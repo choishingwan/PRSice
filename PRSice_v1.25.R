@@ -1448,11 +1448,6 @@ if(!sumsum){
     	        cat(paste(" # \n # \n # \n # \n # \n #   Empirical alpha threshold is ", sort(p.perm)[round(n.emp.perms*0.05)] ," \n # \n # \n # \n # \n # \n #\n"))
             }
   	    }
-
-
-
-
-
 	    ## Alternately, regression with multiple phenotypes::
 	    if(multiple.target.phenotypes){
 	        top.thresh <- as.vector(1)

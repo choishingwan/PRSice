@@ -1,0 +1,20 @@
+#include <iostream>
+#include <cstdlib>
+#include <string>
+#include "commander.h"
+#include "prsice.h"
+
+
+
+int main(int argc, char *argv[])
+{
+    Commander commander;
+    try{
+        commander(argc, argv);
+    }
+    catch(...){
+    }
+    PRSice prsice();
+    prs
+    return 0;
+}
