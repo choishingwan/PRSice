@@ -5,13 +5,14 @@ Commander::Commander(const int argc, const char *argv[]){
         usage();
         throw "Please provide the required parameters";
     }
-    static const char *optString = "b:t:p:mh?";
+    static const char *optString = "b:t:p:h?";
     static const struct option longOpts[]={
 	    //Qt specific parameter
-		{"base",required_argument,NULL,'b'},
-		{"target",required_argument,NULL,'t'},
+		{"base",required_argument,NULL,'o'},
+		{"target",required_argument,NULL,'i'},
+		{"block",required_argument,NULL,'b'},
+		{"threshold",required_argument,NULL,'t'},
 		{"thread",required_argument,NULL,'p'},
-		{"multiPheno",no_argument,NULL,'m'},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
