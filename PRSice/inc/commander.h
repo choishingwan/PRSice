@@ -29,7 +29,8 @@ class Commander
         std::string m_bp="BP";
         std::string m_standard_error = "SE";
         std::string m_p_value = "P";
-
+        std::string m_ld_prefix=""; //Allow people to use external reference for LD estimation
+    
         bool m_clumping=true;
         bool m_pruning = false;
         bool m_binary_target=true;
@@ -42,16 +43,12 @@ class Commander
         double m_clump_p1 = 1;
         double m_clump_p2 = 1;
         double m_clump_r2 = 0.1;
-        double m_clump_kb = 250;
+        size_t m_clump_kb = 250;
+        //We disable prunning
 
-        //Might want to disable the pruning part
-        double m_prune_kb_wind = 50;
-        double m_prune_kb_step = 2;
-        double m_prune_kb_r2 = 0.8;
-
-        double m_slower = 0.0001;
-        double m_supper = 0.5;
-        double m_sinc = 0.00005;
+        double m_lower = 0.0001;
+        double m_upper = 0.5;
+        double m_inter = 0.00005;
 
         size_t m_thread=1;
 };
