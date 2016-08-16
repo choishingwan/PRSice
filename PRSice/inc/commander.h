@@ -17,7 +17,7 @@ class Commander
         void usage();
         std::vector<std::string> m_target;
         std::vector<std::string> m_base;
-        std::vector<std::string> m_covariates;
+        std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
         std::vector<std::string> m_covariate_files;
         std::string m_ancestry_dim;
         std::string m_pheno_file;
@@ -29,14 +29,6 @@ class Commander
         std::string m_bp="BP";
         std::string m_standard_error = "SE";
         std::string m_p_value = "P";
-        int m_i_chr=-1;
-        int m_i_ref_allele=-1;
-        int m_i_alt_allele=-1;
-        int m_i_statistic=-1;
-        int m_i_snp=-1;
-        int m_i_bp=-1;
-        int m_i_standard_error=-1;
-        int m_i_p_value=-1;
 
         bool m_clumping=true;
         bool m_pruning = false;

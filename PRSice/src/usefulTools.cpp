@@ -22,7 +22,7 @@ void usefulTools::tokenizer(const std::string seq, const std::string separators,
 std::vector<std::string> usefulTools::split(const std::string seq, const std::string separators){
     std::size_t prev = 0, pos;
     std::vector<std::string> result;
-    while ((pos = seq.find_first_of(" ';", prev)) != std::string::npos){
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos){
         if (pos > prev) result.push_back(seq.substr(prev, pos-prev));
         prev = pos+1;
     }
