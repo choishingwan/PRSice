@@ -13,18 +13,6 @@ SNP::~SNP()
 }
 
 
-void SNP::read_snp(const std::string c_input_file, boost::ptr_vector<SNP> &snp_list, const Commander commander){
-    std::ifstream input;
-    input.open(c_input_file.c_str());
-    if(!input.is_open()){
-        std::string error_message = "Cannot open " + c_input_file + " to read";
-        throw std::runtime_error(error_message);
-    }
-    std::string line;
-    while(std::getline(input, line)){
-        usefulTools::trim(line);
-        std::vector<string> token = usefulTools::split(line, "\t ");
-
-    }
-    input.close();
+void SNP::read_snp(const Commander &c_commander, boost::ptr_vector<SNP> &snp_list){
+    
 }

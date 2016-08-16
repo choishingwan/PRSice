@@ -4,14 +4,16 @@
 #include <string>
 #include <getopt.h>
 #include <unistd.h>
+#include <vector>
+#include <stdexcept>
+#include "usefulTools.h"
 
 class Commander
 {
     public:
         Commander();
-        Commander(const int argc, const char *argv[]);
+        bool initialize(int argc, char *argv[]);
         virtual ~Commander();
-        std::string get_target() const{ return m_target; };
     protected:
     private:
         void usage();
@@ -22,7 +24,7 @@ class Commander
         std::string m_ancestry_dim;
         std::string m_pheno_file;
         std::string m_chr = "CHR";
-        std::string m_ref_allele="A1;
+        std::string m_ref_allele="A1";
         std::string m_alt_allele="A2";
         std::string m_statistic = "OR";
         std::string m_snp="SNP";
@@ -39,6 +41,7 @@ class Commander
         bool m_remove_mhc=false;
         bool m_use_beta=false;
         bool m_fastscore =false;
+        bool m_index =false; //Indicate that instead of a header name, the index is given
 
         double m_clump_p1 = 1;
         double m_clump_p2 = 1;

@@ -26,7 +26,7 @@ class usefulTools{
     public:
     /** Tokenize the string using based on the separator (by Thomas, my FYP supervisor) */
     static void tokenizer(const std::string seq, const std::string separators, std::vector<std::string>* result);
-    static std::vector<std::string> split(const std::string seq, const std::string separators){
+    static std::vector<std::string> split(const std::string seq, const std::string separators);
     /** dnorm from R */
 	static double dnorm(const double x);
 	/** qnorm from R */

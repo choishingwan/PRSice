@@ -1,9 +1,9 @@
 #include "commander.h"
 
-Commander::Commander(const int argc, const char *argv[]){
+bool Commander::initialize(int argc, char *argv[]){
     if(argc<=1){
         usage();
-        throw "Please provide the required parameters";
+        throw std::runtime_error("Please provide the required parameters");
     }
     static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:h?";
     static const struct option longOpts[]={
@@ -30,6 +30,7 @@ Commander::Commander(const int argc, const char *argv[]){
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
         {"thread",required_argument,NULL,'T'},
+        {"index",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -37,16 +38,14 @@ Commander::Commander(const int argc, const char *argv[]){
     bool error = false;
     int longIndex=0;
     int opt = 0;
+    std::string command ="";
     opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    std::vector<char> type;
-    std::vector<std::string> columnName;
-    std::map<std::string, char> duplication;
     std::string error_message = "";
     //Start reading all the parameters and perform the qc at the same time
     while(opt!=-1){
         switch(opt){
             case 0:
-                std::string command = longOpts[longIndex].name;
+                command = longOpts[longIndex].name;
                 if(command.compare("chr")==0) m_chr=optarg;
                 else if(command.compare("A1")==0) m_ref_allele = optarg;
                 else if(command.compare("A2")==0) m_alt_allele=optarg;
@@ -54,6 +53,7 @@ Commander::Commander(const int argc, const char *argv[]){
                 else if(command.compare("snp")==0) m_snp=optarg;
                 else if(command.compare("bp")==0) m_bp=optarg;
                 else if(command.compare("se")==0) m_standard_error = optarg;
+                else if(command.compare("index")==0) m_index = true;
                 else if(command.compare("clump_p1")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
@@ -185,7 +185,7 @@ Commander::Commander(const int argc, const char *argv[]){
             case 'h':
             case '?':
                 
-                return;
+                return false;
                 break;
             default:
                 throw "Undefined operator, please use --help for more information!";
@@ -193,7 +193,8 @@ Commander::Commander(const int argc, const char *argv[]){
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
     
-    
+    if(error) throw std::runtime_error(error_message);
+    return true;
 }
 
 
@@ -208,4 +209,34 @@ Commander::~Commander()
 }
 
 void Commander::usage(){
+    fprintf(stderr, "Usage: PRSice [Options] \n\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "         -b | --base         \n");
+    fprintf(stderr, "         -t | --target       \n");
+    fprintf(stderr, "         -f | --pheno_file   \n");
+    fprintf(stderr, "         -L | --ld           \n");
+    fprintf(stderr, "         --chr               \n");
+    fprintf(stderr, "         --A1                \n");
+    fprintf(stderr, "         --A2                \n");
+    fprintf(stderr, "         --stat              \n");
+    fprintf(stderr, "         --snp               \n");
+    fprintf(stderr, "         --bp                \n");
+    fprintf(stderr, "         --se                \n");
+    fprintf(stderr, "         --pvalue            \n");
+    fprintf(stderr, "         --index             \n");
+    fprintf(stderr, "         -l | --lower        \n");
+    fprintf(stderr, "         -u | --upper        \n");
+    fprintf(stderr, "         -i | --interval     \n");
+    fprintf(stderr, "         --clump_p1          \n");
+    fprintf(stderr, "         --clump_p2          \n");
+    fprintf(stderr, "         --clump_r2          \n");
+    fprintf(stderr, "         --clump_kb          \n");
+    fprintf(stderr, "         -c | --covar_header \n");
+    fprintf(stderr, "         -C | --covar_file   \n");
+    fprintf(stderr, "         -a | --ancestry     \n");
+    fprintf(stderr, "\nMisc:\n");
+    fprintf(stderr, "         -T | --thread       \n");
+    fprintf(stderr, "         -h | --help         \n");
+
+    
 }
