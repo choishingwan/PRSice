@@ -2,9 +2,9 @@
 #include <cstdlib>
 #include <string>
 #include <stdexcept>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include "commander.h"
 
+#include "../inc/commander.hpp"
+#include "../inc/prsice.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +15,14 @@ int main(int argc, char *argv[])
     catch (const std::runtime_error& error){
         std::cerr << error.what() << std::endl;
     }
+    PRSice prsice = PRSice();
+    try{
+        prsice.run(commander);
+    }
+    catch(const std::runtime_error& error){
+        std::cerr << error.what() << std::endl;
+    }
+    
 //    boost::ptr_vector<SNP> snp_list;
 //    SNP::read_snp(commander, snp_list);
 //    PRSice prsice = PRSice();

@@ -1,4 +1,4 @@
-#include "commander.h"
+#include "../inc/commander.hpp"
 
 bool Commander::initialize(int argc, char *argv[]){
     if(argc<=1){
@@ -29,6 +29,7 @@ bool Commander::initialize(int argc, char *argv[]){
         {"clump_p2",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
+        {"binary_target",required_argument,NULL,0},
         {"thread",required_argument,NULL,'T'},
         {"index",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
@@ -89,23 +90,27 @@ bool Commander::initialize(int argc, char *argv[]){
                     }
                     else m_clump_kb = temp;
                 }
+                else if(command.compare("binary_target")==0){
+                		std::vector<std::string> token = misc::split(optarg, ", ");
+                		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
+                }
                 break;
             case 'b':
-                m_base= usefulTools::split(optarg, ", ");
+                m_base= misc::split(optarg, ", ");
                 if(m_base.size() ==0){
                     error = true;
                     error_message.append("You must provide at least one valid base file name\n");
                 }
                 break;
             case 't':
-                m_target = usefulTools::split(optarg, ", ");
+                m_target = misc::split(optarg, ", ");
                 if(m_target.size() ==0){
                     error = true;
                     error_message.append("You must provide at least one valid target file name\n");
                 }
                 break;
             case 'c':
-                m_covariates = usefulTools::split(optarg, ", ");
+                m_covariates = misc::split(optarg, ", ");
                 if(m_covariate_files.size() != 0){
                     error = true;
                     error_message.append("Covariate header and covariate file option is mutually exclusive\n");
@@ -113,7 +118,7 @@ bool Commander::initialize(int argc, char *argv[]){
                 }
                 break;
             case 'C':
-                m_covariate_files = usefulTools::split(optarg, ", ");
+                m_covariate_files = misc::split(optarg, ", ");
                 if(m_covariates.size() != 0){
                     error = true;
                     error_message.append("Covariate header and covariate file option is mutually exclusive\n");
@@ -192,7 +197,10 @@ bool Commander::initialize(int argc, char *argv[]){
         }
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    
+    if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size()){
+    		error=true;
+    		error_message.append("Length of binary target list does not match number of target");
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }
@@ -224,6 +232,7 @@ void Commander::usage(){
     fprintf(stderr, "         --se                \n");
     fprintf(stderr, "         --pvalue            \n");
     fprintf(stderr, "         --index             \n");
+    fprintf(stderr, "         --binary_target     \n");
     fprintf(stderr, "         -l | --lower        \n");
     fprintf(stderr, "         -u | --upper        \n");
     fprintf(stderr, "         -i | --interval     \n");

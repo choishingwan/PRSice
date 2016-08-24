@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <vector>
 #include <stdexcept>
-#include "usefulTools.h"
+#include "misc.hpp"
 
 class Commander
 {
@@ -14,10 +14,23 @@ class Commander
         Commander();
         bool initialize(int argc, char *argv[]);
         virtual ~Commander();
+        std::vector<std::string> get_base() const{ return m_base;};
+        bool index() const{ return m_index;};
+        std::string chr() const{ return m_chr;};
+        std::string ref() const{ return m_ref_allele;};
+        std::string alt() const{ return m_alt_allele;};
+        std::string statistic() const{ return m_statistic;};
+        std::string snp() const{ return m_snp;};
+        std::string bp() const{ return m_bp;};
+        std::string se() const{ return m_standard_error;};
+        std::string p() const{ return m_p_value;};
+        std::string ld_prefix() const{return m_ld_prefix;};
+        std::vector<std::string> get_target() const{return m_target; };
     protected:
     private:
         void usage();
         std::vector<std::string> m_target;
+        std::vector<bool> m_target_is_binary;
         std::vector<std::string> m_base;
         std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
         std::vector<std::string> m_covariate_files;
