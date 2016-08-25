@@ -25,7 +25,11 @@ class Commander
         std::string se() const{ return m_standard_error;};
         std::string p() const{ return m_p_value;};
         std::string ld_prefix() const{return m_ld_prefix;};
+        std::string get_gtf() const {return m_gtf;};
         std::vector<std::string> get_target() const{return m_target; };
+        std::vector<std::string> get_bed() const {return m_bed_list;};
+        std::vector<std::string> get_msigdb() const{return m_msigdb; };
+
     protected:
     private:
         void usage();
@@ -34,6 +38,8 @@ class Commander
         std::vector<std::string> m_base;
         std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
         std::vector<std::string> m_covariate_files;
+        std::vector<std::string> m_msigdb;
+        std::vector<std::string> m_bed_list;
         std::string m_ancestry_dim;
         std::string m_pheno_file;
         std::string m_chr = "CHR";
@@ -45,7 +51,7 @@ class Commander
         std::string m_standard_error = "SE";
         std::string m_p_value = "P";
         std::string m_ld_prefix=""; //Allow people to use external reference for LD estimation
-    
+        std::string m_gtf="";
         bool m_clumping=true;
         bool m_pruning = false;
         bool m_binary_target=true;
@@ -56,8 +62,8 @@ class Commander
         bool m_fastscore =false;
         bool m_index =false; //Indicate that instead of a header name, the index is given
 
-        double m_clump_p1 = 1;
-        double m_clump_p2 = 1;
+        double m_clump = 1;
+        //double m_clump_p2 = 1;
         double m_clump_r2 = 0.1;
         size_t m_clump_kb = 250;
         //We disable prunning

@@ -5,7 +5,7 @@ bool Commander::initialize(int argc, char *argv[]){
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:h?";
+    static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:B:g:m:h?";
     static const struct option longOpts[]={
         {"base",required_argument,NULL,'b'},
         {"target",required_argument,NULL,'t'},
@@ -25,12 +25,15 @@ bool Commander::initialize(int argc, char *argv[]){
         {"upper",required_argument,NULL,'u'},
         {"lower",required_argument,NULL,'l'},
         {"interval",required_argument,NULL,'i'},
-        {"clump_p1",required_argument,NULL,0},
-        {"clump_p2",required_argument,NULL,0},
+        {"clump",required_argument,NULL,0},
+//        {"clump_p2",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
         {"binary_target",required_argument,NULL,0},
         {"thread",required_argument,NULL,'T'},
+        {"bed",required_argument,NULL,'B'},
+        {"gtf",required_argument,NULL,'g'},
+        {"msigdb",required_argument,NULL,'m'},
         {"index",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
@@ -55,22 +58,22 @@ bool Commander::initialize(int argc, char *argv[]){
                 else if(command.compare("bp")==0) m_bp=optarg;
                 else if(command.compare("se")==0) m_standard_error = optarg;
                 else if(command.compare("index")==0) m_index = true;
-                else if(command.compare("clump_p1")==0){
+                else if(command.compare("clump")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
                         error = true;
                         error_message.append("Clumping p-values must be >=0 and <= 1.0\n");
                     }
-                    else m_clump_p1 = temp;
+                    else m_clump = temp;
                 }
-                else if(command.compare("clump_p2")==0){
-                    double temp = atof(optarg);
-                    if(temp < 0.0 || temp > 1.0){
-                        error = true;
-                        error_message.append("Clumping p-values must be >=0 and <= 1.0\n");
-                    }
-                    else m_clump_p2 = temp;
-                }
+//                else if(command.compare("clump_p2")==0){
+//                    double temp = atof(optarg);
+//                    if(temp < 0.0 || temp > 1.0){
+//                        error = true;
+//                        error_message.append("Clumping p-values must be >=0 and <= 1.0\n");
+//                    }
+//                    else m_clump_p2 = temp;
+//                }
                 else if(command.compare("clump_r2")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
@@ -187,9 +190,18 @@ bool Commander::initialize(int argc, char *argv[]){
                 else m_inter = temp;
             }
                 break;
+            case 'B':
+            		m_bed_list= misc::split(optarg, ", ");
+            		break;
+            case 'g':
+            		m_gtf = optarg;
+            		break;
+            case 'm':
+        			m_msigdb= misc::split(optarg, ", ");
+            		break;
             case 'h':
             case '?':
-                
+                usage();
                 return false;
                 break;
             default:
@@ -199,7 +211,11 @@ bool Commander::initialize(int argc, char *argv[]){
     }
     if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size()){
     		error=true;
-    		error_message.append("Length of binary target list does not match number of target");
+    		error_message.append("Length of binary target list does not match number of target\n");
+    }
+    if(m_msigdb.size() != 0 && m_gtf.empty()){
+    		error = true;
+    		error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
     }
     if(error) throw std::runtime_error(error_message);
     return true;
@@ -218,11 +234,21 @@ Commander::~Commander()
 
 void Commander::usage(){
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
-    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "Required Inputs:\n");
     fprintf(stderr, "         -b | --base         \n");
     fprintf(stderr, "         -t | --target       \n");
+    fprintf(stderr, "         --binary_target     \n");
+    fprintf(stderr, "\nOptions\n");
     fprintf(stderr, "         -f | --pheno_file   \n");
     fprintf(stderr, "         -L | --ld           \n");
+    fprintf(stderr, "         -c | --covar_header \n");
+    fprintf(stderr, "         -C | --covar_file   \n");
+    fprintf(stderr, "         -a | --ancestry     \n");
+    fprintf(stderr, "\nScoring options:\n");
+    fprintf(stderr, "         -l | --lower        \n");
+    fprintf(stderr, "         -u | --upper        \n");
+    fprintf(stderr, "         -i | --interval     \n");
+    fprintf(stderr, "\nFile Headers\n:");
     fprintf(stderr, "         --chr               \n");
     fprintf(stderr, "         --A1                \n");
     fprintf(stderr, "         --A2                \n");
@@ -232,17 +258,15 @@ void Commander::usage(){
     fprintf(stderr, "         --se                \n");
     fprintf(stderr, "         --pvalue            \n");
     fprintf(stderr, "         --index             \n");
-    fprintf(stderr, "         --binary_target     \n");
-    fprintf(stderr, "         -l | --lower        \n");
-    fprintf(stderr, "         -u | --upper        \n");
-    fprintf(stderr, "         -i | --interval     \n");
-    fprintf(stderr, "         --clump_p1          \n");
-    fprintf(stderr, "         --clump_p2          \n");
+    fprintf(stderr, "\nClumping:\n");
+    fprintf(stderr, "         --clump             \n");
+//    fprintf(stderr, "         --clump_p2          \n");
     fprintf(stderr, "         --clump_r2          \n");
     fprintf(stderr, "         --clump_kb          \n");
-    fprintf(stderr, "         -c | --covar_header \n");
-    fprintf(stderr, "         -C | --covar_file   \n");
-    fprintf(stderr, "         -a | --ancestry     \n");
+    fprintf(stderr, "\nSelections:\n");
+    fprintf(stderr, "         -B | --bed          \n");
+    fprintf(stderr, "         -g | --gtf          \n");
+    fprintf(stderr, "         -m | --msigdb       \n");
     fprintf(stderr, "\nMisc:\n");
     fprintf(stderr, "         -T | --thread       \n");
     fprintf(stderr, "         -h | --help         \n");

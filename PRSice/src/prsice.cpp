@@ -82,7 +82,7 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander){
 	// When no inclusion criteria is given, we will generate a vector of 1, indicating
 	// that we will include all SNPs in the analysis
 	// This should be similar to the concept in SHREK
-
+	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
 
 	// Maybe perform clumping?
 	std::vector<std::string> target = c_commander.get_target();

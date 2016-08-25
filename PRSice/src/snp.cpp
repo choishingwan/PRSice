@@ -2,11 +2,29 @@
 
 SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value) {}
 
+std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input) const{
+	std::vector<size_t> idx(input.size());
+	std::iota(idx.begin(), idx.end(),0);
+	std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2){
+		if(input[i1].m_p_value==input[i2].m_p_value){
+			if(fabs(input[i1].m_stat)==fabs(input[i2].m_stat)){
+				if(input[i1].m_chr.compare(input[i2].m_chr)==0){
+					return input[i1].m_loc < input[i2].m_loc;
+				}else return input[i1].m_chr.compare(input[i2].m_chr)<0;
+			}
+			else return fabs(input[i1].m_stat) > fabs(input[2].m_stat);
+		}
+		else return input[i1].m_p_value < input[i2].m_p_value;
+	});
+	return idx;
+}
+
 SNP::SNP(){
 	m_loc=0;
 	m_stat=0.0;
 	m_standard_error=0.0;
 	m_p_value=0.0;
+	m_flags=nullptr;
 }
 
 SNP::~SNP(){}
@@ -69,6 +87,12 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
         result[5] = index_check(c_commander.bp(), header, "WARNING");
         result[6] = index_check(c_commander.se(), header, "WARNING");
         result[7] = index_check(c_commander.p(), header, "ERROR");
+        sort( header.begin(), header.end() );
+        if(!std::adjacent_find( header.begin(), header.end() ) == header.end()){
+    			fprintf(stderr, "WARNING: Header contain duplicated elements\n");
+    			fprintf(stderr, "         Only the first occurrence is used\n");
+    			fprintf(stderr, "         Please do check your input file\n");
+        }
     }
     int max_index = -1;
     for(size_t i = 0; i < 9; ++i) max_index = (result[i]> max_index)? result[i]:max_index; //get the maximum index

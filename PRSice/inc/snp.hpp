@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <algorithm>
+#include <numeric>
 
 #include "commander.hpp"
 #include "misc.hpp"
@@ -23,6 +25,7 @@ class SNP
         size_t get_loc() { return m_loc; }
         double set_stat() { return m_stat; }
         double get_p_value() { return m_p_value; }
+        static std::vector<size_t> sort_by_p(const std::vector<SNP> &input) const;
     protected:
     private:
         static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
@@ -36,6 +39,11 @@ class SNP
         double m_stat;
         double m_standard_error;
         double m_p_value;
+#if defined(__LP64__) || defined(_WIN64)
+        uint64_t *m_flags;
+#else
+        uint32_t *m_flags;
+#endif
 };
 
 #endif // SNP_H
