@@ -1,6 +1,6 @@
-#include "../inc/prsice.hpp"
+#include "prsice.hpp"
 
-void PRSice::process(const std::string &c_input, const Commander &c_commander){
+void PRSice::process(const std::string &c_input, const Commander &c_commander, Region &region){
 	// As we don't use the ptr_vector, we need to read the SNP here
 	// otherwise the SNP might go out of scope
 	std::vector<SNP> snp_list;
@@ -63,10 +63,13 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander){
     		    		size_t loc = 0;
     		    		if(index[5]>=0){
     		    			int temp = atoi(token[index[5]].c_str());
-    		    			if(temp <0) fprintf(stderr, "ERROR: %s has negative loci\n", rs_id);
+    		    			if(temp <0) fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
     		    			else loc = temp;
     		    		}
-    		      	snp_list.push_back(SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue ));
+#if defined(__LP64__) || defined(_WIND64)
+    		    		uint64_t* flag = region.check(chr, loc);
+#endif
+    		      	snp_list.push_back(SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, flag));
     		   	}
     		}
     }
@@ -88,18 +91,18 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander){
 	std::vector<std::string> target = c_commander.get_target();
 	// We need to do this for each target if the LD is not provided
 	if(!c_commander.ld_prefix().empty()){
-		PLINK geno = PLINK(c_commander.ld_prefix());
+		PLINK geno(c_commander.ld_prefix());
 		// Do clumping and at the same time generate the results?
 	}
 	else{
 		for(size_t i_target = 0; i_target < target.size(); ++i_target){
-			PLINK geno = PLINK(target[i_target]);
+			PLINK geno(target[i_target]);
 		}
 	}
 
 }
 
-void PRSice::run(const Commander &c_commander){
+void PRSice::run(const Commander &c_commander, Region &region){
     std::vector<std::string> base = c_commander.get_base();
     int num_base = base.size();
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
@@ -107,7 +110,8 @@ void PRSice::run(const Commander &c_commander){
     else{
         for(size_t i = 0; i < num_base; ++i){
             //We process each base case independently
-            process(base[i], c_commander);
+        		region.reset();
+            process(base[i], c_commander, region);
         }
     }
 }

@@ -33,6 +33,7 @@ bool Commander::initialize(int argc, char *argv[]){
         {"thread",required_argument,NULL,'T'},
         {"bed",required_argument,NULL,'B'},
         {"gtf",required_argument,NULL,'g'},
+        {"gen_bed",no_argument,NULL,0},
         {"msigdb",required_argument,NULL,'m'},
         {"index",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
@@ -97,6 +98,7 @@ bool Commander::initialize(int argc, char *argv[]){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
                 }
+                else if(command.compare("gen_bed")==0) m_gen_bed = true;
                 break;
             case 'b':
                 m_base= misc::split(optarg, ", ");
@@ -197,7 +199,7 @@ bool Commander::initialize(int argc, char *argv[]){
             		m_gtf = optarg;
             		break;
             case 'm':
-        			m_msigdb= misc::split(optarg, ", ");
+        			m_msigdb= optarg;
             		break;
             case 'h':
             case '?':
@@ -213,9 +215,13 @@ bool Commander::initialize(int argc, char *argv[]){
     		error=true;
     		error_message.append("Length of binary target list does not match number of target\n");
     }
-    if(m_msigdb.size() != 0 && m_gtf.empty()){
+    if(!m_msigdb.empty() && m_gtf.empty()){
     		error = true;
     		error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
+    }
+    if(m_gen_bed && m_gtf.empty()){
+    		fprintf(stderr, "ERROR: Cannot generate gene bed file without given the gtf file!\n");
+    		fprintf(stderr, "       Will not generate the gene bed file\n");
     }
     if(error) throw std::runtime_error(error_message);
     return true;
@@ -248,25 +254,31 @@ void Commander::usage(){
     fprintf(stderr, "         -l | --lower        \n");
     fprintf(stderr, "         -u | --upper        \n");
     fprintf(stderr, "         -i | --interval     \n");
-    fprintf(stderr, "\nFile Headers\n:");
-    fprintf(stderr, "         --chr               \n");
-    fprintf(stderr, "         --A1                \n");
-    fprintf(stderr, "         --A2                \n");
-    fprintf(stderr, "         --stat              \n");
-    fprintf(stderr, "         --snp               \n");
-    fprintf(stderr, "         --bp                \n");
-    fprintf(stderr, "         --se                \n");
-    fprintf(stderr, "         --pvalue            \n");
-    fprintf(stderr, "         --index             \n");
+    fprintf(stderr, "\nFile Headers:\n");
+    fprintf(stderr, "              --chr          \n");
+    fprintf(stderr, "              --A1           \n");
+    fprintf(stderr, "              --A2           \n");
+    fprintf(stderr, "              --stat         \n");
+    fprintf(stderr, "              --snp          \n");
+    fprintf(stderr, "              --bp           \n");
+    fprintf(stderr, "              --se           \n");
+    fprintf(stderr, "              --pvalue       \n");
+    fprintf(stderr, "              --index        \n");
     fprintf(stderr, "\nClumping:\n");
-    fprintf(stderr, "         --clump             \n");
+    fprintf(stderr, "              --clump        \n");
 //    fprintf(stderr, "         --clump_p2          \n");
-    fprintf(stderr, "         --clump_r2          \n");
-    fprintf(stderr, "         --clump_kb          \n");
+    fprintf(stderr, "              --clump_r2     \n");
+    fprintf(stderr, "              --clump_kb     \n");
     fprintf(stderr, "\nSelections:\n");
-    fprintf(stderr, "         -B | --bed          \n");
-    fprintf(stderr, "         -g | --gtf          \n");
-    fprintf(stderr, "         -m | --msigdb       \n");
+    fprintf(stderr, "         -B | --bed          Bed file containing the selected regions. \n");
+    fprintf(stderr, "                             Name of bed file will be used as the region\n");
+    fprintf(stderr, "                             identifier \n");
+    fprintf(stderr, "         -g | --gtf          GTF file containing gene boundaries. Required\n");
+    fprintf(stderr, "                             when --msigdb is set \n");
+    fprintf(stderr, "         -m | --msigdb       MSIGDB file containing the pathway information\n");
+    fprintf(stderr, "                             require the gtf file \n");
+    fprintf(stderr, "              --gen_bed      Generate bed file of gene regions from \n");
+    fprintf(stderr, "                             the gtf file \n");
     fprintf(stderr, "\nMisc:\n");
     fprintf(stderr, "         -T | --thread       \n");
     fprintf(stderr, "         -h | --help         \n");

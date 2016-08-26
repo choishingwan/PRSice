@@ -1,8 +1,12 @@
-#include "../inc/snp.hpp"
+#include "snp.hpp"
 
-SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value) {}
+#if defined(__LP64__) || defined(_WIN64)
+SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t* flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value), m_flags(flag) {}
+#else
+SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint32_t* flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value), m_flags(flag) {}
+#endif
 
-std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input) const{
+std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input){
 	std::vector<size_t> idx(input.size());
 	std::iota(idx.begin(), idx.end(),0);
 	std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2){
@@ -88,7 +92,10 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
         result[6] = index_check(c_commander.se(), header, "WARNING");
         result[7] = index_check(c_commander.p(), header, "ERROR");
         sort( header.begin(), header.end() );
-        if(!std::adjacent_find( header.begin(), header.end() ) == header.end()){
+        size_t before = header.size();
+        header.erase( unique( header.begin(), header.end() ), header.end() );
+        size_t after= header.size();
+        if(before!=after){
     			fprintf(stderr, "WARNING: Header contain duplicated elements\n");
     			fprintf(stderr, "         Only the first occurrence is used\n");
     			fprintf(stderr, "         Please do check your input file\n");
@@ -107,4 +114,5 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
     			throw std::runtime_error("ERROR: Number of column in file less than the specified index!");
     		}
     }
+    return result;
 }
