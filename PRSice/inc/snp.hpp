@@ -17,9 +17,9 @@ class SNP
     public:
         SNP();
 #if defined(__LP64__) || defined(_WIN64)
-        SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t *flag);
+        SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t *flag, const size_t size_of_flag);
 #else
-        SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t *flag);
+        SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint32_t *flag, const size_t size_of_flag);
 #endif
         virtual ~SNP();
         std::string get_ref_allele() { return m_ref_allele; }
@@ -40,6 +40,7 @@ class SNP
         std::string m_rs_id;
         std::string m_chr;
         size_t m_loc;
+        size_t m_size_of_flag;
         double m_stat;
         double m_standard_error;
         double m_p_value;
