@@ -31,6 +31,16 @@ class SNP
         double get_p_value() { return m_p_value; }
         static std::vector<size_t> sort_by_p(const std::vector<SNP> &input);
         static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
+        bool check_loc(const std::string &chr, const size_t loc, const std::string &ref_allele, const std::string &alt_allele){
+                if(chr.compare(m_chr)!=0) return false;
+                if(loc!= m_loc) return false;
+                //Check if allele is the same
+                if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)!=0) return false;
+                else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)==0){
+                        //flipping here
+                }
+                return true;
+        };
     protected:
     private:
         static size_t index_check(const std::string &c_in);
