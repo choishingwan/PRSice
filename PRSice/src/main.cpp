@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     }
     Region region = Region();
     try{
-    		region.run(commander.get_gtf(), commander.get_msigdb(), commander.get_bed(), commander.gen_bed());
+    		region.run(commander.get_gtf(), commander.get_msigdb(), commander.get_bed(), commander.get_out(), commander.gen_bed());
     }
     catch(const std::runtime_error &error){
     		std::cerr << error.what() << std::endl;
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
         std::cerr << error.what() << std::endl;
 		exit(-1);
     }
-    
+
 //    boost::ptr_vector<SNP> snp_list;
 //    SNP::read_snp(commander, snp_list);
 //    PRSice prsice = PRSice();

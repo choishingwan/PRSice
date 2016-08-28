@@ -140,7 +140,7 @@ void Region::process_bed(const std::vector<std::string> &bed){
 	}
 }
 
-std::map<std::string, Region::boundary > Region::process_gtf(const std::string &gtf, std::map<std::string, std::string> &id_to_name, bool gen_bed){
+std::map<std::string, Region::boundary > Region::process_gtf(const std::string &gtf, std::map<std::string, std::string> &id_to_name, const std::string &out_prefix, bool gen_bed){
 	std::map<std::string, boundary > res;
 	if(gtf.empty()) return res; // basically return an empty map
 	std::ifstream gtf_file;
@@ -236,11 +236,11 @@ std::map<std::string, Region::boundary > Region::process_gtf(const std::string &
 		id_to_name.clear();
 	}
 	else{
-		if(gen_bed){
-			std::string out_name="";
-			std::vector<std::string>token =misc::split(gtf,".");
+		if(gen_bed && out_prefix.empty()){
+			std::string out_name=out_prefix+".bed";
+			/*std::vector<std::string>token =misc::split(gtf,".");
 			for(size_t i = 0; i < token.size()-1; ++i) out_name.append(token[i]+".");
-			out_name.append("bed");
+			out_name.append("bed");*/
 			struct stat buffer;
 			if(stat (out_name.c_str(), &buffer) == 0){
 				// Issue a warning of file exist
@@ -298,13 +298,13 @@ void Region::process_msigdb(const std::string &msigdb,
 	}
 }
 
-void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, bool gen_bed){
+void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed){
 	process_bed(bed);
 	std::map<std::string, std::string> id_to_name;
 	if(!gtf.empty()){ // without the gtf file, we will not process the msigdb file
 		std::map<std::string, boundary > gtf_info;
 		try{
-			gtf_info=process_gtf(gtf, id_to_name, gen_bed);
+			gtf_info=process_gtf(gtf, id_to_name, out, gen_bed);
 		}
 		catch(const std::runtime_error &error){
 			fprintf(stderr, "ERROR: Cannot process gtf file: %s\n", error.what());

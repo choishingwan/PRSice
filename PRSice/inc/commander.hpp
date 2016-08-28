@@ -31,6 +31,7 @@ class Commander
         std::vector<std::string> get_target() const{return m_target; };
         std::vector<std::string> get_bed() const {return m_bed_list;};
         std::string get_msigdb() const{return m_msigdb; };
+        std::string get_out() const {return m_out; };
 
     protected:
     private:
@@ -54,6 +55,7 @@ class Commander
         std::string m_ld_prefix=""; //Allow people to use external reference for LD estimation
         std::string m_gtf="";
         std::string m_msigdb="";
+        std::string m_out = "PRSice";
         bool m_clumping=true;
         bool m_pruning = false;
         bool m_binary_target=true;

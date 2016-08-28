@@ -20,7 +20,7 @@ class Region {
 public:
 	Region();
 	virtual ~Region();
-	void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, bool gen_bed);
+	void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed);
 	void reset(){ m_index = std::vector<size_t>(m_region_name.size());};
 #if defined(__LP64__) || defined(_WIN64)
 	uint64_t* check(std::string chr, size_t loc);
@@ -31,7 +31,7 @@ public:
 private:
 	typedef std::tuple<std::string, size_t, size_t> boundary;
 	void process_bed(const std::vector<std::string> &bed);
-	std::map<std::string, boundary > process_gtf(const std::string &gtf, std::map<std::string, std::string> &id_to_name, bool gen_bed);
+	std::map<std::string, boundary > process_gtf(const std::string &gtf, std::map<std::string, std::string> &id_to_name, const std::string &out_prefix, bool gen_bed);
 	void process_msigdb(const std::string &msigdb,
 						const std::map<std::string, boundary > &gtf_info,
 						const std::map<std::string, std::string> &id_to_name);

@@ -5,7 +5,7 @@ bool Commander::initialize(int argc, char *argv[]){
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:B:g:m:h?";
+    static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:B:g:m:o:h?";
     static const struct option longOpts[]={
         {"base",required_argument,NULL,'b'},
         {"target",required_argument,NULL,'t'},
@@ -35,11 +35,12 @@ bool Commander::initialize(int argc, char *argv[]){
         {"gtf",required_argument,NULL,'g'},
         {"gen_bed",no_argument,NULL,0},
         {"msigdb",required_argument,NULL,'m'},
+        {"out",required_argument,NULL,'o'},
         {"index",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
-    
+
     bool error = false;
     int longIndex=0;
     int opt = 0;
@@ -193,14 +194,17 @@ bool Commander::initialize(int argc, char *argv[]){
             }
                 break;
             case 'B':
-            		m_bed_list= misc::split(optarg, ", ");
-            		break;
+                m_bed_list= misc::split(optarg, ", ");
+                break;
             case 'g':
-            		m_gtf = optarg;
-            		break;
+                m_gtf = optarg;
+                break;
             case 'm':
-        			m_msigdb= optarg;
-            		break;
+                m_msigdb= optarg;
+                break;
+            case 'o':
+                m_out = optarget;
+                break;
             case 'h':
             case '?':
                 usage();
@@ -212,16 +216,20 @@ bool Commander::initialize(int argc, char *argv[]){
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
     if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size()){
-    		error=true;
-    		error_message.append("Length of binary target list does not match number of target\n");
+        error=true;
+        error_message.append("Length of binary target list does not match number of target\n");
     }
     if(!m_msigdb.empty() && m_gtf.empty()){
-    		error = true;
-    		error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
+        error = true;
+        error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
     }
     if(m_gen_bed && m_gtf.empty()){
-    		fprintf(stderr, "ERROR: Cannot generate gene bed file without given the gtf file!\n");
-    		fprintf(stderr, "       Will not generate the gene bed file\n");
+        fprintf(stderr, "ERROR: Cannot generate gene bed file without given the gtf file!\n");
+        fprintf(stderr, "       Will not generate the gene bed file\n");
+    }
+    if(m_out.empty()){
+        fprintf(stderr, "ERROR: Output prefix is empty, will set it to default\n");
+        m_out = "PRSice";
     }
     if(error) throw std::runtime_error(error_message);
     return true;
@@ -250,6 +258,7 @@ void Commander::usage(){
     fprintf(stderr, "         -c | --covar_header \n");
     fprintf(stderr, "         -C | --covar_file   \n");
     fprintf(stderr, "         -a | --ancestry     \n");
+    fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
     fprintf(stderr, "\nScoring options:\n");
     fprintf(stderr, "         -l | --lower        \n");
     fprintf(stderr, "         -u | --upper        \n");
@@ -283,5 +292,5 @@ void Commander::usage(){
     fprintf(stderr, "         -T | --thread       \n");
     fprintf(stderr, "         -h | --help         \n");
 
-    
+
 }
