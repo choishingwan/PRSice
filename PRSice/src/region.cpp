@@ -9,7 +9,7 @@
 
 Region::Region() {
 	// TODO Auto-generated constructor stub
-
+	m_bit_size = CHAR_BIT;
 }
 
 Region::~Region() {
@@ -18,19 +18,54 @@ Region::~Region() {
 
 #if defined(__LP64__) || defined(_WIN64)
 	uint64_t* Region::check(std::string chr, size_t loc){
-		uint64_t* res = new uint64_t[(m_region_name.size()+1)/(sizeof(uint64_t)*CHAR_BIT)+1];
+		uint64_t* res = new uint64_t[((m_region_name.size()+1)/m_bit_size)+1];
+		memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(uint64_t));
 		res[0]=1; // base region which contains everything
 		for(size_t i = 0; i < m_region_list.size(); ++i){
-			while(m_region_list[m_index[i]]){
-
+			size_t region_size = m_region_list[i].size();
+			while(m_index[i]< region_size){
+                // do the checking
+				std::string region_chr = std::get<0>(m_region_list[m_index[i]]);
+				size_t region_start = std::get<1>(m_region_list[m_index[i]]);
+				size_t region_end = std::get<2>(m_region_list[m_index[i]]);
+				if(chr.compare(region_chr) != 0) m_index[i]++;
+				else{ // same chromosome
+					if(region_start <= loc && region_end >=loc){
+                        // This is the region
+                        res[i/m_bit_size] |= 0x1LLU << i%m_bit_size;
+                        break;
+					}
+					else if(region_start> loc) break;
+                    else if(region_end < loc) m_index[i]++;
+				}
 			}
 		}
-
 		return res;
 	}
 #else
 	uint32_t* Region::check(std::string chr, size_t loc){
-		uint32_t* res = new uint64_t[(m_region_name.size()+1)/(sizeof(uint32_t)*CHAR_BIT)+1];
+		uint32_t* res = new uint32_t[((m_region_name.size()+1)/m_bit_size)+1];
+		memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(uint32_t));
+		res[0]=1; // base region which contains everything
+		for(size_t i = 0; i < m_region_list.size(); ++i){
+			size_t region_size = m_region_list[i].size();
+			while(m_index[i]< region_size){
+                // do the checking
+				std::string region_chr = std::get<0>(m_region_list[m_index[i]]);
+				size_t region_start = std::get<1>(m_region_list[m_index[i]]);
+				size_t region_end = std::get<2>(m_region_list[m_index[i]]);
+				if(chr.compare(region_chr) != 0) m_index[i]++;
+				else{ // same chromosome
+					if(region_start <= loc && region_end >=loc){
+                        // This is the region
+                        res[i/m_bit_size] |= 0x1LU << i%m_bit_size;
+                        break;
+					}
+					else if(region_start> loc) break;
+                    else if(region_end < loc) m_index[i]++;
+				}
+			}
+		}
 		return res;
 	}
 #endif
@@ -283,5 +318,10 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
 	if(size==1) fprintf(stderr, "%zu region is included\n", size);
 	else if(size>1) fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
 	m_index = std::vector<size_t>(m_region_name.size());
+	#if defined(__LP64__) || defined(_WIN64)
+    m_bit_size = sizeof(uint64_t)*CHAR_BIT;
+	#else
+    m_bit_size = sizeof(uint32_t)*CHAR_BIT;
+	#endif
 }
 

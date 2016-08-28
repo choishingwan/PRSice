@@ -27,6 +27,7 @@ public:
 #else
 	uint32_t* check(std::string chr, size_t loc);
 #endif
+    size_t size() const { return (m_region_name.size()+1)/(sizeof(uint32_t)*CHAR_BIT)+1; };
 private:
 	typedef std::tuple<std::string, size_t, size_t> boundary;
 	void process_bed(const std::vector<std::string> &bed);
@@ -37,6 +38,7 @@ private:
 	std::vector<std::string> m_region_name;
 	std::vector< std::vector<boundary> > m_region_list;
 	std::vector<size_t> m_index;
+	size_t m_bit_size;
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */
