@@ -17,6 +17,9 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     size_t num_duplicated = 0;
     size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
+	// only A1 is required
+	// so ambiguous check will be when reading the LD file
+	// same for flipping
 	bool se_error = false;
     while(std::getline(snp_file, line)){
     		misc::trim(line);
@@ -69,7 +72,7 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
 #if defined(__LP64__) || defined(_WIND64)
     		    		uint64_t* flag = region.check(chr, loc);
 #endif
-    		      	snp_list.push_back(SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, flag));
+    		      	snp_list.push_back(SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.check(chr, loc), region.size()));
     		   	}
     		}
     }
@@ -79,26 +82,93 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 
-	// Next, start generating the selection matrix
-	// This should be the matrix deciding whether if the SNP will be included in the
-	// specific threshold
-	// When no inclusion criteria is given, we will generate a vector of 1, indicating
-	// that we will include all SNPs in the analysis
-	// This should be similar to the concept in SHREK
+    // Will do the selection on the fly?
+    // Note: PLINK Clumping will discard any SNPs that doesn't pass clump-p1
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
-
-	// Maybe perform clumping?
-	std::vector<std::string> target = c_commander.get_target();
-	// We need to do this for each target if the LD is not provided
-	if(!c_commander.ld_prefix().empty()){
-		PLINK geno(c_commander.ld_prefix());
-		// Do clumping and at the same time generate the results?
-	}
-	else{
-		for(size_t i_target = 0; i_target < target.size(); ++i_target){
-			PLINK geno(target[i_target]);
-		}
-	}
+    // Read target file first, only include SNPs that are also in the target
+    // can also perform the ambiguous SNP removal at this point
+    // Therefore, anything happened from this point onward should be target
+    // specific
+    std::vector<std::string> target = c_commander.get_target();
+    for(size_t i_target = 0; i_target < target.size(); ++i_target){
+        std::map<std::string, bool> include;
+        std::string target_bim_name = target[i]+".bim";
+        std::ifstream target_file;
+        target_file.open(target_bim_name);
+        if(!target_file.is_open()){
+            std::string error_message = "Cannot open target bim file: "+target_bim_name;
+            throw std::runtime_error(error_message);
+        }
+        size_t num_ambig=0;
+        while(std::getline(target_file, line)){
+            misc::trim(line);
+            if(!line.empty()){
+                std::vector<std::string> token = misc::split(line);
+                // chr rsid cm loc ref alt
+                if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+                std::string chr = token[0];
+                std::string rsid = token[1];
+                size_t loc = 0;
+                int temp = 0;
+                try{
+                    temp =misc::convert<int>(token[3]);
+                    if(temp < 0){
+                        std::string error_message = "Negative coordinate of SNP in "+target_bim_name;
+                        throw std::runtime_error(error_message);
+                    }
+                    loc = temp;
+                }
+                catch(std::runtime_error &error){
+                    std::string error_message = "Non-numeric coordinate of SNP in "+target_bim_name;
+                    throw std::runtime_error(error_message);
+                }
+                std::string ref_allele = token[4];
+                std::string alt_allele = token[5];
+                if(snp_index.find(rsid)==snp_index.end()){
+                    // No summary statistic for this SNP, so we will ignore it
+                    include[rsid] = false;
+                }
+                else{
+                    // will do some soft checking, will issue warning if there are any problem
+                    // first check if ambiguous
+                    if( (ref_allele.compare("A") && alt_allele.compare("T")) ||
+                        (ref_allele.compare("a") && alt_allele.compare("t")) ||
+                        (ref_allele.compare("T") && alt_allele.compare("A")) ||
+                        (ref_allele.compare("t") && alt_allele.compare("a")) ||
+                        (ref_allele.compare("G") && alt_allele.compare("C")) ||
+                        (ref_allele.compare("g") && alt_allele.compare("c")) ||
+                        (ref_allele.compare("C") && alt_allele.compare("G")) ||
+                        (ref_allele.compare("c") && alt_allele.compare("g")))
+                    {
+                        num_ambig++;
+                        include[rsid] = false;
+                    }
+                    else{
+                        // not ambiguous, now do soft checking
+                        size_t index = snp_index[rsid];
+                        bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
+                        if(!same){
+                            fprintf(stderr, "WARNING: %s differ between target and base file\n", rsid.c_str());
+                            fprintf(stderr, "         It is advised that you check the files are \n");
+                            fprintf(stderr, "         From the same genome build\n");
+                        }
+                        include[rsid] = true;
+                    }
+                }
+            }
+        }
+        target_file.close();
+        // Then read in the LD file, that can either be the target file or an
+        // external reference
+        // This should perform the clumping, which will produce a list of SNPs
+        // that are supposedly included in the final PRS
+        if(c_commander.ld_prefix()..empty()){
+            // we will perform clumping using the target file
+        }
+        else{
+            // we will perform clumping using the LD file
+        }
+    }
 
 }
 
