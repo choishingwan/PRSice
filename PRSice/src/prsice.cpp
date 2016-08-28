@@ -91,84 +91,103 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     // specific
     std::vector<std::string> target = c_commander.get_target();
     for(size_t i_target = 0; i_target < target.size(); ++i_target){
-        std::map<std::string, bool> include;
+        std::map<std::string, bool> inclusion;
         std::string target_bim_name = target[i]+".bim";
-        std::ifstream target_file;
-        target_file.open(target_bim_name);
-        if(!target_file.is_open()){
-            std::string error_message = "Cannot open target bim file: "+target_bim_name;
-            throw std::runtime_error(error_message);
-        }
-        size_t num_ambig=0;
-        while(std::getline(target_file, line)){
-            misc::trim(line);
-            if(!line.empty()){
-                std::vector<std::string> token = misc::split(line);
-                // chr rsid cm loc ref alt
-                if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-                std::string chr = token[0];
-                std::string rsid = token[1];
-                size_t loc = 0;
-                int temp = 0;
-                try{
-                    temp =misc::convert<int>(token[3]);
-                    if(temp < 0){
-                        std::string error_message = "Negative coordinate of SNP in "+target_bim_name;
-                        throw std::runtime_error(error_message);
-                    }
-                    loc = temp;
-                }
-                catch(std::runtime_error &error){
-                    std::string error_message = "Non-numeric coordinate of SNP in "+target_bim_name;
-                    throw std::runtime_error(error_message);
-                }
-                std::string ref_allele = token[4];
-                std::string alt_allele = token[5];
-                if(snp_index.find(rsid)==snp_index.end()){
-                    // No summary statistic for this SNP, so we will ignore it
-                    include[rsid] = false;
-                }
-                else{
-                    // will do some soft checking, will issue warning if there are any problem
-                    // first check if ambiguous
-                    if( (ref_allele.compare("A") && alt_allele.compare("T")) ||
-                        (ref_allele.compare("a") && alt_allele.compare("t")) ||
-                        (ref_allele.compare("T") && alt_allele.compare("A")) ||
-                        (ref_allele.compare("t") && alt_allele.compare("a")) ||
-                        (ref_allele.compare("G") && alt_allele.compare("C")) ||
-                        (ref_allele.compare("g") && alt_allele.compare("c")) ||
-                        (ref_allele.compare("C") && alt_allele.compare("G")) ||
-                        (ref_allele.compare("c") && alt_allele.compare("g")))
-                    {
-                        num_ambig++;
-                        include[rsid] = false;
-                    }
-                    else{
-                        // not ambiguous, now do soft checking
-                        size_t index = snp_index[rsid];
-                        bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
-                        if(!same){
-                            fprintf(stderr, "WARNING: %s differ between target and base file\n", rsid.c_str());
-                            fprintf(stderr, "         It is advised that you check the files are \n");
-                            fprintf(stderr, "         From the same genome build\n");
-                        }
-                        include[rsid] = true;
-                    }
-                }
-            }
-        }
-        target_file.close();
+        get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
         // Then read in the LD file, that can either be the target file or an
         // external reference
         // This should perform the clumping, which will produce a list of SNPs
         // that are supposedly included in the final PRS
         if(c_commander.ld_prefix()..empty()){
             // we will perform clumping using the target file
+            // Clumping will update the m_clump_target of the SNP class
+            // And should update the inclusion index we have
+            // The region flag should also be updated such that
+            // the clump index SNP should represent the region of all the
+            // clumped SNPs
         }
         else{
             // we will perform clumping using the LD file
         }
+        // So technically, from here, we just need to perform the PRS with
+        // the inclusion map
+
+
     }
+
+}
+
+void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::string &target_bim_name,
+                       std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index){
+    std::ifstream target_file;
+    target_file.open(target_bim_name.c_str());
+    if(!target_file.is_open()){
+        std::string error_message = "Cannot open target bim file: "+target_bim_name;
+        throw std::runtime_error(error_message);
+    }
+    size_t num_ambig=0;
+    while(std::getline(target_file, line)){
+        misc::trim(line);
+        if(!line.empty()){
+            std::vector<std::string> token = misc::split(line);
+            if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+            std::string chr = token[0];
+            std::string rsid = token[1];
+            size_t loc = 0;
+            int temp = 0;
+            try{
+                temp =misc::convert<int>(token[3]);
+                if(temp < 0){
+                    std::string error_message = "Negative coordinate of SNP in "+target_bim_name;
+                    throw std::runtime_error(error_message);
+                }
+                loc = temp;
+            }
+            catch(std::runtime_error &error){
+                std::string error_message = "Non-numeric coordinate of SNP in "+target_bim_name;
+                throw std::runtime_error(error_message);
+            }
+            std::string ref_allele = token[4];
+            std::string alt_allele = token[5];
+            if(snp_index.find(rsid)==snp_index.end()){
+                // No summary statistic for this SNP, so we will ignore it
+                inclusion[rsid] = false;
+            }
+            else{
+                // will do some soft checking, will issue warning if there are any problem
+                // first check if ambiguous
+                if( (ref_allele.compare("A") && alt_allele.compare("T")) ||
+                    (ref_allele.compare("a") && alt_allele.compare("t")) ||
+                    (ref_allele.compare("T") && alt_allele.compare("A")) ||
+                    (ref_allele.compare("t") && alt_allele.compare("a")) ||
+                    (ref_allele.compare("G") && alt_allele.compare("C")) ||
+                    (ref_allele.compare("g") && alt_allele.compare("c")) ||
+                    (ref_allele.compare("C") && alt_allele.compare("G")) ||
+                    (ref_allele.compare("c") && alt_allele.compare("g")))
+                {
+                    num_ambig++;
+                    inclusion[rsid] = false;
+                }
+                else{
+                    // not ambiguous, now do soft checking
+                    size_t index = snp_index[rsid];
+                    bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
+                    if(!same){
+                        fprintf(stderr, "WARNING: %s differ between target and base file\n", rsid.c_str());
+                        fprintf(stderr, "         It is advised that you check the files are \n");
+                        fprintf(stderr, "         From the same genome build\n");
+                    }
+                    inclusion[rsid] = true;
+                }
+            }
+        }
+    }
+    target_file.close();
+}
+
+// This will update the score for each individual
+void PRSice::score(const std::map<std::string, bool> &inclusion, const std::string target_name,
+                   const std::map<std::string, size_t> &snp_index, std::vector<SNP> &snp_list){
 
 }
 
