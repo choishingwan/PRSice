@@ -26,12 +26,16 @@ class Commander
         std::string bp() const{ return m_bp;};
         std::string se() const{ return m_standard_error;};
         std::string p() const{ return m_p_value;};
-        std::string ld_prefix() const{return m_ld_prefix;};
-        std::string get_gtf() const {return m_gtf;};
-        std::vector<std::string> get_target() const{return m_target; };
-        std::vector<std::string> get_bed() const {return m_bed_list;};
-        std::string get_msigdb() const{return m_msigdb; };
-        std::string get_out() const {return m_out; };
+        std::string ld_prefix() const{ return m_ld_prefix;};
+        std::string get_gtf() const { return m_gtf;};
+        std::vector<std::string> get_target() const{ return m_target; };
+        std::vector<std::string> get_bed() const { return m_bed_list;};
+        std::string get_msigdb() const{ return m_msigdb; };
+        std::string get_out() const { return m_out; };
+        size_t get_thread() const { return m_thread; };
+        double get_clump_p() const { return m_clump;};
+        double get_clump_r2() const { return m_clump_r2;};
+        size_t get_clump_kb() const { return m_clump_kb;};
 
     protected:
     private:

@@ -203,7 +203,7 @@ bool Commander::initialize(int argc, char *argv[]){
                 m_msigdb= optarg;
                 break;
             case 'o':
-                m_out = optarget;
+                m_out = optarg;
                 break;
             case 'h':
             case '?':
