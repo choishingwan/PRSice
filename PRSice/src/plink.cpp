@@ -14,6 +14,122 @@ PLINK::~PLINK(){
 		delete m_missing[i];
 	}
 }
+
+double PLINK::get_r2(const size_t i, const size_t j){
+	double r2 =0.0;
+	if(i >= m_genotype.size() || j >=m_genotype.size()) throw std::runtime_error("Out of bound error! In R2 calculation.");
+	// Crazy stuff of plink here
+	return r2;
+}
+
+void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold){
+	size_t ref_index = index_check[index];
+	for(size_t i = i_start; i < i_end && i < index_check.size(); ++i){
+		if(i != index){
+			// This is a pair of SNPs
+			double r2 = get_r2(i, index);
+			if(r2 >= r2_threshold){
+				size_t target_index = index_check[i];
+				if(snp_list[target_index].get_p_value() < snp_list[ref_index].get_p_value()) snp_list[target_index].add_clump(ref_index);
+				else snp_list[ref_index].add_clump(target_index);
+			}
+		}
+	}
+}
+
+void PLINK::clump(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold){
+	std::vector<std::thread> thread_store;
+	if((index_check.size()-1) < m_thread){
+		for(size_t i = 0; i < index_check.size(); ++i){
+			if(index_check[i]!=index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, index,i, i+1, std::ref(snp_list), std::cref(index_check), r2_threshold));
+		}
+	}
+	else{
+		int num_snp_per_thread =(int)(index_check.size()-1) / (int)m_thread;  //round down
+		int remain = (int)(index_check.size()-1) % (int)m_thread;
+		int cur_start = 0;
+		int cur_end = num_snp_per_thread;
+		for(size_t i = 0; i < m_thread; ++i){
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(index_check),r2_threshold ));
+			cur_start = cur_end+(remain>0);
+			cur_end+=num_snp_per_thread+(remain>0);
+			if(cur_end>index_check.size()) cur_end =index_check.size();
+			remain--;
+		}
+	}
+	for (size_t i = 0; i < thread_store.size(); ++i) thread_store[i].join();
+	thread_store.clear();
+}
+
+void PLINK::clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, double p_threshold, double r2_threshold, size_t kb_threshold){
+	// Go through all SNPs
+	std::deque<size_t> bp_check;
+	std::deque<size_t> index_check;
+	size_t require_bp=0, require_index=0; //this is the index on index_check
+	bool requiring=false;
+	for(size_t i = 0; i < m_snp_list.size(); ++i){
+		std::string rs=m_snp_list[i];
+		if(inclusion.find(rs)!=inclusion.end() && snp_index.find(rs)!=snp_index.end()){
+			// required SNP
+			size_t cur_loc = snp_list[snp_index.at(rs)].get_loc();
+			while(requiring && cur_loc-require_bp > kb_threshold){
+				// All genotypes are here, now calculate the P-value
+				clump(require_index, index_check, snp_list, r2_threshold);
+				// now go through the whole remaining index to check if there are any required
+				requiring = false;
+				for(size_t check = require_index+1; check< index_check.size(); ++check){
+					if(snp_list[index_check[check]].get_p_value() < p_threshold){
+						requiring = true;
+						require_index =check;
+						require_bp = snp_list[index_check[check]].get_loc();
+					}
+				}
+				if(requiring){
+					// remove SNPs in the front that are too far away
+					size_t num_remove=0;
+					for(size_t check; check < require_index; ++check){
+						if(require_bp-snp_list[index_check[check]].get_loc() > kb_threshold)num_remove++;
+						else break;
+					}
+					if(num_remove!=0) lerase(num_remove);
+				}
+			}
+			read_snp(1, true);
+			bp_check.push_back(cur_loc);
+			index_check.push_back(snp_index.at(rs));
+			if(!requiring && snp_list[index_check.back()].get_p_value() < p_threshold){
+				require_bp = cur_loc;
+				require_index = index_check.size()-1;
+			}
+		}
+		else m_bed.seekg(m_num_bytes, m_bed.cur); //This should skip 1 SNP
+	}
+	if(m_genotype.size() != 0){
+		//Still got stuff to work on
+		// keep clumping
+		while(requiring){
+			clump(require_index, index_check, snp_list, r2_threshold);
+			requiring = false;
+			for(size_t check = require_index+1; check< index_check.size(); ++check){
+				if(snp_list[index_check[check]].get_p_value() < p_threshold){
+					requiring = true;
+					require_index =check;
+					require_bp = snp_list[index_check[check]].get_loc();
+				}
+			}
+			if(requiring){
+				size_t num_remove=0;
+				for(size_t check; check < require_index; ++check){
+					if(require_bp-snp_list[index_check[check]].get_loc() > kb_threshold)num_remove++;
+					else break;
+				}
+				if(num_remove!=0) lerase(num_remove);
+			}
+		}
+	}
+	//completed
+}
+
 std::vector<int> PLINK::get_genotype(int geno) const{
 	if(geno >= m_genotype.size()){
 		std::string error_message = "Asked for "+std::to_string(geno)+" genotype but contain only "+std::to_string(m_genotype.size());
@@ -22,12 +138,7 @@ std::vector<int> PLINK::get_genotype(int geno) const{
 	std::vector<int> res(m_num_sample);
 	for(size_t i = 0; i < m_num_sample; ++i){
 		int index =(i*2)/m_bit_size;
-#ifdef __LP64__
-		int right_shift =sizeof(uint64_t)*CHAR_BIT;
-#else
-		int right_shift = sizeof(uint32_t)*CHAR_BIT;
-#endif
-		int info = m_genotype[geno][index] >> (right_shift-(i+1)*2)& THREEMASK;
+		int info = m_genotype[geno][index] >> (m_bit_size-(i+1)*2)& THREEMASK;
 		switch(info){
 			case 0:
 				res[i] = 0;
@@ -64,7 +175,7 @@ void PLINK::lerase(int num){
     m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
     m_missing.erase(m_missing.begin(), m_missing.begin()+num);
     m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
-    m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
+    //m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
     m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
     m_bp_list.erase(m_bp_list.begin(), m_bp_list.begin()+num);
     m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
@@ -73,7 +184,7 @@ void PLINK::lerase(int num){
 }
 
 //The return value should be the number of remaining SNPs
-int PLINK::read_snp(int num_snp){
+int PLINK::read_snp(int num_snp, bool ld){
     if(!m_init) throw std::runtime_error("Class uninitialize! Must initialize before use!");
     if(num_snp <= 0){
         std::string error_message = "Number of required SNPs cannot be less than 1: "+std::to_string(num_snp);
@@ -89,7 +200,7 @@ int PLINK::read_snp(int num_snp){
     	    		std::vector<std::string> token = misc::split(line);
     	    		if(token.size() >= 6){
     	    			m_chr_list.push_back(token[0]);
-    	    			m_snp_list.push_back(token[1]);
+    	    			//m_snp_list.push_back(token[1]);
     	    			int temp = misc::convert<int>(token[2]);
     	    			if(temp < 0){
     	    				std::string error_message = "Negative CM: "+line;
@@ -107,54 +218,35 @@ int PLINK::read_snp(int num_snp){
     	    		}
     	    		else throw std::runtime_error("Malformed bim file");
     	    	}else throw std::runtime_error("Malformed bim file");
-
-
-
         cur_iter++;
         char genotype_list[m_num_bytes];
         m_bed.read(genotype_list, m_num_bytes);
         size_t i_genotype = 0;
         size_t total_allele = 0;
         size_t num_missing = 0;
+        long_type *genotype = new long_type[(m_required_bit /(m_bit_size))+1];
+        long_type *missing = new long_type[(m_required_bit /(m_bit_size))+1];
+        for(size_t byte_runner= 0; byte_runner < m_num_bytes;){
 #ifdef __LP64__
-        uint64_t *genotype = new uint64_t[(m_required_bit /(m_bit_size))+1];
-        uint64_t *missing = new uint64_t[(m_required_bit /(m_bit_size))+1];
-        for(size_t byte_runner= 0; byte_runner < m_num_bytes;){
-            uint64_t current_genotypes = 0ULL;
-            for(int byte_set = 0; byte_set < sizeof(uint64_t)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set){
-                uint64_t current_byte = static_cast<uint64_t>(genotype_list[byte_runner]) << ((sizeof(uint64_t)-1)*CHAR_BIT) >> CHAR_BIT*byte_set;
-                current_genotypes |= current_byte;
-                byte_runner++;
-            }
-            uint64_t current_missing = current_genotypes & FIVEMASK;
-            uint64_t inter = (current_missing & (current_genotypes>>1)) ^ current_missing;
-            current_missing = inter | (inter << 1);
-            genotype[i_genotype] = current_genotypes;
-            missing[i_genotype] = ~current_missing;
-            total_allele += __builtin_popcountll(current_genotypes & (~current_missing));
-            num_missing +=__builtin_popcountll(current_missing);
-            i_genotype++;
-        }
+            long_type current_genotypes = 0ULL;
 #else
-        uint32_t *genotype = new uint32_t[(m_required_bit /(m_bit_size))+1];
-        uint32_t *missing = new uint32_t[(m_required_bit /(m_bit_size))+1];
-        for(size_t byte_runner= 0; byte_runner < m_num_bytes;){
-            uint32_t current_genotypes = 0UL;
-            for(int byte_set = 0; byte_set < sizeof(uint32_t)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set){
-                uint32_t current_byte = static_cast<uint32_t>(genotype_list[byte_runner]) << ((sizeof(uint32_t)-1)*CHAR_BIT) >> CHAR_BIT*byte_set;
+            long_type current_genotypes=0UL;
+#endif
+            for(int byte_set = 0; byte_set < sizeof(long_type)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set){
+            		long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> CHAR_BIT*byte_set;
                 current_genotypes |= current_byte;
                 byte_runner++;
             }
-            uint32_t current_missing = current_genotypes & FIVEMASK;
-            uint32_t inter = (current_missing & (current_genotypes>>1)) ^ current_missing;
-            current_missing = inter | (inter << 1);
-            genotype[i_genotype] = current_genotypes;
+            long_type five_masked_geno = current_genotypes & FIVEMASK;
+            long_type inter = (five_masked_geno & (current_genotypes>>1)) ^ five_masked_geno;
+            long_type current_missing = inter | (inter << 1);
+            if(!ld) genotype[i_genotype] = current_genotypes;
+            else genotype[i_genotype] = (current_genotypes^(five_masked_geno>>1))&(~current_missing);
             missing[i_genotype] = ~current_missing;
             total_allele += __builtin_popcountll(current_genotypes & (~current_missing));
             num_missing +=__builtin_popcountll(current_missing);
             i_genotype++;
         }
-#endif
         m_genotype.push_back(genotype);
         m_missing.push_back(missing);
         double maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
@@ -190,8 +282,10 @@ void PLINK::initialize(){
         throw std::runtime_error(error_message);
     }
     
-    while(std::getline(m_bim, line))
+    while(std::getline(m_bim, line)){
         if(!misc::trimmed(line).empty()) m_num_snp++;
+        m_snp_list.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+    }
     m_bim.clear();
     m_bim.seekg(0);
     m_num_bytes=ceil((double)m_num_sample/4.0);

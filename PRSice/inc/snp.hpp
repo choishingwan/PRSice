@@ -32,15 +32,23 @@ class SNP
         static std::vector<size_t> sort_by_p(const std::vector<SNP> &input);
         static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
         bool check_loc(const std::string &chr, const size_t loc, const std::string &ref_allele, const std::string &alt_allele){
-                if(chr.compare(m_chr)!=0) return false;
-                if(loc!= m_loc) return false;
-                //Check if allele is the same
-                if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)!=0) return false;
-                else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)==0){
-                        //flipping here
-                }
+        		if(chr.compare(m_chr)!=0) return false;
+          	if(loc!= m_loc) return false;
+          	//Check if allele is the same
+          	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)!=0) return false;
+         	else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)==0){
+         		//flipping here
+         		if(!m_alt_allele.empty()){
+         			std::string temp = m_alt_allele;
+         			m_alt_allele = m_ref_allele;
+         			m_ref_allele = temp;
+         		}
+         		// here, we need to flip the test statistic
+         		//TODO: work out the how to flip the test statistic
+         	}
                 return true;
         };
+        void add_clump(const size_t i) { m_clump_target.push_back(i);};
     protected:
     private:
         static size_t index_check(const std::string &c_in);

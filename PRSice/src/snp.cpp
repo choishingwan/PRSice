@@ -1,7 +1,7 @@
 #include "snp.hpp"
 
 #if defined(__LP64__) || defined(_WIN64)
-SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t* flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value), m_flags(flag), m_size_of_flag(size_of_flag)  {}
+SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint64_t* flag, const size_t size_of_flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value), m_flags(flag), m_size_of_flag(size_of_flag)  {}
 #else
 SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc, const std::string ref_allele, const std::string alt_allele, const double statistic, const double se, const double p_value, uint32_t* flag, const size_t size_of_flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele), m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se), m_p_value(p_value), m_flags(flag), m_size_of_flag(size_of_flag) {}
 #endif
@@ -29,6 +29,7 @@ SNP::SNP(){
 	m_standard_error=0.0;
 	m_p_value=0.0;
 	m_flags=nullptr;
+	m_size_of_flag =0;
 }
 
 SNP::~SNP(){}

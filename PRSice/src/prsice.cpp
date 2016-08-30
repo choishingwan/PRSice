@@ -92,23 +92,20 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     std::vector<std::string> target = c_commander.get_target();
     for(size_t i_target = 0; i_target < target.size(); ++i_target){
         std::map<std::string, bool> inclusion;
-        std::string target_bim_name = target[i]+".bim";
+        std::string target_bim_name = target[i_target]+".bim";
         get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
         // Then read in the LD file, that can either be the target file or an
         // external reference
         // This should perform the clumping, which will produce a list of SNPs
         // that are supposedly included in the final PRS
-        if(c_commander.ld_prefix()..empty()){
-            // we will perform clumping using the target file
-            // Clumping will update the m_clump_target of the SNP class
-            // And should update the inclusion index we have
-            // The region flag should also be updated such that
-            // the clump index SNP should represent the region of all the
-            // clumped SNPs
-        }
-        else{
-            // we will perform clumping using the LD file
-        }
+        std::string ld_file = (c_commander.ld_prefix().empty)? target[i_target]: c_commander.ld_prefix();
+        // Clumping will update the m_clump_target of the SNP class
+        // And should update the inclusion index we have
+        // The region flag should also be updated such that
+        // the clump index SNP should represent the region of all the
+        // clumped SNPs
+        PLINK clump = PLINK(ld_file, c_commander.get_thread());
+        clump.clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(), c_commander.get_clump_r2(), c_commander.get_clump_kb());
         // So technically, from here, we just need to perform the PRS with
         // the inclusion map
 
@@ -126,6 +123,7 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
         throw std::runtime_error(error_message);
     }
     size_t num_ambig=0;
+    std::string line;
     while(std::getline(target_file, line)){
         misc::trim(line);
         if(!line.empty()){
@@ -149,11 +147,7 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
             }
             std::string ref_allele = token[4];
             std::string alt_allele = token[5];
-            if(snp_index.find(rsid)==snp_index.end()){
-                // No summary statistic for this SNP, so we will ignore it
-                inclusion[rsid] = false;
-            }
-            else{
+            if(snp_index.find(rsid)!=snp_index.end()){
                 // will do some soft checking, will issue warning if there are any problem
                 // first check if ambiguous
                 if( (ref_allele.compare("A") && alt_allele.compare("T")) ||
@@ -166,11 +160,10 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
                     (ref_allele.compare("c") && alt_allele.compare("g")))
                 {
                     num_ambig++;
-                    inclusion[rsid] = false;
                 }
                 else{
                     // not ambiguous, now do soft checking
-                    size_t index = snp_index[rsid];
+                    size_t index = snp_index.at(rsid);
                     bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
                     if(!same){
                         fprintf(stderr, "WARNING: %s differ between target and base file\n", rsid.c_str());
