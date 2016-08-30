@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <map>
+#include <tuple>
 #include "misc.hpp"
 
 class Region {

@@ -7,7 +7,7 @@
 
 #include "../inc/region.hpp"
 
-Region::Region() {
+Region::Region(){
 	// TODO Auto-generated constructor stub
 	m_bit_size = CHAR_BIT;
 }
@@ -25,9 +25,10 @@ Region::~Region() {
 			size_t region_size = m_region_list[i].size();
 			while(m_index[i]< region_size){
                 // do the checking
-				std::string region_chr = std::get<0>(m_region_list[m_index[i]]);
-				size_t region_start = std::get<1>(m_region_list[m_index[i]]);
-				size_t region_end = std::get<2>(m_region_list[m_index[i]]);
+				boundary current_bound = m_region_list[i][m_index[i]];
+				std::string region_chr = std::get<0>(current_bound);
+				size_t region_start = std::get<1>(current_bound);
+				size_t region_end = std::get<2>(current_bound);
 				if(chr.compare(region_chr) != 0) m_index[i]++;
 				else{ // same chromosome
 					if(region_start <= loc && region_end >=loc){
