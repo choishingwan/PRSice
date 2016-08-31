@@ -98,13 +98,14 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
         // external reference
         // This should perform the clumping, which will produce a list of SNPs
         // that are supposedly included in the final PRS
-        std::string ld_file = (c_commander.ld_prefix().empty)? target[i_target]: c_commander.ld_prefix();
+        std::string ld_file = (c_commander.ld_prefix().empty())? target[i_target]: c_commander.ld_prefix();
         // Clumping will update the m_clump_target of the SNP class
         // And should update the inclusion index we have
         // The region flag should also be updated such that
         // the clump index SNP should represent the region of all the
         // clumped SNPs
-        PLINK clump = PLINK(ld_file, c_commander.get_thread());
+        PLINK clump(ld_file, c_commander.get_thread());
+        clump.initialize();
         clump.clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(), c_commander.get_clump_r2(), c_commander.get_clump_kb());
         // So technically, from here, we just need to perform the PRS with
         // the inclusion map

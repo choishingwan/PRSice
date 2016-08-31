@@ -19,6 +19,7 @@
 #include <map>
 #include <limits.h>
 #include <vector>
+#include <emmintrin.h>
 #include "misc.hpp"
 #include "snp.hpp"
 
@@ -48,12 +49,13 @@ public:
     int get_last_bp() const{return m_bp_list.back();};
     void clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index,
     					double p_threshold, double r2_threshold, size_t kb_threshold);
+    double get_r2(const size_t i, const size_t j);
 private:
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
     void clump(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold);
     void compute_clump(const size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold);
     bool m_init;
-    double get_r2(const size_t i, const size_t j);
+
 #if defined(__LP64__)
     typedef uint64_t long_type;
 #else
@@ -78,15 +80,33 @@ private:
     std::deque<double> m_maf;
     std::deque<long_type*> m_genotype;
     std::deque<long_type*> m_missing;
+    std::deque<size_t> m_num_missing;
 #if defined(__LP64__) || defined(_WIN64)
 	#if defined(_WIN64)
 		#define __LP64__
 	#endif
     // LP64 machine, OS X or Linux
-    const long_type FIVEMASK = ((~0LLU) / 3);
+	#define ZEROLU 0LLU
+	#define FIVEMASK ((~ZEROLU) / 3)
+
     const long_type THREE = 3LLU;
     const long_type THREEMASK = 0x3333333333333333LLU;
     const long_type OFMASK = 0x0f0f0f0f0f0f0f0fLLU;
+    const long_type AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
+    const long_type ONEZEROMASK = 0x0101010101010101LLU;
+	#define BITCT 64
+	#define VEC_BYTES 16
+	#define VEC_BITS (VEC_BYTES * 8)
+    typedef union {
+        __m128 vf;
+		__m128i vi;
+        __m128d vd;
+      	uintptr_t u8[VEC_BITS / BITCT];
+       	double d8[VEC_BYTES / sizeof(double)];
+        	float f4[VEC_BYTES / sizeof(float)];
+      	uint32_t u4[VEC_BYTES / sizeof(int32_t)];
+      } __univec;
+
 #else
     // 32-bit machine, Windows or Linux or OS X
     const long_type FIVEMASK = ((~0LU) / 3);
@@ -96,6 +116,26 @@ private:
     	const long_type ONEZEROMASK = 0x01010101;
     	const long_type AAAAMASK = 0xaaaaaaaa;
 #endif
-    
+    	//code from http://stackoverflow.com/a/17355341
+    	static inline int popcnt128(__m128i n) {
+    	    const __m128i n_hi = _mm_unpackhi_epi64(n, n);
+    	    #ifdef _MSC_VER
+    	        return __popcnt64(_mm_cvtsi128_si64(n)) + __popcnt64(_mm_cvtsi128_si64(n_hi));
+    	    #else
+    	        // I modified this into builtin_popcountll
+    	        return __builtin_popcountll(_mm_cvtsi128_si64(n)) + __builtin_popcountll(_mm_cvtsi128_si64(n_hi));
+    	    #endif
+    	}
+    	void ld_dot_prod_batch(__m128i* vec1, __m128i* vec2, __m128i* mask1, __m128i* mask2, int32_t* return_vals, uint32_t iters);
+    	uint32_t ld_missing_ct_intersect(long_type* lptr1, long_type* lptr2, uintptr_t word12_ct, uintptr_t word12_rem, uintptr_t lshift_last);
+    	static uint32_t popcount2_long(uintptr_t val) {
+    	#ifdef __LP64__
+    		val = (val & 0x3333333333333333LLU) + ((val >> 2) & 0x3333333333333333LLU);
+    		return (((val + (val >> 4)) & 0x0f0f0f0f0f0f0f0fLLU) * 0x0101010101010101LLU) >> 56;
+    	#else
+    		val = (val & 0x33333333) + ((val >> 2) & 0x33333333);
+    		return (((val + (val >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
+    	#endif
+    	}
 };
 #endif /* plink_hpp */
