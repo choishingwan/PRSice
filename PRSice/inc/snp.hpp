@@ -35,8 +35,8 @@ class SNP
         		if(chr.compare(m_chr)!=0) return false;
           	if(loc!= m_loc) return false;
           	//Check if allele is the same
-          	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)!=0) return false;
-         	else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_alt_allele)==0){
+          	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)!=0) return false; // not possible even after flipping
+         	else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)==0){ // flipping can be performed
          		//flipping here
          		if(!m_alt_allele.empty()){
          			std::string temp = m_alt_allele;
@@ -46,9 +46,19 @@ class SNP
          		// here, we need to flip the test statistic
          		//TODO: work out the how to flip the test statistic
          	}
-                return true;
+          	return true;
         };
         void add_clump(const size_t i) { m_clump_target.push_back(i);};
+        void add_clump( std::vector<size_t> &i){m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() );};
+        bool clumped() const{return m_clumped;};
+        void set_clumped() { m_clumped = true;};
+        void clump_all(std::vector<SNP> &snp_list){
+        		for(size_t i = 0; i < m_clump_target.size(); ++i){
+        			snp_list[i].set_clumped();
+        			// update flag
+        			for(size_t j = 0; j < m_size_of_flag; ++j) m_flags[j] |= snp_list[i].m_flags[j];
+        		}
+        }
     protected:
     private:
         static size_t index_check(const std::string &c_in);
@@ -62,6 +72,7 @@ class SNP
         double m_stat;
         double m_standard_error;
         double m_p_value;
+        bool m_clumped = false;
         std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
 #if defined(__LP64__) || defined(_WIN64)
         uint64_t *m_flags;

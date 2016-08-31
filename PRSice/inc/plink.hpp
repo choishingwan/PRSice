@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
+#include <mutex>
 #include <deque>
 #include <map>
 #include <limits.h>
@@ -49,10 +50,12 @@ public:
     int get_last_bp() const{return m_bp_list.back();};
     void clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index,
     					double p_threshold, double r2_threshold, size_t kb_threshold);
-    double get_r2(const size_t i, const size_t j);
+
 private:
+    static std::mutex clump_mtx;
+    double get_r2(const size_t i, const size_t j);
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
-    void clump(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold);
+    void clump_thread(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold);
     void compute_clump(const size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold);
     bool m_init;
 

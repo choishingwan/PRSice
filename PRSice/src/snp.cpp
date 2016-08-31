@@ -42,12 +42,12 @@ size_t SNP::index_check(const std::string &c_in){
 
 size_t SNP::index_check(const std::string &c_in, const std::vector<std::string> &c_header, const std::string &typeOfError){
     for(size_t i = 0; i < c_header.size(); ++i){
-        if(c_in.compare(c_header[i])){
+        if(c_in.compare(c_header[i])==0){
             return i;
         }
     }
     std::string error_message = typeOfError+": No "+c_in+" colume in input data";
-    if(typeOfError.compare("ERROR")) throw std::runtime_error(error_message);
+    if(typeOfError.compare("ERROR")==0) throw std::runtime_error(error_message);
     else fprintf(stderr, "%s\n", error_message.c_str());
     return -1; //Cannot find the index
 }
@@ -58,6 +58,16 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
     // Absent field = -1
     // Here we will also check if the field are actually within the file
     std::vector<int> result(9,-1);
+    fprintf(stderr,"Column Headers\n");
+    fprintf(stderr,"==============================\n");
+    if(!c_commander.chr().empty()) fprintf(stderr,"Chr            : %s\n", c_commander.chr().c_str());
+    fprintf(stderr,"SNP            : %s\n", c_commander.snp().c_str());
+    if(!c_commander.bp().empty()) fprintf(stderr,"BP             : %s\n", c_commander.bp().c_str());
+    fprintf(stderr,"Ref Allele     : %s\n", c_commander.ref().c_str());
+    if(!c_commander.alt().empty()) fprintf(stderr,"Alt Allele     : %s\n", c_commander.alt().c_str());
+    if(!c_commander.statistic().empty()) fprintf(stderr,"Statistic      : %s\n", c_commander.statistic().c_str());
+    if(!c_commander.se().empty()) fprintf(stderr,"Standard Error : %s\n", c_commander.se().c_str());
+    fprintf(stderr,"P-value        : %s\n", c_commander.p().c_str());
     if(c_commander.index()){
         //Index was provided, check if the index is correct, then return the vector
         result[0] = index_check(c_commander.chr());

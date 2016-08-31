@@ -3,6 +3,8 @@
 void PRSice::process(const std::string &c_input, const Commander &c_commander, Region &region){
 	// As we don't use the ptr_vector, we need to read the SNP here
 	// otherwise the SNP might go out of scope
+
+    std::vector<int> index = SNP::get_index(c_commander, c_input);
 	std::vector<SNP> snp_list;
     std::map<std::string, size_t> snp_index;
     std::ifstream snp_file;
@@ -12,7 +14,6 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     		throw std::runtime_error(error_message);
     }
     std::string line;
-    std::vector<int> index = SNP::get_index(c_commander, c_input);
     int max_index = index.back();
     size_t num_duplicated = 0;
     size_t num_stat_not_convertible = 0;
@@ -21,12 +22,13 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
 	// so ambiguous check will be when reading the LD file
 	// same for flipping
 	bool se_error = false;
+	if(!c_commander.index()) std::getline(snp_file, line);
     while(std::getline(snp_file, line)){
     		misc::trim(line);
     		if(!line.empty()){
     			std::vector<std::string> token = misc::split(line);
     		   	if(token.size() <= max_index) throw std::runtime_error("More index than column in data");
-    		   	if(snp_index.find(token[index[4]])==snp_index.end()) num_duplicated++;
+    		   	if(snp_index.find(token[index[4]])!=snp_index.end()) num_duplicated++;
     		   	else{
     		   		std::string rs_id = token[index[4]];
     		   		std::string chr = "";
@@ -72,25 +74,25 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
 #if defined(__LP64__) || defined(_WIND64)
     		    		uint64_t* flag = region.check(chr, loc);
 #endif
+    		    		snp_index[rs_id] =snp_list.size();
     		      	snp_list.push_back(SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.check(chr, loc), region.size()));
     		   	}
     		}
     }
     snp_file.close();
     fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
-    fprintf(stderr, "Number of SNPs included   : %zu\n", snp_list.size());
+    fprintf(stderr, "Number of SNPs from base  : %zu\n", snp_list.size());
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 
-    // Will do the selection on the fly?
-    // Note: PLINK Clumping will discard any SNPs that doesn't pass clump-p1
-	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
     // Read target file first, only include SNPs that are also in the target
     // can also perform the ambiguous SNP removal at this point
     // Therefore, anything happened from this point onward should be target
     // specific
     std::vector<std::string> target = c_commander.get_target();
     for(size_t i_target = 0; i_target < target.size(); ++i_target){
+    		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
+    	    fprintf(stderr,"==============================\n");
         std::map<std::string, bool> inclusion;
         std::string target_bim_name = target[i_target]+".bim";
         get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
@@ -110,7 +112,6 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
         // So technically, from here, we just need to perform the PRS with
         // the inclusion map
 
-
     }
 
 }
@@ -123,7 +124,7 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
         std::string error_message = "Cannot open target bim file: "+target_bim_name;
         throw std::runtime_error(error_message);
     }
-    size_t num_ambig=0;
+    size_t num_ambig=0, not_found=0;
     std::string line;
     while(std::getline(target_file, line)){
         misc::trim(line);
@@ -151,14 +152,14 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
             if(snp_index.find(rsid)!=snp_index.end()){
                 // will do some soft checking, will issue warning if there are any problem
                 // first check if ambiguous
-                if( (ref_allele.compare("A") && alt_allele.compare("T")) ||
-                    (ref_allele.compare("a") && alt_allele.compare("t")) ||
-                    (ref_allele.compare("T") && alt_allele.compare("A")) ||
-                    (ref_allele.compare("t") && alt_allele.compare("a")) ||
-                    (ref_allele.compare("G") && alt_allele.compare("C")) ||
-                    (ref_allele.compare("g") && alt_allele.compare("c")) ||
-                    (ref_allele.compare("C") && alt_allele.compare("G")) ||
-                    (ref_allele.compare("c") && alt_allele.compare("g")))
+                if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
+                    (ref_allele.compare("a")==0 && alt_allele.compare("t")==0) ||
+                    (ref_allele.compare("T")==0 && alt_allele.compare("A")==0) ||
+                    (ref_allele.compare("t")==0 && alt_allele.compare("a")==0) ||
+                    (ref_allele.compare("G")==0 && alt_allele.compare("C")==0) ||
+                    (ref_allele.compare("g")==0 && alt_allele.compare("c")==0) ||
+                    (ref_allele.compare("C")==0 && alt_allele.compare("G")==0) ||
+                    (ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
                 {
                     num_ambig++;
                 }
@@ -174,9 +175,16 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
                     inclusion[rsid] = true;
                 }
             }
+            else {
+            		not_found++;
+            		std::cerr << rsid << std::endl;
+            }
         }
     }
     target_file.close();
+    if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
+    if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
+    fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
 }
 
 // This will update the score for each individual
