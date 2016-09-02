@@ -6,6 +6,7 @@
 //  Copyright © 2016 Shing Wan Choi. All rights reserved.
 //
 
+#include "plink.hpp"
 
 #define MULTIPLEX_LD 1920
 #define BITCT 64
