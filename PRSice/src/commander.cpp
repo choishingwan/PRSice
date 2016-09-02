@@ -14,6 +14,7 @@ bool Commander::initialize(int argc, char *argv[]){
         {"ancestry",required_argument,NULL,'a'},
         {"pheno_file",required_argument,NULL,'f'},
         {"ld",required_argument,NULL,'L'},
+        {"beta",required_argument,NULL,0},
         {"chr",required_argument,NULL,0},
         {"A1",required_argument,NULL,0},
         {"A2",required_argument,NULL,0},
@@ -99,6 +100,10 @@ bool Commander::initialize(int argc, char *argv[]){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
                 }
+                else if(command.compare("beta")==0){
+                		std::vector<std::string> token = misc::split(optarg, ", ");
+                		for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
+                	}
                 else if(command.compare("gen_bed")==0) m_gen_bed = true;
                 break;
             case 'b':
@@ -231,6 +236,25 @@ bool Commander::initialize(int argc, char *argv[]){
         fprintf(stderr, "ERROR: Output prefix is empty, will set it to default\n");
         m_out = "PRSice";
     }
+    // add default binary
+    if(m_target_is_binary.size()<m_target.size() && m_target.size()==1){
+    		 m_target_is_binary.push_back(true); // default is binary
+    }
+    else if(m_target_is_binary.size() != m_target.size()){
+		error_message.append("ERROR: Number of binary target doesn't match number of target file!\n");
+		error_message.append("       Default value only work when all target file are binary and\n");
+		error_message.append("       when --binary_target is not used\n");
+    }
+    if(m_use_beta.size()<m_base.size() && m_base.size() ==1){
+    		for(size_t i = m_use_beta.size(); i < m_base.size(); ++i){
+    			m_use_beta.push_back(false); // default is binary
+    		}
+    }
+    else if(m_use_beta.size() != m_base.size()){
+		error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
+		error_message.append("       Default value only work when all base file are using OR and\n");
+		error_message.append("       when --beta is not used\n");
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }
@@ -251,7 +275,12 @@ void Commander::usage(){
     fprintf(stderr, "Required Inputs:\n");
     fprintf(stderr, "         -b | --base         \n");
     fprintf(stderr, "         -t | --target       \n");
-    fprintf(stderr, "         --binary_target     \n");
+    fprintf(stderr, "         --binary_target     Indication of whether if the target is binary\n");
+    fprintf(stderr, "                             or not. default is T. Should be of the same \n");
+    fprintf(stderr, "                             length as target \n");
+    fprintf(stderr, "         --beta              Indication of whether if the test statistic\n");
+    fprintf(stderr, "                             is beta instead of OR. default is F. Should\n");
+    fprintf(stderr, "                             be of the same length as base \n");
     fprintf(stderr, "\nOptions\n");
     fprintf(stderr, "         -f | --pheno_file   \n");
     fprintf(stderr, "         -L | --ld           \n");
