@@ -39,8 +39,8 @@ public:
         m_snp_iter=0;
     };
     ~PLINK();
-    void initialize();
-    void initialize(std::map<std::string, bool> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index);
+    void initialize(bool bim_read=false);
+    void initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, bool bim_read=false);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
     size_t get_num_snp() const{return m_num_snp; };
@@ -51,9 +51,9 @@ public:
     };
     int get_first_bp() const{ return m_bp_list.front(); };
     int get_last_bp() const{return m_bp_list.back();};
-    void clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index,
+    void clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index,
     					double p_threshold, double r2_threshold, size_t kb_threshold);
-
+    void get_score(const std::map<std::string, size_t> &inclusion, const std::vector<SNP> &snp_list, std::vector<double> &score);
 private:
     static std::mutex clump_mtx;
     double get_r2(const size_t i, const size_t j, bool adjust=false);
@@ -77,6 +77,8 @@ private:
     size_t m_bit_size;
     size_t m_required_bit;
     size_t m_thread;
+    bool m_bim_read=false;
+    bool m_bim_score_open=false; // might have better way, use this for now
     std::deque<std::string> m_chr_list;
     std::deque<std::string> m_snp_list;
     std::deque<size_t> m_cm_list;

@@ -6,7 +6,6 @@
 //  Copyright © 2016 Shing Wan Choi. All rights reserved.
 //
 
-#include "plink.hpp"
 
 #define MULTIPLEX_LD 1920
 #define BITCT 64
@@ -302,8 +301,6 @@ double PLINK::get_r2(const size_t i, const size_t j){
 #endif
 
 void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold){
-
-
 	size_t ref_index = index_check[index];
 	std::vector<size_t> self_index; // index we want to push into the current index
 	for(size_t i = i_start; i < i_end && i < index_check.size(); ++i){
@@ -320,7 +317,6 @@ void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, std::vect
 }
 
 void PLINK::clump_thread(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold){
-
 	if(index_check.size() <=1 ) return; // nothing to do
 	std::vector<std::thread> thread_store;
 	if((index_check.size()-1) < m_thread){
@@ -345,7 +341,7 @@ void PLINK::clump_thread(const size_t index, const std::deque<size_t> &index_che
 	thread_store.clear();
 }
 
-void PLINK::clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, double p_threshold, double r2_threshold, size_t kb_threshold){
+void PLINK::clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, double p_threshold, double r2_threshold, size_t kb_threshold){
 	// Go through all SNPs
 	std::deque<size_t> snp_index_check; // Record of index of snp_list
 	std::string prev_chr = ""; // Indication of current chromosome
@@ -474,7 +470,7 @@ void PLINK::clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &sn
 
 
 	// Now get the list of SNPs that we want to retain (in index)
-	std::map<std::string, bool> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
+	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
 	inclusion.clear();
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
 	for(size_t i = 0; i < p_sort_order.size(); ++i){
@@ -482,17 +478,17 @@ void PLINK::clumping(std::map<std::string, bool> inclusion, std::vector<SNP> &sn
 				!snp_list[p_sort_order[i]].clumped() &&
 				snp_list[p_sort_order[i]].get_p_value() < p_threshold){
 			snp_list[p_sort_order[i]].clump_all(snp_list);
-			inclusion[snp_list[p_sort_order[i]].get_rs_id()]=true;
+			inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
 		}
 		else if(snp_list[p_sort_order[i]].get_p_value() >= p_threshold) break;
 	}
 	//Anything remaining should be the required SNPs
 	//This is for testing
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
-	for(std::map<std::string, bool>::iterator iter = inclusion.begin();
-			iter != inclusion.end(); ++iter){
-		//std::cout << iter->first << std::endl;
-	}
+//	for(std::map<std::string, bool>::iterator iter = inclusion.begin();
+//			iter != inclusion.end(); ++iter){
+//		//std::cout << iter->first << std::endl;
+//	}
 }
 
 std::vector<int> PLINK::get_genotype(int geno) const{
@@ -549,16 +545,19 @@ void PLINK::lerase(int num){
     		m_num_missing.clear();
     }
     else{
-		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
-		m_missing.erase(m_missing.begin(), m_missing.begin()+num);
-		m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
-		//m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
-		m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
-		m_bp_list.erase(m_bp_list.begin(), m_bp_list.begin()+num);
-		m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
-		m_alt_allele.erase(m_alt_allele.begin(), m_alt_allele.begin()+num);
-		m_maf.erase(m_maf.begin(), m_maf.begin()+num);
-		m_num_missing.erase(m_num_missing.begin(), m_num_missing.begin()+num);
+    		if(m_bim_read){
+
+    			m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
+    			//m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
+    			m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
+    			m_bp_list.erase(m_bp_list.begin(), m_bp_list.begin()+num);
+    			m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
+    			m_alt_allele.erase(m_alt_allele.begin(), m_alt_allele.begin()+num);
+    			m_maf.erase(m_maf.begin(), m_maf.begin()+num);
+    			m_num_missing.erase(m_num_missing.begin(), m_num_missing.begin()+num);
+    		}
+    		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
+    		m_missing.erase(m_missing.begin(), m_missing.begin()+num);
     }
 }
 
@@ -573,30 +572,32 @@ int PLINK::read_snp(int num_snp, bool ld){
     //First get the information of the SNPs
     size_t cur_iter = 0;
     for(;m_snp_iter < m_num_snp & cur_iter<num_snp; ++m_snp_iter){
-    		std::getline(m_bim, line);
-    		misc::trim(line);
-    	    	if(!line.empty()){
-    	    		std::vector<std::string> token = misc::split(line);
-    	    		if(token.size() >= 6){
-    	    			m_chr_list.push_back(token[0]);
-    	    			//m_snp_list.push_back(token[1]);
-    	    			int temp = misc::convert<int>(token[2]);
-    	    			if(temp < 0){
-    	    				std::string error_message = "Negative CM: "+line;
-    	    				throw std::runtime_error(error_message);
+    		if(m_bim_read){
+    			std::getline(m_bim, line);
+    			misc::trim(line);
+    	    		if(!line.empty()){
+    	    			std::vector<std::string> token = misc::split(line);
+    	    			if(token.size() >= 6){
+    	    				m_chr_list.push_back(token[0]);
+    	    				//m_snp_list.push_back(token[1]);
+    	    				int temp = misc::convert<int>(token[2]);
+    	    				if(temp < 0){
+    	    					std::string error_message = "Negative CM: "+line;
+    	    					throw std::runtime_error(error_message);
+    	    				}
+    	    				m_cm_list.push_back(temp);
+    	    				temp = misc::convert<int>(token[3]);
+    	    				if(temp < 0){
+    	    					std::string error_message = "Negative BP: "+line;
+    	    					throw std::runtime_error(error_message);
+    	    				}
+    	    				m_bp_list.push_back(temp);
+    	    				m_ref_allele.push_back(token[4]);
+    	    				m_alt_allele.push_back(token[5]);
     	    			}
-    	    			m_cm_list.push_back(temp);
-    	    			temp = misc::convert<int>(token[3]);
-    	    			if(temp < 0){
-    	    				std::string error_message = "Negative BP: "+line;
-    	    				throw std::runtime_error(error_message);
-    	    			}
-    	    			m_bp_list.push_back(temp);
-    	    			m_ref_allele.push_back(token[4]);
-    	    			m_alt_allele.push_back(token[5]);
-    	    		}
-    	    		else throw std::runtime_error("Malformed bim file");
-    	    	}else throw std::runtime_error("Malformed bim file");
+    	    			else throw std::runtime_error("Malformed bim file");
+    	    		}else throw std::runtime_error("Malformed bim file");
+    		}
         cur_iter++;
         char genotype_list[m_num_bytes];
         m_bed.read(genotype_list, m_num_bytes);
@@ -650,7 +651,7 @@ int PLINK::read_snp(int num_snp, bool ld){
 }
 
 
-void PLINK::initialize(){
+void PLINK::initialize(bool bim_read){
     std::string fam_name = m_prefix+".fam";
     std::string bim_name = m_prefix+".bim";
     std::string bed_name = m_prefix+".bed";
@@ -679,17 +680,20 @@ void PLINK::initialize(){
         if(!misc::trimmed(line).empty()) m_num_snp++;
         m_snp_list.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
     }
-    m_bim.clear();
-    m_bim.seekg(0);
+    if(bim_read){
+    		m_bim.clear();
+    		m_bim.seekg(0);
+    }
+    else m_bim.close();
     m_num_bytes=ceil((double)m_num_sample/4.0);
     m_required_bit = m_num_sample*2;
     m_snp_iter=0;
+    m_bim_read = bim_read;
     m_init = true;
 }
 
-
 //This initialization will also perform the filtering and flipping
-void PLINK::initialize(std::map<std::string, bool> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index){
+void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, bool bim_read){
     std::string fam_name = m_prefix+".fam";
     std::string bim_name = m_prefix+".bim";
     std::string bed_name = m_prefix+".bed";
@@ -761,7 +765,7 @@ void PLINK::initialize(std::map<std::string, bool> &inclusion, std::vector<SNP> 
         					fprintf(stderr, "         It is advised that you check the files are \n");
         					fprintf(stderr, "         From the same genome build\n");
         				}
-        				inclusion[rsid] = true;
+        				inclusion[rsid] = snp_index.at(rsid);
         			}
         		}
         		else {
@@ -773,13 +777,58 @@ void PLINK::initialize(std::map<std::string, bool> &inclusion, std::vector<SNP> 
 	if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
 	if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
  	fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
-    m_bim.clear();
-    m_bim.seekg(0);
+ 	if(bim_read){
+ 		m_bim.clear();
+    		m_bim.seekg(0);
+ 	}
+ 	else m_bim.close();
     m_num_bytes=ceil((double)m_num_sample/4.0);
     m_required_bit = m_num_sample*2;
     m_snp_iter=0;
+    m_bim_read=bim_read;
     m_init = true;
 }
+
+void PLINK::get_score(const std::map<std::string, size_t> &inclusion, const std::vector<SNP> &snp_list, std::vector<double> &score){
+	// m_bim should be closed or at the front
+	if(!m_bim_read && ! m_bim_score_open){
+		std::string bim_name = m_prefix+".bim";
+		m_bim.open(bim_name.c_str());
+		if(!m_bim.is_open()){
+			std::string error_message = "Cannot open bim file: "+bim_name+" which is strange. Make sure you don't delete file when you are running PRSice";
+			throw std::runtime_error(error_message);
+		}
+		m_bim_score_open=true;
+	}
+	else{
+		m_bim_score_open=true;
+	}
+	// Then we can read the whole file to get the included SNPs
+	size_t num_read = 0;
+	std::string line;
+	if(score.size()==0) score=std::vector<double>(m_num_sample);
+	while(std::getline(m_bim, line)){
+		misc::trim(line);
+		if(!line.empty()){
+			std::vector<std::string> token = misc::split(line);
+			if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+			if(inclusion.find(token[1])!=inclusion.end()){
+				read_snp(1, false);
+				// get the score here
+				for(size_t i =0; i < m_num_sample; ++i){
+					int index =(i*2)/m_bit_size;
+					long_type info = (m_genotype[0][index] >> (i*2) )& THREE;
+					long_type miss = (m_missing[0][index] >> (i*2) )& THREE;
+					if(miss==3) score[i] = snp_list.at(inclusion.at(token[1])).score((int)info);
+				}
+				// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
+				lerase(1);
+			}
+			else m_bed.seekg(m_num_bytes, m_bed.cur);
+		}
+	}
+}
+
 
 bool PLINK::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
     BIT.open(s.c_str(), std::ios::in | std::ios::binary);

@@ -1,6 +1,6 @@
 #include "prsice.hpp"
 
-void PRSice::process(const std::string &c_input, const Commander &c_commander, Region &region){
+void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
 	// As we don't use the ptr_vector, we need to read the SNP here
 	// otherwise the SNP might go out of scope
 
@@ -37,16 +37,26 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     		   		if(index[1] >= 0) ref_allele = token[index[1]];
     		   		std::string alt_allele = "";
     		   		if(index[2] >= 0) alt_allele = token[index[2]];
+		    		double pvalue = 0.0;
+		    		if(index[7] >= 0){
+		    			try{
+		    				pvalue = misc::convert<double>(token[index[7]]);
+		    			}
+		    			catch(const std::runtime_error &error){
+		    				num_p_not_convertible++;
+		    			}
+		    		}
     		   		double stat = 0.0;
     		   		if(index[3] >= 0){
     		   			//Check if it is double
     		   			try{
     		   				stat = misc::convert<double>(token[index[3]]);
+    		   				if(!beta) stat = log(stat);
     		   			}
     		   			catch(const std::runtime_error& error){ //we know only runtime error is throw
     		   				num_stat_not_convertible++;
     		        		}
-    		   		}
+    		   		}else stat = pvalue;
     		   		double se = 0.0;
     		    		if(index[6] >= 0){
     		    			try{
@@ -54,15 +64,6 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     		    			}
     		    			catch(const std::runtime_error &error){
     		    				se_error = true;
-    		    			}
-    		    		}
-    		    		double pvalue = 0.0;
-    		    		if(index[7] >= 0){
-    		    			try{
-    		    				pvalue = misc::convert<double>(token[index[7]]);
-    		    			}
-    		    			catch(const std::runtime_error &error){
-    		    				num_p_not_convertible++;
     		    			}
     		    		}
     		    		size_t loc = 0;
@@ -99,7 +100,7 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     for(size_t i_target = 0; i_target < target.size(); ++i_target){
     		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
     	    fprintf(stderr,"==============================\n");
-        std::map<std::string, bool> inclusion;
+        std::map<std::string, size_t> inclusion;
         std::string target_bim_name = target[i_target]+".bim";
 //        get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
         // Then read in the LD file, that can either be the target file or an
@@ -123,14 +124,65 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
         		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
         }
         clump.clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(), c_commander.get_clump_r2(), c_commander.get_clump_kb());
-        // So technically, from here, we just need to perform the PRS with
-        // the inclusion map
+        // From here, inclusion include the SNPs that we want to use for PRS
 
+        double bound_start = c_commander.get_lower();
+        double bound_end = c_commander.get_upper();
+        double bound_inter = c_commander.get_inter();
+        std::vector<double> prs_score;
+        // Each time, only read SNPs under the boundary and perform the analysis
+        double current_upper = bound_start;
+        double current_lower = 0.0;
+        size_t num_snp = 0; // The number of SNPs included so far
+        for(;current_upper<bound_end; current_upper+=bound_inter){
+            fprintf(stderr,"\rCalculating cutoff %f", current_upper);
+        		// will add anything from (lower, upper]
+        		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, current_upper, num_snp);
+        		current_lower = current_upper;
+        		// This should update the score
+        		//TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
+        		if(reg){
+					std::ofstream test;
+					std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
+					// TODO: The rest should be here
+					test.open(test_name.c_str());
+					for(size_t i = 0; i < prs_score.size(); ++i){
+						test << prs_score[i] << std::endl;
+					}
+					test.close();
+        		}
+        }
+        if(current_upper != bound_end){
+            fprintf(stderr,"\rCalculating cutoff %f", bound_end);
+        		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, bound_end, num_snp);
+        }
+        fprintf(stderr, "\n");
     }
-
 }
 
-void PRSice::update_inclusion(std::map<std::string, bool> &inclusion, const std::string &target_bim_name,
+// basically update the score vector to contain the new polygenic score
+bool PRSice::score(const std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list,
+		const std::string &target, std::vector<double> &prs_score,
+		double threshold_lower, double threshold_upper, size_t &num_snp){
+	// Here we will make a different inclusion for the inclusion
+	if(threshold_lower==threshold_upper) return false; //nothing to do here
+	std::map<std::string, size_t>::const_iterator i_inclusion;
+	std::map<std::string, size_t> cur_inclusion;
+	for(i_inclusion = inclusion.begin(); i_inclusion!=inclusion.end(); ++i_inclusion){
+		double cur_p = snp_list[i_inclusion->second].get_p_value();
+		if(cur_p < threshold_upper && cur_p >= threshold_lower){
+			cur_inclusion[i_inclusion->first]=i_inclusion->second;
+			num_snp++;
+		}
+	}
+	if(cur_inclusion.size()==0) return false;
+	PLINK prs(target);
+	prs.initialize();
+	prs.get_score(cur_inclusion, snp_list, prs_score);
+	return true;
+}
+
+void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &target_bim_name,
                        std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index){
     std::ifstream target_file;
     target_file.open(target_bim_name.c_str());
@@ -187,7 +239,7 @@ void PRSice::update_inclusion(std::map<std::string, bool> &inclusion, const std:
                         fprintf(stderr, "         It is advised that you check the files are \n");
                         fprintf(stderr, "         From the same genome build\n");
                     }
-                    inclusion[rsid] = true;
+                    inclusion[rsid] = snp_index.at(rsid);
                 }
             }
             else {
@@ -202,11 +254,6 @@ void PRSice::update_inclusion(std::map<std::string, bool> &inclusion, const std:
     fprintf(stderr, "Final number of SNPs      : %zu\n", inclusion.size());
 }
 
-// This will update the score for each individual
-void PRSice::score(const std::map<std::string, bool> &inclusion, const std::string target_name,
-                   const std::map<std::string, size_t> &snp_index, std::vector<SNP> &snp_list){
-
-}
 
 void PRSice::run(const Commander &c_commander, Region &region){
     std::vector<std::string> base = c_commander.get_base();
@@ -217,7 +264,7 @@ void PRSice::run(const Commander &c_commander, Region &region){
         for(size_t i = 0; i < num_base; ++i){
             //We process each base case independently
         		region.reset();
-            process(base[i], c_commander, region);
+            process(base[i], c_commander.get_base_binary(i), c_commander, region);
         }
     }
 }

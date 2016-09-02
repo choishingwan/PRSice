@@ -36,39 +36,61 @@ class SNP
         		if(chr.compare(m_chr)!=0) return false;
           	if(loc!= m_loc) return false;
           	//Check if allele is the same
-          	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)!=0) return false; // not possible even after flipping
-         	else if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)==0){ // flipping can be performed
-         		//flipping here
-         		if(!m_alt_allele.empty()){
-         			std::string temp = m_alt_allele;
-         			m_alt_allele = m_ref_allele;
-         			m_ref_allele = temp;
-         		}
-         		// here, we need to flip the test statistic
-         		//TODO: work out the how to flip the test statistic
-         	}
+          	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)!=0 &&
+          			ref_allele.compare(complement(m_ref_allele))!=0 && alt_allele.compare(complement(m_ref_allele))!=0 ) return false; // not possible even after flipping
+          	if(m_alt_allele.empty()){
+          		// can only use the reference allele to do things, more dangerous
+          		if((ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)==0) ||
+          				(ref_allele.compare(complement(m_ref_allele))!=0 && alt_allele.compare(complement(m_ref_allele))==0)){
+          			m_alt_allele = ref_allele;
+          			m_ref_allele = alt_allele;
+          			m_flipped=true;
+          		}
+          	}
+          	else{
+          		// can use both
+          		if((ref_allele.compare(m_alt_allele)==0 && alt_allele.compare(m_ref_allele)==0) ||
+          			(ref_allele.compare(complement(m_alt_allele))==0 && alt_allele.compare(complement(m_ref_allele))==0)	){
+          			// need to flip
+          			m_alt_allele = ref_allele;
+          			m_ref_allele = alt_allele;
+          			m_flipped=true;
+             		//TODO: work out the how to flip the test statistic
+
+          		}
+          	}
           	return true;
         };
-        void add_clump(const size_t i) { m_clump_target.push_back(i);};
-        void add_clump( std::vector<size_t> &i){
-        		m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() );
-        };
-        bool clumped() const{return m_clumped;};
+        void add_clump( std::vector<size_t> &i){ m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() ); };
+        bool clumped() const{ return m_clumped; };
+        bool flipped() const{ return m_flipped; };
         void set_clumped() { m_clumped = true;};
         void clump_all(std::vector<SNP> &snp_list){
-        		std::cout << m_rs_id << " ";
-        		std::string clump = "";
+//        		std::cout << m_rs_id << " ";
+//        		std::string clump = "";
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
         			if(!snp_list[m_clump_target[i]].clumped()){
         				snp_list[m_clump_target[i]].set_clumped();
-        				clump.append(snp_list[m_clump_target[i]].get_rs_id()+",");
+//        				clump.append(snp_list[m_clump_target[i]].get_rs_id()+",");
         				for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
         			}
         		}
-        		std::cout << clump <<std::endl;
+//        		std::cout << clump <<std::endl;
+        }
+        double score(int geno) const {
+			int g = (geno-1 > 0)? (geno-1) : 0;
+			if(!m_flipped) g=2-g;
+			return (g>0)? (0.5*(double)g)*m_stat: g;
         }
     protected:
     private:
+        std::string complement(std::string allele){
+			if(allele.compare("A")==0 || allele.compare("a")==0) return "T";
+			if(allele.compare("T")==0 || allele.compare("t")==0) return "A";
+			if(allele.compare("G")==0 || allele.compare("g")==0) return "C";
+			if(allele.compare("C")==0 || allele.compare("c")==0) return "G";
+			else throw std::runtime_error("Unknown allele");
+        }
         static size_t index_check(const std::string &c_in);
         static size_t index_check(const std::string &c_in, const std::vector<std::string> &c_header, const std::string &typeOfError);
         std::string m_ref_allele;
@@ -81,6 +103,7 @@ class SNP
         double m_standard_error;
         double m_p_value;
         bool m_clumped = false;
+        bool m_flipped=false;
         std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
 #if defined(__LP64__) || defined(_WIN64)
         uint64_t *m_flags;
