@@ -17,10 +17,12 @@
 #include <thread>
 #include <mutex>
 #include <deque>
+#include <cstring>
 #include <map>
 #include <limits.h>
 #include <vector>
 #include <emmintrin.h>
+#include <assert.h>
 #include "misc.hpp"
 #include "snp.hpp"
 
@@ -38,6 +40,7 @@ public:
     };
     ~PLINK();
     void initialize();
+    void initialize(std::map<std::string, bool> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
     size_t get_num_snp() const{return m_num_snp; };
@@ -53,7 +56,7 @@ public:
 
 private:
     static std::mutex clump_mtx;
-    double get_r2(const size_t i, const size_t j);
+    double get_r2(const size_t i, const size_t j, bool adjust=false);
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
     void clump_thread(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold);
     void compute_clump(const size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold);

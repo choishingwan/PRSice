@@ -90,24 +90,38 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
     // Therefore, anything happened from this point onward should be target
     // specific
     std::vector<std::string> target = c_commander.get_target();
+	fprintf(stderr,"\nClumping Parameters: \n");
+    fprintf(stderr,"==============================\n");
+    fprintf(stderr,"P-Threshold  : %f\n", c_commander.get_clump_p());
+    fprintf(stderr,"R2-Threshold : %f\n", c_commander.get_clump_r2());
+    fprintf(stderr,"Window Size  : %zu\n", c_commander.get_clump_kb());
+
     for(size_t i_target = 0; i_target < target.size(); ++i_target){
     		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
     	    fprintf(stderr,"==============================\n");
         std::map<std::string, bool> inclusion;
         std::string target_bim_name = target[i_target]+".bim";
-        get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
+//        get_inclusion(inclusion, target_bim_name, snp_list, snp_index);
         // Then read in the LD file, that can either be the target file or an
         // external reference
         // This should perform the clumping, which will produce a list of SNPs
         // that are supposedly included in the final PRS
-        std::string ld_file = (c_commander.ld_prefix().empty())? target[i_target]: c_commander.ld_prefix();
+        bool has_ld = !c_commander.ld_prefix().empty();
+        std::string ld_file = (has_ld)? c_commander.ld_prefix(): target[i_target];
         // Clumping will update the m_clump_target of the SNP class
         // And should update the inclusion index we have
         // The region flag should also be updated such that
         // the clump index SNP should represent the region of all the
         // clumped SNPs
         PLINK clump(ld_file, c_commander.get_thread());
-        clump.initialize();
+        if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
+        else fprintf(stderr,"\nStart performing clumping\n");
+        clump.initialize(inclusion, snp_list, snp_index);
+        if(has_ld){
+        		// perform additional filtering
+            fprintf(stderr,"\nIn target %s\n", ld_file.c_str());
+        		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
+        }
         clump.clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(), c_commander.get_clump_r2(), c_commander.get_clump_kb());
         // So technically, from here, we just need to perform the PRS with
         // the inclusion map
@@ -116,7 +130,7 @@ void PRSice::process(const std::string &c_input, const Commander &c_commander, R
 
 }
 
-void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::string &target_bim_name,
+void PRSice::update_inclusion(std::map<std::string, bool> &inclusion, const std::string &target_bim_name,
                        std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index){
     std::ifstream target_file;
     target_file.open(target_bim_name.c_str());
@@ -149,7 +163,7 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
             }
             std::string ref_allele = token[4];
             std::string alt_allele = token[5];
-            if(snp_index.find(rsid)!=snp_index.end()){
+            if(inclusion.find(rsid) != inclusion.end() && snp_index.find(rsid)!=snp_index.end()){
                 // will do some soft checking, will issue warning if there are any problem
                 // first check if ambiguous
                 if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
@@ -162,6 +176,7 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
                     (ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
                 {
                     num_ambig++;
+                    if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
                 }
                 else{
                     // not ambiguous, now do soft checking
@@ -177,14 +192,14 @@ void PRSice::get_inclusion(std::map<std::string, bool> &inclusion, const std::st
             }
             else {
             		not_found++;
-            		std::cerr << rsid << std::endl;
+              	if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
             }
         }
     }
     target_file.close();
     if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
     if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
-    fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
+    fprintf(stderr, "Final number of SNPs      : %zu\n", inclusion.size());
 }
 
 // This will update the score for each individual

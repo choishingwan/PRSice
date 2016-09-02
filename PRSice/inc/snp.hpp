@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <stdexcept>
+#include <deque>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -49,15 +50,22 @@ class SNP
           	return true;
         };
         void add_clump(const size_t i) { m_clump_target.push_back(i);};
-        void add_clump( std::vector<size_t> &i){m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() );};
+        void add_clump( std::vector<size_t> &i){
+        		m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() );
+        };
         bool clumped() const{return m_clumped;};
         void set_clumped() { m_clumped = true;};
         void clump_all(std::vector<SNP> &snp_list){
+        		std::cout << m_rs_id << " ";
+        		std::string clump = "";
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
-        			snp_list[i].set_clumped();
-        			// update flag
-        			for(size_t j = 0; j < m_size_of_flag; ++j) m_flags[j] |= snp_list[i].m_flags[j];
+        			if(!snp_list[m_clump_target[i]].clumped()){
+        				snp_list[m_clump_target[i]].set_clumped();
+        				clump.append(snp_list[m_clump_target[i]].get_rs_id()+",");
+        				for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
+        			}
         		}
+        		std::cout << clump <<std::endl;
         }
     protected:
     private:

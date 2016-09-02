@@ -73,7 +73,7 @@ class Commander
         double m_clump = 1;
         //double m_clump_p2 = 1;
         double m_clump_r2 = 0.1;
-        size_t m_clump_kb = 250;
+        size_t m_clump_kb = 250000;
         //We disable prunning
 
         double m_lower = 0.0001;
