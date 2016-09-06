@@ -118,4 +118,5 @@ namespace misc{
         if (prev < seq.length()) result.push_back(seq.substr(prev, std::string::npos));
         return result;
     }
+
 }

@@ -133,7 +133,9 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         // Each time, only read SNPs under the boundary and perform the analysis
         double current_upper = bound_start;
         double current_lower = 0.0;
+        double p_value=0.0, r2=0.0, r2_adjust = 0.0;
         size_t num_snp = 0; // The number of SNPs included so far
+        // Read in the covaraites.
         for(;current_upper<bound_end; current_upper+=bound_inter){
             fprintf(stderr,"\rCalculating cutoff %f", current_upper);
         		// will add anything from (lower, upper]
@@ -142,14 +144,14 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         		// This should update the score
         		//TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
         		if(reg){
-					std::ofstream test;
-					std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
-					// TODO: The rest should be here
-					test.open(test_name.c_str());
-					for(size_t i = 0; i < prs_score.size(); ++i){
-						test << prs_score[i] << std::endl;
-					}
-					test.close();
+        			std::ofstream test;
+        			std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
+        			// TODO: The rest should be here
+        			test.open(test_name.c_str());
+        			for(size_t i = 0; i < prs_score.size(); ++i){
+        				test << prs_score[i] << std::endl;
+        			}
+        			test.close();
         		}
         }
         if(current_upper != bound_end){

@@ -34,10 +34,13 @@ namespace misc{
 			throw std::runtime_error(error_message);
 		}
 	}
+
+
     // Functions from R
     double dnorm(double x, double mu=0.0, double sigma=1.0, bool log=false);
     double qnorm(double p, double mu=0.0, double sigma=1.0, bool lower_tail=true, bool log_p=false);
-    
+
+
     // codes from stackoverflow
     std::vector<std::string> split(const std::string seq, const std::string separators="\t ");
     template <typename T> inline
