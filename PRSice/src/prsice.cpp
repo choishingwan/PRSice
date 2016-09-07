@@ -136,32 +136,221 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         double p_value=0.0, r2=0.0, r2_adjust = 0.0;
         size_t num_snp = 0; // The number of SNPs included so far
         // Read in the covaraites.
+        double num_sample = 0.0;
+        bool target_binary = c_commander.get_target_binary(i_target);
+        std::map<std::string, int> pheno_missing;
+        std::vector<bool> pheno_missing_index;
+        // Note phenotype size <= num sample in fam as missing data are not included
+        Eigen::VectorXd phenotype = gen_pheno_vec(target[i_target], c_commander.get_pheno(), target_binary, num_sample,pheno_missing, pheno_missing_index);
+        Eigen::MatrixXd covariate = gen_cov_matrix(target[i_target], c_commander.get_cov_file(), c_commander.get_cov_header(), pheno_missing, num_sample);
+        std::string output_name = c_commander.get_out()+"."+target[i_target]+".prsice";
+        std::ofstream prs_out;
+        prs_out.open(output_name.c_str());
+        if(!prs_out.is_open()){
+        		std::string error_message= "Cannot open file "+output_name+" for write!";
+        		throw std::runtime_error(error_message);
+        }
+        prs_out << "Threshold\tR2\tR2_Adjusted\tP-value"<< std::endl;
         for(;current_upper<bound_end; current_upper+=bound_inter){
             fprintf(stderr,"\rCalculating cutoff %f", current_upper);
         		// will add anything from (lower, upper]
         		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, current_upper, num_snp);
+        		size_t j = 0;
+        		for(size_t i = 0; i < prs_score.size(); ++i){
+        			if(!pheno_missing_index[i]){
+        				covariate(j++,0) = prs_score[i];
+        			}
+        		}
         		current_lower = current_upper;
         		// This should update the score
         		//TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
         		if(reg){
-        			std::ofstream test;
-        			std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
-        			// TODO: The rest should be here
-        			test.open(test_name.c_str());
-        			for(size_t i = 0; i < prs_score.size(); ++i){
-        				test << prs_score[i] << std::endl;
-        			}
-        			test.close();
+        			if(target_binary) Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
+        			prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
+//        			std::ofstream test;
+//        			std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
+//        			test.open(test_name.c_str());
+//        			for(size_t i = 0; i < prs_score.size(); ++i){
+//        				test << prs_score[i] << std::endl;
+//        			}
+//        			test.close();
         		}
         }
         if(current_upper != bound_end){
             fprintf(stderr,"\rCalculating cutoff %f", bound_end);
         		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, bound_end, num_snp);
+        		if(reg){
+        			if(target_binary) Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
+        			prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
+        		}
         }
+        prs_out.close();
         fprintf(stderr, "\n");
     }
 }
 
+Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target, const std::string &c_pheno, bool target_binary, double &num_sample, std::map<std::string, int> &pheno_missing, std::vector<bool> &pheno_index){
+	std::vector<double> phenotype_store;
+	std::ifstream pheno_file;
+	std::string fam_name = c_target+".fam";
+	std::string line;
+	num_sample =0;
+	if(c_pheno.empty()){
+		// Use fam file
+		pheno_file.open(fam_name.c_str());
+		while(std::getline(pheno_file, line)){
+			misc::trim(line);
+			if(!line.empty()){
+				std::vector<std::string> token = misc::split(line);
+				if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
+				if(token[5].compare("NA")==0){
+					pheno_missing[token[1]]=-1;
+					pheno_index.push_back(true);
+				}
+				else{
+					try{
+						double temp = misc::convert<double>(token[5]);
+						if(target_binary && temp == -9){
+							pheno_missing[token[1]]=-1;
+							pheno_index.push_back(true);
+						}
+						else{
+							pheno_missing[token[1]]=num_sample;
+							phenotype_store.push_back(temp);
+							pheno_index.push_back(false);
+							num_sample++;
+						}
+					}
+					catch(const std::runtime_error &error){
+						pheno_missing[token[1]]=-1; // Anything we can't handle = missing
+						pheno_index.push_back(true);
+					}
+				}
+			}
+		}
+		pheno_file.close();
+	}
+	else{
+		// Use pheno file
+		std::ifstream fam;
+		fam.open(fam_name.c_str());
+		pheno_file.open(c_pheno.c_str());
+		// First form the map using the fam
+		std::map<std::string, std::string> pheno_info;
+		while(std::getline(pheno_file, line)){
+			misc::trim(line);
+			if(!line.empty()){
+				std::vector<std::string> token = misc::split(line);
+				if(token.size() < 2) std::runtime_error("Malformed pheno file, should contain at least 2 columns");
+				pheno_info[token[0]] = token[1];
+			}
+		}
+		pheno_file.close();
+
+		while(std::getline(fam, line)){
+			misc::trim(line);
+			if(!line.empty()){
+				std::vector<std::string> token = misc::split(line);
+				if(token.size() < 6) std::runtime_error("Malformed fam file, should contain at least 6 columns");
+				if(pheno_info.find(token[1])!= pheno_info.end()){
+					std::string p = pheno_info[token[1]];
+					if(p.compare("NA")==0){
+						pheno_missing[token[1]]=-1;
+						pheno_index.push_back(true);
+					}
+					else{
+						try{
+							double temp = misc::convert<double>(p);
+							if(target_binary && temp == -9) {
+								pheno_missing[token[1]]=-1;
+								pheno_index.push_back(true);
+							}
+							else{
+								pheno_missing[token[1]]=num_sample;
+								pheno_index.push_back(true);
+								phenotype_store.push_back(temp);
+								num_sample++;
+							}
+						}
+						catch(const std::runtime_error &error){
+							pheno_index.push_back(true);
+							pheno_missing[token[1]]=-1; // Anything we can't handle = missing
+						}
+					}
+				}
+				else{
+					pheno_index.push_back(true);
+					pheno_missing[token[1]]=-1;
+				}
+			}
+		}
+		fam.close();
+	}
+	Eigen::Map<Eigen::VectorXd> res(phenotype_store.data(), phenotype_store.size());
+	return res;
+}
+
+Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::string &c_cov_file, const std::vector<std::string> &c_cov_header, std::map<std::string, int> &pheno_missing, size_t num_sample){
+	if(c_cov_file.empty()){
+		return Eigen::MatrixXd::Zero(num_sample,1);
+	}
+	else{
+		// First read in the header
+		std::ifstream cov;
+		cov.open(c_cov_file.c_str());
+		if(!cov.is_open()){
+			std::string error_message = "ERROR: Cannot open covariate file: "+c_cov_file;
+			throw std::runtime_error(error_message);
+		}
+		std::string line;
+		std::vector<size_t> cov_index;
+		int max_index = 0;
+		std::getline(cov, line);
+		if(!line.empty()){
+			std::vector<std::string> token = misc::split(line);
+			if(c_cov_header.size() == 0){
+				for(size_t i = 1; i < token.size(); ++i) cov_index.push_back(i);
+				max_index = cov_index.size()-1;
+			}
+			else{
+				std::map<std::string, bool> include;
+				for(size_t i = 0; i < c_cov_header.size(); ++i) include[c_cov_header[i]]= true;
+				for(size_t i = 1; i < token.size(); ++i){
+					if(include.find(token[i])!=include.end()){
+						cov_index.push_back(i);
+						if(i > max_index) max_index=i;
+					}
+				}
+			}
+		}
+		else throw std::runtime_error("First line of covariate file is empty!");
+		// now we know how much we are working with
+		Eigen::MatrixXd result = Eigen::MatrixXd::Zero(num_sample, cov_index.size());
+		while(std::getline(cov, line)){
+			misc::trim(line);
+			if(!line.empty()){
+				std::vector<std::string> token = misc::split(line);
+				if(token.size() <= max_index){
+					std::string error_message = "ERROR: Malformed covariate file, should contain at least "+std::to_string(max_index+1)+" column!";
+					throw std::runtime_error(error_message);
+				}
+				if(pheno_missing.find(token[1])!= pheno_missing.end() && pheno_missing[token[1]]!=-1){
+					int index = pheno_missing[token[1]];
+					for(size_t i = 0; i < cov_index.size(); ++i){
+						try{
+							double temp = misc::convert<double>(token[cov_index[i]]);
+							result(index, i+1) = temp;
+						}
+						catch(const std::runtime_error &error){
+							result(index, i+1) = 0;
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+}
 // basically update the score vector to contain the new polygenic score
 bool PRSice::score(const std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list,
 		const std::string &target, std::vector<double> &prs_score,

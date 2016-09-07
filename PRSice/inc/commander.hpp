@@ -30,12 +30,15 @@ class Commander
         std::string get_gtf() const { return m_gtf; };
         std::vector<std::string> get_target() const{ return m_target; };
         std::vector<std::string> get_bed() const { return m_bed_list; };
+        std::vector<std::string> get_cov_header() const { return m_covariates; };
         std::string get_msigdb() const{ return m_msigdb; };
         std::string get_out() const { return m_out; };
+        std::string get_cov_file() const { return m_covariate_file; };
+        std::string get_pheno() const { return m_pheno_file; };
         size_t get_thread() const { return m_thread; };
+        size_t get_clump_kb() const { return m_clump_kb; };
         double get_clump_p() const { return m_clump; };
         double get_clump_r2() const { return m_clump_r2; };
-        size_t get_clump_kb() const { return m_clump_kb; };
         double get_lower() const { return m_lower; };
         double get_upper() const { return m_upper; };
         double get_inter() const { return m_inter; };
@@ -49,8 +52,8 @@ class Commander
         std::vector<bool> m_use_beta;
         std::vector<std::string> m_base;
         std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
-        std::vector<std::string> m_covariate_files;
         std::vector<std::string> m_bed_list;
+        std::string m_covariate_file;
         std::string m_ancestry_dim;
         std::string m_pheno_file;
         std::string m_chr = "CHR";

@@ -122,19 +122,9 @@ bool Commander::initialize(int argc, char *argv[]){
                 break;
             case 'c':
                 m_covariates = misc::split(optarg, ", ");
-                if(m_covariate_files.size() != 0){
-                    error = true;
-                    error_message.append("Covariate header and covariate file option is mutually exclusive\n");
-                    error_message.append("Please only use one of the options (You can submit multiple covariate files\n");
-                }
                 break;
             case 'C':
-                m_covariate_files = misc::split(optarg, ", ");
-                if(m_covariates.size() != 0){
-                    error = true;
-                    error_message.append("Covariate header and covariate file option is mutually exclusive\n");
-                    error_message.append("Please only use one of the options (You can submit multiple covariate files\n");
-                }
+                m_covariate_file = optarg;
                 break;
             case 'a':
                 m_ancestry_dim = optarg;
