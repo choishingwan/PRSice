@@ -129,7 +129,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         double bound_start = c_commander.get_lower();
         double bound_end = c_commander.get_upper();
         double bound_inter = c_commander.get_inter();
-        std::vector<double> prs_score;
+        std::vector<double> prs_score, prs_best_score;
         // Each time, only read SNPs under the boundary and perform the analysis
         double current_upper = bound_start;
         double current_lower = 0.0;
@@ -144,7 +144,8 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         Eigen::VectorXd phenotype = gen_pheno_vec(target[i_target], c_commander.get_pheno(), target_binary, num_sample,pheno_missing, pheno_missing_index);
         Eigen::MatrixXd covariate = gen_cov_matrix(target[i_target], c_commander.get_cov_file(), c_commander.get_cov_header(), pheno_missing, num_sample);
         std::string output_name = c_commander.get_out()+"."+target[i_target]+".prsice";
-        std::ofstream prs_out;
+        double best_r2 = 0.0;
+        std::ofstream prs_out, prs_best;
         prs_out.open(output_name.c_str());
         if(!prs_out.is_open()){
         		std::string error_message= "Cannot open file "+output_name+" for write!";
@@ -163,11 +164,25 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         		}
         		current_lower = current_upper;
         		// This should update the score
-        		//TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
+        		// TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
+        		// TODO: Have not handled the region selection
         		if(reg){
-        			if(target_binary) Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
-        			prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
-//        			std::ofstream test;
+        			if(target_binary){
+        				Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
+        				prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
+        			}
+        			else{
+        				Regression::glm(phenotype, covariate, p_value, r2, 25, c_commander.get_thread(), true);
+        				double null_p, null_r2;
+        				Regression::glm(phenotype, covariate.block(0,1,covariate.rows(), covariate.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
+        				r2-=null_r2;
+        				prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value << std::endl;
+        			}
+        			if(r2 > best_r2){
+        				best_r2 = r2;
+        				prs_best_score = prs_score;
+        			}
+//        				std::ofstream test;
 //        			std::string test_name = c_commander.get_out()+std::to_string(current_upper)+".debug";
 //        			test.open(test_name.c_str());
 //        			for(size_t i = 0; i < prs_score.size(); ++i){
@@ -180,11 +195,46 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
             fprintf(stderr,"\rCalculating cutoff %f", bound_end);
         		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, bound_end, num_snp);
         		if(reg){
-        			if(target_binary) Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
-        			prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
+        			if(target_binary){
+        				Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
+        				prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
+        			}
+        			else{
+        				Regression::glm(phenotype, covariate, p_value, r2, 25, c_commander.get_thread(), true);
+        				double null_p, null_r2;
+        				Regression::glm(phenotype, covariate.block(0,1,covariate.rows(), covariate.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
+        				r2-=null_r2;
+        				prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value << std::endl;
+        			}
         		}
         }
         prs_out.close();
+        output_name = c_commander.get_out()+"."+target[i_target]+".best.prsice";
+        prs_best.open(output_name.c_str());
+        if(!prs_best.is_open()){
+        		std::string error_message = "ERROR: Cannot open file "+output_name+" for write";
+        		throw std::runtime_error(error_message);
+        }
+        std::ifstream fam;
+        std::string fam_name = target[i_target]+".fam";
+        fam.open(fam_name.c_str());
+        if(!fam.is_open()){
+        		std::string error_message = "ERROR: Cannot open file "+fam_name;
+        		throw std::runtime_error(error_message);
+        }
+        while(std::getline(fam, line)){
+        		misc::trim(line);
+        		if(!line.empty()){
+        			std::vector<std::string> token = misc::split(line);
+        			if(pheno_missing.find(token[1])!=pheno_missing.end() && pheno_missing[token[1]]!=-1){
+        				prs_best << token[0] << "\t" << token[1] << "\t" << prs_best_score[pheno_missing[token[1]]] << std::endl;;
+        			}
+        			else{
+        				prs_best << token[0] << "\t" << token[1] << "\tNA" << std::endl;;
+        			}
+        		}
+        }
+        prs_best.close();
         fprintf(stderr, "\n");
     }
 }
