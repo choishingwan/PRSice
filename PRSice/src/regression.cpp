@@ -2,7 +2,7 @@
  * regression.cpp
  *
  *  Created on: 5 Sep 2016
- *      Author: Sam Choi
+ *      Author: shingwanchoi
  */
 
 #include "regression.h"
@@ -150,7 +150,7 @@ namespace Regression{
 
 	// This is an unsafe version of R's glm.fit
 	// unsafe as in we don't check if the data is correct
-	void glm(Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, double &r2_adjust, size_t max_iter, size_t thread, bool intercept){
+	void glm(Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, size_t max_iter, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
 		Eigen::MatrixXd A;
 		if(intercept){
