@@ -402,6 +402,7 @@ void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 					}
 					// now clean up everything
 					lerase(m_genotype.size());
+					snp_index_check.clear();
 					// And read in the SNP
 					read_snp(1, true);
 					snp_index_check.push_back(cur_index);
@@ -431,7 +432,7 @@ void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 							// remove SNPs in the front that are too far away
 							size_t num_remove=0;
 							for(size_t check=0; check < genotype_index; ++check){
-								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold)num_remove++;
+								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
 								else break;
 							}
 							if(num_remove!=0){

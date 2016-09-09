@@ -147,15 +147,37 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     double current_upper=0.0;
     while(cur_start_index!=quick_ref.size()){
 		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter, bound_end);
-		fprintf(stderr, "\rProcessing %f\r", current_upper);
+		fprintf(stderr, "\rProcessing %f", current_upper);
     		bool reg = get_prs_score(quick_ref, snp_list, c_target, prs_score,
     				num_snp_included, cur_start_index);
+    		if(reg){
+    			for(size_t i = 0; i < prs_score.size(); ++i){
+    				std::string sample = std::get<0>(prs_score[i]);
+    				if(fam_index.find(sample)!=fam_index.end()){
+    					covariates(fam_index[sample], 0) = std::get<1>(prs_score[i]);
+    				}
+    			}
+    		}
     		if(reg && target_binary){
+    			try{
     			Regression::glm(phenotype, covariates, p_value, r2, 25, c_commander.get_thread(), true);
+    			}
+    			catch(const std::runtime_error &error){
+    				std::ofstream debug;
+    				debug.open("DEBUG");
+    				debug << covariates<< std::endl;
+    				debug.close();
+    				debug.open("DEBUG.y");
+    				debug << phenotype << std::endl;
+    				debug.close();
+    				exit(-1);
+    			}
     			double null_p, null_r2;
-    			Regression::glm(phenotype, covariates.block(0,1,covariates.rows(),
-    					covariates.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
-    			r2-=null_r2;
+    			if(covariates.cols() > 1){
+    				Regression::glm(phenotype, covariates.block(0,1,covariates.rows(),
+    						covariates.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
+    				r2-=null_r2;
+    			}
     			prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value  <<"\t" << num_snp_included << std::endl;
     		}
     		else if(reg){
@@ -251,9 +273,9 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 				prs_score.push_back(std::pair<std::string, double>(token[1], 0.0));
 				if(token[5].compare("NA")!=0){
 					try{
-						double temp = misc::convert<double>(token[5]);
 						if(target_binary){
-							if(temp-1>=0 && temp-1<=2){
+							double temp = misc::convert<int>(token[5]);
+							if(temp-1>=0 && temp-1<2){
 								fam_index[token[1]]=cur_index;
 								phenotype_store.push_back(temp-1);
 								cur_index++;
@@ -263,6 +285,7 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 							// anything other than 1 or 2 will be treated as missing
 						}
 						else{
+							double temp = misc::convert<double>(token[5]);
 							fam_index[token[1]]=cur_index;
 							phenotype_store.push_back(temp);
 							cur_index++;
@@ -292,7 +315,6 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 			}
 		}
 		pheno_file.close();
-
 		while(std::getline(fam, line)){
 			misc::trim(line);
 			if(!line.empty()){
@@ -302,8 +324,8 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 					std::string p = pheno_info[token[1]];
 					if(p.compare("NA")!=0){
 						try{
-							double temp = misc::convert<double>(p);
 							if(target_binary){
+								double temp = misc::convert<int>(p);
 								if(temp-1>=0 && temp-1<=2){
 									fam_index[token[1]]=cur_index;
 									phenotype_store.push_back(temp-1);
@@ -314,6 +336,7 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 								// anything other than 1 or 2 will be treated as missing
 							}
 							else{
+								double temp = misc::convert<double>(p);
 								fam_index[token[1]]=cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
@@ -326,7 +349,7 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 		}
 		fam.close();
 	}
-	if(phenotype_store.size()) throw std::runtime_error("No phenotypes present");
+	if(phenotype_store.size()==0) throw std::runtime_error("No phenotypes present");
 	Eigen::Map<Eigen::VectorXd> res(phenotype_store.data(), phenotype_store.size());
 	if(target_binary){
 		if(num_control==0) throw std::runtime_error("There are no control samples");

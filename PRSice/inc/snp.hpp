@@ -92,7 +92,7 @@ class SNP
 			if(allele.compare("T")==0 || allele.compare("t")==0) return "A";
 			if(allele.compare("G")==0 || allele.compare("g")==0) return "C";
 			if(allele.compare("C")==0 || allele.compare("c")==0) return "G";
-			else throw std::runtime_error("Unknown allele");
+			else return allele; // Cannot flip, so will just return it as is
         }
         static size_t index_check(const std::string &c_in);
         static size_t index_check(const std::string &c_in,
