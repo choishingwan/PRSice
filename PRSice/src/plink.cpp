@@ -301,7 +301,7 @@ double PLINK::get_r2(const size_t i, const size_t j){
 }
 #endif
 
-void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold){
+void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold){
 	size_t ref_index = index_check[index];
 	std::vector<size_t> self_index; // index we want to push into the current index
 	for(size_t i = i_start; i < i_end && i < index_check.size(); ++i){
@@ -317,24 +317,24 @@ void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, std::vect
 	PLINK::clump_mtx.unlock();
 }
 
-void PLINK::clump_thread(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold){
-	if(index_check.size() <=1 ) return; // nothing to do
+void PLINK::clump_thread(const size_t c_index, const std::deque<size_t> &c_index_check, boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold){
+	if(c_index_check.size() <=1 ) return; // nothing to do
 	std::vector<std::thread> thread_store;
-	if((index_check.size()-1) < m_thread){
-		for(size_t i = 0; i < index_check.size(); ++i){
-			if(index_check[i]!=index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, index,i, i+1, std::ref(snp_list), std::cref(index_check), r2_threshold));
+	if((c_index_check.size()-1) < m_thread){
+		for(size_t i = 0; i < c_index_check.size(); ++i){
+			if(c_index_check[i]!=index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, index,i, i+1, std::ref(snp_list), std::cref(c_index_check), c_r2_threshold));
 		}
 	}
 	else{
-		int num_snp_per_thread =(int)(index_check.size()-1) / (int)m_thread;  //round down
-		int remain = (int)(index_check.size()-1) % (int)m_thread;
+		int num_snp_per_thread =(int)(c_index_check.size()-1) / (int)m_thread;  //round down
+		int remain = (int)(c_index_check.size()-1) % (int)m_thread;
 		int cur_start = 0;
 		int cur_end = num_snp_per_thread;
 		for(size_t i = 0; i < m_thread; ++i){
-			thread_store.push_back(std::thread(&PLINK::compute_clump, this, index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(index_check),r2_threshold ));
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(c_index_check),c_r2_threshold ));
 			cur_start = cur_end+(remain>0);
 			cur_end+=num_snp_per_thread+(remain>0);
-			if(cur_end>index_check.size()) cur_end =index_check.size();
+			if(cur_end>c_index_check.size()) cur_end =c_index_check.size();
 			remain--;
 		}
 	}
@@ -342,9 +342,11 @@ void PLINK::clump_thread(const size_t index, const std::deque<size_t> &index_che
 	thread_store.clear();
 }
 
-void PLINK::clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, double p_threshold, double r2_threshold, size_t kb_threshold){
+void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
+		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index,
+		double p_threshold, double r2_threshold, size_t kb_threshold){
 	// Go through all SNPs
-	std::deque<size_t> snp_index_check; // Record of index of snp_list
+	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
 	std::string prev_chr = ""; // Indication of current chromosome
 	size_t require_bp=0;
 	size_t genotype_index=0; // This is the index of the index SNP on the genotype arrays
@@ -354,9 +356,8 @@ void PLINK::clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> 
 		if(inclusion.find(rs)==inclusion.end()) m_bed.seekg(m_num_bytes, m_bed.cur); // Skip SNP
 		else{
 			//Because we build inclusion from snp_index and snp_list, can assume they are always together
-			assert(snp_index.find(rs)!=snp_index.end());
-
-			size_t cur_index = snp_index.at(rs);
+			assert(c_snp_index.find(rs)!=c_snp_index.end());
+			size_t cur_index = c_snp_index.at(rs);
 			if(prev_chr.empty()){
 				// This is the very first SNP
 				read_snp(1, true);
@@ -468,8 +469,6 @@ void PLINK::clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> 
 		}
 	}
 
-
-
 	// Now get the list of SNPs that we want to retain (in index)
 	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
 	inclusion.clear();
@@ -484,41 +483,7 @@ void PLINK::clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> 
 		else if(snp_list[p_sort_order[i]].get_p_value() >= p_threshold) break;
 	}
 	//Anything remaining should be the required SNPs
-	//This is for testing
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
-//	for(std::map<std::string, bool>::iterator iter = inclusion.begin();
-//			iter != inclusion.end(); ++iter){
-//		//std::cout << iter->first << std::endl;
-//	}
-}
-
-std::vector<int> PLINK::get_genotype(int geno) const{
-	if(geno >= m_genotype.size()){
-		std::string error_message = "Asked for "+std::to_string(geno)+" genotype but contain only "+std::to_string(m_genotype.size());
-		throw std::runtime_error(error_message);
-	}
-	std::vector<int> res(m_num_sample);
-	for(size_t i = 0; i < m_num_sample; ++i){
-		int index =(i*2)/m_bit_size;
-		int info = m_genotype[geno][index] >> (m_bit_size-(i+1)*2)& THREEMASK;
-		switch(info){
-			case 0:
-				res[i] = 0;
-				break;
-			case 1:
-				res[i] = -1;
-				break;
-			case 2:
-				res[i] = 1;
-				break;
-			case 3:
-				res[i] = 2;
-				break;
-			default:
-				throw std::runtime_error("Undefined genotype");
-		}
-	}
-	return res;
 }
 
 void PLINK::lerase(int num){
@@ -694,7 +659,7 @@ void PLINK::initialize(bool bim_read){
 }
 
 //This initialization will also perform the filtering and flipping
-void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, bool bim_read){
+void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index, bool bim_read){
     std::string fam_name = m_prefix+".fam";
     std::string bim_name = m_prefix+".bim";
     std::string bed_name = m_prefix+".bed";
@@ -706,8 +671,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP
         throw std::runtime_error(error_message);
     }
     std::string line;
-    while(std::getline(fam, line))
-        if(!misc::trimmed(line).empty()) m_num_sample++;
+    while(std::getline(fam, line)) if(!misc::trimmed(line).empty()) m_num_sample++;
     fam.close();
     // Check whether if the bed file is correct
     bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
@@ -743,7 +707,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP
         		}
         		std::string ref_allele = token[4];
         		std::string alt_allele = token[5];
-        		if(snp_index.find(rsid)!=snp_index.end()){
+        		if(c_snp_index.find(rsid)!=c_snp_index.end()){
         			// will do some soft checking, will issue warning if there are any problem
         			// first check if ambiguous
         			if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
@@ -759,14 +723,14 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP
         			}
         			else{
         				// not ambiguous, now do soft checking
-        				size_t index = snp_index.at(rsid);
+        				size_t index = c_snp_index.at(rsid);
         				bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
         				if(!same){
-        					fprintf(stderr, "WARNING: %s differ between target and base file\n", rsid.c_str());
+        					fprintf(stderr, "WARNING: %s differ between LD and base file\n", rsid.c_str());
         					fprintf(stderr, "         It is advised that you check the files are \n");
         					fprintf(stderr, "         From the same genome build\n");
         				}
-        				inclusion[rsid] = snp_index.at(rsid);
+        				inclusion[rsid] = c_snp_index.at(rsid);
         			}
         		}
         		else {
@@ -790,7 +754,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP
     m_init = true;
 }
 
-void PLINK::get_score(const std::map<std::string, size_t> &inclusion, const std::vector<SNP> &snp_list, std::vector<double> &score){
+void PLINK::get_score(const std::map<std::string, size_t> &inclusion, const boost::ptr_vector<SNP> &snp_list, std::vector<double> &score){
 	// m_bim should be closed or at the front
 	if(!m_bim_read && ! m_bim_score_open){
 		std::string bim_name = m_prefix+".bim";
@@ -801,10 +765,10 @@ void PLINK::get_score(const std::map<std::string, size_t> &inclusion, const std:
 		}
 		m_bim_score_open=true;
 	}
-	else{
-		m_bim_score_open=true;
-	}
-	// Then we can read the whole file to get the included SNPs
+	else m_bim_score_open=true;
+	// there can be better way: skip n SNPs at a time
+	// we know which SNPs to include from the beginning
+	// so in theory, we don't need to check the SNP identity again
 	size_t num_read = 0;
 	std::string line;
 	if(score.size()==0) score=std::vector<double>(m_num_sample);

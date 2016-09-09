@@ -35,9 +35,5 @@ int main(int argc, char *argv[])
 		exit(-1);
     }
 
-//    boost::ptr_vector<SNP> snp_list;
-//    SNP::read_snp(commander, snp_list);
-//    PRSice prsice = PRSice();
-//    prsice.run();
     return 0;
 }

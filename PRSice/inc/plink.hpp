@@ -22,6 +22,7 @@
 #include <limits.h>
 #include <vector>
 #include <emmintrin.h>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <assert.h>
 #include "misc.hpp"
 #include "snp.hpp"
@@ -40,26 +41,26 @@ public:
     };
     ~PLINK();
     void initialize(bool bim_read=false);
-    void initialize(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index, bool bim_read=false);
+    void initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index, bool bim_read=false);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
     size_t get_num_snp() const{return m_num_snp; };
     size_t get_num_sample() const{return m_num_sample;};
-    std::vector<int> get_genotype(int geno) const;
     int get_distance() const{
     		return m_bp_list.back()-m_bp_list.front();
     };
     int get_first_bp() const{ return m_bp_list.front(); };
     int get_last_bp() const{return m_bp_list.back();};
-    void clumping(std::map<std::string, size_t> &inclusion, std::vector<SNP> &snp_list, const std::map<std::string, size_t> &snp_index,
-    					double p_threshold, double r2_threshold, size_t kb_threshold);
-    void get_score(const std::map<std::string, size_t> &inclusion, const std::vector<SNP> &snp_list, std::vector<double> &score);
+    void start_clumping(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
+    		const std::map<std::string, size_t> &c_snp_index, double p_threshold,
+			double r2_threshold, size_t kb_threshold);
+    void get_score(const std::map<std::string, size_t> &inclusion, const boost::ptr_vector<SNP> &snp_list, std::vector<double> &score);
 private:
     static std::mutex clump_mtx;
     double get_r2(const size_t i, const size_t j, bool adjust=false);
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
-    void clump_thread(const size_t index, const std::deque<size_t> &index_check, std::vector<SNP> &snp_list, const double r2_threshold);
-    void compute_clump(const size_t index, size_t i_start, size_t i_end, std::vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold);
+    void clump_thread(const size_t index, const std::deque<size_t> &index_check, boost::ptr_vector<SNP> &snp_list, const double r2_threshold);
+    void compute_clump(const size_t index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold);
     bool m_init;
 
 #if defined(__LP64__)

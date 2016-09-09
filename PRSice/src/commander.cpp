@@ -26,7 +26,7 @@ bool Commander::initialize(int argc, char *argv[]){
         {"upper",required_argument,NULL,'u'},
         {"lower",required_argument,NULL,'l'},
         {"interval",required_argument,NULL,'i'},
-        {"clump",required_argument,NULL,0},
+        {"clump-p",required_argument,NULL,0},
 //        {"clump_p2",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
@@ -61,7 +61,7 @@ bool Commander::initialize(int argc, char *argv[]){
                 else if(command.compare("bp")==0) m_bp=optarg;
                 else if(command.compare("se")==0) m_standard_error = optarg;
                 else if(command.compare("index")==0) m_index = true;
-                else if(command.compare("clump")==0){
+                else if(command.compare("clump-p")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
                         error = true;
@@ -69,14 +69,6 @@ bool Commander::initialize(int argc, char *argv[]){
                     }
                     else m_clump = temp;
                 }
-//                else if(command.compare("clump_p2")==0){
-//                    double temp = atof(optarg);
-//                    if(temp < 0.0 || temp > 1.0){
-//                        error = true;
-//                        error_message.append("Clumping p-values must be >=0 and <= 1.0\n");
-//                    }
-//                    else m_clump_p2 = temp;
-//                }
                 else if(command.compare("clump_r2")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
@@ -279,8 +271,12 @@ void Commander::usage(){
     fprintf(stderr, "         -L | --ld           PLINK binary input for LD calculation. If not\n");
     fprintf(stderr, "                             provided, will use the target genotypes for the \n");
     fprintf(stderr, "                             calculation of the LD during clumping\n");
-    fprintf(stderr, "         -c | --covar_header \n");
-    fprintf(stderr, "         -C | --covar_file   \n");
+    fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will \n");
+    fprintf(stderr, "                             use all variable in the covariate file as the\n");
+    fprintf(stderr, "                             covariate\n");
+    fprintf(stderr, "         -C | --covar_file   Covariate file. Format should be:\n");
+    fprintf(stderr, "                             ID Cov1 Cov2\n");
+    fprintf(stderr, "                             Must contain a header\n");
     fprintf(stderr, "         -a | --ancestry     NOT DEVELOPED YET\n");
     fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
     fprintf(stderr, "\nScoring options:\n");
@@ -301,7 +297,7 @@ void Commander::usage(){
     fprintf(stderr, "                             the above options are providing the INDEX of the\n");
     fprintf(stderr, "                             corresponding column. (Index should be 0-based)\n");
     fprintf(stderr, "\nClumping:\n");
-    fprintf(stderr, "              --clump        The p-value threshold use for clumping. \n");
+    fprintf(stderr, "              --clump-p      The p-value threshold use for clumping. \n");
     fprintf(stderr, "                             Default is %f \n", m_clump);
 //    fprintf(stderr, "         --clump_p2          \n");
     fprintf(stderr, "              --clump_r2     The R2 threshold for clumping.\n");

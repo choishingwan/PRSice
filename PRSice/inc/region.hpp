@@ -24,10 +24,11 @@ public:
 	void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed);
 	void reset(){ m_index = std::vector<size_t>(m_region_name.size());};
 #if defined(__LP64__) || defined(_WIN64)
-	uint64_t* check(std::string chr, size_t loc);
+	typedef uint64_t long_type;
 #else
-	uint32_t* check(std::string chr, size_t loc);
+	typedef uint32_t long_type;
 #endif
+	long_type* check(std::string chr, size_t loc);
     size_t size() const { return (m_region_name.size()+1)/(sizeof(uint32_t)*CHAR_BIT)+1; };
 private:
 	typedef std::tuple<std::string, size_t, size_t> boundary;
