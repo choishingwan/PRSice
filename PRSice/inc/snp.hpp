@@ -35,9 +35,9 @@ class SNP
         size_t get_loc() const { return m_loc; }
         double get_stat() const { return m_stat; }
         double get_p_value() const { return m_p_value; }
-        static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input) const;
+        static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input);
         static std::vector<int> get_index(const Commander &c_commander,
-        		const std::string &c_input) const;
+        		const std::string &c_input);
         bool check_loc(const std::string &chr, const size_t loc,
         		const std::string &ref_allele, const std::string &alt_allele){
         		if(chr.compare(m_chr)!=0) return false;
@@ -73,16 +73,12 @@ class SNP
         bool flipped() const { return m_flipped; };
         void set_clumped() { m_clumped = true;};
         void clump_all(boost::ptr_vector<SNP> &snp_list){
-//        		std::cout << m_rs_id << " ";
-//        		std::string clump = "";
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
         			if(!snp_list[m_clump_target[i]].clumped()){
         				snp_list[m_clump_target[i]].set_clumped();
-//        				clump.append(snp_list[m_clump_target[i]].get_rs_id()+",");
         				for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
         			}
         		}
-//        		std::cout << clump <<std::endl;
         }
         double score(int geno) const {
 			int g = (geno-1 > 0)? (geno-1) : 0;
@@ -98,9 +94,9 @@ class SNP
 			if(allele.compare("C")==0 || allele.compare("c")==0) return "G";
 			else throw std::runtime_error("Unknown allele");
         }
-        static size_t index_check(const std::string &c_in) const;
+        static size_t index_check(const std::string &c_in);
         static size_t index_check(const std::string &c_in,
-        		const std::vector<std::string> &c_header, const std::string &typeOfError) const;
+        		const std::vector<std::string> &c_header, const std::string &typeOfError);
         std::string m_ref_allele;
         std::string m_alt_allele;
         std::string m_rs_id;

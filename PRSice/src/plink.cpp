@@ -322,7 +322,7 @@ void PLINK::clump_thread(const size_t c_index, const std::deque<size_t> &c_index
 	std::vector<std::thread> thread_store;
 	if((c_index_check.size()-1) < m_thread){
 		for(size_t i = 0; i < c_index_check.size(); ++i){
-			if(c_index_check[i]!=index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, index,i, i+1, std::ref(snp_list), std::cref(c_index_check), c_r2_threshold));
+			if(c_index_check[i]!=c_index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_index,i, i+1, std::ref(snp_list), std::cref(c_index_check), c_r2_threshold));
 		}
 	}
 	else{
@@ -331,7 +331,7 @@ void PLINK::clump_thread(const size_t c_index, const std::deque<size_t> &c_index
 		int cur_start = 0;
 		int cur_end = num_snp_per_thread;
 		for(size_t i = 0; i < m_thread; ++i){
-			thread_store.push_back(std::thread(&PLINK::compute_clump, this, index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(c_index_check),c_r2_threshold ));
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(c_index_check),c_r2_threshold ));
 			cur_start = cur_end+(remain>0);
 			cur_end+=num_snp_per_thread+(remain>0);
 			if(cur_end>c_index_check.size()) cur_end =c_index_check.size();
@@ -754,44 +754,32 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     m_init = true;
 }
 
-void PLINK::get_score(const std::map<std::string, size_t> &inclusion, const boost::ptr_vector<SNP> &snp_list, std::vector<double> &score){
-	// m_bim should be closed or at the front
-	if(!m_bim_read && ! m_bim_score_open){
-		std::string bim_name = m_prefix+".bim";
-		m_bim.open(bim_name.c_str());
-		if(!m_bim.is_open()){
-			std::string error_message = "Cannot open bim file: "+bim_name+" which is strange. Make sure you don't delete file when you are running PRSice";
-			throw std::runtime_error(error_message);
+void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, size_t, size_t> > &quick_ref,
+		const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
+		size_t start_index, size_t end_bound)
+{// m_bim should be closed or at the front
+	// quick_ref was constructed the same way as we read the bim file.
+	// so we can actually ignore the bim
+	//if(prs_score.size()==0) prs_score = std::vector<std::pair<std::string, double> >(m_num_sample);
+	size_t prev =0;
+	for(size_t i = start_index; i < end_bound; ++i){
+		size_t cur_index = std::get<1>(quick_ref[i]);
+		if((cur_index-prev)!=0){
+			// Skip snps
+			m_bed.seekg((std::get<1>(quick_ref[i])-prev)*m_num_bytes, m_bed.cur);
+			prev=std::get<1>(quick_ref[i])+1;
 		}
-		m_bim_score_open=true;
-	}
-	else m_bim_score_open=true;
-	// there can be better way: skip n SNPs at a time
-	// we know which SNPs to include from the beginning
-	// so in theory, we don't need to check the SNP identity again
-	size_t num_read = 0;
-	std::string line;
-	if(score.size()==0) score=std::vector<double>(m_num_sample);
-	while(std::getline(m_bim, line)){
-		misc::trim(line);
-		if(!line.empty()){
-			std::vector<std::string> token = misc::split(line);
-			if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-			if(inclusion.find(token[1])!=inclusion.end()){
-				read_snp(1, false);
-				// get the score here
-				for(size_t i =0; i < m_num_sample; ++i){
-					int index =(i*2)/m_bit_size;
-					long_type info = (m_genotype[0][index] >> (i*2) )& THREE;
-					long_type miss = (m_missing[0][index] >> (i*2) )& THREE;
-					if(miss==3) score[i] = snp_list.at(inclusion.at(token[1])).score((int)info);
-				}
-				// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
-				lerase(1);
-			}
-			else m_bed.seekg(m_num_bytes, m_bed.cur);
+		read_snp(1, false);
+		for(size_t i =0; i < m_num_sample; ++i){
+			int index =(i*2)/m_bit_size;
+			long_type info = (m_genotype[0][index] >> (i*2) )& THREE;
+			long_type miss = (m_missing[0][index] >> (i*2) )& THREE;
+			if(miss==3) prs_score[i].second = snp_list.at(std::get<3>(quick_ref[i])).score((int)info);
 		}
+		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
+		lerase(1);
 	}
+
 }
 
 

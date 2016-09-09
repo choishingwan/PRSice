@@ -42,13 +42,13 @@ SNP::SNP(){
 
 SNP::~SNP(){}
 
-size_t SNP::index_check(const std::string &c_in) const{
+size_t SNP::index_check(const std::string &c_in){
     int temp = atoi(c_in.c_str());
     if(temp < 0) throw std::runtime_error("Index of column cannot be less than 0");
     return temp;
 }
 
-size_t SNP::index_check(const std::string &c_in, const std::vector<std::string> &c_header, const std::string &typeOfError) const{
+size_t SNP::index_check(const std::string &c_in, const std::vector<std::string> &c_header, const std::string &typeOfError){
     for(size_t i = 0; i < c_header.size(); ++i){
         if(c_in.compare(c_header[i])==0){
             return i;
@@ -60,7 +60,7 @@ size_t SNP::index_check(const std::string &c_in, const std::vector<std::string> 
     return -1; //Cannot find the index
 }
 
-std::vector<int> SNP::get_index(const Commander &c_commander, const std::string &c_input) const{
+std::vector<int> SNP::get_index(const Commander &c_commander, const std::string &c_input){
     // This function should return the index in the following order
     // CHR, A1, A2, STAT, SNP, BP, SE, P
     // Absent field = -1

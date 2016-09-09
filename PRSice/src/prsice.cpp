@@ -90,8 +90,9 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 {
 	// First, get the phenotype and covariate matrix
 	std::map<std::string, size_t> fam_index;
+    std::vector<std::pair<std::string, double> > prs_score, prs_best_score;
 	Eigen::VectorXd phenotype = gen_pheno_vec(	c_target, c_commander.get_pheno(),
-												target_binary, fam_index);
+												target_binary, fam_index, prs_score);
 	Eigen::MatrixXd covariates = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
 												c_commander.get_cov_header(), fam_index);
 	std::string output_name = c_commander.get_out()+"."+c_target+".prsice";
@@ -101,12 +102,10 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		std::string error_message= "Cannot open file "+output_name+" for write!";
     		throw std::runtime_error(error_message);
     }
-    prs_out << "Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
-    std::vector<std::pair<std::string, double> > prs_score, prs_best_score;
+    prs_out << "#Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
-    double current_upper = bound_start;
     double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0;
     size_t num_snp_included = 0;
     // First, construct a SNP vector,
@@ -138,18 +137,54 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     bim.close();
     std::sort(begin(quick_ref), end(quick_ref),
         [](PRSice::p_partition const &t1, PRSice::p_partition const &t2) {
-            if(get<2>(t1)==get<2>(t2)) return get<1>(t1)<get<1>(t2);
-            else return get<2>(t1)<get<2>(t2);
+            if(std::get<2>(t1)==std::get<2>(t2)) return std::get<1>(t1)<std::get<1>(t2);
+            else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
     // Now the quick_ref can be use for fast SNP reading
     // indicate the start of the quick_ref;
     size_t cur_start_index = 0;
-    for(;current_upper<bound_end; current_upper+=bound_inter){
-    		fprintf(stderr,"\rCalculating cutoff %f", current_upper);
-    //        		// will add anything from (lower, upper]
+    double current_upper=0.0;
+    while(cur_start_index!=quick_ref.size()){
+		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter, bound_end);
+		fprintf(stderr, "\rProcessing %f\r", current_upper);
+    		bool reg = get_prs_score(quick_ref, snp_list, c_target, prs_score,
+    				num_snp_included, cur_start_index);
+    		if(reg && target_binary){
+    			Regression::glm(phenotype, covariates, p_value, r2, 25, c_commander.get_thread(), true);
+    			double null_p, null_r2;
+    			Regression::glm(phenotype, covariates.block(0,1,covariates.rows(),
+    					covariates.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
+    			r2-=null_r2;
+    			prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value  <<"\t" << num_snp_included << std::endl;
+    		}
+    		else if(reg){
+    			Regression::linear_regression(phenotype, covariates, p_value, r2, r2_adjust,
+    					c_commander.get_thread(), true);
+    			prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value <<"\t" << num_snp_included << std::endl;
+    		}
+    		if(r2 > best_r2){
+    			best_r2 = r2;
+    			prs_best_score = prs_score;
+    		}
     }
-
+    prs_out.close();
+    output_name = c_commander.get_out()+"."+c_target+".best.prsice";
+    prs_best.open(output_name.c_str());
+    if(!prs_best.is_open()){
+    		std::string error_message = "ERROR: Cannot open file "+output_name+" for write";
+    		throw std::runtime_error(error_message);
+    }
+    prs_best << "#SampleID\tPRS" << std::endl;
+    for(size_t i = 0; i < prs_best_score.size(); ++i){
+    		std::string sample = std::get<0>(prs_best_score[i]);
+    		if(fam_index.find(sample)!=fam_index.end()){
+    			prs_best << sample << "\t" << std::get<1>(prs_best_score[i]) << std::endl;
+    		}
+    		else prs_best << sample << "\tNA" << std::endl;
+    }
+    prs_best.close();
+    fprintf(stderr, "\n");
 }
 
 void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
@@ -188,88 +223,14 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         // inclusion now represent the index SNPs
         calculate_score(c_commander, c_commander.get_target_binary(i_target),
         		target[i_target], inclusion, snp_list);
-//
-//        for(;current_upper<bound_end; current_upper+=bound_inter){
-//            fprintf(stderr,"\rCalculating cutoff %f", current_upper);
-//        		// will add anything from (lower, upper]
-//        		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, current_upper, num_snp);
-//        		size_t j = 0;
-//        		for(size_t i = 0; i < prs_score.size(); ++i){
-//        			if(!pheno_missing_index[i]){
-//        				covariate(j++,0) = prs_score[i];
-//        			}
-//        		}
-//        		current_lower = current_upper;
-//        		// This should update the score
-//        		// TODO: PRSice can also calculate the PCA / MDS and use as covariate in its analysis
-//        		// TODO: Have not handled the region selection
-//        		if(reg){
-//        			if(target_binary){
-//        				Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
-//        				prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
-//        			}
-//        			else{
-//        				Regression::glm(phenotype, covariate, p_value, r2, 25, c_commander.get_thread(), true);
-//        				double null_p, null_r2;
-//        				Regression::glm(phenotype, covariate.block(0,1,covariate.rows(), covariate.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
-//        				r2-=null_r2;
-//        				prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value << std::endl;
-//        			}
-//        			if(r2 > best_r2){
-//        				best_r2 = r2;
-//        				prs_best_score = prs_score;
-//        			}
-//        		}
-//        }
-//        if(current_upper != bound_end){
-//            fprintf(stderr,"\rCalculating cutoff %f", bound_end);
-//        		bool reg = score(inclusion, snp_list, target[i_target], prs_score, current_lower, bound_end, num_snp);
-//        		if(reg){
-//        			if(target_binary){
-//        				Regression::linear_regression(phenotype, covariate, p_value, r2, r2_adjust, c_commander.get_thread(), true);
-//        				prs_out << current_upper << "\t" << r2 << "\t" << r2_adjust << "\t" << p_value << std::endl;
-//        			}
-//        			else{
-//        				Regression::glm(phenotype, covariate, p_value, r2, 25, c_commander.get_thread(), true);
-//        				double null_p, null_r2;
-//        				Regression::glm(phenotype, covariate.block(0,1,covariate.rows(), covariate.cols()-1), null_p, null_r2, 25, c_commander.get_thread(), true);
-//        				r2-=null_r2;
-//        				prs_out << current_upper << "\t" << r2 << "\tNA\t" << p_value << std::endl;
-//        			}
-//        		}
-//        }
-//        prs_out.close();
-//        output_name = c_commander.get_out()+"."+target[i_target]+".best.prsice";
-//        prs_best.open(output_name.c_str());
-//        if(!prs_best.is_open()){
-//        		std::string error_message = "ERROR: Cannot open file "+output_name+" for write";
-//        		throw std::runtime_error(error_message);
-//        }
-//        std::ifstream fam;
-//        std::string fam_name = target[i_target]+".fam";
-//        fam.open(fam_name.c_str());
-//        if(!fam.is_open()){
-//        		std::string error_message = "ERROR: Cannot open file "+fam_name;
-//        		throw std::runtime_error(error_message);
-//        }
-//        std::string line;
-//        while(std::getline(fam, line)){
-//        		misc::trim(line);
-//        		if(!line.empty()){
-//        			std::vector<std::string> token = misc::split(line);
-//        			if(pheno_missing.find(token[1])!=pheno_missing.end() && pheno_missing[token[1]]!=-1) prs_best << token[0] << "\t" << token[1] << "\t" << prs_best_score[pheno_missing[token[1]]] << std::endl;
-//        			else prs_best << token[0] << "\t" << token[1] << "\tNA" << std::endl;
-//        		}
-//        }
-//        prs_best.close();
-//        fprintf(stderr, "\n");
     }
 }
 
 
 Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 		const std::string c_pheno, bool target_binary,
-		std::map<std::string, size_t> &fam_index)
+		std::map<std::string, size_t> &fam_index,
+		std::vector<std::pair<std::string, double> > &prs_score)
 {
 	std::vector<double> phenotype_store;
 	std::ifstream pheno_file;
@@ -287,6 +248,7 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 			if(!line.empty()){
 				std::vector<std::string> token = misc::split(line);
 				if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
+				prs_score.push_back(std::pair<std::string, double>(token[1], 0.0));
 				if(token[5].compare("NA")!=0){
 					try{
 						double temp = misc::convert<double>(token[5]);
@@ -446,7 +408,7 @@ Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::str
 // basically update the score vector to contain the new polygenic score
 bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, const std::string &target,
-	std::vector<p_partition> &score, size_t &num_snp_included, size_t &cur_index)
+	std::vector<std::pair<std::string, double> > &prs_score, size_t &num_snp_included, size_t &cur_index)
 {
 	// Here we will make a different inclusion for the inclusion
 	if(quick_ref.size()==0) return false; // again, nothing to do
@@ -466,6 +428,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	PLINK prs(target);
 	prs.initialize();
 	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
+	cur_index = end_index;
 	return true;
 }
 
