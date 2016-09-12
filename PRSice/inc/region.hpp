@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <map>
 #include <tuple>
+#include <limits.h>
+#include <string.h>
 #include "misc.hpp"
 
 class Region {
