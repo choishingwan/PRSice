@@ -211,7 +211,8 @@ namespace Regression{
 			eta=A*start;
 			mu = logit_linkinv(eta);
 			dev = binomial_dev_resids_sum(y, mu, weights);
-			if (fabs(dev - devold)/(0.1 + fabs(dev)) < std::numeric_limits<double>::epsilon()) {
+			// R only use 1e-8 here
+			if (fabs(dev - devold)/(0.1 + fabs(dev)) < 1e-8) {
 				converge =true;
 				break;
 			}
