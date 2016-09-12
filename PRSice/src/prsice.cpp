@@ -107,7 +107,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
-    double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0, best_threshold=0.0;
+    double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0, best_threshold=0.0, best_num_snp=0;
     size_t num_snp_included = 0;
     // First, construct a SNP vector,
     std::string bim_name = c_target+".bim";
@@ -144,7 +144,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     );
     // now initiailize the score with score for anything less than 0 in the p-value catelog
     size_t cur_start_index = 0;
-    get_prs_score(quick_ref, snp_list, c_target, prs_score, num_snp_included, cur_start_index);
+    if(bound_start != 0) get_prs_score(quick_ref, snp_list, c_target, prs_score, num_snp_included, cur_start_index);
     // Now the quick_ref can be use for fast SNP reading
     // indicate the start of the quick_ref;
     double current_upper=0.0;
@@ -195,6 +195,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		if(r2 > best_r2){
     			best_r2 = r2;
+    			best_num_snp = num_snp_included;
     			best_threshold = current_upper;
     			prs_best_score = prs_score;
     		}
@@ -210,7 +211,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     for(size_t i = 0; i < prs_best_score.size(); ++i){
     		std::string sample = std::get<0>(prs_best_score[i]);
     		if(fam_index.find(sample)!=fam_index.end()){
-    			prs_best << sample << "\t" << std::get<1>(prs_best_score[i]) << std::endl;
+    			prs_best << sample << "\t" << std::get<1>(prs_best_score[i])/best_num_snp << std::endl;
     		}
     		else prs_best << sample << "\tNA" << std::endl;
     }
