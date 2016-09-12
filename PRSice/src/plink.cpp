@@ -757,7 +757,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
 
 void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
-		size_t start_index, size_t end_bound, size_t num_snp)
+		size_t start_index, size_t end_bound)
 {// m_bim should be closed or at the front
 	// quick_ref was constructed the same way as we read the bim file.
 	// so we can actually ignore the bim
@@ -777,7 +777,7 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 //			std::cerr << i_sample << "\t" << ((int)i_sample*2-(int)index*m_bit_size) << "\t" << index << "\t" << info << "\t" << miss << std::endl;
-			if(miss==3) prs_score[i_sample].second += snp_list.at(snp_index).score((int)info)/(double)num_snp;
+			if(miss==3) prs_score[i_sample].second += snp_list.at(snp_index).score((int)info);
 		}
 		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
 		lerase(1);

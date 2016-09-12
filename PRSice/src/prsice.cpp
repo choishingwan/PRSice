@@ -161,7 +161,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			for(size_t i = 0; i < prs_score.size(); ++i){
     				std::string sample = std::get<0>(prs_score[i]);
     				if(fam_index.find(sample)!=fam_index.end()){
-    					covariates(fam_index[sample], 0) = std::get<1>(prs_score[i]);
+    					covariates(fam_index[sample], 0) = std::get<1>(prs_score[i])/(double)num_snp_included;
     				}
     			}
     		}
@@ -461,7 +461,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	if(!ended) end_index = quick_ref.size();
 	PLINK prs(target);
 	prs.initialize();
-	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index, num_snp_included);
+	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
 	cur_index = end_index;
 	return true;
 }
