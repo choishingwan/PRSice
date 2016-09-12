@@ -4,6 +4,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		std::map<std::string, size_t> &snp_index, const std::string &c_input, bool beta,
 		const Commander &c_commander, Region &region){
 	std::vector<int> index = SNP::get_index(c_commander, c_input);
+	// warning regarding the OR
     std::ifstream snp_file;
     snp_file.open(c_input.c_str());
     if(!snp_file.is_open()){
@@ -102,7 +103,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		std::string error_message= "Cannot open file "+output_name+" for write!";
     		throw std::runtime_error(error_message);
     }
-    prs_out << "#Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
+    prs_out << "Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
@@ -127,7 +128,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(token.size() < 6) throw std::runtime_error("Malformed bim file, should contain at least 6 columns");
     			if(inclusion.find(token[1])!=inclusion.end()){
     				double p = snp_list.at(inclusion.at(token[1])).get_p_value();
-    				if(p<bound_end && p>bound_start){
+    				if(p<bound_end){ // doesn't really matter if the
     					quick_ref.push_back(p_partition(token[1], cur_line, (int)((p-bound_start)/bound_inter),inclusion.at(token[1])));
     				}
     			}
@@ -141,15 +142,20 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
             else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
+    // now initiailize the score with score for anything less than 0 in the p-value catelog
+    size_t cur_start_index = 0;
+    get_prs_score(quick_ref, snp_list, c_target, prs_score, num_snp_included, cur_start_index);
     // Now the quick_ref can be use for fast SNP reading
     // indicate the start of the quick_ref;
-    size_t cur_start_index = 0;
     double current_upper=0.0;
     while(cur_start_index!=quick_ref.size()){
-		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter, bound_end);
+		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
 		fprintf(stderr, "\rProcessing %f", current_upper);
     		bool reg = get_prs_score(quick_ref, snp_list, c_target, prs_score,
     				num_snp_included, cur_start_index);
+//    		std::cerr << "Check score:" << std::endl;
+//    		for(size_t i = 0; i < prs_score.size(); ++i) std::cerr << std::get<0>(prs_score[i]) << "\t" << std::get<1>(prs_score[i]) << std::endl;
+//    		exit(-1);
     		if(reg){
     			for(size_t i = 0; i < prs_score.size(); ++i){
     				std::string sample = std::get<0>(prs_score[i]);
@@ -198,7 +204,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		std::string error_message = "ERROR: Cannot open file "+output_name+" for write";
     		throw std::runtime_error(error_message);
     }
-    prs_best << "#SampleID\tPRS" << std::endl;
+    prs_best << "SampleID\tPRS" << std::endl;
     for(size_t i = 0; i < prs_best_score.size(); ++i){
     		std::string sample = std::get<0>(prs_best_score[i]);
     		if(fam_index.find(sample)!=fam_index.end()){
@@ -208,6 +214,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     }
     prs_best.close();
     fprintf(stderr, "\n");
+    fprintf(stderr, "Completed\n");
 }
 
 void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
@@ -435,16 +442,17 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	std::vector<std::pair<std::string, double> > &prs_score, size_t &num_snp_included, size_t &cur_index)
 {
 	// Here we will make a different inclusion for the inclusion
-	if(quick_ref.size()==0) return false; // again, nothing to do
+	if(quick_ref.size()==0) return false; // nothing to do
 	size_t prev_index =prev_index = std::get<2>(quick_ref[cur_index]);;
 	size_t end_index = 0;
 	bool ended =false;
 	for(size_t i = cur_index; i < quick_ref.size(); ++i){
-		if(std::get<2>(quick_ref[i]) != prev_index){
+		if(std::get<2>(quick_ref[i]) != prev_index && std::get<2>(quick_ref[i])>=0 ){
 			end_index = i;
 			ended=true;
 			break;
 		}
+		else if(std::get<2>(quick_ref[i])!=prev_index) prev_index=std::get<2>(quick_ref[i]); // only when the category is still negative
 		// Use as part of the output
 		num_snp_included++;
 	}

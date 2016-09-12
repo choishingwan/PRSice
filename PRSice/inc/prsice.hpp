@@ -27,7 +27,7 @@ class PRSice
         void process(const std::string &c_input, bool binary, const Commander &c_commander, Region &region);
     protected:
     private:
-        typedef std::tuple<std::string, size_t, size_t, size_t> p_partition;
+        typedef std::tuple<std::string, size_t, int, size_t> p_partition;
         bool get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
         			const boost::ptr_vector<SNP> &snp_list, const std::string &target,
 				std::vector<std::pair<std::string, double> > &score, size_t &num_snp_included,
