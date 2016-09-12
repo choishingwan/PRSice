@@ -763,19 +763,21 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, size_t, 
 	// so we can actually ignore the bim
 	//if(prs_score.size()==0) prs_score = std::vector<std::pair<std::string, double> >(m_num_sample);
 	size_t prev =0;
-	for(size_t i = start_index; i < end_bound; ++i){
-		size_t cur_index = std::get<1>(quick_ref[i]);
+	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp){
+		size_t cur_index = std::get<1>(quick_ref[i_snp]);
 		if((cur_index-prev)!=0){
 			// Skip snps
-			m_bed.seekg((std::get<1>(quick_ref[i])-prev)*m_num_bytes, m_bed.cur);
-			prev=std::get<1>(quick_ref[i])+1;
+			m_bed.seekg((std::get<1>(quick_ref[i_snp])-prev)*m_num_bytes, m_bed.cur);
+			prev=std::get<1>(quick_ref[i_snp])+1;
 		}
 		read_snp(1, false);
-		for(size_t i =0; i < m_num_sample; ++i){
-			int index =(i*2)/m_bit_size;
-			long_type info = (m_genotype[0][index] >> (i*2) )& THREE;
-			long_type miss = (m_missing[0][index] >> (i*2) )& THREE;
-			if(miss==3) prs_score[i].second = snp_list.at(std::get<3>(quick_ref[i])).score((int)info);
+		int snp_index = std::get<3>(quick_ref[i_snp]);
+		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
+			int index =(i_sample*2)/m_bit_size;
+			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
+			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
+//			std::cerr << i_sample << "\t" << ((int)i_sample*2-(int)index*m_bit_size) << "\t" << index << "\t" << info << "\t" << miss << std::endl;
+			if(miss==3) prs_score[i_sample].second += snp_list.at(snp_index).score((int)info);
 		}
 		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
 		lerase(1);
