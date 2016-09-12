@@ -170,6 +170,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				debug.open("DEBUG.y");
     				debug << phenotype << std::endl;
     				debug.close();
+					std::cerr << "ERROR: " << error.what() << std::endl;
     				exit(-1);
     			}
     			double null_p, null_r2;
