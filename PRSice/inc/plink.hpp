@@ -57,7 +57,7 @@ public:
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
     void get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
     			const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
-				size_t start_index, size_t end_bound);
+				size_t start_index, size_t end_bound, size_t num_snp);
 private:
     static std::mutex clump_mtx;
     double get_r2(const size_t i, const size_t j, bool adjust=false);

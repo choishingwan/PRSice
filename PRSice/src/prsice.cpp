@@ -107,7 +107,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
-    double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0;
+    double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0, best_threshold=0.0;
     size_t num_snp_included = 0;
     // First, construct a SNP vector,
     std::string bim_name = c_target+".bim";
@@ -148,6 +148,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     // Now the quick_ref can be use for fast SNP reading
     // indicate the start of the quick_ref;
     double current_upper=0.0;
+
     while(cur_start_index!=quick_ref.size()){
 		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
 		fprintf(stderr, "\rProcessing %f", current_upper);
@@ -194,6 +195,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		if(r2 > best_r2){
     			best_r2 = r2;
+    			best_threshold = current_upper;
     			prs_best_score = prs_score;
     		}
     }
@@ -204,7 +206,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		std::string error_message = "ERROR: Cannot open file "+output_name+" for write";
     		throw std::runtime_error(error_message);
     }
-    prs_best << "SampleID\tPRS" << std::endl;
+    prs_best << "IID\tPRS_"<< best_threshold << std::endl;
     for(size_t i = 0; i < prs_best_score.size(); ++i){
     		std::string sample = std::get<0>(prs_best_score[i]);
     		if(fam_index.find(sample)!=fam_index.end()){
@@ -459,7 +461,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	if(!ended) end_index = quick_ref.size();
 	PLINK prs(target);
 	prs.initialize();
-	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
+	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index, num_snp_included);
 	cur_index = end_index;
 	return true;
 }
