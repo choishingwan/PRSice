@@ -97,6 +97,10 @@ bool Commander::initialize(int argc, char *argv[]){
                 		for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
                 	}
                 else if(command.compare("gen_bed")==0) m_gen_bed = true;
+                else{
+                		std::string er = "Undefined operator: "+command+", please use --help for more information!";
+                		throw std::runtime_error(er);
+                }
                 break;
             case 'b':
                 m_base= misc::split(optarg, ", ");

@@ -43,7 +43,7 @@ class Commander
         double get_upper() const { return m_upper; };
         double get_inter() const { return m_inter; };
         bool get_target_binary(size_t i) const { return m_target_is_binary.at(i); };
-        bool get_base_binary(size_t i) const { return m_target_is_binary.at(i); };
+        bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
     protected:
     private:
         void usage();
