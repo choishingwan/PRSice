@@ -755,7 +755,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     m_init = true;
 }
 
-void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, size_t, size_t> > &quick_ref,
+void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
 		size_t start_index, size_t end_bound)
 {// m_bim should be closed or at the front

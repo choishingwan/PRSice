@@ -55,7 +55,7 @@ public:
     		const std::map<std::string, size_t> &c_snp_index, double p_threshold,
 			double r2_threshold, size_t kb_threshold);
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
-    void get_score(const std::vector<std::tuple<std::string, size_t, size_t, size_t> > &quick_ref,
+    void get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
     			const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
 				size_t start_index, size_t end_bound);
 private:
