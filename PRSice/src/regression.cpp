@@ -9,8 +9,12 @@
 namespace Regression{
 
 	// on purposely perform the copying of x
-	void linear_regression(const Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, double &r2_adjust, size_t thread, bool intercept){
+	void linear_regression(const Eigen::VectorXd &y, const Eigen::MatrixXd &A, double &p_value, double &r2, double &r2_adjust, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
+		// in more general cases, the following is needed (adding the intercept)
+		// but here in PRSice, we always include the intercept, so we will skip
+		// this to speed things up
+		/*
 		Eigen::MatrixXd A;
 		if(intercept){
 			A=Eigen::MatrixXd::Zero(x.rows(), x.cols()+1);
@@ -18,6 +22,7 @@ namespace Regression{
 			A.block(0,1,x.rows(), x.cols()) = x;
 		}
 		else A = x;
+		*/
 		Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
 		Eigen::VectorXd beta = z.solve(y);
 		Eigen::MatrixXd fitted = A*beta;
@@ -149,9 +154,10 @@ namespace Regression{
 	}
 
 	// This is an unsafe version of R's glm.fit
-	// unsafe as in we don't check if the data is correct
+	// unsafe as in I have skipped some of the checking
 	void glm(Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, size_t max_iter, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
+		/*
 		Eigen::MatrixXd A;
 		if(intercept){
 			A=Eigen::MatrixXd::Zero(x.rows(), x.cols()+1);
@@ -159,7 +165,10 @@ namespace Regression{
 			A.block(0,1,x.rows(), x.cols()) = x;
 		}
 		else A = x;
-		//Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(A);
+		*/
+		// unfortunately, because of the algorithm where we will need to modify A, we will
+		// need at least one copying
+		Eigen::MatrixXd A=x;
 		int nobs = y.rows();
 		int nvars = A.cols();
 		Eigen::VectorXd weights = Eigen::VectorXd::Ones(nobs);
