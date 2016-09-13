@@ -1,16 +1,94 @@
 #include "prsice.hpp"
 
+void PRSice::run(const Commander &c_commander, Region &region){
+	// First, wrap the whole process with a for loop
+	// to loop through all base phenotype
+    std::vector<std::string> base = c_commander.get_base();
+    int num_base = base.size();
+    if(num_base == 0) throw std::runtime_error("There is no base case to run");
+    if(num_base < 0) throw std::runtime_error("Negative number of base");
+    else{
+    		if(num_base > 1) fprintf(stderr, "Multiple base phenotype detected. You might want to run seperate instance of PRSice to speed up the process\n");
+        for(size_t i = 0; i < num_base; ++i){
+            process(base[i], c_commander.get_base_binary(i), c_commander, region);
+        }
+    }
+    // completed when we reach here
+}
+
+void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
+	// we need to reset the region flag for region inclusion information
+	region.reset();
+	// snp_list should contain all SNP information from the base file
+	boost::ptr_vector<SNP> snp_list;
+	// and snp_index is used for quickly finding the index of specific SNP in snp_list
+    std::map<std::string, size_t> snp_index;
+    // Now obtaining the SNP information from the base file
+    get_snp(snp_list, snp_index, c_input, beta, c_commander, region);
+    // Then we will perform the rest of the process for each individual
+    // target file.
+    std::vector<std::string> target = c_commander.get_target();
+	fprintf(stderr,"\nClumping Parameters: \n");
+    fprintf(stderr,"==============================\n");
+    fprintf(stderr,"P-Threshold  : %f\n", c_commander.get_clump_p());
+    fprintf(stderr,"R2-Threshold : %f\n", c_commander.get_clump_r2());
+    fprintf(stderr,"Window Size  : %zu\n", c_commander.get_clump_kb());
+
+    for(size_t i_target = 0; i_target < target.size(); ++i_target){
+    		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
+    	    fprintf(stderr,"==============================\n");
+    	    // The inclusion map should contain the SNPs that are supposed to be used for the
+    	    // calculation of PRS
+        std::map<std::string, size_t> inclusion;
+        bool has_ld = !c_commander.ld_prefix().empty();
+        std::string ld_file = (has_ld)? c_commander.ld_prefix(): target[i_target];
+        // create the plink class for clumping
+        PLINK clump(ld_file, c_commander.get_thread());
+        if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
+        else fprintf(stderr,"\nStart performing clumping\n");
+        // now initialize the plink class. This should also update inclusion such
+        // that it will only include SNPs also found in the plink file
+        clump.initialize(inclusion, snp_list, snp_index);
+        if(has_ld){
+        		// because we have independent LD file, we want to make sure
+        		// only SNPs that are also found in the target file are used
+        		// for clumping
+        		std::string target_bim_name = target[i_target]+".bim";
+            fprintf(stderr,"\nIn target %s\n", ld_file.c_str());
+            // This will provide us the final inclusion map, which contains the
+            // SNPs that are supposed to be used for clumping
+        		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
+        }
+        // This will perform clumping. When completed, inclusion will contain the index SNPs
+        // However, this should be changed in later version such that we can also
+        // handle different regions
+        clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
+        		c_commander.get_clump_r2(), c_commander.get_clump_kb());
+        // Now begin the calculation of the PRS
+        calculate_score(c_commander, c_commander.get_target_binary(i_target),
+        		target[i_target], inclusion, snp_list);
+    }
+}
+
 void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		std::map<std::string, size_t> &snp_index, const std::string &c_input, bool beta,
 		const Commander &c_commander, Region &region){
+	// First, we need to obtain the index of different columns from the base files
+	// Might also want to include some warnings regarding OR or beta.
+	// NOTE: -1 means missing and index is hard coded such that each index will represent
+	//       specific header
+
+	// just issue the warning and do nothing
+	if(beta && c_commander.statistic().compare("OR")==0) fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
 	std::vector<int> index = SNP::get_index(c_commander, c_input);
-	// warning regarding the OR
+	// Open the file
     std::ifstream snp_file;
     snp_file.open(c_input.c_str());
     if(!snp_file.is_open()){
     		std::string error_message = "Cannot open base file: "+c_input;
     		throw std::runtime_error(error_message);
     }
+    // Some QC counts
     size_t num_duplicated = 0;
     size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
@@ -19,6 +97,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
     bool se_error = false;
 	if(!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
+	// Acutal reading the file, will do a bunch of QC
 	while(std::getline(snp_file, line)){
 		misc::trim(line);
 		if(!line.empty()){
@@ -79,6 +158,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		if(read_error) throw std::runtime_error("Please check if you have the correct input");
 	}
 	snp_file.close();
+	// Now output the statistics. Might want to improve the outputs
 	fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", snp_list.size());
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
@@ -89,13 +169,25 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 		const std::string c_target, const std::map<std::string, size_t> &inclusion,
 		const boost::ptr_vector<SNP> &snp_list)
 {
+	// Might want to add additional parameter for the region output
+	// keep it for now
 	// First, get the phenotype and covariate matrix
 	std::map<std::string, size_t> fam_index;
     std::vector<std::pair<std::string, double> > prs_score, prs_best_score;
-	Eigen::VectorXd phenotype = gen_pheno_vec(	c_target, c_commander.get_pheno(),
-												target_binary, fam_index, prs_score);
-	Eigen::MatrixXd covariates = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
-												c_commander.get_cov_header(), fam_index);
+    // check whether if regression is required
+    bool no_regress =c_commander.no_regression();
+    // below is only required if regression is required
+    Eigen::VectorXd phenotype;
+    Eigen::MatrixXd covariates;
+    if(!no_regress){
+        // This should generate the phenotype matrix by reading from the fam/pheno file
+    		phenotype = gen_pheno_vec(	c_target, c_commander.get_pheno(),
+    													target_binary, fam_index, prs_score);
+    		// This should generate the covariate matrix
+    		covariates = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
+    													c_commander.get_cov_header(), fam_index);
+    }
+	// Now prepare the output files
 	std::string output_name = c_commander.get_out()+"."+c_target+".prsice";
     std::ofstream prs_out, prs_best;
     prs_out.open(output_name.c_str());
@@ -104,14 +196,21 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		throw std::runtime_error(error_message);
     }
     prs_out << "Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
+    // just some variable definition (should implement fastscore here...
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
     double current_lower = 0.0, p_value=0.0, r2=0.0, r2_adjust = 0.0, best_r2 =0.0, best_threshold=0.0, best_num_snp=0;
     size_t num_snp_included = 0;
-    // First, construct a SNP vector,
+    // instead of search the SNPs for each p-value threshold, we should just use one
+    // special vector to speed things up
     std::string bim_name = c_target+".bim";
-    // Use for speeding up the bed file reading
+    // This should contain some important information to speed up the bed file reading
+    // should contain string, size_t, int, size_t
+    // string = rsid
+    // size_t = line number of bed file
+    // int = p-value threshold category, -1 occurs when bound_start != 0
+    // size_t = index of the SNP on snp_list, avoid repeat finding from map_inclusion
     std::vector<p_partition > quick_ref;
     std::ifstream bim;
     bim.open(bim_name.c_str());
@@ -128,35 +227,58 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(token.size() < 6) throw std::runtime_error("Malformed bim file, should contain at least 6 columns");
     			if(inclusion.find(token[1])!=inclusion.end()){
     				double p = snp_list.at(inclusion.at(token[1])).get_p_value();
-    				if(p<bound_end){ // doesn't really matter if the
-    					quick_ref.push_back(p_partition(token[1], cur_line, (int)((p-bound_start)/bound_inter),inclusion.at(token[1])));
+    				if(p<bound_end){
+    					int category = (int)((p-bound_start)/bound_inter);
+    					quick_ref.push_back(p_partition(token[1], cur_line, (category<0)?-1:category ,inclusion.at(token[1])));
     				}
     			}
     			cur_line++;
     		}
     }
     bim.close();
+    // now we sort quick_ref such that the smaller p_value categories are always in the front
     std::sort(begin(quick_ref), end(quick_ref),
         [](PRSice::p_partition const &t1, PRSice::p_partition const &t2) {
             if(std::get<2>(t1)==std::get<2>(t2)) return std::get<1>(t1)<std::get<1>(t2);
             else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
-    // now initiailize the score with score for anything less than 0 in the p-value catelog
     size_t cur_start_index = 0;
+    // first read everything that are smaller than 0
     if(bound_start != 0) get_prs_score(quick_ref, snp_list, c_target, prs_score, num_snp_included, cur_start_index);
-    // Now the quick_ref can be use for fast SNP reading
-    // indicate the start of the quick_ref;
     double current_upper=0.0;
-
+    // Preparing the output if no_regression is set
+	output_name = c_commander.get_out()+"."+c_target+".all.score";
+    std::ofstream no_regress_out;
+    if(no_regress){
+    		no_regress_out.open(output_name.c_str());
+    		if(!no_regress_out.is_open()){
+    			std::string error_message = "Cannot open file "+output_name+" for write";
+    			throw std::runtime_error(error_message);
+    		}
+    }
+    bool first_run= true;
     while(cur_start_index!=quick_ref.size()){
 		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
 		fprintf(stderr, "\rProcessing %f", current_upper);
     		bool reg = get_prs_score(quick_ref, snp_list, c_target, prs_score,
     				num_snp_included, cur_start_index);
-//    		std::cerr << "Check score:" << std::endl;
-//    		for(size_t i = 0; i < prs_score.size(); ++i) std::cerr << std::get<0>(prs_score[i]) << "\t" << std::get<1>(prs_score[i]) << std::endl;
-//    		exit(-1);
+    		// The actual printing of the PRS
+    		// The format will be different to the best PRS output
+    		// this should essentially limit our output to 1 file (but huge if a lot
+    		// of threshold is set)
+    		if(no_regress){
+    			if(first_run){
+    				first_run=false;
+    				no_regress_out << "Threshold";
+    				for(size_t i = 0; i < prs_score.size(); ++i) no_regress_out << "\t" << std::get<0>(prs_score[i]);
+    				no_regress_out << std::endl;
+    			}
+    			no_regress_out << current_upper;
+    			for(size_t i = 0; i < prs_score.size(); ++i) no_regress_out << "\t" << std::get<1>(prs_score[i])/(double)num_snp_included;
+    			no_regress_out << std::endl;
+    		}
+    		reg = reg&& (!no_regress); // only true when no_regress = false
     		if(reg){
     			for(size_t i = 0; i < prs_score.size(); ++i){
     				std::string sample = std::get<0>(prs_score[i]);
@@ -167,9 +289,11 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		if(reg && target_binary){
     			try{
-    			Regression::glm(phenotype, covariates, p_value, r2, 25, c_commander.get_thread(), true);
+    				Regression::glm(phenotype, covariates, p_value, r2, 25, c_commander.get_thread(), true);
     			}
     			catch(const std::runtime_error &error){
+    				// This should only happen when the glm doesn't converge.
+    				// Let's hope that won't happen...
     				std::ofstream debug;
     				debug.open("DEBUG");
     				debug << covariates<< std::endl;
@@ -220,44 +344,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     fprintf(stderr, "Completed\n");
 }
 
-void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
-	//We will now use the ptr_vector
-	boost::ptr_vector<SNP> snp_list;
-    std::map<std::string, size_t> snp_index;
-    get_snp(snp_list, snp_index, c_input, beta, c_commander, region);
-    std::vector<std::string> target = c_commander.get_target();
-	fprintf(stderr,"\nClumping Parameters: \n");
-    fprintf(stderr,"==============================\n");
-    fprintf(stderr,"P-Threshold  : %f\n", c_commander.get_clump_p());
-    fprintf(stderr,"R2-Threshold : %f\n", c_commander.get_clump_r2());
-    fprintf(stderr,"Window Size  : %zu\n", c_commander.get_clump_kb());
-
-    for(size_t i_target = 0; i_target < target.size(); ++i_target){
-    		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
-    	    fprintf(stderr,"==============================\n");
-    	    // Key = rsid, Value = index w.r.t. snp_list
-        std::map<std::string, size_t> inclusion;
-        bool has_ld = !c_commander.ld_prefix().empty();
-        std::string ld_file = (has_ld)? c_commander.ld_prefix(): target[i_target];
-        PLINK clump(ld_file, c_commander.get_thread());
-        if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
-        else fprintf(stderr,"\nStart performing clumping\n");
-        // after initialize, we have a list of SNPs to include
-        // also, the bim file should be closed
-        clump.initialize(inclusion, snp_list, snp_index);
-        if(has_ld){
-        		std::string target_bim_name = target[i_target]+".bim";
-        		// perform additional filtering
-            fprintf(stderr,"\nIn target %s\n", ld_file.c_str());
-        		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
-        }
-        clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
-        		c_commander.get_clump_r2(), c_commander.get_clump_kb());
-        // inclusion now represent the index SNPs
-        calculate_score(c_commander, c_commander.get_target_binary(i_target),
-        		target[i_target], inclusion, snp_list);
-    }
-}
 
 
 Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
@@ -377,7 +463,8 @@ Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
 Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::string &c_cov_file, const std::vector<std::string> &c_cov_header, std::map<std::string, size_t> &fam_index){
 	size_t num_sample = fam_index.size();
 	if(c_cov_file.empty()){
-		return Eigen::MatrixXd::Zero(num_sample,1);
+		// changed this to 2 to avoid needing to add the intercept for every regression
+		return Eigen::MatrixXd::Zero(num_sample,2);
 	}
 	else{
 		// First read in the header
@@ -394,11 +481,13 @@ Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::str
 		if(!line.empty()){
 			std::vector<std::string> token = misc::split(line);
 			if(c_cov_header.size() == 0){
+				// if no header is provided, we will use all the covariates included
 				for(size_t i = 1; i < token.size(); ++i) cov_index.push_back(i);
 				max_index = cov_index.size()-1;
 			}
 			else{
 				std::map<std::string, bool> include;
+				// if specific headers are provided, we should only include them
 				for(size_t i = 0; i < c_cov_header.size(); ++i) include[c_cov_header[i]]= true;
 				for(size_t i = 1; i < token.size(); ++i){
 					if(include.find(token[i])!=include.end()){
@@ -411,7 +500,8 @@ Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::str
 		else throw std::runtime_error("First line of covariate file is empty!");
 		// now we know how much we are working with
 		// need to include the space for the polygenic risk score
-		Eigen::MatrixXd result = Eigen::MatrixXd::Zero(num_sample, cov_index.size()+1);
+		// +2 because the first row is for intercept and the second row is for the PRS
+		Eigen::MatrixXd result = Eigen::MatrixXd::Zero(num_sample, cov_index.size()+2);
 		while(std::getline(cov, line)){
 			misc::trim(line);
 			if(!line.empty()){
@@ -425,11 +515,11 @@ Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::str
 					for(size_t i = 0; i < cov_index.size(); ++i){
 						try{
 							double temp = misc::convert<double>(token[cov_index[i]]);
-							result(index, i+1) = temp;
+							result(index, i+2) = temp;
 						}
 						catch(const std::runtime_error &error){
-							// Here, we handle all missing covariates as 0
-							result(index, i+1) = 0;
+							// All missing values are treated as 0
+							result(index, i+2) = 0;
 						}
 					}
 				}
@@ -444,7 +534,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, const std::string &target,
 	std::vector<std::pair<std::string, double> > &prs_score, size_t &num_snp_included, size_t &cur_index)
 {
-	// Here we will make a different inclusion for the inclusion
+	// Here is the actual calculation of the PRS
 	if(quick_ref.size()==0) return false; // nothing to do
 	size_t prev_index =prev_index = std::get<2>(quick_ref[cur_index]);;
 	size_t end_index = 0;
@@ -466,6 +556,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	cur_index = end_index;
 	return true;
 }
+
 
 void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
 		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index){
@@ -541,19 +632,7 @@ void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const st
 }
 
 
-void PRSice::run(const Commander &c_commander, Region &region){
-    std::vector<std::string> base = c_commander.get_base();
-    int num_base = base.size();
-    if(num_base == 0) throw std::runtime_error("There is no base case to run");
-    if(num_base < 0) throw std::runtime_error("Negative number of base");
-    else{
-        for(size_t i = 0; i < num_base; ++i){
-        		region.reset();
-            process(base[i], c_commander.get_base_binary(i), c_commander, region);
-        }
-    }
-    // completed when we reach here
-}
+
 
 PRSice::PRSice()
 {

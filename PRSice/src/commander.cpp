@@ -38,6 +38,8 @@ bool Commander::initialize(int argc, char *argv[]){
         {"msigdb",required_argument,NULL,'m'},
         {"out",required_argument,NULL,'o'},
         {"index",no_argument,NULL,0},
+        {"no-regression",no_argument,NULL,0},
+        {"fastscore",no_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -97,6 +99,8 @@ bool Commander::initialize(int argc, char *argv[]){
                 		for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
                 	}
                 else if(command.compare("gen_bed")==0) m_gen_bed = true;
+                else if(command.compare("no-regression")==0) m_no_regress = true;
+                else if(command.compare("fastscore")==0) m_fastscore = true;
                 else{
                 		std::string er = "Undefined operator: "+command+", please use --help for more information!";
                 		throw std::runtime_error(er);
@@ -240,6 +244,12 @@ bool Commander::initialize(int argc, char *argv[]){
 		error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
 		error_message.append("       Default value only work when all base file are using OR and\n");
 		error_message.append("       when --beta is not used\n");
+    }
+    if(m_no_regress && !m_fastscore){
+    		fprintf(stderr, "WARNING: To limit the amount of output,\n");
+    		fprintf(stderr, "         no-regress can only be used with\n");
+    		fprintf(stderr, "         fastscore. Will use fastscore\n");
+    		m_fastscore=true;
     }
     if(error) throw std::runtime_error(error_message);
     return true;
