@@ -11,6 +11,9 @@ Then, you can simply install PRSice by doing the following
 (Assuming you are in the PRSice directory)
 
 mkdir build
+
 cd build
+
 cmake ../
+
 make
