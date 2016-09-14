@@ -796,6 +796,41 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 
 }
 
+void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
+		const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+		size_t start_index, size_t end_bound)
+{// m_bim should be closed or at the front
+	// quick_ref was constructed the same way as we read the bim file.
+	// so we can actually ignore the bim
+	//if(prs_score.size()==0) prs_score = std::vector<std::pair<std::string, double> >(m_num_sample);
+	size_t prev =0;
+	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp){
+		size_t cur_index = std::get<1>(quick_ref[i_snp]);
+		if((cur_index-prev)!=0){
+			// Skip snps
+			m_bed.seekg((std::get<1>(quick_ref[i_snp])-prev)*m_num_bytes, m_bed.cur);
+			prev=std::get<1>(quick_ref[i_snp])+1;
+		}
+		read_snp(1, false);
+		int snp_index = std::get<3>(quick_ref[i_snp]);
+		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
+			int index =(i_sample*2)/m_bit_size;
+			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
+			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
+//			std::cerr << i_sample << "\t" << ((int)i_sample*2-(int)index*m_bit_size) << "\t" << index << "\t" << info << "\t" << miss << std::endl;
+			if(miss==3){
+				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region){
+					if(snp_list.at(snp_index).in((int)info)){
+						prs_score[i_region][i_sample].second += snp_list.at(snp_index).score((int)info);
+					}
+				}
+			}
+		}
+		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
+		lerase(1);
+	}
+
+}
 
 bool PLINK::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
     BIT.open(s.c_str(), std::ios::in | std::ios::binary);
