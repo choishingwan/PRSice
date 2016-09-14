@@ -80,6 +80,20 @@ class SNP
         			}
         		}
         }
+        void clump(boost::ptr_vector<SNP> &snp_list){
+        		for(size_t i = 0; i < m_clump_target.size(); ++i){
+        			if(!snp_list[m_clump_target[i]].clumped()){
+        				int sum_total = 0;
+        				for(size_t j = 0; j < m_size_of_flag; ++j){
+        						// if there is any overlap this should set the snp_list to the new flag
+        						snp_list[m_clump_target[i]].m_flags[j]= snp_list[m_clump_target[i]].m_flags[j] ^
+        												(m_flags[j] & snp_list[m_clump_target[i]].m_flags[j]);
+        						sum_total+=snp_list[m_clump_target[i]].m_flags[j];
+        				}
+        				if(sum_total==0)  snp_list[m_clump_target[i]].set_clumped();
+        			}
+        		}
+        }
         double score(int geno) const {
 			int g = (geno-1 > 0)? (geno-1) : 0;
 			if(!m_flipped) g=2-g;
