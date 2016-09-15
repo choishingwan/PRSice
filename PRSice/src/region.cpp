@@ -140,6 +140,14 @@ void Region::process_bed(const std::vector<std::string> &bed){
 				}
 			}
 			if(!error){
+				std::sort(begin(current_region), end(current_region),
+				    [](boundary const &t1, boundary const &t2) {
+						if(get<0>(t1).compare(get<0>(t2))==0){
+							if(get<1>(t1)==get<1>(t2)) return get<2>(t1)<get<2>(t2);
+							return get<1>(t1) < get<1>(t2);
+						} else return get<0>(t1).compare(get<0>(t2))<0;
+				    }
+				);
 				m_region_list.push_back(current_region);
 			}
 			else{
@@ -299,6 +307,14 @@ void Region::process_msigdb(const std::string &msigdb,
 						}
 						else current_region.push_back(gtf_info.at(token[i]));
 					}
+					std::sort(begin(current_region), end(current_region),
+							[](boundary const &t1, boundary const &t2) {
+						if(get<0>(t1).compare(get<0>(t2))==0){
+							if(get<1>(t1)==get<1>(t2)) return get<2>(t1)<get<2>(t2);
+							return get<1>(t1) < get<1>(t2);
+						} else return get<0>(t1).compare(get<0>(t2))<0;
+					}
+					);
 					m_region_list.push_back(current_region);
 					m_region_name.push_back(name);
 				}
