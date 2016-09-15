@@ -23,8 +23,8 @@ void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 	size_t require_bp=0;
 	size_t genotype_index=0; // This is the index of the index SNP on the genotype arrays
 	bool requiring=false; // Whether if the current interval contain the index snp
-	for(size_t i = 0; i < m_snp_list.size(); ++i){
-		std::string rs = m_snp_list[i];
+	for(size_t i = 0; i < m_snp_id.size(); ++i){
+		std::string rs = m_snp_id[i];
 		if(inclusion.find(rs)==inclusion.end()) m_bed.seekg(m_num_bytes, m_bed.cur); // Skip SNP
 		else{
 			//Because we build inclusion from snp_index and snp_list, can assume they are always together
@@ -656,7 +656,7 @@ void PLINK::initialize(bool bim_read){
     
     while(std::getline(m_bim, line)){
         if(!misc::trimmed(line).empty()) m_num_snp++;
-        m_snp_list.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+        m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
     }
     if(bim_read){
     		m_bim.clear();
@@ -702,7 +702,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
         		m_num_snp++;
         		std::string chr = token[0];
         		std::string rsid = token[1];
-        	    m_snp_list.push_back(rsid);
+        	    m_snp_id.push_back(rsid);
         		size_t loc = 0;
         		int temp = 0;
         		try{

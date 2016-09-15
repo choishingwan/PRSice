@@ -84,7 +84,7 @@ private:
     bool m_bim_read=false;
     bool m_bim_score_open=false; // might have better way, use this for now
     std::deque<std::string> m_chr_list;
-    std::deque<std::string> m_snp_list;
+    std::deque<std::string> m_snp_id;
     std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
     std::deque<std::string> m_ref_allele;
