@@ -38,7 +38,7 @@ class PRSice
         //           function call
         bool get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
         			const boost::ptr_vector<SNP> &snp_list, const std::string &target,
-				std::vector<std::pair<std::string, double> > &score, size_t &num_snp_included,
+				std::vector< std::vector<std::pair<std::string, double> > > &score, size_t &num_snp_included,
 				size_t &cur_index);
         // If an independent plink file is provided for LD calculation, we would like to
         // make sure only SNPs also observed in the target file are used for clumping
@@ -58,7 +58,7 @@ class PRSice
 					std::vector<std::pair<std::string, double> > &prs_score);
         void calculate_score(const Commander &c_commander, bool target_binary,
         			const std::string c_target, const std::map<std::string, size_t> &inclusion,
-				const boost::ptr_vector<SNP> &snp_list);
+				const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
 };
 
 #endif // PRSICE_H

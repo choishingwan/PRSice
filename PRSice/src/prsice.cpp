@@ -63,10 +63,10 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         // However, this should be changed in later version such that we can also
         // handle different regions
         clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
-        		c_commander.get_clump_r2(), c_commander.get_clump_kb());
+        		c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.proxy());
         // Now begin the calculation of the PRS
         calculate_score(c_commander, c_commander.get_target_binary(i_target),
-        		target[i_target], inclusion, snp_list);
+        		target[i_target], inclusion, snp_list, region);
     }
 }
 
@@ -167,7 +167,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 
 void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 		const std::string c_target, const std::map<std::string, size_t> &inclusion,
-		const boost::ptr_vector<SNP> &snp_list)
+		const boost::ptr_vector<SNP> &snp_list, const Region &c_region)
 {
 	// Might want to add additional parameter for the region output
 	// keep it for now
@@ -187,15 +187,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		covariates = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
     													c_commander.get_cov_header(), fam_index);
     }
-	// Now prepare the output files
-	std::string output_name = c_commander.get_out()+"."+c_target+".prsice";
-    std::ofstream prs_out, prs_best;
-    prs_out.open(output_name.c_str());
-    if(!prs_out.is_open()){
-    		std::string error_message= "Cannot open file "+output_name+" for write!";
-    		throw std::runtime_error(error_message);
-    }
-    prs_out << "Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
+
     // just some variable definition (should implement fastscore here...
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
@@ -244,19 +236,43 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
         }
     );
     size_t cur_start_index = 0;
-    // first read everything that are smaller than 0
-    if(bound_start != 0) get_prs_score(quick_ref, snp_list, c_target, prs_score, num_snp_included, cur_start_index);
-    double current_upper=0.0;
-    // Preparing the output if no_regression is set
-	output_name = c_commander.get_out()+"."+c_target+".all.score";
-    std::ofstream no_regress_out;
-    if(no_regress){
-    		no_regress_out.open(output_name.c_str());
-    		if(!no_regress_out.is_open()){
-    			std::string error_message = "Cannot open file "+output_name+" for write";
-    			throw std::runtime_error(error_message);
-    		}
+    // now start working on the region bit
+    bool proxy = c_commander.proxy();
+    // This is only use when we are not requiring the proxy
+    std::vector<std::vector<std::pair<std::string, double> > > prs_region_score(c_region.size());
+    for(size_t i_region=0; i_region < c_region.size(); ++i_region){
+    		prs_region_score.push_back(prs_score);
+    		if(proxy) break; // only use one region when proxy is set
     }
+    // first read everything that are smaller than 0
+    if(bound_start != 0) get_prs_score(quick_ref, snp_list, c_target, prs_region_score, num_snp_included, cur_start_index);
+    typedef std::tuple<double, double, double, double, size_t> PRSice_result;
+    std::vector<PRSice_result> results;
+    std::vector<std::vector<PRSice_result> > region_result;
+
+    // now change the whole output thing to the end
+    // Should we allow no_regress with region?
+    // should be fine I guess...
+    	std::string output_name = c_commander.get_out()+"."+c_target+".all.score";
+    	std::ofstream no_regress_out;
+        if(no_regress){
+        		no_regress_out.open(output_name.c_str());
+        		if(!no_regress_out.is_open()){
+        			std::string error_message = "Cannot open file "+output_name+" for write";
+        			throw std::runtime_error(error_message);
+        		}
+        }
+    // Now prepare the output files
+    output_name = c_commander.get_out()+"."+c_target+".prsice";
+    	std::ofstream prs_out, prs_best;
+    	prs_out.open(output_name.c_str());
+    	if(!prs_out.is_open()){
+    		std::string error_message= "Cannot open file "+output_name+" for write!";
+    		throw std::runtime_error(error_message);
+    	}
+    	prs_out << "Threshold\tR2\tR2_Adjusted\tP-value\tNum_Snp"<< std::endl;
+    double current_upper=0.0;
+
     bool first_run= true;
     while(cur_start_index!=quick_ref.size()){
 		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
@@ -532,7 +548,7 @@ Eigen::MatrixXd PRSice::gen_cov_matrix(const std::string &target, const std::str
 // basically update the score vector to contain the new polygenic score
 bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, const std::string &target,
-	std::vector<std::pair<std::string, double> > &prs_score, size_t &num_snp_included, size_t &cur_index)
+	std::vector< std::vector<std::pair<std::string, double> > > &prs_score, size_t &num_snp_included, size_t &cur_index)
 {
 	// Here is the actual calculation of the PRS
 	if(quick_ref.size()==0) return false; // nothing to do
@@ -556,6 +572,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	cur_index = end_index;
 	return true;
 }
+
 
 
 void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
