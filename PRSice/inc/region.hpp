@@ -31,7 +31,9 @@ public:
 	typedef uint32_t long_type;
 #endif
 	long_type* check(std::string chr, size_t loc);
-    size_t size() const { return (m_region_name.size()+1)/(sizeof(uint32_t)*CHAR_BIT)+1; };
+    size_t flag_size() const { return (m_region_name.size()+1)/(m_bit_size)+1; };
+    size_t size() const { return m_region_name.size(); };
+    std::string get_name(size_t i) const { return m_region_name.at(i); };
 private:
 	typedef std::tuple<std::string, size_t, size_t> boundary;
 	void process_bed(const std::vector<std::string> &bed);
@@ -41,6 +43,9 @@ private:
 						const std::map<std::string, std::string> &id_to_name);
 	std::vector<std::string> m_region_name;
 	std::vector< std::vector<boundary> > m_region_list;
+	// This is to indicate the current location onf each region
+	// This work because we assume all SNPs are sorted by their coordinates
+	// in the same way as the region files.
 	std::vector<size_t> m_index;
 	size_t m_bit_size;
 };
