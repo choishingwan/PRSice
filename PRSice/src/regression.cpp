@@ -155,7 +155,7 @@ namespace Regression{
 
 	// This is an unsafe version of R's glm.fit
 	// unsafe as in I have skipped some of the checking
-	void glm(Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, size_t max_iter, size_t thread, bool intercept){
+	void glm(const Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, size_t max_iter, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
 		/*
 		Eigen::MatrixXd A;
