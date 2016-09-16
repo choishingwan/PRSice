@@ -784,14 +784,15 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 		}
 		read_snp(1, false);
 		int snp_index = std::get<3>(quick_ref[i_snp]);
+		if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
 		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
 			int index =(i_sample*2)/m_bit_size;
 			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			if(miss==3){
 				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region){
-					if(snp_list.at(snp_index).in(i_region)){
-						prs_score[i_region][i_sample].second += snp_list.at(snp_index).score((int)info);
+					if(snp_list[snp_index].in(i_region)){
+						prs_score[i_region][i_sample].second += snp_list[snp_index].score((int)info);
 					}
 				}
 			}

@@ -77,7 +77,7 @@ class PRSice
         		std::vector<PRSice::PRSice_best > &prs_best_info,
         		std::vector<std::vector<PRSice::prs_score> > & prs_best_score,
 			std::vector<std::vector<PRSice::PRSice_result> > &region_result,
-        		size_t region_start, size_t region_end, bool target_binary, double threshold);
+        		size_t region_start, size_t region_end, bool target_binary, double threshold, size_t thread);
 };
 
 #endif // PRSICE_H

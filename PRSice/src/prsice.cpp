@@ -335,7 +335,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(n_thread == 1 || region_prs_score.size()==1){
     				thread_score(covariates, phenotype, region_prs_score, num_snp_included, fam_index,
     						region_best_threshold, region_best_prs_score, prs_results, 0, region_prs_score.size(),
-							target_binary, current_upper);
+							target_binary, current_upper,n_thread);
     			}
     			else{
     				// perform multi threading
@@ -344,7 +344,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     						thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(covariates),
     								std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
-									std::ref(prs_results), i_region, i_region+1, target_binary, current_upper));
+									std::ref(prs_results), i_region, i_region+1, target_binary, current_upper,1));
     					}
     				}else{
     					int job_size = c_region.size()/n_thread;
@@ -356,7 +356,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     						 thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(covariates),
     								 std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									 std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
-									 std::ref(prs_results), start, ending, target_binary, current_upper));
+									 std::ref(prs_results), start, ending, target_binary, current_upper,1));
     						start=ending;
     						remain--;
     					}
@@ -410,7 +410,8 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
         		std::vector<PRSice::PRSice_best > &region_best_threshold,
         		std::vector<std::vector<PRSice::prs_score> > & region_best_prs_score,
 			std::vector<std::vector<PRSice::PRSice_result> > &region_result,
-        		size_t region_start, size_t region_end, bool target_binary, double threshold){
+        		size_t region_start, size_t region_end, bool target_binary, double threshold,
+			size_t thread){
 
 	Eigen::MatrixXd X;
 	bool thread_safe=false;
@@ -426,17 +427,19 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 	//std::vector<PRSice::PRSice_result> temp_region_result;
 	double r2 = 0.0, r2_adjust=0.0, p_value = 0.0;
 	for(size_t iter = region_start; iter < region_end; ++iter){
-		for(size_t i_prs = 0; i_prs < c_region_prs_score.at(iter).size(); ++i_prs){
-			std::string sample = std::get<0>(c_region_prs_score.at(iter).at(i_prs));
+		std::vector<PRSice::prs_score>::const_iterator prs_iter = c_region_prs_score.at(iter).begin();
+		std::vector<PRSice::prs_score>::const_iterator prs_end = c_region_prs_score.at(iter).end();
+		for(;prs_iter != prs_end; ++prs_iter){
+			std::string sample = std::get<0>(*prs_iter);
 			if(c_fam_index.find(sample)!=c_fam_index.end()){
-				if(thread_safe) covariate(c_fam_index.at(sample), 0) = std::get<1>(c_region_prs_score.at(iter).at(i_prs))/(double)c_num_snp_included[iter];
-				else X(c_fam_index.at(sample), 0) = std::get<1>(c_region_prs_score.at(iter).at(i_prs))/(double)c_num_snp_included[iter];
+				if(thread_safe) covariate(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				else X(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
 			}
 		}
 		if(target_binary){
 			try{
-				if(thread_safe) Regression::glm(c_pheno, covariate, p_value, r2, 25, 1, true);
-				else Regression::glm(c_pheno, X, p_value, r2, 25, 1, true);
+				if(thread_safe) Regression::glm(c_pheno, covariate, p_value, r2, 25, thread, true);
+				else Regression::glm(c_pheno, X, p_value, r2, 25, thread, true);
 			}
 			catch(const std::runtime_error &error){
 				// This should only happen when the glm doesn't converge.
@@ -458,19 +461,19 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 			if(thread_safe){
 				if(covariate.cols()>2){
 					Regression::glm(c_pheno, covariate.block(0,2,covariate.rows(), covariate.cols()-1),
-							null_p, null_r2, 25, 1, true);
+							null_p, null_r2, 25, thread, true);
 					r2-=	null_r2;
 				}
 			}
 			else if(X.cols() > 2){ //2 because we now included the intercept
 				Regression::glm(c_pheno, X.block(0,2,X.rows(), X.cols()-1),
-						null_p, null_r2, 25, 1, true);
+						null_p, null_r2, 25, thread, true);
 				r2-=	null_r2;
 			}
 		}
 		else{
-			if(thread_safe) Regression::linear_regression(c_pheno, covariate, p_value, r2, r2_adjust, 1, true);
-			else Regression::linear_regression(c_pheno, X, p_value, r2, r2_adjust, 1, true);
+			if(thread_safe) Regression::linear_regression(c_pheno, covariate, p_value, r2, r2_adjust, thread, true);
+			else Regression::linear_regression(c_pheno, X, p_value, r2, r2_adjust, thread, true);
 		}
 
 		// This should be thread safe as each thread will only mind their own region
