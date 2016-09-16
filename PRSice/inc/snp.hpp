@@ -77,7 +77,10 @@ class SNP
         		return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
         }
         void set_clumped() { m_clumped = true;};
-        void set_flag(long_type *flag){ m_flags = flag; };
+        void set_flag(long_type *flag){
+        		if(m_flags!=nullptr) delete [] m_flags;
+        		m_flags = flag;
+        };
         void clump_all(boost::ptr_vector<SNP> &snp_list){
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
         			if(!snp_list[m_clump_target[i]].clumped()){
