@@ -25,7 +25,6 @@ int main(int argc, char *argv[])
     		std::cerr << error.what() << std::endl;
     		exit(-1);
     }
-
     PRSice prsice = PRSice();
     try{
         prsice.run(commander, region);
