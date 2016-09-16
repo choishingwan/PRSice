@@ -456,14 +456,14 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 			}
 			double null_p, null_r2;
 			if(thread_safe){
-				if(covariate.cols()>1){
-					Regression::glm(c_pheno, covariate.block(0,1,covariate.rows(), covariate.cols()-1),
+				if(covariate.cols()>2){
+					Regression::glm(c_pheno, covariate.block(0,2,covariate.rows(), covariate.cols()-1),
 							null_p, null_r2, 25, 1, true);
 					r2-=	null_r2;
 				}
 			}
 			else if(X.cols() > 2){ //2 because we now included the intercept
-				Regression::glm(c_pheno, X.block(0,1,X.rows(), X.cols()-1),
+				Regression::glm(c_pheno, X.block(0,2,X.rows(), X.cols()-1),
 						null_p, null_r2, 25, 1, true);
 				r2-=	null_r2;
 			}
