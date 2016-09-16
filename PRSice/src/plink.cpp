@@ -788,10 +788,9 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 			int index =(i_sample*2)/m_bit_size;
 			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
-//			std::cerr << i_sample << "\t" << ((int)i_sample*2-(int)index*m_bit_size) << "\t" << index << "\t" << info << "\t" << miss << std::endl;
 			if(miss==3){
 				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region){
-					if(snp_list.at(snp_index).in((int)info)){
+					if(snp_list.at(snp_index).in(i_region)){
 						prs_score[i_region][i_sample].second += snp_list.at(snp_index).score((int)info);
 					}
 				}
