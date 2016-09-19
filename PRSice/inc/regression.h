@@ -20,7 +20,7 @@
 
 namespace Regression{
 	void linear_regression(const Eigen::VectorXd &y, const Eigen::MatrixXd &A, double &p_value, double &r2, double &r2_adjust, size_t thread=1, bool intercept=true);
-	void glm(Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2 , size_t max_iter=25,  size_t thread=1, bool intercept=true);
+	void glm(const Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2 , size_t max_iter=25,  size_t thread=1, bool intercept=true);
 	Eigen::VectorXd logit_linkinv(const Eigen::VectorXd &eta);
 	Eigen::VectorXd logit_variance(const Eigen::VectorXd &eta);
 	Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd &eta);

@@ -7,8 +7,34 @@
 
 #include "../inc/region.hpp"
 
+void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed){
+	process_bed(bed);
+	std::map<std::string, std::string> id_to_name;
+	if(!gtf.empty()){ // without the gtf file, we will not process the msigdb file
+		std::map<std::string, boundary > gtf_info;
+		try{
+			gtf_info=process_gtf(gtf, id_to_name, out, gen_bed);
+		}
+		catch(const std::runtime_error &error){
+			gtf_info.clear();
+			fprintf(stderr, "ERROR: Cannot process gtf file: %s\n", error.what());
+			fprintf(stderr, "       Will not process any of the msigdb items\n");
+		}
+		if(gtf_info.size() != 0){
+			process_msigdb(msigdb, gtf_info, id_to_name);
+		}
+	}
+	size_t size = m_region_name.size();
+	if(size==1) fprintf(stderr, "%zu region is included\n", size);
+	else if(size>1) fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
+	m_index = std::vector<size_t>(m_region_name.size());
+}
+
 Region::Region(){
     m_bit_size = sizeof(long_type)*CHAR_BIT;
+    // Make the base region which includes everything
+    m_region_name.push_back("Base");
+    	m_region_list.push_back(std::vector<boundary>(1));
 }
 
 Region::~Region() {}
@@ -18,26 +44,35 @@ Region::long_type* Region::check(std::string chr, size_t loc){
 	memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(long_type));
 	res[0]=1; // base region which contains everything
 	for(size_t i = 0; i < m_region_list.size(); ++i){
-		size_t region_size = m_region_list[i].size();
-		while(m_index[i]< region_size){
-                // do the checking
-			boundary current_bound = m_region_list[i][m_index[i]];
-			std::string region_chr = std::get<0>(current_bound);
-			size_t region_start = std::get<1>(current_bound);
-			size_t region_end = std::get<2>(current_bound);
-			if(chr.compare(region_chr) != 0) m_index[i]++;
-			else{ // same chromosome
-				if(region_start <= loc && region_end >=loc){
-					// This is the region
+		if(i==0){
 #if defined(__LP64__) || defined(_WIN64)
-					res[i/m_bit_size] |= 0x1LLU << i%m_bit_size;
+					res[0] |= 0x1LLU;
 #else
-					res[i/m_bit_size] |= 0x1LU << i%m_bit_size;
+					res[0] |= 0x1LU;
 #endif
-					break;
+		}
+		else{
+			size_t region_size = m_region_list[i].size();
+			while(m_index[i]< region_size){
+					// do the checking
+				boundary current_bound = m_region_list[i][m_index[i]];
+				std::string region_chr = std::get<0>(current_bound);
+				size_t region_start = std::get<1>(current_bound);
+				size_t region_end = std::get<2>(current_bound);
+				if(chr.compare(region_chr) != 0) m_index[i]++;
+				else{ // same chromosome
+					if(region_start <= loc && region_end >=loc){
+						// This is the region
+	#if defined(__LP64__) || defined(_WIN64)
+						res[i/m_bit_size] |= 0x1LLU << i%m_bit_size;
+	#else
+						res[i/m_bit_size] |= 0x1LU << i%m_bit_size;
+	#endif
+						break;
+					}
+					else if(region_start> loc) break;
+					else if(region_end < loc) m_index[i]++;
 				}
-				else if(region_start> loc) break;
-				else if(region_end < loc) m_index[i]++;
 			}
 		}
 	}
@@ -105,6 +140,14 @@ void Region::process_bed(const std::vector<std::string> &bed){
 				}
 			}
 			if(!error){
+				std::sort(begin(current_region), end(current_region),
+				    [](boundary const &t1, boundary const &t2) {
+						if(std::get<0>(t1).compare(std::get<0>(t2))==0){
+							if(std::get<1>(t1)==std::get<1>(t2)) return std::get<2>(t1)<std::get<2>(t2);
+							return std::get<1>(t1) < std::get<1>(t2);
+						} else return std::get<0>(t1).compare(std::get<0>(t2))<0;
+				    }
+				);
 				m_region_list.push_back(current_region);
 			}
 			else{
@@ -264,6 +307,14 @@ void Region::process_msigdb(const std::string &msigdb,
 						}
 						else current_region.push_back(gtf_info.at(token[i]));
 					}
+					std::sort(begin(current_region), end(current_region),
+							[](boundary const &t1, boundary const &t2) {
+						if(std::get<0>(t1).compare(std::get<0>(t2))==0){
+							if(std::get<1>(t1)==std::get<1>(t2)) return std::get<2>(t1)<std::get<2>(t2);
+							return std::get<1>(t1) < std::get<1>(t2);
+						} else return std::get<0>(t1).compare(std::get<0>(t2))<0;
+					}
+					);
 					m_region_list.push_back(current_region);
 					m_region_name.push_back(name);
 				}
@@ -271,28 +322,5 @@ void Region::process_msigdb(const std::string &msigdb,
 		}
 		input.close();
 	}
-}
-
-void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed){
-	process_bed(bed);
-	std::map<std::string, std::string> id_to_name;
-	if(!gtf.empty()){ // without the gtf file, we will not process the msigdb file
-		std::map<std::string, boundary > gtf_info;
-		try{
-			gtf_info=process_gtf(gtf, id_to_name, out, gen_bed);
-		}
-		catch(const std::runtime_error &error){
-			gtf_info.clear();
-			fprintf(stderr, "ERROR: Cannot process gtf file: %s\n", error.what());
-			fprintf(stderr, "       Will not process any of the msigdb items\n");
-		}
-		if(gtf_info.size() != 0){
-			process_msigdb(msigdb, gtf_info, id_to_name);
-		}
-	}
-	size_t size = m_region_name.size();
-	if(size==1) fprintf(stderr, "%zu region is included\n", size);
-	else if(size>1) fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
-	m_index = std::vector<size_t>(m_region_name.size());
 }
 

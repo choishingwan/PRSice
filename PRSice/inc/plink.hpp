@@ -53,10 +53,10 @@ public:
     int get_last_bp() const{return m_bp_list.back();};
     void start_clumping(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
     		const std::map<std::string, size_t> &c_snp_index, double p_threshold,
-			double r2_threshold, size_t kb_threshold);
+			double r2_threshold, size_t kb_threshold, bool proxy);
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
     void get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
-    			const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
+    			const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 				size_t start_index, size_t end_bound);
 private:
     static std::mutex clump_mtx;
@@ -84,7 +84,7 @@ private:
     bool m_bim_read=false;
     bool m_bim_score_open=false; // might have better way, use this for now
     std::deque<std::string> m_chr_list;
-    std::deque<std::string> m_snp_list;
+    std::deque<std::string> m_snp_id;
     std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
     std::deque<std::string> m_ref_allele;

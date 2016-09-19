@@ -17,12 +17,12 @@
 class SNP
 {
     public:
-        SNP();
 #if defined(__LP64__) || defined(_WIN64)
         typedef uint64_t long_type;
 #else
         typedef uint32_t long_type;
 #endif
+        SNP();
         SNP(const std::string rs_id, const std::string chr, const size_t loc,
         		const std::string ref_allele, const std::string alt_allele,
 				const double statistic, const double se, const double p_value,
@@ -71,7 +71,16 @@ class SNP
         void add_clump( std::vector<size_t> &i){ m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() ); };
         bool clumped() const { return m_clumped; };
         bool flipped() const { return m_flipped; };
+        // indication of whether if the SNP is within the specific region
+        bool in(size_t i) const{
+        		size_t index = i/m_bit_size;
+        		return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
+        }
         void set_clumped() { m_clumped = true;};
+        void set_flag(long_type *flag){
+        		if(m_flags!=nullptr) delete [] m_flags;
+        		m_flags = flag;
+        };
         void clump_all(boost::ptr_vector<SNP> &snp_list){
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
         			if(!snp_list[m_clump_target[i]].clumped()){
@@ -80,13 +89,34 @@ class SNP
         			}
         		}
         }
+        void clump(boost::ptr_vector<SNP> &snp_list){
+        		for(size_t i = 0; i < m_clump_target.size(); ++i){
+        			if(!snp_list[m_clump_target[i]].clumped()){
+        				int sum_total = 0;
+        				for(size_t j = 0; j < m_size_of_flag; ++j){
+        						// if there is any overlap this should set the snp_list to the new flag
+        						snp_list[m_clump_target[i]].m_flags[j]= snp_list[m_clump_target[i]].m_flags[j] ^
+        												(m_flags[j] & snp_list[m_clump_target[i]].m_flags[j]);
+        						sum_total+=snp_list[m_clump_target[i]].m_flags[j];
+        				}
+        				if(sum_total==0)  snp_list[m_clump_target[i]].set_clumped();
+        			}
+        		}
+        }
         double score(int geno) const {
 			int g = (geno-1 > 0)? (geno-1) : 0;
 			if(!m_flipped) g=2-g;
 			return (g>0)? (0.5*(double)g)*m_stat: g;
         }
+        static bool sort_snp (const SNP& i, const SNP& j){
+            if(i.get_chr().compare(j.get_chr()) == 0)
+        		if(i.get_loc() == j.get_loc()) return i.get_rs_id().compare(j.get_rs_id()) < 0;
+        		else return i.get_loc() < j.get_loc();
+        	else return (i.get_chr().compare(j.get_chr()) < 0);
+        }
     protected:
     private:
+
         std::string complement(std::string allele){
 			if(allele.compare("A")==0 || allele.compare("a")==0) return "T";
 			if(allele.compare("T")==0 || allele.compare("t")==0) return "A";
@@ -112,6 +142,11 @@ class SNP
         std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
         long_type *m_flags;
         long_type *m_region_clumped; //place holder for now
+#if defined(__LP64__) || defined(_WIN64)
+        long_type ONE = 1LLU;
+#else
+        long_type ONE = 1LU;
+#endif
 };
 
 #endif // SNP_H

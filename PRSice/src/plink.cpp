@@ -14,6 +14,162 @@
 
 std::mutex PLINK::clump_mtx;
 
+void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
+		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index,
+		double p_threshold, double r2_threshold, size_t kb_threshold, bool proxy){
+	// Go through all SNPs
+	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
+	std::string prev_chr = ""; // Indication of current chromosome
+	size_t require_bp=0;
+	size_t genotype_index=0; // This is the index of the index SNP on the genotype arrays
+	bool requiring=false; // Whether if the current interval contain the index snp
+	for(size_t i = 0; i < m_snp_id.size(); ++i){
+		std::string rs = m_snp_id[i];
+		if(inclusion.find(rs)==inclusion.end()) m_bed.seekg(m_num_bytes, m_bed.cur); // Skip SNP
+		else{
+			//Because we build inclusion from snp_index and snp_list, can assume they are always together
+			assert(c_snp_index.find(rs)!=c_snp_index.end());
+			size_t cur_index = c_snp_index.at(rs);
+			if(prev_chr.empty()){
+				// This is the very first SNP
+				read_snp(1, true);
+				snp_index_check.push_back(cur_index);
+				prev_chr = snp_list[cur_index].get_chr();
+				if(snp_list[cur_index].get_p_value() < p_threshold){
+					require_bp =snp_list[cur_index].get_loc();
+					genotype_index=m_genotype.size()-1; // Should store the index on genotype
+					requiring= true;
+				}
+			}
+			else{
+				std::string cur_chr = snp_list[cur_index].get_chr();
+				if(cur_chr.compare(prev_chr)!=0){
+					// new chromosome
+					while(requiring){
+						// Perform clumping for all index SNPs
+						clump_thread(genotype_index, snp_index_check, snp_list, r2_threshold);
+						requiring = false;
+						for(size_t check = genotype_index+1; check< snp_index_check.size(); ++check){
+							if(snp_list[snp_index_check[check]].get_p_value() < p_threshold){
+								requiring = true;
+								genotype_index = check;
+								require_bp = snp_list[snp_index_check[check]].get_loc();
+								break;
+							}
+						}
+						// clean up the front
+						if(requiring){
+							// remove SNPs in the front that are too far away
+							size_t num_remove=0;
+							for(size_t check=0; check < genotype_index; ++check){
+								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
+								else break;
+							}
+							if(num_remove!=0){
+								lerase(num_remove);
+								snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
+								genotype_index-=num_remove;
+							}
+						}
+					}
+					// now clean up everything
+					lerase(m_genotype.size());
+					snp_index_check.clear();
+					// And read in the SNP
+					read_snp(1, true);
+					snp_index_check.push_back(cur_index);
+					prev_chr = snp_list[cur_index].get_chr();
+					if(snp_list[cur_index].get_p_value() < p_threshold){
+						require_bp =snp_list[cur_index].get_loc();
+						genotype_index=m_genotype.size()-1;
+						requiring= true;
+					}
+				}
+				else{
+					// same chromosome
+					size_t cur_loc = snp_list[cur_index].get_loc();
+					while(requiring && cur_loc-require_bp > kb_threshold){
+						// Keep clumping until we are in range or nothing else to clump
+						clump_thread(genotype_index, snp_index_check, snp_list, r2_threshold);
+						requiring = false;
+						for(size_t check = genotype_index+1; check< snp_index_check.size(); ++check){
+							if(snp_list[snp_index_check[check]].get_p_value() < p_threshold){
+								requiring = true;
+								genotype_index =check;
+								require_bp = snp_list[snp_index_check[check]].get_loc();
+								break;
+							}
+						}
+						if(requiring){
+							// remove SNPs in the front that are too far away
+							size_t num_remove=0;
+							for(size_t check=0; check < genotype_index; ++check){
+								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
+								else break;
+							}
+							if(num_remove!=0){
+								lerase(num_remove);
+								snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
+								genotype_index-=num_remove;
+							}
+						}
+					}
+					// Here, either requiring = false or cur_loc - require_bp < kb_threshold
+					// so remove anything from the front that is too far away
+					size_t num_remove = 0;
+					if(!requiring){ // don't do this unless there is no requiring SNPs
+						for(size_t check = 0; check < snp_index_check.size(); ++check){
+							if(cur_loc-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
+							else break;
+						}
+					}
+					if(num_remove!=0){
+						lerase(num_remove);
+						snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
+						genotype_index-=num_remove;
+					}
+					// Start reading the SNP
+					read_snp(1, true);
+					snp_index_check.push_back(cur_index);
+					prev_chr = snp_list[cur_index].get_chr();
+					if(!requiring && snp_list[cur_index].get_p_value() < p_threshold){
+						require_bp =snp_list[cur_index].get_loc();
+						genotype_index=m_genotype.size()-1;
+						requiring= true;
+					}
+				}
+			}
+		}
+	}
+
+	// Now get the list of SNPs that we want to retain (in index)
+	// When proxy, the index SNP will represent all clumped SNP's region
+	// When no proxy, clumping only occurs for each individual region
+	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
+	inclusion.clear();
+	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
+	for(size_t i = 0; i < p_sort_order.size(); ++i){
+		if(include_ref.find(snp_list[p_sort_order[i]].get_rs_id()) != include_ref.end() &&
+				snp_list[p_sort_order[i]].get_p_value() < p_threshold){
+			// now perform the region related stuff
+			if(proxy && !snp_list[p_sort_order[i]].clumped() ){
+				snp_list[p_sort_order[i]].clump_all(snp_list);
+				inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
+			}
+			else if(!snp_list[p_sort_order[i]].clumped()){
+				// when not proxy, the clumped flag will only be activated when
+				// the SNP is fully represented
+				// e.g. the SNP is being represented for all region
+				snp_list[p_sort_order[i]].clump(snp_list);
+				inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
+			}
+		}
+		else if(snp_list[p_sort_order[i]].get_p_value() >= p_threshold) break;
+	}
+	//Anything remaining should be the required SNPs
+	fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
+}
+
 PLINK::~PLINK(){
 	for(size_t i = 0; i < m_genotype.size(); ++i){
 		delete [] m_genotype[i];
@@ -342,151 +498,6 @@ void PLINK::clump_thread(const size_t c_index, const std::deque<size_t> &c_index
 	thread_store.clear();
 }
 
-void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
-		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index,
-		double p_threshold, double r2_threshold, size_t kb_threshold){
-	// Go through all SNPs
-	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
-	std::string prev_chr = ""; // Indication of current chromosome
-	size_t require_bp=0;
-	size_t genotype_index=0; // This is the index of the index SNP on the genotype arrays
-	bool requiring=false; // Whether if the current interval contain the index snp
-	for(size_t i = 0; i < m_snp_list.size(); ++i){
-		std::string rs = m_snp_list[i];
-		if(inclusion.find(rs)==inclusion.end()) m_bed.seekg(m_num_bytes, m_bed.cur); // Skip SNP
-		else{
-			//Because we build inclusion from snp_index and snp_list, can assume they are always together
-			assert(c_snp_index.find(rs)!=c_snp_index.end());
-			size_t cur_index = c_snp_index.at(rs);
-			if(prev_chr.empty()){
-				// This is the very first SNP
-				read_snp(1, true);
-				snp_index_check.push_back(cur_index);
-				prev_chr = snp_list[cur_index].get_chr();
-				if(snp_list[cur_index].get_p_value() < p_threshold){
-					require_bp =snp_list[cur_index].get_loc();
-					genotype_index=m_genotype.size()-1; // Should store the index on genotype
-					requiring= true;
-				}
-			}
-			else{
-				std::string cur_chr = snp_list[cur_index].get_chr();
-				if(cur_chr.compare(prev_chr)!=0){
-					// new chromosome
-					while(requiring){
-						// Perform clumping for all index SNPs
-						clump_thread(genotype_index, snp_index_check, snp_list, r2_threshold);
-						requiring = false;
-						for(size_t check = genotype_index+1; check< snp_index_check.size(); ++check){
-							if(snp_list[snp_index_check[check]].get_p_value() < p_threshold){
-								requiring = true;
-								genotype_index = check;
-								require_bp = snp_list[snp_index_check[check]].get_loc();
-								break;
-							}
-						}
-						// clean up the front
-						if(requiring){
-							// remove SNPs in the front that are too far away
-							size_t num_remove=0;
-							for(size_t check=0; check < genotype_index; ++check){
-								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
-								else break;
-							}
-							if(num_remove!=0){
-								lerase(num_remove);
-								snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
-								genotype_index-=num_remove;
-							}
-						}
-					}
-					// now clean up everything
-					lerase(m_genotype.size());
-					snp_index_check.clear();
-					// And read in the SNP
-					read_snp(1, true);
-					snp_index_check.push_back(cur_index);
-					prev_chr = snp_list[cur_index].get_chr();
-					if(snp_list[cur_index].get_p_value() < p_threshold){
-						require_bp =snp_list[cur_index].get_loc();
-						genotype_index=m_genotype.size()-1;
-						requiring= true;
-					}
-				}
-				else{
-					// same chromosome
-					size_t cur_loc = snp_list[cur_index].get_loc();
-					while(requiring && cur_loc-require_bp > kb_threshold){
-						// Keep clumping until we are in range or nothing else to clump
-						clump_thread(genotype_index, snp_index_check, snp_list, r2_threshold);
-						requiring = false;
-						for(size_t check = genotype_index+1; check< snp_index_check.size(); ++check){
-							if(snp_list[snp_index_check[check]].get_p_value() < p_threshold){
-								requiring = true;
-								genotype_index =check;
-								require_bp = snp_list[snp_index_check[check]].get_loc();
-								break;
-							}
-						}
-						if(requiring){
-							// remove SNPs in the front that are too far away
-							size_t num_remove=0;
-							for(size_t check=0; check < genotype_index; ++check){
-								if(require_bp-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
-								else break;
-							}
-							if(num_remove!=0){
-								lerase(num_remove);
-								snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
-								genotype_index-=num_remove;
-							}
-						}
-					}
-					// Here, either requiring = false or cur_loc - require_bp < kb_threshold
-					// so remove anything from the front that is too far away
-					size_t num_remove = 0;
-					if(!requiring){ // don't do this unless there is no requiring SNPs
-						for(size_t check = 0; check < snp_index_check.size(); ++check){
-							if(cur_loc-snp_list[snp_index_check[check]].get_loc() > kb_threshold) num_remove++;
-							else break;
-						}
-					}
-					if(num_remove!=0){
-						lerase(num_remove);
-						snp_index_check.erase(snp_index_check.begin(), snp_index_check.begin()+num_remove);
-						genotype_index-=num_remove;
-					}
-					// Start reading the SNP
-					read_snp(1, true);
-					snp_index_check.push_back(cur_index);
-					prev_chr = snp_list[cur_index].get_chr();
-					if(!requiring && snp_list[cur_index].get_p_value() < p_threshold){
-						require_bp =snp_list[cur_index].get_loc();
-						genotype_index=m_genotype.size()-1;
-						requiring= true;
-					}
-				}
-			}
-		}
-	}
-
-	// Now get the list of SNPs that we want to retain (in index)
-	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
-	inclusion.clear();
-	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
-	for(size_t i = 0; i < p_sort_order.size(); ++i){
-		if(include_ref.find(snp_list[p_sort_order[i]].get_rs_id()) != include_ref.end() &&
-				!snp_list[p_sort_order[i]].clumped() &&
-				snp_list[p_sort_order[i]].get_p_value() < p_threshold){
-			snp_list[p_sort_order[i]].clump_all(snp_list);
-			inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
-		}
-		else if(snp_list[p_sort_order[i]].get_p_value() >= p_threshold) break;
-	}
-	//Anything remaining should be the required SNPs
-	fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
-}
-
 void PLINK::lerase(int num){
     if(num <0){
         std::string error_message = "Number of removed SNPs cannot be less than 1: "+std::to_string(num);
@@ -645,7 +656,7 @@ void PLINK::initialize(bool bim_read){
     
     while(std::getline(m_bim, line)){
         if(!misc::trimmed(line).empty()) m_num_snp++;
-        m_snp_list.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+        m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
     }
     if(bim_read){
     		m_bim.clear();
@@ -691,7 +702,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
         		m_num_snp++;
         		std::string chr = token[0];
         		std::string rsid = token[1];
-        	    m_snp_list.push_back(rsid);
+        	    m_snp_id.push_back(rsid);
         		size_t loc = 0;
         		int temp = 0;
         		try{
@@ -755,8 +766,9 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     m_init = true;
 }
 
+
 void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
-		const boost::ptr_vector<SNP> &snp_list, std::vector<std::pair<std::string, double> > &prs_score,
+		const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 		size_t start_index, size_t end_bound)
 {// m_bim should be closed or at the front
 	// quick_ref was constructed the same way as we read the bim file.
@@ -772,19 +784,24 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 		}
 		read_snp(1, false);
 		int snp_index = std::get<3>(quick_ref[i_snp]);
+		if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
 		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
 			int index =(i_sample*2)/m_bit_size;
 			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
-//			std::cerr << i_sample << "\t" << ((int)i_sample*2-(int)index*m_bit_size) << "\t" << index << "\t" << info << "\t" << miss << std::endl;
-			if(miss==3) prs_score[i_sample].second += snp_list.at(snp_index).score((int)info);
+			if(miss==3){
+				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region){
+					if(snp_list[snp_index].in(i_region)){
+						prs_score[i_region][i_sample].second += snp_list[snp_index].score((int)info);
+					}
+				}
+			}
 		}
 		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
 		lerase(1);
 	}
 
 }
-
 
 bool PLINK::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
     BIT.open(s.c_str(), std::ios::in | std::ios::binary);

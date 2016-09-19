@@ -40,7 +40,12 @@ SNP::SNP(){
     m_bit_size = sizeof(long_type)*CHAR_BIT;
 }
 
-SNP::~SNP(){}
+SNP::~SNP(){
+	// This is not exactly safe because if we have also assign this flag
+	// to some other SNP, then the flag will be deleted twice
+	if(m_flags != nullptr) delete [] m_flags;
+	if(m_region_clumped != nullptr) delete [] m_region_clumped;
+}
 
 size_t SNP::index_check(const std::string &c_in){
     int temp = atoi(c_in.c_str());
