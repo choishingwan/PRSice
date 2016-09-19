@@ -97,6 +97,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
     size_t num_duplicated = 0;
     size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
+	size_t num_indel = 0;
     std::string line;
     int max_index = index.back();
     bool se_error = false;
@@ -157,6 +158,15 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		    			else loc = temp;
 		    		}
 		    		// snp_index[rs_id] =snp_list.size();
+		    		if(ref_allele.compare("-")!=0 || ref_allele.compare("I") != 0 || ref_allele.compare("D")!=0 ||
+		    				ref_allele.size()>1){
+		    			num_indel++;
+		    		}
+		    		else if(!alt_allele.empty() &&
+		    				(alt_allele.compare("-")!=0 || alt_allele.compare("I") != 0 ||
+		    						alt_allele.compare("D")!=0 || alt_allele.size()>1)){
+		    			num_indel++;
+		    		}
 		      	snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, new SNP::long_type[1], region.size()));
 		   	}
 		}
@@ -178,6 +188,10 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	}
 
 	// Now output the statistics. Might want to improve the outputs
+	if(num_indel!=0){
+		fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
+		fprintf(stderr, "                            They will be excluded\n");
+	}
 	fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", snp_list.size());
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
