@@ -1,7 +1,9 @@
 #include "../inc/commander.hpp"
 
-bool Commander::initialize(int argc, char *argv[]){
-    if(argc<=1){
+bool Commander::initialize(int argc, char *argv[])
+{
+    if(argc<=1)
+    {
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
@@ -14,6 +16,15 @@ bool Commander::initialize(int argc, char *argv[]){
         {"ancestry",required_argument,NULL,'a'},
         {"pheno_file",required_argument,NULL,'f'},
         {"ld",required_argument,NULL,'L'},
+        {"pvalue",required_argument,NULL,'p'},
+        {"thread",required_argument,NULL,'T'},
+        {"upper",required_argument,NULL,'u'},
+        {"lower",required_argument,NULL,'l'},
+        {"interval",required_argument,NULL,'i'},
+        {"bed",required_argument,NULL,'B'},
+        {"gtf",required_argument,NULL,'g'},
+        {"msigdb",required_argument,NULL,'m'},
+        {"out",required_argument,NULL,'o'},
         {"beta",required_argument,NULL,0},
         {"chr",required_argument,NULL,0},
         {"A1",required_argument,NULL,0},
@@ -22,21 +33,11 @@ bool Commander::initialize(int argc, char *argv[]){
         {"snp",required_argument,NULL,0},
         {"bp",required_argument,NULL,0},
         {"se",required_argument,NULL,0},
-        {"pvalue",required_argument,NULL,'p'},
-        {"upper",required_argument,NULL,'u'},
-        {"lower",required_argument,NULL,'l'},
-        {"interval",required_argument,NULL,'i'},
         {"clump-p",required_argument,NULL,0},
-//        {"clump_p2",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
         {"binary_target",required_argument,NULL,0},
-        {"thread",required_argument,NULL,'T'},
-        {"bed",required_argument,NULL,'B'},
-        {"gtf",required_argument,NULL,'g'},
         {"gen_bed",no_argument,NULL,0},
-        {"msigdb",required_argument,NULL,'m'},
-        {"out",required_argument,NULL,'o'},
         {"index",no_argument,NULL,0},
         {"no-regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
@@ -52,8 +53,10 @@ bool Commander::initialize(int argc, char *argv[]){
     opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string error_message = "";
     //Start reading all the parameters and perform the qc at the same time
-    while(opt!=-1){
-        switch(opt){
+    while(opt!=-1)
+    {
+        switch(opt)
+        {
             case 0:
                 command = longOpts[longIndex].name;
                 if(command.compare("chr")==0) m_chr=optarg;
@@ -89,7 +92,7 @@ bool Commander::initialize(int argc, char *argv[]){
                         error = true;
                         error_message.append("Clumping window size must be larger than 0kb\n");
                     }
-                    else m_clump_kb = temp;
+                    else m_clump_kb = temp*1000; //change it to kb, might want to allow different units
                 }
                 else if(command.compare("binary_target")==0){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
@@ -109,21 +112,30 @@ bool Commander::initialize(int argc, char *argv[]){
                 }
                 break;
             case 'b':
-                m_base= misc::split(optarg, ", ");
-                if(m_base.size() ==0){
-                    error = true;
-                    error_message.append("You must provide at least one valid base file name\n");
-                }
+				{
+					std::vector<std::string> token= misc::split(optarg, ", ");
+					m_base.insert(m_base.end(), token.begin(), token.end());
+					if(m_base.size() ==0){
+						error = true;
+						error_message.append("You must provide at least one valid base file name\n");
+					}
+				}
                 break;
             case 't':
-                m_target = misc::split(optarg, ", ");
-                if(m_target.size() ==0){
-                    error = true;
-                    error_message.append("You must provide at least one valid target file name\n");
-                }
+				{
+					std::vector<std::string> token= misc::split(optarg, ", ");
+					m_target.insert(m_target.end(), token.begin(), token.end());
+					if(m_target.size() ==0){
+						error = true;
+						error_message.append("You must provide at least one valid target file name\n");
+					}
+				}
                 break;
             case 'c':
-                m_covariates = misc::split(optarg, ", ");
+            		{
+            			std::vector<std::string> token= misc::split(optarg, ", ");
+            			m_covariates.insert(m_covariates.end(), token.begin(), token.end());
+            		}
                 break;
             case 'C':
                 m_covariate_file = optarg;
@@ -135,6 +147,7 @@ bool Commander::initialize(int argc, char *argv[]){
                     error = true;
                     error_message.append("Only support PCA and MDS for the calculation of ancestry information\n");
                 }
+                fprintf(stderr, "Currently we have not implement this function\n");
                 break;
             case 'f':
                 m_pheno_file = optarg;
@@ -143,55 +156,58 @@ bool Commander::initialize(int argc, char *argv[]){
                     error_message.append("No parameter is given for phenotype file\n");
                 }
                 break;
-            case 'p':
+            case 'p': // the index/header of p-value in the file
                 m_p_value = optarg;
                 break;
             case 'L':
                 m_ld_prefix=optarg;
                 break;
             case 'T':
-            {
-                int temp = atoi(optarg);
-                if(temp<=0){
-                    std::cerr << "Number of thread cannot be less than 1" << std::endl;
-                    std::cerr << "Will set to 1 instead" << std::endl;
-                    m_thread = 1;
-                }
-                else m_thread = temp;
-            }
+				{
+					int temp = atoi(optarg);
+					if(temp<=0){
+						std::cerr << "Number of thread cannot be less than 1" << std::endl;
+						std::cerr << "Will set to 1 instead" << std::endl;
+						m_thread = 1;
+					}
+					else m_thread = temp;
+				}
                 break;
             case 'u':
-            {
-                double temp = atof(optarg);
-                if(temp <= 0.0 || temp > 1.0){
-                    error = true;
-                    error_message.append("Upper interval must be > 0 and <= 1.0\n");
-                }
-                else m_upper = temp;
-            }
+				{
+					double temp = atof(optarg);
+					if(temp <= 0.0 || temp > 1.0){
+						error = true;
+						error_message.append("Upper interval must be > 0 and <= 1.0\n");
+					}
+					else m_upper = temp;
+				}
                 break;
             case 'l':
-            {
-                double temp = atof(optarg);
-                if(temp < 0.0 || temp >1.0){
-                    error = true;
-                    error_message.append("Lower interval must be >= 0 and < 1.0\n");
-                }
-                else m_lower = temp;
-            }
+				{
+					double temp = atof(optarg);
+					if(temp < 0.0 || temp >1.0){
+						error = true;
+						error_message.append("Lower interval must be >= 0 and < 1.0\n");
+					}
+					else m_lower = temp;
+				}
                 break;
             case 'i':
-            {
-                double temp = atof(optarg);
-                if(temp <= 0.0 || temp > 1.0){
-                    error = true;
-                    error_message.append("Interval must be >=0 and <= 1.0\n");
-                }
-                else m_inter = temp;
-            }
+				{
+					double temp = atof(optarg);
+					if(temp <= 0.0 || temp > 1.0){
+						error = true;
+						error_message.append("Interval must be >=0 and <= 1.0\n");
+					}
+					else m_inter = temp;
+				}
                 break;
             case 'B':
-                m_bed_list= misc::split(optarg, ", ");
+            		{
+            			std::vector<std::string> token = misc::split(optarg, ", ");
+            			m_bed_list.insert(m_bed_list.end(), token.begin(), token.end());
+            		}
                 break;
             case 'g':
                 m_gtf = optarg;
@@ -212,42 +228,53 @@ bool Commander::initialize(int argc, char *argv[]){
         }
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size()){
+
+    // Start performing the check on the inputs
+    if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size())
+    {
         error=true;
         error_message.append("Length of binary target list does not match number of target\n");
     }
-    if(!m_msigdb.empty() && m_gtf.empty()){
+    if(!m_msigdb.empty() && m_gtf.empty())
+    {
         error = true;
         error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
     }
-    if(m_gen_bed && m_gtf.empty()){
+    if(m_gen_bed && m_gtf.empty())
+    {
         fprintf(stderr, "ERROR: Cannot generate gene bed file without given the gtf file!\n");
         fprintf(stderr, "       Will not generate the gene bed file\n");
     }
-    if(m_out.empty()){
-        fprintf(stderr, "ERROR: Output prefix is empty, will set it to default\n");
+    if(m_out.empty())
+    {
+        fprintf(stderr, "WARNING: Output prefix is empty, will set it to PRSice\n");
         m_out = "PRSice";
     }
     // add default binary
-    if(m_target_is_binary.size()<m_target.size() && m_target.size()==1){
+    if(m_target_is_binary.size()<m_target.size() && m_target.size()==1)
+    {
     		 m_target_is_binary.push_back(true); // default is binary
     }
-    else if(m_target_is_binary.size() != m_target.size()){
+    else if(m_target_is_binary.size() != m_target.size())
+    {
 		error_message.append("ERROR: Number of binary target doesn't match number of target file!\n");
 		error_message.append("       Default value only work when all target file are binary and\n");
 		error_message.append("       when --binary_target is not used\n");
     }
-    if(m_use_beta.size()<m_base.size() && m_base.size() ==1){
+    if(m_use_beta.size()<m_base.size() && m_base.size() ==1)
+    {
     		for(size_t i = m_use_beta.size(); i < m_base.size(); ++i){
     			m_use_beta.push_back(false); // default is binary
     		}
     }
-    else if(m_use_beta.size() != m_base.size()){
+    else if(m_use_beta.size() != m_base.size())
+    {
 		error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
 		error_message.append("       Default value only work when all base file are using OR and\n");
 		error_message.append("       when --beta is not used\n");
     }
-    if(m_no_regress && !m_fastscore){
+    if(m_no_regress && !m_fastscore)
+    {
     		fprintf(stderr, "WARNING: To limit the amount of output,\n");
     		fprintf(stderr, "         no-regress can only be used with\n");
     		fprintf(stderr, "         fastscore. Will use fastscore\n");
