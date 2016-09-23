@@ -69,6 +69,7 @@ class SNP
           	return true;
         };
         void add_clump( std::vector<size_t> &i){ m_clump_target.insert( m_clump_target.end(), i.begin(), i.end() ); };
+        void add_clump_r2( std::vector<double> &i){ m_clump_r2.insert( m_clump_r2.end(), i.begin(), i.end() ); };
         bool clumped() const { return m_clumped; };
         bool flipped() const { return m_flipped; };
         // indication of whether if the SNP is within the specific region
@@ -81,11 +82,13 @@ class SNP
         		if(m_flags!=nullptr) delete [] m_flags;
         		m_flags = flag;
         };
-        void clump_all(boost::ptr_vector<SNP> &snp_list){
+        void clump_all(boost::ptr_vector<SNP> &snp_list, double r2_threshold){
         		for(size_t i = 0; i < m_clump_target.size(); ++i){
         			if(!snp_list[m_clump_target[i]].clumped()){
         				snp_list[m_clump_target[i]].set_clumped();
-        				for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
+        				if(m_clump_r2[i] >= r2_threshold){
+        					for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
+        				}
         			}
         		}
         }
@@ -140,6 +143,7 @@ class SNP
         bool m_clumped = false;
         bool m_flipped=false;
         std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
+        std::vector<double> m_clump_r2; // index of SNPs that are clumped under this SNP
         long_type *m_flags;
         long_type *m_region_clumped; //place holder for now
 #if defined(__LP64__) || defined(_WIN64)
