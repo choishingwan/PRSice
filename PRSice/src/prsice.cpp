@@ -68,7 +68,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         // However, this should be changed in later version such that we can also
         // handle different regions
         clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
-        		c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.proxy());
+        		c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
         // Now begin the calculation of the PRS
         calculate_score(c_commander, c_commander.get_target_binary(i_target),
         		target[i_target], inclusion, snp_list, region);

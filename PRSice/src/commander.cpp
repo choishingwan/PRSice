@@ -41,7 +41,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"index",no_argument,NULL,0},
         {"no-regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
-        {"proxy",no_argument,NULL,0},
+        {"proxy",required_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -105,7 +105,19 @@ bool Commander::initialize(int argc, char *argv[])
                 else if(command.compare("gen_bed")==0) m_gen_bed = true;
                 else if(command.compare("no-regression")==0) m_no_regress = true;
                 else if(command.compare("fastscore")==0) m_fastscore = true;
-                else if(command.compare("proxy")==0) m_proxy = true;
+                else if(command.compare("proxy")==0){
+                		try{
+                			m_proxy = misc::convert<double>(optarg);
+                			if(m_proxy<=0.0){
+                				error_message.append("ERROR: Proxy must be bigger than 0.0\n");
+                				error=true;
+                			}
+                		}
+                		catch(const std::runtime_error &er){
+                			error_message.append("ERROR: Proxy provided isn't numeric\n");
+                			error=true;
+                		}
+                }
                 else{
                 		std::string er = "Undefined operator: "+command+", please use --help for more information!";
                 		throw std::runtime_error(er);
@@ -359,10 +371,11 @@ void Commander::usage(){
     fprintf(stderr, "              --gen_bed      Generate bed file of gene regions from \n");
     fprintf(stderr, "                             the gtf file \n");
     fprintf(stderr, "                             Default: false \n");
-    fprintf(stderr, "              --proxy        Perform clumping with proxy SNPs. Any index SNP\n");
-    fprintf(stderr, "                             are considered as part of the region of the\n");
-    fprintf(stderr, "                             clumped SNPs\n");
-    fprintf(stderr, "                             Default: false \n");
+    fprintf(stderr, "              --proxy        Proxy threshold for index SNP to be considered\n");
+    fprintf(stderr, "                             as part of the region represented by the clumped\n");
+    fprintf(stderr, "                             SNPs. e.g. --proxy 0.8 means the index SNP will\n");
+    fprintf(stderr, "                             represent the region of any clumped SNPs that has\n");
+    fprintf(stderr, "                             a R2 >= 0.8 with it\n");
     fprintf(stderr, "\nMisc:\n");
     fprintf(stderr, "         -T | --thread       Number of thread used\n");
     fprintf(stderr, "         -h | --help         Display this help message\n");

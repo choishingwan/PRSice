@@ -16,7 +16,7 @@ std::mutex PLINK::clump_mtx;
 
 void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index,
-		double p_threshold, double r2_threshold, size_t kb_threshold, bool proxy){
+		double p_threshold, double r2_threshold, size_t kb_threshold, double proxy_threshold){
 	// Go through all SNPs
 	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
 	std::string prev_chr = ""; // Indication of current chromosome
@@ -148,12 +148,13 @@ void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
 	inclusion.clear();
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
+	bool proxy = proxy_threshold > 0.0;
 	for(size_t i = 0; i < p_sort_order.size(); ++i){
 		if(include_ref.find(snp_list[p_sort_order[i]].get_rs_id()) != include_ref.end() &&
 				snp_list[p_sort_order[i]].get_p_value() < p_threshold){
 			// now perform the region related stuff
 			if(proxy && !snp_list[p_sort_order[i]].clumped() ){
-				snp_list[p_sort_order[i]].clump_all(snp_list);
+				snp_list[p_sort_order[i]].clump_all(snp_list, proxy_threshold);
 				inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
 			}
 			else if(!snp_list[p_sort_order[i]].clumped()){
@@ -459,17 +460,22 @@ double PLINK::get_r2(const size_t i, const size_t j){
 
 void PLINK::compute_clump( size_t index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &index_check, const double r2_threshold){
 	size_t ref_index = index_check[index];
+	std::vector<double> r2_store;
 	std::vector<size_t> self_index; // index we want to push into the current index
 	for(size_t i = i_start; i < i_end && i < index_check.size(); ++i){
 		size_t target_index = index_check[i];
 		if(i != index && snp_list[target_index].get_p_value() > snp_list[ref_index].get_p_value()){
 			// only calculate r2 if more significant
 			double r2 = get_r2(i, index);
-			if(r2 >= r2_threshold) self_index.push_back(target_index);
+			if(r2 >= r2_threshold){
+				self_index.push_back(target_index);
+				r2_store.push_back(r2);
+			}
 		}
 	}
 	PLINK::clump_mtx.lock();
 		snp_list[ref_index].add_clump(self_index);
+		snp_list[ref_index].add_clump_r2(r2_store);
 	PLINK::clump_mtx.unlock();
 }
 
