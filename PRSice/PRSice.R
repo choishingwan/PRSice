@@ -245,8 +245,8 @@ if(!argv$plot){
     }
   }
   if(nchar(command)==0){
-    # print.arg.parser(p)
+    print.arg.parser(p)
     quit()
   }
-  #system(paste("bin/PRSice", command))
+  system(paste("bin/PRSice", command))
 }
