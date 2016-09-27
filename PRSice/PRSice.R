@@ -3,10 +3,12 @@
 # The code structure are as follow
 # INSTALL_PACKAGE
 # - Contains functions responsible for installing all required packages
-# COMMAND_PARSE
-# - Functions and scripts to process all the command line arguments
-
-
+# COMMAND_FUNC
+# - Functions required for command line argument parsing
+# COMMAD_BUILD
+# - Building the command line parser using argparser
+# CALL_PRSICE
+# - call the cpp prsice
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
@@ -45,7 +47,7 @@ for(library in libraries)
 
 
 
-# COMMAND_PARSE:  Functions and scripts to process all the command line arguments
+# COMMAND_FUNC:  Functions required for command line argument parsing
 
 # Self defined arg_parser object. Difference from the default = removed place holder and the -x flag
 arg_parser_self <- function(description, name = NULL)
@@ -70,7 +72,7 @@ print.arg.parser<- function (x, width=NULL,...)
   max_name_length <- max(nchar(paste(parser$args[!is.na(parser$shorts)],parser$shorts, sep=", ")), nchar(parser$args[is.na(parser$shorts)]))+1
   max_argument_length <- max_name_length+max(nchar(toupper(sub("^-+", "", parser$args[parser$is.opt.arg]))))+1
   if(is.null(width)){
-    width=2*max_argument_length
+    width=max(80, 2*max_argument_length)
   }
   usage<-c("usage: ", parser$name, 
                paste(sub("^(.*)$", "[\\1]", parser$args[parser$is.flag])),
@@ -161,71 +163,90 @@ print.arg.parser<- function (x, width=NULL,...)
   }
 }
 
-
+# COMMAD_BUILD: Building the command line parser using argparser
 p <- arg_parser_self("PRSice: Polygenic Risk Score software")
-p <- add_argument(p, "--base", short="-b", nargs=Inf, help="Base association files, can input multiple times")
-p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. Can input multiple times. Currently only support plink binary input. Does not support multi-chromosome input")
+p <- add_argument(p, "--base", short="-b", nargs=Inf, help="Base association files. User can provide multiple base files.")
+p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. User can provide multiple target files. Currently only support plink binary input. Does not support multi-chromosome input")
 p <- add_argument(p, "--binary_target", nargs=Inf, help="Indication of whether binary target is provided. Should be of the same length as target")
 p <- add_argument(p, "--beta", nargs=Inf, help="Indication of whether the test statistic is beta instead of OR. Should be of the same length as base")
-p <- add_argument(p , "--pheno_file", short="-f", help="Phenotype file(s) containing the target phenotypes. If provided, the fam file of the target is ignored")
--L | --ld           PLINK binary input for LD calculation. If not
-provided, will use the target genotypes for the 
-calculation of the LD during clumping
--c | --covar_header Header of covariates, if not provided, will 
-use all variable in the covariate file as the
-covariate
--C | --covar_file   Covariate file. Format should be:
-  ID Cov1 Cov2
-Must contain a header
--a | --ancestry     NOT DEVELOPED YET
--o | --out          The prefix of all output. Default PRSice
+p <- add_argument(p, "--pheno_file", short="-f", nargs=Inf, help="Phenotype file(s) containing the target phenotypes. If provided, the fam file of the target is ignored. This should be the same line as target (If you want to use phenotype file, you must use it for ALL target")
+p <- add_argument(p, "--ld", short="-L", help="Plink binary file prefix for the reference file used for LD calculation. If not provided, will use the target genotype for the LD calculation")
+p <- add_argument(p, "--covar_header", short="-c", help="Header of covariates, if not provided, will use all variable in the covariate file as the covarite. Should be comma separated")
+p <- add_argument(p, "--covar_file", short="-C", help="Covariate file. Format should be: ID Cov1 Cov2 Must contain a header");
+p <- add_argument(p, "--ancestry", short="-a", help="NOT DEVELOPED YET");
+p <- add_argument(p, "--out", short="-o", help="The prefix of all output", default="PRSice");
+p <- add_argument(p, "--lower", short="-l", help="The starting p-value threshold", default=0.0001);
+p <- add_argument(p, "--upper", short="-u", help="The final p-value threshold", default=0.5);
+p <- add_argument(p, "--interval", short="i", help="The step size of the threshold", default=0.00005);
+p <- add_argument(p, "--chr", help="Column header of Chromosome", default="CHR");
+p <- add_argument(p, "--A1", help="Column header of Reference Allele", default="A1");
+p <- add_argument(p, "--A2", help="Column header of Alternaative Allele", default="A2");
+p <- add_argument(p, "--stat", help="Column header of test statistic, either BETA or OR", default="OR");
+p <- add_argument(p, "--snp", help="Column header of SNP id", default="SNP");
+p <- add_argument(p, "--bp", help="Column header of SNP location", default="BP");
+p <- add_argument(p, "--se",help="Column header of Standard Error", default="SE");
+p <- add_argument(p , "--pvalue", short="-p", help="Column head of p-value", default="P");
+p <- add_argument(p, "--index", flag=T, help="If the base file doesn't contain a header, you can use this option, which essentially state that all the provided \"headers\" are INDEX of the corresponding column. (Index should be 0-based)");
+p <- add_argument(p, "--clump-p", help="The p-value threshold use for clumping", default=1);
+p <- add_argument(p, "--clump_r2", help="The R2 threshold for clumping. Please note that as we did not implement the maximum likelihood R2 calculation, the clumping result can differ slightly from plink.", default=0.1);
+p <- add_argument(p, "--clump_kb", help="The distance for clumping in kb.", default=250);
+p <- add_argument(p, "--bed", short="-B", nargs=Inf, help="Bed file containing the selected regions. Name of bed file will be used as the region identifier");
+p <- add_argument(p, "--gtf", short="-g", help="GTF file containing gene boundaries. Required when --msigdb is set");
+p <- add_argument(p, "--msigdb", short="-m", help="MSIGDB file containing the pathway information require the gtf file");
+p <- add_argument(p, "--gen_bed", flag=T, help="Generate bed file of gene regions from the gtf file");
+p <- add_argument(p, "--proxy", help="Proxy threshold for index SNP to be considered as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will represent the region of any clumped SNPs that has a R2 >= 0.8 with it");
+p <- add_argument(p, "--thread", short="-T", help="Number of thread used", default=1);
+p <- add_argument(p, "--c_help", flag=T, help="Print the help message from the c++ program instead");
+p <- add_argument(p, "--plot", flag=T, help="Indicate whether only plotting is required");
+argv = commandArgs(trailingOnly = TRUE)
+help=(sum(c("--help", "-h") %in%argv)>=1)
+if(help){
+  print.arg.parser(p)
+  quit();
+}
+argv <- parse_args(p)
 
-Scoring options:
-  -l | --lower        The starting p-value threshold. default: 0.000100
--u | --upper        The final p-value threshold. default: 0.500000
--i | --interval     The step size of the threshold. default: 0.000050
+# CALL_PRSICE: Call the cpp PRSice if required
+if(argv$c_help){
+  system("bin/PRSice --help")
+}
 
-File Headers:
-  --chr          Column header of Chromosome <Required>
-  --A1           Column header of Reference Allele <Required>
-  --A2           Column header of Alternaative Allele 
---stat         Column header of test statistic, either BETA or OR
---snp          Column header of SNP id
---bp           Column header of SNP location
---se           Column header of Standard Error
---pvalue       Column head of p-value <Required>
-  --index        If the base file doesn't contain a header, you can
-use this option, which essentially state that all 
-the above options are providing the INDEX of the
-corresponding column. (Index should be 0-based)
+command=""
+# We don't bother to check if the input is correct, the parameter should be checked by the c++ program
+add_command <- function(input){
+  if(length(input)==1){
+    if(is.na(input)){
+      return(NA);
+    }else{
+      return(input)
+    }
+  }else{
+    return(paste(input,collapse=","))
+  }
+}
+if(!argv$plot){
+  #call the cpp PRSice
+  #command = paste("--base",paste(argv$base,collapse=","))
+  #command = paste(command, paste("--target",paste(argv$target,collapse=",")))
 
-Clumping:
---clump-p      The p-value threshold use for clumping. 
-Default is 1.000000 
---clump_r2     The R2 threshold for clumping.
-Please note that as we did not implement
-the maximum likelihood R2 calculation, the
-clumping result can differ slightly from plink
---clump_kb     The distance for clumping in kb
-
-Selections:
--B | --bed          Bed file containing the selected regions. 
-Name of bed file will be used as the region
-identifier 
--g | --gtf          GTF file containing gene boundaries. Required
-when --msigdb is set 
--m | --msigdb       MSIGDB file containing the pathway information
-require the gtf file 
---gen_bed      Generate bed file of gene regions from 
-the gtf file 
-Default: false 
---proxy        Proxy threshold for index SNP to be considered
-as part of the region represented by the clumped
-SNPs. e.g. --proxy 0.8 means the index SNP will
-represent the region of any clumped SNPs that has
-a R2 >= 0.8 with it
-
-Misc:
--T | --thread       Number of thread used
--h | --help         Display this help message
-print.arg.parser(p)
+  for(i in names(argv)){
+    # only need special processing for flags and specific inputs
+    if(i=="index"){
+      if(argv[[i]]) command = paste(command, " --",i,sep="")
+    }else if(i=="gen_bed"){
+      if(argv[[i]]) command = paste(command, " --",i,sep="")
+    }else if(i=="c_help" | i=="help" | i=="plot"){
+      # ignore 
+    }else{
+      temp = add_command(argv[[i]])
+      if(!is.na(temp)){
+        command = paste(command, " --",i, " ", temp, sep="")
+      }
+    }
+  }
+  if(nchar(command)==0){
+    # print.arg.parser(p)
+    quit()
+  }
+  #system(paste("bin/PRSice", command))
+}
