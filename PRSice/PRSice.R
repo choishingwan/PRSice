@@ -164,9 +164,68 @@ print.arg.parser<- function (x, width=NULL,...)
 
 p <- arg_parser_self("PRSice: Polygenic Risk Score software")
 p <- add_argument(p, "--base", short="-b", nargs=Inf, help="Base association files, can input multiple times")
-p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. Can input multiple times")
-p <- add_argument(p, "--binary_target", nargs=Inf, help="Indication of whether if the target is binary or not.Should be of the same  length as target")
-p <- add_argument(p, "--superLongFlagHahaha", flag=T, help="Indication of whether if the target is binary or not.Should be of the same  length as target")
-p <- add_argument(p, "positionFlagHahahajusttestingagain", help="Indication of whether if the target is binary or not.Should be of the same  length as target")
+p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. Can input multiple times. Currently only support plink binary input. Does not support multi-chromosome input")
+p <- add_argument(p, "--binary_target", nargs=Inf, help="Indication of whether binary target is provided. Should be of the same length as target")
+p <- add_argument(p, "--beta", nargs=Inf, help="Indication of whether the test statistic is beta instead of OR. Should be of the same length as base")
+p <- add_argument(p , "--pheno_file", short="-f", help="Phenotype file(s) containing the target phenotypes. If provided, the fam file of the target is ignored")
+-L | --ld           PLINK binary input for LD calculation. If not
+provided, will use the target genotypes for the 
+calculation of the LD during clumping
+-c | --covar_header Header of covariates, if not provided, will 
+use all variable in the covariate file as the
+covariate
+-C | --covar_file   Covariate file. Format should be:
+  ID Cov1 Cov2
+Must contain a header
+-a | --ancestry     NOT DEVELOPED YET
+-o | --out          The prefix of all output. Default PRSice
 
+Scoring options:
+  -l | --lower        The starting p-value threshold. default: 0.000100
+-u | --upper        The final p-value threshold. default: 0.500000
+-i | --interval     The step size of the threshold. default: 0.000050
+
+File Headers:
+  --chr          Column header of Chromosome <Required>
+  --A1           Column header of Reference Allele <Required>
+  --A2           Column header of Alternaative Allele 
+--stat         Column header of test statistic, either BETA or OR
+--snp          Column header of SNP id
+--bp           Column header of SNP location
+--se           Column header of Standard Error
+--pvalue       Column head of p-value <Required>
+  --index        If the base file doesn't contain a header, you can
+use this option, which essentially state that all 
+the above options are providing the INDEX of the
+corresponding column. (Index should be 0-based)
+
+Clumping:
+--clump-p      The p-value threshold use for clumping. 
+Default is 1.000000 
+--clump_r2     The R2 threshold for clumping.
+Please note that as we did not implement
+the maximum likelihood R2 calculation, the
+clumping result can differ slightly from plink
+--clump_kb     The distance for clumping in kb
+
+Selections:
+-B | --bed          Bed file containing the selected regions. 
+Name of bed file will be used as the region
+identifier 
+-g | --gtf          GTF file containing gene boundaries. Required
+when --msigdb is set 
+-m | --msigdb       MSIGDB file containing the pathway information
+require the gtf file 
+--gen_bed      Generate bed file of gene regions from 
+the gtf file 
+Default: false 
+--proxy        Proxy threshold for index SNP to be considered
+as part of the region represented by the clumped
+SNPs. e.g. --proxy 0.8 means the index SNP will
+represent the region of any clumped SNPs that has
+a R2 >= 0.8 with it
+
+Misc:
+-T | --thread       Number of thread used
+-h | --help         Display this help message
 print.arg.parser(p)
