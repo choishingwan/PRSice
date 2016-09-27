@@ -100,7 +100,7 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
         result[0] = index_check(c_commander.chr(), header, "WARNING");
         result[1] = index_check(c_commander.ref(), header, "ERROR");
         result[2] = index_check(c_commander.alt(), header, "WARNING");
-        result[3] = index_check(c_commander.statistic(), header, "WARNING");
+        result[3] = index_check(c_commander.statistic(), header, "ERROR");
         result[4] = index_check(c_commander.snp(), header, "ERROR");
         result[5] = index_check(c_commander.bp(), header, "WARNING");
         result[6] = index_check(c_commander.se(), header, "WARNING");

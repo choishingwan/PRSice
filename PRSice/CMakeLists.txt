@@ -13,7 +13,6 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 # SET(BUILD_SHARED_LIBRARIES OFF)
 # SET(CMAKE_EXE_LINKER_FLAGS "-static")
 
-
 # Header files
 include_directories(inc)
 

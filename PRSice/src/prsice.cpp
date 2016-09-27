@@ -141,7 +141,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		   			catch(const std::runtime_error& error){ //we know only runtime error is throw
 		   				num_stat_not_convertible++;
 		        		}
-		   		}else stat = pvalue;
+		   		}
 		   		double se = 0.0;
 		    		if(index[6] >= 0){
 		    			try{
