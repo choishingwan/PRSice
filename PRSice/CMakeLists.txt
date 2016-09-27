@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(PRSice)
 include(ExternalProject)
 set(CMAKE_BUILD_TYPE Release)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+
 # To compile a static library, we can use 
 # g++ --std=c++11 -I ../inc/ -isystem ../lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -pthread -DNDEBUG -static ../src/*.cpp -o PRSice
 set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
