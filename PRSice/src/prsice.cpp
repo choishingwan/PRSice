@@ -71,7 +71,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         		c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
         // Now begin the calculation of the PRS
         calculate_score(c_commander, c_commander.get_target_binary(i_target),
-        		target[i_target], inclusion, snp_list, region);
+        		i_target, inclusion, snp_list, region);
     }
 }
 
@@ -199,7 +199,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 }
 
 void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
-		const std::string c_target, const std::map<std::string, size_t> &inclusion,
+		const size_t c_i_target, const std::map<std::string, size_t> &inclusion,
 		const boost::ptr_vector<SNP> &snp_list, const Region &c_region)
 {
 	// Might want to add additional parameter for the region output
@@ -217,12 +217,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     // below is only required if regression is performed
     Eigen::VectorXd phenotype;
     Eigen::MatrixXd covariates;
+    std::string target = c_commander.get_target(c_i_target);
+    std::string pheno_file = c_commander.get_pheno(c_i_target);
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file
-    		phenotype = gen_pheno_vec(	c_target, c_commander.get_pheno(),
+    		phenotype = gen_pheno_vec(	target, pheno_file,
     													target_binary, fam_index, prs_fam);
     		// This should generate the covariate matrix
-    		covariates = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
+    		covariates = gen_cov_matrix(	target, c_commander.get_cov_file(),
     													c_commander.get_cov_header(), fam_index);
     }
 
@@ -232,7 +234,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	double bound_inter = c_commander.get_inter();
 	// we will use a "special" vector to speed up the bim reading
 	// the concept is such that we can skip lines efficiently
-    std::string bim_name = c_target+".bim";
+    std::string bim_name = target+".bim";
     // This should contain some important information to speed up the bed file reading
     // should contain string, size_t, int, size_t
     // string = rsid
@@ -285,10 +287,10 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	// regions
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
-	if(bound_start != 0) get_prs_score(quick_ref, snp_list, c_target, region_prs_score, num_snp_included, cur_start_index);
+	if(bound_start != 0) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
 
 	// if people require only the PRS score, then we will open this no_regress_out file
-    	std::string output_name = c_commander.get_out()+"."+c_target+".all.score";
+    	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
     	if(no_regress){
     		no_regress_out.open(output_name.c_str());
@@ -329,7 +331,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
     		fprintf(stderr, "\rProcessing %f", current_upper);
     		// now calculate the PRS for each region
-    		bool reg = get_prs_score(quick_ref, snp_list, c_target, region_prs_score,
+    		bool reg = get_prs_score(quick_ref, snp_list, target, region_prs_score,
     				num_snp_included, cur_start_index);
     		// if regression is not required, we will simply output the score
     		if(no_regress){
@@ -384,7 +386,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
     	no_regress_out.close();
     	// now perform the output for all the best scores and PRSice results
-	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+c_target;
+	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+target;
     	for(size_t i_region = 0; i_region< prs_results.size(); ++i_region){
     		output_name = output_prefix+"."+c_region.get_name(i_region);
     		std::string out_best = output_name+".best";

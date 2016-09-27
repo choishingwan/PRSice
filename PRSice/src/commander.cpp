@@ -162,11 +162,14 @@ bool Commander::initialize(int argc, char *argv[])
                 fprintf(stderr, "Currently we have not implement this function\n");
                 break;
             case 'f':
-                m_pheno_file = optarg;
-                if(m_pheno_file.empty()){
-                    error = true;
-                    error_message.append("No parameter is given for phenotype file\n");
-                }
+				{
+					std::vector<std::string> token= misc::split(optarg, ", ");
+					m_pheno_file.insert(m_pheno_file.end(), token.begin(), token.end());
+					if(m_pheno_file.size() ==0){
+						error = true;
+						error_message.append("No parameter is given for phenotype file\n");
+					}
+				}
                 break;
             case 'p': // the index/header of p-value in the file
                 m_p_value = optarg;
@@ -310,8 +313,8 @@ Commander::~Commander()
 void Commander::usage(){
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
     fprintf(stderr, "Required Inputs:\n");
-    fprintf(stderr, "         -b | --base         A list of base file. Should be comma separated\n");
-    fprintf(stderr, "         -t | --target       A list of target file. Should be comma separated\n");
+    fprintf(stderr, "         -b | --base         Base association files, can input multiple times\n");
+    fprintf(stderr, "         -t | --target       Target bed prefix, can input multiple times\n");
     fprintf(stderr, "                             Currently only support the PLINK binary input\n");
     fprintf(stderr, "         --binary_target     Indication of whether if the target is binary\n");
     fprintf(stderr, "                             or not. default is T. Should be of the same \n");
@@ -322,7 +325,8 @@ void Commander::usage(){
     fprintf(stderr, "\nOptions\n");
     fprintf(stderr, "         -f | --pheno_file   The phenotype file containing the target\n");
     fprintf(stderr, "                             phenotypes. If provided, the fam file of the\n");
-    fprintf(stderr, "                             target is ignored\n");
+    fprintf(stderr, "                             target is ignored. It should be of the same\n");
+    fprintf(stderr, "                             length as target\n");
     fprintf(stderr, "         -L | --ld           PLINK binary input for LD calculation. If not\n");
     fprintf(stderr, "                             provided, will use the target genotypes for the \n");
     fprintf(stderr, "                             calculation of the LD during clumping\n");
