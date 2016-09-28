@@ -216,18 +216,29 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     bool no_regress =c_commander.no_regression();
     // below is only required if regression is performed
     Eigen::VectorXd phenotype;
+<<<<<<< Updated upstream
     Eigen::MatrixXd covariates;
     std::string target = c_commander.get_target(c_i_target);
     std::string pheno_file = c_commander.get_pheno(c_i_target);
+=======
+    Eigen::MatrixXd covariates_only;
+    Eigen::MatrixXd independent_variables;
+>>>>>>> Stashed changes
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file
     		phenotype = gen_pheno_vec(	target, pheno_file,
     													target_binary, fam_index, prs_fam);
     		// This should generate the covariate matrix
+<<<<<<< Updated upstream
     		covariates = gen_cov_matrix(	target, c_commander.get_cov_file(),
+=======
+    		independent_variables = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
+>>>>>>> Stashed changes
     													c_commander.get_cov_header(), fam_index);
     }
-
+    covariates_only = independent_variables;
+    covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
+    covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
     // Declare the variables, might need to implement fastscore here
 	double bound_start = c_commander.get_lower();
 	double bound_end = c_commander.get_upper();
@@ -349,7 +360,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		if(reg){
     			// here we do multithreading
     			if(n_thread == 1 || region_prs_score.size()==1){
-    				thread_score(covariates, phenotype, region_prs_score, num_snp_included, fam_index,
+    				thread_score(independent_variables, covariates_only, phenotype, region_prs_score, num_snp_included, fam_index,
     						region_best_threshold, region_best_prs_score, prs_results, 0, region_prs_score.size(),
 							target_binary, current_upper,n_thread);
     			}
@@ -357,8 +368,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				// perform multi threading
     				if(c_region.size() < n_thread){
     					for(size_t i_region = 0; i_region < c_region.size(); ++i_region){
-    						thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(covariates),
-    								std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
+    						thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(independent_variables),
+    								std::cref(covariates_only), std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
 									std::ref(prs_results), i_region, i_region+1, target_binary, current_upper,1));
     					}
@@ -369,8 +380,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     					for(size_t i_thread = 0; i_thread < n_thread; ++i_thread){
     						size_t ending = start+job_size+(remain>0);
     						ending = (ending>c_region.size())? c_region.size(): ending;
-    						 thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(covariates),
-    								 std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
+    						 thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(independent_variables),
+    								 std::cref(covariates_only), std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									 std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
 									 std::ref(prs_results), start, ending, target_binary, current_upper,1));
     						start=ending;
@@ -420,7 +431,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
 }
 
-void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_pheno,
+void PRSice::thread_score( Eigen::MatrixXd &independent_variables,
+			const Eigen::MatrixXd &covariate_only, const Eigen::VectorXd &c_pheno,
         		const std::vector<std::vector<PRSice::prs_score > > &c_region_prs_score,
         		const std::vector<size_t> &c_num_snp_included, const std::map<std::string, size_t> &c_fam_index,
         		std::vector<PRSice::PRSice_best > &region_best_threshold,
@@ -433,7 +445,7 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 	bool thread_safe=false;
 	// so we will only copy the matrix when it is not thread safe to do so
 	if(region_start==0 && region_end == c_region_prs_score.size()) thread_safe = true;
-	else X = covariate;
+	else X = independent_variables;
 	// c_prs_region_score = prs score of the region at the current threshold
 	// c_num_snp_include = num of SNP in region at current threshold
 	// c_fam_index = index for each individual on the matrix (mainly to deal with missing data)
@@ -448,13 +460,13 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 		for(;prs_iter != prs_end; ++prs_iter){
 			std::string sample = std::get<0>(*prs_iter);
 			if(c_fam_index.find(sample)!=c_fam_index.end()){
-				if(thread_safe) covariate(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				if(thread_safe) independent_variables(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
 				else X(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
 			}
 		}
 		if(target_binary){
 			try{
-				if(thread_safe) Regression::glm(c_pheno, covariate, p_value, r2, 25, thread, true);
+				if(thread_safe) Regression::glm(c_pheno, independent_variables, p_value, r2, 25, thread, true);
 				else Regression::glm(c_pheno, X, p_value, r2, 25, thread, true);
 			}
 			catch(const std::runtime_error &error){
@@ -464,7 +476,7 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 				fprintf(stderr, "       Please send me the DEBUG files\n");
 				std::ofstream debug;
 				debug.open("DEBUG");
-				if(thread_safe) debug << covariate << std::endl;
+				if(thread_safe) debug << independent_variables << std::endl;
 				else 	debug << X<< std::endl;
 				debug.close();
 				debug.open("DEBUG.y");
@@ -475,8 +487,8 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 			}
 			double null_p, null_r2;
 			if(thread_safe){
-				if(covariate.cols()>2){
-					Regression::glm(c_pheno, covariate.block(0,2,covariate.rows(), covariate.cols()-1),
+				if(independent_variables.cols()>2){
+					Regression::glm(c_pheno, covariate_only,
 							null_p, null_r2, 25, thread, true);
 					r2-=	null_r2;
 				}
@@ -488,8 +500,13 @@ void PRSice::thread_score( Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_
 			}
 		}
 		else{
-			if(thread_safe) Regression::linear_regression(c_pheno, covariate, p_value, r2, r2_adjust, thread, true);
+			if(thread_safe) Regression::linear_regression(c_pheno, independent_variables, p_value, r2, r2_adjust, thread, true);
 			else Regression::linear_regression(c_pheno, X, p_value, r2, r2_adjust, thread, true);
+			if(independent_variables.cols()>2){
+				double null_p, null_r2, null_r2_adjust;
+				Regression::linear_regression(c_pheno, covariate_only, null_p, null_r2, null_r2_adjust, thread, true);
+				r2-=null_r2;
+			}
 		}
 
 		// This should be thread safe as each thread will only mind their own region
