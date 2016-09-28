@@ -9,6 +9,9 @@
 # - Building the command line parser using argparser
 # CALL_PRSICE
 # - call the cpp prsice
+# PLOTTING
+# - Here we should perform all the plottings
+
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
@@ -36,7 +39,7 @@ UsePackage <- function(package)
 
 dir.create(file.path("lib"), showWarnings = FALSE)
 .libPaths(c(.libPaths(), "./lib"))
-libraries <- c( "ggplot2", "argparser")
+libraries <- c( "ggplot2", "argparser", "data.table")
 for(library in libraries)
 {
   if(!UsePackage(library))
@@ -211,7 +214,6 @@ if(argv$c_help){
   system("bin/PRSice --help")
 }
 
-command=""
 # We don't bother to check if the input is correct, the parameter should be checked by the c++ program
 add_command <- function(input){
   if(length(input)==1){
@@ -224,11 +226,8 @@ add_command <- function(input){
     return(paste(input,collapse=","))
   }
 }
+command=""
 if(!argv$plot){
-  #call the cpp PRSice
-  #command = paste("--base",paste(argv$base,collapse=","))
-  #command = paste(command, paste("--target",paste(argv$target,collapse=",")))
-
   for(i in names(argv)){
     # only need special processing for flags and specific inputs
     if(i=="index"){
@@ -250,3 +249,7 @@ if(!argv$plot){
   }
   system(paste("bin/PRSice", command))
 }
+
+# PLOTTING: Here we should perform all the plottings
+PRS=fread(paste(argv$out,".prsice",sep=""), header=T,data.table=F)
+PRS.best = fread(paste(argv$out, ".best",sep=""), header=T,data.table=F)
