@@ -324,28 +324,6 @@ Commander::~Commander()
 void Commander::usage(){
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
     fprintf(stderr, "Required Inputs:\n");
-<<<<<<< Updated upstream
-    fprintf(stderr, "         -b | --base         Base association files, can input multiple times\n");
-    fprintf(stderr, "         -t | --target       Target bed prefix, can input multiple times\n");
-    fprintf(stderr, "                             Currently only support the PLINK binary input\n");
-    fprintf(stderr, "         --binary_target     Indication of whether if the target is binary\n");
-    fprintf(stderr, "                             or not. default is T. Should be of the same \n");
-    fprintf(stderr, "                             length as target \n");
-    fprintf(stderr, "         --beta              Indication of whether if the test statistic\n");
-    fprintf(stderr, "                             is beta instead of OR. default is F. Should\n");
-    fprintf(stderr, "                             be of the same length as base \n");
-    fprintf(stderr, "\nOptions\n");
-    fprintf(stderr, "         -f | --pheno_file   The phenotype file containing the target\n");
-    fprintf(stderr, "                             phenotypes. If provided, the fam file of the\n");
-    fprintf(stderr, "                             target is ignored. It should be of the same\n");
-    fprintf(stderr, "                             length as target\n");
-    fprintf(stderr, "         -L | --ld           PLINK binary input for LD calculation. If not\n");
-    fprintf(stderr, "                             provided, will use the target genotypes for the \n");
-    fprintf(stderr, "                             calculation of the LD during clumping\n");
-    fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will \n");
-    fprintf(stderr, "                             use all variable in the covariate file as the\n");
-    fprintf(stderr, "                             covariate\n");
-=======
     fprintf(stderr, "         -b | --base         Base association files. User can provide multiple\n");
     fprintf(stderr, "                             base files.\n");
     fprintf(stderr, "         -t | --target       Plink binary file prefix for target files. User\n");
@@ -367,7 +345,6 @@ void Commander::usage(){
     fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will use all\n");
     fprintf(stderr, "                             variable in the covariate file as the covarite.\n");
     fprintf(stderr, "                             Should be comma separated\n");
->>>>>>> Stashed changes
     fprintf(stderr, "         -C | --covar_file   Covariate file. Format should be:\n");
     fprintf(stderr, "                             ID Cov1 Cov2\n");
     fprintf(stderr, "                             Must contain a header\n");

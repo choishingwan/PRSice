@@ -216,24 +216,16 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     bool no_regress =c_commander.no_regression();
     // below is only required if regression is performed
     Eigen::VectorXd phenotype;
-<<<<<<< Updated upstream
-    Eigen::MatrixXd covariates;
     std::string target = c_commander.get_target(c_i_target);
     std::string pheno_file = c_commander.get_pheno(c_i_target);
-=======
     Eigen::MatrixXd covariates_only;
     Eigen::MatrixXd independent_variables;
->>>>>>> Stashed changes
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file
     		phenotype = gen_pheno_vec(	target, pheno_file,
     													target_binary, fam_index, prs_fam);
     		// This should generate the covariate matrix
-<<<<<<< Updated upstream
-    		covariates = gen_cov_matrix(	target, c_commander.get_cov_file(),
-=======
-    		independent_variables = gen_cov_matrix(	c_target, c_commander.get_cov_file(),
->>>>>>> Stashed changes
+    		independent_variables = gen_cov_matrix(	target, c_commander.get_cov_file(),
     													c_commander.get_cov_header(), fam_index);
     }
     covariates_only = independent_variables;
