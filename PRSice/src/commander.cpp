@@ -162,11 +162,14 @@ bool Commander::initialize(int argc, char *argv[])
                 fprintf(stderr, "Currently we have not implement this function\n");
                 break;
             case 'f':
-                m_pheno_file = optarg;
-                if(m_pheno_file.empty()){
-                    error = true;
-                    error_message.append("No parameter is given for phenotype file\n");
-                }
+				{
+					std::vector<std::string> token= misc::split(optarg, ", ");
+					m_pheno_file.insert(m_pheno_file.end(), token.begin(), token.end());
+					if(m_pheno_file.size() ==0){
+						error = true;
+						error_message.append("No parameter is given for phenotype file\n");
+					}
+				}
                 break;
             case 'p': // the index/header of p-value in the file
                 m_p_value = optarg;
@@ -241,6 +244,14 @@ bool Commander::initialize(int argc, char *argv[])
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
 
+    if(m_base.size()==0){
+    		error=true;
+    		error_message.append("There are no base file to run\n");
+    }
+    if(m_target.size()==0){
+    		error=true;
+    		error_message.append("There are no target file to run\n");
+    }
     // Start performing the check on the inputs
     if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size())
     {
@@ -263,9 +274,12 @@ bool Commander::initialize(int argc, char *argv[])
         m_out = "PRSice";
     }
     // add default binary
-    if(m_target_is_binary.size()<m_target.size() && m_target.size()==1)
+    if(m_target_is_binary.size()==0)
     {
-    		 m_target_is_binary.push_back(true); // default is binary
+    		for(size_t i = 0; i < m_target.size(); ++i)
+    		{
+    			m_target_is_binary.push_back(true); // default is binary
+    		}
     }
     else if(m_target_is_binary.size() != m_target.size())
     {
@@ -273,9 +287,9 @@ bool Commander::initialize(int argc, char *argv[])
 		error_message.append("       Default value only work when all target file are binary and\n");
 		error_message.append("       when --binary_target is not used\n");
     }
-    if(m_use_beta.size()<m_base.size() && m_base.size() ==1)
+    if(m_use_beta.size()==0)
     {
-    		for(size_t i = m_use_beta.size(); i < m_base.size(); ++i){
+    		for(size_t i = 0; i < m_base.size(); ++i){
     			m_use_beta.push_back(false); // default is binary
     		}
     }
@@ -310,25 +324,27 @@ Commander::~Commander()
 void Commander::usage(){
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
     fprintf(stderr, "Required Inputs:\n");
-    fprintf(stderr, "         -b | --base         A list of base file. Should be comma separated\n");
-    fprintf(stderr, "         -t | --target       A list of target file. Should be comma separated\n");
-    fprintf(stderr, "                             Currently only support the PLINK binary input\n");
-    fprintf(stderr, "         --binary_target     Indication of whether if the target is binary\n");
-    fprintf(stderr, "                             or not. default is T. Should be of the same \n");
-    fprintf(stderr, "                             length as target \n");
-    fprintf(stderr, "         --beta              Indication of whether if the test statistic\n");
-    fprintf(stderr, "                             is beta instead of OR. default is F. Should\n");
-    fprintf(stderr, "                             be of the same length as base \n");
+    fprintf(stderr, "         -b | --base         Base association files. User can provide multiple\n");
+    fprintf(stderr, "                             base files.\n");
+    fprintf(stderr, "         -t | --target       Plink binary file prefix for target files. User\n");
+    fprintf(stderr, "                             can provide multiple target files. Currently only\n");
+    fprintf(stderr, "                             support plink binary input. Does not support multi-\n");
+    	fprintf(stderr, "                             chromosome input\n");
+    fprintf(stderr, "         --binary_target     Indication of whether binary target is provided.\n");
+    fprintf(stderr, "                             Should be of the same length as target\n");
+    fprintf(stderr, "         --beta              Indication of whether the test statistic is beta\n");
+	fprintf(stderr, "                             instead of OR. Should be of the same length as base\n");
     fprintf(stderr, "\nOptions\n");
-    fprintf(stderr, "         -f | --pheno_file   The phenotype file containing the target\n");
-    fprintf(stderr, "                             phenotypes. If provided, the fam file of the\n");
-    fprintf(stderr, "                             target is ignored\n");
-    fprintf(stderr, "         -L | --ld           PLINK binary input for LD calculation. If not\n");
-    fprintf(stderr, "                             provided, will use the target genotypes for the \n");
-    fprintf(stderr, "                             calculation of the LD during clumping\n");
-    fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will \n");
-    fprintf(stderr, "                             use all variable in the covariate file as the\n");
-    fprintf(stderr, "                             covariate\n");
+    fprintf(stderr, "         -f | --pheno_file   Phenotype file(s) containing the target phenotypes.\n");
+    fprintf(stderr, "                             If provided, the fam file of the target is ignored.\n");
+    fprintf(stderr, "                             This should be the same line as target (If you want to\n");
+    fprintf(stderr, "                             use phenotype file, you must use it for ALL target\n");
+    fprintf(stderr, "         -L | --ld           Plink binary file prefix for the reference file used\n");
+    fprintf(stderr, "                             for LD calculation. If not provided, will use the\n");
+    fprintf(stderr, "                             target genotype for the LD calculation\n");
+    fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will use all\n");
+    fprintf(stderr, "                             variable in the covariate file as the covarite.\n");
+    fprintf(stderr, "                             Should be comma separated\n");
     fprintf(stderr, "         -C | --covar_file   Covariate file. Format should be:\n");
     fprintf(stderr, "                             ID Cov1 Cov2\n");
     fprintf(stderr, "                             Must contain a header\n");
@@ -346,7 +362,7 @@ void Commander::usage(){
     fprintf(stderr, "              --snp          Column header of SNP id\n");
     fprintf(stderr, "              --bp           Column header of SNP location\n");
     fprintf(stderr, "              --se           Column header of Standard Error\n");
-    fprintf(stderr, "              --pvalue       Column head of p-value <Required>\n");
+    fprintf(stderr, "         -p | --pvalue       Column head of p-value <Required>\n");
     fprintf(stderr, "              --index        If the base file doesn't contain a header, you can\n");
     fprintf(stderr, "                             use this option, which essentially state that all \n");
     fprintf(stderr, "                             the above options are providing the INDEX of the\n");

@@ -69,9 +69,10 @@ class PRSice
         			bool target_binary, std::map<std::string, size_t> &fam_index,
 					std::vector<std::pair<std::string, double> > &prs_score);
         void calculate_score(const Commander &c_commander, bool target_binary,
-        			const std::string c_target, const std::map<std::string, size_t> &inclusion,
+        			const size_t c_i_target, const std::map<std::string, size_t> &inclusion,
 				const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
-        void thread_score(Eigen::MatrixXd &covariate, const Eigen::VectorXd &c_pheno,
+        void thread_score( Eigen::MatrixXd &independent_variables,
+    			const Eigen::MatrixXd &covariate_only, const Eigen::VectorXd &c_pheno,
         		const std::vector<std::vector<PRSice::prs_score > > &c_prs_region_score,
         		const std::vector<size_t> &c_num_snp_included, const std::map<std::string, size_t> &c_fam_index,
         		std::vector<PRSice::PRSice_best > &prs_best_info,

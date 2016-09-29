@@ -31,10 +31,12 @@ class Commander
         std::vector<std::string> get_target() const{ return m_target; };
         std::vector<std::string> get_bed() const { return m_bed_list; };
         std::vector<std::string> get_cov_header() const { return m_covariates; };
+        std::vector<std::string> get_pheno() const { return m_pheno_file; };
+        std::string get_pheno(size_t i) const { return (m_pheno_file.size()==0)? "": m_pheno_file.at(i); };
+        std::string get_target(size_t i) const{ return m_target.at(i); };
         std::string get_msigdb() const{ return m_msigdb; };
         std::string get_out() const { return m_out; };
         std::string get_cov_file() const { return m_covariate_file; };
-        std::string get_pheno() const { return m_pheno_file; };
         size_t get_thread() const { return m_thread; };
         size_t get_clump_kb() const { return m_clump_kb; };
         double get_clump_p() const { return m_clump; };
@@ -56,9 +58,9 @@ class Commander
         std::vector<std::string> m_base;
         std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
         std::vector<std::string> m_bed_list;
+        std::vector<std::string> m_pheno_file;
         std::string m_covariate_file;
         std::string m_ancestry_dim;
-        std::string m_pheno_file;
         std::string m_chr = "CHR";
         std::string m_ref_allele="A1";
         std::string m_alt_allele="A2";
