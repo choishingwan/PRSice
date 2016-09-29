@@ -394,9 +394,11 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		output_name = output_prefix+"."+c_region.get_name(i_region);
     		std::string out_best = output_name+".best";
     		std::string out_prsice = output_name+".prsice";
-    		std::ofstream best_out, prsice_out;
+    		std::string out_pheno = output_name+".pheno";
+    		std::ofstream best_out, prsice_out, pheno_out;
     		best_out.open(out_best.c_str());
     		prsice_out.open(out_prsice.c_str());
+    		pheno_out.open(out_pheno.c_str());
     		if(!best_out.is_open()){
     			std::string error_message = "ERROR: Cannot open file: " +out_best+" to write";
     			throw std::runtime_error(error_message);
@@ -405,8 +407,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			std::string error_message = "ERROR: Cannot open file: " +out_prsice+" to write";
     			throw std::runtime_error(error_message);
     		}
+    		if(!pheno_out.is_open()){
+    			// we won't need this once we have incorporate the plotting into PRSice
+    			std::string error_message = "ERROR: Cannot open file: "+out_pheno+" to write";
+    			throw std::runtime_error(error_message);
+    		}
     		best_out << "IID\tprs_"<<std::get<1>(region_best_threshold[i_region]) << std::endl;
     		prsice_out << "Threshold\tR2\tP-value\tNum_SNP" << std::endl;
+    		pheno_out << "IID\tPheno" << std::endl;
     		for(size_t i_prsice=0; i_prsice< prs_results[i_region].size();++i_prsice){
     			prsice_out << std::get<0>(prs_results[i_region][i_prsice]) << "\t" <<
     					std::get<1>(prs_results[i_region][i_prsice]) << "\t" <<
@@ -414,12 +422,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 						std::get<4>(prs_results[i_region][i_prsice]) << std::endl;
     		}
     		for(size_t i_score=0; i_score < region_best_prs_score[i_region].size(); ++i_score){
+    			pheno_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" << phenotype(i_score) << std::endl;
     			best_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" <<
     					std::get<1>(region_best_prs_score[i_region][i_score])/std::get<2>(region_best_threshold[i_region])<< std::endl;
 
     		}
     		prsice_out.close();
     		best_out.close();
+    		pheno_out.close();
     	}
 }
 
