@@ -314,7 +314,11 @@ quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv){
   
   quants <- factor(quants, levels = c(quant.ref, seq(1, num_quant, 1)[-quant.ref]))
   pheno$quantile <- quants
-  pheno <- pheno[,c(colnames(pheno)[2],"quantile",colnames(pheno)[3:(ncol(pheno)-1)])]
+  if(ncol(pheno)>=3){
+    pheno <- pheno[,c(colnames(pheno)[2],"quantile",colnames(pheno)[3:(ncol(pheno)-1)])]
+  }else{
+    pheno <- pheno[,c(colnames(pheno)[2],"quantile")]
+  }
   family <- gaussian
   if(sum(unique(pheno[,1])%in%c(0,1)) ==2){
     # When only contain 0 and 1, we will consider it as binary
