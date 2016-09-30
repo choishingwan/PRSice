@@ -37,7 +37,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
         {"binary_target",required_argument,NULL,0},
-        {"barchart_levels",required_argument,NULL,0},
+        {"bar_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
         {"no_regression",no_argument,NULL,0},
@@ -99,10 +99,18 @@ bool Commander::initialize(int argc, char *argv[])
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
                 }
-                else if(command.compare("barchart_levels")==0){
+                else if(command.compare("bar_levels")==0){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		try{
-                		for(size_t i = 0; i < token.size(); ++i) m_barlevel.push_back(misc::convert<double>(token[i]));
+							for(size_t i = 0; i < token.size(); ++i){
+								double temp = misc::convert<double>(token[i]);
+								if(temp < 0){
+									error_message.append("ERROR: Negative barchart level\n");
+									error=true;
+									break;
+								}
+								m_barlevel.push_back(temp);
+							}
                 		}
                 		catch(const std::runtime_error &er){
                 			error_message.append("ERROR: None numeric barchart level\n");
@@ -360,11 +368,16 @@ void Commander::usage(){
     fprintf(stderr, "                             ID Cov1 Cov2\n");
     fprintf(stderr, "                             Must contain a header\n");
     fprintf(stderr, "         -a | --ancestry     NOT DEVELOPED YET\n");
+    fprintf(stderr, "              --no_regress   Do not perform the regression analysis and simply\n");
+    fprintf(stderr, "                             calculate the PRS. Can only be used together with\n");
+    fprintf(stderr, "                             fastscore\n");
     fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
     fprintf(stderr, "\nScoring options:\n");
     fprintf(stderr, "         -l | --lower        The starting p-value threshold. default: %f\n", m_lower);
     fprintf(stderr, "         -u | --upper        The final p-value threshold. default: %f\n", m_upper);
     fprintf(stderr, "         -i | --interval     The step size of the threshold. default: %f\n", m_inter);
+    fprintf(stderr, "              --fastscore    Calculate the minimum amount of threshold as indicated\n");
+    fprintf(stderr, "                             by the bar_level option.\n");
     fprintf(stderr, "\nFile Headers:\n");
     fprintf(stderr, "              --chr          Column header of Chromosome <Required>\n");
     fprintf(stderr, "              --A1           Column header of Reference Allele <Required>\n");
@@ -403,9 +416,13 @@ void Commander::usage(){
     fprintf(stderr, "                             SNPs. e.g. --proxy 0.8 means the index SNP will\n");
     fprintf(stderr, "                             represent the region of any clumped SNPs that has\n");
     fprintf(stderr, "                             a R2 >= 0.8 with it\n");
+    fprintf(stderr, "\nPlotting Related:\n");
+    fprintf(stderr, "              --bar_levels   Level of barchart to be plotted. When fastscore\n");
+    fprintf(stderr, "                             is set, PRSice will only calculate the PRS for\n");
+    fprintf(stderr, "                             threshold within the bar level\n");
     fprintf(stderr, "\nMisc:\n");
     fprintf(stderr, "         -T | --thread       Number of thread used\n");
     fprintf(stderr, "         -h | --help         Display this help message\n");
-
+    //remove.mhc <- F
 
 }

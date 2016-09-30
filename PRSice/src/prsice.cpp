@@ -234,9 +234,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
     covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
     // Declare the variables, might need to implement fastscore here
-
-    bool fastscore = (fastscore)? 0.001: c_commander.fastscore();
-	double bound_start = c_commander.get_lower();
+    bool fastscore = c_commander.fastscore();
+	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
 	double bound_end = (fastscore)? 0.5:c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
 
@@ -259,6 +258,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 
     std::string line;
     size_t cur_line = 0;
+    bool pre_run = false;
     while(getline(bim, line)){
     		misc::trim(line);
     		if(!line.empty()){
@@ -273,6 +273,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     						if(category ==-2) throw std::runtime_error("Undefined category!");
     					}
     					else category = (int)((p-bound_start)/bound_inter);
+    					if(category <0) pre_run=true;
     					quick_ref.push_back(p_partition(token[1], cur_line, (category<0)?-1:category ,inclusion.at(token[1])));
     				}
     			}
@@ -301,8 +302,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	// regions
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
-	if(bound_start != 0) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
-
+	if(pre_run) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
 	// if people require only the PRS score, then we will open this no_regress_out file
     	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
@@ -340,6 +340,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
     	// now start going through all the thresholds
     	// when cur_start_index == quick_ref.size(), all SNPs should have processed
+
     	while(cur_start_index != quick_ref.size()){
     		// getting the current cutoff
     		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
@@ -398,6 +399,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			}
     		}
     	}
+    	fprintf(stderr, "\n");
     	no_regress_out.close();
     	// now perform the output for all the best scores and PRSice results
 	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+target;
@@ -424,7 +426,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			throw std::runtime_error(error_message);
     		}
     		best_out << "IID\tprs_"<<std::get<1>(region_best_threshold[i_region]) << std::endl;
-    		prsice_out << "Threshold\tR2\tP-value\tNum_SNP" << std::endl;
+    		prsice_out << "Threshold\tR2\tP\tNum_SNP" << std::endl;
     		pheno_out << "IID\tPheno";
     		// We want to skip the intercept for now
     		for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col) pheno_out << "\tCov"<<std::to_string(i_col);
