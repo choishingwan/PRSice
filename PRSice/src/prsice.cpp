@@ -269,14 +269,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				if(p<bound_end){
     					int category = -1;
     					if(fastscore){
-    						if(p < 0.001) category = -1;
-    						else if(p < 0.05) category = 0;
-    						else if(p < 0.1) category = 1;
-    						else if(p < 0.2) category = 2;
-    						else if(p < 0.3) category = 3;
-    						else if(p < 0.4) category = 4;
-    						else if(p < 0.5) category = 5;
-
+    						category = c_commander.get_category(p);
+    						if(category ==-2) throw std::runtime_error("Undefined category!");
     					}
     					else category = (int)((p-bound_start)/bound_inter);
     					quick_ref.push_back(p_partition(token[1], cur_line, (category<0)?-1:category ,inclusion.at(token[1])));

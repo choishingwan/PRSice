@@ -33,13 +33,14 @@ bool Commander::initialize(int argc, char *argv[])
         {"snp",required_argument,NULL,0},
         {"bp",required_argument,NULL,0},
         {"se",required_argument,NULL,0},
-        {"clump-p",required_argument,NULL,0},
+        {"clump_p",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
         {"binary_target",required_argument,NULL,0},
+        {"barchart_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
-        {"no-regression",no_argument,NULL,0},
+        {"no_regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
@@ -67,7 +68,7 @@ bool Commander::initialize(int argc, char *argv[])
                 else if(command.compare("bp")==0) m_bp=optarg;
                 else if(command.compare("se")==0) m_standard_error = optarg;
                 else if(command.compare("index")==0) m_index = true;
-                else if(command.compare("clump-p")==0){
+                else if(command.compare("clump_p")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
                         error = true;
@@ -98,12 +99,22 @@ bool Commander::initialize(int argc, char *argv[])
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
                 }
+                else if(command.compare("barchart_levels")==0){
+                		std::vector<std::string> token = misc::split(optarg, ", ");
+                		try{
+                		for(size_t i = 0; i < token.size(); ++i) m_barlevel.push_back(misc::convert<double>(token[i]));
+                		}
+                		catch(const std::runtime_error &er){
+                			error_message.append("ERROR: None numeric barchart level\n");
+                			error=true;
+                		}
+                }
                 else if(command.compare("beta")==0){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
                 		for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
                 	}
                 else if(command.compare("gen_bed")==0) m_gen_bed = true;
-                else if(command.compare("no-regression")==0) m_no_regress = true;
+                else if(command.compare("no_regression")==0) m_no_regress = true;
                 else if(command.compare("fastscore")==0) m_fastscore = true;
                 else if(command.compare("proxy")==0){
                 		try{
