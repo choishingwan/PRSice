@@ -27,14 +27,14 @@ class PRSice
         virtual ~PRSice();
         void run(const Commander &c_commander, Region &region);
         void process(const std::string &c_input, bool binary, const Commander &c_commander, Region &region);
+        // IID PRS
+        typedef std::pair<std::string, double> prs_score;
     protected:
     private:
 
         static std::mutex score_mutex;
         // rsid, line number in bim, category, snp_list index
         typedef std::tuple<std::string, size_t, int, size_t> p_partition;
-        // IID PRS
-        typedef std::pair<std::string, double> prs_score;
         // threshold, r2, r2 adjust, p, num_snps
         typedef std::tuple<double, double, double, double, size_t> PRSice_result;
         // r2, threshold, num_snps (The r2 is for determining if it is the best)
