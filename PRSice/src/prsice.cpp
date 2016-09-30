@@ -16,6 +16,7 @@ void PRSice::run(const Commander &c_commander, Region &region){
     			fprintf(stderr,"==============================\n");
         		m_current_base=base[i];
             process(base[i], c_commander.get_base_binary(i), c_commander, region);
+            fprintf(stderr, "\n");
         }
     }
     // completed when we reach here
@@ -158,16 +159,18 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		    			else loc = temp;
 		    		}
 		    		// snp_index[rs_id] =snp_list.size();
-		    		if(ref_allele.compare("-")!=0 || ref_allele.compare("I") != 0 || ref_allele.compare("D")!=0 ||
+		    		if(ref_allele.compare("-")==0 || ref_allele.compare("I") == 0 || ref_allele.compare("D")==0 ||
 		    				ref_allele.size()>1){
 		    			num_indel++;
 		    		}
 		    		else if(!alt_allele.empty() &&
-		    				(alt_allele.compare("-")!=0 || alt_allele.compare("I") != 0 ||
-		    						alt_allele.compare("D")!=0 || alt_allele.size()>1)){
+		    				(alt_allele.compare("-")==0 || alt_allele.compare("I") == 0 ||
+		    						alt_allele.compare("D")==0 || alt_allele.size()>1)){
 		    			num_indel++;
 		    		}
-		      	snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, new SNP::long_type[1], region.size()));
+		    		else{
+		    			snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, new SNP::long_type[1], region.size()));
+		    		}
 		   	}
 		}
 		if(read_error) throw std::runtime_error("Please check if you have the correct input");
@@ -190,7 +193,6 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	// Now output the statistics. Might want to improve the outputs
 	if(num_indel!=0){
 		fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
-		fprintf(stderr, "                            They will be excluded\n");
 	}
 	fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", snp_list.size());
@@ -232,9 +234,12 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
     covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
     // Declare the variables, might need to implement fastscore here
+
+    bool fastscore = (fastscore)? 0.001: c_commander.fastscore();
 	double bound_start = c_commander.get_lower();
-	double bound_end = c_commander.get_upper();
+	double bound_end = (fastscore)? 0.5:c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
+
 	// we will use a "special" vector to speed up the bim reading
 	// the concept is such that we can skip lines efficiently
     std::string bim_name = target+".bim";
@@ -251,6 +256,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		std::string error_message = "Cannot open bim file: " +bim_name;
     		throw std::runtime_error(error_message);
     }
+
     std::string line;
     size_t cur_line = 0;
     while(getline(bim, line)){
@@ -261,7 +267,18 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(inclusion.find(token[1])!=inclusion.end()){
     				double p = snp_list.at(inclusion.at(token[1])).get_p_value();
     				if(p<bound_end){
-    					int category = (int)((p-bound_start)/bound_inter);
+    					int category = -1;
+    					if(fastscore){
+    						if(p < 0.001) category = -1;
+    						else if(p < 0.05) category = 0;
+    						else if(p < 0.1) category = 1;
+    						else if(p < 0.2) category = 2;
+    						else if(p < 0.3) category = 3;
+    						else if(p < 0.4) category = 4;
+    						else if(p < 0.5) category = 5;
+
+    					}
+    					else category = (int)((p-bound_start)/bound_inter);
     					quick_ref.push_back(p_partition(token[1], cur_line, (category<0)?-1:category ,inclusion.at(token[1])));
     				}
     			}
@@ -414,7 +431,10 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		best_out << "IID\tprs_"<<std::get<1>(region_best_threshold[i_region]) << std::endl;
     		prsice_out << "Threshold\tR2\tP-value\tNum_SNP" << std::endl;
-    		pheno_out << "IID\tPheno" << std::endl;
+    		pheno_out << "IID\tPheno";
+    		// We want to skip the intercept for now
+    		for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col) pheno_out << "\tCov"<<std::to_string(i_col);
+    		pheno_out << std::endl;
     		for(size_t i_prsice=0; i_prsice< prs_results[i_region].size();++i_prsice){
     			prsice_out << std::get<0>(prs_results[i_region][i_prsice]) << "\t" <<
     					std::get<1>(prs_results[i_region][i_prsice]) << "\t" <<
@@ -422,7 +442,11 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 						std::get<4>(prs_results[i_region][i_prsice]) << std::endl;
     		}
     		for(size_t i_score=0; i_score < region_best_prs_score[i_region].size(); ++i_score){
-    			pheno_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" << phenotype(i_score) << std::endl;
+    			pheno_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" << phenotype(i_score);
+    			for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col){
+    				pheno_out << "\t" << covariates_only(i_score,i_col);
+    			}
+    			pheno_out << std::endl;
     			best_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" <<
     					std::get<1>(region_best_prs_score[i_region][i_score])/std::get<2>(region_best_threshold[i_region])<< std::endl;
 
