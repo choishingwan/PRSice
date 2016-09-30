@@ -1,17 +1,38 @@
 # Here is the guide to this protentially long R code
 # To go to each section, just search for the corresponding header as stated here
 # The code structure are as follow
+#
 # INSTALL_PACKAGE
 # - Contains functions responsible for installing all required packages
+#
 # COMMAND_FUNC
 # - Functions required for command line argument parsing
+#
 # COMMAD_BUILD
 # - Building the command line parser using argparser
+#
 # CALL_PRSICE
 # - call the cpp prsice
+#
 # PLOTTING
-# - Here we should perform all the plottings
+# - Here contains all the function for plotting
+# - quantile_plot: plotting the quantile plots
+# - run_plot: The function used for calling different plotting functions
+#
+# CALL PLOTTING FUNCTION
+# - Process the input names and call the actual plotting function
 
+# Environment stuff: This will allow us to locate the cpp file correctly
+if(Sys.info()[1]=="Windows"){
+  print("Window not supported, because of slash...")  
+  print("They use backward slash, which will cause problems in the script as it is an escape character")
+}
+
+initial.options <- commandArgs(trailingOnly = FALSE)
+file.arg.name <- "--file="
+script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
+dir=strsplit(script.name, "/")
+dir = paste(dir[[1]][-length(dir[[1]])], "/", sep="",collapse="/")
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
@@ -37,8 +58,8 @@ UsePackage <- function(package)
   return(TRUE)
 }
 
-dir.create(file.path("lib"), showWarnings = FALSE)
-.libPaths(c(.libPaths(), "./lib"))
+dir.create(file.path(dir,"lib"), showWarnings = FALSE)
+.libPaths(c(.libPaths(), paste(dir,"lib",sep="")))
 libraries <- c( "ggplot2", "argparser", "data.table")
 for(library in libraries)
 {
@@ -167,6 +188,7 @@ print.arg.parser<- function (x, width=NULL,...)
 }
 
 # COMMAD_BUILD: Building the command line parser using argparser
+# TODO: Write our own package to better handle these parameters. Currently they are all over the places
 p <- arg_parser_self("PRSice: Polygenic Risk Score software")
 p <- add_argument(p, "--base", short="-b", nargs=Inf, help="Base association files. User can provide multiple base files.")
 p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. User can provide multiple target files. Currently only support plink binary input. Does not support multi-chromosome input")
@@ -201,6 +223,10 @@ p <- add_argument(p, "--proxy", help="Proxy threshold for index SNP to be consid
 p <- add_argument(p, "--thread", short="-T", help="Number of thread used", default=1);
 p <- add_argument(p, "--c_help", flag=T, help="Print the help message from the c++ program instead");
 p <- add_argument(p, "--plot", flag=T, help="Indicate whether only plotting is required");
+p <- add_argument(p, "--intermediate", help="Pefix of the intermediate files for plotting (e.g. ignore .prsice and .best). If not provided, will deduce the file prefix from --base and --target")
+p <- add_argument(p, "--quantile", short="-q", help="Number of quantiles to plot. 0 = Not producing the quantile plot", default=0);
+p <- add_argument(p, "--quant_extract", short="-e", help="File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples" )
+
 argv = commandArgs(trailingOnly = TRUE)
 help=(sum(c("--help", "-h") %in%argv)>=1)
 if(help){
@@ -209,9 +235,11 @@ if(help){
 }
 argv <- parse_args(p)
 
+not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate")
 # CALL_PRSICE: Call the cpp PRSice if required
 if(argv$c_help){
-  system("bin/PRSice --help")
+  system(paste(dir,"bin/PRSice --help",sep=""))
+  quit();
 }
 
 # We don't bother to check if the input is correct, the parameter should be checked by the c++ program
@@ -234,7 +262,7 @@ if(!argv$plot){
       if(argv[[i]]) command = paste(command, " --",i,sep="")
     }else if(i=="gen_bed"){
       if(argv[[i]]) command = paste(command, " --",i,sep="")
-    }else if(i=="c_help" | i=="help" | i=="plot"){
+    }else if(sum(i%in%not_cpp)!=0){
       # ignore 
     }else{
       temp = add_command(argv[[i]])
@@ -247,9 +275,120 @@ if(!argv$plot){
     print.arg.parser(p)
     quit()
   }
-  system(paste("bin/PRSice", command))
+  ret<-system2(paste(dir,"bin/PRSice",sep=""), command, stdout=TRUE, stderr=TRUE)
+  if(attr(ret, "status")!=0){
+    quit();
+  }
 }
 
-# PLOTTING: Here we should perform all the plottings
-PRS=fread(paste(argv$out,".prsice",sep=""), header=T,data.table=F)
-PRS.best = fread(paste(argv$out, ".best",sep=""), header=T,data.table=F)
+
+
+
+# PLOTTING: Here contains all the function for plotting
+# quantile_plot: plotting the quantile plots
+quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv){
+  extract = NULL
+  if(!is.na(argv$quant_extract)){
+    extract = fread(argv$quant_extract, header=F, data.table=F)
+  }
+  quants <- as.numeric(cut(PRS.best[,2], breaks = quantile(PRS.best[,2], probs = seq(0, 1, 1/argv$quantile)), include.lowest=T))
+  num_quant <- argv$quantile
+  print(table(PRS.best[,1]%in%extract$V2))
+  if(!is.null(extract)){
+    quants[PRS.best[,1]%in%extract$V2] <- num_quant+1
+    num_quant<-num_quant+1;
+  }
+  quant.ref <- ceiling(argv$quantile/2)
+  quants <- factor(quants, levels = c(quant.ref, seq(1, num_quant, 1)[-quant.ref]))
+  pheno$quantile <- quants
+  pheno <- pheno[,c(colnames(pheno)[2],"quantile",colnames(pheno)[3:(ncol(pheno)-1)])]
+  family <- gaussian
+  if(sum(unique(pheno[,1])%in%c(0,1)) ==2){
+    # When only contain 0 and 1, we will consider it as binary
+    # Someone will have to be very unlucky to have a quantitative trait as exactly 0 and 1 for all samples
+    family <- binomial
+  }
+  reg <- summary(glm(Pheno ~ ., family, data = pheno))
+  coef.quantiles <- reg$coefficients[1:num_quant,1]
+  ci.quantiles.u <- reg$coefficients[1:num_quant,1] + (1.96*reg$coefficients[1:num_quant,2])
+  ci.quantiles.l <- reg$coefficients[1:num_quant,1] - (1.96*reg$coefficients[1:num_quant,2])
+  coef.quantiles[1] <- 0 
+  ci.quantiles.u[1] <- 0
+  ci.quantiles.l[1] <- 0
+  quantiles.for.table <- c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
+  quantiles.df <- data.frame(coef.quantiles, ci.quantiles.u, ci.quantiles.l, quantiles.for.table)
+  names(quantiles.df) <- c("Coef", "CI.U", "CI.L", "DEC")
+  quantiles.df$Group=0;
+  if(!is.null(extract)){
+    quantiles.df$Group[max(quantiles.df$DEC)]=1
+  }
+  quantiles.df$Group <- factor(quantiles.df$Group, levels=c(0,1))
+  quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
+  quantiles.plot <- ggplot(quantiles.df) + 
+    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), panel.background = element_blank(), 
+          axis.line = element_line(colour = "black",size=0.5)) + 
+    ylab("Change in Phenotype given score in quantiles") + 
+    xlab("Quantiles for Polygenic Score") + 
+    scale_x_continuous(breaks=seq(0, num_quant, 1)) +
+    theme(axis.line.x = element_line(color="black"),
+          axis.line.y = element_line(color="black"))
+  if(is.null(extract)){
+    quantiles.plot <- quantiles.plot+geom_point(aes(x = DEC, y = Coef), colour = "royalblue2", size=4) + 
+      geom_pointrange(aes(ymin = CI.L,ymax = CI.U, y = Coef, x = DEC), colour = "royalblue2", size = 0.9)
+  }else{
+    quantiles.plot <- quantiles.plot+geom_point(aes(x = DEC, y = Coef,color=Group), size=4) + 
+      geom_pointrange(aes(ymin = CI.L,ymax = CI.U, y = Coef, x = DEC, color=Group), size = 0.9)+
+      scale_colour_manual(values=c("#0072B2", "#D55E00"))
+  }
+  ggsave(paste(prefix, "QUANTILES_PLOT.png", sep = "_")) 
+}
+
+barplot <- function(PRS, PRS.best, prefix, argv){
+  # we will stick with the default for now as the cpp program doesn't really allow for a barchar threshold input
+  barchart.levels <- c(0.001,0.05,0.1,0.2,0.3,0.4,0.5, PRS$Threshold[which.max(PRS$R2)])
+  barchart.levels <- sort(unique(barchart.levels),decreasing=F)
+  
+}
+# run_plot: The function used for calling different plotting functions
+run_plot<-function(prefix, argv){
+  PRS <- fread(paste(prefix,".prsice",sep=""), header=T,data.table=F)
+  PRS.best <- fread(paste(prefix, ".best",sep=""), header=T,data.table=F)
+  pheno <- fread(paste(prefix, ".pheno", sep=""), header=T, data.table=F)
+  if(argv$quantile > 0){
+    # Need to plot the quantile plot
+    quantile_plot(PRS, PRS.best, pheno, prefix, argv)
+  }
+  # Now perform the barplotting
+  
+}
+
+# CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
+if(!is.na(argv$intermediate)){
+  # File name provided
+  run_plot(argv$intermediate, argv)
+}else{
+  # we need to deduce the file name
+  writeLines(strwrap("WARNING: Using this method, we will only perform plotting to the base region. If you are using PRSlice, please specify the name of the desired intermediate file",width=80))
+  if(sum(is.na(argv$base))!=length(argv$base)){
+    if(sum(is.na(argv$target))!=length(argv$target)){
+      for(b in argv$base){
+        for(t in argv$target){
+          # no need to check out, as it has default (PRSice)
+          run_plot(paste(argv$out, b,t,"base",sep="."), argv);
+        }
+      }
+    }else{
+      message <- "NA in --target"
+      if(argv$plot){
+        message<-paste(message, "You'll need to either provide the intermediate prefix or all the target/base name for plot only")
+      }
+      stop(message);
+    }
+  }else{
+    message <- "NA in --base"
+    if(argv$plot){
+      message<-paste(message, "You'll need to either provide the intermediate prefix or all the target/base name for plot only")
+    }
+    stop(message);
+  }
+}
