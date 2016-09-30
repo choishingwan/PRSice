@@ -29,6 +29,10 @@ if(Sys.info()[1]=="Windows"){
 }
 
 initial.options <- commandArgs(trailingOnly = FALSE)
+if(length(commandArgs(trailingOnly = TRUE))==0){
+  stop("Please use --help for the help messages")
+}
+
 file.arg.name <- "--file="
 script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
 dir=strsplit(script.name, "/")
@@ -226,6 +230,8 @@ p <- add_argument(p, "--plot", flag=T, help="Indicate whether only plotting is r
 p <- add_argument(p, "--intermediate", help="Pefix of the intermediate files for plotting (e.g. ignore .prsice and .best). If not provided, will deduce the file prefix from --base and --target")
 p <- add_argument(p, "--quantile", short="-q", help="Number of quantiles to plot. 0 = Not producing the quantile plot", default=0);
 p <- add_argument(p, "--quant_extract", short="-e", help="File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples" )
+p <- add_argument(p, "--bar_level", help="barchar level used for plotting", default=c(0.001,0.05,0.1,0.2,0.3,0.4,0.5))
+p <- add_argument(p, "--quant_ref", help="Reference quantile for quantile plot")
 
 argv = commandArgs(trailingOnly = TRUE)
 help=(sum(c("--help", "-h") %in%argv)>=1)
@@ -235,7 +241,7 @@ if(help){
 }
 argv <- parse_args(p)
 
-not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate")
+not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate","quant_ref")
 # CALL_PRSICE: Call the cpp PRSice if required
 if(argv$c_help){
   system(paste(dir,"bin/PRSice --help",sep=""))
@@ -293,12 +299,19 @@ quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv){
   }
   quants <- as.numeric(cut(PRS.best[,2], breaks = quantile(PRS.best[,2], probs = seq(0, 1, 1/argv$quantile)), include.lowest=T))
   num_quant <- argv$quantile
-  print(table(PRS.best[,1]%in%extract$V2))
   if(!is.null(extract)){
     quants[PRS.best[,1]%in%extract$V2] <- num_quant+1
     num_quant<-num_quant+1;
   }
   quant.ref <- ceiling(argv$quantile/2)
+  if(!is.na(argv$quant_ref)){
+    quant.ref <- argv$quant_ref;
+    if(quant.ref > argv$quantile){
+      quant.ref <- ceiling(argv$quantile/2)
+      cat(paste("WARNING: reference quantile", quant.ref, "is greater than number of quantiles", argv$quantile, "\n Using middle quantile by default"))
+    }
+  }
+  
   quants <- factor(quants, levels = c(quant.ref, seq(1, num_quant, 1)[-quant.ref]))
   pheno$quantile <- quants
   pheno <- pheno[,c(colnames(pheno)[2],"quantile",colnames(pheno)[3:(ncol(pheno)-1)])]
@@ -343,12 +356,18 @@ quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv){
   ggsave(paste(prefix, "QUANTILES_PLOT.png", sep = "_")) 
 }
 
-barplot <- function(PRS, PRS.best, prefix, argv){
-  # we will stick with the default for now as the cpp program doesn't really allow for a barchar threshold input
-  barchart.levels <- c(0.001,0.05,0.1,0.2,0.3,0.4,0.5, PRS$Threshold[which.max(PRS$R2)])
+high_res_plot <- function(PRS, prefix, argv){
+  # we will always include the best threshold
+  barchart.levels <- c(argv$bar_level, PRS$Threshold[which.max(PRS$R2)])
   barchart.levels <- sort(unique(barchart.levels),decreasing=F)
-  
+  # Need to also plot the barchart level stuff with green
+  ggfig.points <- ggplot(data=PRS, aes(x = Threshold, y = -log10(P))) + geom_point() + geom_line() +
+    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), panel.background = element_blank(), 
+          axis.line = element_line(colour = "black",size=0.5), axis.line.x = element_line(color="black"),
+                axis.line.y = element_line(color="black"))
+   ggsave(paste(prefix,"_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""))
 }
+
 # run_plot: The function used for calling different plotting functions
 run_plot<-function(prefix, argv){
   PRS <- fread(paste(prefix,".prsice",sep=""), header=T,data.table=F)
@@ -359,7 +378,7 @@ run_plot<-function(prefix, argv){
     quantile_plot(PRS, PRS.best, pheno, prefix, argv)
   }
   # Now perform the barplotting
-  
+  high_res_plot(PRS, prefix, argv)
 }
 
 # CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
