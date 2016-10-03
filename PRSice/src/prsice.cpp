@@ -328,11 +328,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
             else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
-    std::cerr << "Check: " << std::endl;
-    for(size_t i =0; i < quick_ref.size(); ++i){
-    		std::cerr << std::get<0>(quick_ref[i]) << "\t" << std::get<1>(quick_ref[i]) << "\t" <<
-    				std::get<2>(quick_ref[i]) << "\t" <<std::get<3>(quick_ref[i]) << std::endl;
-    }
+
     std::cerr << "Start obtaining other stuff" << std::endl;
     // as proxy only affect clumping, we don't need to handle it here
     std::vector<std::vector<prs_score> > region_prs_score;
@@ -422,13 +418,12 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				num_snp_included, cur_start_index);
     		std::cerr << "PRS got" << std::endl;
     		std::string problem = "BASE_"+std::to_string(current_upper);
-    		if(current_upper >= 0.444 && current_upper <= 0.447){
     			debug.open(problem.c_str());
     			for(size_t i =0; i < region_prs_score[0].size(); ++i){
     				debug << std::get<1>(region_prs_score[0][i]) << std::endl;
     			}
     			debug.close();
-    		}
+
     		// if regression is not required, we will simply output the score
     		std::cerr << "No regress check" << std::endl;
     		if(no_regress){
@@ -840,13 +835,14 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 			if(snp_list.at(std::get<3>(quick_ref[i])).in(i_region)) num_snp_included[i_region]++;
 		}
 	}
-	std::cerr << "Got the end index: " << end_index << std::endl;
 	if(!ended) end_index = quick_ref.size();
+	std::cerr << "Got the end index: " << end_index << std::endl;
 	PLINK prs(target);
 	prs.initialize();
 	std::cerr << "PLINK initialized" << std::endl;
 	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
 	std::cerr << "Got scores now" << std::endl;
+
 	cur_index = end_index;
 	return true;
 }
