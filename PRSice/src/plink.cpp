@@ -783,6 +783,7 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 	size_t prev =0;
 	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp){
 		size_t cur_index = std::get<1>(quick_ref[i_snp]);
+//		std::cerr << "Current index is: " << cur_index << std::endl;
 		if((cur_index-prev)!=0){
 			// Skip snps
 			m_bed.seekg((std::get<1>(quick_ref[i_snp])-prev)*m_num_bytes, m_bed.cur);
@@ -790,15 +791,21 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 		}
 		read_snp(1, false);
 		int snp_index = std::get<3>(quick_ref[i_snp]);
+//		std::cerr << "SNP index is: " << snp_index << std::endl;
 		if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
 		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
 			int index =(i_sample*2)/m_bit_size;
 			long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
 			long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
+//			std::cerr << "Got sample stuff" << std::endl;
 			if(miss==3){
 				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region){
 					if(snp_list[snp_index].in(i_region)){
+//						std::cerr << "Cal score" << std::endl;
+//						std::cerr << "PRS size; " << prs_score.size() << std::endl;
+//						std::cerr << "Level 1+: " << prs_score[i_region].size() << std::endl;
 						prs_score[i_region][i_sample].second += snp_list[snp_index].score((int)info);
+//						std::cerr << "Done score" << std::endl;
 					}
 				}
 			}

@@ -325,6 +325,11 @@ bool Commander::initialize(int argc, char *argv[])
     		fprintf(stderr, "         fastscore. Will use fastscore\n");
     		m_fastscore=true;
     }
+    if(m_fastscore && m_barlevel.size()==0)
+    {
+    		fprintf(stderr, "barlevel not provided. Will set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
+    		m_barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }
