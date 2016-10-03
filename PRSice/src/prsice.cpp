@@ -266,11 +266,18 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(token.size() < 6) throw std::runtime_error("Malformed bim file, should contain at least 6 columns");
     			if(inclusion.find(token[1])!=inclusion.end()){
     				double p = snp_list.at(inclusion.at(token[1])).get_p_value();
-    				if(p<bound_end){
+    				if(p< bound_start){
+    					pre_run=true;
+    					quick_ref.push_back(p_partition(token[1], cur_line, -1,inclusion.at(token[1])));
+    				}
+    				else if(p<bound_end){
     					int category = -1;
     					if(fastscore){
     						category = c_commander.get_category(p);
-    						if(category ==-2) throw std::runtime_error("Undefined category!");
+    						if(category ==-2){
+    							std::cerr << p << "\t" << category << std::endl;
+    							throw std::runtime_error("Undefined category!");
+    						}
     					}
     					else category = (int)((p-bound_start)/bound_inter);
     					if(category <0) pre_run=true;
@@ -302,7 +309,13 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	// regions
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
+    std::ofstream debug;
 	if(pre_run) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
+	debug.open("BASE");
+	for(size_t i =0; i < region_prs_score[0].size(); ++i){
+		debug << std::get<1>(region_prs_score[0][i]) << std::endl;
+	}
+	debug.close();
 	// if people require only the PRS score, then we will open this no_regress_out file
     	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
@@ -348,6 +361,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		// now calculate the PRS for each region
     		bool reg = get_prs_score(quick_ref, snp_list, target, region_prs_score,
     				num_snp_included, cur_start_index);
+    		std::string problem = "BASE_"+std::to_string(current_upper);
+    		if(current_upper >= 0.444 && current_upper <= 0.447){
+    			debug.open(problem.c_str());
+    			for(size_t i =0; i < region_prs_score[0].size(); ++i){
+    				debug << std::get<1>(region_prs_score[0][i]) << std::endl;
+    			}
+    			debug.close();
+    		}
     		// if regression is not required, we will simply output the score
     		if(no_regress){
     			for(size_t i_region; i_region < region_prs_score.size(); ++i_region){
@@ -482,8 +503,8 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables,
 		for(;prs_iter != prs_end; ++prs_iter){
 			std::string sample = std::get<0>(*prs_iter);
 			if(c_fam_index.find(sample)!=c_fam_index.end()){
-				if(thread_safe) independent_variables(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
-				else X(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				if(thread_safe) independent_variables(c_fam_index.at(sample), 1) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				else X(c_fam_index.at(sample), 1) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
 			}
 		}
 		if(target_binary){
