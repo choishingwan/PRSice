@@ -227,7 +227,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     std::string pheno_file = c_commander.get_pheno(c_i_target);
     Eigen::MatrixXd covariates_only;
     Eigen::MatrixXd independent_variables;
-    std::cerr <<"before get matrix" << std::endl;
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file
     		phenotype = gen_pheno_vec(	target, pheno_file,
@@ -255,17 +254,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		fam.close();
     }
-    std::cerr << "after get matrix" << std::endl;
     covariates_only = independent_variables;
     covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
     covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
-    std::cerr << "got covariates only" << std::endl;
     // Declare the variables, might need to implement fastscore here
     bool fastscore = c_commander.fastscore();
 	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
 	double bound_end = (fastscore)? 0.5:c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
-	std::cerr << "Bound info: " <<fastscore << "\t" << bound_start << "\t" << bound_end << "\t" << bound_inter << std::endl;
 	// we will use a "special" vector to speed up the bim reading
 	// the concept is such that we can skip lines efficiently
     std::string bim_name = target+".bim";
@@ -275,7 +271,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     // size_t = line number of bed file
     // int = p-value threshold category, -1 occurs when bound_start != 0
     // size_t = index of the SNP on snp_list, avoid repeat finding from map_inclusion
-    std::cerr << "Build quick_ref" << std::endl;
     std::vector<p_partition > quick_ref;
     std::ifstream bim;
     bim.open(bim_name.c_str());
@@ -303,7 +298,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     					if(fastscore){
     						category = c_commander.get_category(p);
     						if(category ==-2){
-    							std::cerr << p << "\t" << category << std::endl;
     							throw std::runtime_error("Undefined category!");
     						}
     					}
@@ -316,7 +310,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     }
     bim.close();
-    std::cerr << "Start sorting quick_ref" << std::endl;
     if(quick_ref.size() ==0){
     		fprintf(stderr, "None of the SNPs met the threshold\n");
     		return;
@@ -328,8 +321,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
             else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
-
-    std::cerr << "Start obtaining other stuff" << std::endl;
     // as proxy only affect clumping, we don't need to handle it here
     std::vector<std::vector<prs_score> > region_prs_score;
     std::vector<std::vector<prs_score> > region_best_prs_score;
@@ -337,23 +328,13 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		region_prs_score.push_back(prs_fam);
     		region_best_prs_score.push_back(prs_fam);
     }
-    std::cerr << "Initialized the vectors" << std::endl;
     // cur_start_index indiciates how much of quick_ref has been processed
 	size_t cur_start_index = 0;
 	// num_snp_included should contain the number of SNPs included for each individual
 	// regions
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
-    std::ofstream debug;
-    std::cerr << "Run the pre_run steps" << std::endl;
-    std::cerr << "Size check: " << region_prs_score.size() << "\t" << region_prs_score.front().size() << std::endl;
 	if(pre_run) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
-	debug.open("BASE");
-	for(size_t i =0; i < region_prs_score[0].size(); ++i){
-		debug << std::get<1>(region_prs_score[0][i]) << std::endl;
-	}
-	debug.close();
-	std::cerr << "No regress stuff" << std::endl;
 	// if people require only the PRS score, then we will open this no_regress_out file
     	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
@@ -375,7 +356,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 				}
     		}
     	}
-    	std::cerr << "No regress header done" << std::endl;
     	// Now we prepare for the PRS analysis
     	double current_upper =0.0;
     	// need to initialize this to use multithreading with EIGEN library
@@ -400,7 +380,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
     	// now start going through all the thresholds
     	// when cur_start_index == quick_ref.size(), all SNPs should have processed
-    	std::cerr << "Going into the main loop" << cur_start_index << "\t" << quick_ref.size() << std::endl;
     	if(cur_start_index == quick_ref.size()){
     		fprintf(stderr, "There are no valid threshold to test\n");
     		fprintf(stderr, "All SNPs have p-value lower than --lower and higher than --upper\n");
@@ -409,23 +388,13 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
     	while(cur_start_index != quick_ref.size()){
     		// getting the current cutoff
-    		std::cerr << "Inside node" << std::endl;
     		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
     		fprintf(stderr, "\rProcessing %f", current_upper);
-    		std::cerr << "Current threshold: " << current_upper << std::endl;
+
     		// now calculate the PRS for each region
     		bool reg = get_prs_score(quick_ref, snp_list, target, region_prs_score,
     				num_snp_included, cur_start_index);
-    		std::cerr << "PRS got" << std::endl;
-    		std::string problem = "BASE_"+std::to_string(current_upper);
-    			debug.open(problem.c_str());
-    			for(size_t i =0; i < region_prs_score[0].size(); ++i){
-    				debug << std::get<1>(region_prs_score[0][i]) << std::endl;
-    			}
-    			debug.close();
-
     		// if regression is not required, we will simply output the score
-    		std::cerr << "No regress check" << std::endl;
     		if(no_regress){
     			for(size_t i_region=0; i_region < region_prs_score.size(); ++i_region){
     				no_regress_out << current_upper << "\t" << c_region.get_name(i_region);
@@ -435,7 +404,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				no_regress_out << std::endl;
     			}
     		}
-    		std::cerr << "Now perform regression if needed" << std::endl;
     		// update the boolean, basically, if we have added new SNPs AND require regression
     		// we will perform the regression analysis
     		reg=reg&&!no_regress;
@@ -471,17 +439,14 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     					}
     				}
     				// joining the threads
-    				std::cerr << "Waiting for join" << std::endl;
     				for(size_t i_thread = 0; i_thread < thread_store.size(); ++i_thread){
     					thread_store[i_thread].join();
     				}
     			}
     		}
-    		std::cerr << "Touch down!" << std::endl;
     	}
     	fprintf(stderr, "\n");
     	no_regress_out.close();
-    	std::cerr << "Now trying to show results" << std::endl;
     	if(no_regress) return;
     	// now perform the output for all the best scores and PRSice results
 	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+target;
@@ -818,9 +783,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 {
 	// Here is the actual calculation of the PRS
 	if(quick_ref.size()==0) return false; // nothing to do
-	std::cerr << "Cur thing is " << cur_index << std::endl;
 	int prev_index =prev_index = std::get<2>(quick_ref[cur_index]);
-	std::cerr << "Previous index is: " << prev_index << std::endl;
 	int end_index = 0;
 	bool ended =false;
 	for(size_t i = cur_index; i < quick_ref.size(); ++i){
@@ -836,12 +799,9 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 		}
 	}
 	if(!ended) end_index = quick_ref.size();
-	std::cerr << "Got the end index: " << end_index << std::endl;
 	PLINK prs(target);
 	prs.initialize();
-	std::cerr << "PLINK initialized" << std::endl;
 	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
-	std::cerr << "Got scores now" << std::endl;
 
 	cur_index = end_index;
 	return true;
