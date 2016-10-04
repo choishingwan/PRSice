@@ -232,6 +232,11 @@ p <- add_argument(p, "--quantile", short="-q", help="Number of quantiles to plot
 p <- add_argument(p, "--quant_extract", short="-e", help="File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples" )
 p <- add_argument(p, "--bar_level", help="barchar level used for plotting", default=c(0.001,0.05,0.1,0.2,0.3,0.4,0.5))
 p <- add_argument(p, "--quant_ref", help="Reference quantile for quantile plot")
+p <- add_argument(p, "--scatter_r2", flag=T, help="y-axis of the high resolution scatter plot should be R2")
+p <- add_argument(p, "--fastscore", flag=T, help="Calculate the minimum amount of threshold as indicated by the bar_level option")
+p <- add_argument(p, "--bar_col_r2", flag=T, help="Change the colour of bar to R2 instead of p-value")
+p <- add_argument(p, "--bar_col_low", help="Colour of the poorest predicting thresholds", default="dodgerblue")
+p <- add_argument(p, "--bar_col_high", help="Colour of the highest predicting thresholds", default="firebrick")
 
 argv = commandArgs(trailingOnly = TRUE)
 help=(sum(c("--help", "-h") %in%argv)>=1)
@@ -241,7 +246,7 @@ if(help){
 }
 argv <- parse_args(p)
 
-not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate","quant_ref")
+not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate","quant_ref", "scatter_R2","bar_col_r2","bar_col_low","bar_col_high")
 # CALL_PRSICE: Call the cpp PRSice if required
 if(argv$c_help){
   system(paste(dir,"bin/PRSice --help",sep=""))
@@ -364,14 +369,67 @@ high_res_plot <- function(PRS, prefix, argv){
   # we will always include the best threshold
   barchart.levels <- c(argv$bar_level, PRS$Threshold[which.max(PRS$R2)])
   barchart.levels <- sort(unique(barchart.levels),decreasing=F)
+  # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
+  threshold_presented <- barchart.levels %in% PRS$Threshold
+  for(i in 1:length(threshold_presented)){
+    if(!threshold_presented[i]){
+      barchart.levels[i] <- tail(PRS[PRS$Threshold<barchart.levels[i],],n=1)$Threshold
+    }
+  }
   # Need to also plot the barchart level stuff with green
-  ggfig.points <- ggplot(data=PRS, aes(x = Threshold, y = -log10(P))) + geom_point() + geom_line() +
+  ggfig.points <- NULL
+  if(argv$scatter_r2){
+    ggfig.points <- ggplot(data=PRS, aes(x = Threshold, y = R2))+
+      geom_line(aes(Threshold,  R2), colour = "green", data = PRS[with(PRS, Threshold %in% barchart.levels) , ] )+ 
+      geom_hline(yintercept=max(PRS$R2),colour="red")+
+      ylab(expression(paste("PRS model fit:  ", R^2, sep = " ")))
+  }else{
+    ggfig.points <- ggplot(data=PRS, aes(x = Threshold, y = -log10(P)))+
+      geom_line(aes(Threshold,  -log10(P)), colour = "green", data = PRS[with(PRS, Threshold %in% barchart.levels) , ] )+ 
+      geom_hline(yintercept=max(-log10(PRS$P)),colour="red")+
+      ylab(bquote(PRS~model~fit:~italic(P)-value~(-log[10])))
+  }
+  ggfig.points <- ggfig.points + geom_point() + geom_line() +
     theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), panel.background = element_blank(), 
           axis.line = element_line(colour = "black",size=0.5), axis.line.x = element_line(color="black"),
-                axis.line.y = element_line(color="black"))
+                axis.line.y = element_line(color="black"))+
+    xlab(expression(italic(P)-value~threshold~(italic(P)[T])));
    ggsave(paste(prefix,"_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""))
 }
 
+bar_plot<-function(PRS, prefix, argv){
+  barchart.levels <- c(argv$bar_level, PRS$Threshold[which.max(PRS$R2)])
+  barchart.levels <- sort(unique(barchart.levels),decreasing=F)
+  # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
+  threshold_presented <- barchart.levels %in% PRS$Threshold
+  for(i in 1:length(threshold_presented)){
+    if(!threshold_presented[i]){
+      barchart.levels[i] <- tail(PRS[PRS$Threshold<barchart.levels[i],],n=1)$Threshold
+    }
+  }
+  output <- PRS[PRS$Threshold %in% barchart.levels,]
+  output$print.p[round(output$P, digits = 3) != 0] <- round(output$P[round(output$P, digits = 3) != 0], digits = 3)
+  output$print.p[round(output$P, digits = 3) == 0] <- format(output$P[round(output$P, digits = 3) == 0], digits=2)
+  output$print.p <- sub("e", "*x*10^", output$print.p)
+  
+  ggfig.plot <- ggplot(data=output)
+  if(!argv$bar_col_r2){
+    ggfig.plot <- ggfig.plot + geom_bar(aes(x = factor(Threshold), y = R2, fill = factor(Threshold)), stat="identity") +
+      scale_fill_brewer(palette="YlOrRd", name = expression(italic(P)-value~threshold))
+  }
+  if(argv$bar_col_r2){
+    ggfig.plot <- ggfig.plot + geom_bar(aes(x = factor(Threshold), y = R2, fill = -log10(P)), stat="identity") +     
+      scale_fill_gradient(low= argv$bar_col_low, high= argv$bar_col_high, name =bquote(atop(-log[10]~model,italic(P)-value),))  
+  }
+  ggfig.plot <- ggfig.plot + geom_text(aes(x = factor(Threshold), y = R2, label = paste(print.p)), vjust = -1.5, hjust = 0, angle = 45, cex = 2.8, parse=T) +
+    scale_y_continuous(limits = c(0, max(output$R2)*1.25)) +
+    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), panel.background = element_blank(), 
+          axis.line = element_line(colour = "black",size=0.5) , axis.line.x = element_line(color="black"),
+          axis.line.y = element_line(color="black"))+
+    xlab(expression(italic(P)-value~threshold~(italic(P)[T]))) + 
+      ylab(expression(paste("PRS model fit:  ",R^2)))
+    ggsave(paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""))		
+}  
 # run_plot: The function used for calling different plotting functions
 run_plot<-function(prefix, argv){
   PRS <- fread(paste(prefix,".prsice",sep=""), header=T,data.table=F)
@@ -382,7 +440,10 @@ run_plot<-function(prefix, argv){
     quantile_plot(PRS, PRS.best, pheno, prefix, argv)
   }
   # Now perform the barplotting
-  high_res_plot(PRS, prefix, argv)
+  if(!argv$fastscore){
+    high_res_plot(PRS, prefix, argv)
+  }
+  bar_plot(PRS,prefix, argv)
 }
 
 # CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
