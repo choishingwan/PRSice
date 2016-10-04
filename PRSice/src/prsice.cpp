@@ -326,7 +326,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     std::vector<std::vector<prs_score> > region_best_prs_score;
     for(size_t i_region=0; i_region < c_region.size(); ++i_region){
     		region_prs_score.push_back(prs_fam);
-    		region_best_prs_score.push_back(prs_fam);
     }
     // cur_start_index indiciates how much of quick_ref has been processed
 	size_t cur_start_index = 0;
@@ -335,6 +334,9 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
 	if(pre_run) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
+//	This will update the best score to equal to the base. When there is no valid threshold
+//	this should be used to provide the PRS score output
+	region_best_prs_score = region_prs_score;
 	// if people require only the PRS score, then we will open this no_regress_out file
     	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
@@ -383,8 +385,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	if(cur_start_index == quick_ref.size()){
     		fprintf(stderr, "There are no valid threshold to test\n");
     		fprintf(stderr, "All SNPs have p-value lower than --lower and higher than --upper\n");
-    		if(no_regress) no_regress_out.close();
-    		return;
+    		fprintf(stderr, "We will output the PRS score for you just to be nice\n");
     	}
     	while(cur_start_index != quick_ref.size()){
     		// getting the current cutoff
