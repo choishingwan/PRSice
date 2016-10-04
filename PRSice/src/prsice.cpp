@@ -2,7 +2,9 @@
 
 std::mutex PRSice::score_mutex;
 
-void PRSice::run(const Commander &c_commander, Region &region){
+// Should be alright without problem
+void PRSice::run(const Commander &c_commander, Region &region)
+{
 	// First, wrap the whole process with a for loop
 	// to loop through all base phenotype
     std::vector<std::string> base = c_commander.get_base();
@@ -10,7 +12,7 @@ void PRSice::run(const Commander &c_commander, Region &region){
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
     if(num_base < 0) throw std::runtime_error("Negative number of base");
     else{
-    		if(num_base > 1) fprintf(stderr, "Multiple base phenotype detected. You might want to run seperate instance of PRSice to speed up the process\n");
+    		if(num_base > 1) fprintf(stderr, "Multiple base phenotype detected. You might want to run separate instance of PRSice to speed up the process\n");
         for(size_t i = 0; i < num_base; ++i){
     			fprintf(stderr,"\nStart processing: %s\n", base[i].c_str());
     			fprintf(stderr,"==============================\n");
@@ -19,10 +21,11 @@ void PRSice::run(const Commander &c_commander, Region &region){
             fprintf(stderr, "\n");
         }
     }
-    // completed when we reach here
 }
 
-void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region){
+// Seems to be working alright (hope I know how to write test cases...)
+void PRSice::process(const std::string &c_input, bool beta, const Commander &c_commander, Region &region)
+{
 	// we need to reset the region flag for region inclusion information
 	region.reset();
 	// snp_list should contain all SNP information from the base file
@@ -60,7 +63,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
         		// only SNPs that are also found in the target file are used
         		// for clumping
         		std::string target_bim_name = target[i_target]+".bim";
-            fprintf(stderr,"\nIn target %s\n", ld_file.c_str());
+            fprintf(stderr,"\nIn target %s\n", target_bim_name.c_str());
             // This will provide us the final inclusion map, which contains the
             // SNPs that are supposed to be used for clumping
         		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
@@ -76,15 +79,17 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
     }
 }
 
+// Seems alright now
 void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		std::map<std::string, size_t> &snp_index, const std::string &c_input, bool beta,
-		const Commander &c_commander, Region &region){
+		const Commander &c_commander, Region &region)
+{
 	// First, we need to obtain the index of different columns from the base files
 	// Might also want to include some warnings regarding OR or beta.
 	// NOTE: -1 means missing and index is hard coded such that each index will represent
 	//       specific header
 
-	// just issue the warning and do nothing
+	// just issue the warning. would terminate though
 	if(beta && c_commander.statistic().compare("OR")==0) fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
 	std::vector<int> index = SNP::get_index(c_commander, c_input);
 	// Open the file
@@ -104,7 +109,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
     bool se_error = false;
 	if(!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
-	// Acutal reading the file, will do a bunch of QC
+	// Actual reading the file, will do a bunch of QC
 	while(std::getline(snp_file, line)){
 		misc::trim(line);
 		if(!line.empty()){
@@ -149,16 +154,18 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		    				se = misc::convert<double>(token[index[6]]);
 		    			}
 		    			catch(const std::runtime_error &error){
-		    				se_error = true;
+		    				se_error = true; // This does nothing
 		    			}
 		    		}
 		    		size_t loc = 0;
 		    		if(index[5]>=0){
 		    			int temp = atoi(token[index[5]].c_str());
-		    			if(temp <0) fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+		    			if(temp <0){
+		    				read_error=true;
+		    				fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+		    			}
 		    			else loc = temp;
 		    		}
-		    		// snp_index[rs_id] =snp_list.size();
 		    		if(ref_allele.compare("-")==0 || ref_allele.compare("I") == 0 || ref_allele.compare("D")==0 ||
 		    				ref_allele.size()>1){
 		    			num_indel++;
@@ -191,11 +198,9 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	}
 
 	// Now output the statistics. Might want to improve the outputs
-	if(num_indel!=0){
-		fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
-	}
-	fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", snp_list.size());
+	if(num_indel!=0) fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
+	if(num_duplicated!=0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 }
@@ -229,17 +234,34 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		// This should generate the covariate matrix
     		independent_variables = gen_cov_matrix(	target, c_commander.get_cov_file(),
     													c_commander.get_cov_header(), fam_index);
+    }else{
+//  		We will need to initialize prs_fam
+    		std::string fam_name = target+".fam";
+    		std::ifstream fam;
+    		fam.open(fam_name.c_str());
+    		if(!fam.is_open()){
+    			std::string error_message = "ERROR: Cannot open fam file: " + fam_name;
+    			throw std::runtime_error(error_message);
+    		}
+    		std::string line;
+    		while(std::getline(fam, line)){
+    			misc::trim(line);
+    			if(!line.empty()){
+    				std::vector<std::string> token = misc::split(line);
+    				if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
+    				prs_fam.push_back(std::pair<std::string, double>(token[1], 0.0));
+    			}
+    		}
+    		fam.close();
     }
     covariates_only = independent_variables;
     covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
     covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
     // Declare the variables, might need to implement fastscore here
-
-    bool fastscore = (fastscore)? 0.001: c_commander.fastscore();
-	double bound_start = c_commander.get_lower();
+    bool fastscore = c_commander.fastscore();
+	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
 	double bound_end = (fastscore)? 0.5:c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
-
 	// we will use a "special" vector to speed up the bim reading
 	// the concept is such that we can skip lines efficiently
     std::string bim_name = target+".bim";
@@ -259,6 +281,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 
     std::string line;
     size_t cur_line = 0;
+    bool pre_run = false;
     while(getline(bim, line)){
     		misc::trim(line);
     		if(!line.empty()){
@@ -266,19 +289,20 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			if(token.size() < 6) throw std::runtime_error("Malformed bim file, should contain at least 6 columns");
     			if(inclusion.find(token[1])!=inclusion.end()){
     				double p = snp_list.at(inclusion.at(token[1])).get_p_value();
-    				if(p<bound_end){
+    				if(p< bound_start){
+    					pre_run=true;
+    					quick_ref.push_back(p_partition(token[1], cur_line, -1,inclusion.at(token[1])));
+    				}
+    				else if(p<bound_end){
     					int category = -1;
     					if(fastscore){
-    						if(p < 0.001) category = -1;
-    						else if(p < 0.05) category = 0;
-    						else if(p < 0.1) category = 1;
-    						else if(p < 0.2) category = 2;
-    						else if(p < 0.3) category = 3;
-    						else if(p < 0.4) category = 4;
-    						else if(p < 0.5) category = 5;
-
+    						category = c_commander.get_category(p);
+    						if(category ==-2){
+    							throw std::runtime_error("Undefined category!");
+    						}
     					}
     					else category = (int)((p-bound_start)/bound_inter);
+    					if(category <0) pre_run=true;
     					quick_ref.push_back(p_partition(token[1], cur_line, (category<0)?-1:category ,inclusion.at(token[1])));
     				}
     			}
@@ -286,6 +310,10 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     }
     bim.close();
+    if(quick_ref.size() ==0){
+    		fprintf(stderr, "None of the SNPs met the threshold\n");
+    		return;
+    }
     // now we sort quick_ref such that the smaller p_value categories are always in the front
     std::sort(begin(quick_ref), end(quick_ref),
         [](PRSice::p_partition const &t1, PRSice::p_partition const &t2) {
@@ -293,7 +321,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
             else return std::get<2>(t1)<std::get<2>(t2);
         }
     );
-
     // as proxy only affect clumping, we don't need to handle it here
     std::vector<std::vector<prs_score> > region_prs_score;
     std::vector<std::vector<prs_score> > region_best_prs_score;
@@ -307,8 +334,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
 	// regions
 	std::vector<size_t> num_snp_included(c_region.size());
     // first read everything that are smaller than 0
-	if(bound_start != 0) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
-
+	if(pre_run) get_prs_score(quick_ref, snp_list, target, region_prs_score, num_snp_included, cur_start_index);
 	// if people require only the PRS score, then we will open this no_regress_out file
     	std::string output_name = c_commander.get_out()+"."+target+".all.score";
     	std::ofstream no_regress_out;
@@ -320,8 +346,16 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		no_regress_out << "Threshold\tRegion";
     		for(size_t i = 0; i < prs_fam.size(); ++i) no_regress_out << "\t" << std::get<0>(prs_fam[i]);
+//    	just in case we have already got something, we will print the no_regress here too
+    		if(pre_run){
+				for(size_t i_region=0; i_region < region_prs_score.size(); ++i_region){
+					for(size_t i_reg_score=0; i_reg_score < region_prs_score[i_region].size(); ++i_reg_score){
+						no_regress_out << "\t" << std::get<1>(region_prs_score[i_region][i_reg_score])/(double)num_snp_included[i_region];
+					}
+					no_regress_out << std::endl;
+				}
+    		}
     	}
-
     	// Now we prepare for the PRS analysis
     	double current_upper =0.0;
     	// need to initialize this to use multithreading with EIGEN library
@@ -346,16 +380,23 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
     	// now start going through all the thresholds
     	// when cur_start_index == quick_ref.size(), all SNPs should have processed
+    	if(cur_start_index == quick_ref.size()){
+    		fprintf(stderr, "There are no valid threshold to test\n");
+    		fprintf(stderr, "All SNPs have p-value lower than --lower and higher than --upper\n");
+    		if(no_regress) no_regress_out.close();
+    		return;
+    	}
     	while(cur_start_index != quick_ref.size()){
     		// getting the current cutoff
     		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
     		fprintf(stderr, "\rProcessing %f", current_upper);
+
     		// now calculate the PRS for each region
     		bool reg = get_prs_score(quick_ref, snp_list, target, region_prs_score,
     				num_snp_included, cur_start_index);
     		// if regression is not required, we will simply output the score
     		if(no_regress){
-    			for(size_t i_region; i_region < region_prs_score.size(); ++i_region){
+    			for(size_t i_region=0; i_region < region_prs_score.size(); ++i_region){
     				no_regress_out << current_upper << "\t" << c_region.get_name(i_region);
     				for(size_t i_reg_score=0; i_reg_score < region_prs_score[i_region].size(); ++i_reg_score){
     					no_regress_out << "\t" << std::get<1>(region_prs_score[i_region][i_reg_score])/(double)num_snp_included[i_region];
@@ -404,7 +445,9 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			}
     		}
     	}
+    	fprintf(stderr, "\n");
     	no_regress_out.close();
+    	if(no_regress) return;
     	// now perform the output for all the best scores and PRSice results
 	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+target;
     	for(size_t i_region = 0; i_region< prs_results.size(); ++i_region){
@@ -430,7 +473,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     			throw std::runtime_error(error_message);
     		}
     		best_out << "IID\tprs_"<<std::get<1>(region_best_threshold[i_region]) << std::endl;
-    		prsice_out << "Threshold\tR2\tP-value\tNum_SNP" << std::endl;
+    		prsice_out << "Threshold\tR2\tP\tNum_SNP" << std::endl;
     		pheno_out << "IID\tPheno";
     		// We want to skip the intercept for now
     		for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col) pheno_out << "\tCov"<<std::to_string(i_col);
@@ -486,8 +529,8 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables,
 		for(;prs_iter != prs_end; ++prs_iter){
 			std::string sample = std::get<0>(*prs_iter);
 			if(c_fam_index.find(sample)!=c_fam_index.end()){
-				if(thread_safe) independent_variables(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
-				else X(c_fam_index.at(sample), 0) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				if(thread_safe) independent_variables(c_fam_index.at(sample), 1) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
+				else X(c_fam_index.at(sample), 1) = std::get<1>(*prs_iter)/(double)c_num_snp_included[iter];
 			}
 		}
 		if(target_binary){
@@ -740,8 +783,8 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 {
 	// Here is the actual calculation of the PRS
 	if(quick_ref.size()==0) return false; // nothing to do
-	size_t prev_index =prev_index = std::get<2>(quick_ref[cur_index]);;
-	size_t end_index = 0;
+	int prev_index =prev_index = std::get<2>(quick_ref[cur_index]);
+	int end_index = 0;
 	bool ended =false;
 	for(size_t i = cur_index; i < quick_ref.size(); ++i){
 		if(std::get<2>(quick_ref[i]) != prev_index && std::get<2>(quick_ref[i])>=0 ){
@@ -759,6 +802,7 @@ bool PRSice::get_prs_score(const std::vector<PRSice::p_partition> &quick_ref,
 	PLINK prs(target);
 	prs.initialize();
 	prs.get_score(quick_ref, snp_list, prs_score, cur_index, end_index);
+
 	cur_index = end_index;
 	return true;
 }

@@ -786,9 +786,10 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 		if((cur_index-prev)!=0){
 			// Skip snps
 			m_bed.seekg((std::get<1>(quick_ref[i_snp])-prev)*m_num_bytes, m_bed.cur);
-			prev=std::get<1>(quick_ref[i_snp])+1;
+			prev=std::get<1>(quick_ref[i_snp]);
 		}
 		read_snp(1, false);
+		prev++;
 		int snp_index = std::get<3>(quick_ref[i_snp]);
 		if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
 		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
@@ -803,10 +804,9 @@ void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, siz
 				}
 			}
 		}
-		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012)
+		// AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012) / num_SNPs
 		lerase(1);
 	}
-
 }
 
 bool PLINK::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){

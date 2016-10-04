@@ -45,6 +45,14 @@ class Commander
         double get_upper() const { return m_upper; };
         double get_inter() const { return m_inter; };
         double get_proxy() const { return m_proxy; };
+        int get_category(double p) const {
+        		for(int i = 0; i < m_barlevel.size(); ++i){
+        			if(p < m_barlevel[i]){
+        				return i-1;
+        			}
+        		}
+        		return -2;
+        };
         bool get_target_binary(size_t i) const { return m_target_is_binary.at(i); };
         bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
         bool no_regression() const { return m_no_regress; };
@@ -60,6 +68,7 @@ class Commander
         std::vector<std::string> m_covariates; //Should be mutrally exclusive with m_covariate_files
         std::vector<std::string> m_bed_list;
         std::vector<std::string> m_pheno_file;
+        std::vector<double> m_barlevel;
         std::string m_covariate_file;
         std::string m_ancestry_dim;
         std::string m_chr = "CHR";
