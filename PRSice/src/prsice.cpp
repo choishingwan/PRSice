@@ -225,7 +225,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     Eigen::VectorXd phenotype;
     std::string target = c_commander.get_target(c_i_target);
     std::string pheno_file = c_commander.get_pheno(c_i_target);
-    Eigen::MatrixXd covariates_only;
     Eigen::MatrixXd independent_variables;
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file
@@ -254,9 +253,8 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		}
     		fam.close();
     }
-    covariates_only = independent_variables;
-    covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
-    covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
+
+
     // Declare the variables, might need to implement fastscore here
     bool fastscore = c_commander.fastscore();
 	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
@@ -387,6 +385,22 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		fprintf(stderr, "All SNPs have p-value lower than --lower and higher than --upper\n");
     		fprintf(stderr, "We will output the PRS score for you just to be nice\n");
     	}
+//    	Calculate the null here if required. This should speed things up a lot when there are a large amount
+//    	of covariates
+    	double null_r2 = 0.0, null_r2_adjust=0.0, null_p=0.0;
+    	if(independent_variables.cols()>2){
+    		Eigen::MatrixXd covariates_only;
+    		covariates_only = independent_variables;
+    		covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
+    		covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
+    		if(target_binary){
+    			Regression::glm(phenotype, covariates_only, null_p, null_r2, 25, n_thread, true);
+    		}
+    		else{
+    			Regression::linear_regression(phenotype, covariates_only, null_p, null_r2, null_r2_adjust, n_thread, true);
+    		}
+
+    	}
     	while(cur_start_index != quick_ref.size()){
     		// getting the current cutoff
     		current_upper = std::min((std::get<2>(quick_ref[cur_start_index])+1)*bound_inter+bound_start, bound_end);
@@ -411,7 +425,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		if(reg){
     			// here we do multithreading
     			if(n_thread == 1 || region_prs_score.size()==1){
-    				thread_score(independent_variables, covariates_only, phenotype, region_prs_score, num_snp_included, fam_index,
+    				thread_score(independent_variables, phenotype, region_prs_score, num_snp_included, fam_index,
     						region_best_threshold, region_best_prs_score, prs_results, 0, region_prs_score.size(),
 							target_binary, current_upper,n_thread);
     			}
@@ -420,7 +434,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     				if(c_region.size() < n_thread){
     					for(size_t i_region = 0; i_region < c_region.size(); ++i_region){
     						thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(independent_variables),
-    								std::cref(covariates_only), std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
+    								std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
 									std::ref(prs_results), i_region, i_region+1, target_binary, current_upper,1));
     					}
@@ -432,7 +446,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     						size_t ending = start+job_size+(remain>0);
     						ending = (ending>c_region.size())? c_region.size(): ending;
     						 thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(independent_variables),
-    								 std::cref(covariates_only), std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
+    								 std::cref(phenotype), std::cref(region_prs_score), std::cref(num_snp_included),
 									 std::cref(fam_index), std::ref(region_best_threshold), std::ref(region_best_prs_score),
 									 std::ref(prs_results), start, ending, target_binary, current_upper,1));
     						start=ending;
@@ -477,18 +491,18 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		prsice_out << "Threshold\tR2\tP\tNum_SNP" << std::endl;
     		pheno_out << "IID\tPheno";
     		// We want to skip the intercept for now
-    		for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col) pheno_out << "\tCov"<<std::to_string(i_col);
+    		for(size_t i_col=2; i_col < independent_variables.cols(); ++i_col) pheno_out << "\tCov"<<std::to_string(i_col);
     		pheno_out << std::endl;
     		for(size_t i_prsice=0; i_prsice< prs_results[i_region].size();++i_prsice){
     			prsice_out << std::get<0>(prs_results[i_region][i_prsice]) << "\t" <<
-    					std::get<1>(prs_results[i_region][i_prsice]) << "\t" <<
+    					std::get<1>(prs_results[i_region][i_prsice])-null_r2 << "\t" <<
 						std::get<3>(prs_results[i_region][i_prsice])<< "\t" <<
 						std::get<4>(prs_results[i_region][i_prsice]) << std::endl;
     		}
     		for(size_t i_score=0; i_score < region_best_prs_score[i_region].size(); ++i_score){
     			pheno_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" << phenotype(i_score);
-    			for(size_t i_col=1; i_col < covariates_only.cols(); ++i_col){
-    				pheno_out << "\t" << covariates_only(i_score,i_col);
+    			for(size_t i_col=2; i_col < independent_variables.cols(); ++i_col){
+    				pheno_out << "\t" << independent_variables(i_score,i_col);
     			}
     			pheno_out << std::endl;
     			best_out << std::get<0>(region_best_prs_score[i_region][i_score]) << "\t" <<
@@ -501,8 +515,7 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	}
 }
 
-void PRSice::thread_score( Eigen::MatrixXd &independent_variables,
-			const Eigen::MatrixXd &covariate_only, const Eigen::VectorXd &c_pheno,
+void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
         		const std::vector<std::vector<PRSice::prs_score > > &c_region_prs_score,
         		const std::vector<size_t> &c_num_snp_included, const std::map<std::string, size_t> &c_fam_index,
         		std::vector<PRSice::PRSice_best > &region_best_threshold,
@@ -555,28 +568,10 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables,
 				std::cerr << "ERROR: " << error.what() << std::endl;
 				exit(-1);
 			}
-			double null_p, null_r2;
-			if(thread_safe){
-				if(independent_variables.cols()>2){
-					Regression::glm(c_pheno, covariate_only,
-							null_p, null_r2, 25, thread, true);
-					r2-=	null_r2;
-				}
-			}
-			else if(X.cols() > 2){ //2 because we now included the intercept
-				Regression::glm(c_pheno, X.block(0,2,X.rows(), X.cols()-1),
-						null_p, null_r2, 25, thread, true);
-				r2-=	null_r2;
-			}
 		}
 		else{
 			if(thread_safe) Regression::linear_regression(c_pheno, independent_variables, p_value, r2, r2_adjust, thread, true);
 			else Regression::linear_regression(c_pheno, X, p_value, r2, r2_adjust, thread, true);
-			if(independent_variables.cols()>2){
-				double null_p, null_r2, null_r2_adjust;
-				Regression::linear_regression(c_pheno, covariate_only, null_p, null_r2, null_r2_adjust, thread, true);
-				r2-=null_r2;
-			}
 		}
 
 		// This should be thread safe as each thread will only mind their own region
