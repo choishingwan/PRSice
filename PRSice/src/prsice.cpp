@@ -254,7 +254,6 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     		fam.close();
     }
 
-
     // Declare the variables, might need to implement fastscore here
     bool fastscore = c_commander.fastscore();
 	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
@@ -464,6 +463,9 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     	no_regress_out.close();
     	if(no_regress) return;
     	// now perform the output for all the best scores and PRSice results
+    	// unfortunately this is not as simple, as the base and target might contain some path information
+    	// instead, we need to tokenize them before we do this
+
 	std::string output_prefix = c_commander.get_out()+"."+m_current_base+"."+target;
     	for(size_t i_region = 0; i_region< prs_results.size(); ++i_region){
     		output_name = output_prefix+"."+c_region.get_name(i_region);
