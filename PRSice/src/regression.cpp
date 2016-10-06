@@ -5,7 +5,7 @@
  *      Author: shingwanchoi
  */
 
-#include "regression.h"
+#include "regression.hpp"
 namespace Regression{
 
 	// on purposely perform the copying of x
