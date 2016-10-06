@@ -44,6 +44,8 @@ class Commander
         double get_upper() const { return m_upper; };
         double get_inter() const { return m_inter; };
         double get_proxy() const { return m_proxy; };
+        double get_bar_upper() const { return *max_element(m_barlevel.begin(), m_barlevel.end()); };
+        double get_bar_lower() const { return *min_element(m_barlevel.begin(), m_barlevel.end()); };
         int get_category(double p) const {
         		for(int i = 0; i < m_barlevel.size(); ++i){
         			if(p < m_barlevel[i]){

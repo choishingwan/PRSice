@@ -310,6 +310,7 @@ bool Commander::initialize(int argc, char *argv[])
     		fprintf(stderr, "         fastscore. Will use fastscore\n");
     		m_fastscore=true;
     }
+    if(m_no_regress) m_all=true;
     if(m_fastscore && m_barlevel.size()==0)
     {
     		fprintf(stderr, "barlevel not provided. Will set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
@@ -396,10 +397,10 @@ void Commander::usage(){
     fprintf(stderr, "                             For example, with the default threshold and 150,000 samples\n");
     fprintf(stderr, "                             a file of at least 12 GB will be generated\n");
     fprintf(stderr, "                             NOTE: Output format will be:\n");
-    fprintf(stderr, "                                   THRESHOLD Sample1 Sample2 ...\n");
-    fprintf(stderr, "                                   0.001 WWW XXX ...\n");
-    fprintf(stderr, "                                   0.002 YYY ZZZ ...\n");
-    fprintf(stderr, "              --full         Also include the full model in the PRSice output");
+    fprintf(stderr, "                                   THRESHOLD Region Sample1 Sample2 ...\n");
+    fprintf(stderr, "                                   0.001 RegionA WWW XXX ...\n");
+    fprintf(stderr, "                                   0.002 RegionA YYY ZZZ ...\n");
+    fprintf(stderr, "              --full         Also include the full model in the PRSice output\n");
     fprintf(stderr, "              --no_regress   Do not perform the regression analysis and simply\n");
     fprintf(stderr, "                             output all PRS. Can only be used together with\n");
     fprintf(stderr, "                             fastscore to avoid huge output files. If you must,\n");
@@ -426,7 +427,7 @@ void Commander::usage(){
     fprintf(stderr, "                             the above options are providing the INDEX of the\n");
     fprintf(stderr, "                             corresponding column. (Index should be 0-based)\n");
     fprintf(stderr, "\nClumping:\n");
-    fprintf(stderr, "              --clump-p      The p-value threshold use for clumping. \n");
+    fprintf(stderr, "              --clump_p      The p-value threshold use for clumping. \n");
     fprintf(stderr, "                             Default is %f \n", m_clump);
 //    fprintf(stderr, "         --clump_p2          \n");
     fprintf(stderr, "              --clump_r2     The R2 threshold for clumping.\n");
