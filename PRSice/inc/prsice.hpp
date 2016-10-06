@@ -65,9 +65,11 @@ class PRSice
         Eigen::MatrixXd gen_cov_matrix(const std::string &c_target, const std::string &c_cov_file,
         			const std::vector<std::string> &c_cov_header, std::map<std::string, size_t> &fam_index);
         Eigen::VectorXd gen_pheno_vec(const std::string &c_target, const std::string c_pheno,
-        			bool target_binary, std::map<std::string, size_t> &fam_index,
-					std::vector<std::pair<std::string, double> > &prs_score);
+        			const std::vector<std::string> pheno_col, bool target_binary,
+					std::map<std::string, size_t> &fam_index, std::vector<std::pair<std::string, double> > &prs_score);
         void calculate_score(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
+        		const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
+        void target_process(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
         		const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
         void thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
         		const std::vector<std::vector<PRSice::prs_score > > &c_prs_region_score,

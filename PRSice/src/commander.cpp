@@ -41,6 +41,8 @@ bool Commander::initialize(int argc, char *argv[])
         {"bar_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
+        {"all",no_argument,NULL,0},
+        {"full",no_argument,NULL,0},
         {"no_regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
@@ -69,6 +71,8 @@ bool Commander::initialize(int argc, char *argv[])
                 else if(command.compare("bp")==0) m_bp=optarg;
                 else if(command.compare("se")==0) m_standard_error = optarg;
                 else if(command.compare("index")==0) m_index = true;
+                else if(command.compare("all")==0) m_all = true;
+                else if(command.compare("full")==0) m_full = true;
                 else if(command.compare("clump_p")==0){
                     double temp = atof(optarg);
                     if(temp < 0.0 || temp > 1.0){
@@ -340,6 +344,8 @@ Commander::Commander()
 	m_index =false;
 	m_gen_bed = false;
 	m_no_regress = false;
+	m_all = false;
+	m_full = false;
 	m_proxy = -1.0;
 	m_clump = 1.0;
 	m_clump_r2 = 0.1;
@@ -384,9 +390,21 @@ void Commander::usage(){
     fprintf(stderr, "                             ID Cov1 Cov2\n");
     fprintf(stderr, "                             Must contain a header\n");
     fprintf(stderr, "         -a | --ancestry     NOT DEVELOPED YET\n");
+    fprintf(stderr, "              --all          Output PRS for ALL threshold. WARNING: For fine scale \n");
+    fprintf(stderr, "                             PRS, this will generate a huge file. The size of the file\n");
+    fprintf(stderr, "                             can be estimated as Num Threshold x Num sample x 8 byte\n");
+    fprintf(stderr, "                             For example, with the default threshold and 150,000 samples\n");
+    fprintf(stderr, "                             a file of at least 12 GB will be generated\n");
+    fprintf(stderr, "                             NOTE: Output format will be:\n");
+    fprintf(stderr, "                                   THRESHOLD Sample1 Sample2 ...\n");
+    fprintf(stderr, "                                   0.001 WWW XXX ...\n");
+    fprintf(stderr, "                                   0.002 YYY ZZZ ...\n");
+    fprintf(stderr, "              --full         Also include the full model in the PRSice output");
     fprintf(stderr, "              --no_regress   Do not perform the regression analysis and simply\n");
-    fprintf(stderr, "                             calculate the PRS. Can only be used together with\n");
-    fprintf(stderr, "                             fastscore\n");
+    fprintf(stderr, "                             output all PRS. Can only be used together with\n");
+    fprintf(stderr, "                             fastscore to avoid huge output files. If you must,\n");
+    fprintf(stderr, "                             you can modify bar_levels to obtain the fine scale \n");
+    fprintf(stderr, "                             PRS outputs\n");
     fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
     fprintf(stderr, "\nScoring options:\n");
     fprintf(stderr, "         -l | --lower        The starting p-value threshold. default: %f\n", m_lower);

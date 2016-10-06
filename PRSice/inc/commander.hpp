@@ -56,6 +56,8 @@ class Commander
         bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
         bool no_regression() const { return m_no_regress; };
         bool fastscore() const { return m_fastscore; };
+        bool full() const { return m_full; };
+        bool all() const { return m_all; };
 //        bool proxy() const { return m_proxy; };
     protected:
     private:
@@ -87,6 +89,8 @@ class Commander
         bool m_index;//Indicate that instead of a header name, the index is given
         bool m_gen_bed;
         bool m_no_regress;
+        bool m_all;
+        bool m_full;
         double m_proxy;
         double m_clump;
         double m_clump_r2;

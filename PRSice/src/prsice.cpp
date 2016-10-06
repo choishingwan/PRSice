@@ -74,9 +74,14 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
     	clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
     			c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
     	// Now begin the calculation of the PRS
+    	target_process(c_commander, inclusion, snp_list, region);
     	calculate_score(c_commander, inclusion, snp_list, region);
 }
 
+void PRSice::target_process(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
+		const boost::ptr_vector<SNP> &snp_list, const Region &c_region){
+
+}
 // Seems alright now
 void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		std::map<std::string, size_t> &snp_index, const std::string &c_input, bool beta,
@@ -240,21 +245,62 @@ void PRSice::calculate_score(const Commander &c_commander, const std::map<std::s
     // check whether if regression is required
     bool no_regress =c_commander.no_regression();
     // below is only required if regression is performed
-    Eigen::VectorXd phenotype;
     std::string target = c_commander.get_target();
     std::string pheno_file = c_commander.get_pheno();
     bool target_binary = c_commander.target_is_binary();
     std::vector<std::string> pheno_col = c_commander.get_pheno_col();
     // The first major overhault
+    Eigen::VectorXd phenotype;
     Eigen::MatrixXd independent_variables;
-    if(!no_regress){
+    // First, optain the index of the phenotypes
+    std::vector<size_t> pheno_index;
+    if(pheno_col.size()==0 || pheno_file.empty()){
+    		pheno_index.push_back(5);
+    }
+    else if(!pheno_file.empty() && pheno_col.size()==0){
+		pheno_index.push_back(1);
+    }
+    else if(!pheno_file.empty())
+    {
+    		std::ifstream pheno;
+    		pheno.open(pheno_file.c_str());
+    		if(!pheno.is_open()){
+    			throw std::runtime_error("Cannot open phenotype file");
+    		}
+    		std::string header;
+    		std::getline(pheno, header);
+    		misc::trim(header);
+    		pheno.close();
+    		std::vector<std::string> columns = misc::split(header);
+    		if(columns.size() < 2){
+    			throw std::runtime_error("Malformed pheontype file! Must contain at least 2 ");
+    		}
+    		for (auto i_col : pheno_col){ // access by value, the type of i is int
+    			bool found = false;
+    			for(size_t i_head = 1; i_head < columns.size(); ++i_head){
+    				// Start from 1 because that is reserved for IID
+    				if(columns[i_head].compare(i_col)==0){
+    					pheno_index.push_back(i_head);
+    					found=true;
+    					break;
+    				}
+    			}
+    			if(!found){
+    				fprintf(stderr, "WARNING: Cannot find phenotype: %s\n", i_col.c_str());
+    			}
+    		}
+    }
+
+    if(!no_regress)
+    {
         // This should generate the phenotype matrix by reading from the fam/pheno file
-    		phenotype = gen_pheno_vec(	target, pheno_file,
-    													target_binary, fam_index, prs_fam);
+    		phenotype = gen_pheno_vec(	target, pheno_file,pheno_col, target_binary, fam_index, prs_fam);
     		// This should generate the covariate matrix
     		independent_variables = gen_cov_matrix(	target, c_commander.get_cov_file(),
     													c_commander.get_cov_header(), fam_index);
-    }else{
+    }
+    else
+    {
 //  		We will need to initialize prs_fam
     		std::string fam_name = target+".fam";
     		std::ifstream fam;
@@ -274,7 +320,7 @@ void PRSice::calculate_score(const Commander &c_commander, const std::map<std::s
     		}
     		fam.close();
     }
-
+//  DEBUG UNTIL HERE
     // Declare the variables, might need to implement fastscore here
     bool fastscore = c_commander.fastscore();
 	double bound_start =  (fastscore)? 0.001: c_commander.get_lower();
@@ -611,8 +657,8 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
 }
 
 
-Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target,
-		const std::string c_pheno, bool target_binary,
+Eigen::VectorXd PRSice::gen_pheno_vec(const std::string &c_target, const std::string c_pheno,
+		std::vector<std::string> pheno_col, bool target_binary,
 		std::map<std::string, size_t> &fam_index,
 		std::vector<std::pair<std::string, double> > &prs_score)
 {
