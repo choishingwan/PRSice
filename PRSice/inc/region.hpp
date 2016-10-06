@@ -34,6 +34,13 @@ public:
     size_t flag_size() const { return (m_region_name.size()+1)/(m_bit_size)+1; };
     size_t size() const { return m_region_name.size(); };
     std::string get_name(size_t i) const { return m_region_name.at(i); };
+
+    Region::long_type* Region::empty_flag(){
+			long_type* res = new long_type[((m_region_name.size()+1)/m_bit_size)+1];
+			memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(long_type));
+			res[0]=1; // base region which contains everything
+			return res;
+    }
 private:
 	typedef std::tuple<std::string, size_t, size_t> boundary;
 	void process_bed(const std::vector<std::string> &bed);

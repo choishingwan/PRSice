@@ -5,7 +5,7 @@
  *      Author: shingwanchoi
  */
 
-#include "../inc/region.hpp"
+#include "region.hpp"
 
 void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed){
 	process_bed(bed);

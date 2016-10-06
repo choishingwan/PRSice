@@ -16,7 +16,8 @@ void PRSice::run(const Commander &c_commander, Region &region)
         for(size_t i = 0; i < num_base; ++i){
     			fprintf(stderr,"\nStart processing: %s\n", base[i].c_str());
     			fprintf(stderr,"==============================\n");
-        		m_current_base=base[i];
+//        	Need to handle paths in the name
+    			m_current_base=misc::remove_extension<std::string>(misc::base_name<std::string>(base[i]));
             process(base[i], c_commander.get_base_binary(i), c_commander, region);
             fprintf(stderr, "\n");
         }
@@ -36,47 +37,44 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
     get_snp(snp_list, snp_index, c_input, beta, c_commander, region);
     // Then we will perform the rest of the process for each individual
     // target file.
-    std::vector<std::string> target = c_commander.get_target();
+    std::string target = c_commander.get_target();
 	fprintf(stderr,"\nClumping Parameters: \n");
     fprintf(stderr,"==============================\n");
     fprintf(stderr,"P-Threshold  : %f\n", c_commander.get_clump_p());
     fprintf(stderr,"R2-Threshold : %f\n", c_commander.get_clump_r2());
     fprintf(stderr,"Window Size  : %zu\n", c_commander.get_clump_kb());
-
-    for(size_t i_target = 0; i_target < target.size(); ++i_target){
-    		fprintf(stderr,"\nStart processing: %s\n", target[i_target].c_str());
-    	    fprintf(stderr,"==============================\n");
-    	    // The inclusion map should contain the SNPs that are supposed to be used for the
-    	    // calculation of PRS
-        std::map<std::string, size_t> inclusion;
-        bool has_ld = !c_commander.ld_prefix().empty();
-        std::string ld_file = (has_ld)? c_commander.ld_prefix(): target[i_target];
-        // create the plink class for clumping
-        PLINK clump(ld_file, c_commander.get_thread());
-        if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
-        else fprintf(stderr,"\nStart performing clumping\n");
-        // now initialize the plink class. This should also update inclusion such
-        // that it will only include SNPs also found in the plink file
-        clump.initialize(inclusion, snp_list, snp_index);
-        if(has_ld){
-        		// because we have independent LD file, we want to make sure
-        		// only SNPs that are also found in the target file are used
-        		// for clumping
-        		std::string target_bim_name = target[i_target]+".bim";
-            fprintf(stderr,"\nIn target %s\n", target_bim_name.c_str());
-            // This will provide us the final inclusion map, which contains the
-            // SNPs that are supposed to be used for clumping
-        		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
-        }
-        // This will perform clumping. When completed, inclusion will contain the index SNPs
-        // However, this should be changed in later version such that we can also
-        // handle different regions
-        clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
-        		c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
-        // Now begin the calculation of the PRS
-        calculate_score(c_commander, c_commander.get_target_binary(i_target),
-        		i_target, inclusion, snp_list, region);
-    }
+    	fprintf(stderr,"\nStart processing: %s\n", target.c_str());
+    	fprintf(stderr,"==============================\n");
+    	// The inclusion map should contain the SNPs that are supposed to be used for the
+    	// calculation of PRS
+    	std::map<std::string, size_t> inclusion;
+    	bool has_ld = !c_commander.ld_prefix().empty();
+    	std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
+    	// create the plink class for clumping
+    	PLINK clump(ld_file, c_commander.get_thread());
+    	if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
+    	else fprintf(stderr,"\nStart performing clumping\n");
+    	// now initialize the plink class. This should also update inclusion such
+    	// that it will only include SNPs also found in the plink file
+    	clump.initialize(inclusion, snp_list, snp_index);
+    	if(has_ld)
+    	{
+    		// because we have independent LD file, we want to make sure
+    		// only SNPs that are also found in the target file are used
+    		// for clumping
+    		std::string target_bim_name = target+".bim";
+    		fprintf(stderr,"\nIn target %s\n", target_bim_name.c_str());
+    		// This will provide us the final inclusion map, which contains the
+    		// SNPs that are supposed to be used for clumping
+    		update_inclusion(inclusion, target_bim_name, snp_list, snp_index);
+    	}
+    	// This will perform clumping. When completed, inclusion will contain the index SNPs
+    	// However, this should be changed in later version such that we can also
+    	// handle different regions
+    	clump.start_clumping(inclusion, snp_list, snp_index, c_commander.get_clump_p(),
+    			c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
+    	// Now begin the calculation of the PRS
+    	calculate_score(c_commander, inclusion, snp_list, region);
 }
 
 // Seems alright now
@@ -90,7 +88,10 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	//       specific header
 
 	// just issue the warning. would terminate though
-	if(beta && c_commander.statistic().compare("OR")==0) fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
+	if(beta && c_commander.statistic().compare("OR")==0)
+	{
+		fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
+	}
 	std::vector<int> index = SNP::get_index(c_commander, c_input);
 	// Open the file
     std::ifstream snp_file;
@@ -104,15 +105,17 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
     size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
 	size_t num_indel = 0;
+	size_t num_se_not_convertible=0;
     std::string line;
     int max_index = index.back();
-    bool se_error = false;
+    // remove header if index is not provided
 	if(!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
 	// Actual reading the file, will do a bunch of QC
 	while(std::getline(snp_file, line)){
 		misc::trim(line);
 		if(!line.empty()){
+			bool not_converted=false;
 			std::vector<std::string> token = misc::split(line);
 		   	if(token.size() <= max_index) throw std::runtime_error("More index than column in data");
 		   	if(snp_index.find(token[index[4]])!=snp_index.end()) num_duplicated++;
@@ -135,6 +138,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	    				}
 	    				catch(const std::runtime_error &error){
 	    					num_p_not_convertible++;
+	    					not_converted = true;
 	    				}
 	    			}
 		   		double stat = 0.0;
@@ -146,6 +150,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		   			}
 		   			catch(const std::runtime_error& error){ //we know only runtime error is throw
 		   				num_stat_not_convertible++;
+    						not_converted = true;
 		        		}
 		   		}
 		   		double se = 0.0;
@@ -154,17 +159,22 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		    				se = misc::convert<double>(token[index[6]]);
 		    			}
 		    			catch(const std::runtime_error &error){
-		    				se_error = true; // This does nothing
+		    				num_se_not_convertible++;
 		    			}
 		    		}
 		    		size_t loc = 0;
 		    		if(index[5]>=0){
-		    			int temp = atoi(token[index[5]].c_str());
-		    			if(temp <0){
-		    				read_error=true;
-		    				fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+		    			try{
+		    				int temp = misc::convert<int>(token[index[5]].c_str());
+		    				if(temp <0){
+		    					read_error=true;
+		    					fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+		    				}
+		    				else loc = temp;
 		    			}
-		    			else loc = temp;
+		    			catch(const std::runtime_error &error){
+
+		    			}
 		    		}
 		    		if(ref_allele.compare("-")==0 || ref_allele.compare("I") == 0 || ref_allele.compare("D")==0 ||
 		    				ref_allele.size()>1){
@@ -175,8 +185,12 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		    						alt_allele.compare("D")==0 || alt_allele.size()>1)){
 		    			num_indel++;
 		    		}
+		    		else if(! not_converted){
+		    			snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.empty_flag(), region.size()));
+		    		}
 		    		else{
-		    			snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, new SNP::long_type[1], region.size()));
+//		    			We skip any SNPs with non-convertible stat and p-value as we don't know how to
+//		    			handle them. Most likely those will be NA, which should be ignored anyway
 		    		}
 		   	}
 		}
@@ -190,11 +204,15 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	// are from the same genome build (e.g. not hg19 vs b37), then
 	// we should always be able to assume that the SNPs are in
 	// the correct order
+	// The only exception is when loc and chr are not provided. In
+	// that sense, SNPs will be sorted by the rsid
 	snp_list.sort(SNP::sort_snp);
 	// now write in the index
 	for(size_t i_snp = 0; i_snp < snp_list.size(); ++i_snp){
 		snp_index[snp_list[i_snp].get_rs_id()]=i_snp;
-		snp_list[i_snp].set_flag(region.check(snp_list[i_snp].get_chr(), snp_list[i_snp].get_loc()));
+		if(index[0] >=0 && index[5]>=0){
+			snp_list[i_snp].set_flag(region.check(snp_list[i_snp].get_chr(), snp_list[i_snp].get_loc()));
+		}
 	}
 
 	// Now output the statistics. Might want to improve the outputs
@@ -203,10 +221,10 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	if(num_duplicated!=0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
+	if(num_se_not_convertible!=0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 }
 
-void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
-		const size_t c_i_target, const std::map<std::string, size_t> &inclusion,
+void PRSice::calculate_score(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
 		const boost::ptr_vector<SNP> &snp_list, const Region &c_region)
 {
 	// Might want to add additional parameter for the region output
@@ -223,8 +241,11 @@ void PRSice::calculate_score(const Commander &c_commander, bool target_binary,
     bool no_regress =c_commander.no_regression();
     // below is only required if regression is performed
     Eigen::VectorXd phenotype;
-    std::string target = c_commander.get_target(c_i_target);
-    std::string pheno_file = c_commander.get_pheno(c_i_target);
+    std::string target = c_commander.get_target();
+    std::string pheno_file = c_commander.get_pheno();
+    bool target_binary = c_commander.target_is_binary();
+    std::vector<std::string> pheno_col = c_commander.get_pheno_col();
+    // The first major overhault
     Eigen::MatrixXd independent_variables;
     if(!no_regress){
         // This should generate the phenotype matrix by reading from the fam/pheno file

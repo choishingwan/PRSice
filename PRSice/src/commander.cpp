@@ -279,7 +279,14 @@ bool Commander::initialize(int argc, char *argv[])
         m_out = "PRSice";
     }
     // add default binary
-
+    if((!m_msigdb.empty() || m_bed_list.size() != 0) && m_chr.empty() && m_bp.empty()){
+    		fprintf(stderr, "WARNING: For pathway/region PRSice to work, you must provide\n");
+    		fprintf(stderr, "         the chromosome and bp information\n");
+    		fprintf(stderr, "         As chromosome / bp information were not provided, we\n");
+    		fprintf(stderr, "         will disable the pathwya/region PRSice analysis\n");
+    		m_msigdb = "";
+    		m_bed_list.clear();
+    }
     if(m_use_beta.size()==0)
     {
     		for(size_t i = 0; i < m_base.size(); ++i){

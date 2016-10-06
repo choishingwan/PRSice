@@ -15,15 +15,14 @@
 #include "misc.hpp"
 #include "plink.hpp"
 #include "snp.hpp"
-#include "regression.h"
 #include "region.hpp"
+#include "regression.hpp"
 
 //This should be the class to handle all the procedures
 class PRSice
 {
     public:
         PRSice();
-        PRSice(std::string name):m_current_base(name){};
         virtual ~PRSice();
         void run(const Commander &c_commander, Region &region);
         void process(const std::string &c_input, bool binary, const Commander &c_commander, Region &region);
@@ -31,7 +30,7 @@ class PRSice
         typedef std::pair<std::string, double> prs_score;
     protected:
     private:
-
+//      This is used for thead safety
         static std::mutex score_mutex;
         // rsid, line number in bim, category, snp_list index
         typedef std::tuple<std::string, size_t, int, size_t> p_partition;
@@ -68,9 +67,8 @@ class PRSice
         Eigen::VectorXd gen_pheno_vec(const std::string &c_target, const std::string c_pheno,
         			bool target_binary, std::map<std::string, size_t> &fam_index,
 					std::vector<std::pair<std::string, double> > &prs_score);
-        void calculate_score(const Commander &c_commander, bool target_binary,
-        			const size_t c_i_target, const std::map<std::string, size_t> &inclusion,
-				const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
+        void calculate_score(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
+        		const boost::ptr_vector<SNP> &snp_list, const Region &c_region);
         void thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
         		const std::vector<std::vector<PRSice::prs_score > > &c_prs_region_score,
         		const std::vector<size_t> &c_num_snp_included, const std::map<std::string, size_t> &c_fam_index,

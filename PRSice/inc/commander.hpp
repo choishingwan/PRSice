@@ -30,6 +30,7 @@ class Commander
         std::string get_gtf() const { return m_gtf; };
         std::vector<std::string> get_bed() const { return m_bed_list; };
         std::vector<std::string> get_cov_header() const { return m_covariates; };
+        std::vector<std::string> get_pheno_col() const { return m_pheno_col; };
         std::string get_pheno() const { return m_pheno_file; };
         std::string get_target() const{ return m_target; };
         std::string get_msigdb() const{ return m_msigdb; };
