@@ -5,8 +5,7 @@ set(CMAKE_BUILD_TYPE Release)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 # To compile a static library on Rosalind, we can use 
-# g++ --std=c++11 -I ../inc/ -isystem ../lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole
--archive  -static-libstdc++  -static-libgcc -static ../src/*.cpp -o PRSice
+# g++ --std=c++11 -I ../inc/ -isystem ../lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -static-libgcc -static ../src/*.cpp -o PRSice
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
 # Eigen from http://bitbucket.org/eigen/eigen/get/3.2.9.tar.bz2

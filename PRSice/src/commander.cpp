@@ -15,6 +15,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"covar_file",required_argument,NULL,'C'},
         {"ancestry",required_argument,NULL,'a'},
         {"pheno_file",required_argument,NULL,'f'},
+        {"pheno_col",required_argument,NULL,0},
         {"ld",required_argument,NULL,'L'},
         {"pvalue",required_argument,NULL,'p'},
         {"thread",required_argument,NULL,'T'},
@@ -36,7 +37,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump_p",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
-        {"binary_target",required_argument,NULL,0},
+        {"binary_target",no_argument,NULL,0},
         {"bar_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
@@ -96,8 +97,7 @@ bool Commander::initialize(int argc, char *argv[])
                     else m_clump_kb = temp*1000; //change it to kb, might want to allow different units
                 }
                 else if(command.compare("binary_target")==0){
-                		std::vector<std::string> token = misc::split(optarg, ", ");
-                		for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
+                		m_target_is_binary=true;
                 }
                 else if(command.compare("bar_levels")==0){
                 		std::vector<std::string> token = misc::split(optarg, ", ");
@@ -137,6 +137,10 @@ bool Commander::initialize(int argc, char *argv[])
                 			error=true;
                 		}
                 }
+                else if(command.compare("pheno_col")==0){
+            			std::vector<std::string> token = misc::split(optarg, ", ");
+            			m_pheno_col.insert(m_pheno_col.end(), token.begin(), token.end());
+                }
                 else{
                 		std::string er = "Undefined operator: "+command+", please use --help for more information!";
                 		throw std::runtime_error(er);
@@ -153,14 +157,7 @@ bool Commander::initialize(int argc, char *argv[])
 				}
                 break;
             case 't':
-				{
-					std::vector<std::string> token= misc::split(optarg, ", ");
-					m_target.insert(m_target.end(), token.begin(), token.end());
-					if(m_target.size() ==0){
-						error = true;
-						error_message.append("You must provide at least one valid target file name\n");
-					}
-				}
+				m_target = optarg;
                 break;
             case 'c':
             		{
@@ -181,14 +178,7 @@ bool Commander::initialize(int argc, char *argv[])
                 fprintf(stderr, "Currently we have not implement this function\n");
                 break;
             case 'f':
-				{
-					std::vector<std::string> token= misc::split(optarg, ", ");
-					m_pheno_file.insert(m_pheno_file.end(), token.begin(), token.end());
-					if(m_pheno_file.size() ==0){
-						error = true;
-						error_message.append("No parameter is given for phenotype file\n");
-					}
-				}
+				m_pheno_file = optarg;
                 break;
             case 'p': // the index/header of p-value in the file
                 m_p_value = optarg;
@@ -272,11 +262,7 @@ bool Commander::initialize(int argc, char *argv[])
     		error_message.append("There are no target file to run\n");
     }
     // Start performing the check on the inputs
-    if(m_target.size() != 1 && m_target.size() != m_target_is_binary.size())
-    {
-        error=true;
-        error_message.append("Length of binary target list does not match number of target\n");
-    }
+
     if(!m_msigdb.empty() && m_gtf.empty())
     {
         error = true;
@@ -293,19 +279,7 @@ bool Commander::initialize(int argc, char *argv[])
         m_out = "PRSice";
     }
     // add default binary
-    if(m_target_is_binary.size()==0)
-    {
-    		for(size_t i = 0; i < m_target.size(); ++i)
-    		{
-    			m_target_is_binary.push_back(true); // default is binary
-    		}
-    }
-    else if(m_target_is_binary.size() != m_target.size())
-    {
-		error_message.append("ERROR: Number of binary target doesn't match number of target file!\n");
-		error_message.append("       Default value only work when all target file are binary and\n");
-		error_message.append("       when --binary_target is not used\n");
-    }
+
     if(m_use_beta.size()==0)
     {
     		for(size_t i = 0; i < m_base.size(); ++i){
@@ -337,7 +311,36 @@ bool Commander::initialize(int argc, char *argv[])
 
 Commander::Commander()
 {
-    //ctor
+	// should gives the default here
+	m_target="";
+	m_pheno_file="";
+	m_covariate_file="";
+	m_ancestry_dim="MDS";
+	m_chr = "CHR";
+	m_ref_allele="A1";
+	m_alt_allele="A2";
+	m_statistic = "OR";
+	m_snp="SNP";
+	m_bp="BP";
+	m_standard_error = "SE";
+	m_p_value = "P";
+	m_ld_prefix="";
+	m_gtf="";
+	m_msigdb="";
+	m_out = "PRSice";
+	m_target_is_binary=false;
+	m_fastscore =false;
+	m_index =false;
+	m_gen_bed = false;
+	m_no_regress = false;
+	m_proxy = -1.0;
+	m_clump = 1.0;
+	m_clump_r2 = 0.1;
+	m_clump_kb = 250000;
+	m_lower = 0.0001;
+	m_upper = 0.5;
+	m_inter = 0.00005;
+	m_thread=1;
 }
 
 Commander::~Commander()
@@ -350,19 +353,20 @@ void Commander::usage(){
     fprintf(stderr, "Required Inputs:\n");
     fprintf(stderr, "         -b | --base         Base association files. User can provide multiple\n");
     fprintf(stderr, "                             base files.\n");
-    fprintf(stderr, "         -t | --target       Plink binary file prefix for target files. User\n");
-    fprintf(stderr, "                             can provide multiple target files. Currently only\n");
-    fprintf(stderr, "                             support plink binary input. Does not support multi-\n");
-    	fprintf(stderr, "                             chromosome input\n");
+    fprintf(stderr, "         -t | --target       Plink binary file prefix for target files. Currently\n");
+    fprintf(stderr, "                             only support plink binary inputs. Does not support\n");
+    fprintf(stderr, "                             multi-chromosome input. For multiple target phenotypes,\n");
+    	fprintf(stderr, "                             user should use the --pheno_file option together with \n");
+    	fprintf(stderr, "                             the pheno_col option\n");
     fprintf(stderr, "         --binary_target     Indication of whether binary target is provided.\n");
-    fprintf(stderr, "                             Should be of the same length as target\n");
     fprintf(stderr, "         --beta              Indication of whether the test statistic is beta\n");
 	fprintf(stderr, "                             instead of OR. Should be of the same length as base\n");
     fprintf(stderr, "\nOptions\n");
-    fprintf(stderr, "         -f | --pheno_file   Phenotype file(s) containing the target phenotypes.\n");
+    fprintf(stderr, "         -f | --pheno_file   Phenotype file containing the target phenotype(s).\n");
     fprintf(stderr, "                             If provided, the fam file of the target is ignored.\n");
-    fprintf(stderr, "                             This should be the same line as target (If you want to\n");
-    fprintf(stderr, "                             use phenotype file, you must use it for ALL target\n");
+    fprintf(stderr, "                             When pheno_col is specified, this file must contain\n");
+    fprintf(stderr, "                             a header\n");
+    fprintf(stderr, "              --pheno_col    Headers of phenotypes used from the phenotype file\n");
     fprintf(stderr, "         -L | --ld           Plink binary file prefix for the reference file used\n");
     fprintf(stderr, "                             for LD calculation. If not provided, will use the\n");
     fprintf(stderr, "                             target genotype for the LD calculation\n");
