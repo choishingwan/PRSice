@@ -100,6 +100,7 @@ class Commander
         double m_lower;
         double m_upper;
         double m_inter;
+        double m_prslice_size;
         size_t m_thread;
 };
 

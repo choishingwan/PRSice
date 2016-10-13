@@ -46,6 +46,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"no_regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
+        {"prslice",required_argument,NULL,0},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -99,6 +100,14 @@ bool Commander::initialize(int argc, char *argv[])
                         error_message.append("Clumping window size must be larger than 0kb\n");
                     }
                     else m_clump_kb = temp*1000; //change it to kb, might want to allow different units
+                }
+                else if(command.compare("prslice")==0){
+                    int temp = atoi(optarg);
+                    if(temp <= 0.0){
+                        error = true;
+                        error_message.append("PRSlice bin size must be larger than 0\n");
+                    }
+                    else m_prslice_size = temp*1000; //change it to kb, might want to allow different units
                 }
                 else if(command.compare("binary_target")==0){
                 		m_target_is_binary=true;
@@ -354,6 +363,7 @@ Commander::Commander()
 	m_lower = 0.0001;
 	m_upper = 0.5;
 	m_inter = 0.00005;
+	m_prslice_size = -1.0;
 	m_thread=1;
 }
 
@@ -406,6 +416,11 @@ void Commander::usage(){
     fprintf(stderr, "                             fastscore to avoid huge output files. If you must,\n");
     fprintf(stderr, "                             you can modify bar_levels to obtain the fine scale \n");
     fprintf(stderr, "                             PRS outputs\n");
+    fprintf(stderr, "              --prslice      Perform PRSlice where the whole genome is cut into\n");
+    fprintf(stderr, "                             bin size specify by this option. PRSice will then be\n");
+    fprintf(stderr, "                             performed on each bin. Bins will then be sorted according\n");
+    fprintf(stderr, "                             to their R2 where PRSice will be performed again to \n");
+    fprintf(stderr, "                             find the best bin combination \n");
     fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
     fprintf(stderr, "\nScoring options:\n");
     fprintf(stderr, "         -l | --lower        The starting p-value threshold. default: %f\n", m_lower);
@@ -451,7 +466,7 @@ void Commander::usage(){
     fprintf(stderr, "                             SNPs. e.g. --proxy 0.8 means the index SNP will\n");
     fprintf(stderr, "                             represent the region of any clumped SNPs that has\n");
     fprintf(stderr, "                             a R2 >= 0.8 with it\n");
-    fprintf(stderr, "\nPlotting Related:\n");
+    fprintf(stderr, "\nPlotting:\n");
     fprintf(stderr, "              --bar_levels   Level of barchart to be plotted. When fastscore\n");
     fprintf(stderr, "                             is set, PRSice will only calculate the PRS for\n");
     fprintf(stderr, "                             threshold within the bar level\n");

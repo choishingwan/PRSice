@@ -33,8 +33,10 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
 	boost::ptr_vector<SNP> snp_list;
 	// and snp_index is used for quickly finding the index of specific SNP in snp_list
     std::map<std::string, size_t> snp_index;
+    // This chr_list is used for multiple chromosome input
+    std::vector<std::string> chr_list;
     // Now obtaining the SNP information from the base file
-    get_snp(snp_list, snp_index, c_input, beta, c_commander, region);
+    get_snp(snp_list, snp_index, c_input, beta, c_commander, region, chr_list);
     // Then we will perform the rest of the process for each individual
     // target file.
     std::string target = c_commander.get_target();
@@ -80,7 +82,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
 // Seems alright now
 void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		std::map<std::string, size_t> &snp_index, const std::string &c_input, bool beta,
-		const Commander &c_commander, Region &region)
+		const Commander &c_commander, Region &region, std::vector<std::string> &chr_list)
 {
 	// First, we need to obtain the index of different columns from the base files
 	// Might also want to include some warnings regarding OR or beta.
@@ -108,6 +110,7 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 	size_t num_se_not_convertible=0;
     std::string line;
     int max_index = index.back();
+    std::map<std::string, bool> unique_chr;
     // remove header if index is not provided
 	if(!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
@@ -122,7 +125,13 @@ void PRSice::get_snp(boost::ptr_vector<SNP> &snp_list,
 		   	else{
 		   		std::string rs_id = token[index[4]];
 		   		std::string chr = "";
-		   		if(index[0] >= 0) chr = token[index[0]];
+		   		if(index[0] >= 0){
+		   			chr = token[index[0]];
+		   			if(unique_chr.find(chr)!=unique_chr.end()){
+		   				chr_list.push_back(chr);
+		   				unique_chr[chr]= true;
+		   			}
+		   		}
 		   		std::string ref_allele = "";
 		   		if(index[1] >= 0) ref_allele = token[index[1]];
 		   		std::string alt_allele = "";

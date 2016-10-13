@@ -61,7 +61,8 @@ class PRSice
         void update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
         			boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index);
         void get_snp(boost::ptr_vector<SNP> &snp_list, std::map<std::string, size_t> &snp_index,
-        			const std::string &c_input, bool beta, const Commander &c_commander, Region &region);
+        			const std::string &c_input, bool beta, const Commander &c_commander, Region &region,
+					std::vector<std::string> &chr_list);
         Eigen::MatrixXd gen_cov_matrix(const std::string &c_target, const std::string &c_cov_file,
         			const std::vector<std::string> &c_cov_header, std::map<std::string, size_t> &fam_index);
         Eigen::VectorXd gen_pheno_vec(const std::string &c_target, const std::string c_pheno,
