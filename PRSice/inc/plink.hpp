@@ -30,7 +30,7 @@
 class PLINK{
 public:
     //Initialize plink object with the bim bed fam file prefix
-    PLINK(std::string prefix, size_t thread=1):m_prefix(prefix),m_thread(thread){
+    PLINK(std::string prefix, std::vector<std::string> &chr_list, size_t thread=1):m_prefix(prefix),m_thread(thread){
         m_init = false;
         m_bit_size = sizeof(long_type)*CHAR_BIT;
         m_num_bytes=0;
@@ -38,6 +38,8 @@ public:
         m_num_snp=0;
         m_required_bit = 0;
         m_snp_iter=0;
+        // Need to process the input files names
+
     };
     ~PLINK();
     void initialize(bool bim_read=false);

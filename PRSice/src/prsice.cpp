@@ -53,7 +53,7 @@ void PRSice::process(const std::string &c_input, bool beta, const Commander &c_c
     	bool has_ld = !c_commander.ld_prefix().empty();
     	std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
     	// create the plink class for clumping
-    	PLINK clump(ld_file, c_commander.get_thread());
+    	PLINK clump(ld_file, chr_list, c_commander.get_thread());
     	if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
     	else fprintf(stderr,"\nStart performing clumping\n");
     	// now initialize the plink class. This should also update inclusion such
