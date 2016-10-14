@@ -15,7 +15,6 @@ class Commander
         Commander();
         bool initialize(int argc, char *argv[]);
         virtual ~Commander();
-        std::vector<std::string> get_base() const{ return m_base; };
         bool index() const{ return m_index;};
         bool gen_bed() const{ return m_gen_bed; };
         std::string chr() const{ return m_chr; };
@@ -28,11 +27,13 @@ class Commander
         std::string p() const{ return m_p_value; };
         std::string ld_prefix() const{ return m_ld_prefix;};
         std::string get_gtf() const { return m_gtf; };
+        std::vector<std::string> get_base() const{ return m_base; };
         std::vector<std::string> get_bed() const { return m_bed_list; };
         std::vector<std::string> get_cov_header() const { return m_covariates; };
         std::vector<std::string> get_pheno_col() const { return m_pheno_col; };
         std::string get_pheno() const { return m_pheno_file; };
         std::string get_target() const{ return m_target; };
+        std::string get_base(size_t i) const{ return m_base.at(i); };
         std::string get_msigdb() const{ return m_msigdb; };
         std::string get_out() const { return m_out; };
         std::string get_cov_file() const { return m_covariate_file; };

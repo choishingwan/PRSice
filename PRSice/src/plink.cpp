@@ -520,23 +520,23 @@ void PLINK::lerase(int num){
     if(num==m_genotype.size()){
     		m_genotype.clear();
     		m_missing.clear();
-    		m_chr_list.clear();
-    		m_cm_list.clear();
+//    		m_chr_list.clear();
+//    		m_cm_list.clear();
     		m_bp_list.clear();
-    		m_ref_allele.clear();
-    		m_alt_allele.clear();
+//    		m_ref_allele.clear();
+//    		m_alt_allele.clear();
     		m_maf.clear();
     		m_num_missing.clear();
     }
     else{
     		if(m_bim_read){
 
-    			m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
+//    			m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
     			//m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
-    			m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
+//    			m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
     			m_bp_list.erase(m_bp_list.begin(), m_bp_list.begin()+num);
-    			m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
-    			m_alt_allele.erase(m_alt_allele.begin(), m_alt_allele.begin()+num);
+//    			m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
+//    			m_alt_allele.erase(m_alt_allele.begin(), m_alt_allele.begin()+num);
     			m_maf.erase(m_maf.begin(), m_maf.begin()+num);
     			m_num_missing.erase(m_num_missing.begin(), m_num_missing.begin()+num);
     		}
@@ -562,22 +562,22 @@ int PLINK::read_snp(int num_snp, bool ld){
     	    		if(!line.empty()){
     	    			std::vector<std::string> token = misc::split(line);
     	    			if(token.size() >= 6){
-    	    				m_chr_list.push_back(token[0]);
+//    	    				m_chr_list.push_back(token[0]);
     	    				//m_snp_list.push_back(token[1]);
     	    				int temp = misc::convert<int>(token[2]);
     	    				if(temp < 0){
     	    					std::string error_message = "Negative CM: "+line;
     	    					throw std::runtime_error(error_message);
     	    				}
-    	    				m_cm_list.push_back(temp);
+//    	    				m_cm_list.push_back(temp);
     	    				temp = misc::convert<int>(token[3]);
     	    				if(temp < 0){
     	    					std::string error_message = "Negative BP: "+line;
     	    					throw std::runtime_error(error_message);
     	    				}
     	    				m_bp_list.push_back(temp);
-    	    				m_ref_allele.push_back(token[4]);
-    	    				m_alt_allele.push_back(token[5]);
+//    	    				m_ref_allele.push_back(token[4]);
+//    	    				m_alt_allele.push_back(token[5]);
     	    			}
     	    			else throw std::runtime_error("Malformed bim file");
     	    		}else throw std::runtime_error("Malformed bim file");
@@ -773,7 +773,7 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
 }
 
 
-void PLINK::get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
+void PLINK::get_score(const std::vector<p_partition> &quick_ref,
 		const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 		size_t start_index, size_t end_bound)
 {// m_bim should be closed or at the front

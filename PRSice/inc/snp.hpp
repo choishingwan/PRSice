@@ -23,7 +23,7 @@ class SNP
         typedef uint32_t long_type;
 #endif
         SNP();
-        SNP(const std::string rs_id, const std::string chr, const size_t loc,
+        SNP(const std::string rs_id, const std::string chr, const int loc,
         		const std::string ref_allele, const std::string alt_allele,
 				const double statistic, const double se, const double p_value,
 				long_type *flag, const size_t size_of_flag);
@@ -32,13 +32,13 @@ class SNP
         std::string get_alt_allele() const { return m_alt_allele; }
         std::string get_rs_id() const { return m_rs_id; }
         std::string get_chr() const { return m_chr; }
-        size_t get_loc() const { return m_loc; }
+        int get_loc() const { return m_loc; }
         double get_stat() const { return m_stat; }
         double get_p_value() const { return m_p_value; }
         static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input);
         static std::vector<int> get_index(const Commander &c_commander,
         		const std::string &c_input);
-        bool check_loc(const std::string &chr, const size_t loc,
+        bool check_loc(const std::string &chr, const int loc,
         		const std::string &ref_allele, const std::string &alt_allele){
         		if(chr.compare(m_chr)!=0) return false;
           	if(loc!= m_loc) return false;
@@ -134,7 +134,7 @@ class SNP
         std::string m_alt_allele;
         std::string m_rs_id;
         std::string m_chr;
-        size_t m_loc;
+        int m_loc;
         size_t m_size_of_flag;
         size_t m_bit_size;
         double m_stat;

@@ -26,11 +26,12 @@
 #include <assert.h>
 #include "misc.hpp"
 #include "snp.hpp"
+#include "storage.hpp"
 
 class PLINK{
 public:
     //Initialize plink object with the bim bed fam file prefix
-    PLINK(std::string prefix, std::vector<std::string> &chr_list, size_t thread=1):m_prefix(prefix),m_thread(thread){
+    PLINK(std::string prefix, size_t thread=1):m_prefix(prefix),m_thread(thread){
         m_init = false;
         m_bit_size = sizeof(long_type)*CHAR_BIT;
         m_num_bytes=0;
@@ -38,8 +39,6 @@ public:
         m_num_snp=0;
         m_required_bit = 0;
         m_snp_iter=0;
-        // Need to process the input files names
-
     };
     ~PLINK();
     void initialize(bool bim_read=false);
@@ -57,7 +56,7 @@ public:
     		const std::map<std::string, size_t> &c_snp_index, double p_threshold,
 			double r2_threshold, size_t kb_threshold, double proxy);
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
-    void get_score(const std::vector<std::tuple<std::string, size_t, int, size_t> > &quick_ref,
+    void get_score(const std::vector<p_partition> &quick_ref,
     			const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 				size_t start_index, size_t end_bound);
 private:
@@ -85,12 +84,12 @@ private:
     size_t m_thread;
     bool m_bim_read=false;
     bool m_bim_score_open=false; // might have better way, use this for now
-    std::deque<std::string> m_chr_list;
+//    std::deque<std::string> m_chr_list;
     std::deque<std::string> m_snp_id;
-    std::deque<size_t> m_cm_list;
+//    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
-    std::deque<std::string> m_ref_allele;
-    std::deque<std::string> m_alt_allele;
+//    std::deque<std::string> m_ref_allele;
+//    std::deque<std::string> m_alt_allele;
     std::deque<double> m_maf;
     std::deque<long_type*> m_genotype;
     std::deque<long_type*> m_missing;

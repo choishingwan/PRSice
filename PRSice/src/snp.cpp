@@ -1,7 +1,7 @@
 #include "snp.hpp"
 
 
-SNP::SNP(const std::string rs_id, const std::string chr, const size_t loc,
+SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
 		const std::string ref_allele, const std::string alt_allele,
 		const double statistic, const double se, const double p_value, long_type* flag,
 		const size_t size_of_flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele),
@@ -30,7 +30,7 @@ std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input){
 }
 
 SNP::SNP(){
-	m_loc=0;
+	m_loc=-1; // default is -1 to indicate that it is not provided
 	m_stat=0.0;
 	m_standard_error=0.0;
 	m_p_value=0.0;
