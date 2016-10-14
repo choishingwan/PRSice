@@ -31,18 +31,18 @@
 class PLINK{
 public:
     //Initialize plink object with the bim bed fam file prefix
-    PLINK(std::string prefix, size_t thread=1):m_prefix(prefix),m_thread(thread){
+    PLINK(std::string prefix, std::vector<std::string> chr_list, size_t thread=1):m_prefix(prefix),m_chr_list(chr_list),m_thread(thread){
         m_init = false;
         m_bit_size = sizeof(long_type)*CHAR_BIT;
         m_num_bytes=0;
         m_num_sample=0;
-        m_num_snp=0;
         m_required_bit = 0;
         m_snp_iter=0;
+        m_name_index=0;
     };
     ~PLINK();
-    void initialize(bool bim_read=false);
-    void initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index, bool bim_read=false);
+    void initialize();
+    void initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
     size_t get_num_snp() const{return m_num_snp; };
@@ -59,6 +59,13 @@ public:
     void get_score(const std::vector<p_partition> &quick_ref,
     			const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 				size_t start_index, size_t end_bound);
+    void close(){
+    		if(m_bed.is_open()) m_bed.close();
+    		if(m_bim.is_open()) m_bim.close();
+    		m_init=false;
+    		delete [] m_genotype;
+    		delete [] m_missing;
+    }
 private:
     static std::mutex clump_mtx;
     double get_r2(const size_t i, const size_t j, bool adjust=false);
@@ -76,18 +83,20 @@ private:
     std::ifstream m_bed;
     std::ifstream m_bim;
     size_t m_num_sample;
-    size_t m_num_snp;
     size_t m_num_bytes;
     size_t m_snp_iter;
     size_t m_bit_size;
     size_t m_required_bit;
     size_t m_thread;
-    bool m_bim_read=false;
+    size_t m_name_index;
     bool m_bim_score_open=false; // might have better way, use this for now
 //    std::deque<std::string> m_chr_list;
+    std::vector<std::string> m_names;
+    std::vector<std::string> m_chr_list;
     std::deque<std::string> m_snp_id;
 //    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
+    std::vector<size_t> m_num_snp;
 //    std::deque<std::string> m_ref_allele;
 //    std::deque<std::string> m_alt_allele;
     std::deque<double> m_maf;

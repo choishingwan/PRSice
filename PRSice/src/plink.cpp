@@ -12,6 +12,193 @@
 #define BITCT 64
 #define BITCT2 (BITCT / 2)
 
+void PLINK::initialize(){
+    std::string fam_name = m_prefix+".fam";
+    // Start processing the fam file
+    if(m_prefix.find("#")!=std::string::npos){
+    		if(m_chr_list.size()==0){
+    			std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
+    			throw std::runtime_error(error_message);
+    		}
+    		for(auto chr: m_chr_list){
+    			std::string name = m_prefix;
+    			misc::replace_substring(name, "#", chr);;
+    			m_names.push_back(name);
+    		}
+    		misc::replace_substring(fam_name, "#", m_chr_list.front());
+    }
+    else{
+    		m_names.push_back(m_prefix);
+    }
+//  This should be ok for sample size as that will always be the same for all file
+    std::ifstream fam;
+    fam.open(fam_name.c_str());
+    if(!fam.is_open()){
+        std::string error_message = "Cannot open fam file: "+fam_name;
+        throw std::runtime_error(error_message);
+    }
+    std::string line;
+    while(std::getline(fam, line))
+        if(!misc::trimmed(line).empty()) m_num_sample++;
+    fam.close();
+
+    // Check whether if the bed file is correct
+    for(auto bed:m_names){
+    		std::string bed_name = bed+".bed";
+    		bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    		if(!snp_major){
+    			std::string error_message = "Currently does not support sample major format\n";
+    			error_message.append(bed+" is in sample major format");
+    			throw std::runtime_error(error_message);
+    		}
+    		m_bed.close();
+    }
+	std::string bed_name = m_names.front()+".bed";
+	bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    // Check whether if the bim file is correct
+    for(auto bim: m_names){
+    		std::string bim_name = bim+".bim";
+    		m_num_snp.push_back(0);
+    		m_bim.open(bim_name.c_str());
+		if(!m_bim.is_open()){
+			std::string error_message = "Cannot open bim file: "+bim;
+			throw std::runtime_error(error_message);
+		}
+		while(std::getline(m_bim, line)){
+			if(!misc::trimmed(line).empty()) m_num_snp.back()++;
+			m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+		}
+		m_bim.close();
+    }
+	std::string bim_name = m_names.front()+".bim";
+    m_bim.open(bim_name.c_str());
+    m_name_index=0;
+    m_num_bytes=ceil((double)m_num_sample/4.0);
+    m_required_bit = m_num_sample*2;
+    m_snp_iter=0;
+    m_init = true;
+}
+
+void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index){
+    std::string fam_name = m_prefix+".fam";
+    if(m_prefix.find("#")!=std::string::npos){
+    		if(m_chr_list.size()==0){
+    			std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
+    			throw std::runtime_error(error_message);
+    		}
+    		for(auto chr: m_chr_list){
+    			std::string name = m_prefix;
+    			misc::replace_substring(name, "#", chr);
+    			m_names.push_back(name);
+    		}
+    		misc::replace_substring(fam_name, "#", m_chr_list.front());
+    }
+    else m_names.push_back(m_prefix);
+    // Start processing the fam file
+
+    std::ifstream fam;
+    fam.open(fam_name.c_str());
+    if(!fam.is_open()){
+        std::string error_message = "Cannot open fam file: "+fam_name;
+        throw std::runtime_error(error_message);
+    }
+    std::string line;
+    while(std::getline(fam, line)) if(!misc::trimmed(line).empty()) m_num_sample++;
+    fam.close();
+
+    // Check whether if the bed file is correct
+    for(auto bed:m_names){
+    		std::string bed_name = bed+".bed";
+    		bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    		if(!snp_major){
+    			std::string error_message = "Currently does not support sample major format\n";
+    			error_message.append(bed+" is in sample major format");
+    			throw std::runtime_error(error_message);
+    		}
+    		m_bed.close();
+    }
+	std::string bed_name = m_names.front()+".bed";
+    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    // Check whether if the bim file is correct
+    size_t num_ambig=0, not_found=0;
+    for(auto bim:m_names){
+    		std::string bim_name = bim+".bim";
+    		m_bim.open(bim_name.c_str());
+    		if(!m_bim.is_open()){
+    			std::string error_message = "Cannot open bim file: "+bim_name;
+    			throw std::runtime_error(error_message);
+    		}
+    		m_num_snp.push_back(0);
+    		while(std::getline(m_bim, line)){
+    			if(!misc::trimmed(line).empty()){
+    				std::vector<std::string> token = misc::split(line);
+    				if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+    				m_num_snp.back()++;
+    				std::string chr = token[0];
+    				std::string rsid = token[1];
+    				m_snp_id.push_back(rsid);
+    				int loc = -1;
+    				int temp = 0;
+    				try{
+    					temp =misc::convert<int>(token[3]);
+    					if(temp < 0){
+    						std::string error_message = "Negative coordinate of SNP in "+bim;
+    						throw std::runtime_error(error_message);
+    					}
+    					loc = temp;
+    				}
+    				catch(std::runtime_error &error){
+    					std::string error_message = "Non-numeric coordinate of SNP in "+bim;
+    					throw std::runtime_error(error_message);
+    				}
+    				std::string ref_allele = token[4];
+    				std::string alt_allele = token[5];
+    				if(c_snp_index.find(rsid)!=c_snp_index.end()){
+        			// will do some soft checking, will issue warning if there are any problem
+        			// first check if ambiguous
+    					if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
+    							(ref_allele.compare("a")==0 && alt_allele.compare("t")==0) ||
+								(ref_allele.compare("T")==0 && alt_allele.compare("A")==0) ||
+								(ref_allele.compare("t")==0 && alt_allele.compare("a")==0) ||
+								(ref_allele.compare("G")==0 && alt_allele.compare("C")==0) ||
+								(ref_allele.compare("g")==0 && alt_allele.compare("c")==0) ||
+								(ref_allele.compare("C")==0 && alt_allele.compare("G")==0) ||
+								(ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
+    					{
+    						num_ambig++;
+    					}
+    					else{
+    						// not ambiguous, now do soft checking
+    						size_t index = c_snp_index.at(rsid);
+        					bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
+
+        					if(!same && (snp_list[index].get_loc()!=-1 || loc!=-1)){
+        						fprintf(stderr, "WARNING: %s differ between LD and base file\n", rsid.c_str());
+        						fprintf(stderr, "         It is advised that you check the files are \n");
+        						fprintf(stderr, "         From the same genome build\n");
+        					}
+        					inclusion[rsid] = c_snp_index.at(rsid);
+    					}
+    				}
+    				else not_found++;
+    			}
+    		}
+    		m_bim.close();
+    }
+	if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
+	if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
+ 	fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
+
+	std::string bim_name = m_names.front()+".bim";
+ 	m_bim.open(bim_name.c_str());
+ 	m_name_index=0;
+    m_num_bytes=ceil((double)m_num_sample/4.0);
+    m_required_bit = m_num_sample*2;
+    m_snp_iter=0;
+    m_init = true;
+}
+
+
 std::mutex PLINK::clump_mtx;
 
 void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
@@ -180,116 +367,6 @@ PLINK::~PLINK(){
 
 #ifdef __LP64__
 //This is obtained from plink
-void PLINK::ld_dot_prod_batch(__m128i* vec1, __m128i* vec2, __m128i* mask1, __m128i* mask2, int32_t* return_vals, uint32_t iters) {
-	const __m128i m1 = {FIVEMASK,FIVEMASK};
-	const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-	const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-	__m128i loader1;
-	__m128i loader2;
-	__m128i sum1;
-	__m128i sum2;
-	__m128i sum11;
-	__m128i sum22;
-	__m128i sum12;
-	__m128i tmp_sum1;
-	__m128i tmp_sum2;
-	__m128i tmp_sum12;
-	__univec acc;
-	__univec acc1;
-	__univec acc2;
-	__univec acc11;
-	__univec acc22;
-	acc.vi = _mm_setzero_si128();
-	acc1.vi = _mm_setzero_si128();
-	acc2.vi = _mm_setzero_si128();
-	acc11.vi = _mm_setzero_si128();
-	acc22.vi = _mm_setzero_si128();
-	do {
-		loader1 = *vec1++;
-	    	loader2 = *vec2++;
-	    	sum1 = *mask2++;
-	    	sum2 = *mask1++;
-	    	sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-	    	sum1 = _mm_and_si128(sum1, loader1);
-	    	sum2 = _mm_and_si128(sum2, loader2);
-	    	sum11 = _mm_and_si128(sum1, m1);
-	    	sum22 = _mm_and_si128(sum2, m1);
-	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12), _mm_xor_si128(loader1, loader2));
-	    	sum12 = _mm_or_si128(sum12, loader1);
-
-	    	sum1 = _mm_add_epi64(_mm_and_si128(sum1, m2), _mm_and_si128(_mm_srli_epi64(sum1, 2), m2));
-	    	sum2 = _mm_add_epi64(_mm_and_si128(sum2, m2), _mm_and_si128(_mm_srli_epi64(sum2, 2), m2));
-	    	sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2), _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
-
-	    	loader1 = *vec1++;
-	    	loader2 = *vec2++;
-	    	tmp_sum1 = *mask2++;
-	    	tmp_sum2 = *mask1++;
-
-	    	tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-	    	tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
-	    	tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
-	    	sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
-	    	sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
-	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12), _mm_xor_si128(loader1, loader2));
-	    	tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-
-	    	sum1 = _mm_add_epi64(sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
-	    	sum2 = _mm_add_epi64(sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
-	    	sum12 = _mm_add_epi64(sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-
-	    	loader1 = *vec1++;
-	    	loader2 = *vec2++;
-
-	   	tmp_sum1 = *mask2++;
-	    	tmp_sum2 = *mask1++;
-
-	    	tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-	    	tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
-	    	tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
-	    	sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
-	    	sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
-	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12), _mm_xor_si128(loader1, loader2));
-	    	tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-//	    	if(bug) std::cerr << "Loader1: " << std::hex << loader1[0] << "\t" << loader1[1] << std::endl;
-//	    	if(bug) std::cerr << "Loader2: " << std::hex << loader2[0] << "\t" << loader2[1] << std::endl;
-//	    	if(bug) std::cerr << "Sum1b: " << std::hex << sum12[0] << "\t" << sum12[1] << std::endl;
-//	    	if(bug) std::cerr << "Sum1t: " << std::hex << tmp_sum12[0] << "\t" << tmp_sum12[1] << std::endl;
-	    	sum1 = _mm_add_epi64(sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
-	    	sum2 = _mm_add_epi64(sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
-	    	sum11 = _mm_add_epi64(_mm_and_si128(sum11, m2), _mm_and_si128(_mm_srli_epi64(sum11, 2), m2));
-	    	sum22 = _mm_add_epi64(_mm_and_si128(sum22, m2), _mm_and_si128(_mm_srli_epi64(sum22, 2), m2));
-	    	sum12 = _mm_add_epi64(sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-//	    	if(bug) std::cerr << "Before: " << std::hex << acc.vi[0] << "\t" << acc.vi[1] << std::endl;
-//	    	if(bug) std::cerr << "Sum12: " << std::hex << sum12[0] << "\t" << sum12[1] << std::endl;
-	    	acc1.vi = _mm_add_epi64(acc1.vi, _mm_add_epi64(_mm_and_si128(sum1, m4), _mm_and_si128(_mm_srli_epi64(sum1, 4), m4)));
-	    	acc2.vi = _mm_add_epi64(acc2.vi, _mm_add_epi64(_mm_and_si128(sum2, m4), _mm_and_si128(_mm_srli_epi64(sum2, 4), m4)));
-	    	acc11.vi = _mm_add_epi64(acc11.vi, _mm_add_epi64(_mm_and_si128(sum11, m4), _mm_and_si128(_mm_srli_epi64(sum11, 4), m4)));
-	    	acc22.vi = _mm_add_epi64(acc22.vi, _mm_add_epi64(_mm_and_si128(sum22, m4), _mm_and_si128(_mm_srli_epi64(sum22, 4), m4)));
-	    	acc.vi = _mm_add_epi64(acc.vi, _mm_add_epi64(_mm_and_si128(sum12, m4), _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
-//	    	if(bug) std::cerr << "After: " << std::hex << acc.vi[0] << "\t" << acc.vi[1] << std::dec << std::endl;
-
-	}while (--iters);
-	// moved down because we've almost certainly run out of xmm registers
-	const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-	#if MULTIPLEX_LD > 960
-		acc1.vi = _mm_add_epi64(_mm_and_si128(acc1.vi, m8), _mm_and_si128(_mm_srli_epi64(acc1.vi, 8), m8));
-		acc2.vi = _mm_add_epi64(_mm_and_si128(acc2.vi, m8), _mm_and_si128(_mm_srli_epi64(acc2.vi, 8), m8));
-		acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8), _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
-	#else
-		acc1.vi = _mm_and_si128(_mm_add_epi64(acc1.vi, _mm_srli_epi64(acc1.vi, 8)), m8);
-		acc2.vi = _mm_and_si128(_mm_add_epi64(acc2.vi, _mm_srli_epi64(acc2.vi, 8)), m8);
-		acc.vi = _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
-	#endif
-	acc11.vi = _mm_and_si128(_mm_add_epi64(acc11.vi, _mm_srli_epi64(acc11.vi, 8)), m8);
-	acc22.vi = _mm_and_si128(_mm_add_epi64(acc22.vi, _mm_srli_epi64(acc22.vi, 8)), m8);
-	return_vals[0] -= ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
-	return_vals[1] += ((acc1.u8[0] + acc1.u8[1]) * 0x1000100010001LLU) >> 48;
-	return_vals[2] += ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
-	return_vals[3] += ((acc11.u8[0] + acc11.u8[1]) * 0x1000100010001LLU) >> 48;
-	return_vals[4] += ((acc22.u8[0] + acc22.u8[1]) * 0x1000100010001LLU) >> 48;
-}
-
 double PLINK::get_r2(const size_t i, const size_t j, bool adjust){
 	uintptr_t founder_ct_mld = (m_num_sample + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
 	uint32_t founder_ct_mld_m1 = ((uint32_t)founder_ct_mld) - 1;
@@ -529,17 +606,8 @@ void PLINK::lerase(int num){
     		m_num_missing.clear();
     }
     else{
-    		if(m_bim_read){
-
-//    			m_chr_list.erase(m_chr_list.begin(), m_chr_list.begin()+num);
-    			//m_snp_list.erase(m_snp_list.begin(), m_snp_list.begin()+num);
-//    			m_cm_list.erase(m_cm_list.begin(), m_cm_list.begin()+num);
-    			m_bp_list.erase(m_bp_list.begin(), m_bp_list.begin()+num);
-//    			m_ref_allele.erase(m_ref_allele.begin(), m_ref_allele.begin()+num);
-//    			m_alt_allele.erase(m_alt_allele.begin(), m_alt_allele.begin()+num);
-    			m_maf.erase(m_maf.begin(), m_maf.begin()+num);
-    			m_num_missing.erase(m_num_missing.begin(), m_num_missing.begin()+num);
-    		}
+    		m_maf.erase(m_maf.begin(), m_maf.begin()+num);
+    		m_num_missing.erase(m_num_missing.begin(), m_num_missing.begin()+num);
     		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
     		m_missing.erase(m_missing.begin(), m_missing.begin()+num);
     }
@@ -555,242 +623,101 @@ int PLINK::read_snp(int num_snp, bool ld){
     std::string line;
     //First get the information of the SNPs
     size_t cur_iter = 0;
-    for(;m_snp_iter < m_num_snp & cur_iter<num_snp; ++m_snp_iter){
-    		if(m_bim_read){
-    			std::getline(m_bim, line);
-    			misc::trim(line);
-    	    		if(!line.empty()){
-    	    			std::vector<std::string> token = misc::split(line);
-    	    			if(token.size() >= 6){
-//    	    				m_chr_list.push_back(token[0]);
-    	    				//m_snp_list.push_back(token[1]);
-    	    				int temp = misc::convert<int>(token[2]);
-    	    				if(temp < 0){
-    	    					std::string error_message = "Negative CM: "+line;
-    	    					throw std::runtime_error(error_message);
-    	    				}
-//    	    				m_cm_list.push_back(temp);
-    	    				temp = misc::convert<int>(token[3]);
-    	    				if(temp < 0){
-    	    					std::string error_message = "Negative BP: "+line;
-    	    					throw std::runtime_error(error_message);
-    	    				}
-    	    				m_bp_list.push_back(temp);
-//    	    				m_ref_allele.push_back(token[4]);
-//    	    				m_alt_allele.push_back(token[5]);
-    	    			}
-    	    			else throw std::runtime_error("Malformed bim file");
-    	    		}else throw std::runtime_error("Malformed bim file");
+    while(cur_iter < num_snp){
+    		for(; m_snp_iter < m_num_snp[m_name_index] && cur_iter<num_snp; ++m_snp_iter){
+    			cur_iter++;
+    			char genotype_list[m_num_bytes];
+    			m_bed.read(genotype_list, m_num_bytes);
+    			size_t i_genotype = 0;
+    			size_t total_allele = 0;
+    			size_t num_missing = 0;
+    			uintptr_t founder_ct_mld = (m_num_sample + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
+        		uint32_t founder_ct_mld_m1 = ((uint32_t)founder_ct_mld) - 1;
+        		uint32_t founder_ct_mld_rem = (MULTIPLEX_LD / 192) - (founder_ct_mld * MULTIPLEX_LD - m_num_sample) / 192;
+            size_t range = (founder_ct_mld_m1*(MULTIPLEX_LD / 192)*6+founder_ct_mld_rem*6)*2/(sizeof(long_type)/4);
+            long_type *genotype = new long_type[range];
+            long_type *missing = new long_type[range];
+            std::memset(genotype, 0x0,(range)*sizeof(long_type));
+            std::memset(missing, 0x0,(range)*sizeof(long_type));
+            for(size_t byte_runner= 0; byte_runner < m_num_bytes;){
+				#ifdef __LP64__
+                long_type current_genotypes = 0ULL;
+    				#else
+                long_type current_genotypes=0UL;
+    				#endif
+                for(int byte_set = 0; byte_set < sizeof(long_type)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set){
+                		long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> (((sizeof(long_type)-1)-byte_set)*CHAR_BIT);
+                		current_genotypes |= current_byte;
+                		byte_runner++;
+                }
+                long_type five_masked_geno = current_genotypes & FIVEMASK;
+                long_type inter = (five_masked_geno & (current_genotypes>>1)) ^ five_masked_geno;
+                long_type current_missing = inter | (inter << 1);
+                genotype[i_genotype] = current_genotypes;
+                if(!ld) genotype[i_genotype] = current_genotypes;
+                else {
+                		genotype[i_genotype] =(current_genotypes &(five_masked_geno <<1));
+                		genotype[i_genotype] |= (five_masked_geno^((current_genotypes &(FIVEMASK*2))>>1));
+                		missing[i_genotype] = ~current_missing;
+                		total_allele += __builtin_popcountll(current_genotypes & (~current_missing));
+                		num_missing +=__builtin_popcountll(inter); // because inter only contain one bit for each missing
+                		i_genotype++;
+                }
+            }
+            m_genotype.push_back(genotype);
+            m_missing.push_back(missing);
+            double maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
+            maf = (maf > 0.5)? 1.0-maf: maf;
+            m_maf.push_back(maf);
+            m_num_missing.push_back(num_missing);
     		}
-        cur_iter++;
-        char genotype_list[m_num_bytes];
-        m_bed.read(genotype_list, m_num_bytes);
-        size_t i_genotype = 0;
-        size_t total_allele = 0;
-        size_t num_missing = 0;
-
-        uintptr_t founder_ct_mld = (m_num_sample + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
-    		uint32_t founder_ct_mld_m1 = ((uint32_t)founder_ct_mld) - 1;
-    		uint32_t founder_ct_mld_rem = (MULTIPLEX_LD / 192) - (founder_ct_mld * MULTIPLEX_LD - m_num_sample) / 192;
-        size_t range = (founder_ct_mld_m1*(MULTIPLEX_LD / 192)*6+founder_ct_mld_rem*6)*2/(sizeof(long_type)/4);
-        long_type *genotype = new long_type[range];
-        long_type *missing = new long_type[range];
-        std::memset(genotype, 0x0,(range)*sizeof(long_type));
-        std::memset(missing, 0x0,(range)*sizeof(long_type));
-        for(size_t byte_runner= 0; byte_runner < m_num_bytes;){
-#ifdef __LP64__
-            long_type current_genotypes = 0ULL;
-#else
-            long_type current_genotypes=0UL;
-#endif
-            for(int byte_set = 0; byte_set < sizeof(long_type)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set){
-            		//long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> CHAR_BIT*byte_set;
-            		long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> (((sizeof(long_type)-1)-byte_set)*CHAR_BIT);
-            		current_genotypes |= current_byte;
-                byte_runner++;
-            }
-            long_type five_masked_geno = current_genotypes & FIVEMASK;
-            long_type inter = (five_masked_geno & (current_genotypes>>1)) ^ five_masked_geno;
-            long_type current_missing = inter | (inter << 1);
-            genotype[i_genotype] = current_genotypes;
-            if(!ld) genotype[i_genotype] = current_genotypes;
-            else {
-            		genotype[i_genotype] =(current_genotypes &(five_masked_geno <<1));
-            		genotype[i_genotype] |= (five_masked_geno^((current_genotypes &(FIVEMASK*2))>>1));
-            }
-            missing[i_genotype] = ~current_missing;
-            total_allele += __builtin_popcountll(current_genotypes & (~current_missing));
-            num_missing +=__builtin_popcountll(inter); // because inter only contain one bit for each missing
-            i_genotype++;
-        }
-        m_genotype.push_back(genotype);
-        m_missing.push_back(missing);
-        double maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
-        maf = (maf > 0.5)? 1.0-maf: maf;
-        m_maf.push_back(maf);
-        m_num_missing.push_back(num_missing);
-
+    		if(m_snp_iter >= m_num_snp[m_name_index]){
+    			m_snp_iter = 0;
+    			m_name_index++;
+    			m_bed.close();
+    			m_bim.close();
+    			std::string bed_name = m_names[m_name_index]+".bed";
+    			std::string bim_name = m_names[m_name_index]+".bim";
+    			openPlinkBinaryFile(bed_name, m_bed);
+    			m_bim.open(bim_name.c_str());
+    		}
     }
+
     return m_num_snp-m_snp_iter;
 }
 
-
-void PLINK::initialize(bool bim_read){
-    std::string fam_name = m_prefix+".fam";
-    std::string bim_name = m_prefix+".bim";
-    std::string bed_name = m_prefix+".bed";
-    // Start processing the fam file
-    std::ifstream fam;
-    fam.open(fam_name.c_str());
-    if(!fam.is_open()){
-        std::string error_message = "Cannot open fam file: "+fam_name;
-        throw std::runtime_error(error_message);
-    }
-    std::string line;
-    while(std::getline(fam, line))
-        if(!misc::trimmed(line).empty()) m_num_sample++;
-    fam.close();
-    // Check whether if the bed file is correct
-    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
-    if(!snp_major) throw std::runtime_error("Currently does not support sample major format");
-    // Check whether if the bim file is correct
-    m_bim.open(bim_name.c_str());
-    if(!m_bim.is_open()){
-        std::string error_message = "Cannot open bim file: "+bim_name;
-        throw std::runtime_error(error_message);
-    }
-    
-    while(std::getline(m_bim, line)){
-        if(!misc::trimmed(line).empty()) m_num_snp++;
-        m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
-    }
-    if(bim_read){
-    		m_bim.clear();
-    		m_bim.seekg(0);
-    }
-    else m_bim.close();
-    m_num_bytes=ceil((double)m_num_sample/4.0);
-    m_required_bit = m_num_sample*2;
-    m_snp_iter=0;
-    m_bim_read = bim_read;
-    m_init = true;
-}
-
+// Because of the per chromosome method, we will no longer be using the bool and the whole structure of this class
+// will change
 //This initialization will also perform the filtering and flipping
-void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index, bool bim_read){
-    std::string fam_name = m_prefix+".fam";
-    std::string bim_name = m_prefix+".bim";
-    std::string bed_name = m_prefix+".bed";
-    // Start processing the fam file
-    std::ifstream fam;
-    fam.open(fam_name.c_str());
-    if(!fam.is_open()){
-        std::string error_message = "Cannot open fam file: "+fam_name;
-        throw std::runtime_error(error_message);
-    }
-    std::string line;
-    while(std::getline(fam, line)) if(!misc::trimmed(line).empty()) m_num_sample++;
-    fam.close();
-    // Check whether if the bed file is correct
-    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
-    if(!snp_major) throw std::runtime_error("Currently does not support sample major format");
-    // Check whether if the bim file is correct
-    m_bim.open(bim_name.c_str());
-    if(!m_bim.is_open()){
-        std::string error_message = "Cannot open bim file: "+bim_name;
-        throw std::runtime_error(error_message);
-    }
-    size_t num_ambig=0, not_found=0;
-    while(std::getline(m_bim, line)){
-        if(!misc::trimmed(line).empty()){
-        		std::vector<std::string> token = misc::split(line);
-        		if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-        		m_num_snp++;
-        		std::string chr = token[0];
-        		std::string rsid = token[1];
-        	    m_snp_id.push_back(rsid);
-        		size_t loc = 0;
-        		int temp = 0;
-        		try{
-        			temp =misc::convert<int>(token[3]);
-        			if(temp < 0){
-        				std::string error_message = "Negative coordinate of SNP in "+bim_name;
-        				throw std::runtime_error(error_message);
-        			}
-        			loc = temp;
-        		}
-        		catch(std::runtime_error &error){
-        			std::string error_message = "Non-numeric coordinate of SNP in "+bim_name;
-        			throw std::runtime_error(error_message);
-        		}
-        		std::string ref_allele = token[4];
-        		std::string alt_allele = token[5];
-        		if(c_snp_index.find(rsid)!=c_snp_index.end()){
-        			// will do some soft checking, will issue warning if there are any problem
-        			// first check if ambiguous
-        			if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
-        					(ref_allele.compare("a")==0 && alt_allele.compare("t")==0) ||
-							(ref_allele.compare("T")==0 && alt_allele.compare("A")==0) ||
-							(ref_allele.compare("t")==0 && alt_allele.compare("a")==0) ||
-							(ref_allele.compare("G")==0 && alt_allele.compare("C")==0) ||
-							(ref_allele.compare("g")==0 && alt_allele.compare("c")==0) ||
-							(ref_allele.compare("C")==0 && alt_allele.compare("G")==0) ||
-							(ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
-        			{
-        				num_ambig++;
-        			}
-        			else{
-        				// not ambiguous, now do soft checking
-        				size_t index = c_snp_index.at(rsid);
-        				bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
-        				if(!same){
-        					fprintf(stderr, "WARNING: %s differ between LD and base file\n", rsid.c_str());
-        					fprintf(stderr, "         It is advised that you check the files are \n");
-        					fprintf(stderr, "         From the same genome build\n");
-        				}
-        				inclusion[rsid] = c_snp_index.at(rsid);
-        			}
-        		}
-        		else {
-        			not_found++;
-        		}
-        }
-    }
-
-	if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
-	if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
- 	fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
- 	if(bim_read){
- 		m_bim.clear();
-    		m_bim.seekg(0);
- 	}
- 	else m_bim.close();
-    m_num_bytes=ceil((double)m_num_sample/4.0);
-    m_required_bit = m_num_sample*2;
-    m_snp_iter=0;
-    m_bim_read=bim_read;
-    m_init = true;
-}
-
-
-void PLINK::get_score(const std::vector<p_partition> &quick_ref,
+void PLINK::get_score(const std::vector<p_partition> &partition,
 		const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
 		size_t start_index, size_t end_bound)
-{// m_bim should be closed or at the front
-	// quick_ref was constructed the same way as we read the bim file.
-	// so we can actually ignore the bim
-	//if(prs_score.size()==0) prs_score = std::vector<std::pair<std::string, double> >(m_num_sample);
+{
+
 	size_t prev =0;
+//	This allow for consistence at least in this specific use case
+	if(m_bed.is_open()) m_bed.close();
+	if(m_bim.is_open()) m_bim.close();
+	std::string prev_name = "";
 	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp){
-		size_t cur_index = std::get<1>(quick_ref[i_snp]);
+		if(prev_name.compare(std::get<FILENAME>(partition[i_snp]))!=0){
+			m_bed.close();
+			prev_name= std::get<FILENAME>(partition[i_snp]);
+			std::string bed_name = prev_name+".bed";
+			openPlinkBinaryFile(bed_name, m_bed);
+			prev=0;
+		}
+		size_t cur_index = std::get<LINE>(partition[i_snp]);
 		if((cur_index-prev)!=0){
 			// Skip snps
-			m_bed.seekg((std::get<1>(quick_ref[i_snp])-prev)*m_num_bytes, m_bed.cur);
-			prev=std::get<1>(quick_ref[i_snp]);
+			m_bed.seekg((std::get<LINE>(partition[i_snp])-prev)*m_num_bytes, m_bed.cur);
+			prev=std::get<LINE>(partition[i_snp]);
 		}
+		// in a way, we should be able to optimize this part as it is not really needed for us to
+		// process the whole thing twice
 		read_snp(1, false);
 		prev++;
-		int snp_index = std::get<3>(quick_ref[i_snp]);
+		int snp_index = std::get<INDEX>(partition[i_snp]);
 		if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
 		for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample){
 			int index =(i_sample*2)/m_bit_size;
@@ -854,6 +781,116 @@ bool PLINK::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
         }
     }
     return bfile_SNP_major;
+}
+
+void PLINK::ld_dot_prod_batch(__m128i* vec1, __m128i* vec2, __m128i* mask1, __m128i* mask2, int32_t* return_vals, uint32_t iters) {
+	const __m128i m1 = {FIVEMASK,FIVEMASK};
+	const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+	const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+	__m128i loader1;
+	__m128i loader2;
+	__m128i sum1;
+	__m128i sum2;
+	__m128i sum11;
+	__m128i sum22;
+	__m128i sum12;
+	__m128i tmp_sum1;
+	__m128i tmp_sum2;
+	__m128i tmp_sum12;
+	__univec acc;
+	__univec acc1;
+	__univec acc2;
+	__univec acc11;
+	__univec acc22;
+	acc.vi = _mm_setzero_si128();
+	acc1.vi = _mm_setzero_si128();
+	acc2.vi = _mm_setzero_si128();
+	acc11.vi = _mm_setzero_si128();
+	acc22.vi = _mm_setzero_si128();
+	do {
+		loader1 = *vec1++;
+	    	loader2 = *vec2++;
+	    	sum1 = *mask2++;
+	    	sum2 = *mask1++;
+	    	sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+	    	sum1 = _mm_and_si128(sum1, loader1);
+	    	sum2 = _mm_and_si128(sum2, loader2);
+	    	sum11 = _mm_and_si128(sum1, m1);
+	    	sum22 = _mm_and_si128(sum2, m1);
+	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12), _mm_xor_si128(loader1, loader2));
+	    	sum12 = _mm_or_si128(sum12, loader1);
+
+	    	sum1 = _mm_add_epi64(_mm_and_si128(sum1, m2), _mm_and_si128(_mm_srli_epi64(sum1, 2), m2));
+	    	sum2 = _mm_add_epi64(_mm_and_si128(sum2, m2), _mm_and_si128(_mm_srli_epi64(sum2, 2), m2));
+	    	sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2), _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
+
+	    	loader1 = *vec1++;
+	    	loader2 = *vec2++;
+	    	tmp_sum1 = *mask2++;
+	    	tmp_sum2 = *mask1++;
+
+	    	tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+	    	tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
+	    	tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
+	    	sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
+	    	sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
+	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12), _mm_xor_si128(loader1, loader2));
+	    	tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+
+	    	sum1 = _mm_add_epi64(sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
+	    	sum2 = _mm_add_epi64(sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
+	    	sum12 = _mm_add_epi64(sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+
+	    	loader1 = *vec1++;
+	    	loader2 = *vec2++;
+
+	   	tmp_sum1 = *mask2++;
+	    	tmp_sum2 = *mask1++;
+
+	    	tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+	    	tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
+	    	tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
+	    	sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
+	    	sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
+	    	loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12), _mm_xor_si128(loader1, loader2));
+	    	tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+//	    	if(bug) std::cerr << "Loader1: " << std::hex << loader1[0] << "\t" << loader1[1] << std::endl;
+//	    	if(bug) std::cerr << "Loader2: " << std::hex << loader2[0] << "\t" << loader2[1] << std::endl;
+//	    	if(bug) std::cerr << "Sum1b: " << std::hex << sum12[0] << "\t" << sum12[1] << std::endl;
+//	    	if(bug) std::cerr << "Sum1t: " << std::hex << tmp_sum12[0] << "\t" << tmp_sum12[1] << std::endl;
+	    	sum1 = _mm_add_epi64(sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
+	    	sum2 = _mm_add_epi64(sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
+	    	sum11 = _mm_add_epi64(_mm_and_si128(sum11, m2), _mm_and_si128(_mm_srli_epi64(sum11, 2), m2));
+	    	sum22 = _mm_add_epi64(_mm_and_si128(sum22, m2), _mm_and_si128(_mm_srli_epi64(sum22, 2), m2));
+	    	sum12 = _mm_add_epi64(sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2), _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+//	    	if(bug) std::cerr << "Before: " << std::hex << acc.vi[0] << "\t" << acc.vi[1] << std::endl;
+//	    	if(bug) std::cerr << "Sum12: " << std::hex << sum12[0] << "\t" << sum12[1] << std::endl;
+	    	acc1.vi = _mm_add_epi64(acc1.vi, _mm_add_epi64(_mm_and_si128(sum1, m4), _mm_and_si128(_mm_srli_epi64(sum1, 4), m4)));
+	    	acc2.vi = _mm_add_epi64(acc2.vi, _mm_add_epi64(_mm_and_si128(sum2, m4), _mm_and_si128(_mm_srli_epi64(sum2, 4), m4)));
+	    	acc11.vi = _mm_add_epi64(acc11.vi, _mm_add_epi64(_mm_and_si128(sum11, m4), _mm_and_si128(_mm_srli_epi64(sum11, 4), m4)));
+	    	acc22.vi = _mm_add_epi64(acc22.vi, _mm_add_epi64(_mm_and_si128(sum22, m4), _mm_and_si128(_mm_srli_epi64(sum22, 4), m4)));
+	    	acc.vi = _mm_add_epi64(acc.vi, _mm_add_epi64(_mm_and_si128(sum12, m4), _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
+//	    	if(bug) std::cerr << "After: " << std::hex << acc.vi[0] << "\t" << acc.vi[1] << std::dec << std::endl;
+
+	}while (--iters);
+	// moved down because we've almost certainly run out of xmm registers
+	const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+	#if MULTIPLEX_LD > 960
+		acc1.vi = _mm_add_epi64(_mm_and_si128(acc1.vi, m8), _mm_and_si128(_mm_srli_epi64(acc1.vi, 8), m8));
+		acc2.vi = _mm_add_epi64(_mm_and_si128(acc2.vi, m8), _mm_and_si128(_mm_srli_epi64(acc2.vi, 8), m8));
+		acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8), _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
+	#else
+		acc1.vi = _mm_and_si128(_mm_add_epi64(acc1.vi, _mm_srli_epi64(acc1.vi, 8)), m8);
+		acc2.vi = _mm_and_si128(_mm_add_epi64(acc2.vi, _mm_srli_epi64(acc2.vi, 8)), m8);
+		acc.vi = _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
+	#endif
+	acc11.vi = _mm_and_si128(_mm_add_epi64(acc11.vi, _mm_srli_epi64(acc11.vi, 8)), m8);
+	acc22.vi = _mm_and_si128(_mm_add_epi64(acc22.vi, _mm_srli_epi64(acc22.vi, 8)), m8);
+	return_vals[0] -= ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
+	return_vals[1] += ((acc1.u8[0] + acc1.u8[1]) * 0x1000100010001LLU) >> 48;
+	return_vals[2] += ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
+	return_vals[3] += ((acc11.u8[0] + acc11.u8[1]) * 0x1000100010001LLU) >> 48;
+	return_vals[4] += ((acc22.u8[0] + acc22.u8[1]) * 0x1000100010001LLU) >> 48;
 }
 
 uint32_t PLINK::ld_missing_ct_intersect(long_type* lptr1, long_type* lptr2, uintptr_t word12_ct, uintptr_t word12_rem, uintptr_t lshift_last) {

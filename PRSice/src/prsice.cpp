@@ -55,7 +55,7 @@ void PRSice::process(const size_t &cur_base, const Commander &c_commander, Regio
     	bool has_ld = !c_commander.ld_prefix().empty();
     	std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
     	// create the plink class for clumping
-    	PLINK clump(ld_file, c_commander.get_thread());
+    	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
     	if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
     	else fprintf(stderr,"\nStart performing clumping\n");
     	// now initialize the plink class. This should also update inclusion such
@@ -89,6 +89,8 @@ void PRSice::process(const size_t &cur_base, const Commander &c_commander, Regio
     	// handle different regions
     	clump.start_clumping(inclusion, m_snp_list, m_snp_index, c_commander.get_clump_p(),
     			c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
+    	// this should close everything and render the clump unusable
+    	clump.close();
     	// Now begin the calculation of the PRS
     	run_prs(c_commander, inclusion, region);
 }
@@ -789,7 +791,7 @@ bool PRSice::get_prs_score(const std::string &target, size_t &cur_index)
 		}
 	}
 	if(!ended) end_index = m_partition.size();
-	PLINK prs(target);
+	PLINK prs(target, m_chr_list);
 	prs.initialize();
 	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
