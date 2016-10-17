@@ -7,6 +7,33 @@
 
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
+	// From http://stackoverflow.com/a/12927952/1441789
+	template< typename e >
+	struct enumeration_traits;
+
+	struct enumeration_trait_indexing {
+		static constexpr bool does_index = true;
+	};
+
+	template< typename e >
+	constexpr
+	typename std::enable_if< enumeration_traits< e >::does_index,
+    		typename std::underlying_type< e >::type >::type
+	operator + ( e val )
+    		{ return static_cast< typename std::underlying_type< e >::type >( val ); }
+
+	template< typename e >
+	typename std::enable_if< enumeration_traits< e >::does_index, e & >::type
+	operator ++ ( e &val )
+    		{ return val = static_cast< e >( + val + 1 ); }
+	// END
+
+	enum class SNP_Index {CHR, REF, ALT, STAT, RS, BP, SE, P, MAX };
+	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
+	enum class BIM{CHR, RS, CM, BP, A1, A2};
+	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
+	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
+	template<> struct enumeration_traits< BIM > : enumeration_trait_indexing {};
 
 	//List of const for use with the GET
 	const size_t IID=0;

@@ -73,14 +73,14 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
     std::vector<int> result(9,-1);
     if(c_commander.index()){
         //Index was provided, check if the index is correct, then return the vector
-        result[0] = index_check(c_commander.chr());
-        result[1] = index_check(c_commander.ref());
-        result[2] = index_check(c_commander.alt());
-        result[3] = index_check(c_commander.statistic());
-        result[4] = index_check(c_commander.snp());
-        result[5] = index_check(c_commander.bp());
-        result[6] = index_check(c_commander.se());
-        result[7] = index_check(c_commander.p());
+        result[+SNP_Index::CHR] = index_check(c_commander.chr());
+        result[+SNP_Index::REF] = index_check(c_commander.ref());
+        result[+SNP_Index::ALT] = index_check(c_commander.alt());
+        result[+SNP_Index::STAT] = index_check(c_commander.statistic());
+        result[+SNP_Index::RS] = index_check(c_commander.snp());
+        result[+SNP_Index::BP] = index_check(c_commander.bp());
+        result[+SNP_Index::SE] = index_check(c_commander.se());
+        result[+SNP_Index::P] = index_check(c_commander.p());
     }
     else{
         std::ifstream in;
@@ -97,14 +97,14 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
             throw std::runtime_error(error_message);
         }
         std::vector<std::string> header = misc::split(header_line);
-        result[0] = index_check(c_commander.chr(), header, "WARNING");
-        result[1] = index_check(c_commander.ref(), header, "ERROR");
-        result[2] = index_check(c_commander.alt(), header, "WARNING");
-        result[3] = index_check(c_commander.statistic(), header, "ERROR");
-        result[4] = index_check(c_commander.snp(), header, "ERROR");
-        result[5] = index_check(c_commander.bp(), header, "WARNING");
-        result[6] = index_check(c_commander.se(), header, "WARNING");
-        result[7] = index_check(c_commander.p(), header, "ERROR");
+        result[+SNP_Index::CHR] = index_check(c_commander.chr(), header, "WARNING");
+        result[+SNP_Index::REF] = index_check(c_commander.ref(), header, "ERROR");
+        result[+SNP_Index::ALT] = index_check(c_commander.alt(), header, "WARNING");
+        result[+SNP_Index::STAT] = index_check(c_commander.statistic(), header, "ERROR");
+        result[+SNP_Index::RS] = index_check(c_commander.snp(), header, "ERROR");
+        result[+SNP_Index::BP] = index_check(c_commander.bp(), header, "WARNING");
+        result[+SNP_Index::SE] = index_check(c_commander.se(), header, "WARNING");
+        result[+SNP_Index::P] = index_check(c_commander.p(), header, "ERROR");
         sort( header.begin(), header.end() );
         size_t before = header.size();
         header.erase( unique( header.begin(), header.end() ), header.end() );
@@ -117,7 +117,7 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
     }
     int max_index = -1;
     for(size_t i = 0; i < 9; ++i) max_index = (result[i]> max_index)? result[i]:max_index; //get the maximum index
-    result[8] = max_index;
+    result[+SNP_Index::MAX] = max_index;
     if(c_commander.index()){
     		std::ifstream in;
     		in.open(c_input.c_str());
@@ -128,17 +128,68 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
     			throw std::runtime_error("ERROR: Number of column in file less than the specified index!");
     		}
     }
-
-    fprintf(stderr,"Column Headers\n");
-    fprintf(stderr,"==============================\n");
-    if(!c_commander.chr().empty() && result[0] != -1) fprintf(stderr,"Chr            : %s\n", c_commander.chr().c_str());
-    fprintf(stderr,"SNP            : %s\n", c_commander.snp().c_str());
-    if(!c_commander.bp().empty() && result[5] != -1) fprintf(stderr,"BP             : %s\n", c_commander.bp().c_str());
-    fprintf(stderr,"Ref Allele     : %s\n", c_commander.ref().c_str());
-    if(!c_commander.alt().empty() && result[2] != -1) fprintf(stderr,"Alt Allele     : %s\n", c_commander.alt().c_str());
-    if(!c_commander.statistic().empty() && result[3] != -1) fprintf(stderr,"Statistic      : %s\n", c_commander.statistic().c_str());
-    if(!c_commander.se().empty() && result[6] != -1) fprintf(stderr,"Standard Error : %s\n", c_commander.se().c_str());
-    fprintf(stderr,"P-value        : %s\n", c_commander.p().c_str());
-
     return result;
 }
+
+
+void SNP::clump(boost::ptr_vector<SNP> &snp_list){
+	for(size_t i = 0; i < m_clump_target.size(); ++i){
+		if(!snp_list[m_clump_target[i]].clumped()){
+			int sum_total = 0;
+			for(size_t j = 0; j < m_size_of_flag; ++j){
+					// if there is any overlap this should set the snp_list to the new flag
+					snp_list[m_clump_target[i]].m_flags[j]= snp_list[m_clump_target[i]].m_flags[j] ^
+											(m_flags[j] & snp_list[m_clump_target[i]].m_flags[j]);
+					sum_total+=snp_list[m_clump_target[i]].m_flags[j];
+			}
+			if(sum_total==0)  snp_list[m_clump_target[i]].set_clumped();
+		}
+	}
+}
+
+void SNP::clump_all(boost::ptr_vector<SNP> &snp_list, double r2_threshold){
+	for(size_t i = 0; i < m_clump_target.size(); ++i){
+		if(!snp_list[m_clump_target[i]].clumped()){
+			snp_list[m_clump_target[i]].set_clumped();
+			if(m_clump_r2[i] >= r2_threshold){
+				for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
+			}
+		}
+	}
+}
+
+
+bool SNP::check_loc(const std::string &chr, const int loc, const std::string &ref_allele,
+		const std::string &alt_allele)
+{
+	if(chr.compare(m_chr)!=0) return false;
+	if(loc!= m_loc) return false;
+	//Check if allele is the same
+	if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)!=0 &&
+			ref_allele.compare(complement(m_ref_allele))!=0 &&
+			alt_allele.compare(complement(m_ref_allele))!=0 ) return false; // not possible even after flipping
+	if(m_alt_allele.empty())
+	{
+		// can only use the reference allele to do things, more dangerous
+		if((ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)==0) ||
+				(ref_allele.compare(complement(m_ref_allele))!=0 && alt_allele.compare(complement(m_ref_allele))==0)){
+			m_alt_allele = ref_allele;
+			m_ref_allele = alt_allele;
+			m_flipped=true;
+		}
+	}
+	else{
+		// can use both
+		if((ref_allele.compare(m_alt_allele)==0 && alt_allele.compare(m_ref_allele)==0) ||
+				(ref_allele.compare(complement(m_alt_allele))==0 &&
+						alt_allele.compare(complement(m_ref_allele))==0)	)
+		{
+			// need to flip
+			m_alt_allele = ref_allele;
+			m_ref_allele = alt_allele;
+			m_flipped=true;
+		}
+	}
+	return true;
+}
+

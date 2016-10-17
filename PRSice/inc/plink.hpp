@@ -22,6 +22,7 @@
 #include <limits.h>
 #include <vector>
 #include <emmintrin.h>
+#include <unordered_map>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <assert.h>
 #include "misc.hpp"
@@ -31,7 +32,7 @@
 class PLINK{
 public:
     //Initialize plink object with the bim bed fam file prefix
-    PLINK(std::string prefix, std::vector<std::string> chr_list, size_t thread=1):m_prefix(prefix),m_chr_list(chr_list),m_thread(thread){
+    PLINK(std::string prefix, std::vector<std::string> &chr_list, size_t thread=1):m_prefix(prefix),m_chr_list(chr_list),m_thread(thread){
         m_init = false;
         m_bit_size = sizeof(long_type)*CHAR_BIT;
         m_num_bytes=0;
@@ -42,18 +43,18 @@ public:
     };
     ~PLINK();
     void initialize();
-    void initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index);
+    void initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
-    size_t get_num_snp() const{return m_num_snp; };
+//    size_t get_num_snp() const{return m_num_snp; };
     size_t get_num_sample() const{return m_num_sample;};
     int get_distance() const{
     		return m_bp_list.back()-m_bp_list.front();
     };
     int get_first_bp() const{ return m_bp_list.front(); };
     int get_last_bp() const{return m_bp_list.back();};
-    void start_clumping(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-    		const std::map<std::string, size_t> &c_snp_index, double p_threshold,
+    void start_clumping(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
+    		const std::unordered_map<std::string, size_t> &c_snp_index, double p_threshold,
 			double r2_threshold, size_t kb_threshold, double proxy);
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
     void get_score(const std::vector<p_partition> &quick_ref,
@@ -63,8 +64,10 @@ public:
     		if(m_bed.is_open()) m_bed.close();
     		if(m_bim.is_open()) m_bim.close();
     		m_init=false;
-    		delete [] m_genotype;
-    		delete [] m_missing;
+    		for(size_t i = 0; i < m_genotype.size(); ++i){
+    			delete [] m_genotype[i];
+    			delete [] m_missing[i];
+    		}
     }
 private:
     static std::mutex clump_mtx;
@@ -93,7 +96,7 @@ private:
 //    std::deque<std::string> m_chr_list;
     std::vector<std::string> m_names;
     std::vector<std::string> m_chr_list;
-    std::deque<std::string> m_snp_id;
+    std::vector<std::string> m_snp_id;
 //    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
     std::vector<size_t> m_num_snp;

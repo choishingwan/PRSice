@@ -24,9 +24,6 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
 			process_msigdb(msigdb, gtf_info, id_to_name);
 		}
 	}
-	size_t size = m_region_name.size();
-	if(size==1) fprintf(stderr, "%zu region is included\n", size);
-	else if(size>1) fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
 	m_index = std::vector<size_t>(m_region_name.size());
 }
 

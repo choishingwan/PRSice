@@ -12,6 +12,8 @@
 #define BITCT 64
 #define BITCT2 (BITCT / 2)
 
+std::mutex PLINK::clump_mtx;
+
 void PLINK::initialize(){
     std::string fam_name = m_prefix+".fam";
     // Start processing the fam file
@@ -79,7 +81,7 @@ void PLINK::initialize(){
     m_init = true;
 }
 
-void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index){
+void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index){
     std::string fam_name = m_prefix+".fam";
     if(m_prefix.find("#")!=std::string::npos){
     		if(m_chr_list.size()==0){
@@ -121,6 +123,8 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     size_t num_ambig=0, not_found=0;
+    size_t num_line=0;
+    std::unordered_map<std::string, bool> dup_check;
     for(auto bim:m_names){
     		std::string bim_name = bim+".bim";
     		m_bim.open(bim_name.c_str());
@@ -130,17 +134,18 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     		}
     		m_num_snp.push_back(0);
     		while(std::getline(m_bim, line)){
+    			num_line++;
     			if(!misc::trimmed(line).empty()){
     				std::vector<std::string> token = misc::split(line);
     				if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
     				m_num_snp.back()++;
-    				std::string chr = token[0];
-    				std::string rsid = token[1];
+    				std::string chr = token[+BIM::CHR];
+    				std::string rsid = token[+BIM::RS];
     				m_snp_id.push_back(rsid);
     				int loc = -1;
     				int temp = 0;
     				try{
-    					temp =misc::convert<int>(token[3]);
+    					temp =misc::convert<int>(token[+BIM::BP]);
     					if(temp < 0){
     						std::string error_message = "Negative coordinate of SNP in "+bim;
     						throw std::runtime_error(error_message);
@@ -151,11 +156,11 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
     					std::string error_message = "Non-numeric coordinate of SNP in "+bim;
     					throw std::runtime_error(error_message);
     				}
-    				std::string ref_allele = token[4];
-    				std::string alt_allele = token[5];
-    				if(c_snp_index.find(rsid)!=c_snp_index.end()){
-        			// will do some soft checking, will issue warning if there are any problem
-        			// first check if ambiguous
+    				std::string ref_allele = token[+BIM::A1];
+    				std::string alt_allele = token[+BIM::A2];
+    				if(c_snp_index.find(rsid)!=c_snp_index.end() && inclusion.find(rsid)!=inclusion.end()
+    						&& (dup_check.find(rsid)==dup_check.end() || !dup_check[rsid]) )
+    				{
     					if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
     							(ref_allele.compare("a")==0 && alt_allele.compare("t")==0) ||
 								(ref_allele.compare("T")==0 && alt_allele.compare("A")==0) ||
@@ -166,25 +171,37 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
 								(ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
     					{
     						num_ambig++;
+    	                    if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
+        					dup_check[rsid] = false;
     					}
     					else{
     						// not ambiguous, now do soft checking
     						size_t index = c_snp_index.at(rsid);
         					bool same = snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
-
+        					if(snp_list[index].get_loc() == -1 && loc!=-1){
+        						snp_list[index].set_loc(loc);
+        					}
         					if(!same && (snp_list[index].get_loc()!=-1 || loc!=-1)){
         						fprintf(stderr, "WARNING: %s differ between LD and base file\n", rsid.c_str());
         						fprintf(stderr, "         It is advised that you check the files are \n");
         						fprintf(stderr, "         From the same genome build\n");
         					}
-        					inclusion[rsid] = c_snp_index.at(rsid);
+        					//inclusion[rsid] = index; // Doesn't need to add the index as it should already be there
+        					if(dup_check.find(rsid)!=dup_check.end() && !dup_check[rsid]) num_ambig--;
+        					dup_check[rsid] = true;
     					}
     				}
-    				else not_found++;
+    				else{
+    					not_found++;
+    					if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
+    				}
     			}
     		}
     		m_bim.close();
     }
+    // don't calculate the number of duplication as that might be time consuming
+    int num_dup = num_line-dup_check.size();
+    if(num_dup!=0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_dup);
 	if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
 	if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
  	fprintf(stderr, "Number of SNPs included   : %zu\n", inclusion.size());
@@ -199,12 +216,10 @@ void PLINK::initialize(std::map<std::string, size_t> &inclusion, boost::ptr_vect
 }
 
 
-std::mutex PLINK::clump_mtx;
-
-void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
-		boost::ptr_vector<SNP> &snp_list, const std::map<std::string, size_t> &c_snp_index,
+void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
+		boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index,
 		double p_threshold, double r2_threshold, size_t kb_threshold, double proxy_threshold){
-	// Go through all SNPs
+
 	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
 	std::string prev_chr = ""; // Indication of current chromosome
 	size_t require_bp=0;
@@ -332,7 +347,7 @@ void PLINK::start_clumping(std::map<std::string, size_t> &inclusion,
 	// Now get the list of SNPs that we want to retain (in index)
 	// When proxy, the index SNP will represent all clumped SNP's region
 	// When no proxy, clumping only occurs for each individual region
-	std::map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
+	std::unordered_map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
 	inclusion.clear();
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
 	bool proxy = proxy_threshold > 0.0;
@@ -676,14 +691,22 @@ int PLINK::read_snp(int num_snp, bool ld){
     			m_name_index++;
     			m_bed.close();
     			m_bim.close();
-    			std::string bed_name = m_names[m_name_index]+".bed";
-    			std::string bim_name = m_names[m_name_index]+".bim";
-    			openPlinkBinaryFile(bed_name, m_bed);
-    			m_bim.open(bim_name.c_str());
+    			if(m_name_index< m_names.size()){
+    				std::string bed_name = m_names[m_name_index]+".bed";
+    				std::string bim_name = m_names[m_name_index]+".bim";
+    				openPlinkBinaryFile(bed_name, m_bed);
+    				m_bim.open(bim_name.c_str());
+    			}
+    			else if(cur_iter < num_snp){
+    				throw std::runtime_error("All SNP read");
+    			}
+    			else{
+    				return 0; // everything is read
+    			}
     		}
     }
 
-    return m_num_snp-m_snp_iter;
+    return m_num_snp[m_name_index]-m_snp_iter;
 }
 
 // Because of the per chromosome method, we will no longer be using the bool and the whole structure of this class

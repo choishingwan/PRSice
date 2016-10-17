@@ -2,104 +2,12 @@
 
 std::mutex PRSice::score_mutex;
 
-// Should be alright without problem
-void PRSice::run(const Commander &c_commander, Region &region)
-{
-	// First, wrap the whole process with a for loop
-	// to loop through all base phenotype
-    std::vector<std::string> base = c_commander.get_base();
-    int num_base = base.size();
-    if(num_base == 0) throw std::runtime_error("There is no base case to run");
-    if(num_base < 0) throw std::runtime_error("Negative number of base");
-    else{
-    		if(num_base > 1) fprintf(stderr, "Multiple base phenotype detected. You might want to run separate instance of PRSice to speed up the process\n");
-        for(size_t i = 0; i < num_base; ++i){
-    			fprintf(stderr,"\nStart processing: %s\n", base[i].c_str());
-    			fprintf(stderr,"==============================\n");
-//        	Need to handle paths in the name
-    			m_current_base=misc::remove_extension<std::string>(misc::base_name<std::string>(base[i]));
-            process(i, c_commander, region);
-            fprintf(stderr, "\n");
-        }
-    }
-}
 
 // Seems to be working alright (hope I know how to write test cases...)
-void PRSice::process(const size_t &cur_base, const Commander &c_commander, Region &region)
+void PRSice::get_snp(const Commander &c_commander, Region &region, const double &threshold)
 {
-	// we need to reset the region flag for region inclusion information
-	region.reset();
-	// snp_list should contain all SNP information from the base file
-	m_snp_list.clear();
-	// and snp_index is used for quickly finding the index of specific SNP in snp_list
-    m_snp_index.clear();
-    // This chr_list is used for multiple chromosome input
-    m_chr_list.clear();
-    // Now obtaining the SNP information from the base file
-    std::string input = c_commander.get_base(cur_base);
-    bool beta = c_commander.get_base_binary(cur_base);
-    get_snp(input, beta, c_commander, region);
-    // Then we will perform the rest of the process for each individual
-    // target file.
-    std::string target = c_commander.get_target();
-	fprintf(stderr,"\nClumping Parameters: \n");
-    fprintf(stderr,"==============================\n");
-    fprintf(stderr,"P-Threshold  : %f\n", c_commander.get_clump_p());
-    fprintf(stderr,"R2-Threshold : %f\n", c_commander.get_clump_r2());
-    fprintf(stderr,"Window Size  : %zu\n", c_commander.get_clump_kb());
-    	fprintf(stderr,"\nStart processing: %s\n", target.c_str());
-    	fprintf(stderr,"==============================\n");
-    	// The inclusion map should contain the SNPs that are supposed to be used for the
-    	// calculation of PRS
-    	std::map<std::string, size_t> inclusion;
-    	bool has_ld = !c_commander.ld_prefix().empty();
-    	std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
-    	// create the plink class for clumping
-    	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
-    	if(has_ld) fprintf(stderr,"\nIn LD Reference %s\n", ld_file.c_str());
-    	else fprintf(stderr,"\nStart performing clumping\n");
-    	// now initialize the plink class. This should also update inclusion such
-    	// that it will only include SNPs also found in the plink file
-    	clump.initialize(inclusion, m_snp_list, m_snp_index);
-    	if(has_ld)
-    	{
-    		// because we have independent LD file, we want to make sure
-    		// only SNPs that are also found in the target file are used
-    		// for clumping
-
-    		// This will provide us the final inclusion map, which contains the
-    		// SNPs that are supposed to be used for clumping
-    		size_t num_ambig=0, not_found=0;
-    		std::string target_bim_name = target+".bim";
-    		if(target_bim_name.find("#")!=std::string::npos){
-    			for(auto chr: m_chr_list){
-        			std::string target_chr_bim_name = target_bim_name;
-    				misc::replace_substring(target_chr_bim_name, "#", chr);
-    				update_inclusion(inclusion, target_chr_bim_name, num_ambig, not_found);
-    			}
-    		}
-    		else update_inclusion(inclusion, target_bim_name, num_ambig, not_found);
-
-    	    if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
-    	    if(not_found != 0)	fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
-    	    fprintf(stderr, "Final number of SNPs      : %zu\n", inclusion.size());
-    	}
-    	// This will perform clumping. When completed, inclusion will contain the index SNPs
-    	// However, this should be changed in later version such that we can also
-    	// handle different regions
-    	clump.start_clumping(inclusion, m_snp_list, m_snp_index, c_commander.get_clump_p(),
-    			c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
-    	// this should close everything and render the clump unusable
-    	clump.close();
-    	// Now begin the calculation of the PRS
-    	run_prs(c_commander, inclusion, region);
-}
-
-// Seems alright now
-void PRSice::get_snp(const std::string &c_input, bool beta,
-		const Commander &c_commander, Region &region)
-{
-
+	const std::string input = c_commander.get_base(m_base_index);
+	const bool beta = c_commander.get_base_binary(m_base_index);
 	// just issue the warning. would not terminate
 	if(beta && c_commander.statistic().compare("OR")==0)
 	{
@@ -108,63 +16,73 @@ void PRSice::get_snp(const std::string &c_input, bool beta,
 	// First, we need to obtain the index of different columns from the base files
 	// NOTE: -1 means missing and index is hard coded such that each index will represent
 	//       specific header
-	std::vector<int> index = SNP::get_index(c_commander, c_input);
-	if((c_commander.get_target().find("#")!=std::string::npos && index[0]<0)||
-			(c_commander.ld_prefix().find("#")!=std::string::npos && index[0]<0 ) ){
-		std::string error_message = "To use chromosome separated PLINK input, you must provide the CHR header";
-		error_message.append(" as we use the CHR information form the base file to substitute #");
+	std::vector<int> index = SNP::get_index(c_commander, input);
+	if((c_commander.get_target().find("#")!=std::string::npos && index[+SNP_Index::CHR]<0)||
+			(c_commander.ld_prefix().find("#")!=std::string::npos && index[+SNP_Index::CHR]<0 ) ){
+		std::string error_message = "To use chromosome separated PLINK input, you must provide"
+				" the CHR header as we use the CHR information form the base file to substitute #";
+		throw std::runtime_error(error_message);
+	}
+	else if(region.size() > 1 && (index[+SNP_Index::CHR] <0 || index[+SNP_Index::BP] <0 )){
+		std::string error_message = "To perform PRSet, you must provide the CHR and LOC header such"
+				" that we can determine the set membership";
+		throw std::runtime_error(error_message);
+	}
+	else if(c_commander.prslice() > 0.0 && (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP]<0)){
+		std::string error_message = "To perform PRSlice, you must provide the CHR and LOC header such"
+				" that we can perform the slicing";
 		throw std::runtime_error(error_message);
 	}
 	// Open the file
     std::ifstream snp_file;
-    snp_file.open(c_input.c_str());
+    snp_file.open(input.c_str());
     if(!snp_file.is_open())
     {
-    		std::string error_message = "Cannot open base file: "+c_input;
+    		std::string error_message = "Cannot open base file: "+input;
     		throw std::runtime_error(error_message);
     }
     // Some QC counts
-    size_t num_duplicated = 0;
+    int num_duplicated = 0;
     size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
 	size_t num_indel = 0;
 	size_t num_se_not_convertible=0;
-    int max_index = index.back();
-    std::map<std::string, bool> unique_chr;
-    std::map<std::string, bool> unique_snp;
+	size_t num_exclude = 0;
+    int max_index = index[+SNP_Index::MAX];
     std::string line;
     // remove header if index is not provided
 	if(!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
 	bool not_converted = false;
+	bool exclude=false;
 	std::vector<std::string> token;
 	// Actual reading the file, will do a bunch of QC
 	while(std::getline(snp_file, line)){
 		misc::trim(line);
 		if(!line.empty()){
 			not_converted=false;
+			exclude = false;
 			token = misc::split(line);
 		   	if(token.size() <= max_index) throw std::runtime_error("More index than column in data");
-		   	if(unique_snp.find(token[index[4]])!=unique_snp.end()) num_duplicated++;
 		   	else{
-		   		std::string rs_id = token[index[4]];
+		   		std::string rs_id = token[index[+SNP_Index::RS]];
 		   		std::string chr = "";
 		   		if(index[0] >= 0){
-		   			chr = token[index[0]];
-		   			if(unique_chr.find(chr)==unique_chr.end()){
-		   				m_chr_list.push_back(chr);
-		   				unique_chr[chr]= true;
-		   			}
+		   			chr = token[index[+SNP_Index::CHR]];
 		   		}
-		   		std::string ref_allele = (index[1] >= 0)? token[index[1]]:"";
-		   		std::string alt_allele = (index[2] >= 0)? token[index[2]]:"";
+		   		std::string ref_allele = (index[+SNP_Index::REF] >= 0)? token[index[+SNP_Index::REF]]:"";
+		   		std::string alt_allele = (index[+SNP_Index::ALT] >= 0)? token[index[+SNP_Index::ALT]]:"";
 	    			double pvalue = 0.0;
-	    			if(index[7] >= 0){
+	    			if(index[+SNP_Index::P] >= 0){
 	    				try{
-	    					pvalue = misc::convert<double>(token[index[7]]);
+	    					pvalue = misc::convert<double>(token[index[+SNP_Index::P]]);
 	    					if(pvalue < 0.0 || pvalue > 1.0){
 	    						read_error =true;
 	    						fprintf(stderr, "ERROR: %s's p-value is %f\n", rs_id.c_str(), pvalue);
+	    					}
+	    					else if(pvalue > threshold){
+	    						exclude=true;
+	    						num_exclude++;
 	    					}
 	    				}
 	    				catch(const std::runtime_error &error){
@@ -173,10 +91,10 @@ void PRSice::get_snp(const std::string &c_input, bool beta,
 	    				}
 	    			}
 		   		double stat = 0.0;
-		   		if(index[3] >= 0){
+		   		if(index[+SNP_Index::STAT] >= 0){
 		   			//Check if it is double
 		   			try{
-		   				stat = misc::convert<double>(token[index[3]]);
+		   				stat = misc::convert<double>(token[index[+SNP_Index::STAT]]);
 		   				if(!beta) stat = log(stat);
 		   			}
 		   			catch(const std::runtime_error& error){ //we know only runtime error is throw
@@ -185,18 +103,18 @@ void PRSice::get_snp(const std::string &c_input, bool beta,
 		        		}
 		   		}
 		   		double se = 0.0;
-		    		if(index[6] >= 0){
+		    		if(index[+SNP_Index::SE] >= 0){
 		    			try{
-		    				se = misc::convert<double>(token[index[6]]);
+		    				se = misc::convert<double>(token[index[+SNP_Index::SE]]);
 		    			}
 		    			catch(const std::runtime_error &error){
 		    				num_se_not_convertible++;
 		    			}
 		    		}
 		    		int loc = -1;
-		    		if(index[5]>=0){
+		    		if(index[+SNP_Index::BP]>=0){
 		    			try{
-		    				int temp = misc::convert<int>(token[index[5]].c_str());
+		    				int temp = misc::convert<int>(token[index[+SNP_Index::BP]].c_str());
 		    				if(temp <0){
 		    					read_error=true;
 		    					fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
@@ -216,9 +134,8 @@ void PRSice::get_snp(const std::string &c_input, bool beta,
 		    						alt_allele.compare("D")==0 || alt_allele.size()>1)){
 		    			num_indel++;
 		    		}
-		    		else if(! not_converted){
+		    		else if(! not_converted && ! exclude){
 		    			m_snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.empty_flag(), region.size()));
-		    			unique_snp[rs_id] = true;
 		    		}
 		    		else{
 //		    			We skip any SNPs with non-convertible stat and p-value as we don't know how to
@@ -236,27 +153,86 @@ void PRSice::get_snp(const std::string &c_input, bool beta,
 	// The only exception is when loc and chr are not provided. In
 	// that case, SNPs will be sorted by the rsid and PRSet/PRSlice
 	// cannot be run
-	m_snp_list.sort(SNP::sort_snp);
+
+	m_snp_list.sort();
+	// Interestingly, because we already need the sorting of the SNP list, the map method of
+	// finding duplication is actually slower (can be as much as 2x in mock test)
+	// That is mainly due to the number of SNPs in the map
+	// The larger the map, the slower it gets
+	size_t before = m_snp_list.size();
+	m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()), m_snp_list.end());
+	size_t after = m_snp_list.size();
 	// now write in the index
+	// As we don't expect too many chromosome, map will be rather efficient here
+    std::map<std::string, bool> unique_chr;
 	for(size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp){
 		m_snp_index[m_snp_list[i_snp].get_rs_id()]=i_snp;
+		if(unique_chr.find(m_snp_list[i_snp].get_chr())==unique_chr.end()){
+			unique_chr[m_snp_list[i_snp].get_chr()] = true;
+			// The chr_list should be sorted in the same order as the SNPs' order
+			m_chr_list.push_back(m_snp_list[i_snp].get_chr());
+		}
 		if(index[0] >=0 && index[5]>=0){
 			m_snp_list[i_snp].set_flag(region.check(m_snp_list[i_snp].get_chr(), m_snp_list[i_snp].get_loc()));
 		}
 	}
 
 	// Now output the statistics. Might want to improve the outputs
+	num_duplicated = (int)before-(int)after;
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", m_snp_list.size());
 	if(num_indel!=0) fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
-	if(num_duplicated!=0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
+	if(num_duplicated!=0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
 	if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 	if(num_se_not_convertible!=0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 }
 
+void PRSice::clump(const Commander &c_commander, const Region &region)
+{
+	std::string target = c_commander.get_target();
+	std::unordered_map<std::string, size_t> inclusion;
+	bool has_ld = !c_commander.ld_prefix().empty();
+	std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
+	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
+	// Because we will go through the target anyway, first go through the target for inclusion
+	size_t num_ambig=0, not_found=0, num_duplicate=0;
+	std::string target_bim_name = target+".bim";
+	if(target_bim_name.find("#")!=std::string::npos){
+		for(auto chr: m_chr_list){
+			std::string target_chr_bim_name = target_bim_name;
+			misc::replace_substring(target_chr_bim_name, "#", chr);
+			check_inclusion(inclusion, target_chr_bim_name, num_ambig, not_found, num_duplicate);
+		}
+	}
+	else check_inclusion(inclusion, target_bim_name, num_ambig, not_found, num_duplicate);
+	fprintf(stderr, "\nIn Target File\n");
+	fprintf(stderr,"==============================\n");
+    if(num_ambig != 0)	fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
+    if(num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicate);
+    if(not_found != 0) fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
+    fprintf(stderr, "Number of SNPs in target  : %zu\n", inclusion.size());
+    if(has_ld){
+    		fprintf(stderr, "\nIn LD Reference %s\n", ld_file.c_str());
+    		fprintf(stderr,"==============================\n");
+    		clump.initialize(inclusion, m_snp_list, m_snp_index);
+    }
+    fprintf(stderr,"\nStart performing clumping\n");
+
+	// This will perform clumping. When completed, inclusion will contain the index SNPs
+	// However, this should be changed in later version such that we can also
+	// handle different regions
+	clump.start_clumping(inclusion, m_snp_list, m_snp_index, c_commander.get_clump_p(),
+			c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
+	// Because it is now call from main, clump will run out of scope, which is what we want
+
+}
+
+
+
+// Seems alright now
 // This function should give us a nice platform to know where and when to get each SNPs
-void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
-		size_t &num_ambig, size_t &not_found){
+void PRSice::check_inclusion(std::unordered_map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
+		size_t &num_ambig, size_t &not_found, size_t &num_duplicate){
     std::ifstream target_file;
     target_file.open(c_target_bim_name.c_str());
     if(!target_file.is_open()){
@@ -269,12 +245,12 @@ void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const st
         if(!line.empty()){
             std::vector<std::string> token = misc::split(line);
             if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-            std::string chr = token[0];
-            std::string rsid = token[1];
+            std::string chr = token[+BIM::CHR];
+            std::string rsid = token[+BIM::RS];
             int loc = -1;
             int temp = 0;
             try{
-                temp =misc::convert<int>(token[3]);
+                temp =misc::convert<int>(token[+BIM::BP]);
                 if(temp < 0){
                     std::string error_message = "Negative coordinate of SNP in "+c_target_bim_name;
                     throw std::runtime_error(error_message);
@@ -285,9 +261,10 @@ void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const st
                 std::string error_message = "Non-numeric coordinate of SNP in "+c_target_bim_name;
                 throw std::runtime_error(error_message);
             }
-            std::string ref_allele = token[4];
-            std::string alt_allele = token[5];
-            if(inclusion.find(rsid) != inclusion.end() && m_snp_index.find(rsid)!=m_snp_index.end()){
+            std::string ref_allele = token[+BIM::A1];
+            std::string alt_allele = token[+BIM::A2];
+
+            if(inclusion.find(rsid) == inclusion.end() && m_snp_index.find(rsid)!=m_snp_index.end()){
                 // will do some soft checking, will issue warning if there are any problem
                 // first check if ambiguous
                 if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
@@ -300,9 +277,6 @@ void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const st
                     (ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
                 {
                     num_ambig++;
-                    // This suggest there are mismatching between the LD
-                    // and the target file
-                    if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
                 }
                 else{
                     // not ambiguous, now do soft checking
@@ -315,11 +289,14 @@ void PRSice::update_inclusion(std::map<std::string, size_t> &inclusion, const st
 							fprintf(stderr, "         From the same genome build\n");
 						}
                     }
+                    inclusion[rsid]=index;
                 }
+            }
+            else if(inclusion.find(rsid)!=inclusion.end()){
+            		num_duplicate++;
             }
             else {
             		not_found++;
-              	if(inclusion.find(rsid)!=inclusion.end()) inclusion.erase(rsid);
             }
         }
     }

@@ -11,6 +11,7 @@
 #include <map>
 #include <stdio.h>
 #include <thread>
+#include <unordered_map>
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink.hpp"
@@ -23,15 +24,20 @@ class PRSice
 {
     public:
         PRSice();
+        PRSice(std::string base_name, int index): m_current_base(base_name), m_base_index(index){
+        		if(index < 0){
+        			throw std::out_of_range("Index cannot be less than 0");
+        		}
+        };
         virtual ~PRSice();
-        void run(const Commander &c_commander, Region &region);
-
-
+        void get_snp(const Commander &c_commander, Region &region, const double &threshold);
+        void clump(const Commander &c_commander, const Region &region);
 
     protected:
     private:
 //      This is used for thead safety
         static std::mutex score_mutex;
+        int m_base_index;
         std::string m_current_base;
         std::vector<p_partition> m_partition;
         std::vector<std::vector<PRSice_result> > m_prs_results;
@@ -40,12 +46,12 @@ class PRSice
         std::vector<size_t> m_num_snp_included;
         std::vector<std::vector<prs_score> > m_current_prs;
         boost::ptr_vector<SNP> m_snp_list;
-        std::map<std::string, size_t> m_snp_index;
+        std::unordered_map<std::string, size_t> m_snp_index;
         std::vector<std::string> m_chr_list;
 
-        void process(const size_t &cur_base, const Commander &c_commander, Region &region);
-        void get_snp(const std::string &c_input, bool beta, const Commander &c_commander, Region &region);
-        void update_inclusion(std::map<std::string, size_t> &inclusion, const std::string &c_target_bim_name, size_t &num_ambig, size_t &not_found);
+
+        void check_inclusion(std::unordered_map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
+        		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
         void run_prs(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
                 		const Region &c_region);
         void categorize(const Commander &c_commander, const std::map<std::string, size_t> &inclusion, bool &pre_run);
