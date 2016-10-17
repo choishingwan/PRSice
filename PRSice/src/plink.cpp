@@ -81,7 +81,83 @@ void PLINK::initialize(){
     m_init = true;
 }
 
-void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index){
+void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &inclusion)
+{
+	std::string fam_name = m_prefix+".fam";
+	if(m_prefix.find("#")!=std::string::npos){
+		if(m_chr_list.size()==0){
+			std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
+			throw std::runtime_error(error_message);
+		}
+		for(auto chr: m_chr_list){
+			std::string name = m_prefix;
+			misc::replace_substring(name, "#", chr);
+			m_names.push_back(name);
+		}
+		misc::replace_substring(fam_name, "#", m_chr_list.front());
+	}
+	else m_names.push_back(m_prefix);
+	// Start processing the fam file
+
+	std::ifstream fam;
+	fam.open(fam_name.c_str());
+	if(!fam.is_open()){
+		std::string error_message = "Cannot open fam file: "+fam_name;
+		throw std::runtime_error(error_message);
+	}
+	std::string line;
+	while(std::getline(fam, line)) if(!misc::trimmed(line).empty()) m_num_sample++;
+	fam.close();
+
+	    // Check whether if the bed file is correct
+	for(auto bed:m_names){
+		std::string bed_name = bed+".bed";
+		bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+		if(!snp_major){
+			std::string error_message = "Currently does not support sample major format\n";
+			error_message.append(bed+" is in sample major format");
+			throw std::runtime_error(error_message);
+		}
+		m_bed.close();
+	}
+	std::string bed_name = m_names.front()+".bed";
+	bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+	// Check whether if the bim file is correct
+	size_t cur_num_line=0;
+	for(auto bim:m_names){
+		cur_num_line=0;
+		std::string bim_name = bim+".bim";
+		m_bim.open(bim_name.c_str());
+		if(!m_bim.is_open()){
+			std::string error_message = "Cannot open bim file: "+bim_name;
+			throw std::runtime_error(error_message);
+		}
+		m_num_snp.push_back(0);
+		while(std::getline(m_bim, line)){
+			cur_num_line++;
+			if(!misc::trimmed(line).empty()){
+				std::vector<std::string> token = misc::split(line);
+				if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+				m_num_snp.back()++;
+				std::string rsid = token[+BIM::RS];
+				m_snp_id.push_back(rsid);
+				if(inclusion.find(rsid)!=inclusion.end()){
+					m_clump_ref.push_back(file_info(bim, cur_num_line, inclusion.at(rsid)));
+	    			}
+			}
+	    	}
+	    	m_bim.close();
+	}
+	std::string bim_name = m_names.front()+".bim";
+	m_bim.open(bim_name.c_str());
+	m_name_index=0;
+	m_num_bytes=ceil((double)m_num_sample/4.0);
+	m_required_bit = m_num_sample*2;
+	m_snp_iter=0;
+	m_init = true;
+}
+
+void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index){
     std::string fam_name = m_prefix+".fam";
     if(m_prefix.find("#")!=std::string::npos){
     		if(m_chr_list.size()==0){
@@ -123,9 +199,10 @@ void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost
     bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     size_t num_ambig=0, not_found=0;
-    size_t num_line=0;
+    size_t num_line=0, cur_num_line=0;
     std::unordered_map<std::string, bool> dup_check;
     for(auto bim:m_names){
+    		cur_num_line=0;
     		std::string bim_name = bim+".bim";
     		m_bim.open(bim_name.c_str());
     		if(!m_bim.is_open()){
@@ -135,6 +212,7 @@ void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost
     		m_num_snp.push_back(0);
     		while(std::getline(m_bim, line)){
     			num_line++;
+    			cur_num_line++;
     			if(!misc::trimmed(line).empty()){
     				std::vector<std::string> token = misc::split(line);
     				if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
@@ -188,6 +266,7 @@ void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost
         					}
         					//inclusion[rsid] = index; // Doesn't need to add the index as it should already be there
         					if(dup_check.find(rsid)!=dup_check.end() && !dup_check[rsid]) num_ambig--;
+        					m_clump_ref.push_back(file_info(bim, cur_num_line, inclusion[rsid]));
         					dup_check[rsid] = true;
     					}
     				}
@@ -219,12 +298,26 @@ void PLINK::initialize(std::unordered_map<std::string, size_t> &inclusion, boost
 void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
 		boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index,
 		double p_threshold, double r2_threshold, size_t kb_threshold, double proxy_threshold){
+	// we just need to follow m_clump_ref;
+	// with m_clump_ref, we know exactly which line of each file is required
+	// we also know the index of each SNP w.r.t snp_list
+	// so we no longer need the c_snp_index
+	// Term:core snp = index snp in clumping terminorlogy just not to confused with index of SNP
+	std::deque<size_t> snp_index;
+	std::string prev_chr="";
+	std::string prev_file="";
+	size_t read_snps=0;
+	size_t require_bp =0;
+	size_t genotype_index=0; //index of the core SNP on the genotype arrays
+	bool requiring=false; // Whether if the current interval contain the core snp
+	for(size_t i_info = 0; i_info < m_clump_ref.size(); ++i_info){
+		size_t index = std::get<FILE_INFO::INDEX>(m_clump_ref[i_info]);
+		std::string cur_chr = snp_list[index].get_chr();
+		if(prev_chr.compare(cur_chr)!=0){
 
-	std::deque<size_t> snp_index_check; // Record of index of snp_list (not m_snp_list)
-	std::string prev_chr = ""; // Indication of current chromosome
-	size_t require_bp=0;
-	size_t genotype_index=0; // This is the index of the index SNP on the genotype arrays
-	bool requiring=false; // Whether if the current interval contain the index snp
+		}
+	}
+
 	for(size_t i = 0; i < m_snp_id.size(); ++i){
 		std::string rs = m_snp_id[i];
 		if(inclusion.find(rs)==inclusion.end()) m_bed.seekg(m_num_bytes, m_bed.cur); // Skip SNP

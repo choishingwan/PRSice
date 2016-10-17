@@ -43,7 +43,8 @@ public:
     };
     ~PLINK();
     void initialize();
-    void initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index);
+    void clump_initialize(const std::unordered_map<std::string, size_t> &inclusion);
+    void clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
 //    size_t get_num_snp() const{return m_num_snp; };
@@ -97,6 +98,11 @@ private:
     std::vector<std::string> m_names;
     std::vector<std::string> m_chr_list;
     std::vector<std::string> m_snp_id;
+
+	typedef std::tuple<std::string, int, size_t> file_info;
+	enum class FILE_INFO{FILE, LINE, INDEX};
+	template<> struct enumeration_traits< FILE_INFO > : enumeration_trait_indexing {};
+    std::vector<file_info> m_clump_ref;
 //    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
     std::vector<size_t> m_num_snp;

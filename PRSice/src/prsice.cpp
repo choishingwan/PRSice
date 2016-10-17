@@ -214,8 +214,9 @@ void PRSice::clump(const Commander &c_commander, const Region &region)
     if(has_ld){
     		fprintf(stderr, "\nIn LD Reference %s\n", ld_file.c_str());
     		fprintf(stderr,"==============================\n");
-    		clump.initialize(inclusion, m_snp_list, m_snp_index);
+    		clump.clump_initialize(inclusion, m_snp_list, m_snp_index);
     }
+    else clump.clump_initialize(inclusion);
     fprintf(stderr,"\nStart performing clumping\n");
 
 	// This will perform clumping. When completed, inclusion will contain the index SNPs
