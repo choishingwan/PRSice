@@ -155,33 +155,32 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
 
 void SNP::clump(boost::ptr_vector<SNP> &snp_list)
 {
-    for(size_t i = 0; i < m_clump_target.size(); ++i)
-    {
-        if(!snp_list[m_clump_target[i]].clumped())
-        {
-            int sum_total = 0;
-            for(size_t j = 0; j < m_size_of_flag; ++j)
-            {
-                // if there is any overlap this should set the snp_list to the new flag
-                snp_list[m_clump_target[i]].m_flags[j]= snp_list[m_clump_target[i]].m_flags[j] ^
-                                                        (m_flags[j] & snp_list[m_clump_target[i]].m_flags[j]);
-                sum_total+=snp_list[m_clump_target[i]].m_flags[j];
-            }
-            if(sum_total==0)  snp_list[m_clump_target[i]].set_clumped();
-        }
-    }
+	for(auto target : m_clump_target){
+		if(!snp_list[target].clumped())
+		{
+			int sum_total = 0;
+			for(size_t i_flag = 0; i_flag < m_size_of_flag; ++i_flag)
+			{
+				// if there is any overlap this should set the snp_list to the new flag
+				snp_list[target].m_flags[i_flag]= snp_list[target].m_flags[i_flag] ^
+						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
+				sum_total+=snp_list[target].m_flags[i_flag];
+			}
+			if(sum_total==0)  snp_list[target].set_clumped();
+		}
+	}
 }
 
-void SNP::clump_all(boost::ptr_vector<SNP> &snp_list, double r2_threshold)
+void SNP::proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold)
 {
-    for(size_t i = 0; i < m_clump_target.size(); ++i)
+    for(size_t i_target = 0; i_target < m_clump_target.size(); ++i_target)
     {
-        if(!snp_list[m_clump_target[i]].clumped())
+        if(!snp_list[m_clump_target[i_target]].clumped())
         {
-            snp_list[m_clump_target[i]].set_clumped();
-            if(m_clump_r2[i] >= r2_threshold)
+            snp_list[m_clump_target[i_target]].set_clumped();
+            if(m_clump_r2[i_target] >= r2_threshold)
             {
-                for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i]].m_flags[j];
+                for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i_target]].m_flags[j];
             }
         }
     }

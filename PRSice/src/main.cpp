@@ -79,7 +79,19 @@ int main(int argc, char *argv[])
                 double threshold = (full_model)? 1.0:bound_end;
                 // no point in getting SNPs that we will never use in the model
                 prsice.get_snp(commander, region, threshold);
-                prsice.clump(commander, region);
+                prsice.clump(commander);
+                if(commander.prslice() > 0.0)
+                {
+                		if(region.size() > 1)
+                		{
+                			fprintf(stderr, "\nWARNING: Currently, PRSlice cannot be performed together with PRSet. Please run them separately\n");
+                		}
+                		prsice.run_prslice(commander);
+                }
+                else
+                {
+                		prsice.run_prs(commander, region);
+                }
             }
             catch(const std::out_of_range &error)
             {

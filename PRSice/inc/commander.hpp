@@ -143,7 +143,7 @@ public:
     {
         return *min_element(m_barlevel.begin(), m_barlevel.end());
     };
-    double prslice() const
+    int prslice() const
     {
         return m_prslice_size;
     };
@@ -222,7 +222,7 @@ private:
     double m_lower;
     double m_upper;
     double m_inter;
-    double m_prslice_size;
+    int m_prslice_size;
     size_t m_thread;
 };
 

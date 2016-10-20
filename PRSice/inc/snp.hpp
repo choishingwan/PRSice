@@ -83,7 +83,7 @@ public:
         if(m_flags!=nullptr) delete [] m_flags;
         m_flags = flag;
     };
-    void clump_all(boost::ptr_vector<SNP> &snp_list, double r2_threshold);
+    void proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold);
     void clump(boost::ptr_vector<SNP> &snp_list);
 
     void set_loc(int loc)

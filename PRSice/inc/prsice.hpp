@@ -32,12 +32,16 @@ public:
         }
     };
     virtual ~PRSice();
-    void get_snp(const Commander &c_commander, Region &region, const double &threshold);
-    void clump(const Commander &c_commander, const Region &region);
+    void get_snp(const Commander &c_commander, Region &region, const double &c_threshold);
+    void clump(const Commander &c_commander);
+    void run_prs(const Commander &c_commander, const Region &c_region);
+    void run_prslice(const Commander &c_commander);
 
 protected:
 private:
 //      This is used for thead safety
+    enum pheno_store{FILE_NAME, INDEX, NAME};
+    typedef std::tuple<std::string, size_t, std::string> pheno_storage;
     static std::mutex score_mutex;
     int m_base_index;
     std::string m_current_base;
@@ -50,28 +54,34 @@ private:
     boost::ptr_vector<SNP> m_snp_list;
     std::unordered_map<std::string, size_t> m_snp_index;
     std::vector<std::string> m_chr_list;
+    std::unordered_map<std::string, size_t> m_include_snp;
 
 
-    void check_inclusion(std::unordered_map<std::string, size_t> &inclusion, const std::string &c_target_bim_name,
-                         size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
+    void check_inclusion(const std::string &c_target_bim_name,
+    		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
+
     void run_prs(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
-                 const Region &c_region);
-    void categorize(const Commander &c_commander, const std::map<std::string, size_t> &inclusion, bool &pre_run);
-    Eigen::VectorXd gen_pheno_vec(const std::string &c_target, const std::string c_pheno, const int pheno_index,
-                                  bool target_binary, std::map<std::string, size_t> &fam_index, std::vector<prs_score> &prs_fam);
-    Eigen::MatrixXd gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header,
-                                   std::map<std::string, size_t> &fam_index);
+    		const Region &c_region);
+
+    void categorize(const Commander &c_commander, bool &pre_run);
+    void individual_pheno_prs(const Commander &c_commander, const Region &c_region, const bool pre_run,
+    		pheno_storage &pheno_index, const bool multi);
+    void gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_target, const std::string c_pheno,
+    		const int pheno_index, bool target_binary, std::unordered_map<std::string, size_t> &sample_index,
+			std::vector<prs_score> &sample_prs);
+    void gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::string &c_cov_file,
+    		const std::vector<std::string> &c_cov_header, std::unordered_map<std::string, size_t> &sample_index);
 
 
 
     bool get_prs_score(const std::string &target, size_t &cur_index);
-
-    void thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
-                       const std::map<std::string, size_t> &c_fam_index, size_t region_start, size_t region_end,
-                       bool target_binary, double threshold, size_t thread);
     void calculate_scores(const Commander &c_commander,  const Region &c_region, size_t cur_start_index,
-                          Eigen::MatrixXd &independent_variables, Eigen::VectorXd &phenotype, const std::string &pheno_name,
-                          const std::map<std::string, size_t> &fam_index);
+                              Eigen::MatrixXd &independent_variables, Eigen::VectorXd &phenotype, const std::string &pheno_name,
+                              const std::unordered_map<std::string, size_t> &fam_index);
+    void thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
+                       const std::unordered_map<std::string, size_t> &c_fam_index, size_t region_start, size_t region_end,
+                       bool target_binary, double threshold, size_t thread);
+
     void prs_output(const Commander &c_commander, const Region &c_region, const double null_r2,
                     const std::string pheno_name) const;
 

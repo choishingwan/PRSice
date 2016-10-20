@@ -46,7 +46,10 @@ public:
     ~PLINK();
     void initialize();
     void clump_initialize(const std::unordered_map<std::string, size_t> &inclusion);
-    void clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list, const std::unordered_map<std::string, size_t> &c_snp_index);
+    void clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
+    		const std::unordered_map<std::string, size_t> &c_snp_index);
+    void start_clumping(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
+    		double p_threshold, double r2_threshold, size_t kb_threshold, double proxy);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
 //    size_t get_num_snp() const{return m_num_snp; };
@@ -54,24 +57,7 @@ public:
     {
         return m_num_sample;
     };
-    int get_distance() const
-    {
-        return m_bp_list.back()-m_bp_list.front();
-    };
-    int get_first_bp() const
-    {
-        return m_bp_list.front();
-    };
-    int get_last_bp() const
-    {
-        return m_bp_list.back();
-    };
-    void start_clumping(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-                        const std::unordered_map<std::string, size_t> &c_snp_index, double p_threshold,
-                        double r2_threshold, size_t kb_threshold, double proxy);
-    void perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> &snp_list, size_t &core_snp_index,
-						bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
-						std::string next_chr, size_t next_loc);
+
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
     void get_score(const std::vector<p_partition> &quick_ref,
                    const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
@@ -89,8 +75,12 @@ public:
     }
 private:
     static std::mutex clump_mtx;
+
     double get_r2(const size_t i, const size_t j, bool adjust=false);
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
+    void perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> &snp_list, size_t &core_snp_index,
+    						bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
+    						std::string next_chr, size_t next_loc);
     void clump_thread(const size_t index, const std::deque<size_t> &index_check, boost::ptr_vector<SNP> &snp_list, const double r2_threshold);
     void compute_clump(const size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &snp_index_list, const double r2_threshold);
     bool m_init;
@@ -115,13 +105,7 @@ private:
     std::vector<std::string> m_names;
     std::vector<std::string> m_chr_list;
     std::vector<std::string> m_snp_id;
-
     typedef std::tuple<std::string, int, size_t> file_info;
-    enum class FILE_INFO
-    {
-        FILE, LINE, INDEX
-    };
-    template<> struct enumeration_traits< FILE_INFO > : enumeration_trait_indexing {};
     std::vector<file_info> m_clump_ref;
 //    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;

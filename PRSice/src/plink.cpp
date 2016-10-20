@@ -25,7 +25,7 @@ void PLINK::initialize()
             std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
             throw std::runtime_error(error_message);
         }
-        for(auto chr: m_chr_list)
+        for(auto &&chr: m_chr_list)
         {
             std::string name = m_prefix;
             misc::replace_substring(name, "#", chr);;
@@ -51,7 +51,7 @@ void PLINK::initialize()
     fam.close();
 
     // Check whether if the bed file is correct
-    for(auto bed:m_names)
+    for(auto &&bed:m_names)
     {
         std::string bed_name = bed+".bed";
         bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
@@ -66,7 +66,7 @@ void PLINK::initialize()
     std::string bed_name = m_names.front()+".bed";
     bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
-    for(auto bim: m_names)
+    for(auto &&bim: m_names)
     {
         std::string bim_name = bim+".bim";
         m_num_snp.push_back(0);
@@ -102,7 +102,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
             std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
             throw std::runtime_error(error_message);
         }
-        for(auto chr: m_chr_list)
+        for(auto &&chr: m_chr_list)
         {
             std::string name = m_prefix;
             misc::replace_substring(name, "#", chr);
@@ -125,7 +125,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
     fam.close();
 
     // Check whether if the bed file is correct
-    for(auto bed:m_names)
+    for(auto &&bed:m_names)
     {
         std::string bed_name = bed+".bed";
         bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
@@ -141,7 +141,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
     bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     size_t cur_num_line=0;
-    for(auto bim:m_names)
+    for(auto &&bim:m_names)
     {
         cur_num_line=0;
         std::string bim_name = bim+".bim";
@@ -189,7 +189,7 @@ void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion,
             std::string error_message = "# is reserved for chromosome number. Chromosome information must be provided in order to use the chromosome separated PLINK file!";
             throw std::runtime_error(error_message);
         }
-        for(auto chr: m_chr_list)
+        for(auto &&chr: m_chr_list)
         {
             std::string name = m_prefix;
             misc::replace_substring(name, "#", chr);
@@ -212,7 +212,7 @@ void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion,
     fam.close();
 
     // Check whether if the bed file is correct
-    for(auto bed:m_names)
+    for(auto &&bed:m_names)
     {
         std::string bed_name = bed+".bed";
         bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
@@ -230,7 +230,7 @@ void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion,
     size_t num_ambig=0, not_found=0;
     size_t num_line=0, cur_num_line=0;
     std::unordered_map<std::string, bool> dup_check;
-    for(auto bim:m_names)
+    for(auto &&bim:m_names)
     {
         cur_num_line=0;
         std::string bim_name = bim+".bim";
@@ -335,24 +335,99 @@ void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion,
 }
 
 
+void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
+                           boost::ptr_vector<SNP> &snp_list, double p_threshold,
+                           double r2_threshold, size_t kb_threshold, double proxy_threshold)
+{
+    std::deque<size_t> snp_index; // SNPs within the region
+    std::string prev_chr="";
+    std::string prev_file="";
+    size_t read_snps=0; //<- past tense =P
+    size_t bp_of_core =0;
+    size_t core_genotype_index=0; //index of the core SNP on our genotype deque
+    bool require_clump=false; // Whether if the current interval contain the core snp
+    for(size_t i_info = 0; i_info < m_clump_ref.size(); ++i_info)
+    {
+        size_t cur_snp_index = std::get<+FILE_INFO::INDEX>(m_clump_ref[i_info]);
+        size_t cur_line_num = std::get<+FILE_INFO::LINE>(m_clump_ref[i_info]);
+        std::string cur_chr = snp_list[cur_snp_index].get_chr();
+        size_t cur_loc = snp_list[cur_snp_index].get_loc();
+        if(prev_chr.compare(cur_chr)!=0)
+        {
+			perform_clump(snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+							 r2_threshold, kb_threshold, cur_chr, cur_loc);
+			if(prev_file.compare(std::get<+FILE_INFO::FILE>(m_clump_ref[i_info]))!=0)
+			{
+                prev_file = std::get<+FILE_INFO::FILE>(m_clump_ref[i_info]);
+				read_snps = 0;
+                if(m_bed.is_open()) m_bed.close();
+                if(m_bim.is_open()) m_bim.close();
+                openPlinkBinaryFile(prev_file, m_bed);
+			}
+			prev_chr = cur_chr;
+        }
+        else if((cur_loc-bp_of_core) > kb_threshold){
+			perform_clump(snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+							 r2_threshold, kb_threshold, cur_chr, cur_loc);
+        }
+        if((cur_line_num-read_snps)!=0)
+        {
+            m_bed.seekg((cur_line_num-read_snps)*m_num_bytes, m_bed.cur);
+            read_snps=cur_line_num;
+        }
+		read_snp(1, true);
+        read_snps++;
+		snp_index.push_back(cur_snp_index);
+        if(!require_clump && snp_list[cur_snp_index].get_p_value() < p_threshold)
+        {
+        		bp_of_core =snp_list[cur_snp_index].get_loc();
+        		core_genotype_index=m_genotype.size()-1; // Should store the index on genotype
+            require_clump= true;
+        }
+    }
+
+    std::unordered_map<std::string, size_t> inclusion_backup = inclusion;
+    inclusion.clear();
+    std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
+    bool proxy = proxy_threshold > 0.0;
+    for(auto &&i_snp : p_sort_order){
+		if(inclusion_backup.find(snp_list[i_snp].get_rs_id()) != inclusion_backup.end() &&
+                snp_list[i_snp].get_p_value() < p_threshold)
+		{
+			if(proxy && !snp_list[i_snp].clumped() )
+            {
+                snp_list[i_snp].proxy_clump(snp_list, proxy_threshold);
+                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
+            }
+            else if(!snp_list[i_snp].clumped())
+            {
+                snp_list[i_snp].clump(snp_list);
+                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
+            }
+        }
+        else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
+    }
+    fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
+}
+
 void PLINK::perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> &snp_list, size_t &core_snp_index,
 						bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
 						std::string next_chr, size_t next_loc)
 {
-    std::string cur_chr = snp_list[core_snp_index].get_chr();
-    size_t cur_loc = snp_list[core_snp_index].get_loc();
-    while(require_clump && (cur_chr.compare(next_chr)!=0 || next_loc - cur_loc > kb_threshold))
+	if(snp_index.size()==0) return; // got nothing to do
+    std::string core_chr = snp_list[core_snp_index].get_chr();
+    size_t core_loc = snp_list[core_snp_index].get_loc();
+    while(require_clump && (core_chr.compare(next_chr)!=0 || (next_loc - core_loc) > kb_threshold))
 	{
 		clump_thread(core_snp_index, snp_index, snp_list, r2_threshold);
 		require_clump = false;
-		// Now we progress and identify the next core snp
         for(size_t core_finder = core_snp_index+1; core_finder < snp_index.size(); ++core_finder)
 		{
 			if(snp_list[snp_index[core_finder]].get_p_value() < p_threshold)
 			{
                 core_snp_index=core_finder;
-				cur_chr = snp_list[core_snp_index].get_chr();
-				cur_loc = snp_list[core_snp_index].get_loc();
+				core_chr = snp_list[core_snp_index].get_chr();
+				core_loc = snp_list[core_snp_index].get_loc();
                 require_clump= true;
                 break;
 			}
@@ -363,7 +438,7 @@ void PLINK::perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> 
 			size_t num_remove = 0;
 			for(size_t remover = 0; remover < core_snp_index; ++remover)
 			{
-				if(cur_loc-snp_list[snp_index[remover]].get_loc() > kb_threshold) num_remove++;
+				if(core_loc-snp_list[snp_index[remover]].get_loc() > kb_threshold) num_remove++;
                 else break;
 			}
 			if(num_remove!=0)
@@ -375,109 +450,92 @@ void PLINK::perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> 
 		}
     }
     // for this to be true, require_clump must be false, otherwise it will still be within the loop
-    if(cur_chr.compare(next_chr)!=0)
+    if(core_chr.compare(next_chr)!=0)
 	{
 		// just remove everything
 		lerase(m_genotype.size());
 		snp_index.clear();
     }
+    else if(!require_clump){
+    		//remove anything that is too far ahead
+    		size_t num_remove = 0;
+    		for(auto &&remover : snp_index)
+    		{
+    			if(next_loc-snp_list[remover].get_loc()>kb_threshold) num_remove++;
+    			else break;
+    		}
+    		if(num_remove!=0)
+    		{
+    			lerase(num_remove);
+    			snp_index.erase(snp_index.begin(), snp_index.begin()+num_remove);
+    		}
+    }
 }
 
 
 
-void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
-                           boost::ptr_vector<SNP> &snp_list,
-                           const std::unordered_map<std::string, size_t> c_snp_index, double p_threshold,
-                           double r2_threshold, size_t kb_threshold, double proxy_threshold)
+void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_snp_index, boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
 {
-    // we just need to follow m_clump_ref;
-    // with m_clump_ref, we know exactly which line of each file is required
-    // we also know the index of each SNP w.r.t snp_list
-    // so we no longer need the c_snp_index
-    // Term:core snp = index snp in clumping terminorlogy just not to confused with index of SNP
-    std::deque<size_t> snp_index;
-    std::string prev_chr="";
-    std::string prev_file="";
-    size_t read_snps=0; //<- past tense =P
-    size_t require_bp =0;
-    size_t core_snp_index=0; //index of the core SNP on our genotype deque
-    bool require_clump=false; // Whether if the current interval contain the core snp
-    for(size_t i_info = 0; i_info < m_clump_ref.size(); ++i_info)
+	size_t snp_in_region = c_snp_index.size();
+    if(snp_in_region <=1 ) return; // nothing to do
+    std::vector<std::thread> thread_store;
+    if((snp_in_region-1) < m_thread)
     {
-        size_t cur_snp_index = std::get<FILE_INFO::INDEX>(m_clump_ref[i_info]);
-        size_t cur_line_num = std::get<FILE_INFO::LINE>(m_clump_ref[i_info]);
-        std::string cur_chr = snp_list[cur_snp_index].get_chr();
-        size_t cur_loc = snp_list[cur_snp_index].get_bp();
-        if(prev_chr.compare(cur_chr)!=0)
+        for(size_t i_snp = 0; i_snp < c_snp_index.size(); ++i_snp)
         {
-			//Clump everything
-			perform_clump(snp_index, snp_list, core_snp_index, require_clump, p_threshold,
-							 r2_threshold, kb_threshold, cur_chr, cur_loc);
-			// Also need to check if a new file is required
-			if(prev_file.compare(std::get<FILE_INFO::FILE>(m_clump_ref[i_info]))!=0)
-			{
-                // new file
-                prev_file = std::get<FILE_INFO::FILE>(m_clump_ref[i_info]);
-				read_snps =0;
-                if(m_bed.is_open()) m_bed.close();
-                if(m_bim.is_open()) m_bim.close();
-                openPlinkBinaryFile(prev_file, m_bed);
-			}
-			prev_chr = cur_chr;
-        }
-        else if(cur_loc-require_bp > kb_threshold){
-            // Too far away, so just clump until the range is reasonable
-			perform_clump(snp_index, snp_list, core_snp_index, require_clump, p_threshold,
-							 r2_threshold, kb_threshold, cur_chr, cur_loc);
-        }
-        // Add the current SNP
-        if((cur_line_num-read_snps)!=0)
-        {
-            m_bed.seekg((cur_line_num-read_snps)*m_num_bytes, m_bed.cur);
-            prev=std::get<LINE>(partition[i_info]);
-        }
-		read_snp(1, true);
-        read_snps++;
-		snp_index_check.push_back(cur_snp_index);
-        if(!require_clump && snp_list[cur_snp_index].get_p_value() < p_threshold)
-        {
-            require_bp =snp_list[cur_snp_index].get_loc();
-            core_snp_index=m_genotype.size()-1; // Should store the index on genotype
-            require_clump= true;
+            if(c_snp_index[i_snp]!=c_core_index)
+            	{
+            		thread_store.push_back(std::thread(&PLINK::compute_clump, this,
+            				c_core_index,i_snp, i_snp+1, std::ref(snp_list), std::cref(c_snp_index), c_r2_threshold));
+            	}
+
         }
     }
+    else
+    {
+        int num_snp_per_thread =(int)(snp_in_region) / (int)m_thread;  //round down
+        int remain = (int)(snp_in_region) % (int)m_thread;
+        int cur_start = 0;
+        int cur_end = num_snp_per_thread;
+        for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
+        {
+            thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
+            		cur_end+(remain>0), std::ref(snp_list), std::cref(c_snp_index),c_r2_threshold ));
+            cur_start = cur_end+(remain>0);
+            cur_end+=num_snp_per_thread+(remain>0);
+            if(cur_end>snp_in_region) cur_end =snp_in_region;
+            remain--;
+        }
+    }
+    for(auto &&thread_runner : thread_store) thread_runner.join();
+    thread_store.clear();
+}
 
-    // Now get the list of SNPs that we want to retain (in index)
-    // When proxy, the index SNP will represent all clumped SNP's region
-    // When no proxy, clumping only occurs for each individual region
-    std::unordered_map<std::string, size_t> include_ref = inclusion; // now update the inclusion such that it only contain the index snps
-    inclusion.clear();
-    std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
-    bool proxy = proxy_threshold > 0.0;
-    for(auto i_snp : p_sort_order){
-		if(include_ref.find(snp_list[i_snp].get_rs_id()) != include_ref.end() &&
-                snp_list[i_snp].get_p_value() < p_threshold)
-		{
-			if(proxy && !snp_list[i_snp].clumped() )
+void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
+		const std::deque<size_t> &snp_index_list, const double r2_threshold)
+{
+    size_t ref_index = snp_index_list[core_snp_index];
+    double ref_p_value = snp_list[ref_index].get_p_value();
+    std::vector<double> r2_store;
+    std::vector<size_t> target_index_store; // index we want to push into the current index
+    for(size_t i_snp = i_start; i_snp < i_end && i_snp < snp_index_list.size(); ++i_snp)
+    {
+        size_t target_index = snp_index_list[i_snp];
+        if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
+        {
+            // only calculate r2 if more significant
+            double r2 = get_r2(i_snp, core_snp_index);
+            if(r2 >= r2_threshold)
             {
-                snp_list[i_snp].clump_all(snp_list, proxy_threshold);
-                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
-            }
-            else if(!snp_list[i_snp].clumped())
-            {
-                // when not proxy, the clumped flag will only be activated when
-                // the SNP is fully represented
-                // e.g. the SNP is being represented for all region
-                snp_list[i_snp].clump(snp_list);
-                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
+            		target_index_store.push_back(target_index);
+                r2_store.push_back(r2);
             }
         }
-        else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
-
-		}
     }
-    //Anything remaining should be the required SNPs
-    fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
+    PLINK::clump_mtx.lock();
+    snp_list[ref_index].add_clump(target_index_store);
+    snp_list[ref_index].add_clump_r2(r2_store);
+    PLINK::clump_mtx.unlock();
 }
 
 PLINK::~PLINK()
@@ -668,62 +726,6 @@ double PLINK::get_r2(const size_t i, const size_t j)
 }
 #endif
 
-void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &snp_index_list, const double r2_threshold)
-{
-    size_t ref_index = snp_index_list[core_snp_index];
-    double ref_p_value = snp_list[ref_index].get_p_value();
-    std::vector<double> r2_store;
-    std::vector<size_t> self_index; // index we want to push into the current index
-    for(size_t i = i_start; i < i_end && i < snp_index_list.size(); ++i)
-    {
-        size_t target_index = snp_index_list[i];
-        if(i != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
-        {
-            // only calculate r2 if more significant
-            double r2 = get_r2(i, core_snp_index);
-            if(r2 >= r2_threshold)
-            {
-                self_index.push_back(target_index);
-                r2_store.push_back(r2);
-            }
-        }
-    }
-    PLINK::clump_mtx.lock();
-    snp_list[ref_index].add_clump(self_index);
-    snp_list[ref_index].add_clump_r2(r2_store);
-    PLINK::clump_mtx.unlock();
-}
-
-void PLINK::clump_thread(const size_t c_index, const std::deque<size_t> &c_index_check, boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
-{
-    if(c_index_check.size() <=1 ) return; // nothing to do
-    std::vector<std::thread> thread_store;
-    if((c_index_check.size()-1) < m_thread)
-    {
-        for(size_t i = 0; i < c_index_check.size(); ++i)
-        {
-            if(c_index_check[i]!=c_index) thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_index,i, i+1, std::ref(snp_list), std::cref(c_index_check), c_r2_threshold));
-        }
-    }
-    else
-    {
-        int num_snp_per_thread =(int)(c_index_check.size()-1) / (int)m_thread;  //round down
-        int remain = (int)(c_index_check.size()-1) % (int)m_thread;
-        int cur_start = 0;
-        int cur_end = num_snp_per_thread;
-        for(size_t i = 0; i < m_thread; ++i)
-        {
-            thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_index, cur_start, cur_end+(remain>0), std::ref(snp_list), std::cref(c_index_check),c_r2_threshold ));
-            cur_start = cur_end+(remain>0);
-            cur_end+=num_snp_per_thread+(remain>0);
-            if(cur_end>c_index_check.size()) cur_end =c_index_check.size();
-            remain--;
-        }
-    }
-    for (size_t i = 0; i < thread_store.size(); ++i) thread_store[i].join();
-    thread_store.clear();
-}
-
 void PLINK::lerase(int num)
 {
     if(num <0)
@@ -869,26 +871,26 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     std::string prev_name = "";
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
-        if(prev_name.compare(std::get<FILENAME>(partition[i_snp]))!=0)
+        if(prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
         {
             m_bed.close();
-            prev_name= std::get<FILENAME>(partition[i_snp]);
+            prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);
             std::string bed_name = prev_name+".bed";
             openPlinkBinaryFile(bed_name, m_bed);
             prev=0;
         }
-        size_t cur_index = std::get<LINE>(partition[i_snp]);
+        size_t cur_index = std::get<+PRS::LINE>(partition[i_snp]);
         if((cur_index-prev)!=0)
         {
             // Skip snps
-            m_bed.seekg((std::get<LINE>(partition[i_snp])-prev)*m_num_bytes, m_bed.cur);
-            prev=std::get<LINE>(partition[i_snp]);
+            m_bed.seekg((std::get<+PRS::LINE>(partition[i_snp])-prev)*m_num_bytes, m_bed.cur);
+            prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
         // in a way, we should be able to optimize this part as it is not really needed for us to
         // process the whole thing twice
         read_snp(1, false);
         prev++;
-        int snp_index = std::get<INDEX>(partition[i_snp]);
+        int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
         for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample)
         {
