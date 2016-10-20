@@ -454,27 +454,27 @@ void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
     inclusion.clear();
     std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
     bool proxy = proxy_threshold > 0.0;
-    for(size_t i = 0; i < p_sort_order.size(); ++i)
-    {
-        if(include_ref.find(snp_list[p_sort_order[i]].get_rs_id()) != include_ref.end() &&
-                snp_list[p_sort_order[i]].get_p_value() < p_threshold)
-        {
-            // now perform the region related stuff
-            if(proxy && !snp_list[p_sort_order[i]].clumped() )
+    for(auto i_snp : p_sort_order){
+		if(include_ref.find(snp_list[i_snp].get_rs_id()) != include_ref.end() &&
+                snp_list[i_snp].get_p_value() < p_threshold)
+		{
+			if(proxy && !snp_list[i_snp].clumped() )
             {
-                snp_list[p_sort_order[i]].clump_all(snp_list, proxy_threshold);
-                inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
+                snp_list[i_snp].clump_all(snp_list, proxy_threshold);
+                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
             }
-            else if(!snp_list[p_sort_order[i]].clumped())
+            else if(!snp_list[i_snp].clumped())
             {
                 // when not proxy, the clumped flag will only be activated when
                 // the SNP is fully represented
                 // e.g. the SNP is being represented for all region
-                snp_list[p_sort_order[i]].clump(snp_list);
-                inclusion[snp_list[p_sort_order[i]].get_rs_id()]=p_sort_order[i];
+                snp_list[i_snp].clump(snp_list);
+                inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
             }
         }
-        else if(snp_list[p_sort_order[i]].get_p_value() >= p_threshold) break;
+        else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
+
+		}
     }
     //Anything remaining should be the required SNPs
     fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
