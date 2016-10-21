@@ -352,11 +352,11 @@ void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
         size_t cur_line_num = std::get<+FILE_INFO::LINE>(m_clump_ref[i_info]);
         std::string cur_chr = snp_list[cur_snp_index].get_chr();
         size_t cur_loc = snp_list[cur_snp_index].get_loc();
-        if(prev_chr.compare(cur_chr)!=0)
+        if(prev_chr.empty() || prev_chr.compare(cur_chr)!=0)
         {
 			perform_clump(snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
 							 r2_threshold, kb_threshold, cur_chr, cur_loc);
-			if(prev_file.compare(std::get<+FILE_INFO::FILE>(m_clump_ref[i_info]))!=0)
+			if(prev_file.empty()||prev_file.compare(std::get<+FILE_INFO::FILE>(m_clump_ref[i_info]))!=0)
 			{
                 prev_file = std::get<+FILE_INFO::FILE>(m_clump_ref[i_info]);
 				read_snps = 0;
@@ -873,7 +873,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     std::string prev_name = "";
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
-        if(prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
+        if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
         {
             m_bed.close();
             prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);

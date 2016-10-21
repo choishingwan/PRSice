@@ -407,7 +407,6 @@ void PRSice::run_prs(const Commander &c_commander, const Region &c_region)
     {
 		for(auto &&pheno_info : pheno_index)
 		{
-
 		    bool pre_run=false;
 		    categorize(c_commander, pre_run);
 			m_prs_results.clear();
@@ -464,15 +463,15 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
                 if(m_include_snp.find(token[+BIM::RS])!=m_include_snp.end())
                 {
                     double p = m_snp_list.at(m_include_snp.at(token[+BIM::RS])).get_p_value();
+                    p_partition part;
+                    std::get<+PRS::RS>(part) = token[+BIM::RS];
+                    std::get<+PRS::LINE>(part) = cur_line;
+                    std::get<+PRS::INDEX>(part) = m_include_snp.at(token[+BIM::RS]);
+                    std::get<+PRS::FILENAME>(part) = name;
                     if(p< bound_start)
                     {
                         pre_run=true;
-                        p_partition part;
-                        std::get<+PRS::RS>(part) = token[+BIM::RS];
-                        std::get<+PRS::LINE>(part) = cur_line;
                         std::get<+PRS::CATEGORY>(part) = -1;
-                        std::get<+PRS::INDEX>(part) = m_include_snp.at(token[+BIM::RS]);
-                        std::get<+PRS::FILENAME>(part) = name;
                         m_partition.push_back(part);
                     }
                     else if(p<bound_end)
@@ -488,22 +487,12 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
                         }
                         else category = (int)((p-bound_start)/bound_inter);
                         if(category <0) pre_run=true;
-                        p_partition part;
-                        std::get<+PRS::RS>(part) = token[+BIM::RS];
-                        std::get<+PRS::LINE>(part) = cur_line;
                         std::get<+PRS::CATEGORY>(part) = (category<0)?-1:category;
-                        std::get<+PRS::INDEX>(part) = m_include_snp.at(token[+BIM::RS]);
-                        std::get<+PRS::FILENAME>(part) = name;
                         m_partition.push_back(part);
                     }
                     else if(full_model)
                     {
-                        p_partition part;
-                        std::get<+PRS::RS>(part) = token[+BIM::RS];
-                        std::get<+PRS::LINE>(part) = cur_line;
                         std::get<+PRS::CATEGORY>(part) = (int)(1-bound_start)/bound_inter;
-                        std::get<+PRS::INDEX>(part) = m_include_snp.at(token[+BIM::RS]);
-                        std::get<+PRS::FILENAME>(part) = name;
                         m_partition.push_back(part);
                     }
                 }
@@ -1158,6 +1147,123 @@ void PRSice::pheno_prslice(const Commander &c_commander, const Region &c_region,
 		const bool multi)
 {
 	int window = c_commander.prslice();
+	std::unordered_map<std::string, std::string> file_name_reference;
+	std::vector<std::string> file_name;
+	if(c_commander.get_target().find("#")!=std::string::npos)
+	{
+		for(auto &&chr: m_chr_list)
+		{
+			std::string name = c_commander.get_target();
+			misc::replace_substring(name, "#", chr);
+			file_name_reference[chr] = name;
+			file_name.push_back(name);
+		}
+	}
+	else
+	{
+		for(auto &&chr : m_chr_list)
+		{
+			file_name_reference[chr] = c_commander.get_target();
+		}
+		file_name.push_back(c_commander.get_target());
+	}
+	// Although in a sense, the partition should be the same for all PRSlice Phenotype run,
+	// we will do it separately just to simplify the code (after all, I don't think it is
+	// very efficient to run all phenotype together anyway)
+    bool fastscore = c_commander.fastscore();
+    double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
+    double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
+    double bound_inter = c_commander.get_inter();
+    bool full_model = c_commander.full();
+	std::string prev_chr = "";
+	size_t prev_loc = 0;
+	std::vector<double> best_rs;
+	std::vector<std::vector<p_partition> > best_snp_index;
+	std::unordered_map<std::string, size_t> part_ref;
+	bool pre_run = false;
+	for(auto &&snp : m_snp_list) // for each SNP
+	{
+		std::string cur_chr = snp.get_chr();
+		size_t cur_loc = snp.get_loc();
+		if((prev_chr.empty() || cur_chr.compare(prev_chr)!=0) || (cur_loc-prev_loc) > window)
+		{
+			for(auto file : file_name)
+			{
+				size_t cur_line = 0;
+				std::ifstream bim;
+				bim.open(file.c_str());
+				if(!bim.is_open())
+				{
+					std::string error_message = "Cannot open bim file: " + file;
+					throw std::runtime_error(error_message);
+				}
+				std::string line;
+				while(std::getline(bim, line))
+				{
+					misc::trim(line);
+					if(!line.empty())
+					{
+						std::vector<std::string> token = misc::split(line);
+						if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
+						std::string rs = token[+BIM::RS];
+						if(part_ref.find(rs)!=part_ref.end())
+						{
+							std::get<+PRS::LINE>(m_partition[part_ref[rs]]) = cur_line;
+						}
+					}
+					cur_line++;
+				}
+			}
+			// Run PRS here
+
+			// Reset stuff here
+			m_partition.clear();
+			prev_chr = cur_chr;
+			prev_loc = cur_loc;
+			pre_run = false;
+		}
+		else
+		{
+			// add this to the m_partition
+            p_partition part;
+            std::get<+PRS::RS>(part) = snp.get_rs_id();
+            std::get<+PRS::LINE>(part) = 0; // we don't know what line it is
+            std::get<+PRS::INDEX>(part) = m_include_snp[snp.get_rs_id()];
+            std::get<+PRS::FILENAME>(part) = file_name_reference[cur_chr];
+            double p = snp.get_p_value();
+            if(p< bound_start){
+                std::get<+PRS::CATEGORY>(part) = -1;
+                m_partition.push_back(part);
+                part_ref[snp.get_rs_id()] = m_partition.size()-1;
+            }
+            else if(p<bound_end)
+            {
+            		int category = -1;
+            		if(fastscore)
+            		{
+            			category = c_commander.get_category(p);
+            			if(category ==-2)
+            			{
+            				throw std::runtime_error("Undefined category!");
+            			}
+            		}
+            		else category = (int)((p-bound_start)/bound_inter);
+            		if(category <0) pre_run=true;
+            		std::get<+PRS::CATEGORY>(part) = category;
+            		m_partition.push_back(part);
+            		part_ref[snp.get_rs_id()] = m_partition.size()-1;
+            }
+            else if(full_model)
+            {
+            		std::get<+PRS::CATEGORY>(part) = (int)(1-bound_start)/bound_inter;
+            		m_partition.push_back(part);
+            		part_ref[snp.get_rs_id()] = m_partition.size()-1;
+            }
+		}
+	}
+	// Now completed the PRSlice part, need to again
+
+
 
 }
 
