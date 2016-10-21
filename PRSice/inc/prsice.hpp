@@ -74,7 +74,9 @@ private:
 			std::vector<prs_score> &sample_prs);
     void gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::string &c_cov_file,
     		const std::vector<std::string> &c_cov_header, std::unordered_map<std::string, size_t> &sample_index);
-
+    void prslice_prs(const Commander &commander, const Region &c_region, std::vector<p_partition> &best_snp_index);
+    double calculate_prslice_prs(const Commander &commander, const Region &c_region, std::vector<p_partition> &best_snp_index, bool pre_run,  pheno_storage &pheno_index, std::vector<prs_score> &sample_prs,
+    std::unordered_map<std::string,size_t> &sample_index, Eigen::VectorXd &phenotype, Eigen::MatrixXd &independent_variables);
 
 
     bool get_prs_score(const std::string &target, size_t &cur_index);
@@ -86,8 +88,8 @@ private:
                        bool target_binary, double threshold, size_t thread);
 
     void prs_output(const Commander &c_commander, const Region &c_region, const double null_r2,
-                    const std::string pheno_name) const;
-
+    const std::string pheno_name) const;
+    std::vector<size_t> sort_by_r2(const std::vector<double> &r2) const;
 };
 
 #endif // PRSICE_H
