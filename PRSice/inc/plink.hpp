@@ -47,9 +47,9 @@ public:
     void initialize();
     void clump_initialize(const std::unordered_map<std::string, size_t> &inclusion);
     void clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-    		const std::unordered_map<std::string, size_t> &c_snp_index);
+                          const std::unordered_map<std::string, size_t> &c_snp_index);
     void start_clumping(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-    		double p_threshold, double r2_threshold, size_t kb_threshold, double proxy);
+                        double p_threshold, double r2_threshold, size_t kb_threshold, double proxy);
     int read_snp(int num_snp, bool ld=false);
     void lerase(int num);
 //    size_t get_num_snp() const{return m_num_snp; };
@@ -79,8 +79,8 @@ private:
     double get_r2(const size_t i, const size_t j, bool adjust=false);
     bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
     void perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> &snp_list, size_t &core_snp_index,
-    						bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
-    						std::string next_chr, size_t next_loc);
+                       bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
+                       std::string next_chr, size_t next_loc);
     void clump_thread(const size_t index, const std::deque<size_t> &index_check, boost::ptr_vector<SNP> &snp_list, const double r2_threshold);
     void compute_clump(const size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &snp_index_list, const double r2_threshold);
     bool m_init;

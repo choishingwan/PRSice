@@ -82,10 +82,10 @@ int main(int argc, char *argv[])
                 prsice.clump(commander);
                 if(commander.prslice() > 0.0)
                 {
-                		if(region.size() > 1)
-                		{
-                			fprintf(stderr, "\nWARNING: Currently, PRSlice cannot be performed together with PRSet. Please run them separately\n");
-                		}
+                    if(region.size() > 1)
+                    {
+                        fprintf(stderr, "\nWARNING: Currently, PRSlice cannot be performed together with PRSet. Please run them separately\n");
+                    }
                 }
                 prsice.run_prs(commander, region);
             }
