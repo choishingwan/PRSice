@@ -45,16 +45,16 @@ private:
     static std::mutex score_mutex;
     int m_base_index;
     std::string m_current_base;
-    std::vector<p_partition> m_partition;
-    std::vector<std::vector<PRSice_result> > m_prs_results;
-    std::vector<PRSice_best> m_best_threshold;
-    std::vector<std::vector<prs_score> > m_best_score;
-    std::vector<size_t> m_num_snp_included;
-    std::vector<std::vector<prs_score> > m_current_prs;
-    boost::ptr_vector<SNP> m_snp_list;
-    std::unordered_map<std::string, size_t> m_snp_index;
-    std::vector<std::string> m_chr_list;
-    std::unordered_map<std::string, size_t> m_include_snp;
+    std::vector<PRSice_best> m_best_threshold; //
+    std::vector<std::vector<prs_score> > m_best_score; //
+    std::vector<p_partition> m_partition; //
+    std::vector<std::vector<PRSice_result> > m_prs_results; //
+    std::vector<size_t> m_num_snp_included; //
+    std::vector<std::vector<prs_score> > m_current_prs; //
+    boost::ptr_vector<SNP> m_snp_list; //
+    std::unordered_map<std::string, size_t> m_snp_index; //
+    std::vector<std::string> m_chr_list; //
+    std::unordered_map<std::string, size_t> m_include_snp; //
 
 
     void check_inclusion(const std::string &c_target_bim_name,
@@ -64,8 +64,11 @@ private:
     		const Region &c_region);
 
     void categorize(const Commander &c_commander, bool &pre_run);
+    void categorize(const Commander &c_commander, bool &pre_run, size_t &start_snp, size_t &last_snp);
     void individual_pheno_prs(const Commander &c_commander, const Region &c_region, const bool pre_run,
     		pheno_storage &pheno_index, const bool multi);
+    void pheno_prslice(const Commander &c_commander, const Region &c_region,  pheno_storage &pheno_index,
+    		const bool multi);
     void gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_target, const std::string c_pheno,
     		const int pheno_index, bool target_binary, std::unordered_map<std::string, size_t> &sample_index,
 			std::vector<prs_score> &sample_prs);

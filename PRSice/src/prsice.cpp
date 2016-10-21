@@ -333,10 +333,8 @@ void PRSice::run_prs(const Commander &c_commander, const Region &c_region)
     std::string pheno_file = c_commander.get_pheno();
     std::string output_name = c_commander.get_out();
 
-    bool pre_run=false;
-    categorize(c_commander, pre_run);
 
-    if(pheno_header.size() !=0&& pheno_file.empty())
+    if(pheno_header.size() !=0 && pheno_file.empty())
     {
     		throw std::runtime_error("You must provide a phenotype file for multiple phenotype analysis");
     }
@@ -393,16 +391,33 @@ void PRSice::run_prs(const Commander &c_commander, const Region &c_region)
     }
 
     //Start processing each individual phenotypes
-    for(auto &&pheno_info : pheno_index)
+    if(c_commander.prslice() >0)
     {
-        m_prs_results.clear();
-        m_best_threshold.clear();
-        m_best_score.clear();
-        m_num_snp_included.clear();
-        m_current_prs.clear();
-    		individual_pheno_prs(c_commander, c_region, pre_run, pheno_info, pheno_index.size()> 1);
+    		for(auto &&pheno_info : pheno_index)
+    		{
+    			m_prs_results.clear();
+    			m_best_threshold.clear();
+    			m_best_score.clear();
+    			m_num_snp_included.clear();
+    			m_current_prs.clear();
+    			pheno_prslice(c_commander, c_region, pheno_info, pheno_index.size()> 1);
+    		}
     }
+    else
+    {
+		for(auto &&pheno_info : pheno_index)
+		{
 
+		    bool pre_run=false;
+		    categorize(c_commander, pre_run);
+			m_prs_results.clear();
+			m_best_threshold.clear();
+			m_best_score.clear();
+			m_num_snp_included.clear();
+			m_current_prs.clear();
+			individual_pheno_prs(c_commander, c_region, pre_run, pheno_info, pheno_index.size()> 1);
+		}
+    }
 }
 
 void PRSice::categorize(const Commander &c_commander, bool &pre_run)
@@ -517,6 +532,7 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
 				}
     );
 }
+
 void PRSice::individual_pheno_prs(const Commander &c_commander, const Region &c_region, const bool pre_run,
 		pheno_storage &pheno_info, const bool multi)
 {
@@ -589,6 +605,7 @@ void PRSice::individual_pheno_prs(const Commander &c_commander, const Region &c_
 	{
 		m_current_prs.push_back(sample_prs);
 	}
+	m_num_snp_included = std::vector<size_t>(c_region.size());
 	size_t cur_start_index = 0;
 	if(pre_run) get_prs_score(target, cur_start_index);
 	m_best_score = m_current_prs;
@@ -625,12 +642,12 @@ void PRSice::individual_pheno_prs(const Commander &c_commander, const Region &c_
 		{
 			Regression::linear_regression(phenotype, covariates_only, null_p, null_r2, null_r2_adjust, n_thread, true);
 		}
-		calculate_scores(c_commander, c_region, cur_start_index,
-				independent_variables, phenotype, std::get<pheno_store::NAME>(pheno_info), sample_index);
-		if(!no_regress)
-		{
-			prs_output(c_commander, c_region, null_r2, std::get<pheno_store::NAME>(pheno_info));
-		}
+	}
+	calculate_scores(c_commander, c_region, cur_start_index,
+			independent_variables, phenotype, std::get<pheno_store::NAME>(pheno_info), sample_index);
+	if(!no_regress)
+	{
+		prs_output(c_commander, c_region, null_r2, std::get<pheno_store::NAME>(pheno_info));
 	}
 
 }
@@ -650,7 +667,7 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
 	std::string line;
 	size_t cur_index;
 	size_t num_case=0, num_control=0;
-	if(fam_name.compare(c_pheno)==0)
+	if(c_pheno.empty() || fam_name.compare(c_pheno)==0 )
 	{
 		pheno_file.open(fam_name.c_str());
 		if(!pheno_file.is_open())
@@ -906,9 +923,9 @@ void PRSice::calculate_scores(const Commander &c_commander,
     std::vector<std::thread> thread_store;
     size_t n_thread = c_commander.get_thread();
     double p_value=0.0, r2=0.0, r2_adjust = 0.0;
-    for(size_t i = 0; i < m_best_threshold.size(); ++i)
+    for(size_t i = 0; i < c_region.size(); ++i)
     {
-        m_best_threshold[i] = PRSice_best(0,0,0);
+        m_best_threshold.push_back(PRSice_best(0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
     }
     if(cur_start_index == m_partition.size())
@@ -937,6 +954,7 @@ void PRSice::calculate_scores(const Commander &c_commander,
             throw std::runtime_error(error_message);
         }
     }
+
     while(cur_start_index != m_partition.size())
     {
         // getting the current cutoff
@@ -944,7 +962,9 @@ void PRSice::calculate_scores(const Commander &c_commander,
         fprintf(stderr, "\rProcessing %f", current_upper);
 
         // now calculate the PRS for each region
+
         bool reg = get_prs_score(target, cur_start_index);
+        for(auto m : m_num_snp_included)
         // if regression is not required, we will simply output the score
         if(all)
         {
@@ -1015,7 +1035,7 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0;
     for(size_t iter = region_start; iter < region_end; ++iter)
     {
-    		for(auto prs : m_current_prs.at(iter))
+    		for(auto &&prs : m_current_prs[iter])
     		{
     			std::string sample = std::get<+PRS::IID>(prs);
     			if(c_sample_index.find(sample)!=c_sample_index.end())
@@ -1045,7 +1065,7 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
                 debug.open("DEBUG.y");
                 debug << c_pheno << std::endl;
                 debug.close();
-                std::cerr << "ERROR: " << error.what() << std::endl;
+                fprintf(stderr, "ERROR: %s\n",error.what());
                 exit(-1);
             }
         }
@@ -1133,8 +1153,12 @@ void PRSice::prs_output(const Commander &c_commander, const Region &c_region, co
 }
 
 
-void PRSice::run_prslice(const Commander &c_commander){
-	int window_size = c_commander.prslice();
+
+void PRSice::pheno_prslice(const Commander &c_commander, const Region &c_region,  pheno_storage &pheno_index,
+		const bool multi)
+{
+	int window = c_commander.prslice();
+
 }
 
 // basically update the score vector to contain the new polygenic score

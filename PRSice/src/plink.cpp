@@ -362,7 +362,8 @@ void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
 				read_snps = 0;
                 if(m_bed.is_open()) m_bed.close();
                 if(m_bim.is_open()) m_bim.close();
-                openPlinkBinaryFile(prev_file, m_bed);
+                std::string bed_name = prev_file+".bed";
+                openPlinkBinaryFile(bed_name, m_bed);
 			}
 			prev_chr = cur_chr;
         }
@@ -803,20 +804,21 @@ int PLINK::read_snp(int num_snp, bool ld)
 #endif
                 for(int byte_set = 0; byte_set < sizeof(long_type)/sizeof(char) && byte_runner < m_num_bytes; ++byte_set)
                 {
-                    long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> (((sizeof(long_type)-1)-byte_set)*CHAR_BIT);
+                		long_type current_byte = static_cast<long_type>(genotype_list[byte_runner]) << ((sizeof(long_type)-1)*CHAR_BIT) >> (((sizeof(long_type)-1)-byte_set)*CHAR_BIT);
                     current_genotypes |= current_byte;
                     byte_runner++;
                 }
                 long_type five_masked_geno = current_genotypes & FIVEMASK;
                 long_type inter = (five_masked_geno & (current_genotypes>>1)) ^ five_masked_geno;
                 long_type current_missing = inter | (inter << 1);
-                genotype[i_genotype] = current_genotypes;
-                if(!ld) genotype[i_genotype] = current_genotypes;
+                missing[i_genotype] = ~current_missing;
+                if(!ld){
+                		genotype[i_genotype] = current_genotypes;
+                }
                 else
                 {
                     genotype[i_genotype] =(current_genotypes &(five_masked_geno <<1));
                     genotype[i_genotype] |= (five_masked_geno^((current_genotypes &(FIVEMASK*2))>>1));
-                    missing[i_genotype] = ~current_missing;
                     total_allele += __builtin_popcountll(current_genotypes & (~current_missing));
                     num_missing +=__builtin_popcountll(inter); // because inter only contain one bit for each missing
                     i_genotype++;
@@ -879,37 +881,42 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             openPlinkBinaryFile(bed_name, m_bed);
             prev=0;
         }
-        size_t cur_index = std::get<+PRS::LINE>(partition[i_snp]);
-        if((cur_index-prev)!=0)
+        size_t cur_line = std::get<+PRS::LINE>(partition[i_snp]);
+        if((cur_line-prev)!=0)
         {
             // Skip snps
             m_bed.seekg((std::get<+PRS::LINE>(partition[i_snp])-prev)*m_num_bytes, m_bed.cur);
             prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
-        // in a way, we should be able to optimize this part as it is not really needed for us to
-        // process the whole thing twice
-        read_snp(1, false);
+        //read_snp(1, false);
+        char genotype_list[m_num_bytes];
+        m_bed.read(genotype_list, m_num_bytes);
+        if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
         prev++;
+        size_t sample_index = 0;
         int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
-        for(size_t i_sample =0; i_sample < m_num_sample; ++i_sample)
+        for(auto &&byte : genotype_list)
         {
-            int index =(i_sample*2)/m_bit_size;
-            long_type info = (m_genotype[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
-            long_type miss = (m_missing[0][index] >> ((i_sample*2-index*m_bit_size)) )& THREE;
-            if(miss==3)
-            {
-                for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
-                {
-                    if(snp_list[snp_index].in(i_region))
-                    {
-                        prs_score[i_region][i_sample].second += snp_list[snp_index].score((int)info);
-                    }
-                }
-            }
+        		size_t geno_bit = 0;
+    			int geno_batch = static_cast<int>(byte);
+        		while(geno_bit < 7 && sample_index < m_num_sample)
+        		{
+        			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
+        			if(geno!=1) // Because 01 is coded as missing
+        			{
+        				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
+        				{
+        					if(snp_list[snp_index].in(i_region))
+        					{
+        						prs_score[i_region][sample_index].second += snp_list[snp_index].score(geno);
+        					}
+        				}
+        			}
+        			sample_index++;
+        			geno_bit+=2;
+        		}
         }
-        // AFAIK score = beta*genotype(in 012) or log(OR) * genotype(in 012) / num_SNPs
-        lerase(1);
     }
 }
 

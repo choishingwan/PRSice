@@ -86,12 +86,8 @@ int main(int argc, char *argv[])
                 		{
                 			fprintf(stderr, "\nWARNING: Currently, PRSlice cannot be performed together with PRSet. Please run them separately\n");
                 		}
-                		prsice.run_prslice(commander);
                 }
-                else
-                {
-                		prsice.run_prs(commander, region);
-                }
+                prsice.run_prs(commander, region);
             }
             catch(const std::out_of_range &error)
             {
