@@ -3,7 +3,7 @@
 std::mutex PRSice::score_mutex;
 
 
-// Seems to be working alright (hope I know how to write test cases...)
+
 void PRSice::get_snp(const Commander &c_commander, Region &region, const double &c_threshold)
 {
     const std::string input = c_commander.get_base(m_base_index);
@@ -202,15 +202,15 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
     if(num_se_not_convertible!=0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 }
 
+
 void PRSice::clump(const Commander &c_commander)
 {
-    std::string target = c_commander.get_target();
     bool has_ld = !c_commander.ld_prefix().empty();
-    std::string ld_file = (has_ld)? c_commander.ld_prefix(): target;
+    std::string ld_file = (has_ld)? c_commander.ld_prefix(): m_target;
     PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
     // Because we will go through the target anyway, first go through the target for inclusion
     size_t num_ambig=0, not_found=0, num_duplicate=0;
-    std::string target_bim_name = target+".bim";
+    std::string target_bim_name = m_target+".bim";
     if(target_bim_name.find("#")!=std::string::npos)
     {
         for(auto &&chr: m_chr_list)
@@ -283,14 +283,14 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
             {
                 // will do some soft checking, will issue warning if there are any problem
                 // first check if ambiguous
-                if( (ref_allele.compare("A")==0 && alt_allele.compare("T")==0) ||
-                        (ref_allele.compare("a")==0 && alt_allele.compare("t")==0) ||
-                        (ref_allele.compare("T")==0 && alt_allele.compare("A")==0) ||
-                        (ref_allele.compare("t")==0 && alt_allele.compare("a")==0) ||
-                        (ref_allele.compare("G")==0 && alt_allele.compare("C")==0) ||
-                        (ref_allele.compare("g")==0 && alt_allele.compare("c")==0) ||
-                        (ref_allele.compare("C")==0 && alt_allele.compare("G")==0) ||
-                        (ref_allele.compare("c")==0 && alt_allele.compare("g")==0))
+                if( (ref_allele == "A" && alt_allele == "T") ||
+                        (ref_allele == "a" && alt_allele =="t") ||
+                        (ref_allele == "T" && alt_allele == "A") ||
+                        (ref_allele == "t" && alt_allele == "a") ||
+                        (ref_allele == "G" && alt_allele == "C") ||
+                        (ref_allele == "g" && alt_allele == "c") ||
+                        (ref_allele == "C" && alt_allele == "G") ||
+                        (ref_allele == "c" && alt_allele == "g"))
                 {
                     num_ambig++;
                 }
@@ -324,104 +324,138 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
     target_file.close();
 }
 
-
-void PRSice::run_prs(const Commander &c_commander, const Region &c_region)
+void PRSice::init_pheno(const std::string &c_commander)
 {
-    std::vector<std::string> pheno_header = c_commander.get_pheno_col();
-    std::vector<pheno_storage> pheno_index;
-    std::string target = c_commander.get_target();
-    std::string pheno_file = c_commander.get_pheno();
-    std::string output_name = c_commander.get_out();
-
-
-    if(pheno_header.size() !=0 && pheno_file.empty())
-    {
-        throw std::runtime_error("You must provide a phenotype file for multiple phenotype analysis");
-    }
-    if(pheno_file.empty())
-    {
-        std::string fam = target+".fam";
-        pheno_storage temp;
-        std::get<pheno_store::FILE_NAME>(temp) = fam;
-        std::get<pheno_store::INDEX>(temp) = +FAM::PHENOTYPE;
-        std::get<pheno_store::NAME>(temp) = "";
-        pheno_index.push_back(std::tuple<std::string, size_t, std::string>());
-    }
-    else
-    {
-        std::ifstream pheno;
-        pheno.open(pheno_file.c_str());
-        if(!pheno.is_open())
-        {
-            std::string error_message = "Cannot open phenotype file: "+pheno_file;
-            throw std::runtime_error(error_message);
-        }
-        std::string line;
-        std::getline(pheno, line);
-        if(line.empty())
-        {
-            throw std::runtime_error("Cannot have empty header line for phenotype file!");
-        }
-        pheno.close();
-        misc::trim(line);
-        std::vector<std::string> col = misc::split(line);
-        bool found = false;
-        std::sort(pheno_header.begin(), pheno_header.end());
-        pheno_header.erase(std::unique(pheno_header.begin(), pheno_header.end()), pheno_header.end());
-        for(auto &&pheno_info : pheno_header)
-        {
-            found = false;
-            for(size_t i_column =0; i_column < col.size(); ++i_column)
-            {
-                if(col[i_column].compare(pheno_info)==0)
-                {
-                    found = true;
-                    pheno_storage temp;
-                    std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
-                    std::get<pheno_store::INDEX>(temp) = i_column;
-                    std::get<pheno_store::NAME>(temp) = pheno_info;
-                    pheno_index.push_back(temp);
-                    break;
-                }
-            }
-            if(!found)
-            {
-                fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_info.c_str());
-            }
-        }
-    }
-
-    //Start processing each individual phenotypes
-    if(c_commander.prslice() >0)
-    {
-        for(auto &&pheno_info : pheno_index)
-        {
-            m_prs_results.clear();
-            m_best_threshold.clear();
-            m_best_score.clear();
-            m_num_snp_included.clear();
-            m_current_prs.clear();
-            pheno_prslice(c_commander, c_region, pheno_info, pheno_index.size()> 1);
-        }
-    }
-    else
-    {
-        for(auto &&pheno_info : pheno_index)
-        {
-            bool pre_run=false;
-            categorize(c_commander, pre_run);
-            m_prs_results.clear();
-            m_best_threshold.clear();
-            m_best_score.clear();
-            m_num_snp_included.clear();
-            m_current_prs.clear();
-            individual_pheno_prs(c_commander, c_region, pre_run, pheno_info, pheno_index.size()> 1);
-        }
-    }
+	std::vector<std::string> pheno_header = c_commander.get_pheno_col();
+	std::string pheno_file = c_commander.get_pheno();
+	m_pheno_index = 0;
+	if(pheno_header.size() !=0 && pheno_file.empty())
+	{
+		throw std::runtime_error("You must provide a phenotype file for multiple phenotype analysis");
+	}
+	if(pheno_file.empty())
+	{
+		std::string fam = m_target+".fam";
+		pheno_storage temp;
+		std::get<pheno_store::FILE_NAME>(temp) = fam;
+		std::get<pheno_store::INDEX>(temp) = +FAM::PHENOTYPE;
+		std::get<pheno_store::NAME>(temp) = "";
+		m_pheno_names.push_back(temp);
+	}
+	else
+	{
+		std::ifstream pheno;
+		pheno.open(pheno_file.c_str());
+		if(!pheno.is_open())
+		{
+			std::string error_message = "Cannot open phenotype file: "+pheno_file;
+			throw std::runtime_error(error_message);
+		}
+		std::string line;
+		std::getline(pheno, line);
+		if(line.empty())
+		{
+			throw std::runtime_error("Cannot have empty header line for phenotype file!");
+		}
+		pheno.close();
+		misc::trim(line);
+		std::vector<std::string> col = misc::split(line);
+		bool found = false;
+		std::sort(pheno_header.begin(), pheno_header.end());
+		pheno_header.erase(std::unique(pheno_header.begin(), pheno_header.end()), pheno_header.end());
+		for(auto &&pheno_info : pheno_header)
+		{
+			found = false;
+			for(size_t i_column =0; i_column < col.size(); ++i_column)
+			{
+				if(col[i_column].compare(pheno_info)==0)
+				{
+					found = true;
+					pheno_storage temp;
+					std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
+					std::get<pheno_store::INDEX>(temp) = i_column;
+					std::get<pheno_store::NAME>(temp) = pheno_info;
+					m_pheno_names.push_back(temp);
+					break;
+				}
+			}
+			if(!found)
+			{
+				fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_info.c_str());
+			}
+		}
+	}
+	fprintf(stderr, "There are a total of %zu phenotype to process\n", m_pheno_names.size());
 }
 
-void PRSice::categorize(const Commander &c_commander, bool &pre_run)
+void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_index, const bool prslice)
 {
+	m_null_r2 = 0.0,
+	m_sample_names.clear();
+	// Clean up the matrix
+	m_phenotype.resize(0,0);
+	m_individual_variables.resize(0,0);
+	bool fastscore = c_commander.fastscore();
+	bool no_regress =c_commander.no_regression();
+	bool all = c_commander.all();
+	double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
+	double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
+	double bound_inter = c_commander.get_inter();
+	std::string pheno_file = c_commander.get_pheno();
+	std::string output_name = c_commander.get_out();
+	std::ofstream all_out;
+
+	if(all && !prslice) // we don't want this output for PRSlice
+	{
+		std::string all_out_name = output_name+"."+m_current_base;
+		if(multi)
+		{
+			all_out_name.append("."+std::get<pheno_store::NAME>(m_pheno_names[c_pheno_index]));
+		}
+		all_out_name.append(".all.score");
+		all_out.open(all_out_name.c_str());
+		if(!all_out.is_open())
+		{
+			std::string error_message = "Cannot open file "+all_out_name+" for write";
+			throw std::runtime_error(error_message);
+		}
+	}
+	gen_pheno_vec(std::get<pheno_store::FILE_NAME>(m_pheno_names[c_pheno_index]),
+			std::get<pheno_store::INDEX>(m_pheno_names[c_pheno_index]), !no_regress);
+	if(!no_regress)
+	{
+		gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_header());
+	}
+	if(all && ! prslice)
+	{
+		all_out << "Threshold\tRegion";
+		for(auto &&sample : m_sample_names) all_out << "\t" << std::get<+PRS::IID>(sample);
+		all_out.close();
+	}
+	double null_r2_adjust=0.0, null_p=0.0;
+	int n_thread= c_commander.get_thread();
+	if(m_independent_variables.cols()>2)
+	{
+		Eigen::MatrixXd covariates_only;
+		covariates_only = m_independent_variables;
+		covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) =
+				covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
+		covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
+		if(target_binary)
+		{
+			Regression::glm(m_phenotype, covariates_only, null_p, m_null_r2, 25, n_thread, true);
+		}
+		else
+		{
+			Regression::linear_regression(phenotype, covariates_only, null_p, m_null_r2,
+					null_r2_adjust, n_thread, true);
+		}
+	}
+}
+
+void PRSice::categorize(const Commander &c_commander)
+{
+	m_partition.clear();
     bool fastscore = c_commander.fastscore();
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
     double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
@@ -454,7 +488,7 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
         }
         std::string line;
         size_t cur_line = 0;
-        while(getline(bim, line))
+        while(std::getline(bim, line))
         {
             misc::trim(line);
             if(!line.empty())
@@ -463,19 +497,14 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
                 if(token.size() < 6) throw std::runtime_error("Malformed bim file, should contain at least 6 columns");
                 if(m_include_snp.find(token[+BIM::RS])!=m_include_snp.end())
                 {
-                    double p = m_snp_list.at(m_include_snp.at(token[+BIM::RS])).get_p_value();
+                	size_t cur_snp_index = m_include_snp.at(token[+BIM::RS]);
+                    double p = m_snp_list.at(cur_snp_index).get_p_value();
                     p_partition part;
                     std::get<+PRS::RS>(part) = token[+BIM::RS];
                     std::get<+PRS::LINE>(part) = cur_line;
-                    std::get<+PRS::INDEX>(part) = m_include_snp.at(token[+BIM::RS]);
+                    std::get<+PRS::INDEX>(part) = cur_snp_index;
                     std::get<+PRS::FILENAME>(part) = name;
-                    if(p< bound_start)
-                    {
-                        pre_run=true;
-                        std::get<+PRS::CATEGORY>(part) = -1;
-                        m_partition.push_back(part);
-                    }
-                    else if(p<bound_end)
+                    if(p<bound_end)
                     {
                         int category = -1;
                         if(fastscore)
@@ -487,13 +516,12 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
                             }
                         }
                         else category = (int)((p-bound_start)/bound_inter);
-                        if(category <0) pre_run=true;
-                        std::get<+PRS::CATEGORY>(part) = (category<0)?-1:category;
+                        std::get<+PRS::CATEGORY>(part) = (category<0)?0:category;
                         m_partition.push_back(part);
                     }
                     else if(full_model)
                     {
-                        std::get<+PRS::CATEGORY>(part) = (int)(1-bound_start)/bound_inter;
+                        std::get<+PRS::CATEGORY>(part) = (int)((bound_end+0.1)-bound_start)/bound_inter; // This ensure they all fall into the same category
                         m_partition.push_back(part);
                     }
                 }
@@ -523,133 +551,121 @@ void PRSice::categorize(const Commander &c_commander, bool &pre_run)
              );
 }
 
-void PRSice::individual_pheno_prs(const Commander &c_commander, const Region &c_region, const bool pre_run,
-                                  pheno_storage &pheno_info, const bool multi)
+void PRSice::prsice(const Commander &c_commander, Region &c_region)
 {
-    bool fastscore = c_commander.fastscore();
+
+    if(m_partition.size()==0)
+    {
+        throw std::runtime_error("None of the SNPs fall into the threshold\n");
+    }
+	bool fastscore = c_commander.fastscore();
     bool no_regress =c_commander.no_regression();
-    bool all = c_commander.all();
-    bool target_binary = c_commander.target_is_binary();
+    bool require_all = c_commander.all();
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
     double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
     double bound_inter = c_commander.get_inter();
-    std::string target = c_commander.get_target();
-    std::string pheno_file = c_commander.get_pheno();
-    std::string output_name = c_commander.get_out();
     std::ofstream all_out;
-
-    if(all)
+    if(require_all)
     {
-        std::string all_out_name = output_name+"."+m_current_base;
-        if(multi)
-        {
-            all_out_name.append("."+std::get<pheno_store::NAME>(pheno_info));
-        }
-        all_out_name.append(".all.score");
-        all_out.open(all_out_name.c_str());
+        std::string all_out_name = c_commander.get_out()+"."+m_current_base;
+        if(!pheno_name.empty()) all_out_name.append("."+pheno_name+".all.score");
+        all_out.open(all_out_name.c_str(), std::ofstream::app);
         if(!all_out.is_open())
         {
             std::string error_message = "Cannot open file "+all_out_name+" for write";
             throw std::runtime_error(error_message);
         }
     }
-    std::unordered_map<std::string,size_t> sample_index;
-    std::vector<prs_score> sample_prs;
-    Eigen::VectorXd phenotype;
-    Eigen::MatrixXd independent_variables;
-    if(!no_regress)
-    {
-        gen_pheno_vec(phenotype, target, std::get<pheno_store::FILE_NAME>(pheno_info),
-                      std::get<pheno_store::INDEX>(pheno_info), target_binary, sample_index, sample_prs);
-        gen_cov_matrix(independent_variables, c_commander.get_cov_file(), c_commander.get_cov_header(),
-                       sample_index);
-    }
-    else
-    {
-        std::string fam_name = target+".fam";
-        if(fam_name.find("#")!=std::string::npos)
-        {
-            misc::replace_substring(fam_name, "#", m_chr_list.front());
-        }
-        std::ifstream fam;
-        fam.open(fam_name.c_str());
-        if(!fam.is_open())
-        {
-            std::string error_message = "ERROR: Cannot open fam file: " + fam_name;
-            throw std::runtime_error(error_message);
-        }
-        std::string line;
-        while(std::getline(fam, line))
-        {
-            misc::trim(line);
-            if(!line.empty())
-            {
-                std::vector<std::string> token = misc::split(line);
-                if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
-                sample_prs.push_back(prs_score(token[+FAM::IID], 0.0));
-            }
-        }
-        fam.close();
-    }
-    for(size_t i_region=0; i_region < c_region.size(); ++i_region)
-    {
-        m_current_prs.push_back(sample_prs);
-    }
-    m_num_snp_included = std::vector<size_t>(c_region.size());
+    Eigen::initParallel();
+    std::vector<std::thread> thread_store;
+    size_t n_thread = c_commander.get_thread();
+    double p_value=0.0, r2=0.0, r2_adjust = 0.0;
+    m_best_threshold.clear();
+    m_current_prs.clear();
+    m_prs_results.clear();
     size_t cur_start_index = 0;
-    if(pre_run) get_prs_score(target, cur_start_index);
+    m_num_snp_included = std::vector<size_t> c_region.size();
+    for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
+    {
+    	m_current_prs.push_back(m_sample_names);
+        m_best_threshold.push_back(PRSice_best(0,0,0));
+        m_prs_results.push_back(std::vector<PRSice_result>(0));
+    }
     m_best_score = m_current_prs;
-    if(all)
+
+    int max_category = std::get<+PRS::CATEGORY>(m_partition.back());
+    int non_full_upper_category = (int)((bound_end-bound_start)/bound_inter);
+    size_t num_region = c_region.size();
+    size_t partition_size = m_partition.size();
+    while(cur_start_index != partition_size)
     {
-        all_out << "Threshold\tRegion";
-        for(auto &&sample : sample_prs) all_out << "\t" << std::get<+PRS::IID>(sample); // Get the sample names
-        if(pre_run)
-        {
-            for(size_t i_region=0; i_region < m_current_prs.size(); ++i_region)
-            {
-                for(auto &&prs : m_current_prs[i_region])
-                {
-                    all_out << "\t" << std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[i_region];
-                }
-                all_out << std::endl;
-            }
-        }
-        all_out.close();
+
+    	int cur_category = std::get<+PRS::CATEGORY>(m_partition[cur_start_index]);
+    	cur_threshold = (cur_category > non_full_upper_category)? 1:
+    			std::min((cur_category+1)*bound_inter+bound_start, bound_end);
+    	fprintf(stderr, "\rProcessing %f%%", cur_category/(max_category)*100);
+    	bool reg = get_prs_score(cur_start_index);
+    	if(require_all && all_out.is_open())
+    	{
+    		for(size_t i_region=0; i_region < m_current_prs.size(); ++i_region)
+    		{
+    			all_out << cur_threshold << "\t" << c_region.get_name(i_region);
+    			for(auto &&prs : m_current_prs[i_region])
+    			{
+    				all_out << "\t" << std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[i_region];
+    			}
+    			all_out << std::endl;
+    		}
+    	}
+    	reg=reg&&!no_regress;
+    	if(reg)
+    	{
+    		if(n_thread == 1 || m_current_prs.size()==1)
+    		{
+    			thread_score(0, m_current_prs.size(), cur_threshold,n_thread);
+    		}
+    		else
+    		{
+    			if(c_region.size() < n_thread)
+    			{
+    				for(size_t i_region = 0; i_region < num_region; ++i_region)
+    				{
+    					thread_store.push_back(std::thread(&PRSice::thread_score, this,
+								i_region, i_region+1, cur_threshold,1));
+    				}
+    			}
+    			else
+    			{
+    				int job_size = num_region.size()/n_thread;
+    				int remain = num_region.size()%n_thread;
+    				size_t start =0;
+    				for(size_t i_thread = 0; i_thread < n_thread; ++i_thread)
+    				{
+    					size_t ending = start+job_size+(remain>0);
+    					ending = (ending>num_region.size())? num_region.size(): ending;
+    					thread_store.push_back(std::thread(&PRSice::thread_score, this, start, ending,
+    							cur_threshold,1));
+    					start=ending;
+    					remain--;
+    				}
+    			}
+    			// joining the threads
+    			for(auto &&thread : thread_store) thread.join();
+    		}
+    	}
     }
-    double null_r2 = 0.0, null_r2_adjust=0.0, null_p=0.0;
-    int n_thread= c_commander.get_thread();
-    if(independent_variables.cols()>2)
-    {
-        Eigen::MatrixXd covariates_only;
-        covariates_only = independent_variables;
-        covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
-        covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
-        if(target_binary)
-        {
-            Regression::glm(phenotype, covariates_only, null_p, null_r2, 25, n_thread, true);
-        }
-        else
-        {
-            Regression::linear_regression(phenotype, covariates_only, null_p, null_r2, null_r2_adjust, n_thread, true);
-        }
-    }
-    calculate_scores(c_commander, c_region, cur_start_index,
-                     independent_variables, phenotype, std::get<pheno_store::NAME>(pheno_info), sample_index);
-    if(!no_regress)
-    {
-        prs_output(c_commander, c_region, null_r2, std::get<pheno_store::NAME>(pheno_info));
-    }
+    fprintf(stderr, "\n");
+    if(all_out.is_open()) all_out.close();
 
 }
 
-void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_target, const std::string c_pheno,
-                           const int pheno_index, bool target_binary, std::unordered_map<std::string, size_t> &sample_index,
-                           std::vector<prs_score> &sample_prs)
+
+void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress)
 {
 
     std::vector<double> phenotype_store;
     std::ifstream pheno_file;
-    std::string fam_name = c_target+".fam";
+    std::string fam_name = m_target+".fam";
     if(fam_name.find("#")!=std::string::npos)
     {
         misc::replace_substring(fam_name, "#", m_chr_list.front());
@@ -657,7 +673,7 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
     std::string line;
     size_t cur_index;
     size_t num_case=0, num_control=0;
-    if(c_pheno.empty() || fam_name.compare(c_pheno)==0 )
+    if(c_pheno.empty() || fam_name == c_pheno )
     {
         pheno_file.open(fam_name.c_str());
         if(!pheno_file.is_open())
@@ -672,17 +688,17 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
             {
                 std::vector<std::string> token = misc::split(line);
                 if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
-                sample_prs.push_back(prs_score(token[+FAM::IID], 0.0));
-                if(token[+FAM::PHENOTYPE].compare("NA")!=0)
+                m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0));
+                if(token[+FAM::PHENOTYPE] == "NA" )
                 {
                     try
                     {
-                        if(target_binary)
+                        if(m_target_binary)
                         {
                             double temp = misc::convert<int>(token[+FAM::PHENOTYPE]);
                             if(temp-1>=0 && temp-1<2)
                             {
-                                sample_index[token[+FAM::IID]]=cur_index;
+                            	m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
                                 phenotype_store.push_back(temp-1);
                                 cur_index++;
                                 if(temp==2) num_case++;
@@ -692,7 +708,7 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
                         else
                         {
                             double temp = misc::convert<double>(token[+FAM::PHENOTYPE]);
-                            sample_index[token[+FAM::IID]]=cur_index;
+                            m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
                             phenotype_store.push_back(temp);
                             cur_index++;
                         }
@@ -743,7 +759,7 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
             {
                 std::vector<std::string> token = misc::split(line);
                 if(token.size() < 6) std::runtime_error("Malformed fam file, should contain at least 6 columns");
-                sample_prs.push_back(prs_score(token[+FAM::IID], 0.0));
+                m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0));
                 if(phenotype_info.find(token[+FAM::IID])!= phenotype_info.end())
                 {
                     std::string p = phenotype_info[token[+FAM::IID]];
@@ -751,12 +767,12 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
                     {
                         try
                         {
-                            if(target_binary)
+                            if(m_target_binary)
                             {
                                 double temp = misc::convert<int>(p);
                                 if(temp-1>=0 && temp-1<=2)
                                 {
-                                    sample_index[token[+FAM::IID]]=cur_index;
+                                	m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
                                     phenotype_store.push_back(temp-1);
                                     cur_index++;
                                     if(temp==2) num_case++;
@@ -766,7 +782,7 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
                             else
                             {
                                 double temp = misc::convert<double>(p);
-                                sample_index[token[+FAM::IID]]=cur_index;
+                                m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
                                 phenotype_store.push_back(temp);
                                 cur_index++;
                             }
@@ -779,11 +795,14 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
         fam.close();
     }
     if(phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
-    phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
-    if(target_binary)
+    m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
+    if(m_target_binary)
     {
-        if(num_control==0) throw std::runtime_error("There are no control samples");
-        if(num_case==0) throw std::runtime_error("There are no cases");
+    	if(regress)
+    	{
+    		if(num_control==0) throw std::runtime_error("There are no control samples");
+    		if(num_case==0) throw std::runtime_error("There are no cases");
+    	}
         fprintf(stderr,"Number of controls : %zu\n", num_control);
         fprintf(stderr,"Number of cases : %zu\n", num_case);
     }
@@ -793,13 +812,12 @@ void PRSice::gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_targ
     }
 }
 
-void PRSice::gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::string &c_cov_file,
-                            const std::vector<std::string> &c_cov_header, std::unordered_map<std::string, size_t> &sample_index)
+void PRSice::gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header)
 {
-    size_t num_sample = sample_index.size();
+    size_t num_sample = m_sample_with_phenotypes.size();
     if(c_cov_file.empty())
     {
-        independent_variables = Eigen::MatrixXd::Ones(num_sample,2);
+        m_independent_variables = Eigen::MatrixXd::Ones(num_sample,2);
         return;
     }
     std::ifstream cov;
@@ -838,7 +856,7 @@ void PRSice::gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::s
         }
     }
     else throw std::runtime_error("First line of covariate file is empty!");
-    independent_variables = Eigen::MatrixXd::Ones(num_sample, cov_index.size()+2);
+    m_independent_variables = Eigen::MatrixXd::Ones(num_sample, cov_index.size()+2);
     while(std::getline(cov, line))
     {
         misc::trim(line);
@@ -850,19 +868,19 @@ void PRSice::gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::s
                 std::string error_message = "ERROR: Malformed covariate file, should contain at least "+std::to_string(max_index+1)+" column!";
                 throw std::runtime_error(error_message);
             }
-            if(sample_index.find(token[0])!= sample_index.end())
+            if(m_sample_with_phenotypes.find(token[0])!= m_sample_with_phenotypes.end())
             {
-                int index = sample_index[token[0]];
-                for(size_t i = 0; i < cov_index.size(); ++i)
+                int index = m_sample_with_phenotypes[token[0]];
+                for(size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
                 {
                     try
                     {
-                        double temp = misc::convert<double>(token[cov_index[i]]);
-                        independent_variables(index, i+2) = temp; // + 2 because first line = intercept, second line = PRS
+                        double temp = misc::convert<double>(token[cov_index[i_cov]]);
+                        m_independent_variables(index, i_cov+2) = temp; // + 2 because first line = intercept, second line = PRS
                     }
                     catch(const std::runtime_error &error)
                     {
-                        independent_variables(index, i+2) = 0;
+                        m_independent_variables(index, i_cov+2) = 0;
                     }
                 }
             }
@@ -870,7 +888,7 @@ void PRSice::gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::s
     }
 }
 
-bool PRSice::get_prs_score(const std::string &target, size_t &cur_index)
+bool PRSice::get_prs_score(size_t &cur_index)
 {
     if(m_partition.size()==0) return false; // nothing to do
     int prev_index = std::get<+PRS::CATEGORY>(m_partition[cur_index]);
@@ -892,7 +910,7 @@ bool PRSice::get_prs_score(const std::string &target, size_t &cur_index)
         }
     }
     if(!ended) end_index = m_partition.size();
-    PLINK prs(target, m_chr_list);
+    PLINK prs(m_target, m_chr_list);
     prs.initialize();
     prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
@@ -900,147 +918,31 @@ bool PRSice::get_prs_score(const std::string &target, size_t &cur_index)
     return true;
 }
 
-
-
-void PRSice::calculate_scores(const Commander &c_commander,
-                              const Region &c_region, size_t cur_start_index, Eigen::MatrixXd &independent_variables,
-                              Eigen::VectorXd &phenotype, const std::string &pheno_name,
-                              const std::unordered_map<std::string, size_t> &sample_index)
-{
-    bool target_binary = c_commander.target_is_binary();
-    std::string target = c_commander.get_target();
-    double current_upper =0.0;
-    Eigen::initParallel();
-    std::vector<std::thread> thread_store;
-    size_t n_thread = c_commander.get_thread();
-    double p_value=0.0, r2=0.0, r2_adjust = 0.0;
-    for(size_t i = 0; i < c_region.size(); ++i)
-    {
-        m_best_threshold.push_back(PRSice_best(0,0,0));
-        m_prs_results.push_back(std::vector<PRSice_result>(0));
-    }
-    if(cur_start_index == m_partition.size())
-    {
-        fprintf(stderr, "There are no valid threshold to test\n");
-        fprintf(stderr, "All SNPs have p-value lower than --lower and higher than --upper\n");
-        fprintf(stderr, "We will output the PRS score for you just to be nice\n");
-    }
-
-    bool fastscore = c_commander.fastscore();
-    double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
-    double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
-    double bound_inter = c_commander.get_inter();
-    bool no_regress =c_commander.no_regression();
-    bool all = c_commander.all();
-
-    std::ofstream all_out;
-    if(all)
-    {
-        std::string all_out_name = c_commander.get_out()+"."+m_current_base;
-        if(!pheno_name.empty()) all_out_name.append("."+pheno_name+".all.score");
-        all_out.open(all_out_name.c_str(), std::ofstream::app);
-        if(!all_out.is_open())
-        {
-            std::string error_message = "Cannot open file "+all_out_name+" for write";
-            throw std::runtime_error(error_message);
-        }
-    }
-
-    while(cur_start_index != m_partition.size())
-    {
-        // getting the current cutoff
-        current_upper = std::min((std::get<+PRS::CATEGORY>(m_partition[cur_start_index])+1)*bound_inter+bound_start, bound_end);
-        fprintf(stderr, "\rProcessing %f", current_upper);
-
-        // now calculate the PRS for each region
-
-        bool reg = get_prs_score(target, cur_start_index);
-        for(auto m : m_num_snp_included)
-            // if regression is not required, we will simply output the score
-            if(all)
-            {
-                for(size_t i_region=0; i_region < m_current_prs.size(); ++i_region)
-                {
-                    all_out << current_upper << "\t" << c_region.get_name(i_region);
-                    for(auto &&prs : m_current_prs[i_region])
-                    {
-                        all_out << "\t" << std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[i_region];
-                    }
-                    all_out << std::endl;
-                }
-            }
-        reg=reg&&!no_regress;
-        if(reg)
-        {
-            if(n_thread == 1 || m_current_prs.size()==1)
-            {
-                thread_score(independent_variables, phenotype, sample_index, 0, m_current_prs.size(),
-                             target_binary, current_upper,n_thread);
-            }
-            else
-            {
-                // perform multi threading
-                if(c_region.size() < n_thread)
-                {
-                    for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
-                    {
-                        thread_store.push_back(std::thread(&PRSice::thread_score, this,
-                                                           std::ref(independent_variables), std::cref(phenotype), std::cref(sample_index),
-                                                           i_region, i_region+1, target_binary, current_upper,1));
-                    }
-                }
-                else
-                {
-                    int job_size = c_region.size()/n_thread;
-                    int remain = c_region.size()%n_thread;
-                    size_t start =0;
-                    for(size_t i_thread = 0; i_thread < n_thread; ++i_thread)
-                    {
-                        size_t ending = start+job_size+(remain>0);
-                        ending = (ending>c_region.size())? c_region.size(): ending;
-                        thread_store.push_back(std::thread(&PRSice::thread_score, this,
-                                                           std::ref(independent_variables), std::cref(phenotype), std::cref(sample_index),
-                                                           start, ending, target_binary, current_upper,1));
-                        start=ending;
-                        remain--;
-                    }
-                }
-                // joining the threads
-                for(auto &&thread : thread_store) thread.join();
-            }
-        }
-    }
-    fprintf(stderr, "\n");
-    if(all) all_out.close();
-}
-
-
-void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
-                           const std::unordered_map<std::string, size_t> &c_sample_index, size_t region_start, size_t region_end,
-                           bool target_binary, double threshold, size_t thread)
+void PRSice::thread_score(size_t region_start, size_t region_end, double threshold, size_t thread)
 {
     Eigen::MatrixXd X;
     bool thread_safe=false;
     if(region_start==0 && region_end ==m_current_prs.size()) thread_safe = true;
-    else X = independent_variables;
+    else X = m_independent_variables;
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0;
     for(size_t iter = region_start; iter < region_end; ++iter)
     {
         for(auto &&prs : m_current_prs[iter])
         {
             std::string sample = std::get<+PRS::IID>(prs);
-            if(c_sample_index.find(sample)!=c_sample_index.end())
+            if(m_sample_with_phenotypes.find(sample)!=m_sample_with_phenotypes.end())
             {
-                if(thread_safe) independent_variables(c_sample_index.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
-                else X(c_sample_index.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
+                if(thread_safe) independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                		std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
+                else X(m_sample_with_phenotypes.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
             }
         }
-        if(target_binary)
+        if(m_target_binary)
         {
             try
             {
-                if(thread_safe) Regression::glm(c_pheno, independent_variables, p_value, r2, 25, thread, true);
-                else Regression::glm(c_pheno, X, p_value, r2, 25, thread, true);
+                if(thread_safe) Regression::glm(m_phenotype, m_independent_variables, p_value, r2, 25, thread, true);
+                else Regression::glm(m_phenotype, X, p_value, r2, 25, thread, true);
             }
             catch(const std::runtime_error &error)
             {
@@ -1050,11 +952,11 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
                 fprintf(stderr, "       Please send me the DEBUG files\n");
                 std::ofstream debug;
                 debug.open("DEBUG");
-                if(thread_safe) debug << independent_variables << std::endl;
+                if(thread_safe) debug << m_independent_variables << std::endl;
                 else 	debug << X<< std::endl;
                 debug.close();
                 debug.open("DEBUG.y");
-                debug << c_pheno << std::endl;
+                debug << m_phenotype << std::endl;
                 debug.close();
                 fprintf(stderr, "ERROR: %s\n",error.what());
                 exit(-1);
@@ -1062,8 +964,8 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
         }
         else
         {
-            if(thread_safe) Regression::linear_regression(c_pheno, independent_variables, p_value, r2, r2_adjust, thread, true);
-            else Regression::linear_regression(c_pheno, X, p_value, r2, r2_adjust, thread, true);
+            if(thread_safe) Regression::linear_regression(m_phenotype, m_independent_variables, p_value, r2, r2_adjust, thread, true);
+            else Regression::linear_regression(m_phenotype, X, p_value, r2, r2_adjust, thread, true);
         }
         // This should be thread safe as each thread will only mind their own region
         // now add the PRS result to the vectors (hopefully won't be out off scope
@@ -1088,12 +990,9 @@ void PRSice::thread_score( Eigen::MatrixXd &independent_variables, const Eigen::
 }
 
 
-
-// This function should be responsible for the output
-void PRSice::prs_output(const Commander &c_commander, const Region &c_region, const double null_r2,
-                        const std::string pheno_name) const
+void PRSice::output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const
 {
-
+	std::string pheno_name = m_pheno_names[pheno_index];
     std::string output_prefix = c_commander.get_out()+"."+m_current_base;
     if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
     for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)
@@ -1120,7 +1019,7 @@ void PRSice::prs_output(const Commander &c_commander, const Region &c_region, co
         for(auto &&prs : m_prs_results[i_region])
         {
             prsice_out << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
-                       std::get<+PRS::R2>(prs)-null_r2 << "\t" <<
+                       std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
                        std::get<+PRS::P>(prs)<< "\t" <<
                        std::get<+PRS::NSNP>(prs) << std::endl;
         }
@@ -1141,335 +1040,6 @@ void PRSice::prs_output(const Commander &c_commander, const Region &c_region, co
         prsice_out.close();
         best_out.close();
     }
-}
-
-
-
-void PRSice::pheno_prslice(const Commander &c_commander, const Region &c_region,  pheno_storage &pheno_index,
-                           const bool multi)
-{
-    // get the null first
-    m_prs_results.clear();
-    m_best_threshold.clear();
-    m_best_score.clear();
-    m_num_snp_included.clear();
-    m_current_prs.clear();
-    bool target_binary = c_commander.target_is_binary();
-    std::string target = c_commander.get_target();
-    std::string pheno_file = c_commander.get_pheno();
-    std::unordered_map<std::string,size_t> sample_index;
-    std::unordered_map<size_t, std::string> bin_names;
-    std::vector<prs_score> sample_prs;
-    Eigen::VectorXd phenotype;
-    Eigen::MatrixXd independent_variables;
-    gen_pheno_vec(phenotype, target, std::get<pheno_store::FILE_NAME>(pheno_index),
-                  std::get<pheno_store::INDEX>(pheno_index), target_binary, sample_index, sample_prs);
-    gen_cov_matrix(independent_variables, c_commander.get_cov_file(), c_commander.get_cov_header(), sample_index);
-    for(size_t i_region=0; i_region < c_region.size(); ++i_region)
-    {
-        m_current_prs.push_back(sample_prs);
-    }
-    m_num_snp_included = std::vector<size_t>(c_region.size());
-    double null_r2 = 0.0, null_r2_adjust=0.0, null_p=0.0;
-    int n_thread= c_commander.get_thread();
-    if(independent_variables.cols()>2)
-    {
-        Eigen::MatrixXd covariates_only;
-        covariates_only = independent_variables;
-        covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) = covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
-        covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
-        if(target_binary)
-        {
-            Regression::glm(phenotype, covariates_only, null_p, null_r2, 25, n_thread, true);
-        }
-        else
-        {
-            Regression::linear_regression(phenotype, covariates_only, null_p, null_r2, null_r2_adjust, n_thread, true);
-        }
-    }
-
-
-
-
-
-
-    int window = c_commander.prslice();
-    std::unordered_map<std::string, std::string> file_name_reference;
-    std::vector<std::string> file_name;
-    if(c_commander.get_target().find("#")!=std::string::npos)
-    {
-        for(auto &&chr: m_chr_list)
-        {
-            std::string name = c_commander.get_target();
-            misc::replace_substring(name, "#", chr);
-            file_name_reference[chr] = name;
-            file_name.push_back(name);
-        }
-    }
-    else
-    {
-        for(auto &&chr : m_chr_list)
-        {
-            file_name_reference[chr] = c_commander.get_target();
-        }
-        file_name.push_back(c_commander.get_target());
-    }
-    // Although in a sense, the partition should be the same for all PRSlice Phenotype run,
-    // we will do it separately just to simplify the code (after all, I don't think it is
-    // very efficient to run all phenotype together anyway)
-    bool fastscore = c_commander.fastscore();
-    double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
-    double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
-    double bound_inter = c_commander.get_inter();
-    bool full_model = c_commander.full();
-    std::string prev_chr = "";
-    size_t prev_loc = 0;
-    std::vector<double> best_r2;
-    std::vector<std::vector<p_partition> > best_snp_index;
-    std::unordered_map<std::string, size_t> part_ref;
-    bool pre_run = false;
-    std::string cur_name="";
-    std::string last_chr="";
-    size_t last_loc=0;
-    size_t cur_bin_count = 0;
-    for(auto &&snp : m_snp_list) // for each SNP
-    {
-        if(m_include_snp.find(snp.get_rs_id())!=m_include_snp.end())
-        {
-            std::string cur_chr = snp.get_chr();
-            size_t cur_loc = snp.get_loc();
-            last_chr = cur_chr;
-            last_loc = cur_loc;
-            if((prev_chr.empty() || cur_chr.compare(prev_chr)!=0) || (cur_loc-prev_loc) > window)
-            {
-                bin_names[cur_bin_count-1].append("-"+cur_loc);
-                for(auto file : file_name)
-                {
-                    size_t cur_line = 0;
-                    std::ifstream bim;
-                    bim.open(file.c_str());
-                    if(!bim.is_open())
-                    {
-                        std::string error_message = "Cannot open bim file: " + file;
-                        throw std::runtime_error(error_message);
-                    }
-                    std::string line;
-                    while(std::getline(bim, line))
-                    {
-                        misc::trim(line);
-                        if(!line.empty())
-                        {
-                            std::vector<std::string> token = misc::split(line);
-                            if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-                            std::string rs = token[+BIM::RS];
-                            if(part_ref.find(rs)!=part_ref.end())
-                            {
-                                std::get<+PRS::LINE>(m_partition[part_ref[rs]]) = cur_line;
-                            }
-                        }
-                        cur_line++;
-                    }
-                }
-                // Run PRS here
-                std::vector<p_partition> cur_best_snp_index;
-                double cur_r2 = calculate_prslice_prs(c_commander, c_region, cur_best_snp_index, pre_run, pheno_index, sample_prs, sample_index, phenotype, independent_variables);
-                best_r2.push_back(cur_r2);
-                best_snp_index.push_back(cur_best_snp_index);
-                // Reset stuff here
-                m_partition.clear();
-                prev_chr = cur_chr;
-                prev_loc = cur_loc;
-                cur_name = cur_chr+":"+cur_loc;
-                bin_names[bin_count] = cur_name;
-                bin_count++;
-                pre_run = false;
-            }
-            else
-            {
-                // add this to the m_partition
-                p_partition part;
-                std::get<+PRS::RS>(part) = snp.get_rs_id();
-                std::get<+PRS::LINE>(part) = 0; // we don't know what line it is
-                std::get<+PRS::INDEX>(part) = m_include_snp[snp.get_rs_id()];
-                std::get<+PRS::FILENAME>(part) = file_name_reference[cur_chr];
-                double p = snp.get_p_value();
-                if(p< bound_start)
-                {
-                    std::get<+PRS::CATEGORY>(part) = -1;
-                    m_partition.push_back(part);
-                    part_ref[snp.get_rs_id()] = m_partition.size()-1;
-                }
-                else if(p<bound_end)
-                {
-                    int category = -1;
-                    if(fastscore)
-                    {
-                        category = c_commander.get_category(p);
-                        if(category ==-2)
-                        {
-                            throw std::runtime_error("Undefined category!");
-                        }
-                    }
-                    else category = (int)((p-bound_start)/bound_inter);
-                    if(category <0) pre_run=true;
-                    std::get<+PRS::CATEGORY>(part) = category;
-                    m_partition.push_back(part);
-                    part_ref[snp.get_rs_id()] = m_partition.size()-1;
-                }
-                else if(full_model)
-                {
-                    std::get<+PRS::CATEGORY>(part) = (int)(1-bound_start)/bound_inter;
-                    m_partition.push_back(part);
-                    part_ref[snp.get_rs_id()] = m_partition.size()-1;
-                }
-            }
-        }
-    }
-    // Finish the left overs
-    if(m_partition.size() > 0)
-    {
-        bin_names[cur_bin_count-1].append("-"+last_loc);
-        for(auto file : file_name)
-        {
-            size_t cur_line = 0;
-            std::ifstream bim;
-            bim.open(file.c_str());
-            if(!bim.is_open())
-            {
-                std::string error_message = "Cannot open bim file: " + file;
-                throw std::runtime_error(error_message);
-            }
-            std::string line;
-            while(std::getline(bim, line))
-            {
-                misc::trim(line);
-                if(!line.empty())
-                {
-                    std::vector<std::string> token = misc::split(line);
-                    if(token.size() < 6) throw std::runtime_error("Malformed bim file. Should contain at least 6 column");
-                    std::string rs = token[+BIM::RS];
-                    if(part_ref.find(rs)!=part_ref.end())
-                    {
-                        std::get<+PRS::LINE>(m_partition[part_ref[rs]]) = cur_line;
-                    }
-                }
-                cur_line++;
-            }
-        }
-        std::vector<p_partition> cur_best_snp_index;
-        double cur_r2=calculate_prslice_prs(c_commander, c_region, cur_best_snp_index, pre_run, pheno_index, sample_prs, sample_index, phenotype, independent_variables);
-        best_r2.push_back(cur_r2);
-        best_snp_index.push_back(cur_best_snp_index);
-    }
-
-    // Now completed the PRSlice part, need to again
-    std::vector<size_t> best_order = sort_by_r2(best_r2);
-    int total = best_order.size();
-    int processed = 0;
-    // need to figure out how to present the data
-
-
-    size_t cur_start_index=0;
-    size_t bin_count = 0;
-    for(auto best : best_order)
-    {
-        fprintf(stderr, "\rProcessing %d out of %d regions\r", processed, total);
-        if(best_snp_index[best].size()==0)
-        {
-            throw std::runtime_error("Best Snp should always contain at least 1 SNP!");
-        }
-        m_partition.insert(m_partition.end(), best_snp_index[best].begin(), best_snp_index[best].end());
-        )
-        // just read everything
-        PLINK prs(target, m_chr_list);
-        prs.initialize();
-        prs.get_score(m_partition, m_snp_list, m_current_prs, cur_start_index, m_partition.size());
-        // now we've got the PRS, proceed to calculation
-        cur_start_index = m_partition.size();
-        if(n_thread == 1 || m_current_prs.size()==1)
-        {
-            thread_score(independent_variables, phenotype, sample_index, 0, m_current_prs.size(), target_binary, (int)bin_count,n_thread);
-        }
-        else
-        {
-            // perform multi threading
-            if(c_region.size() < n_thread)
-            {
-                for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
-                {
-                    thread_store.push_back(std::thread(&PRSice::thread_score, this, std::ref(independent_variables), std::cref(phenotype), std::cref(sample_index), i_region, i_region+1, target_binary, (int)bin_count,1));
-                }
-            }
-            else
-            {
-                int job_size = c_region.size()/n_thread;
-                int remain = c_region.size()%n_thread;
-                size_t start =0;
-                for(size_t i_thread = 0; i_thread < n_thread; ++i_thread)
-                {
-                    size_t ending = start+job_size+(remain>0);
-                    ending = (ending>c_region.size())? c_region.size(): ending;
-                    thread_store.push_back(std::thread(&PRSice::thread_score, this,
-                                                       std::ref(independent_variables), std::cref(phenotype), std::cref(sample_index), start, ending, target_binary, (int)bin_count,1));
-                    start=ending;
-                    remain--;
-                }
-            }
-            // joining the threads
-            for(auto &&thread : thread_store) thread.join();
-        }
-        bin_count++;
-    }
-    // now the m_best_threhsold should have the info and the prs_result should contain the
-    fprintf(stderr, "\nCompleted\n");
-}
-
-double PRSice::calculate_prslice_prs(const Commander &commander, const Region &c_region, std::vector<p_partition> &best_snp_index, bool pre_run,  pheno_storage &pheno_index, std::vector<prs_score> &sample_prs,
-                                     std::unordered_map<std::string,size_t> &sample_index, Eigen::VectorXd &phenotype, Eigen::MatrixXd &independent_variables)
-{
-    if(m_partition.size()==0) return 0.0;
-    m_prs_results.clear();
-    m_best_threshold.clear();
-    m_best_score.clear();
-    m_num_snp_included.clear();
-    m_current_prs.clear();
-    std::string target = c_commander.get_target();
-    for(size_t i_region=0; i_region < c_region.size(); ++i_region)
-    {
-        m_current_prs.push_back(sample_prs);
-    }
-    m_num_snp_included = std::vector<size_t>(c_region.size());
-    size_t cur_start_index = 0;
-    if(pre_run) get_prs_score(target, cur_start_index);
-    m_best_score = m_current_prs;
-    calculate_scores(c_commander, c_region, cur_start_index,
-                     independent_variables, phenotype, std::get<pheno_store::NAME>(pheno_index), sample_index);
-    // now need to get the best threshold information here
-
-    size_t n_snp = std::get<+PRS::NSNP>(m_best_threshold[i_region]);
-    for(size_t i_snp = 0; i_snp < m_partition.size(); ++i_snp)
-    {
-        best_snp_index.push_back(m_partition[i_snp]);
-    }
-    return std::get<+PRS::R2>(m_best_threshold[i_region]);
-}
-
-
-std::vector<size_t> sort_by_r2(const std::vector<double> &r2) const
-{
-    std::vector<size_t> idx(r2.size());
-    std::iota(idx.begin(), idx.end(),0);
-    std::sort(idx.begin(), idx.end(), [&r2](size_t i1, size_t i2)
-    {
-        return r2[i1] < r2[i2];
-    });
-    return idx;
-}
-
-// basically update the score vector to contain the new polygenic score
-PRSice::PRSice()
-{
-    m_base_index = 0;
 }
 
 PRSice::~PRSice()

@@ -53,11 +53,9 @@ int main(int argc, char *argv[])
     fprintf(stderr,"Window Size  : %zu\n", commander.get_clump_kb());
     fprintf(stderr,"\nStart processing: %s\n", commander.get_target().c_str());
     fprintf(stderr,"==============================\n");
-    bool fastscore = commander.fastscore();
-    bool full_model = commander.full();
-    double bound_start =  (fastscore)? commander.get_bar_lower(): commander.get_lower();
-    double bound_end = (fastscore)? commander.get_bar_upper():commander.get_upper();
-    double bound_inter = commander.get_inter();
+
+
+    bool perform_prslice = commander.prslice() > 0.0;
 
     std::vector<std::string> base = commander.get_base();
     int num_base = base.size();
@@ -75,19 +73,62 @@ int main(int argc, char *argv[])
             std::string base_name=misc::remove_extension<std::string>(misc::base_name<std::string>(base[i_base]));
             try
             {
-                PRSice prsice = PRSice(base_name, i_base);
+                PRSice prsice = PRSice(base_name, i_base, commander.get_target(), commander.target_is_binary());
                 double threshold = (full_model)? 1.0:bound_end;
-                // no point in getting SNPs that we will never use in the model
+                /**
+                 * Read in SNPs from the base file. We will only include SNPs less than threhsold as
+                 * they will be ignored in the whole process anyway
+                 */
                 prsice.get_snp(commander, region, threshold);
+                /**
+                 * Perform clumping on the SNPs. This help us to get around the problem of LD
+                 */
                 prsice.clump(commander);
-                if(commander.prslice() > 0.0)
+                /**
+                 * Initialize the phenotype information for the target
+                 * We can actually perform this outside the loop and set the
+                 * phenotype information as static variable. But then this piece
+                 * of code should be quick. So might be safer and easier to just
+                 * keep it here
+                 */
+                prsice.init_pheno(commander);
+                size_t num_pheno = prsice.num_phenotype();
+                if(!perform_prslice)
                 {
-                    if(region.size() > 1)
-                    {
-                        fprintf(stderr, "\nWARNING: Currently, PRSlice cannot be performed together with PRSet. Please run them separately\n");
-                    }
+                	/**
+                	 * Categorize SNPs based on their p-value. This will aid the
+                	 * Iterative process of PRSice
+                	 */
+                	prsice.categorize(commander);
+                	for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
+                	{
+                		/**
+                		 * Initialize the matrix. The reason why we do it for each phenotype
+                		 * is because of missing data. It is much easier to make it for each
+                		 * phenotype than making a full matrix and modifying it
+                		 */
+                		prsice.init_matrix(commander, region, i_pheno, perform_prslice);
+                		/**
+                		 * Start performing the actual PRSice. The results will all be stored
+                		 * within the class vectors. This help us to reduce the number of
+                		 * parameters required
+                		 */
+                		prsice.prsice(commander, region);
+                		/**
+                		 * Output the results
+                		 */
+                		prsice.output(commander, region, i_pheno);
+                	}
                 }
-                prsice.run_prs(commander, region);
+                else
+                {
+                	for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
+                	{
+                		prsice.init_matrix(commander, region, i_pheno, perform_prslice);
+                	}
+                }
+
+
             }
             catch(const std::out_of_range &error)
             {

@@ -23,8 +23,8 @@
 class PRSice
 {
 public:
-    PRSice();
-    PRSice(std::string base_name, int index): m_current_base(base_name), m_base_index(index)
+    PRSice(std::string base_name, int index, std::string target, bool target_binary): m_current_base(base_name), m_base_index(index),
+    		m_target(target), m_target_binary(target_binary)
     {
         if(index < 0)
         {
@@ -32,64 +32,121 @@ public:
         }
     };
     virtual ~PRSice();
+    /**
+     * This function will read in all SNPs with p-value less than c_threshold from
+     * the base file. Base file is determined by m_base_index
+     * @param c_commander Contain the meta information of the user input. This is where
+     *	we get the base file information
+     * @param region The region information. This is used to set the flag of the SNPs
+     * @param c_threshold The p-value threshold. Any SNPs with p-value higher than this
+     *  will be ignored
+     */
     void get_snp(const Commander &c_commander, Region &region, const double &c_threshold);
+    /**
+     * This function will perform clumping based on SNPs found in both the target and LD files
+     * All required parameters are obtained from c_commander. Index SNPs will be stored in
+     * m_include_snp. As different base file might contain different SNPs, this has to be
+     * done separately for each base files
+     * @param c_commander Contain all the parameters e.g. clumping threshold.
+     */
     void clump(const Commander &c_commander);
-    void run_prs(const Commander &c_commander, const Region &c_region);
-    void run_prslice(const Commander &c_commander);
-
+    /**
+     * This function will compute the required phenotype that will be used for PRS.
+     * Result phenotype will be stored in m_pheno_names
+     * @param c_commander Again, c_commander serves as the container of all parameters
+     */
+    void init_pheno(const std::string &c_commander);
+    /**
+     * This function compute the required matrix and the null r2
+     * @param c_commander The paramter container
+     * @param c_region Provide information as to number of region included
+     * @param c_pheno_index Current phenotype
+     * @param prslice Whether if this is for PRSlice. For PRSlice, we will not allow output of all
+     */
+    void init_matrix(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,
+    		const bool prslice);
+    /**
+     * This function return the number of valid phenotype for the analysis
+     * @return Number of valid phenotype for the analysis
+     */
+    size_t num_phenotype() const { return m_pheno_names.size(); };
+    /**
+     * Essentially calculate the index for PRSice run. Categorize SNPs based on
+     * their p-values. Will update the m_partition vector
+     * @param c_commander Parameter container
+     */
+    void categorize(const Commander &c_commander);
+    /**
+     * Output the results
+     * @param c_commander List of parameters
+     * @param c_region List of regions
+     * @param pheno_index Indication of which phenotype we are working with
+     */
+    void output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
 protected:
 private:
-//      This is used for thead safety
+    // Phenotype storages
     enum pheno_store{FILE_NAME, INDEX, NAME};
     typedef std::tuple<std::string, size_t, std::string> pheno_storage;
+	std::vector<pheno_storage> m_pheno_names;
+	size_t m_pheno_index=0;
+	// Regression related storages
+	double m_null_r2 = 0.0;
+	Eigen::VectorXd m_phenotype;
+	Eigen::MatrixXd m_independent_variables;
+	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
+	// For thread safety
     static std::mutex score_mutex;
-    int m_base_index;
-    std::string m_current_base;
+
+    // Holder vector containing the sample names in the target file
+	std::vector<prs_score> m_sample_names;
+	// PRS storages
+    std::vector<p_partition> m_partition; //
+    std::vector<size_t> m_num_snp_included; //
     std::vector<PRSice_best> m_best_threshold; //
     std::vector<std::vector<prs_score> > m_best_score; //
-    std::vector<p_partition> m_partition; //
-    std::vector<std::vector<PRSice_result> > m_prs_results; //
-    std::vector<size_t> m_num_snp_included; //
     std::vector<std::vector<prs_score> > m_current_prs; //
+    std::vector<std::vector<PRSice_result> > m_prs_results; //
+    // SNPs found in the base file
     boost::ptr_vector<SNP> m_snp_list; //
     std::unordered_map<std::string, size_t> m_snp_index; //
-    std::vector<std::string> m_chr_list; //
+    /**
+     * This vector contain the chromosome included in the base file
+     * Should be used to guide the plink class to read the multi-chromosome
+     * files
+     */
+    std::vector<std::string> m_chr_list;
     std::unordered_map<std::string, size_t> m_include_snp; //
 
+    /**
+     * The base index indicating which base we are working with
+     */
+    int m_base_index;
+    /**
+     * The name of the base file
+     * We use this as a storage as wehave already stripped off the directory
+     * information from this string
+     */
+    std::string m_current_base;
 
+    std::string m_target;
+    bool m_target_binary;
+    /**
+     * Check whether if the SNP is included in the target file. This should update
+     * the m_include_snp
+     * @param c_target_bim_name The target bim file name
+     * @param num_ambig Number of ambiguous SNPs
+     * @param not_found Number of base SNPs not found in the target file
+     * @param num_duplicate Number of duplicated SNPs found in the target file
+     */
     void check_inclusion(const std::string &c_target_bim_name,
     		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
-    void run_prs(const Commander &c_commander, const std::map<std::string, size_t> &inclusion,
-    		const Region &c_region);
+    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress);
+    void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
+    bool get_prs_score(size_t &cur_index);
+    void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread);
 
-    void categorize(const Commander &c_commander, bool &pre_run);
-    void categorize(const Commander &c_commander, bool &pre_run, size_t &start_snp, size_t &last_snp);
-    void individual_pheno_prs(const Commander &c_commander, const Region &c_region, const bool pre_run,
-    		pheno_storage &pheno_index, const bool multi);
-    void pheno_prslice(const Commander &c_commander, const Region &c_region,  pheno_storage &pheno_index,
-    		const bool multi);
-    void gen_pheno_vec(Eigen::VectorXd &phenotype, const std::string &c_target, const std::string c_pheno,
-    		const int pheno_index, bool target_binary, std::unordered_map<std::string, size_t> &sample_index,
-			std::vector<prs_score> &sample_prs);
-    void gen_cov_matrix(Eigen::MatrixXd &independent_variables, const std::string &c_cov_file,
-    		const std::vector<std::string> &c_cov_header, std::unordered_map<std::string, size_t> &sample_index);
-    void prslice_prs(const Commander &commander, const Region &c_region, std::vector<p_partition> &best_snp_index);
-    double calculate_prslice_prs(const Commander &commander, const Region &c_region, std::vector<p_partition> &best_snp_index, bool pre_run,  pheno_storage &pheno_index, std::vector<prs_score> &sample_prs,
-    std::unordered_map<std::string,size_t> &sample_index, Eigen::VectorXd &phenotype, Eigen::MatrixXd &independent_variables);
-
-
-    bool get_prs_score(const std::string &target, size_t &cur_index);
-    void calculate_scores(const Commander &c_commander,  const Region &c_region, size_t cur_start_index,
-                              Eigen::MatrixXd &independent_variables, Eigen::VectorXd &phenotype, const std::string &pheno_name,
-                              const std::unordered_map<std::string, size_t> &fam_index);
-    void thread_score( Eigen::MatrixXd &independent_variables, const Eigen::VectorXd &c_pheno,
-                       const std::unordered_map<std::string, size_t> &c_fam_index, size_t region_start, size_t region_end,
-                       bool target_binary, double threshold, size_t thread);
-
-    void prs_output(const Commander &c_commander, const Region &c_region, const double null_r2,
-    const std::string pheno_name) const;
-    std::vector<size_t> sort_by_r2(const std::vector<double> &r2) const;
 };
 
 #endif // PRSICE_H
