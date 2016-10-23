@@ -76,6 +76,7 @@ public:
      * @param c_commander Parameter container
      */
     void categorize(const Commander &c_commander);
+    void prsice(const Commander &c_commander, Region &c_region, bool prslice=false);
     /**
      * Output the results
      * @param c_commander List of parameters
@@ -110,6 +111,8 @@ private:
     // SNPs found in the base file
     boost::ptr_vector<SNP> m_snp_list; //
     std::unordered_map<std::string, size_t> m_snp_index; //
+    // PRSlice related storages
+    std::vector<std::string> m_window_names;
     /**
      * This vector contain the chromosome included in the base file
      * Should be used to guide the plink class to read the multi-chromosome
@@ -142,6 +145,7 @@ private:
     void check_inclusion(const std::string &c_target_bim_name,
     		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
+    void update_line(std::unordered_map<std::string, size_t> &partition_index)
     void gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress);
     void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
     bool get_prs_score(size_t &cur_index);

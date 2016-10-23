@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
                 		 * parameters required
                 		 */
                 		prsice.prsice(commander, region);
+                	    fprintf(stderr, "\n");
                 		/**
                 		 * Output the results
                 		 */

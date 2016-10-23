@@ -462,19 +462,18 @@ void PRSice::categorize(const Commander &c_commander)
     double bound_inter = c_commander.get_inter();
     bool full_model = c_commander.full();
     std::vector<std::string> file_names;
-    if(c_commander.get_target().find("#")!=std::string::npos)
+    if(m_target.find("#")!=std::string::npos)
     {
         for(auto &&chr: m_chr_list)
         {
-            std::string name = c_commander.get_target();
+            std::string name = m_target;
             misc::replace_substring(name, "#", chr);
             file_names.push_back(name);
         }
     }
     else
     {
-        std::string name = c_commander.get_target();
-        file_names.push_back(name);
+        file_names.push_back(m_target);
     }
     for(auto &&name: file_names)
     {
@@ -551,7 +550,7 @@ void PRSice::categorize(const Commander &c_commander)
              );
 }
 
-void PRSice::prsice(const Commander &c_commander, Region &c_region)
+void PRSice::prsice(const Commander &c_commander, Region &c_region, bool prslice)
 {
 
     if(m_partition.size()==0)
@@ -559,8 +558,8 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region)
         throw std::runtime_error("None of the SNPs fall into the threshold\n");
     }
 	bool fastscore = c_commander.fastscore();
-    bool no_regress =c_commander.no_regression();
-    bool require_all = c_commander.all();
+    bool no_regress =c_commander.no_regression() && !prslice; // for prslice, we will not allow no_regression;
+    bool require_all = c_commander.all() && !prslice; // for prslice, we will not allow require_all
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
     double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
     double bound_inter = c_commander.get_inter();
@@ -603,7 +602,7 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region)
     	int cur_category = std::get<+PRS::CATEGORY>(m_partition[cur_start_index]);
     	cur_threshold = (cur_category > non_full_upper_category)? 1:
     			std::min((cur_category+1)*bound_inter+bound_start, bound_end);
-    	fprintf(stderr, "\rProcessing %f%%", cur_category/(max_category)*100);
+    	if(!prslice) fprintf(stderr, "\rProcessing %f%%", cur_category/(max_category)*100);
     	bool reg = get_prs_score(cur_start_index);
     	if(require_all && all_out.is_open())
     	{
@@ -654,7 +653,6 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region)
     		}
     	}
     }
-    fprintf(stderr, "\n");
     if(all_out.is_open()) all_out.close();
 
 }
