@@ -231,7 +231,6 @@ namespace Regression{
 		}
 		if(!converge) throw std::runtime_error("GLM algorithm did not converge");
 		Eigen::VectorXd residuals = (y.array() - mu.array())/(logit_mu_eta(eta).array());
-		double rss = (residuals.array()*residuals.array()).sum();
 		int sum_good = 0;
 		int weight_bad = 0;
 		for(size_t i = 0; i < good.rows(); ++i){
@@ -240,12 +239,7 @@ namespace Regression{
 		}
 		Eigen::VectorXd wtdmu= (intercept)? Eigen::VectorXd::Constant(nobs,(weights.array()*y.array()).array().sum()/weights.array().sum()) : logit_linkinv(Eigen::VectorXd::Zero(nobs));
 		double nulldev =binomial_dev_resids_sum(y, wtdmu, weights);
-		int nr = std::min(sum_good, nvars);
-		int n_ok = nobs - weight_bad;
-		int nulldf = n_ok -intercept;
 		int rank = qr.rank();
-		int df_r = n_ok - rank;
-		double resvar = rss/(double)df_r;
 		Eigen::MatrixXd R = qr.matrixQR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
 		Eigen::VectorXd se = ((R.transpose()*R).inverse().diagonal()).array().sqrt();
 		// again, we are ony interested in one of the variable

@@ -19,6 +19,11 @@ Therefore the clumping result might deviate slightly from the plink, which uses 
 -- We do not support the ped map format. User need to use the binary plink file
 - mend.score
 -- This function is not implemented
-- Full PRS
--- Currently, unless you use fastscore + bar_level, PRSice will not calculate the PRS when all SNPs are included
+
+~~- Full PRS~~
+
+~~-- Currently, unless you use fastscore + bar_level, PRSice will not calculate the PRS when all SNPs are included~~
+
+To Do List:
+- Write a better command line handling interface?
 
