@@ -1,4 +1,4 @@
-#include "../inc/commander.hpp"
+#include "commander.hpp"
 
 bool Commander::initialize(int argc, char *argv[])
 {

@@ -324,7 +324,7 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
     target_file.close();
 }
 
-void PRSice::init_pheno(const std::string &c_commander)
+void PRSice::init_pheno(const Commander &c_commander)
 {
 	std::vector<std::string> pheno_header = c_commander.get_pheno_col();
 	std::string pheno_file = c_commander.get_pheno();
@@ -394,7 +394,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 	m_sample_names.clear();
 	// Clean up the matrix
 	m_phenotype.resize(0,0);
-	m_individual_variables.resize(0,0);
+	m_independent_variables.resize(0,0);
 	bool fastscore = c_commander.fastscore();
 	bool no_regress =c_commander.no_regression();
 	bool all = c_commander.all();
@@ -404,7 +404,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 	std::string pheno_file = c_commander.get_pheno();
 	std::string output_name = c_commander.get_out();
 	std::ofstream all_out;
-
+	bool multi = m_pheno_names.size()>1;
 	if(all && !prslice) // we don't want this output for PRSlice
 	{
 		std::string all_out_name = output_name+"."+m_current_base;
@@ -441,13 +441,13 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) =
 				covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
 		covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
-		if(target_binary)
+		if(m_target_binary)
 		{
 			Regression::glm(m_phenotype, covariates_only, null_p, m_null_r2, 25, n_thread, true);
 		}
 		else
 		{
-			Regression::linear_regression(phenotype, covariates_only, null_p, m_null_r2,
+			Regression::linear_regression(m_phenotype, covariates_only, null_p, m_null_r2,
 					null_r2_adjust, n_thread, true);
 		}
 	}
@@ -550,7 +550,7 @@ void PRSice::categorize(const Commander &c_commander)
              );
 }
 
-void PRSice::prsice(const Commander &c_commander, Region &c_region, bool prslice)
+void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool prslice)
 {
 
     if(m_partition.size()==0)
@@ -567,6 +567,7 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region, bool prslice
     if(require_all)
     {
         std::string all_out_name = c_commander.get_out()+"."+m_current_base;
+        std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[m_pheno_index]);
         if(!pheno_name.empty()) all_out_name.append("."+pheno_name+".all.score");
         all_out.open(all_out_name.c_str(), std::ofstream::app);
         if(!all_out.is_open())
@@ -583,10 +584,10 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region, bool prslice
     m_current_prs.clear();
     m_prs_results.clear();
     size_t cur_start_index = 0;
-    m_num_snp_included = std::vector<size_t> c_region.size();
+    m_num_snp_included = std::vector<size_t>(c_region.size());
     for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
     {
-    	m_current_prs.push_back(m_sample_names);
+    		m_current_prs.push_back(m_sample_names);
         m_best_threshold.push_back(PRSice_best(0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
     }
@@ -596,62 +597,63 @@ void PRSice::prsice(const Commander &c_commander, Region &c_region, bool prslice
     int non_full_upper_category = (int)((bound_end-bound_start)/bound_inter);
     size_t num_region = c_region.size();
     size_t partition_size = m_partition.size();
+    double cur_threshold = 0.0;
     while(cur_start_index != partition_size)
     {
 
-    	int cur_category = std::get<+PRS::CATEGORY>(m_partition[cur_start_index]);
-    	cur_threshold = (cur_category > non_full_upper_category)? 1:
-    			std::min((cur_category+1)*bound_inter+bound_start, bound_end);
-    	if(!prslice) fprintf(stderr, "\rProcessing %f%%", cur_category/(max_category)*100);
-    	bool reg = get_prs_score(cur_start_index);
-    	if(require_all && all_out.is_open())
-    	{
-    		for(size_t i_region=0; i_region < m_current_prs.size(); ++i_region)
+    		int cur_category = std::get<+PRS::CATEGORY>(m_partition[cur_start_index]);
+    		cur_threshold = (cur_category > non_full_upper_category)? 1:
+    				std::min((cur_category+1)*bound_inter+bound_start, bound_end);
+    		if(!prslice) fprintf(stderr, "\rProcessing %f%%", (double)cur_category/(double)(max_category)*100.0);
+    		bool reg = get_prs_score(cur_start_index);
+    		if(require_all && all_out.is_open())
     		{
-    			all_out << cur_threshold << "\t" << c_region.get_name(i_region);
-    			for(auto &&prs : m_current_prs[i_region])
+    			for(size_t i_region=0; i_region < m_current_prs.size(); ++i_region)
     			{
-    				all_out << "\t" << std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[i_region];
-    			}
-    			all_out << std::endl;
-    		}
-    	}
-    	reg=reg&&!no_regress;
-    	if(reg)
-    	{
-    		if(n_thread == 1 || m_current_prs.size()==1)
-    		{
-    			thread_score(0, m_current_prs.size(), cur_threshold,n_thread);
-    		}
-    		else
-    		{
-    			if(c_region.size() < n_thread)
-    			{
-    				for(size_t i_region = 0; i_region < num_region; ++i_region)
+    				all_out << cur_threshold << "\t" << c_region.get_name(i_region);
+    				for(auto &&prs : m_current_prs[i_region])
     				{
-    					thread_store.push_back(std::thread(&PRSice::thread_score, this,
-								i_region, i_region+1, cur_threshold,1));
+    					all_out << "\t" << std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[i_region];
     				}
+    				all_out << std::endl;
+    			}
+    		}
+    		reg=reg&&!no_regress;
+    		if(reg)
+    		{
+    			if(n_thread == 1 || m_current_prs.size()==1)
+    			{
+    				thread_score(0, m_current_prs.size(), cur_threshold,n_thread);
     			}
     			else
     			{
-    				int job_size = num_region.size()/n_thread;
-    				int remain = num_region.size()%n_thread;
-    				size_t start =0;
-    				for(size_t i_thread = 0; i_thread < n_thread; ++i_thread)
+    				if(c_region.size() < n_thread)
     				{
-    					size_t ending = start+job_size+(remain>0);
-    					ending = (ending>num_region.size())? num_region.size(): ending;
-    					thread_store.push_back(std::thread(&PRSice::thread_score, this, start, ending,
-    							cur_threshold,1));
-    					start=ending;
-    					remain--;
+    					for(size_t i_region = 0; i_region < num_region; ++i_region)
+    					{
+    						thread_store.push_back(std::thread(&PRSice::thread_score, this,
+    								i_region, i_region+1, cur_threshold,1));
+    					}
     				}
+    				else
+    				{
+    					int job_size = num_region/n_thread;
+    					int remain = num_region%n_thread;
+    					size_t start =0;
+    					for(size_t i_thread = 0; i_thread < n_thread; ++i_thread)
+    					{
+    						size_t ending = start+job_size+(remain>0);
+    						ending = (ending>num_region)? num_region: ending;
+    						thread_store.push_back(std::thread(&PRSice::thread_score, this, start, ending,
+    								cur_threshold,1));
+    						start=ending;
+    						remain--;
+    					}
+    				}
+    				// joining the threads
+    				for(auto &&thread : thread_store) thread.join();
     			}
-    			// joining the threads
-    			for(auto &&thread : thread_store) thread.join();
     		}
-    	}
     }
     if(all_out.is_open()) all_out.close();
 
@@ -806,7 +808,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
     }
     else
     {
-        fprintf(stderr,"Number of sample(s) with phenotype  : %zu\n", phenotype.rows());
+        fprintf(stderr,"Number of sample(s) with phenotype  : %zu\n", m_phenotype.rows());
     }
 }
 
@@ -930,7 +932,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
             std::string sample = std::get<+PRS::IID>(prs);
             if(m_sample_with_phenotypes.find(sample)!=m_sample_with_phenotypes.end())
             {
-                if(thread_safe) independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                if(thread_safe) m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
                 		std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
                 else X(m_sample_with_phenotypes.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
             }
@@ -990,7 +992,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
 
 void PRSice::output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const
 {
-	std::string pheno_name = m_pheno_names[pheno_index];
+	std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[pheno_index]);
     std::string output_prefix = c_commander.get_out()+"."+m_current_base;
     if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
     for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)

@@ -56,7 +56,8 @@ int main(int argc, char *argv[])
 
 
     bool perform_prslice = commander.prslice() > 0.0;
-
+    bool full_model = commander.full();
+    double bound_end = commander.get_lower();
     std::vector<std::string> base = commander.get_base();
     int num_base = base.size();
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
@@ -95,38 +96,63 @@ int main(int argc, char *argv[])
                 size_t num_pheno = prsice.num_phenotype();
                 if(!perform_prslice)
                 {
-                	/**
-                	 * Categorize SNPs based on their p-value. This will aid the
-                	 * Iterative process of PRSice
-                	 */
-                	prsice.categorize(commander);
-                	for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
-                	{
                 		/**
-                		 * Initialize the matrix. The reason why we do it for each phenotype
-                		 * is because of missing data. It is much easier to make it for each
-                		 * phenotype than making a full matrix and modifying it
+                		 * Categorize SNPs based on their p-value. This will aid the
+                		 * Iterative process of PRSice
                 		 */
-                		prsice.init_matrix(commander, region, i_pheno, perform_prslice);
-                		/**
-                		 * Start performing the actual PRSice. The results will all be stored
-                		 * within the class vectors. This help us to reduce the number of
-                		 * parameters required
-                		 */
-                		prsice.prsice(commander, region);
-                	    fprintf(stderr, "\n");
-                		/**
-                		 * Output the results
-                		 */
-                		prsice.output(commander, region, i_pheno);
-                	}
+                		prsice.categorize(commander);
+                		for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
+                		{
+                			/**
+                			 * Initialize the matrix. The reason why we do it for each phenotype
+                			 * is because of missing data. It is much easier to make it for each
+                			 * phenotype than making a full matrix and modifying it
+                			 */
+                			prsice.init_matrix(commander, i_pheno, perform_prslice);
+                			/**
+                			 * Start performing the actual PRSice. The results will all be stored
+                			 * within the class vectors. This help us to reduce the number of
+                			 * parameters required
+                			 */
+                			try
+                			{
+                				prsice.prsice(commander, region);
+                    			fprintf(stderr, "\n");
+                    			/**
+                    			 * Output the results
+                    			 */
+                    			prsice.output(commander, region, i_pheno);
+                			}
+                			catch(const std::runtime_error &error)
+                			{
+                				fprintf(stderr, "None of the SNPs fall within the threshold\n");
+                			}
+                		}
                 }
                 else
                 {
-                	for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
-                	{
-                		prsice.init_matrix(commander, region, i_pheno, perform_prslice);
-                	}
+                		if(region.size()!=1)
+                		{
+                			std::string error_message= "WARNING: It doesn't make sense to run PRSlice together with "
+                					"PRSset. Will only perfrom PRSlice";
+                			fprintf(stderr, "%s\n", error_message.c_str());
+                		}
+                		for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
+                		{
+                			/**
+                			 * Again, initialize the matrix, which will be used for the whole PRSlice
+                			 */
+                			prsice.init_matrix(commander, i_pheno, perform_prslice);
+                			/**
+                			 * Perform PRSice on each window
+                			 */
+                			prsice.prslice_windows(commander, region);
+                			/**
+                			 * Now calculate the best window combination
+                			 */
+                			prsice.prslice(commander, region);
+                			prsice.output(commander, i_pheno);
+                		}
                 }
 
 

@@ -55,16 +55,14 @@ public:
      * Result phenotype will be stored in m_pheno_names
      * @param c_commander Again, c_commander serves as the container of all parameters
      */
-    void init_pheno(const std::string &c_commander);
+    void init_pheno(const Commander &c_commander);
     /**
      * This function compute the required matrix and the null r2
      * @param c_commander The paramter container
-     * @param c_region Provide information as to number of region included
      * @param c_pheno_index Current phenotype
      * @param prslice Whether if this is for PRSlice. For PRSlice, we will not allow output of all
      */
-    void init_matrix(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,
-    		const bool prslice);
+    void init_matrix(const Commander &c_commander, const size_t c_pheno_index, const bool prslice);
     /**
      * This function return the number of valid phenotype for the analysis
      * @return Number of valid phenotype for the analysis
@@ -76,7 +74,7 @@ public:
      * @param c_commander Parameter container
      */
     void categorize(const Commander &c_commander);
-    void prsice(const Commander &c_commander, Region &c_region, bool prslice=false);
+    void prsice(const Commander &c_commander, const Region &c_region, bool prslice=false);
     /**
      * Output the results
      * @param c_commander List of parameters
@@ -84,6 +82,10 @@ public:
      * @param pheno_index Indication of which phenotype we are working with
      */
     void output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
+    void output(const Commander &c_commander, size_t pheno_index) const;
+    // PRSlice related stuff
+    void prslice_windows(const Commander &c_commander, const Region &c_region);
+    void prslice(const Commander &c_commander, const Region &c_region);
 protected:
 private:
     // Phenotype storages
@@ -112,7 +114,9 @@ private:
     boost::ptr_vector<SNP> m_snp_list; //
     std::unordered_map<std::string, size_t> m_snp_index; //
     // PRSlice related storages
-    std::vector<std::string> m_window_names;
+    enum prslice_wind{WIND,SNPS, R2};
+    typedef std::tuple<std::string, std::vector<p_partition>, double > windows;
+    std::vector<windows> m_best_snps;
     /**
      * This vector contain the chromosome included in the base file
      * Should be used to guide the plink class to read the multi-chromosome
@@ -145,7 +149,7 @@ private:
     void check_inclusion(const std::string &c_target_bim_name,
     		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
-    void update_line(std::unordered_map<std::string, size_t> &partition_index)
+    void update_line(std::unordered_map<std::string, size_t> &partition_index);
     void gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress);
     void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
     bool get_prs_score(size_t &cur_index);
