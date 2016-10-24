@@ -70,6 +70,7 @@ protected:
 private:
     void usage();
     void info();
+    void program_info();
     std::vector<bool> m_use_beta;
     std::vector<std::string> m_base;
     std::vector<std::string> m_covariates;

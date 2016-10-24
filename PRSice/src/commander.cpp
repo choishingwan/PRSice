@@ -2,6 +2,7 @@
 
 bool Commander::initialize(int argc, char *argv[])
 {
+	program_info();
 	info();
     if(argc<=1)
     {
@@ -540,4 +541,26 @@ void Commander::usage()
     			}
     		}
     }
+}
+
+void Commander::program_info()
+{
+	std::cerr << "####################################################################" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "# PRSice: Polygenic Risk Score software                            #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "# Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly 2014            #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "# If you use PRSice in published work, please cite:                #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "# \"PRSice: Polygenic Risk Score software\"                          #" << std::endl;
+	std::cerr << "# Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468 #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "#                                                                  #" << std::endl;
+	std::cerr << "####################################################################" << std::endl;
+
+
 }
