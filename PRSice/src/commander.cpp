@@ -39,7 +39,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump_p",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
-        {"binary_target",no_argument,NULL,0},
+        {"quant_target",no_argument,NULL,0},
         {"bar_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
@@ -120,9 +120,9 @@ bool Commander::initialize(int argc, char *argv[])
                 }
                 else m_prslice_size = temp*1000; //change it to kb, might want to allow different units
             }
-            else if(command.compare("binary_target")==0)
+            else if(command.compare("quant_target")==0)
             {
-                m_target_is_binary=true;
+                m_target_is_binary=false;
             }
             else if(command.compare("bar_levels")==0)
             {
@@ -433,7 +433,7 @@ void Commander::info()
 			"will use all variable in the covariate file as the covarite."));
 	m_help_messages.push_back(help("Options", 'C', "covar_file", "Covarite file. Formate should be: ID Cov1 Cov2"));
 	m_help_messages.push_back(help("Options", '\0', "full", "Also include the full model in the PRSice output"));
-	m_help_messages.push_back(help("Options", 'a', "all", "Output PRS for ALL threshold. Can only be used together "
+	m_help_messages.push_back(help("Options", '\0', "all", "Output PRS for ALL threshold. Can only be used together "
 			"with fastscore to avoid huge output files."));
 	m_help_messages.push_back(help("Options",'\0', "no_regress", "Do not perform the regression analysis and "
 			"simply output all PRS. Can only be used together with fastscore to avoid huge output files. If "
