@@ -125,16 +125,17 @@ private:
     std::vector<std::string> m_chr_list;
     std::unordered_map<std::string, size_t> m_include_snp; //
 
-    /**
-     * The base index indicating which base we are working with
-     */
-    int m_base_index;
+
     /**
      * The name of the base file
      * We use this as a storage as wehave already stripped off the directory
      * information from this string
      */
     std::string m_current_base;
+    /**
+     * The base index indicating which base we are working with
+     */
+    int m_base_index;
 
     std::string m_target;
     bool m_target_binary;

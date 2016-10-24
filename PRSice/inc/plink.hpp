@@ -95,6 +95,7 @@ private:
 #else
     typedef uint32_t long_type;
 #endif
+
     std::string m_prefix;
     std::ifstream m_bed;
     std::ifstream m_bim;
@@ -103,24 +104,23 @@ private:
     size_t m_snp_iter;
     size_t m_bit_size;
     size_t m_required_bit;
-    size_t m_thread;
     size_t m_name_index;
-    bool m_bim_score_open=false; // might have better way, use this for now
-//    std::deque<std::string> m_chr_list;
     std::vector<std::string> m_names;
     std::vector<std::string> m_chr_list;
     std::vector<std::string> m_snp_id;
     typedef std::tuple<std::string, int, size_t> file_info;
     std::vector<file_info> m_clump_ref;
-//    std::deque<size_t> m_cm_list;
     std::deque<size_t> m_bp_list;
     std::vector<size_t> m_num_snp;
-//    std::deque<std::string> m_ref_allele;
-//    std::deque<std::string> m_alt_allele;
     std::deque<double> m_maf;
     std::deque<long_type*> m_genotype;
     std::deque<long_type*> m_missing;
     std::deque<size_t> m_num_missing;
+
+    size_t m_thread;
+
+
+
 #if defined(__LP64__) || defined(_WIN64)
 #if defined(_WIN64)
 #define __LP64__
@@ -128,12 +128,11 @@ private:
     // LP64 machine, OS X or Linux
 #define ZEROLU 0LLU
 #define FIVEMASK ((~ZEROLU) / 3)
-
-    const long_type THREE = 3LLU;
-    const long_type THREEMASK = 0x3333333333333333LLU;
-    const long_type OFMASK = 0x0f0f0f0f0f0f0f0fLLU;
-    const long_type AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
-    const long_type ONEZEROMASK = 0x0101010101010101LLU;
+//    const long_type THREE = 3LLU;
+//    const long_type THREEMASK = 0x3333333333333333LLU;
+//    const long_type OFMASK = 0x0f0f0f0f0f0f0f0fLLU;
+//    const long_type AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
+//    const long_type ONEZEROMASK = 0x0101010101010101LLU;
 #define BITCT 64
 #define VEC_BYTES 16
 #define VEC_BITS (VEC_BYTES * 8)

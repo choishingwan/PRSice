@@ -395,12 +395,8 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 	// Clean up the matrix
 	m_phenotype.resize(0,0);
 	m_independent_variables.resize(0,0);
-	bool fastscore = c_commander.fastscore();
 	bool no_regress =c_commander.no_regression();
 	bool all = c_commander.all();
-	double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
-	double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
-	double bound_inter = c_commander.get_inter();
 	std::string pheno_file = c_commander.get_pheno();
 	std::string output_name = c_commander.get_out();
 	std::ofstream all_out;
@@ -579,17 +575,17 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool p
     Eigen::initParallel();
     std::vector<std::thread> thread_store;
     size_t n_thread = c_commander.get_thread();
-    double p_value=0.0, r2=0.0, r2_adjust = 0.0;
     m_best_threshold.clear();
     m_current_prs.clear();
     m_prs_results.clear();
     size_t cur_start_index = 0;
-    m_num_snp_included = std::vector<size_t>(c_region.size());
+    m_num_snp_included = prslice? std::vector<size_t>(1) : std::vector<size_t>(c_region.size());
     for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
     {
     		m_current_prs.push_back(m_sample_names);
         m_best_threshold.push_back(PRSice_best(0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
+        if(prslice) break;
     }
     m_best_score = m_current_prs;
 
@@ -671,7 +667,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
         misc::replace_substring(fam_name, "#", m_chr_list.front());
     }
     std::string line;
-    size_t cur_index;
+    size_t cur_index=0;
     size_t num_case=0, num_control=0;
     if(c_pheno.empty() || fam_name == c_pheno )
     {

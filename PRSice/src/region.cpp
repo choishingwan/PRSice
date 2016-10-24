@@ -342,7 +342,6 @@ void Region::process_msigdb(const std::string &msigdb,
     else
     {
         std::string line;
-        bool error=false;
         while(std::getline(input, line))
         {
             misc::trim(line);

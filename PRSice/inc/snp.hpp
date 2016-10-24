@@ -103,7 +103,6 @@ public:
     // indication of whether if the SNP is within the specific region
     inline bool in(size_t i) const
     {
-        size_t index = i/m_bit_size;
         return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
     }
     bool operator < (const SNP& j) const
@@ -138,7 +137,6 @@ private:
     std::string m_rs_id;
     std::string m_chr;
     int m_loc;
-    size_t m_size_of_flag;
     size_t m_bit_size;
     double m_stat;
     double m_standard_error;
@@ -148,6 +146,7 @@ private:
     std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
     std::vector<double> m_clump_r2; // index of SNPs that are clumped under this SNP
     long_type *m_flags;
+    size_t m_size_of_flag;
     long_type *m_region_clumped; //place holder for now
 #if defined(__LP64__) || defined(_WIN64)
     long_type ONE = 1LLU;

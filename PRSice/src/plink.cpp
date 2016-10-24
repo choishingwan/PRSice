@@ -64,7 +64,7 @@ void PLINK::initialize()
         m_bed.close();
     }
     std::string bed_name = m_names.front()+".bed";
-    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     for(auto &&bim: m_names)
     {
@@ -138,7 +138,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
         m_bed.close();
     }
     std::string bed_name = m_names.front()+".bed";
-    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     size_t cur_num_line=0;
     for(auto &&bim:m_names)
@@ -225,7 +225,7 @@ void PLINK::clump_initialize(std::unordered_map<std::string, size_t> &inclusion,
         m_bed.close();
     }
     std::string bed_name = m_names.front()+".bed";
-    bool snp_major = openPlinkBinaryFile(bed_name, m_bed);
+    openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
     size_t num_ambig=0, not_found=0;
     size_t num_line=0, cur_num_line=0;

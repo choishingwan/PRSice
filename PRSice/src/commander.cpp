@@ -2,6 +2,7 @@
 
 bool Commander::initialize(int argc, char *argv[])
 {
+	info();
     if(argc<=1)
     {
         usage();
@@ -405,108 +406,138 @@ Commander::~Commander()
     //dtor
 }
 
+void Commander::info()
+{
+	m_help_messages.push_back(help("Required", 'b', "base", "Base association files. "
+			"User can provide multiple base files"));
+	m_help_messages.push_back(help("Required", 't', "target", "Plink binary file prefix for target files. "
+			"Currently only support plink binary inputs. For multiple target phenotypes, user should use the "
+			"--pheno_file option together with the pheno_col option. For multiple chromosome input, one "
+			"should substitute the chromosome number with #. For example, if you files are presented as "
+			"genotype_chr1_test, genotype_chr2_test, genotype_chr3_test, then you can use: genotype_chr#_test."
+			"Please note that the substitute is based on your base file. So if your base file code chromosome "
+			"with chr, e.g. chr1 chr2 etc, then in our example case, you should code your plink file as "
+			"genotype_#_test"));
+	m_help_messages.push_back(help("Required", '\0', "quant_target", "Indicate the target sampels has "
+			"quantitative phenotypes"));
+	m_help_messages.push_back(help("Required", '\0', "beta", "Indicate whether the test statistic is beta "
+			"instead of OR. Must be of the same length as base"));
+	m_help_messages.push_back(help("Options", 'f', "pheno_file", "Phenotype file containing the target "
+			"phenotype(s). If provided, the fam file of the target is ignored. First column must be "
+			"IID of the samples. Must contain a header if pheno_col is specified"));
+	m_help_messages.push_back(help("Options", '\0',"pheno_col", "Headers of pheenotypes from phenotype file"));
+	m_help_messages.push_back(help("Options", 'L',"ld", "Plink binary file prefix for the reference file "
+			"used for LD calculation. If not provided, will use the target genotype for the LD calculation. "
+			"Can also use multiple chromosome plink file. Please see --target for more information."));
+	m_help_messages.push_back(help("Options", 'c', "covar_header", "Header of covariates. If not provided, "
+			"will use all variable in the covariate file as the covarite."));
+	m_help_messages.push_back(help("Options", 'C', "covar_file", "Covarite file. Formate should be: ID Cov1 Cov2"));
+	m_help_messages.push_back(help("Options", '\0', "full", "Also include the full model in the PRSice output"));
+	m_help_messages.push_back(help("Options", 'a', "all", "Output PRS for ALL threshold. Can only be used together "
+			"with fastscore to avoid huge output files."));
+	m_help_messages.push_back(help("Options",'\0', "no_regress", "Do not perform the regression analysis and "
+			"simply output all PRS. Can only be used together with fastscore to avoid huge output files. If "
+			"you must, you can modify bar_levels to obtain the fine scale PRS outputs"));
+	m_help_messages.push_back(help("Options",'o', "out", "Prefix of all output. Default: "+m_out));
+	m_help_messages.push_back(help("Scoring options",'l', "lower", "The starting p-value threshold. "
+			"Default: "+std::to_string(m_lower)));
+	m_help_messages.push_back(help("Scoring options",'u', "upper", "The final p-value threshold. "
+			"Default: "+std::to_string(m_upper)));
+	m_help_messages.push_back(help("Scoring options",'i', "interval", "The step size of the threshold. "
+			"Default: "+std::to_string(m_inter)));
+	m_help_messages.push_back(help("Scoring options",'\0', "fastscore", "Calculate the minimum amount of threshold as "
+			"required by the bar_level option"));
+	m_help_messages.push_back(help("File Headers", '\0', "chr", "Column header of Chromosome <Required>"));
+	m_help_messages.push_back(help("File Headers", '\0', "A1", "Column header of Reference Allele <Required>"));
+	m_help_messages.push_back(help("File Headers", '\0', "A2", "Column header of Alternaative Allele"));
+	m_help_messages.push_back(help("File Headers", '\0', "stat", "Column header of test statistic <Required>"));
+	m_help_messages.push_back(help("File Headers", '\0', "snp", "Column header of SNP id"));
+	m_help_messages.push_back(help("File Headers", '\0', "bp", "Column header of SNP location"));
+	m_help_messages.push_back(help("File Headers", '\0', "se", "Column header of Standard Error"));
+	m_help_messages.push_back(help("File Headers", 'p', "pvalue", "Column header of p-value <Required> "));
+	m_help_messages.push_back(help("File Headers", '\0', "index", "Indicate all the above options are providing "
+			"the INDEX of the corresponding column. (Index should be 0-based). Useful when your base file "
+			"each have a different header but the column index remains the same"));
+	m_help_messages.push_back(help("Clumping", '\0', "clump_p", "The p-value threshold use for clumping."
+			"Default: "+std::to_string(m_clump)));
+	m_help_messages.push_back(help("Clumping", '\0', "clump_r2", "The R2 threshold for clumping. Please note that "
+			"as we did not implement the maximum likelihood R2 calculation, the clumping result can differ "
+			"slightly from plink. Default: "+std::to_string(m_clump_r2)));
+	m_help_messages.push_back(help("Clumping", '\0', "clump_kb", "The distance for clumping in kb."
+			"Default: "+std::to_string(m_clump_kb/1000)));
+	m_help_messages.push_back(help("PRSet", 'B', "bed", "Bed file containing the selected regions. "
+			"Name of bed file will be used as the region identifier."));
+	m_help_messages.push_back(help("PRSet", 'g', "gtf", "GTF file containing gene boundaries. Required "
+			"when --msigdb is set."));
+	m_help_messages.push_back(help("PRSet", 'm', "msigdb", "MSIGDB file containing the pathway information "
+			"require the gtf file."));
+	m_help_messages.push_back(help("PRSet", '\0', "gen_bed", "Generate bed file of gene regions from "
+			" the gtf file."));
+	m_help_messages.push_back(help("PRSet", '\0', "proxy", "Proxy threshold for index SNP to be considered "
+			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
+			"represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if it is not physically "
+			"within these regions"));
+	m_help_messages.push_back(help("PRSlice", '\0', "prslice", "Perform PRSlice where the whole genome is first "
+			"cut into bin size specified by this option. PRSice will then be performed on each bin. Bins are "
+			"then sorted according to the their R2. PRSice is then performed again to find the best bin combination."
+			" This cannot be performed together with PRSet"));
+	m_help_messages.push_back(help("Plotting", '\0', "bar_levels", "Level of barchart to be plotted. When fastscore "
+			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
+	m_help_messages.push_back(help("Misc", 'T', "thread", "Number of thread use"));
+	m_help_messages.push_back(help("Misc", 'h', "help", "Display this help message"));
+}
 void Commander::usage()
 {
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
-    fprintf(stderr, "Required Inputs:\n");
-    fprintf(stderr, "         -b | --base         Base association files. User can provide multiple\n");
-    fprintf(stderr, "                             base files.\n");
-    fprintf(stderr, "         -t | --target       Plink binary file prefix for target files. Currently\n");
-    fprintf(stderr, "                             only support plink binary inputs. Does not support\n");
-    fprintf(stderr, "                             multi-chromosome input. For multiple target phenotypes,\n");
-    fprintf(stderr, "                             user should use the --pheno_file option together with \n");
-    fprintf(stderr, "                             the pheno_col option\n");
-    fprintf(stderr, "         --binary_target     Indication of whether binary target is provided.\n");
-    fprintf(stderr, "         --beta              Indication of whether the test statistic is beta\n");
-    fprintf(stderr, "                             instead of OR. Should be of the same length as base\n");
-    fprintf(stderr, "\nOptions\n");
-    fprintf(stderr, "         -f | --pheno_file   Phenotype file containing the target phenotype(s).\n");
-    fprintf(stderr, "                             If provided, the fam file of the target is ignored.\n");
-    fprintf(stderr, "                             When pheno_col is specified, this file must contain\n");
-    fprintf(stderr, "                             a header\n");
-    fprintf(stderr, "              --pheno_col    Headers of phenotypes used from the phenotype file\n");
-    fprintf(stderr, "         -L | --ld           Plink binary file prefix for the reference file used\n");
-    fprintf(stderr, "                             for LD calculation. If not provided, will use the\n");
-    fprintf(stderr, "                             target genotype for the LD calculation\n");
-    fprintf(stderr, "         -c | --covar_header Header of covariates, if not provided, will use all\n");
-    fprintf(stderr, "                             variable in the covariate file as the covarite.\n");
-    fprintf(stderr, "                             Should be comma separated\n");
-    fprintf(stderr, "         -C | --covar_file   Covariate file. Format should be:\n");
-    fprintf(stderr, "                             ID Cov1 Cov2\n");
-    fprintf(stderr, "                             Must contain a header\n");
-    fprintf(stderr, "         -a | --ancestry     NOT DEVELOPED YET\n");
-    fprintf(stderr, "              --all          Output PRS for ALL threshold. WARNING: For fine scale \n");
-    fprintf(stderr, "                             PRS, this will generate a huge file. The size of the file\n");
-    fprintf(stderr, "                             can be estimated as Num Threshold x Num sample x 8 byte\n");
-    fprintf(stderr, "                             For example, with the default threshold and 150,000 samples\n");
-    fprintf(stderr, "                             a file of at least 12 GB will be generated\n");
-    fprintf(stderr, "                             NOTE: Output format will be:\n");
-    fprintf(stderr, "                                   THRESHOLD Region Sample1 Sample2 ...\n");
-    fprintf(stderr, "                                   0.001 RegionA WWW XXX ...\n");
-    fprintf(stderr, "                                   0.002 RegionA YYY ZZZ ...\n");
-    fprintf(stderr, "              --full         Also include the full model in the PRSice output\n");
-    fprintf(stderr, "              --no_regress   Do not perform the regression analysis and simply\n");
-    fprintf(stderr, "                             output all PRS. Can only be used together with\n");
-    fprintf(stderr, "                             fastscore to avoid huge output files. If you must,\n");
-    fprintf(stderr, "                             you can modify bar_levels to obtain the fine scale \n");
-    fprintf(stderr, "                             PRS outputs\n");
-    fprintf(stderr, "              --prslice      Perform PRSlice where the whole genome is cut into\n");
-    fprintf(stderr, "                             bin size specify by this option. PRSice will then be\n");
-    fprintf(stderr, "                             performed on each bin. Bins will then be sorted according\n");
-    fprintf(stderr, "                             to their R2 where PRSice will be performed again to \n");
-    fprintf(stderr, "                             find the best bin combination \n");
-    fprintf(stderr, "         -o | --out          The prefix of all output. Default %s\n", m_out.c_str());
-    fprintf(stderr, "\nScoring options:\n");
-    fprintf(stderr, "         -l | --lower        The starting p-value threshold. default: %f\n", m_lower);
-    fprintf(stderr, "         -u | --upper        The final p-value threshold. default: %f\n", m_upper);
-    fprintf(stderr, "         -i | --interval     The step size of the threshold. default: %f\n", m_inter);
-    fprintf(stderr, "              --fastscore    Calculate the minimum amount of threshold as indicated\n");
-    fprintf(stderr, "                             by the bar_level option.\n");
-    fprintf(stderr, "\nFile Headers:\n");
-    fprintf(stderr, "              --chr          Column header of Chromosome <Required>\n");
-    fprintf(stderr, "              --A1           Column header of Reference Allele <Required>\n");
-    fprintf(stderr, "              --A2           Column header of Alternaative Allele \n");
-    fprintf(stderr, "              --stat         Column header of test statistic, either BETA or OR\n");
-    fprintf(stderr, "              --snp          Column header of SNP id\n");
-    fprintf(stderr, "              --bp           Column header of SNP location\n");
-    fprintf(stderr, "              --se           Column header of Standard Error\n");
-    fprintf(stderr, "         -p | --pvalue       Column head of p-value <Required>\n");
-    fprintf(stderr, "              --index        If the base file doesn't contain a header, you can\n");
-    fprintf(stderr, "                             use this option, which essentially state that all \n");
-    fprintf(stderr, "                             the above options are providing the INDEX of the\n");
-    fprintf(stderr, "                             corresponding column. (Index should be 0-based)\n");
-    fprintf(stderr, "\nClumping:\n");
-    fprintf(stderr, "              --clump_p      The p-value threshold use for clumping. \n");
-    fprintf(stderr, "                             Default is %f \n", m_clump);
-//    fprintf(stderr, "         --clump_p2          \n");
-    fprintf(stderr, "              --clump_r2     The R2 threshold for clumping.\n");
-    fprintf(stderr, "                             Please note that as we did not implement\n");
-    fprintf(stderr, "                             the maximum likelihood R2 calculation, the\n");
-    fprintf(stderr, "                             clumping result can differ slightly from plink\n");
-    fprintf(stderr, "              --clump_kb     The distance for clumping in kb\n");
-    fprintf(stderr, "\nSelections:\n");
-    fprintf(stderr, "         -B | --bed          Bed file containing the selected regions. \n");
-    fprintf(stderr, "                             Name of bed file will be used as the region\n");
-    fprintf(stderr, "                             identifier \n");
-    fprintf(stderr, "         -g | --gtf          GTF file containing gene boundaries. Required\n");
-    fprintf(stderr, "                             when --msigdb is set \n");
-    fprintf(stderr, "         -m | --msigdb       MSIGDB file containing the pathway information\n");
-    fprintf(stderr, "                             require the gtf file \n");
-    fprintf(stderr, "              --gen_bed      Generate bed file of gene regions from \n");
-    fprintf(stderr, "                             the gtf file \n");
-    fprintf(stderr, "                             Default: false \n");
-    fprintf(stderr, "              --proxy        Proxy threshold for index SNP to be considered\n");
-    fprintf(stderr, "                             as part of the region represented by the clumped\n");
-    fprintf(stderr, "                             SNPs. e.g. --proxy 0.8 means the index SNP will\n");
-    fprintf(stderr, "                             represent the region of any clumped SNPs that has\n");
-    fprintf(stderr, "                             a R2 >= 0.8 with it\n");
-    fprintf(stderr, "\nPlotting:\n");
-    fprintf(stderr, "              --bar_levels   Level of barchart to be plotted. When fastscore\n");
-    fprintf(stderr, "                             is set, PRSice will only calculate the PRS for\n");
-    fprintf(stderr, "                             threshold within the bar level\n");
-    fprintf(stderr, "\nMisc:\n");
-    fprintf(stderr, "         -T | --thread       Number of thread used\n");
-    fprintf(stderr, "         -h | --help         Display this help message\n");
-    //remove.mhc <- F
+    std::string category = "";
+    size_t width = 80;
+    size_t max_prev = 0;
+    for(auto message : m_help_messages)
+    {
+    		max_prev=(max_prev > std::get<help_index::LONG>(message).length()) ? max_prev: std::get<help_index::LONG>(message).length();
+    }
+    max_prev+=13;
+    int remain = width-max_prev;
+    std::string pad="";
+    for(size_t i = 0; i < max_prev; ++i) pad+=" ";
+    for(auto message : m_help_messages)
+    {
+    		if(category.empty() || std::get<help_index::CATEGORY>(message)!=category)
+    		{
+    			fprintf(stderr, "\n%s:\n",  std::get<help_index::CATEGORY>(message).c_str());
+    			category =  std::get<help_index::CATEGORY>(message);
+    		}
+    		char short_flag = std::get<help_index::SHORT>(message);
+    		std::string cur_message = "    ";
+    		if(short_flag=='\0') cur_message+="     --"+std::get<help_index::LONG>(message);
+    		else cur_message+="-"+std::string(1,short_flag)+" | --"+std::get<help_index::LONG>(message);
+    		int diff = max_prev-cur_message.length();
+    		if(diff > 0){
+    			for(size_t i = 0; i < diff; ++i) cur_message.append(" ");
+    		}
 
+    		std::string description = std::get<help_index::DESCRIPTION>(message);
+    		std::cerr << cur_message;
+    		size_t cur_index = 0;
+    		size_t last_space = 0;
+    		for(size_t i = 0; i < description.length(); ++i)
+    		{
+    			if(description[i]==' ') last_space=i;
+    			if(i-cur_index>=remain)
+    			{
+    				if(i != last_space)
+    				{
+    					if(cur_index != 0) std::cerr << pad;
+    					std::cerr << description.substr(cur_index, last_space-cur_index) << std::endl;
+    					i=last_space+1;
+    					cur_index=i;
+    				}
+    			}
+    			else if(i==description.length()-1)
+    			{
+				if(cur_index != 0) std::cerr << pad;
+    				std::cerr << description.substr(cur_index, i-cur_index+1) << std::endl;
+    			}
+    		}
+    }
 }

@@ -51,8 +51,7 @@ int main(int argc, char *argv[])
     fprintf(stderr,"P-Threshold  : %f\n", commander.get_clump_p());
     fprintf(stderr,"R2-Threshold : %f\n", commander.get_clump_r2());
     fprintf(stderr,"Window Size  : %zu\n", commander.get_clump_kb());
-    fprintf(stderr,"\nStart processing: %s\n", commander.get_target().c_str());
-    fprintf(stderr,"==============================\n");
+
 
 
     bool perform_prslice = commander.prslice() > 0.0;
@@ -74,6 +73,9 @@ int main(int argc, char *argv[])
             std::string base_name=misc::remove_extension<std::string>(misc::base_name<std::string>(base[i_base]));
             try
             {
+            		/**
+            		 * Initialize the PRSice object
+            		 */
                 PRSice prsice = PRSice(base_name, i_base, commander.get_target(), commander.target_is_binary());
                 double threshold = (full_model)? 1.0:bound_end;
                 /**
@@ -97,8 +99,11 @@ int main(int argc, char *argv[])
                 if(!perform_prslice)
                 {
                 		/**
+                		 * For PRSet / PRSice, we will perform this set of actions
                 		 * Categorize SNPs based on their p-value. This will aid the
                 		 * Iterative process of PRSice
+                		 * As this only depends on the base file, this should be the
+                		 * same for all phenotypes
                 		 */
                 		prsice.categorize(commander);
                 		for(size_t i_pheno=0; i_pheno < num_pheno; ++i_pheno)
@@ -109,13 +114,13 @@ int main(int argc, char *argv[])
                 			 * phenotype than making a full matrix and modifying it
                 			 */
                 			prsice.init_matrix(commander, i_pheno, perform_prslice);
-                			/**
-                			 * Start performing the actual PRSice. The results will all be stored
-                			 * within the class vectors. This help us to reduce the number of
-                			 * parameters required
-                			 */
                 			try
                 			{
+                    			/**
+                    			 * Start performing the actual PRSice. The results will all be stored
+                    			 * within the class vectors. This help us to reduce the number of
+                    			 * parameters required
+                    			 */
                 				prsice.prsice(commander, region);
                     			fprintf(stderr, "\n");
                     			/**
@@ -133,6 +138,13 @@ int main(int argc, char *argv[])
                 {
                 		if(region.size()!=1)
                 		{
+                			/**
+                			 * It doesn't make much sense for PRSet + PRSlice as PRSlice only
+                			 * consider the genomic coordinates, which for most of the time,
+                			 * it will not fall within the region defined by PRSet anyway.
+                			 * It also complicate the algorithm and might take forever to
+                			 * run
+                			 */
                 			std::string error_message= "WARNING: It doesn't make sense to run PRSlice together with "
                 					"PRSset. Will only perfrom PRSlice";
                 			fprintf(stderr, "%s\n", error_message.c_str());
@@ -145,12 +157,17 @@ int main(int argc, char *argv[])
                 			prsice.init_matrix(commander, i_pheno, perform_prslice);
                 			/**
                 			 * Perform PRSice on each window
+                			 * region here is only a place holder required by some of
+                			 * the functions from PRSice
                 			 */
                 			prsice.prslice_windows(commander, region);
                 			/**
                 			 * Now calculate the best window combination
                 			 */
                 			prsice.prslice(commander, region);
+                			/**
+                			 * This should produce the output
+                			 */
                 			prsice.output(commander, i_pheno);
                 		}
                 }
