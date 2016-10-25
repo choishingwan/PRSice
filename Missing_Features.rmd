@@ -2,8 +2,11 @@
 Here we list out features that are currently missing from the c++ version of PRSice
 - Dosage Data
 -- The c++ PRSice currrently cannot handle dosage data
-- Multi-chromosome input
--- Currently the c++ PRSice requires a single input file
+
+~~- Multi-chromosome input~~
+
+~~-- Currently the c++ PRSice requires a single input file~~
+
 - PCA / MDS calculation
 -- We are currently trying to make PRSice a standalone programme, during which some of the plink function need to be reimplmented.
 Therefore some functions, such as MDS and PCA calculation has not been implemented
