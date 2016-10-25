@@ -1,6 +1,7 @@
 #ifndef COMMANDER_H
 #define COMMANDER_H
 
+#include "storage.hpp"
 #include <string>
 #include <getopt.h>
 #include <unistd.h>
@@ -8,7 +9,6 @@
 #include <stdexcept>
 #include <iostream>
 #include "misc.hpp"
-#include "storage.hpp"
 
 class Commander
 {
