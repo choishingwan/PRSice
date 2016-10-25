@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <iostream>
 #include "misc.hpp"
+#include "storage.hpp"
 
 class Commander
 {
@@ -109,8 +110,6 @@ private:
     double m_inter;
     int m_prslice_size;
     size_t m_thread;
-    enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
-    typedef std::tuple<std::string, char, std::string, std::string> help;
     std::vector<help> m_help_messages;
 };
 
