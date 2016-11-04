@@ -437,7 +437,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		covariates_only.block(0,1,covariates_only.rows(),covariates_only.cols()-2) =
 				covariates_only.topRightCorner(covariates_only.rows(),covariates_only.cols()-2);
 		covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
-		if(m_target_binary)
+		if(m_target_binary[c_pheno_index])
 		{
 			Regression::glm(m_phenotype, covariates_only, null_p, m_null_r2, 25, n_thread, true);
 		}
@@ -546,7 +546,7 @@ void PRSice::categorize(const Commander &c_commander)
              );
 }
 
-void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool prslice)
+void PRSice::prsice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index, bool prslice)
 {
 
     if(m_partition.size()==0)
@@ -619,7 +619,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool p
     		{
     			if(n_thread == 1 || m_current_prs.size()==1)
     			{
-    				thread_score(0, m_current_prs.size(), cur_threshold,n_thread);
+    				thread_score(0, m_current_prs.size(), cur_threshold,n_thread,c_pheno_index);
     			}
     			else
     			{
@@ -628,7 +628,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool p
     					for(size_t i_region = 0; i_region < num_region; ++i_region)
     					{
     						thread_store.push_back(std::thread(&PRSice::thread_score, this,
-    								i_region, i_region+1, cur_threshold,1));
+    								i_region, i_region+1, cur_threshold,1, c_pheno_index));
     					}
     				}
     				else
@@ -641,7 +641,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, bool p
     						size_t ending = start+job_size+(remain>0);
     						ending = (ending>num_region)? num_region: ending;
     						thread_store.push_back(std::thread(&PRSice::thread_score, this, start, ending,
-    								cur_threshold,1));
+    								cur_threshold,1, c_pheno_index));
     						start=ending;
     						remain--;
     					}
@@ -689,7 +689,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
                 {
                     try
                     {
-                        if(m_target_binary)
+                        if(m_target_binary[pheno_index])
                         {
                             double temp = misc::convert<int>(token[+FAM::PHENOTYPE]);
                             if(temp-1>=0 && temp-1<2)
@@ -763,7 +763,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
                     {
                         try
                         {
-                            if(m_target_binary)
+                            if(m_target_binary[pheno_index])
                             {
                                 double temp = misc::convert<int>(p);
                                 if(temp-1>=0 && temp-1<=2)
@@ -792,7 +792,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
     }
     if(phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
     m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
-    if(m_target_binary)
+    if(m_target_binary[pheno_index])
     {
     	if(regress)
     	{
@@ -914,7 +914,7 @@ bool PRSice::get_prs_score(size_t &cur_index)
     return true;
 }
 
-void PRSice::thread_score(size_t region_start, size_t region_end, double threshold, size_t thread)
+void PRSice::thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index)
 {
     Eigen::MatrixXd X;
     bool thread_safe=false;
@@ -933,7 +933,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
                 else X(m_sample_with_phenotypes.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
             }
         }
-        if(m_target_binary)
+        if(m_target_binary[c_pheno_index])
         {
             try
             {

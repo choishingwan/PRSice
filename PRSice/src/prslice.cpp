@@ -125,7 +125,7 @@ void PRSice::prslice_windows(const Commander &c_commander, const Region &c_regio
     	             );
 }
 
-void PRSice::prslice(const Commander &c_commander, const Region &c_region)
+void PRSice::prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index)
 {
 	size_t n_thread = c_commander.get_thread();
 	m_partition.clear();
@@ -150,7 +150,7 @@ void PRSice::prslice(const Commander &c_commander, const Region &c_region)
 		prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, m_partition.size(), 0);
 		cur_index=m_partition.size();
 		m_num_snp_included.front() += m_partition.size();
-		thread_score(0, 1, bin_count,n_thread);
+		thread_score(0, 1, bin_count,n_thread, c_pheno_index);
 		bin_count++;
 	}
 }
