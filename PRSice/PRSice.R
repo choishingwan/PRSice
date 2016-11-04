@@ -2,6 +2,12 @@
 # To go to each section, just search for the corresponding header as stated here
 # The code structure are as follow
 #
+# ARG
+# The package argparser is included here to reduce one level of dependency
+# This will allow us to parse the command line input elegantly, then decide
+# where to install ggplot2. 
+# END_ARG
+#
 # INSTALL_PACKAGE
 # - Contains functions responsible for installing all required packages
 #
@@ -23,21 +29,13 @@
 # - Process the input names and call the actual plotting function
 
 # Environment stuff: This will allow us to locate the cpp file correctly
-if(Sys.info()[1]=="Windows"){
-  print("Window not supported, because of slash...")  
-  print("They use backward slash, which will cause problems in the script as it is an escape character")
+
+libraries <- c( "ggplot2", "data.table", "optparse", "methods")
+argv = commandArgs(trailingOnly = TRUE)
+dir_loc = grep("--dir",argv)
+if(length(dir_loc)!=0){
+  dir_loc=dir_loc+1;
 }
-
-initial.options <- commandArgs(trailingOnly = FALSE)
-if(length(commandArgs(trailingOnly = TRUE))==0){
-  stop("Please use --help for the help messages")
-}
-
-file.arg.name <- "--file="
-script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
-dir=strsplit(script.name, "/")
-dir = paste(dir[[1]][-length(dir[[1]])], "/", sep="",collapse="/")
-
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
 {
@@ -52,191 +50,111 @@ CRANChoosen <- function()
   return(getOption("repos")["CRAN"] != "@CRAN@")
 }
 
-UsePackage <- function(package)
+UsePackage <- function(package,dir)
 {
   if(!InstalledPackage(package))
   {
-    suppressMessages(suppressWarnings(install.packages(package, lib="./lib",repos="http://cran.rstudio.com/")))
+    dir.create(file.path(dir,"lib"), showWarnings = FALSE)
+    .libPaths(c(.libPaths(), paste(dir,"/lib",sep="")))
+    if(!InstalledPackage(package)){
+      if(is.na(dir)){
+        print("WARNING: dir not provided, cannot install the required packages")
+        return(FALSE);
+      }else{
+        print(paste("Trying to install ", package, " in ", dir, "/lib",sep=""))
+      }
+      suppressMessages(suppressWarnings(install.packages(package, lib=paste(dir, "/lib",sep=""),repos="http://cran.rstudio.com/")))
+    }
     if(!InstalledPackage(package)) return(FALSE)
   }
   return(TRUE)
 }
 
-dir.create(file.path(dir,"lib"), showWarnings = FALSE)
-.libPaths(c(.libPaths(), paste(dir,"lib",sep="")))
-libraries <- c( "ggplot2", "argparser", "data.table")
 for(library in libraries)
 {
-  if(!UsePackage(library))
+  if(!UsePackage(library, argv[dir_loc]))
   {
     stop("Error: ", library, " cannot be load nor install!")
   }
 }
 
-
-
-# COMMAND_FUNC:  Functions required for command line argument parsing
-
-# Self defined arg_parser object. Difference from the default = removed place holder and the -x flag
-arg_parser_self <- function(description, name = NULL)
-{
-  if (is.null(name)) {
-    prefix <- "--file="
-    name <- sub(prefix, "", grep(paste(prefix, "(.+)", sep = ""), commandArgs(), value = TRUE))
-  }
-  if (length(name) == 0) name <- "<script>"
-  parser <- structure(list(name = name, description = description), class = "arg.parser")
-  parser <- add_argument(parser, "--help", "show this help message and exit", 
-                         flag = TRUE)
-  parser    
-}
-
-# Self defined print function, should look much better than the default one
-print.arg.parser<- function (x, width=NULL,...) 
-{
-  parser <- x
-  opt.args <- parser$args[parser$is.opt.arg]
+option_list <- list(
+  make_option(c("-b", "--base"), type="character", help="Base association files. User can provide multiple base files"),
+  make_option(c("-t", "--target"), type="character", help="Plink binary file prefix for target files. Currently only 
+                  support plink binary inputs. For multiple target phenotypes, user should use the --pheno_file option 
+              together with the pheno_col option. For multiple chromosome input, one  should substitute the chromosome 
+              number with #. For example, if you files are presented as genotype_chr1_test, genotype_chr2_test, genotype_chr3_test,
+              then you can use: genotype_chr#_test. Please note that the substitute is based on your base file. So if 
+              your base file code chromosome with chr, e.g. chr1 chr2 etc, then in our example case, you should code your plink 
+              file as genotype_#_test"),
+  make_option("--target_is_binary", type="character", help="Indicate whether the target sample has binary phenotype or not. 
+                  For each phenotype, user need to provide either T or F where T means the phenotype is binary"),
   
-  max_name_length <- max(nchar(paste(parser$args[!is.na(parser$shorts)],parser$shorts, sep=", ")), nchar(parser$args[is.na(parser$shorts)]))+1
-  max_argument_length <- max_name_length+max(nchar(toupper(sub("^-+", "", parser$args[parser$is.opt.arg]))))+1
-  if(is.null(width)){
-    width=max(80, 2*max_argument_length)
-  }
-  usage<-c("usage: ", parser$name, 
-               paste(sub("^(.*)$", "[\\1]", parser$args[parser$is.flag])),
-               paste(sub("^(.*)$", "[\\1 ", opt.args), toupper(sub("^--(.*)$", "\\1]", opt.args)), sep = ""),
-               paste(parser$args[parser$is.req.arg]))
-  current_message = paste(usage[1:2],sep=" ",collapse = "")
-  pad = paste(rep(" ",nchar(current_message)),collapse = "");
-  for(i_usage in 3:length(usage)){
-    if(nchar(paste(current_message, usage[i_usage],sep=" ",collapse = ""))> width){
-      writeLines(current_message)
-      current_message = paste(pad,usage[i_usage],sep=" ",collapse = "");
-    }else{
-      current_message=paste(current_message, usage[i_usage], sep=" ",collapse = "")
-    }
-  }
-  if(current_message!=pad){
-    writeLines(current_message)
-  }
-  writeLines(strwrap(parser$description,width=width))
-  
-  
-  if (sum(parser$is.req.arg) > 0) {
-    message("positional arguments:")
-    for (i_reg_arg in which(parser$is.req.arg)) {
-      parser.frag = strwrap(parser$helps[i_reg_arg], width-6-max_argument_length)
-      writeLines(paste("  ", parser$args[i_reg_arg], paste(rep(" ", max_argument_length-nchar(parser$args[i_reg_arg])), collapse=""), "    ",parser.frag[1],sep="",collapse=""))
-      if(length(parser.frag)>1){
-        for(i_frag in 2:length(parser.frag)){
-          writeLines(paste(paste(rep(" ", 6+max_argument_length),collapse = ""), parser.frag[i_frag], collapse="",sep=""))
-        }
-      }
-    }
-  }
-  
-  message("")
-  if (sum(parser$is.flag) > 0) {
-    message("flags:")
-    for (i_flag in which(parser$is.flag)) {
-      if (parser$args[i_flag] == "--") 
-        next
-      if (is.na(parser$shorts[i_flag])) {
-        arg.name <- parser$args[i_flag]
-      }
-      else {
-        arg.name <- paste(parser$shorts[i_flag], parser$args[i_flag],  sep = ", ")
-      }
-      if(nchar(arg.name)<max_argument_length){
-        arg.name <- paste(arg.name, paste(rep(" ", max_argument_length-nchar(arg.name)), collapse = ""), sep="")
-      }
-      arg.help <- argparser:::make_arg_help(parser, i_flag)
-      arg.help.frag = strwrap(arg.help, width-6-max_argument_length)
-      writeLines(paste("  ",arg.name, "    ", arg.help.frag[1],collapse = "",sep=""))
-      if(length(arg.help.frag)>1){
-        for(i_flag in 2:length(arg.help.frag)){
-          writeLines(paste(paste(rep(" ", 6+max_argument_length),collapse = ""), arg.help.frag[i_flag], collapse="",sep=""))
-        }
-      }
-    }
-  }
-  
-  message("")
-  if (sum(parser$is.opt.arg) > 0) {
-    message("optional arguments:")
-    for (i_opt_arg in which(parser$is.opt.arg)) {
-      if (is.na(parser$shorts[i_opt_arg])) {
-        arg.name <- parser$args[i_opt_arg]
-      }
-      else {
-        arg.name <- paste(parser$shorts[i_opt_arg], parser$args[i_opt_arg],  sep = ", ")
-      }
-      
-      if(nchar(arg.name)<max_name_length){
-        arg.name <- paste(arg.name, paste(rep(" ", max_name_length-nchar(arg.name)), collapse = ""), sep="")
-      }
-      arg.name <- paste(arg.name, toupper(sub("^-+", "", parser$args[i_opt_arg])))
-      if(nchar(arg.name)<max_argument_length){
-        arg.name <- paste(arg.name, paste(rep(" ", max_argument_length-nchar(arg.name)), collapse = ""), sep="")
-      }
-      arg.help <- argparser:::make_arg_help(parser, i_opt_arg)
-      arg.help.frag = strwrap(arg.help, width-6-max_argument_length)
-      writeLines(paste("  ",arg.name, "    ", arg.help.frag[1],collapse = "",sep=""))
-      if(length(arg.help.frag)>1){
-        for(i_flag in 2:length(arg.help.frag)){
-          writeLines(paste(paste(rep(" ", 6+max_argument_length),collapse = ""), arg.help.frag[i_flag], collapse="",sep=""))
-        }
-      }
-    }
-  }
-}
+  make_option("--beta", type="charactre", help="Indicate whether the test statistic is beta instead of OR. Must be of the same length as base"),
+  make_option(c("--pheno_file","-f"), type="character", help="Phenotype file containing the target phenotype(s). 
+                    If provided, the fam file of the target is ignored. First column must be IID of the samples. Must contain a header 
+                    if --pheno_col is specified"),
+  make_option("--pheno_col", type="character", help="Headers of pheenotypes from phenotype file"),
+  make_option(c("--ld","-L"),type="character", help="Plink binary file prefix for the reference file used for LD calculation. 
+                    If not provided, will use the target genotype for the LD calculation. Can also use multiple chromosome
+                    plink file. Please see --target for more information."),
+  make_option(c("--covar_header","-c"), type="character", help="Header of covariates. If not provided, will use all variable in the 
+                    covariate file as the covarite."),
+  make_option(c("--covar_file","-C"), type="character", help="Covarite file. Formate should be: ID Cov1 Cov2 ..."),
+  make_option("--full",action="store_true", help="Also include the full model in the PRSice output"),
+  make_option("--all", action="store_true", help="Output PRS for ALL threshold. Can only be used together with fastscore to avoid huge output files."),
+  make_option("--no_regress", action="store_true", "Do not perform the regression analysis and simply output all PRS. Can only be used together 
+                    with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs"),
+  make_option(c("--out","-o"),type="character", help="Prefix of all output.", default="PRSice"),
+  make_option(c("--lower", "-l"), type="numeric", help="The starting p-value threshold. ", default=0.0001),
+  make_option(c("--upper", "-u"), type="numeric", help="The final p-value threshold.", default=0.5),
+  make_option(c("--interval", "-i"), type="numeric", help="The step size of the threshold.", default=0.00005),
+  make_option("--fastscore", action="store_true", help="Calculate the minimum amount of threshold as required by the bar_level option"),
+  make_option("--chr", type="character", help="Column header of Chromosome <Required>"),
+  make_option("--A1", type="character", help="Column header of Reference Allele <Required>"),
+  make_option("--A2", type="character", help="Column header of Alternaative Allele"),
+  make_option("--stat", type="character", help="Column header of test statistic <Required>"),
+  make_option("--snp", type="character", help="Column header of SNP id"),
+  make_option("--bp", type="character", help="Column header of SNP location"),
+  make_option("--se", type="character", help="Column header of Standard Error"),
+  make_option(c("--pvalue","-p"), help="Column header of p-value <Required> "),
+  make_option("--index",action="store_true", "Indicate all the above options are providing the INDEX of the corresponding column. 
+                    (Index should be 0-based). Useful when your base file each have a different header but the column 
+                    index remains the same"),
+  make_option("--clump_p", type="numeric", help="The p-value threshold use for clumping.", default=1),
+  make_option("--clump_r2", type="numeric", help="The R2 threshold for clumping. Please note that as we did not implement the
+                    maximum likelihood R2 calculation, the clumping result can differ slightly from plink.", default=0.1),
+  make_option("--clump_kb", type="numeric", help="The distance for clumping in kb.", default=250),
+  make_option(c("--bed", "-B"), type="character", help="Bed file containing the selected regions. Name of bed file will be used as the region identifier."),
+  make_option(c("--gtf", "-g"), type="character", help="GTF file containing gene boundaries. Required when --msigdb is set."),
+  make_option(c("--msigdb", "-m"), type="character", help="MSIGDB file containing the pathway information require the gtf file."),
+  make_option("--gen_bed", action="store_true", help="Generate bed file of gene regions from the gtf file."),
+  make_option("--proxy", type="numeric", help="Proxy threshold for index SNP to be considered as part of the region represented by the clumped SNPs.
+                    e.g. --proxy 0.8 means the index SNP will represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if 
+                    it is not physically within these regions"),
+  make_option("--prslice", type="numeric", help="Perform PRSlice where the whole genome is first cut into bin size specified by this option. PRSice 
+                    will then be performed on each bin. Bins are then sorted according to the their R2. PRSice is then performed again 
+                    to find the best bin combination. This cannot be performed together with PRSet"),
+  make_option("--bar_levels", type="character", help="Level of barchart to be plotted. When fastscore is set, PRSice will 
+                    only calculate the PRS for threshold within the bar level"),
+  make_option(c("--thread","-T"), type="numeric", help="Number of thread use", default=1),
+  make_option("--c_help", action="store_true", help="Print the help message from the c++ program instead"),
+  make_option("--plot", action="store_true", help="Indicate only plotting is required"),
+  make_option("--intermediate", type="character", help="Pefix of the intermediate files for plotting (e.g. ignore .prsice and .best). If not provided, will deduce the file prefix from --base and --target"),
+  make_option(c("--quantile", "-q"), type="numeric", help="Number of quantiles to plot. 0 = Not producing the quantile plot", default=0),
+  make_option(c("--quant_extract", "-e"), type="character", help="File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples" ),
+  make_option("--bar_level", type="character", help="barchar level used for plotting", default="0.001,0.05,0.1,0.2,0.3,0.4,0.5"),
+  make_option("--quant_ref", type="numeric", help="Reference quantile for quantile plot"),
+  make_option("--scatter_r2",action="store_true", help="y-axis of the high resolution scatter plot should be R2"),
+  make_option("--bar_col_r2", action="store_true", help="Change the colour of bar to R2 instead of p-value"),
+  make_option("--bar_col_low", type="character", help="Colour of the poorest predicting thresholds", default="dodgerblue"),
+  make_option("--bar_col_high", type="character", help="Colour of the highest predicting thresholds", default="firebrick"),
+  make_option("--prsice", type="character", help="Location of the PRSice binary"),
+  make_option("--dir", type="character", help="Location to install ggplot. Only require if ggplot is not installed")
+)
 
-# COMMAD_BUILD: Building the command line parser using argparser
-# TODO: Write our own package to better handle these parameters. Currently they are all over the places
-p <- arg_parser_self("PRSice: Polygenic Risk Score software")
-p <- add_argument(p, "--base", short="-b", nargs=Inf, help="Base association files. User can provide multiple base files.")
-p <- add_argument(p, "--target", short="-t", nargs=Inf, help="Plink binary file prefix for target files. User can provide multiple target files. Currently only support plink binary input. Does not support multi-chromosome input")
-p <- add_argument(p, "--binary_target", nargs=Inf, help="Indication of whether binary target is provided. Should be of the same length as target")
-p <- add_argument(p, "--beta", nargs=Inf, help="Indication of whether the test statistic is beta instead of OR. Should be of the same length as base")
-p <- add_argument(p, "--pheno_file", short="-f", nargs=Inf, help="Phenotype file(s) containing the target phenotypes. If provided, the fam file of the target is ignored. This should be the same line as target (If you want to use phenotype file, you must use it for ALL target")
-p <- add_argument(p, "--ld", short="-L", help="Plink binary file prefix for the reference file used for LD calculation. If not provided, will use the target genotype for the LD calculation")
-p <- add_argument(p, "--covar_header", short="-c", help="Header of covariates, if not provided, will use all variable in the covariate file as the covarite. Should be comma separated")
-p <- add_argument(p, "--covar_file", short="-C", help="Covariate file. Format should be: ID Cov1 Cov2 Must contain a header");
-p <- add_argument(p, "--ancestry", short="-a", help="NOT DEVELOPED YET");
-p <- add_argument(p, "--out", short="-o", help="The prefix of all output", default="PRSice");
-p <- add_argument(p, "--lower", short="-l", help="The starting p-value threshold", default=0.0001);
-p <- add_argument(p, "--upper", short="-u", help="The final p-value threshold", default=0.5);
-p <- add_argument(p, "--interval", short="i", help="The step size of the threshold", default=0.00005);
-p <- add_argument(p, "--chr", help="Column header of Chromosome", default="CHR");
-p <- add_argument(p, "--A1", help="Column header of Reference Allele", default="A1");
-p <- add_argument(p, "--A2", help="Column header of Alternaative Allele", default="A2");
-p <- add_argument(p, "--stat", help="Column header of test statistic, either BETA or OR", default="OR");
-p <- add_argument(p, "--snp", help="Column header of SNP id", default="SNP");
-p <- add_argument(p, "--bp", help="Column header of SNP location", default="BP");
-p <- add_argument(p, "--se",help="Column header of Standard Error", default="SE");
-p <- add_argument(p , "--pvalue", short="-p", help="Column head of p-value", default="P");
-p <- add_argument(p, "--index", flag=T, help="If the base file doesn't contain a header, you can use this option, which essentially state that all the provided \"headers\" are INDEX of the corresponding column. (Index should be 0-based)");
-p <- add_argument(p, "--clump-p", help="The p-value threshold use for clumping", default=1);
-p <- add_argument(p, "--clump_r2", help="The R2 threshold for clumping. Please note that as we did not implement the maximum likelihood R2 calculation, the clumping result can differ slightly from plink.", default=0.1);
-p <- add_argument(p, "--clump_kb", help="The distance for clumping in kb.", default=250);
-p <- add_argument(p, "--bed", short="-B", nargs=Inf, help="Bed file containing the selected regions. Name of bed file will be used as the region identifier");
-p <- add_argument(p, "--gtf", short="-g", help="GTF file containing gene boundaries. Required when --msigdb is set");
-p <- add_argument(p, "--msigdb", short="-m", help="MSIGDB file containing the pathway information require the gtf file");
-p <- add_argument(p, "--gen_bed", flag=T, help="Generate bed file of gene regions from the gtf file");
-p <- add_argument(p, "--proxy", help="Proxy threshold for index SNP to be considered as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will represent the region of any clumped SNPs that has a R2 >= 0.8 with it");
-p <- add_argument(p, "--thread", short="-T", help="Number of thread used", default=1);
-p <- add_argument(p, "--c_help", flag=T, help="Print the help message from the c++ program instead");
-p <- add_argument(p, "--plot", flag=T, help="Indicate whether only plotting is required");
-p <- add_argument(p, "--intermediate", help="Pefix of the intermediate files for plotting (e.g. ignore .prsice and .best). If not provided, will deduce the file prefix from --base and --target")
-p <- add_argument(p, "--quantile", short="-q", help="Number of quantiles to plot. 0 = Not producing the quantile plot", default=0);
-p <- add_argument(p, "--quant_extract", short="-e", help="File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples" )
-p <- add_argument(p, "--bar_level", help="barchar level used for plotting", default=c(0.001,0.05,0.1,0.2,0.3,0.4,0.5))
-p <- add_argument(p, "--quant_ref", help="Reference quantile for quantile plot")
-p <- add_argument(p, "--scatter_r2", flag=T, help="y-axis of the high resolution scatter plot should be R2")
-p <- add_argument(p, "--fastscore", flag=T, help="Calculate the minimum amount of threshold as indicated by the bar_level option")
-p <- add_argument(p, "--bar_col_r2", flag=T, help="Change the colour of bar to R2 instead of p-value")
-p <- add_argument(p, "--bar_col_low", help="Colour of the poorest predicting thresholds", default="dodgerblue")
-p <- add_argument(p, "--bar_col_high", help="Colour of the highest predicting thresholds", default="firebrick")
+argv <- parse_args(OptionParser(option_list=option_list))
+stop()
 
 argv = commandArgs(trailingOnly = TRUE)
 help=(sum(c("--help", "-h") %in%argv)>=1)
@@ -245,11 +163,23 @@ if(help){
   quit();
 }
 argv <- parse_args(p)
+not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate","quant_ref", "scatter_R2","bar_col_r2","bar_col_low","bar_col_high", "prsice", "dir")
 
-not_cpp <- c("help", "c_help", "plot", "quantile", "quant_extract", "intermediate","quant_ref", "scatter_R2","bar_col_r2","bar_col_low","bar_col_high")
+
+
+
 # CALL_PRSICE: Call the cpp PRSice if required
+# To ensure the excutable is set correctly
+if(!is.na(argv$prsice)){
+  if(!startsWith(argv$prsice, "/") && !startsWith(argv$prsice, ".")){
+    argv$prsice = paste("./", argv$prsice, sep="")
+  }
+}
 if(argv$c_help){
-  system(paste(dir,"bin/PRSice --help",sep=""))
+  if(is.na(argv$prsice)){
+    stop("Cannot use c_help without specifying the location of the PRSice binary!");
+  }
+  system(paste(argv$prsice," --help",sep=""))
   quit();
 }
 
@@ -454,11 +384,17 @@ if(!is.na(argv$intermediate)){
   # we need to deduce the file name
   writeLines(strwrap("WARNING: Using this method, we will only perform plotting to the base region. If you are using PRSlice, please specify the name of the desired intermediate file",width=80))
   if(sum(is.na(argv$base))!=length(argv$base)){
-    if(sum(is.na(argv$target))!=length(argv$target)){
+    if(!is.na(argv$target)){
+      print(argv$base)
       for(b in argv$base){
-        for(t in argv$target){
-          # no need to check out, as it has default (PRSice)
-          run_plot(paste(argv$out, b,t,"base",sep="."), argv);
+        print(argv$base)
+        if(sum(!is.na(argv$pheno_col)) != 0){
+          for(t in argv$pheno_col){
+            # no need to check out, as it has default (PRSice)
+            run_plot(paste(argv$out, b,t,"base",sep="."), argv);
+          }
+        }else{
+          run_plot(paste(argv$out, b,"base",sep="."), argv);
         }
       }
     }else{
