@@ -341,6 +341,7 @@ void PRSice::init_pheno(const Commander &c_commander)
 		std::get<pheno_store::FILE_NAME>(temp) = fam;
 		std::get<pheno_store::INDEX>(temp) = +FAM::PHENOTYPE;
 		std::get<pheno_store::NAME>(temp) = "";
+		std::get<pheno_store::ORDER>(temp) = 0;
 		m_pheno_names.push_back(temp);
 	}
 	else
@@ -362,27 +363,30 @@ void PRSice::init_pheno(const Commander &c_commander)
 		misc::trim(line);
 		std::vector<std::string> col = misc::split(line);
 		bool found = false;
-		std::sort(pheno_header.begin(), pheno_header.end());
-		pheno_header.erase(std::unique(pheno_header.begin(), pheno_header.end()), pheno_header.end());
-		for(auto &&pheno_info : pheno_header)
+		std::unordered_map<std::string, bool> dup_col;
+		for(size_t i_pheno=0; i_pheno <  pheno_header.size(); ++i_pheno)
 		{
-			found = false;
-			for(size_t i_column =0; i_column < col.size(); ++i_column)
-			{
-				if(col[i_column].compare(pheno_info)==0)
+			if(dup_col.find(pheno_header[i_pheno])==dup_col.end()){
+				found = false;
+				dup_col[pheno_header[i_pheno]] = true;
+				for(size_t i_column =0; i_column < col.size(); ++i_column)
 				{
-					found = true;
-					pheno_storage temp;
-					std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
-					std::get<pheno_store::INDEX>(temp) = i_column;
-					std::get<pheno_store::NAME>(temp) = pheno_info;
-					m_pheno_names.push_back(temp);
-					break;
+					if(col[i_column].compare(pheno_header[i_pheno])==0)
+					{
+						found = true;
+						pheno_storage temp;
+						std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
+						std::get<pheno_store::INDEX>(temp) = i_column;
+						std::get<pheno_store::NAME>(temp) = pheno_header[i_pheno];
+						std::get<pheno_store::ORDER>(temp) = i_pheno;
+						m_pheno_names.push_back(temp);
+						break;
+					}
 				}
-			}
-			if(!found)
-			{
-				fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_info.c_str());
+				if(!found)
+				{
+					fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_info.c_str());
+				}
 			}
 		}
 	}
@@ -418,7 +422,8 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		}
 	}
 	gen_pheno_vec(std::get<pheno_store::FILE_NAME>(m_pheno_names[c_pheno_index]),
-			std::get<pheno_store::INDEX>(m_pheno_names[c_pheno_index]), !no_regress);
+			std::get<pheno_store::INDEX>(m_pheno_names[c_pheno_index]),
+			std::get<pheno_store::ORDER>(m_pheno_names[c_pheno_index]), !no_regress);
 	if(!no_regress)
 	{
 		gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_header());
@@ -657,12 +662,13 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
 }
 
 
-void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress)
+void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, const int col_index, bool regress)
 {
 
     std::vector<double> phenotype_store;
     std::ifstream pheno_file;
     std::string fam_name = m_target+".fam";
+    bool binary = m_target_binary.at(col_index);
     if(fam_name.find("#")!=std::string::npos)
     {
         misc::replace_substring(fam_name, "#", m_chr_list.front());
@@ -686,11 +692,11 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
                 std::vector<std::string> token = misc::split(line);
                 if(token.size() < 6) throw std::runtime_error("Malformed fam file, should contain at least 6 columns");
                 m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0));
-                if(token[+FAM::PHENOTYPE] == "NA" )
+                if(token[+FAM::PHENOTYPE] != "NA" )
                 {
                     try
                     {
-                        if(m_target_binary[pheno_index])
+                        if(binary)
                         {
                             double temp = misc::convert<int>(token[+FAM::PHENOTYPE]);
                             if(temp-1>=0 && temp-1<2)
@@ -764,7 +770,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
                     {
                         try
                         {
-                            if(m_target_binary[pheno_index])
+                            if(binary)
                             {
                                 double temp = misc::convert<int>(p);
                                 if(temp-1>=0 && temp-1<=2)
@@ -793,7 +799,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, boo
     }
     if(phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
     m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
-    if(m_target_binary[pheno_index])
+    if(binary)
     {
     	if(regress)
     	{
