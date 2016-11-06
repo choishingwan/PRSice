@@ -151,7 +151,7 @@ private:
     		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
     void update_line(std::unordered_map<std::string, size_t> &partition_index);
-    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress);
+    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, const int col_index, bool regress);
     void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
     bool get_prs_score(size_t &cur_index);
     void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);
