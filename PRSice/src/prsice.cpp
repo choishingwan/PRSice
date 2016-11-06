@@ -196,6 +196,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
     num_duplicated = (int)before-(int)after;
     fprintf(stderr, "Number of SNPs from base  : %zu\n", m_snp_list.size());
     if(num_indel!=0) fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
+    if(num_exclude!=0) fprintf(stderr, "Number of SNPs excluded due to p-value threshold: %zu\n", num_exclude);
     if(num_duplicated!=0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
     if(num_stat_not_convertible!=0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
     if(num_p_not_convertible!=0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);

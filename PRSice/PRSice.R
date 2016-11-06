@@ -322,7 +322,7 @@ not_cpp <-
         "quant_extract",
         "intermediate",
         "quant_ref",
-        "scatter_R2",
+        "scatter_r2",
         "bar_col_r2",
         "bar_col_low",
         "bar_col_high",

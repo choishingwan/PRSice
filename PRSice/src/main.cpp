@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     bool perform_prslice = commander.prslice() > 0.0;
     bool full_model = commander.full();
-    double bound_end = commander.get_lower();
+    double bound_end = commander.get_upper();
     std::vector<std::string> base = commander.get_base();
     int num_base = base.size();
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
