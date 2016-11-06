@@ -1,7 +1,7 @@
 # Here is the guide to this protentially long R code
 # To go to each section, just search for the corresponding header as stated here
 # The code structure are as follow
-# The easiest way will be to use RStudio and go to the corresponding section by 
+# The easiest way will be to use RStudio and go to the corresponding section by
 # selecting it on the bottom left corner of the script console
 #
 # INSTALL_PACKAGE
@@ -29,7 +29,8 @@
 
 # Library handling --------------------------------------------------------
 
-libraries <- c("ggplot2", "data.table", "optparse", "methods")
+libraries <-
+    c("ggplot2", "data.table", "optparse", "methods", "tools")
 argv = commandArgs(trailingOnly = TRUE)
 dir_loc = grep("--dir", argv)
 if (length(dir_loc) != 0) {
@@ -155,7 +156,7 @@ option_list <- list(
     make_option(
         "--no_regress",
         action = "store_true",
-        "Do not perform the regression analysis and simply output all PRS. Can only be used together
+        help="Do not perform the regression analysis and simply output all PRS. Can only be used together
         with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs"
     ),
     make_option(
@@ -194,7 +195,7 @@ option_list <- list(
     make_option(
         "--index",
         action = "store_true",
-        "Indicate all the above options are providing the INDEX of the corresponding column.
+        help="Indicate all the above options are providing the INDEX of the corresponding column.
         (Index should be 0-based). Useful when your base file each have a different header but the column
         index remains the same"
     ),
@@ -342,7 +343,8 @@ provided <- function(name, argv) {
 # To ensure the excutable is set correctly
 # This is also one of the reason why window doesn't work. I don't know if we can handle the \
 if (provided("prsice", argv)) {
-    if (!startsWith(argv$prsice, "/") && !startsWith(argv$prsice, ".")) {
+    if (!startsWith(argv$prsice, "/") &&
+        !startsWith(argv$prsice, ".")) {
         argv$prsice = paste("./", argv$prsice, sep = "")
     }
 }
@@ -381,7 +383,8 @@ if (!argv$plot) {
         # only need special processing for flags and specific inputs
         if (i == "index" ||
             i == "gen_bed" ||
-            i == "fastscore" || i == "full" || i == "all" || i == "no_regress") {
+            i == "fastscore" ||
+            i == "full" || i == "all" || i == "no_regress") {
             if (argv[[i]])
                 command = paste(command, " --", i, sep = "")
         } else if (i %in% not_cpp) {
@@ -419,27 +422,26 @@ if (!argv$plot) {
 
 # PLOTTING: Here contains all the function for plotting
 # quantile_plot: plotting the quantile plots
-quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv) {
+quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv, binary) {
     extract = NULL
-    if (!is.na(argv$quant_extract)) {
+    if (provided("quant_extract", argv)) {
         extract = fread(argv$quant_extract,
                         header = F,
                         data.table = F)
     }
+    num_quant <- argv$quantile
     quants <-
         as.numeric(cut(
             PRS.best[, 2],
-            breaks = quantile(PRS.best[, 2], probs = seq(0, 1, 1 / argv$quantile)),
+            breaks = quantile(PRS.best[, 2], probs = seq(0, 1, 1 /num_quant)),
             include.lowest = T
         ))
-    num_quant <- argv$quantile
     if (!is.null(extract)) {
         quants[PRS.best[, 1] %in% extract$V2] <- num_quant + 1
         num_quant <- num_quant + 1
-        
     }
     quant.ref <- ceiling(argv$quantile / 2)
-    if (!is.na(argv$quant_ref)) {
+    if (provided("quant_ref", argv)) {
         quant.ref <- argv$quant_ref
         
         if (quant.ref > argv$quantile) {
@@ -459,17 +461,15 @@ quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv) {
     quants <-
         factor(quants, levels = c(quant.ref, seq(1, num_quant, 1)[-quant.ref]))
     pheno$quantile <- quants
-    if (ncol(pheno) >= 3) {
+    if (ncol(pheno) >= 2) {
         pheno <-
-            pheno[, c(colnames(pheno)[2], "quantile", colnames(pheno)[3:(ncol(pheno) -
+            pheno[, c(colnames(pheno)[1], "quantile", colnames(pheno)[2:(ncol(pheno) -
                                                                              1)])]
     } else{
-        pheno <- pheno[, c(colnames(pheno)[2], "quantile")]
+        pheno <- pheno[, c(colnames(pheno)[1], "quantile")]
     }
     family <- gaussian
-    if (sum(unique(pheno[, 1]) %in% c(0, 1)) == 2) {
-        # When only contain 0 and 1, we will consider it as binary
-        # Someone will have to be very unlucky to have a quantitative trait as exactly 0 and 1 for all samples
+    if (binary) {
         family <- binomial
     }
     reg <- summary(glm(Pheno ~ ., family, data = pheno))
@@ -494,7 +494,8 @@ quantile_plot <- function(PRS, PRS.best, pheno, prefix, argv) {
     if (!is.null(extract)) {
         quantiles.df$Group[max(quantiles.df$DEC)] = 1
     }
-    quantiles.df$Group <- factor(quantiles.df$Group, levels = c(0, 1))
+    quantiles.df$Group <-
+        factor(quantiles.df$Group, levels = c(0, 1))
     quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
     quantiles.plot <- ggplot(quantiles.df) +
         theme(
@@ -568,7 +569,8 @@ high_res_plot <- function(PRS, prefix, argv) {
             geom_hline(yintercept = max(PRS$R2), colour = "red") +
             ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
     } else{
-        ggfig.points <- ggplot(data = PRS, aes(x = Threshold, y = -log10(P))) +
+        ggfig.points <-
+            ggplot(data = PRS, aes(x = Threshold, y = -log10(P))) +
             geom_line(aes(Threshold,-log10(P)),
                       colour = "green",
                       data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
@@ -660,7 +662,7 @@ bar_plot <- function(PRS, prefix, argv) {
 }
 
 # run_plot: The function used for calling different plotting functions
-run_plot <- function(prefix, argv) {
+run_plot <- function(prefix, argv, pheno, binary, cov) {
     PRS <- fread(paste(prefix, ".prsice", sep = ""),
                  header = T,
                  data.table = F)
@@ -668,72 +670,161 @@ run_plot <- function(prefix, argv) {
         fread(paste(prefix, ".best", sep = ""),
               header = T,
               data.table = F)
-    pheno <-
-        fread(paste(prefix, ".pheno", sep = ""),
-              header = T,
-              data.table = F)
-    if (argv$quantile > 0) {
+    if (provided("quantile", argv) && argv$quantile > 0) {
+        if(!is.null(cov)){
+            cov = cov[!is.na(pheno),]
+        }
+        cur_pheno = pheno(!is.na(pheno))
+        if(binary){
+            if(!is.null(cov)){
+                cov = cov[!(cur_pheno!=1 && cur_pheno!=2),]
+            }
+            cur_pheno = cur_pheno[!(cur_pheno!=1 && cur_pheno!=2)]-1
+        }
+        phenotype = data.frame(Pheno=cur_pheno);
+        if(!is.null(cov)){
+            phenotype = data.frame(Pheno=cur_pheno, cov)
+        }
         # Need to plot the quantile plot
-        quantile_plot(PRS, PRS.best, pheno, prefix, argv)
+        quantile_plot(PRS, PRS.best, phenotype, prefix, argv, binary)
     }
     # Now perform the barplotting
-    if (!argv$fastscore) {
+    if (provided("fastscore", argv) && argv$fastscore) {
         high_res_plot(PRS, prefix, argv)
     }
     bar_plot(PRS, prefix, argv)
 }
 
+
+
+
+# Process file names for plotting------------------------------------------------------
+
+
 # CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
-if (!is.na(argv$intermediate)) {
+if (provided("intermediate", argv)) {
     # File name provided
+    # Need to know the beta and the phenotype of the target
+    # So in theory, we still need argv$target
     run_plot(argv$intermediate, argv)
 } else{
-    # we need to deduce the file name
-    writeLines(
-        strwrap(
-            "WARNING: Using this method, we will only perform plotting to the base region. If you are using PRSlice, please specify the name of the desired intermediate file",
-            width = 80
-        )
-    )
-    if (sum(is.na(argv$base)) != length(argv$base)) {
-        if (!is.na(argv$target)) {
-            print(argv$base)
-            for (b in argv$base) {
-                print(argv$base)
-                if (sum(!is.na(argv$pheno_col)) != 0) {
-                    for (t in argv$pheno_col) {
-                        # no need to check out, as it has default (PRSice)
-                        run_plot(paste(argv$out, b, t, "base", sep = "."),
-                                 argv)
-                        
-                    }
-                } else{
-                    run_plot(paste(argv$out, b, "base", sep = "."), argv)
+    # we need to deduce the file names
+    # Now we actually require one single string for the input, separated by ,
+    if (provided("base", argv) && !is.na(argv[["base"]])) {
+        bases = strsplit(argv$base, split = ",")[[1]]
+        # now check the target
+        phenos = NULL
+        if (!provided("target", argv)) {
+            stop(
+                "Target file name not found. You'll need to either provide the intermediate prefix of all the target name for plotting!"
+            )
+        }
+        if (!provided("target_is_binary", argv)) {
+            stop(
+                "We do need to know if the target file is binary or not in order to decide whether if we will run logistic or linear regression."
+            )
+        }
+        binary_target = strsplit(argv$target_is_binary, split = ",")[[1]]
+        if (provided("pheno_col", argv)) {
+            phenos = strsplit(argv$pheno_col, split = ",")[[1]]
+            if (!provided("pheno_file", argv)) {
+                phenos = NULL
+                writeLines(
+                    strwrap(
+                        "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.",
+                        width = 80
+                    )
+                )
+            } else{
+                header <- read.table(argv$pheno_file,
+                                     nrows = 1,
+                                     header = FALSE)
+                # This will automatically filter out un-used phenos
+                if (length(binary_target) != length(phenos)) {
+                    message <-
+                        "Number of binray target should match number of phenotype provided!"
                     
+                    message = paste(
+                        message,
+                        "There are ",
+                        length(binary_target),
+                        " binary target information and ",
+                        length(phenos),
+                        "phenotypes",
+                        sep = ""
+                    )
+                    stop(message)
                 }
+                binary_target = binary_target[phenos %in% header[1,]]
+                phenos = phenos[phenos %in% header[1,]]
             }
         } else{
-            message <- "NA in --target"
-            if (argv$plot) {
-                message <-
-                    paste(
-                        message,
-                        "You'll need to either provide the intermediate prefix or all the target/base name for plot only"
-                    )
+            if (length(binary_target) != 1) {
+                stop("Too many binary target information. We only have one phenotype")
             }
-            stop(message)
-            
+        }
+        # we have the correct information of phenos, bases and binary_target here
+        
+        # Now read region names
+        regions = "Base"
+        if(provided("bed", argv)){
+            beds <- strsplit(argv$bed, split=",")[[1]]
+            regions <- c(regions, beds)
+        }
+        if(provided("msigdb", argv) && provided("gtf", argv)){
+            con  <- file(argv$msigdb, open = "r")
+            while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
+                line <- (strsplit(oneLine, "\\s+")[[1]])
+                # We want at least 2 item for each line (1 name and 1 gene)
+                if(length(line)>2){
+                    regions <- c(regions, line[1])
+                }
+            } 
+            close(con)
+        }
+        # Unfortunately, we never check for duplicated region names. So better print an error here
+        if(duplicated(regions)!=0){
+            writeLines(strwrap("Duplicated Region name found. PRSice might have overwrote some of the output. Please re-run PRSice with unique region names", width=80))
+            stop()
+        }
+        # Now we have the correct information of phenos, bases and binary_target here
+        # Need to get the covariates
+        cov = NULL
+        for (b in bases) {
+            base_name = file_path_sans_ext(basename(b))
+            # region will always have at least one item -> Base
+            prefix = paste(argv$out, base_name, sep=".");
+            for(r in regions){
+                if(!is.null(phenos)){
+                    pheno_file = fread(argv$pheno_file, header=T, data.table=F)
+                    fam = fread(paste(argv$target,".fam",sep=""), data.table=F, header=F)$V2
+                    pheno_file = pheno_file[pheno_file[,1]%in%fam,]
+                    id=1
+                    for(p in phenos){
+                        cur_prefix = paste(prefix, p, r, sep=".");
+                        run_plot(cur_prefix, argv, pheno[[p]], binary_target[id], cov)
+                        id=id+1
+                    }
+                }else{
+                    cur_prefix = paste(prefix, r, sep=".");
+                    fam = fread(paste(argv$target,".fam",sep=""), data.table=F, header=F)$V2
+                    if(provided("pheno_file", argv)){
+                        pheno=fread(paste(argv$pheno_file), data.table=F, header=F)
+                        fam=pheno$V2[pheno$V1%in%fam]
+                    }
+                    run_plot(cur_prefix,argv, fam, binary_target[1], cov)
+                }
+            }
         }
     } else{
-        message <- "NA in --base"
-        if (argv$plot) {
+        message <- "Base file name not found. "
+        if (provided("plot", argv) && argv$plot) {
             message <-
                 paste(
                     message,
-                    "You'll need to either provide the intermediate prefix or all the target/base name for plot only"
+                    "You'll need to either provide the intermediate prefix or all the target/base name for plotting"
                 )
         }
         stop(message)
-        
     }
 }
