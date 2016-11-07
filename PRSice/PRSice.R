@@ -404,7 +404,7 @@ if (!argv$plot) {
         ret <- system2(argv$prsice,
                        command,
                        stdout = TRUE,
-                       stderr = TRUE)
+                       stderr = "")
         if (attr(ret, "status") != 0) {
             quit()
             
