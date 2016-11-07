@@ -405,10 +405,6 @@ if (!argv$plot) {
                        command,
                        stdout = TRUE,
                        stderr = "")
-        if (attr(ret, "status") != 0) {
-            quit()
-            
-        }
     } else{
         stop("Cannot run PRSice without the PRSice binary file")
     }
