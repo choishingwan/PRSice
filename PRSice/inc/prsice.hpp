@@ -23,7 +23,7 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, bool target_binary): m_current_base(base_name), m_base_index(index),
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary): m_current_base(base_name), m_base_index(index),
     		m_target(target), m_target_binary(target_binary)
     {
         if(index < 0)
@@ -74,7 +74,7 @@ public:
      * @param c_commander Parameter container
      */
     void categorize(const Commander &c_commander);
-    void prsice(const Commander &c_commander, const Region &c_region, bool prslice=false);
+    void prsice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,  bool prslice=false);
     /**
      * Output the results
      * @param c_commander List of parameters
@@ -85,12 +85,12 @@ public:
     void output(const Commander &c_commander, size_t pheno_index) const;
     // PRSlice related stuff
     void prslice_windows(const Commander &c_commander, const Region &c_region);
-    void prslice(const Commander &c_commander, const Region &c_region);
+    void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
     // Phenotype storages
-    enum pheno_store{FILE_NAME, INDEX, NAME};
-    typedef std::tuple<std::string, size_t, std::string> pheno_storage;
+    enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
+    typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
 	std::vector<pheno_storage> m_pheno_names;
 	size_t m_pheno_index=0;
 	// Regression related storages
@@ -138,7 +138,7 @@ private:
     int m_base_index;
 
     std::string m_target;
-    bool m_target_binary;
+    std::vector<bool> m_target_binary;
     /**
      * Check whether if the SNP is included in the target file. This should update
      * the m_include_snp
@@ -151,10 +151,10 @@ private:
     		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
     void update_line(std::unordered_map<std::string, size_t> &partition_index);
-    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, bool regress);
+    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, const int col_index, bool regress);
     void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
     bool get_prs_score(size_t &cur_index);
-    void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread);
+    void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);
 
 };
 

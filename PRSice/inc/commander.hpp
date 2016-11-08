@@ -60,7 +60,7 @@ public:
         }
         return -2;
     };
-    bool target_is_binary() const { return m_target_is_binary; };
+    std::vector<bool> target_is_binary() const { return m_target_is_binary; };
     bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
     bool no_regression() const { return m_no_regress; };
     bool fastscore() const { return m_fastscore;};
@@ -73,6 +73,7 @@ private:
     void info();
     void program_info();
     std::vector<bool> m_use_beta;
+    std::vector<bool> m_target_is_binary;
     std::vector<std::string> m_base;
     std::vector<std::string> m_covariates;
     std::vector<std::string> m_bed_list;
@@ -94,7 +95,7 @@ private:
     std::string m_gtf;
     std::string m_msigdb;
     std::string m_out;
-    bool m_target_is_binary;
+//    bool m_target_is_binary;
     bool m_fastscore;
     bool m_index;
     bool m_gen_bed;

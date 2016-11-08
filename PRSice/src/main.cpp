@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     bool perform_prslice = commander.prslice() > 0.0;
     bool full_model = commander.full();
-    double bound_end = commander.get_lower();
+    double bound_end = commander.get_upper();
     std::vector<std::string> base = commander.get_base();
     int num_base = base.size();
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
                     			 * within the class vectors. This help us to reduce the number of
                     			 * parameters required
                     			 */
-                				prsice.prsice(commander, region);
+                				prsice.prsice(commander, region, i_pheno);
                     			fprintf(stderr, "\n");
                     			/**
                     			 * Output the results
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                 			/**
                 			 * Now calculate the best window combination
                 			 */
-                			prsice.prslice(commander, region);
+                			prsice.prslice(commander, region, i_pheno);
                 			/**
                 			 * This should produce the output
                 			 */

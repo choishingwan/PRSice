@@ -40,7 +40,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump_p",required_argument,NULL,0},
         {"clump_r2",required_argument,NULL,0},
         {"clump_kb",required_argument,NULL,0},
-        {"quant_target",no_argument,NULL,0},
+        {"target_is_binary",required_argument,NULL,0},
         {"bar_levels",required_argument,NULL,0},
         {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
@@ -121,9 +121,10 @@ bool Commander::initialize(int argc, char *argv[])
                 }
                 else m_prslice_size = temp*1000; //change it to kb, might want to allow different units
             }
-            else if(command.compare("quant_target")==0)
+            else if(command.compare("target_is_binary")==0)
             {
-                m_target_is_binary=false;
+            		std::vector<std::string> token = misc::split(optarg, ", ");
+            	    for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
             }
             else if(command.compare("bar_levels")==0)
             {
@@ -343,9 +344,18 @@ bool Commander::initialize(int argc, char *argv[])
     }
     else if(m_use_beta.size() != m_base.size())
     {
+    		error=true;
         error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
         error_message.append("       Default value only work when all base file are using OR and\n");
         error_message.append("       when --beta is not used\n");
+    }
+    if(m_pheno_col.size()!=0 && m_pheno_col.size()!=m_target_is_binary.size())
+    {
+    		error=true;
+        error_message.append("ERROR: Number of target phenotypes doesn't match information of binary\n");
+        error_message.append("       target! You must indicate whether the phenotype is binary using\n");
+        error_message.append("       --target_is_binary\n");
+
     }
     if(m_no_regress && !m_fastscore)
     {
@@ -384,7 +394,6 @@ Commander::Commander()
     m_gtf="";
     m_msigdb="";
     m_out = "PRSice";
-    m_target_is_binary=false;
     m_fastscore =false;
     m_index =false;
     m_gen_bed = false;
@@ -419,8 +428,9 @@ void Commander::info()
 			"Please note that the substitute is based on your base file. So if your base file code chromosome "
 			"with chr, e.g. chr1 chr2 etc, then in our example case, you should code your plink file as "
 			"genotype_#_test"));
-	m_help_messages.push_back(help("Required", '\0', "quant_target", "Indicate the target sampels has "
-			"quantitative phenotypes"));
+	m_help_messages.push_back(help("Required", '\0', "quant_target", "Indicate whether the target sample has "
+			"binary phenotype or not. For each phenotype, user need to provide either T or F where T"
+			" means the phenotype is binary"));
 	m_help_messages.push_back(help("Required", '\0', "beta", "Indicate whether the test statistic is beta "
 			"instead of OR. Must be of the same length as base"));
 	m_help_messages.push_back(help("Options", 'f', "pheno_file", "Phenotype file containing the target "
