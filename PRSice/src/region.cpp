@@ -10,10 +10,10 @@
 void Region::run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed)
 {
     process_bed(bed);
-    std::map<std::string, std::string> id_to_name;
+    std::unordered_map<std::string, std::string> id_to_name;
     if(!gtf.empty())  // without the gtf file, we will not process the msigdb file
     {
-        std::map<std::string, boundary > gtf_info;
+        std::unordered_map<std::string, boundary > gtf_info;
         try
         {
             gtf_info=process_gtf(gtf, id_to_name, out, gen_bed);
@@ -185,9 +185,10 @@ void Region::process_bed(const std::vector<std::string> &bed)
     }
 }
 
-std::map<std::string, Region::boundary > Region::process_gtf(const std::string &gtf, std::map<std::string, std::string> &id_to_name, const std::string &out_prefix, bool gen_bed)
+std::unordered_map<std::string, Region::boundary > Region::process_gtf(const std::string &gtf,
+		std::unordered_map<std::string, std::string> &id_to_name, const std::string &out_prefix, bool gen_bed)
 {
-    std::map<std::string, boundary > res;
+    std::unordered_map<std::string, boundary > res;
     if(gtf.empty()) return res; // basically return an empty map
     std::ifstream gtf_file;
     gtf_file.open(gtf.c_str());
@@ -201,10 +202,10 @@ std::map<std::string, Region::boundary > Region::process_gtf(const std::string &
     while(std::getline(gtf_file, line))
     {
         misc::trim(line);
-        if(!line.empty())
+        if(!line.empty() && line[0]!='#')
         {
             std::vector<std::string> token = misc::split(line, "\t");
-            if(token[1].compare("exon")==0 || token[1].compare("gene")==0)
+            if(token[2].compare("exon")==0 || token[2].compare("gene")==0)
             {
                 std::string chr = token[0];
                 int temp=0;
@@ -317,7 +318,7 @@ std::map<std::string, Region::boundary > Region::process_gtf(const std::string &
             }
             std::ofstream out;
             out.open(out_name.c_str());
-            for(std::map<std::string, boundary >::iterator iter = res.begin(); iter != res.end(); ++iter)
+            for(std::unordered_map<std::string, boundary >::iterator iter = res.begin(); iter != res.end(); ++iter)
             {
                 out << std::get<0>(iter->second) << "\t" <<std::get<0>(iter->second) << "\t" << std::get<0>(iter->second) << "\t" << iter->first;
                 if(id_to_name.find(iter->first)!=id_to_name.end()) out << "\t" << id_to_name[iter->first];
@@ -331,8 +332,8 @@ std::map<std::string, Region::boundary > Region::process_gtf(const std::string &
 }
 
 void Region::process_msigdb(const std::string &msigdb,
-                            const std::map<std::string, boundary > &gtf_info,
-                            const std::map<std::string, std::string> &id_to_name)
+                            const std::unordered_map<std::string, boundary > &gtf_info,
+                            const std::unordered_map<std::string, std::string> &id_to_name)
 {
     if(msigdb.empty() || gtf_info.size()==0) return; // Got nothing to do
     //Assume format = Name URL Gene
@@ -356,15 +357,24 @@ void Region::process_msigdb(const std::string &msigdb,
                 else
                 {
                     std::string name = token[0];
+                    int found  = 0;
                     std::vector<boundary> current_region;
                     for(size_t i = 1; i < token.size(); ++i)
                     {
                         if(gtf_info.find(token[i])==gtf_info.end())
                         {
                             //Cannot find this gene
-                            if(gtf_info.find(id_to_name.at(token[i]))!=gtf_info.end()) current_region.push_back(gtf_info.at(id_to_name.at(token[i])));
+                        		if(id_to_name.find(token[i])!= id_to_name.end()){
+								if(gtf_info.find(id_to_name.at(token[i]))!=gtf_info.end()){
+										current_region.push_back(gtf_info.at(id_to_name.at(token[i])));
+										found++;
+								}
+                        		}
                         }
-                        else current_region.push_back(gtf_info.at(token[i]));
+                        else{
+                        		current_region.push_back(gtf_info.at(token[i]));
+                        		found++;
+                        }
                     }
                     std::sort(begin(current_region), end(current_region),
                               [](boundary const &t1, boundary const &t2)
@@ -377,6 +387,8 @@ void Region::process_msigdb(const std::string &msigdb,
                         else return std::get<0>(t1).compare(std::get<0>(t2))<0;
                     }
                              );
+
+                    m_region_found.push_back((double)found/(double)token.size());
                     m_region_list.push_back(current_region);
                     m_region_name.push_back(name);
                 }
