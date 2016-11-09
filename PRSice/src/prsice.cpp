@@ -398,7 +398,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 	m_null_r2 = 0.0,
 	m_sample_names.clear();
 	// Clean up the matrix
-	m_phenotype.resize(0,0);
+	m_phenotype= Eigen::VectorXd::Zero(0);
 	m_independent_variables.resize(0,0);
 	bool no_regress =c_commander.no_regression();
 	bool all = c_commander.all();
@@ -654,6 +654,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     				}
     				// joining the threads
     				for(auto &&thread : thread_store) thread.join();
+    				thread_store.clear();
     			}
     		}
     }
@@ -801,13 +802,13 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
     if(binary)
     {
-    	if(regress)
-    	{
-    		if(num_control==0) throw std::runtime_error("There are no control samples");
-    		if(num_case==0) throw std::runtime_error("There are no cases");
-    	}
-        fprintf(stderr,"Number of controls : %zu\n", num_control);
-        fprintf(stderr,"Number of cases : %zu\n", num_case);
+    		if(regress)
+    		{
+    			if(num_control==0) throw std::runtime_error("There are no control samples");
+    			if(num_case==0) throw std::runtime_error("There are no cases");
+    		}
+    		fprintf(stderr,"Number of controls : %zu\n", num_control);
+    		fprintf(stderr,"Number of cases : %zu\n", num_case);
     }
     else
     {
@@ -923,12 +924,13 @@ bool PRSice::get_prs_score(size_t &cur_index)
 
 void PRSice::thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index)
 {
+
     Eigen::MatrixXd X;
     bool thread_safe=false;
     if(region_start==0 && region_end ==m_current_prs.size()) thread_safe = true;
     else X = m_independent_variables;
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0, coefficient=0.0;
-    for(size_t iter = region_start; iter < region_end; ++iter)
+    for(size_t iter = region_start; iter < region_end ; ++iter)
     {
     		if(m_num_snp_included[iter]==0) continue;
         for(auto &&prs : m_current_prs[iter])
@@ -941,6 +943,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
                 else X(m_sample_with_phenotypes.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
             }
         }
+
         if(m_target_binary[c_pheno_index])
         {
             try

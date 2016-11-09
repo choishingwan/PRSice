@@ -31,11 +31,12 @@
 
 libraries <-
   c("ggplot2", "data.table", "optparse", "methods", "tools")
+found = FALSE
 argv = commandArgs(trailingOnly = TRUE)
 dir_loc = grep("--dir", argv)
 if (length(dir_loc) != 0) {
   dir_loc = dir_loc + 1
-  
+  found = TRUE
 }
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
@@ -96,9 +97,18 @@ UsePackage <- function(package, dir)
 
 for (library in libraries)
 {
-  if (!UsePackage(library, argv[dir_loc]))
+  if (found)
   {
-    stop("Error: ", library, " cannot be load nor install!")
+    if (!UsePackage(library, argv[dir_loc]))
+    {
+      stop("Error: ", library, " cannot be load nor install!")
+    }
+  } else{
+    if (!UsePackage(library, "."))
+    {
+      stop("Error: ", library, " cannot be load nor install!")
+    }
+    
   }
 }
 
@@ -494,7 +504,7 @@ quantile_plot <-
     }
     quantiles.df$Group <-
       factor(quantiles.df$Group, levels = c(0, 1))
-    quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
+    quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
     quantiles.plot <- ggplot(quantiles.df) +
       theme(
         panel.grid.major = element_blank(),
@@ -541,33 +551,37 @@ quantile_plot <-
 high_res_plot <- function(PRS, prefix, argv) {
   # we will always include the best threshold
   print("Plotting the high resolution plot")
+  print(prefix);
   barchart.levels <-
-    c(strsplit(argv$bar_level,split=",")[[1]], PRS$Threshold[which.max(PRS$R2)])
-  barchart.levels <- as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
+    c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+  barchart.levels <-
+    as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
   threshold <- as.numeric(as.character(PRS$Threshold))
   
-  for(i in 1:length(barchart.levels)){
-    barchart.levels[i] <- (PRS$Threshold[which(abs(PRS$Threshold-barchart.levels[i])==min(abs(PRS$Threshold-barchart.levels[i])))])
+  for (i in 1:length(barchart.levels)) {
+    barchart.levels[i] <-
+      (PRS$Threshold[which(abs(PRS$Threshold - barchart.levels[i]) == min(abs(PRS$Threshold -
+                                                                                barchart.levels[i])))])
   }
-
+  
   # Need to also plot the barchart level stuff with green
   ggfig.points <- NULL
   if (argv$scatter_r2) {
     ggfig.points <- ggplot(data = PRS, aes(x = Threshold, y = R2)) +
       geom_line(aes(Threshold,  R2),
                 colour = "green",
-                data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
+                data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
       geom_hline(yintercept = max(PRS$R2), colour = "red") +
       ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
   } else{
     ggfig.points <-
       ggplot(data = PRS, aes(x = Threshold, y = -log10(P))) +
-      geom_line(aes(Threshold, -log10(P)),
+      geom_line(aes(Threshold,-log10(P)),
                 colour = "green",
-                data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
+                data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
       geom_hline(yintercept = max(-log10(PRS$P)), colour = "red") +
-      ylab(bquote(PRS ~ model ~ fit:~ italic(P) - value ~ (-log[10])))
+      ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
   }
   ggfig.points <- ggfig.points + geom_point() + geom_line() +
     theme(
@@ -586,16 +600,19 @@ high_res_plot <- function(PRS, prefix, argv) {
 bar_plot <- function(PRS, prefix, argv) {
   print("Plot Bar Plot")
   barchart.levels <-
-    c(strsplit(argv$bar_level,split=",")[[1]], PRS$Threshold[which.max(PRS$R2)])
-  barchart.levels <- as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
+    c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+  barchart.levels <-
+    as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
   threshold <- as.numeric(as.character(PRS$Threshold))
   
-  for(i in 1:length(barchart.levels)){
-    barchart.levels[i] <- (PRS$Threshold[which(abs(PRS$Threshold-barchart.levels[i])==min(abs(PRS$Threshold-barchart.levels[i])))])
+  for (i in 1:length(barchart.levels)) {
+    barchart.levels[i] <-
+      (PRS$Threshold[which(abs(PRS$Threshold - barchart.levels[i]) == min(abs(PRS$Threshold -
+                                                                                barchart.levels[i])))])
   }
   
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
-  output <- PRS[PRS$Threshold %in% barchart.levels,]
+  output <- PRS[PRS$Threshold %in% barchart.levels, ]
   output$print.p[round(output$P, digits = 3) != 0] <-
     round(output$P[round(output$P, digits = 3) != 0], digits = 3)
   output$print.p[round(output$P, digits = 3) == 0] <-
@@ -623,7 +640,7 @@ bar_plot <- function(PRS, prefix, argv) {
       scale_fill_gradient(
         low = argv$bar_col_low,
         high = argv$bar_col_high,
-        name = bquote(atop(-log[10] ~ model, italic(P) - value),)
+        name = bquote(atop(-log[10] ~ model, italic(P) - value), )
       )
   }
   ggfig.plot <-
@@ -664,12 +681,12 @@ run_plot <- function(prefix, argv, pheno, binary, cov) {
           data.table = F)
   if (provided("quantile", argv) && argv$quantile > 0) {
     if (!is.null(cov)) {
-      cov = cov[!is.na(pheno), ]
+      cov = cov[!is.na(pheno),]
     }
     cur_pheno = pheno[!is.na(pheno)]
     if (binary) {
       if (!is.null(cov)) {
-        cov = cov[!(cur_pheno != 1 && cur_pheno != 2), ]
+        cov = cov[!(cur_pheno != 1 && cur_pheno != 2),]
       }
       cur_pheno = cur_pheno[!(cur_pheno != 1 &&
                                 cur_pheno != 2)] - 1
@@ -704,6 +721,13 @@ if (provided("intermediate", argv)) {
 } else{
   # we need to deduce the file names
   # Now we actually require one single string for the input, separated by ,
+  # Get all the region information
+  regions="Base";
+  if((provided("msigdb", argv) && provided("gtf", argv)) || provided("bed", argv)){
+    reg = fread(paste(argv$out, ".region", sep=""), data.table=F, header=T);
+    reg = subset(reg, reg[,2]>0.0)[,1]
+    regions = reg
+  }
   if (provided("base", argv) && !is.na(argv[["base"]])) {
     bases = strsplit(argv$base, split = ",")[[1]]
     # now check the target
@@ -749,8 +773,8 @@ if (provided("intermediate", argv)) {
           )
           stop(message)
         }
-        binary_target = binary_target[phenos %in% header[1, ]]
-        phenos = phenos[phenos %in% header[1, ]]
+        binary_target = binary_target[phenos %in% header[1,]]
+        phenos = phenos[phenos %in% header[1,]]
       }
     } else{
       if (length(binary_target) != 1) {
@@ -759,42 +783,16 @@ if (provided("intermediate", argv)) {
     }
     # we have the correct information of phenos, bases and binary_target here
     
-    # Now read region names
-    regions = "Base"
-    if (provided("bed", argv)) {
-      beds <- strsplit(argv$bed, split = ",")[[1]]
-      regions <- c(regions, beds)
-    }
-    if (provided("msigdb", argv) && provided("gtf", argv)) {
-      con  <- file(argv$msigdb, open = "r")
-      while (length(oneLine <-
-                    readLines(con, n = 1, warn = FALSE)) > 0) {
-        line <- (strsplit(oneLine, "\\s+")[[1]])
-        # We want at least 2 item for each line (1 name and 1 gene)
-        if (length(line) > 2) {
-          regions <- c(regions, line[1])
-        }
-      }
-      close(con)
-    }
-    # Unfortunately, we never check for duplicated region names. So better print an error here
-    if (duplicated(regions) != 0) {
-      writeLines(
-        strwrap(
-          "Duplicated Region name found. PRSice might have overwrote some of the output. Please re-run PRSice with unique region names",
-          width = 80
-        )
-      )
-      stop()
-    }
     # Now we have the correct information of phenos, bases and binary_target here
     # Need to get the covariates
     covariance = NULL
-    if(provided("covar_file",argv)){
-      covariance = fread(argv$covar_file, data.table=F, header=T)
-      if(provided("covar_header", argv)){
-        c = strsplit(argv$cov_header, split=",")[[1]]
-        covariance = covariance[,colnames(covariance)%in%c]
+    if (provided("covar_file", argv)) {
+      covariance = fread(argv$covar_file,
+                         data.table = F,
+                         header = T)
+      if (provided("covar_header", argv)) {
+        c = strsplit(argv$cov_header, split = ",")[[1]]
+        covariance = covariance[, colnames(covariance) %in% c]
       }
     }
     for (b in bases) {
@@ -812,15 +810,19 @@ if (provided("intermediate", argv)) {
             data.table = F,
             header = F
           )$V2
-          pheno_file = pheno_file[pheno_file[, 1] %in% fam, ]
+          pheno_file = pheno_file[pheno_file[, 1] %in% fam,]
           match_cov = NULL
-          if(!is.null(covariance)){
-            match_cov = covariance[covariance[,1]%in%fam,]
+          if (!is.null(covariance)) {
+            match_cov = covariance[covariance[, 1] %in% fam, ]
           }
           id = 1
           for (p in phenos) {
             cur_prefix = paste(prefix, p, r, sep = ".")
-            run_plot(cur_prefix, argv, pheno_file[[p]], binary_target[id], match_cov)
+            run_plot(cur_prefix,
+                     argv,
+                     pheno_file[[p]],
+                     binary_target[id],
+                     match_cov)
             id = id + 1
           }
         } else{
@@ -832,8 +834,8 @@ if (provided("intermediate", argv)) {
             header = F
           )$V6
           match_cov = NULL
-          if(!is.null(covariance)){
-            match_cov = covariance[covariance[,1]%in%fam,]
+          if (!is.null(covariance)) {
+            match_cov = covariance[covariance[, 1] %in% fam, ]
           }
           if (provided("pheno_file", argv)) {
             pheno = fread(paste(argv$pheno_file),

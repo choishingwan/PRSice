@@ -48,6 +48,7 @@ Region::Region()
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything
+    m_dup_names.insert("Base");
     m_region_name.push_back("Base");
 //    m_region_found.push_back(100.0);
     m_processed_regions.push_back(std::pair<std::string, double>("Base", 100.0));
@@ -112,8 +113,9 @@ void Region::process_bed(const std::vector<std::string> &bed)
         bool error=false;
         bed_file.open(bed[i].c_str());
         if(!bed_file.is_open()) fprintf(stderr, "WARNING: %s cannot be open. It will be ignored\n", bed[i].c_str());
-        else
+        else if(m_dup_names.find(bed[i]) == m_dup_names.end())
         {
+        		m_dup_names.insert(bed[i]);
             m_region_name.push_back(bed[i]);
             std::vector<boundary > current_region;
             std::string line;
@@ -195,6 +197,11 @@ void Region::process_bed(const std::vector<std::string> &bed)
                 m_region_name.pop_back();
             }
             bed_file.close();
+        }
+        else
+        {
+        		fprintf(stderr, "Duplicated set: %s\n", bed[i].c_str());
+        		fprintf(stderr, "It will be ignored\n");
         }
     }
 }
@@ -415,8 +422,16 @@ void Region::process_msigdb(const std::string &msigdb,
 //                    m_region_found.push_back((double)found/(double)token.size());
                     m_processed_regions.push_back(std::pair<std::string, double>(name, (double)found/(double)(token.size()-1)));
                     if(found != 0){
-                    		m_region_list.push_back(current_region);
-                    		m_region_name.push_back(name);
+                    		if(m_dup_names.find(name)!=m_dup_names.end())
+                    		{
+                    			fprintf(stderr, "Duplicated set: %s\n", name.c_str());
+                    			fprintf(stderr, "It will be ignored\n");
+                    		}
+                    		else{
+                    			m_dup_names.insert(name);
+                    			m_region_name.push_back(name);
+                        		m_region_list.push_back(current_region);
+                    		}
                     }
                 }
             }

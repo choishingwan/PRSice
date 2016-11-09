@@ -16,6 +16,7 @@
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
 #include <tuple>
 #include <limits.h>
 #include <string.h>
@@ -72,6 +73,7 @@ private:
     void process_msigdb(const std::string &msigdb,
                         const std::unordered_map<std::string, boundary > &gtf_info,
                         const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
+    std::unordered_set<std::string> m_dup_names;
     std::vector<std::string> m_region_name;
     std::vector< std::vector<boundary> > m_region_list;
     std::vector<std::pair<std::string, double> > m_processed_regions;
