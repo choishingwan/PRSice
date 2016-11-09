@@ -434,7 +434,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		for(auto &&sample : m_sample_names) all_out << "\t" << std::get<+PRS::IID>(sample);
 		all_out.close();
 	}
-	double null_r2_adjust=0.0, null_p=0.0;
+	double null_r2_adjust=0.0, null_p=0.0, null_coeff=0.0;
 	int n_thread= c_commander.get_thread();
 	if(m_independent_variables.cols()>2)
 	{
@@ -445,12 +445,12 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		covariates_only.conservativeResize(covariates_only.rows(),covariates_only.cols()-1);
 		if(m_target_binary[c_pheno_index])
 		{
-			Regression::glm(m_phenotype, covariates_only, null_p, m_null_r2, 25, n_thread, true);
+			Regression::glm(m_phenotype, covariates_only, null_p, m_null_r2, null_coeff, 25, n_thread, true);
 		}
 		else
 		{
 			Regression::linear_regression(m_phenotype, covariates_only, null_p, m_null_r2,
-					null_r2_adjust, n_thread, true);
+					null_r2_adjust, null_coeff, n_thread, true);
 		}
 	}
 }
@@ -927,7 +927,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
     bool thread_safe=false;
     if(region_start==0 && region_end ==m_current_prs.size()) thread_safe = true;
     else X = m_independent_variables;
-    double r2 = 0.0, r2_adjust=0.0, p_value = 0.0;
+    double r2 = 0.0, r2_adjust=0.0, p_value = 0.0, coefficient=0.0;
     for(size_t iter = region_start; iter < region_end; ++iter)
     {
     		if(m_num_snp_included[iter]==0) continue;
@@ -945,8 +945,8 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
         {
             try
             {
-                if(thread_safe) Regression::glm(m_phenotype, m_independent_variables, p_value, r2, 25, thread, true);
-                else Regression::glm(m_phenotype, X, p_value, r2, 25, thread, true);
+                if(thread_safe) Regression::glm(m_phenotype, m_independent_variables, p_value, r2, coefficient, 25, thread, true);
+                else Regression::glm(m_phenotype, X, p_value, r2, coefficient, 25, thread, true);
             }
             catch(const std::runtime_error &error)
             {
@@ -968,8 +968,9 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
         }
         else
         {
-            if(thread_safe) Regression::linear_regression(m_phenotype, m_independent_variables, p_value, r2, r2_adjust, thread, true);
-            else Regression::linear_regression(m_phenotype, X, p_value, r2, r2_adjust, thread, true);
+            if(thread_safe) Regression::linear_regression(m_phenotype, m_independent_variables, p_value, r2,
+            		r2_adjust, coefficient, thread, true);
+            else Regression::linear_regression(m_phenotype, X, p_value, r2, r2_adjust, coefficient, thread, true);
         }
         // This should be thread safe as each thread will only mind their own region
         // now add the PRS result to the vectors (hopefully won't be out off scope
@@ -979,7 +980,9 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
         std::get<+PRS::NSNP>(res) =  m_num_snp_included[iter];
         std::get<+PRS::R2ADJ>(res) =  r2_adjust;
         std::get<+PRS::P>(res) =  p_value;
+        std::get<+PRS::COEFF>(res) = coefficient;
         m_prs_results[iter].push_back(res);
+
         // It this is the best r2, then we will add it
         if(std::get<+PRS::R2>(m_best_threshold[iter]) < r2)
         {
@@ -1018,13 +1021,14 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
             throw std::runtime_error(error_message);
         }
         best_out << "IID\tprs_"<<std::get<+PRS::THRESHOLD>(m_best_threshold[i_region]) << std::endl;
-        prsice_out << "Threshold\tR2\tP\tNum_SNP" << std::endl;
+        prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP" << std::endl;
         // We want to skip the intercept for now
         for(auto &&prs : m_prs_results[i_region])
         {
             prsice_out << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
                        std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
                        std::get<+PRS::P>(prs)<< "\t" <<
+					   std::get<+PRS::COEFF>(prs) << "\t" <<
                        std::get<+PRS::NSNP>(prs) << std::endl;
         }
         int best_snp_size = std::get<+PRS::NSNP>(m_best_threshold[i_region]);

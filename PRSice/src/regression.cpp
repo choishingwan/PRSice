@@ -9,7 +9,8 @@
 namespace Regression{
 
 	// on purposely perform the copying of x
-	void linear_regression(const Eigen::VectorXd &y, const Eigen::MatrixXd &A, double &p_value, double &r2, double &r2_adjust, size_t thread, bool intercept){
+	void linear_regression(const Eigen::VectorXd &y, const Eigen::MatrixXd &A, double &p_value, double &r2,
+			double &r2_adjust, double &coeff, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
 		// in more general cases, the following is needed (adding the intercept)
 		// but here in PRSice, we always include the intercept, so we will skip
@@ -46,6 +47,7 @@ namespace Regression{
 		// Remember, only the coefficient's order is wrong e.g. intercept at the end
 		//Eigen::VectorXd est = beta.transpose()*Eigen::MatrixXd(z.colsPermutation());
 		double tval = beta(intercept)/se(intercept); // only interested in the one coefficient
+		coeff = beta(intercept);
 		boost::math::students_t dist(rdf);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tval)));
 	}
@@ -155,7 +157,8 @@ namespace Regression{
 
 	// This is an unsafe version of R's glm.fit
 	// unsafe as in I have skipped some of the checking
-	void glm(const Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2, size_t max_iter, size_t thread, bool intercept){
+	void glm(const Eigen::VectorXd &y, const Eigen::MatrixXd &x, double &p_value, double &r2,
+			double &coeff, size_t max_iter, size_t thread, bool intercept){
 		Eigen::setNbThreads(thread);
 		/*
 		Eigen::MatrixXd A;
@@ -245,6 +248,7 @@ namespace Regression{
 		// again, we are ony interested in one of the variable
 		r2 = (1.0 - std::exp((dev - nulldev)/(double)nobs))/(1 - std::exp(-nulldev/(double) nobs));
 		double tvalue = start(intercept)/se(intercept);
+		coeff = start(intercept);
 		boost::math::normal_distribution<> dist(0,1);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
 	}
