@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <stdexcept>
+#include <utility>
 
 #include "commander.hpp"
 #include "prsice.hpp"
@@ -29,7 +30,22 @@ int main(int argc, char *argv[])
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
-
+    // Output the region summary
+    std::vector<std::pair<std::string, double> > region_info= region.get_info();
+    std::ofstream region_out;
+    std::string region_out_name = commander.get_out()+".region";
+    region_out.open(region_out_name.c_str());
+    if(!region_out.is_open())
+    {
+    		fprintf(stderr, "Cannot open region information file to write: %s\n", region_out_name.c_str());
+    		return -1;
+    }
+    region_out << "Region\t%Gene info" << std::endl;
+    for(auto i : region_info)
+    {
+    		region_out << std::get<0>(i) << "\t" << std::get<1>(i) << std::endl;
+    }
+    region_out.close();
 
     // User input should be shown before other stuff to reduce the redundency
     fprintf(stderr,"\nRegion Information\n");

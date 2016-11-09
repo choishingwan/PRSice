@@ -930,6 +930,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0;
     for(size_t iter = region_start; iter < region_end; ++iter)
     {
+    		if(m_num_snp_included[iter]==0) continue;
         for(auto &&prs : m_current_prs[iter])
         {
             std::string sample = std::get<+PRS::IID>(prs);

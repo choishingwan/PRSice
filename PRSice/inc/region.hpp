@@ -15,9 +15,11 @@
 #include <stdio.h>
 #include <map>
 #include <unordered_map>
+#include <set>
 #include <tuple>
 #include <limits.h>
 #include <string.h>
+#include <utility>
 #include "misc.hpp"
 
 #include <iostream>
@@ -58,17 +60,21 @@ public:
         res[0]=1; // base region which contains everything
         return res;
     }
+    std::vector<std::pair<std::string, double> > get_info() const {
+    		return m_processed_regions;
+    }
+
 private:
     typedef std::tuple<std::string, size_t, size_t> boundary;
     void process_bed(const std::vector<std::string> &bed);
     std::unordered_map<std::string, boundary > process_gtf(const std::string &gtf,
-    		std::unordered_map<std::string, std::string> &id_to_name, const std::string &out_prefix, bool gen_bed);
+    		std::unordered_map<std::string, std::set<std::string> > &id_to_name, const std::string &out_prefix, bool gen_bed);
     void process_msigdb(const std::string &msigdb,
                         const std::unordered_map<std::string, boundary > &gtf_info,
-                        const std::unordered_map<std::string, std::string> &id_to_name);
+                        const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
     std::vector<std::string> m_region_name;
     std::vector< std::vector<boundary> > m_region_list;
-    std::vector<double> m_region_found;
+    std::vector<std::pair<std::string, double> > m_processed_regions;
     // This is to indicate the current location onf each region
     // This work because we assume all SNPs are sorted by their coordinates
     // in the same way as the region files.
