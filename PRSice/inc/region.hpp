@@ -34,11 +34,14 @@ public:
     void reset()
     {
         m_index = std::vector<size_t>(m_region_name.size());
+        m_region_count = std::vector<int>(m_region_name.size());
     };
 #if defined(__LP64__) || defined(_WIN64)
     typedef uint64_t long_type;
+#define ONE  0x1LLU
 #else
     typedef uint32_t long_type;
+#define ONE  0x1LU
 #endif
     long_type* check(std::string chr, size_t loc);
     size_t flag_size() const
@@ -64,6 +67,7 @@ public:
     std::vector<std::pair<std::string, double> > get_info() const {
     		return m_processed_regions;
     }
+    int get_count(size_t i) const { return m_region_count.at(i); };
 
 private:
     typedef std::tuple<std::string, size_t, size_t> boundary;
@@ -77,6 +81,7 @@ private:
     std::vector<std::string> m_region_name;
     std::vector< std::vector<boundary> > m_region_list;
     std::vector<std::pair<std::string, double> > m_processed_regions;
+    std::vector<int> m_region_count;
     // This is to indicate the current location onf each region
     // This work because we assume all SNPs are sorted by their coordinates
     // in the same way as the region files.

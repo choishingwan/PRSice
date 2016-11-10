@@ -30,22 +30,6 @@ int main(int argc, char *argv[])
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
-    // Output the region summary
-    std::vector<std::pair<std::string, double> > region_info= region.get_info();
-    std::ofstream region_out;
-    std::string region_out_name = commander.get_out()+".region";
-    region_out.open(region_out_name.c_str());
-    if(!region_out.is_open())
-    {
-    		fprintf(stderr, "Cannot open region information file to write: %s\n", region_out_name.c_str());
-    		return -1;
-    }
-    region_out << "Region\t%Gene info" << std::endl;
-    for(auto i : region_info)
-    {
-    		region_out << std::get<0>(i) << "\t" << std::get<1>(i) << std::endl;
-    }
-    region_out.close();
 
     // User input should be shown before other stuff to reduce the redundency
     fprintf(stderr,"\nRegion Information\n");
@@ -70,6 +54,7 @@ int main(int argc, char *argv[])
 
 
 
+    std::vector<std::pair<std::string, double> > region_info= region.get_info();
     bool perform_prslice = commander.prslice() > 0.0;
     bool full_model = commander.full();
     double bound_end = commander.get_upper();
@@ -99,6 +84,26 @@ int main(int argc, char *argv[])
                  * they will be ignored in the whole process anyway
                  */
                 prsice.get_snp(commander, region, threshold);
+                /**
+                 * Now output the region information. This should provide a guide to the RScript as to
+                 * which region should we bother with
+                 */
+                std::ofstream region_out;
+                std::string region_out_name = commander.get_out()+"."+base_name+".region";
+                region_out.open(region_out_name.c_str());
+                if(!region_out.is_open())
+                {
+                		fprintf(stderr, "Cannot open region information file to write: %s\n", region_out_name.c_str());
+                		return -1;
+                }
+                region_out << "Region\t%Gene info\t#SNPs" << std::endl;
+                for(size_t i_region= 0; i_region < region_info.size(); ++i_region)
+                {
+                		region_out << std::get<0>(region_info[i_region]) << "\t" << std::get<1>(region_info[i_region])
+                				<< "\t" << region.get_count(i_region) << std::endl;
+                }
+                region_out.close();
+
                 /**
                  * Perform clumping on the SNPs. This help us to get around the problem of LD
                  */

@@ -1005,8 +1005,12 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
 	std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[pheno_index]);
     std::string output_prefix = c_commander.get_out()+"."+m_current_base;
     if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
+//    Might want to change the output file format
+//    Maybe we will have only 2 files per phenotype
+
     for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)
     {
+    		if(std::get<+PRS::NSNP>(m_best_threshold[i_region]) <=0) continue;
         std::string output_name = output_prefix+"."+c_region.get_name(i_region);
         std::string out_best = output_name+".best";
         std::string out_prsice = output_name+".prsice";

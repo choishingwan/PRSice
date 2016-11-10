@@ -42,6 +42,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
         }
     }
     m_index = std::vector<size_t>(m_region_name.size());
+    m_region_count = std::vector<int>(m_region_name.size());
 }
 
 Region::Region()
@@ -62,41 +63,34 @@ Region::long_type* Region::check(std::string chr, size_t loc)
     long_type* res = new long_type[((m_region_name.size()+1)/m_bit_size)+1];
     memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(long_type));
     res[0]=1; // base region which contains everything
-    for(size_t i = 0; i < m_region_list.size(); ++i)
+    for(size_t i_region = 0; i_region < m_region_list.size(); ++i_region)
     {
-        if(i==0)
+        if(i_region==0)
         {
-#if defined(__LP64__) || defined(_WIN64)
-            res[0] |= 0x1LLU;
-#else
-            res[0] |= 0x1LU;
-#endif
+            res[0] |= ONE;
         }
         else
         {
-            size_t region_size = m_region_list[i].size();
-            while(m_index[i]< region_size)
+            size_t region_size = m_region_list[i_region].size();
+            while(m_index[i_region]< region_size)
             {
                 // do the checking
-                boundary current_bound = m_region_list[i][m_index[i]];
+                boundary current_bound = m_region_list[i_region][m_index[i_region]];
                 std::string region_chr = std::get<0>(current_bound);
                 size_t region_start = std::get<1>(current_bound);
                 size_t region_end = std::get<2>(current_bound);
-                if(chr.compare(region_chr) != 0) m_index[i]++;
+                if(chr.compare(region_chr) != 0) m_index[i_region]++;
                 else  // same chromosome
                 {
                     if(region_start <= loc && region_end >=loc)
                     {
                         // This is the region
-#if defined(__LP64__) || defined(_WIN64)
-                        res[i/m_bit_size] |= 0x1LLU << i%m_bit_size;
-#else
-                        res[i/m_bit_size] |= 0x1LU << i%m_bit_size;
-#endif
+                        res[i_region/m_bit_size] |= ONE << i_region%m_bit_size;
+                        m_region_count[i_region]++;
                         break;
                     }
                     else if(region_start> loc) break;
-                    else if(region_end < loc) m_index[i]++;
+                    else if(region_end < loc) m_index[i_region]++;
                 }
             }
         }
