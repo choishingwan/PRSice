@@ -422,7 +422,41 @@ if (!argv$plot) {
 # Plottings ---------------------------------------------------------------
 
 
-
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
 
 # PLOTTING: Here contains all the function for plotting
 # quantile_plot: plotting the quantile plots
@@ -438,7 +472,7 @@ quantile_plot <-
     num_quant <- argv$quantile
     # Need to check if we have less pehnotypes than quantile
     if(length(unique(PRS.best[,2])) < num_quant){
-      writeLines(paste("WARNING: There are only ", length(unique(PRS.best[,2])), " numbers but asked for ", num_quant, " quantiles", sep=""))
+      writeLines(paste("WARNING: There are only ", length(unique(PRS.best[,2])), " unique PRS but asked for ", num_quant, " quantiles", sep=""))
       writeLines(paste("Will not generate the quantile plot for ", prefix))
       return();
     }
@@ -638,6 +672,7 @@ bar_plot <- function(PRS, prefix, argv) {
       PRS = rbind(PRS, temp);
     }
   }
+  PRS <- unique(PRS[order(PRS$Threshold),])
   
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
   output <- PRS[PRS$Threshold %in% barchart.levels, ]
@@ -645,32 +680,20 @@ bar_plot <- function(PRS, prefix, argv) {
     round(output$P[round(output$P, digits = 3) != 0], digits = 3)
   output$print.p[round(output$P, digits = 3) == 0] <-
     format(output$P[round(output$P, digits = 3) == 0], digits = 2)
+  output$sign <- sign(output$Coefficient)
   output$print.p <- sub("e", "*x*10^", output$print.p)
-  
   ggfig.plot <- ggplot(data = output)
+
   if (!argv$bar_col_r2) {
-    ggfig.plot <-
-      ggfig.plot + geom_bar(aes(
-        x = factor(Threshold),
-        y = R2,
-        fill = factor(Threshold)
-      ), stat = "identity") +
-      scale_fill_brewer(palette = "YlOrRd",
-                        name = expression(italic(P) - value ~ threshold))
+    ggfig.plot <- ggfig.plot + geom_bar(aes( x = factor(Threshold), y = R2, fill = factor(Threshold) ), stat = "identity") +
+                  scale_fill_brewer(palette = "YlOrRd", name = expression(italic(P) - value ~ threshold))
   }
   if (argv$bar_col_r2) {
-    ggfig.plot <-
-      ggfig.plot + geom_bar(aes(
-        x = factor(Threshold),
-        y = R2,
-        fill = -log10(P)
-      ), stat = "identity") +
-      scale_fill_gradient(
-        low = argv$bar_col_low,
-        high = argv$bar_col_high,
-        name = bquote(atop(-log[10] ~ model, italic(P) - value), )
+    ggfig.plot <- ggfig.plot + geom_bar(aes( x = factor(Threshold), y = R2, fill = -log10(P) ), stat = "identity") +
+                  scale_fill_gradient( low = argv$bar_col_low, high = argv$bar_col_high, name = bquote(atop(-log[10] ~ model, italic(P) - value), )
       )
   }
+  
   ggfig.plot <-
     ggfig.plot + geom_text(
       aes(
@@ -748,6 +771,72 @@ if (provided("intermediate", argv)) {
   # So in theory, we still need argv$target
   # TODO: It is more complicated than this
   #run_plot(argv$intermediate, argv)
+  covariance = NULL
+  if (provided("covar_file", argv)) {
+    covariance = fread(argv$covar_file,
+                       data.table = F,
+                       header = T)
+    if (provided("covar_header", argv)) {
+      c = strsplit(argv$cov_header, split = ",")[[1]]
+      covariance = covariance[, colnames(covariance) %in% c]
+    }
+  }
+  prefix = argv$intermediate
+  if(!provided("target", argv)){
+    stop("You still need to provide the target information when you use intermediate!");
+  }
+  regions="Base";
+  if(file.exists(paste(prefix, ".region", sep=""))){
+    reg = fread(paste(prefix, ".region", sep=""), data.table=F, header=T);
+    reg = subset(reg, reg[,2]>0.0 & reg[,3]>0)[,1]
+    regions = reg
+  }
+  for (r in regions) {
+    if (!is.null(phenos)) {
+      pheno_file = fread(argv$pheno_file,
+                         header = T,
+                         data.table = F)
+      fam = fread(
+        paste(argv$target, ".fam", sep = ""),
+        data.table = F,
+        header = F
+      )$V2
+      pheno_file = pheno_file[pheno_file[, 1] %in% fam,]
+      match_cov = NULL
+      if (!is.null(covariance)) {
+        match_cov = covariance[covariance[, 1] %in% fam, ]
+      }
+      id = 1
+      for (p in phenos) {
+        cur_prefix = paste(prefix, p, r, sep = ".")
+        run_plot(cur_prefix,
+                 argv,
+                 pheno_file[[p]],
+                 binary_target[id],
+                 match_cov)
+        id = id + 1
+      }
+    } else{
+      cur_prefix = paste(prefix, r, sep = ".")
+      fam = fread(
+        paste(argv$target, ".fam", sep = ""),
+        data.table = F,
+        header = F
+      )$V6
+      match_cov = NULL
+      if (!is.null(covariance)) {
+        match_cov = covariance[covariance[, 1] %in% fam, ]
+      }
+      if (provided("pheno_file", argv)) {
+        pheno = fread(paste(argv$pheno_file),
+                      data.table = F,
+                      header = F)
+        
+        fam = pheno$V2[pheno$V1 %in% fam]
+      }
+      run_plot(cur_prefix, argv, fam, binary_target[1], match_cov)
+    }
+  }
 } else{
   # we need to deduce the file names
   # Now we actually require one single string for the input, separated by ,
