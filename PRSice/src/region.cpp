@@ -13,6 +13,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
     std::unordered_map<std::string, std::set<std::string> > id_to_name;
     if(!gtf.empty())  // without the gtf file, we will not process the msigdb file
     {
+    		fprintf(stderr, "Processing the gtf file\n");
         std::unordered_map<std::string, boundary > gtf_info;
         try
         {
@@ -24,20 +25,9 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
             fprintf(stderr, "ERROR: Cannot process gtf file: %s\n", error.what());
             fprintf(stderr, "       Will not process any of the msigdb items\n");
         }
-
+        fprintf(stderr, "A total of %lu genes found\n", gtf_info.size());
         if(gtf_info.size() != 0)
         {
-        	std::ofstream DEBUG;
-        	DEBUG.open("TEST");
-//        	for(auto i: gtf_info){
-//        		DEBUG << i.first << std::endl;
-//        	}
-        	for(auto i: id_to_name){
-        		for(auto j : i.second){
-        			DEBUG << i.first << "\t" << j << std::endl;
-        		}
-        	}
-        	DEBUG.close();
             process_msigdb(msigdb, gtf_info, id_to_name);
         }
     }
@@ -220,7 +210,8 @@ std::unordered_map<std::string, Region::boundary > Region::process_gtf(const std
         if(!line.empty() && line[0]!='#')
         {
             std::vector<std::string> token = misc::split(line, "\t");
-            if(token[2].compare("exon")==0 || token[2].compare("gene")==0)
+            if(token[2].compare("exon")==0 || token[2].compare("gene")==0 || token[2].compare("protein_coding")==0 ||
+            		token[2].compare("CDS")==0)
             {
                 std::string chr = token[0];
                 int temp=0;

@@ -932,7 +932,11 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0, coefficient=0.0;
     for(size_t iter = region_start; iter < region_end ; ++iter)
     {
-    		if(m_num_snp_included[iter]==0) continue;
+    		if	(m_num_snp_included[iter]==0 ||
+    				(m_prs_results[iter].size()!=0 &&
+    						m_num_snp_included[iter] == std::get<+PRS::NSNP>(m_prs_results[iter].back())
+				)
+    			)	continue;
         for(auto &&prs : m_current_prs[iter])
         {
             std::string sample = std::get<+PRS::IID>(prs);
@@ -1005,9 +1009,6 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
 	std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[pheno_index]);
     std::string output_prefix = c_commander.get_out()+"."+m_current_base;
     if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
-//    Might want to change the output file format
-//    Maybe we will have only 2 files per phenotype
-
     for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)
     {
     		if(std::get<+PRS::NSNP>(m_best_threshold[i_region]) <=0) continue;

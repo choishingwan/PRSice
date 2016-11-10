@@ -70,11 +70,11 @@ UsePackage <- function(package, dir)
     .libPaths(c(.libPaths(), paste(dir, "/lib", sep = "")))
     if (!InstalledPackage(package)) {
       if (is.na(dir)) {
-        print("WARNING: dir not provided, cannot install the required packages")
+        writeLines("WARNING: dir not provided, cannot install the required packages")
         return(FALSE)
         
       } else{
-        print(paste("Trying to install ",
+        writeLines(paste("Trying to install ",
                     package,
                     " in ",
                     dir,
@@ -428,7 +428,7 @@ if (!argv$plot) {
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
   function(PRS, PRS.best, pheno, prefix, argv, binary) {
-    print("Plotting the quantile plot")
+    writeLines("Plotting the quantile plot")
     extract = NULL
     if (provided("quant_extract", argv)) {
       extract = fread(argv$quant_extract,
@@ -436,12 +436,23 @@ quantile_plot <-
                       data.table = F)
     }
     num_quant <- argv$quantile
+    # Need to check if we have less pehnotypes than quantile
+    if(length(unique(PRS.best[,2])) < num_quant){
+      writeLines(paste("WARNING: There are only ", length(unique(PRS.best[,2])), " numbers but asked for ", num_quant, " quantiles", sep=""))
+      writeLines(paste("Will not generate the quantile plot for ", prefix))
+      return();
+    }
     quants <-
       as.numeric(cut(
         PRS.best[, 2],
-        breaks = quantile(PRS.best[, 2], probs = seq(0, 1, 1 / num_quant)),
+        breaks = unique(quantile(PRS.best[, 2], probs = seq(0, 1, 1 / num_quant))),
         include.lowest = T
       ))
+    
+    if(anyDuplicated(quantile(PRS.best[, 2], probs = seq(0, 1, 1 / num_quant)))){
+      writeLines(paste("Duplicate quantiles formed. Will use less quantiles: ", length(unique(quants)), sep=""));
+    }
+    num_quant = sum(!is.na(unique(quants)))
     if (!is.null(extract)) {
       quants[PRS.best[, 1] %in% extract$V2] <- num_quant + 1
       num_quant <- num_quant + 1
@@ -452,7 +463,7 @@ quantile_plot <-
       
       if (quant.ref > argv$quantile) {
         quant.ref <- ceiling(argv$quantile / 2)
-        cat(
+        writeLines(
           paste(
             "WARNING: reference quantile",
             quant.ref,
@@ -465,7 +476,7 @@ quantile_plot <-
     }
     
     quants <-
-      factor(quants, levels = c(quant.ref, seq(1, num_quant, 1)[-quant.ref]))
+      factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
     pheno$quantile <- quants
     
     if (ncol(pheno) > 2) {
@@ -545,26 +556,33 @@ quantile_plot <-
         size = 0.9) +
         scale_colour_manual(values = c("#0072B2", "#D55E00"))
     }
-    ggsave(paste(prefix, "QUANTILES_PLOT.png", sep = "_"))
+    ggsave(paste(prefix, "QUANTILES_PLOT.png", sep = "_"),  width = 7, height = 7)
   }
 
 high_res_plot <- function(PRS, prefix, argv) {
   # we will always include the best threshold
-  print("Plotting the high resolution plot")
-  print(prefix);
+  writeLines("Plotting the high resolution plot")
   barchart.levels <-
     c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
   barchart.levels <-
     as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
-  threshold <- as.numeric(as.character(PRS$Threshold))
-  
+  PRS.ori = PRS
+  threshold <- as.numeric(as.character(PRS.ori$Threshold))
   for (i in 1:length(barchart.levels)) {
-    barchart.levels[i] <-
-      (PRS$Threshold[which(abs(PRS$Threshold - barchart.levels[i]) == min(abs(PRS$Threshold -
-                                                                                barchart.levels[i])))])
+    if(sum(barchart.levels[i]-threshold>0)>0){
+      target <-max(threshold[barchart.levels[i]-threshold>=0])
+      temp <- PRS.ori[threshold==target,]
+      temp$Threshold <- barchart.levels[i]
+      PRS = rbind(PRS, temp);
+    }else{
+      target <- (threshold[which(abs(threshold - barchart.levels[i]) == min(abs(threshold - barchart.levels[i])))])
+      temp <- PRS.ori[threshold==target,]
+      temp$Threshold <- barchart.levels[i]
+      PRS = rbind(PRS, temp);
+    }
   }
-  
+  PRS = unique(PRS)
   # Need to also plot the barchart level stuff with green
   ggfig.points <- NULL
   if (argv$scatter_r2) {
@@ -594,21 +612,31 @@ high_res_plot <- function(PRS, prefix, argv) {
     ) +
     xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T])))
   
-  ggsave(paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""))
+  ggsave(paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""), width = 7, height = 7)
 }
 
 bar_plot <- function(PRS, prefix, argv) {
-  print("Plot Bar Plot")
+  writeLines("Plotting Bar Plot")
   barchart.levels <-
     c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
   barchart.levels <-
     as.numeric(as.character(sort(unique(barchart.levels), decreasing = F)))
   threshold <- as.numeric(as.character(PRS$Threshold))
   
+  PRS.ori = PRS
+  threshold <- as.numeric(as.character(PRS.ori$Threshold))
   for (i in 1:length(barchart.levels)) {
-    barchart.levels[i] <-
-      (PRS$Threshold[which(abs(PRS$Threshold - barchart.levels[i]) == min(abs(PRS$Threshold -
-                                                                                barchart.levels[i])))])
+    if(sum(barchart.levels[i]-threshold>0)>0){
+      target <-max(threshold[barchart.levels[i]-threshold>=0])
+      temp <- PRS.ori[threshold==target,]
+      temp$Threshold <- barchart.levels[i]
+      PRS = rbind(PRS, temp);
+    }else{
+      target <- (threshold[which(abs(threshold - barchart.levels[i]) == min(abs(threshold - barchart.levels[i])))])
+      temp <- PRS.ori[threshold==target,]
+      temp$Threshold <- barchart.levels[i]
+      PRS = rbind(PRS, temp);
+    }
   }
   
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
@@ -667,11 +695,13 @@ bar_plot <- function(PRS, prefix, argv) {
     ) +
     xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
     ylab(expression(paste("PRS model fit:  ", R ^ 2)))
-  ggsave(paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""))
+  ggsave(paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),  width = 7, height = 7)
 }
 
 # run_plot: The function used for calling different plotting functions
 run_plot <- function(prefix, argv, pheno, binary, cov) {
+  writeLines("")
+  writeLines(prefix);
   PRS <- fread(paste(prefix, ".prsice", sep = ""),
                header = T,
                data.table = F)
@@ -722,12 +752,7 @@ if (provided("intermediate", argv)) {
   # we need to deduce the file names
   # Now we actually require one single string for the input, separated by ,
   # Get all the region information
-  regions="Base";
-  if((provided("msigdb", argv) && provided("gtf", argv)) || provided("bed", argv)){
-    reg = fread(paste(argv$out, ".region", sep=""), data.table=F, header=T);
-    reg = subset(reg, reg[,2]>0.0)[,1]
-    regions = reg
-  }
+  
   if (provided("base", argv) && !is.na(argv[["base"]])) {
     bases = strsplit(argv$base, split = ",")[[1]]
     # now check the target
@@ -799,7 +824,12 @@ if (provided("intermediate", argv)) {
       base_name = file_path_sans_ext(basename(b))
       # region will always have at least one item -> Base
       prefix = paste(argv$out, base_name, sep = ".")
-      
+      regions="Base";
+      if((provided("msigdb", argv) && provided("gtf", argv)) || provided("bed", argv)){
+        reg = fread(paste(prefix, ".region", sep=""), data.table=F, header=T);
+        reg = subset(reg, reg[,2]>0.0 & reg[,3]>0)[,1]
+        regions = reg
+      }
       for (r in regions) {
         if (!is.null(phenos)) {
           pheno_file = fread(argv$pheno_file,
