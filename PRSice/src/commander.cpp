@@ -46,6 +46,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"index",no_argument,NULL,0},
         {"all",no_argument,NULL,0},
         {"full",no_argument,NULL,0},
+        {"print_all",no_argument,NULL,0},
         {"no_regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
@@ -77,6 +78,7 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("index")==0) m_index = true;
             else if(command.compare("all")==0) m_all = true;
             else if(command.compare("full")==0) m_full = true;
+            else if(command.compare("print_all")==0) m_print_all = true;
             else if(command.compare("clump_p")==0)
             {
                 double temp = atof(optarg);
@@ -409,6 +411,7 @@ Commander::Commander()
     m_inter = 0.00005;
     m_prslice_size = -1.0;
     m_thread=1;
+    m_print_all= false;
 }
 
 Commander::~Commander()
@@ -484,6 +487,7 @@ void Commander::info()
 			"require the gtf file."));
 	m_help_messages.push_back(help("PRSet", '\0', "gen_bed", "Generate bed file of gene regions from "
 			" the gtf file."));
+	m_help_messages.push_back(help("PRSet", '\0', "print_all", "Print the detail report for all sets"));
 	m_help_messages.push_back(help("PRSet", '\0', "proxy", "Proxy threshold for index SNP to be considered "
 			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
 			"represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if it is not physically "

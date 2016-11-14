@@ -66,6 +66,7 @@ public:
     bool fastscore() const { return m_fastscore;};
     bool full() const { return m_full; };
     bool all() const { return m_all; };
+    bool print_all() const { return m_print_all; };
 
 protected:
 private:
@@ -102,6 +103,7 @@ private:
     bool m_no_regress;
     bool m_all;
     bool m_full;
+    bool m_print_all;
     double m_proxy;
     double m_clump;
     double m_clump_r2;

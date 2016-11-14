@@ -589,7 +589,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
     {
     		m_current_prs.push_back(m_sample_names);
-        m_best_threshold.push_back(PRSice_best(0,0,0));
+        m_best_threshold.push_back(PRSice_best(0,0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
         if(prslice) break;
     }
@@ -997,6 +997,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
             std::get<+PRS::THRESHOLD>(best) = threshold;
             std::get<+PRS::R2>(best) = r2;
             std::get<+PRS::NSNP>(best) =  m_num_snp_included[iter];
+            std::get<+PRS::COEFF>(best) =coefficient;
             m_best_threshold[iter] = best;
             m_best_score[iter] = m_current_prs.at(iter);
         }
@@ -1007,55 +1008,127 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
 void PRSice::output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const
 {
 	std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[pheno_index]);
-    std::string output_prefix = c_commander.get_out()+"."+m_current_base;
-    if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
-    for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)
-    {
-    		if(std::get<+PRS::NSNP>(m_best_threshold[i_region]) <=0) continue;
-        std::string output_name = output_prefix+"."+c_region.get_name(i_region);
-        std::string out_best = output_name+".best";
-        std::string out_prsice = output_name+".prsice";
-        std::ofstream best_out, prsice_out;
-        best_out.open(out_best.c_str());
-        prsice_out.open(out_prsice.c_str());
-        if(!best_out.is_open())
-        {
-            std::string error_message = "ERROR: Cannot open file: " +out_best+" to write";
-            throw std::runtime_error(error_message);
-        }
-        if(!prsice_out.is_open())
-        {
-            std::string error_message = "ERROR: Cannot open file: " +out_prsice+" to write";
-            throw std::runtime_error(error_message);
-        }
-        best_out << "IID\tprs_"<<std::get<+PRS::THRESHOLD>(m_best_threshold[i_region]) << std::endl;
-        prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP" << std::endl;
-        // We want to skip the intercept for now
-        for(auto &&prs : m_prs_results[i_region])
-        {
-            prsice_out << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
-                       std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
-                       std::get<+PRS::P>(prs)<< "\t" <<
-					   std::get<+PRS::COEFF>(prs) << "\t" <<
-                       std::get<+PRS::NSNP>(prs) << std::endl;
-        }
-        int best_snp_size = std::get<+PRS::NSNP>(m_best_threshold[i_region]);
-        if(best_snp_size==0)
-        {
-            fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
-            fprintf(stderr, "       Cannot output the best PRS score\n");
-        }
-        else
-        {
-            for(auto &&prs : m_best_score[i_region])
-            {
-                best_out << std::get<+PRS::IID>(prs) << "\t" <<
-                         std::get<+PRS::PRS>(prs)/(double)best_snp_size<< std::endl;
-            }
-        }
-        prsice_out.close();
-        best_out.close();
-    }
+	std::string output_prefix = c_commander.get_out()+"."+m_current_base;
+	if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
+	if(c_commander.print_all())
+	{
+		for(size_t i_region = 0; i_region< m_prs_results.size(); ++i_region)
+		    {
+		    		if(std::get<+PRS::NSNP>(m_best_threshold[i_region]) <=0) continue;
+		        std::string output_name = output_prefix+"."+c_region.get_name(i_region);
+		        std::string out_best = output_name+".best";
+		        std::string out_prsice = output_name+".prsice";
+		        std::ofstream best_out, prsice_out;
+		        best_out.open(out_best.c_str());
+		        prsice_out.open(out_prsice.c_str());
+		        if(!best_out.is_open())
+		        {
+		            std::string error_message = "ERROR: Cannot open file: " +out_best+" to write";
+		            throw std::runtime_error(error_message);
+		        }
+		        if(!prsice_out.is_open())
+		        {
+		            std::string error_message = "ERROR: Cannot open file: " +out_prsice+" to write";
+		            throw std::runtime_error(error_message);
+		        }
+		        best_out << "IID\tprs_"<<std::get<+PRS::THRESHOLD>(m_best_threshold[i_region]) << std::endl;
+		        prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP" << std::endl;
+		        // We want to skip the intercept for now
+		        for(auto &&prs : m_prs_results[i_region])
+		        {
+		            prsice_out << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
+		                       std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
+		                       std::get<+PRS::P>(prs)<< "\t" <<
+							   std::get<+PRS::COEFF>(prs) << "\t" <<
+		                       std::get<+PRS::NSNP>(prs) << std::endl;
+		        }
+		        int best_snp_size = std::get<+PRS::NSNP>(m_best_threshold[i_region]);
+		        if(best_snp_size==0)
+		        {
+		            fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
+		            fprintf(stderr, "       Cannot output the best PRS score\n");
+		        }
+		        else
+		        {
+		            for(auto &&prs : m_best_score[i_region])
+		            {
+		                best_out << std::get<+PRS::IID>(prs) << "\t" <<
+		                         std::get<+PRS::PRS>(prs)/(double)best_snp_size<< std::endl;
+		            }
+		        }
+		        prsice_out.close();
+		        best_out.close();
+		    }
+	}
+	else
+	{
+		// only for the base region
+		size_t i_region = 0;
+		std::string output_name = output_prefix+"."+c_region.get_name(i_region);
+		std::string out_best = output_name+".best";
+		std::string out_prsice = output_name+".prsice";
+		std::ofstream best_out, prsice_out;
+		best_out.open(out_best.c_str());
+		prsice_out.open(out_prsice.c_str());
+		if(!best_out.is_open())
+		{
+			std::string error_message = "ERROR: Cannot open file: " +out_best+" to write";
+			throw std::runtime_error(error_message);
+		}
+		if(!prsice_out.is_open())
+		{
+			std::string error_message = "ERROR: Cannot open file: " +out_prsice+" to write";
+			throw std::runtime_error(error_message);
+		}
+		best_out << "IID\tprs_"<<std::get<+PRS::THRESHOLD>(m_best_threshold[i_region]) << std::endl;
+		prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP" << std::endl;
+		// We want to skip the intercept for now
+		for(auto &&prs : m_prs_results[i_region])
+		{
+			prsice_out << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
+					std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
+					std::get<+PRS::P>(prs)<< "\t" <<
+					std::get<+PRS::COEFF>(prs) << "\t" <<
+					std::get<+PRS::NSNP>(prs) << std::endl;
+		}
+		int best_snp_size = std::get<+PRS::NSNP>(m_best_threshold[i_region]);
+		if(best_snp_size==0)
+		{
+			fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
+			fprintf(stderr, "       Cannot output the best PRS score\n");
+		}
+		else
+		{
+			for(auto &&prs : m_best_score[i_region])
+			{
+				best_out << std::get<+PRS::IID>(prs) << "\t" <<
+						std::get<+PRS::PRS>(prs)/(double)best_snp_size<< std::endl;
+			}
+		}
+		prsice_out.close();
+		best_out.close();
+
+		// now print the group information
+        std::string out_region = output_name+".prset";
+		std::ofstream region_out;
+		region_out.open(out_region.c_str());
+		region_out << "Region\tThreshold\tR2\tCoefficient\tNum_SNP" << std::endl;
+		i_region = 0;
+		for(auto best_region: m_best_threshold)
+		{
+			region_out << c_region.get_name(i_region) << "\t"
+					<< std::get<+PRS::THRESHOLD>(best_region) << "\t"
+					<< std::get<+PRS::R2>(best_region) << "\t"
+					<< std::get<+PRS::COEFF>(best_region) << "\t"
+					<< std::get<+PRS::NSNP>(best_region) << std::endl;
+			i_region++;
+		}
+		region_out.close();
+	}
+
+
+
+
 }
 
 PRSice::~PRSice()
