@@ -868,7 +868,7 @@ if (provided("intermediate", argv)) {
       id = id + 1
     }
   } else{
-    cur_prefix = paste(prefix, r, sep = ".")
+    cur_prefix = paste(prefix, region, sep = ".")
     fam = fread(paste(argv$target, ".fam", sep = ""),
                 data.table = F,
                 header = F)$V6
@@ -988,7 +988,7 @@ if (provided("intermediate", argv)) {
           id = id + 1
         }
       } else{
-        cur_prefix = paste(prefix, r, sep = ".")
+        cur_prefix = paste(prefix, region, sep = ".")
         
         fam = fread(
           paste(argv$target, ".fam", sep = ""),
