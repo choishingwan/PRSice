@@ -3,14 +3,13 @@
 
 SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
          const std::string ref_allele, const std::string alt_allele,
-         const double statistic, const double se, const double p_value, long_type* flag,
-         const size_t size_of_flag):m_ref_allele(ref_allele), m_alt_allele(alt_allele),
+         const double statistic, const double se, const double p_value, std::vector<long_type> flag
+	):m_ref_allele(ref_allele), m_alt_allele(alt_allele),
     m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se),
-    m_p_value(p_value), m_flags(flag), m_size_of_flag(size_of_flag)
+    m_p_value(p_value), m_flags(flag)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
-    m_region_clumped = new long_type[((size_of_flag+1)/m_bit_size)+1];
-    memset(m_region_clumped, 0x0,(((size_of_flag+1)/m_bit_size)+1)*sizeof(long_type));
+    m_region_clumped = std::vector<long_type>(m_flags.size());
 }
 
 std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input)
@@ -42,9 +41,9 @@ SNP::SNP()
     m_stat=0.0;
     m_standard_error=0.0;
     m_p_value=0.0;
-    m_flags=nullptr;
-    m_region_clumped=nullptr;
-    m_size_of_flag =0;
+//    m_flags=nullptr;
+//    m_region_clumped=nullptr;
+//    m_size_of_flag =0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
 }
 
@@ -52,8 +51,8 @@ SNP::~SNP()
 {
     // This is not exactly safe because if we have also assign this flag
     // to some other SNP, then the flag will be deleted twice
-    if(m_flags != nullptr) delete [] m_flags;
-    if(m_region_clumped != nullptr) delete [] m_region_clumped;
+//    if(m_flags != nullptr) delete [] m_flags;
+//    if(m_region_clumped != nullptr) delete [] m_region_clumped;
 }
 
 size_t SNP::index_check(const std::string &c_in)
@@ -159,10 +158,12 @@ void SNP::clump(boost::ptr_vector<SNP> &snp_list)
 		if(!snp_list[target].clumped())
 		{
 			int sum_total = 0;
-			for(size_t i_flag = 0; i_flag < m_size_of_flag; ++i_flag)
+			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
 			{
+
+				//TODO: ERROR IS HERE
 				// if there is any overlap this should set the snp_list to the new flag
-				snp_list[target].m_flags[i_flag]= snp_list[target].m_flags[i_flag] ^
+				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
 						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
 				sum_total+=snp_list[target].m_flags[i_flag];
 			}
@@ -180,7 +181,7 @@ void SNP::proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold)
             snp_list[m_clump_target[i_target]].set_clumped();
             if(m_clump_r2[i_target] >= r2_threshold)
             {
-                for(size_t j = 0; j < m_size_of_flag; ++j)  m_flags[j] |= snp_list[m_clump_target[i_target]].m_flags[j];
+                for(size_t j = 0; j < m_flags.size(); ++j)  m_flags[j] |= snp_list[m_clump_target[i_target]].m_flags[j];
             }
         }
     }

@@ -160,7 +160,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 }
                 else if(! not_converted && ! exclude)
                 {
-                    m_snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.empty_flag(), region.size()));
+                    m_snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.empty_flag()));
                 }
                 else
                 {

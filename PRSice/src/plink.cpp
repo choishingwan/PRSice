@@ -392,7 +392,7 @@ void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
     std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
     bool proxy = proxy_threshold > 0.0;
     for(auto &&i_snp : p_sort_order){
-		if(inclusion_backup.find(snp_list[i_snp].get_rs_id()) != inclusion_backup.end() &&
+		if(inclusion_backup.find(snp_list.at(i_snp).get_rs_id()) != inclusion_backup.end() &&
                 snp_list[i_snp].get_p_value() < p_threshold)
 		{
 			if(proxy && !snp_list[i_snp].clumped() )
@@ -407,6 +407,7 @@ void PLINK::start_clumping(std::unordered_map<std::string, size_t> &inclusion,
             }
         }
         else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
+
     }
     fprintf(stderr, "Number of SNPs after clumping : %zu\n", inclusion.size());
 }
@@ -826,7 +827,8 @@ int PLINK::read_snp(int num_snp, bool ld)
             }
             m_genotype.push_back(genotype);
             m_missing.push_back(missing);
-            double maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
+            double maf= 0.0;
+            if(m_required_bit - num_missing != 0) maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
             maf = (maf > 0.5)? 1.0-maf: maf;
             m_maf.push_back(maf);
             m_num_missing.push_back(num_missing);

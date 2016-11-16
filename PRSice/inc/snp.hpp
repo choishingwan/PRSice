@@ -26,7 +26,7 @@ public:
     SNP(const std::string rs_id, const std::string chr, const int loc,
         const std::string ref_allele, const std::string alt_allele,
         const double statistic, const double se, const double p_value,
-        long_type *flag, const size_t size_of_flag);
+        std::vector<long_type> flag);
     virtual ~SNP();
     static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input);
     static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
@@ -78,9 +78,9 @@ public:
     {
         m_clumped = true;
     };
-    void set_flag(long_type *flag)
+    void set_flag(std::vector<long_type> flag)
     {
-        if(m_flags!=nullptr) delete [] m_flags;
+//        if(m_flags!=nullptr) delete [] m_flags;
         m_flags = flag;
     };
     void proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold);
@@ -103,6 +103,7 @@ public:
     // indication of whether if the SNP is within the specific region
     inline bool in(size_t i) const
     {
+    		if(i/m_bit_size >= m_flags.size()) throw std::out_of_range("Out of range for flag");
         return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
     }
     bool operator < (const SNP& j) const
@@ -145,9 +146,10 @@ private:
     bool m_flipped=false;
     std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP
     std::vector<double> m_clump_r2; // index of SNPs that are clumped under this SNP
-    long_type *m_flags;
-    size_t m_size_of_flag;
-    long_type *m_region_clumped; //place holder for now
+//    long_type *m_flags;
+    std::vector<long_type> m_flags;
+//    size_t m_size_of_flag;
+    std::vector<long_type> m_region_clumped; //place holder for now
 #if defined(__LP64__) || defined(_WIN64)
     long_type ONE = 1LLU;
 #else

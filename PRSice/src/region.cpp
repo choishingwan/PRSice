@@ -48,10 +48,9 @@ Region::Region()
 
 Region::~Region() {}
 
-Region::long_type* Region::check(std::string chr, size_t loc)
+std::vector<Region::long_type> Region::check(std::string chr, size_t loc)
 {
-    long_type* res = new long_type[((m_region_name.size()+1)/m_bit_size)+1];
-    memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(long_type));
+    std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
     res[0]=1; // base region which contains everything
     for(size_t i_region = 0; i_region < m_region_list.size(); ++i_region)
     {

@@ -43,7 +43,7 @@ public:
     typedef uint32_t long_type;
 #define ONE  0x1LU
 #endif
-    long_type* check(std::string chr, size_t loc);
+    std::vector<long_type> check(std::string chr, size_t loc);
     size_t flag_size() const
     {
         return (m_region_name.size()+1)/(m_bit_size)+1;
@@ -57,10 +57,9 @@ public:
         return m_region_name.at(i);
     };
 
-    Region::long_type* empty_flag()
+    std::vector<Region::long_type> empty_flag()
     {
-        long_type* res = new long_type[((m_region_name.size()+1)/m_bit_size)+1];
-        memset(res, 0x0,(((m_region_name.size()+1)/m_bit_size)+1)*sizeof(long_type));
+        std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
         res[0]=1; // base region which contains everything
         return res;
     }
