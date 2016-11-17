@@ -47,8 +47,8 @@
 	typedef std::tuple<std::string, size_t, int, size_t, std::string> p_partition;
 	// threshold, r2,  num_snps, p, coefficient r2 adjust
 	typedef std::tuple<double, double, size_t, double, double, double> PRSice_result;
-	//  threshold, r2, num_snps, coefficient (The r2 is for determining if it is the best)
-	typedef std::tuple<double, double, size_t, double> PRSice_best;
+	//  threshold, r2, num_snps, coefficient, pvalue (The r2 is for determining if it is the best)
+	typedef std::tuple<double, double, size_t, double, double> PRSice_best;
     typedef std::tuple<std::string, char, std::string, std::string> help;
 
 #endif /* PRSICE_INC_STORAGE_HPP_ */

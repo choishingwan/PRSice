@@ -998,6 +998,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
             std::get<+PRS::R2>(best) = r2;
             std::get<+PRS::NSNP>(best) =  m_num_snp_included[iter];
             std::get<+PRS::COEFF>(best) =coefficient;
+            std::get<+PRS::P>(best) = p_value;
             m_best_threshold[iter] = best;
             m_best_score[iter] = m_current_prs.at(iter);
         }
@@ -1112,7 +1113,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
         std::string out_region = output_name+".prset";
 		std::ofstream region_out;
 		region_out.open(out_region.c_str());
-		region_out << "Region\tThreshold\tR2\tCoefficient\tNum_SNP" << std::endl;
+		region_out << "Region\tThreshold\tR2\tCoefficient\tP\tNum_SNP" << std::endl;
 		i_region = 0;
 		for(auto best_region: m_best_threshold)
 		{
@@ -1120,6 +1121,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
 					<< std::get<+PRS::THRESHOLD>(best_region) << "\t"
 					<< std::get<+PRS::R2>(best_region) << "\t"
 					<< std::get<+PRS::COEFF>(best_region) << "\t"
+					<< std::get<+PRS::P>(best_region) << "\t"
 					<< std::get<+PRS::NSNP>(best_region) << std::endl;
 			i_region++;
 		}
