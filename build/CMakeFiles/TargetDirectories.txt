@@ -1,0 +1,3 @@
+/Users/shingwanchoi/Desktop/KCL/development/PRSice/PRSice/build/CMakeFiles/edit_cache.dir
+/Users/shingwanchoi/Desktop/KCL/development/PRSice/PRSice/build/CMakeFiles/rebuild_cache.dir
+/Users/shingwanchoi/Desktop/KCL/development/PRSice/PRSice/build/CMakeFiles/PRSice.dir
