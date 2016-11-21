@@ -1110,7 +1110,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region, size_t
 		best_out.close();
 
 		// now print the group information
-        std::string out_region = output_name+".prset";
+        std::string out_region = output_prefix+".prset";
 		std::ofstream region_out;
 		region_out.open(out_region.c_str());
 		region_out << "Region\tThreshold\tR2\tCoefficient\tP\tNum_SNP" << std::endl;
