@@ -1,0 +1,32 @@
+# Missing Features
+Here we list out features that are currently missing from the c++ version of PRSice
+- Dosage Data
+-- The c++ PRSice currrently cannot handle dosage data
+
+~~- Multi-chromosome input~~
+
+~~-- Currently the c++ PRSice requires a single input file~~
+
+- PCA / MDS calculation
+-- We are currently trying to make PRSice a standalone programme, during which some of the plink function need to be reimplmented.
+Therefore some functions, such as MDS and PCA calculation has not been implemented
+- Most plotting related functions
+-- Most plotting functions are not implmented as plotting is very difficult from c++. 
+However, we are currently building the R wrapper as a temporary alternative. 
+Please check the r_wrapper branch
+- LD calculation
+-- A vital step in PRSice is the clumping. 
+However, as the algorithm for the Maximum likelihood R^2^ calculation is difficult, we are currently using only the correlation based R^2^ calculation.
+Therefore the clumping result might deviate slightly from the plink, which uses the ML R^2^ calculation.
+- Ped format
+-- We do not support the ped map format. User need to use the binary plink file
+- mend.score
+-- This function is not implemented
+
+~~- Full PRS~~
+
+~~-- Currently, unless you use fastscore + bar_level, PRSice will not calculate the PRS when all SNPs are included~~
+
+To Do List:
+- Write a better command line handling interface?
+
