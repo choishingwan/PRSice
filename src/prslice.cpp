@@ -54,6 +54,9 @@ void PRSice::prslice_windows(const Commander &c_commander, const Region &c_regio
 				std::get<prslice_wind::WIND>(wind) = window_name;
 				std::get<prslice_wind::R2>(wind) = best_r2;
 				std::get<prslice_wind::SNPS>(wind) = best_snp;
+				std::get<prslice_wind::P>(wind) = std::get<+PRS::P>(m_best_threshold[0]);
+				std::get<prslice_wind::NSNP>(wind) = std::get<+PRS::NSNP>(m_best_threshold[0]);
+				std::get<prslice_wind::COEFF>(wind) = std::get<+PRS::COEFF>(m_best_threshold[0]);
 				m_best_snps.push_back(wind);
 				m_best_threshold.clear();
 				m_partition.clear();
@@ -109,6 +112,9 @@ void PRSice::prslice_windows(const Commander &c_commander, const Region &c_regio
 		std::get<prslice_wind::WIND>(wind) = window_name;
 		std::get<prslice_wind::R2>(wind) = best_r2;
 		std::get<prslice_wind::SNPS>(wind) = best_snp;
+		std::get<prslice_wind::P>(wind) = std::get<+PRS::P>(m_best_threshold[0]);
+		std::get<prslice_wind::NSNP>(wind) = std::get<+PRS::NSNP>(m_best_threshold[0]);
+		std::get<prslice_wind::COEFF>(wind) = std::get<+PRS::COEFF>(m_best_threshold[0]);
 		m_best_snps.push_back(wind);
 	}
 
@@ -182,12 +188,17 @@ void PRSice::output(const Commander &c_commander, size_t pheno_index) const
 		std::string error_message = "Cannot open file " +out_wind+" for write";
 		throw std::runtime_error(error_message);
 	}
-	window << "Window\tR2" << std::endl;
+	window << "Window\tR2\tCoefficient\tP\tNum_SNP" << std::endl;
 	best_prs << "IID\tprs_"<<std::get<+PRS::THRESHOLD>(m_best_threshold[0]) << std::endl;
-	prslice << "Num_Windows\tR2\tP\tNum_SNP" << std::endl;
+	prslice << "Num_Windows\tR2\tCoefficient\tP\tNum_SNP" << std::endl;
 	for(auto &&wind : m_best_snps)
 	{
-		window << std::get<prslice_wind::WIND>(wind) << "\t" << std::get<prslice_wind::R2>(wind) << std::endl;
+		window << std::get<prslice_wind::WIND>(wind) << "\t"
+				<< std::get<prslice_wind::R2>(wind)-m_null_r2 << "\t"
+				<< std::get<prslice_wind::COEFF>(wind) << "\t"
+				<< std::get<prslice_wind::P>(wind) << "\t"
+				<< std::get<prslice_wind::NSNP>(wind) << "\t"
+				<< std::endl;
 	}
 	window.close();
 	int best_snp_size = std::get<+PRS::NSNP>(m_best_threshold[0]);
@@ -209,6 +220,7 @@ void PRSice::output(const Commander &c_commander, size_t pheno_index) const
 	{
 		prslice << std::get<+PRS::THRESHOLD>(prs) << "\t" <<
 				std::get<+PRS::R2>(prs)-m_null_r2 << "\t" <<
+				std::get<+PRS::COEFF>(prs)<< "\t" <<
 				std::get<+PRS::P>(prs)<< "\t" <<
 				std::get<+PRS::NSNP>(prs) << std::endl;
 	}

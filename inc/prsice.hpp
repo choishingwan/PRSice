@@ -114,8 +114,8 @@ private:
     boost::ptr_vector<SNP> m_snp_list; //
     std::unordered_map<std::string, size_t> m_snp_index; //
     // PRSlice related storages
-    enum prslice_wind{WIND,SNPS, R2};
-    typedef std::tuple<std::string, std::vector<p_partition>, double > windows;
+    enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
+    typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;
     std::vector<windows> m_best_snps;
     /**
      * This vector contain the chromosome included in the base file
