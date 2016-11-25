@@ -130,7 +130,7 @@ option_list <- list(
     file as genotype_#_test"
   ),
   make_option(
-    "--target_is_binary",
+    "--binary_target",
     type = "character",
     help = "Indicate whether the target sample has binary phenotype or not.
     For each phenotype, user need to provide either T or F where T means the phenotype is binary"
@@ -899,12 +899,12 @@ if (provided("intermediate", argv)) {
         "Target file name not found. You'll need to either provide the intermediate prefix of all the target name for plotting!"
       )
     }
-    if (!provided("target_is_binary", argv)) {
+    if (!provided("binary_target", argv)) {
       stop(
         "We do need to know if the target file is binary or not in order to decide whether if we will run logistic or linear regression."
       )
     }
-    binary_target = strsplit(argv$target_is_binary, split = ",")[[1]]
+    binary_target = strsplit(argv$binary_target, split = ",")[[1]]
     if (provided("pheno_col", argv)) {
       phenos = strsplit(argv$pheno_col, split = ",")[[1]]
       if (!provided("pheno_file", argv)) {
