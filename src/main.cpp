@@ -31,11 +31,29 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+
+    
+    std::vector<std::string> base = commander.get_base();
     // User input should be shown before other stuff to reduce the redundency
     fprintf(stderr,"\nRegion Information\n");
     fprintf(stderr,"==============================\n");
     if(region.size() ==1) fprintf(stderr, "1 region is included\n");
     else if(region.size()>1) fprintf(stderr, "A total of %zu regions are included\n", region.size());
+    fprintf(stderr, "\nUser Input\n");
+    fprintf(stderr,"==============================\n");
+    fprintf(stderr, "Base files: ");
+    for(size_t i_base = 0; i_base < base.size(); ++i_base)
+    {
+        if(!commander.get_base_binary(i_base))
+        {
+            fprintf(stderr, "%s(OR) ",base[i_base].c_str());
+        }
+        else
+        {
+            fprintf(stderr, "%s(Beta) ",base[i_base].c_str());
+        }
+    }
+    fprintf(stderr, "\n");
     fprintf(stderr,"\nUser Defined Column Headers\n");
     fprintf(stderr,"==============================\n");
     if(!commander.chr().empty()) fprintf(stderr,"Chr            : %s\n", commander.chr().c_str());
@@ -58,7 +76,6 @@ int main(int argc, char *argv[])
     bool perform_prslice = commander.prslice() > 0.0;
     bool full_model = commander.full();
     double bound_end = commander.get_upper();
-    std::vector<std::string> base = commander.get_base();
     int num_base = base.size();
     if(num_base == 0) throw std::runtime_error("There is no base case to run");
     if(num_base < 0) throw std::runtime_error("Negative number of base");

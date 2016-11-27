@@ -29,6 +29,12 @@
 
 # Library handling --------------------------------------------------------
 
+if(!exists('startsWith', mode='function')){
+	startsWith <- function(x, prefix){
+		return(substring(x, 1, nchar(prefix)) == prefix)
+	}
+}
+
 libraries <-
   c("ggplot2", "data.table", "optparse", "methods", "tools")
 found = FALSE
@@ -136,7 +142,7 @@ option_list <- list(
     For each phenotype, user need to provide either T or F where T means the phenotype is binary"
   ),
   
-  make_option("--beta", type = "charactre", help = "Indicate whether the test statistic is beta instead of OR. Must be of the same length as base"),
+  make_option("--beta", help = "Indicate whether the test statistic is beta instead of OR. Must be of the same length as base"),
   make_option(
     c("--pheno_file", "-f"),
     type = "character",
