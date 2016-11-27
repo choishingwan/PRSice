@@ -104,6 +104,8 @@ private:
     bool m_all;
     bool m_full;
     bool m_print_all;
+    bool m_beta_provided;
+    bool m_stat_provided;
     double m_proxy;
     double m_clump;
     double m_clump_r2;

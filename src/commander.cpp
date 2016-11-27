@@ -71,7 +71,11 @@ bool Commander::initialize(int argc, char *argv[])
             if(command.compare("chr")==0) m_chr=optarg;
             else if(command.compare("A1")==0) m_ref_allele = optarg;
             else if(command.compare("A2")==0) m_alt_allele=optarg;
-            else if(command.compare("stat")==0) m_statistic = optarg;
+            else if(command.compare("stat")==0)
+            {
+            	m_statistic = optarg;
+            	m_stat_provided = true;
+            }
             else if(command.compare("snp")==0) m_snp=optarg;
             else if(command.compare("bp")==0) m_bp=optarg;
             else if(command.compare("se")==0) m_standard_error = optarg;
@@ -299,7 +303,10 @@ bool Commander::initialize(int argc, char *argv[])
         }
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-
+    if(!m_stat_provided && m_beta_provided)
+    {
+    	m_statistic = (m_use_beta.front())? "BETA" : "OR";
+    }
     if(m_base.size()==0)
     {
         error=true;
@@ -343,6 +350,7 @@ bool Commander::initialize(int argc, char *argv[])
         {
             m_use_beta.push_back(false); // default is binary
         }
+        m_beta_provided = true;
     }
     else if(m_use_beta.size() != m_base.size())
     {
@@ -402,6 +410,8 @@ Commander::Commander()
     m_no_regress = false;
     m_all = false;
     m_full = false;
+    m_beta_provided = false;
+    m_stat_provided = false;
     m_proxy = -1.0;
     m_clump = 1.0;
     m_clump_r2 = 0.1;
