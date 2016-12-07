@@ -821,7 +821,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
         }
         fam.close();
     }
-    if(n_not_fonud!=0){
+    if(n_not_found!=0){
     	fprintf(stderr, "Number of missing samples: %zu\n", n_not_found);
     }
     if(phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
