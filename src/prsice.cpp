@@ -699,7 +699,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
                     {
                         if(binary)
                         {
-                            double temp = misc::convert<int>(token[+FAM::PHENOTYPE]);
+                            int temp = misc::convert<int>(token[+FAM::PHENOTYPE]);
                             if(temp-1>=0 && temp-1<2)
                             {
                             	m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
@@ -741,6 +741,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
         // Main problem: we want the order following the fam file
         std::unordered_map<std::string, std::string> phenotype_info;
         cur_index = 0;
+        std::cerr << "pheno_index is: " << pheno_index << std::endl;
         while(std::getline(pheno_file, line))
         {
             misc::trim(line);
@@ -756,6 +757,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
             }
         }
         pheno_file.close();
+        size_t n_not_found=0;
         while(std::getline(fam, line))
         {
             misc::trim(line);
@@ -773,7 +775,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
                         {
                             if(binary)
                             {
-                                double temp = misc::convert<int>(p);
+                                int temp = misc::convert<int>(p);
                                 if(temp-1>=0 && temp-1<=2)
                                 {
                                 	m_sample_with_phenotypes[token[+FAM::IID]]=cur_index;
@@ -794,9 +796,16 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
                         catch(const std::runtime_error &error) { }
                     }
                 }
+                else
+                {
+                	n_not_found++;
+                }
             }
         }
         fam.close();
+    }
+    if(n_not_fonud!=0){
+    	fprintf(stderr, "Number of missing samples: %zu\n", n_not_found);
     }
     if(phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
     m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());

@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
                 /**
                  * Perform clumping on the SNPs. This help us to get around the problem of LD
                  */
-                prsice.clump(commander);
+                //prsice.clump(commander);
                 /**
                  * Initialize the phenotype information for the target
                  * We can actually perform this outside the loop and set the
