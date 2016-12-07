@@ -677,6 +677,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     std::string line;
     size_t cur_index=0;
     size_t num_case=0, num_control=0;
+    size_t n_not_found=0;
     if(c_pheno.empty() || fam_name == c_pheno )
     {
         pheno_file.open(fam_name.c_str());
@@ -757,7 +758,6 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
             }
         }
         pheno_file.close();
-        size_t n_not_found=0;
         while(std::getline(fam, line))
         {
             misc::trim(line);
