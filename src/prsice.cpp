@@ -368,7 +368,7 @@ void PRSice::init_pheno(const Commander &c_commander)
 		{
 			// use the second column from the pheno file
 			pheno_storage temp;
-			std::get<pheno_store::FILE_NAME>(temp) = pheno)file;
+			std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
 			std::get<pheno_store::INDEX>(temp) = 1;
 			std::get<pheno_store::NAME>(temp) = "";
 			std::get<pheno_store::ORDER>(temp) = 0;
@@ -475,6 +475,7 @@ void PRSice::categorize(const Commander &c_commander)
     bool fastscore = c_commander.fastscore();
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
     double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
+    std::cerr << "Bound end is: " << bound_end << std::endl;
     double bound_inter = c_commander.get_inter();
     bool full_model = c_commander.full();
     std::vector<std::string> file_names;
