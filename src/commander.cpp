@@ -381,10 +381,6 @@ bool Commander::initialize(int argc, char *argv[])
         m_barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
     }
     std::sort(m_barlevel.begin(), m_barlevel.end());
-    for(auto bar:m_barlevel)
-    {
-    	std::cerr << bar << std::endl;
-    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }

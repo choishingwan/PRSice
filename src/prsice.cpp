@@ -471,6 +471,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 
 void PRSice::categorize(const Commander &c_commander)
 {
+	std::cerr << "There are : " << m_include_snp.size() << " SNPs" << std::endl;
 	m_partition.clear();
     bool fastscore = c_commander.fastscore();
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
