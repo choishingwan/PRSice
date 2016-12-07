@@ -364,31 +364,45 @@ void PRSice::init_pheno(const Commander &c_commander)
 		std::vector<std::string> col = misc::split(line);
 		bool found = false;
 		std::unordered_map<std::string, bool> dup_col;
-		for(size_t i_pheno=0; i_pheno <  pheno_header.size(); ++i_pheno)
+		if(pheno_header.size()==0)
 		{
-			if(dup_col.find(pheno_header[i_pheno])==dup_col.end()){
-				found = false;
-				dup_col[pheno_header[i_pheno]] = true;
-				for(size_t i_column =0; i_column < col.size(); ++i_column)
-				{
-					if(col[i_column].compare(pheno_header[i_pheno])==0)
+			// use the second column from the pheno file
+			pheno_storage temp;
+			std::get<pheno_store::FILE_NAME>(temp) = pheno)file;
+			std::get<pheno_store::INDEX>(temp) = 1;
+			std::get<pheno_store::NAME>(temp) = "";
+			std::get<pheno_store::ORDER>(temp) = 0;
+			m_pheno_names.push_back(temp);
+		}
+		else
+		{
+			for(size_t i_pheno=0; i_pheno <  pheno_header.size(); ++i_pheno)
+			{
+				if(dup_col.find(pheno_header[i_pheno])==dup_col.end()){
+					found = false;
+					dup_col[pheno_header[i_pheno]] = true;
+					for(size_t i_column =0; i_column < col.size(); ++i_column)
 					{
-						found = true;
-						pheno_storage temp;
-						std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
-						std::get<pheno_store::INDEX>(temp) = i_column;
-						std::get<pheno_store::NAME>(temp) = pheno_header[i_pheno];
-						std::get<pheno_store::ORDER>(temp) = i_pheno;
-						m_pheno_names.push_back(temp);
-						break;
+						if(col[i_column].compare(pheno_header[i_pheno])==0)
+						{
+							found = true;
+							pheno_storage temp;
+							std::get<pheno_store::FILE_NAME>(temp) = pheno_file;
+							std::get<pheno_store::INDEX>(temp) = i_column;
+							std::get<pheno_store::NAME>(temp) = pheno_header[i_pheno];
+							std::get<pheno_store::ORDER>(temp) = i_pheno;
+							m_pheno_names.push_back(temp);
+							break;
+						}
 					}
-				}
-				if(!found)
-				{
-					fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_header[i_pheno].c_str());
+					if(!found)
+					{
+						fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n", pheno_header[i_pheno].c_str());
+					}
 				}
 			}
 		}
+
 	}
 	fprintf(stderr, "There are a total of %zu phenotype to process\n", m_pheno_names.size());
 }
@@ -680,6 +694,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     size_t n_not_found=0;
     if(c_pheno.empty() || fam_name == c_pheno )
     {
+    	std::cerr << "Using fam file" << std::endl;
+    	std::cerr << fam_name << "\t" << c_pheno << std::endl;
         pheno_file.open(fam_name.c_str());
         if(!pheno_file.is_open())
         {
@@ -726,6 +742,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     }
     else
     {
+    	std::cerr << "Using pheno file" << std::endl;
         std::ifstream fam;
         fam.open(fam_name.c_str());
         pheno_file.open(c_pheno.c_str());
