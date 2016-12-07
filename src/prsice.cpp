@@ -471,12 +471,10 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 
 void PRSice::categorize(const Commander &c_commander)
 {
-	std::cerr << "There are : " << m_include_snp.size() << " SNPs" << std::endl;
 	m_partition.clear();
     bool fastscore = c_commander.fastscore();
     double bound_start =  (fastscore)? c_commander.get_bar_lower(): c_commander.get_lower();
     double bound_end = (fastscore)? c_commander.get_bar_upper():c_commander.get_upper();
-    std::cerr << "Bound end is: " << bound_end << std::endl;
     double bound_inter = c_commander.get_inter();
     bool full_model = c_commander.full();
     std::vector<std::string> file_names;

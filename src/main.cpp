@@ -123,8 +123,10 @@ int main(int argc, char *argv[])
 
                 /**
                  * Perform clumping on the SNPs. This help us to get around the problem of LD
+                 * P.S. The m_included_snp will not be filled without this been done first
+                 * thus cause all subsequent analysis to stop
                  */
-                //prsice.clump(commander);
+                prsice.clump(commander);
                 /**
                  * Initialize the phenotype information for the target
                  * We can actually perform this outside the loop and set the
@@ -169,7 +171,6 @@ int main(int argc, char *argv[])
                 			catch(const std::runtime_error &error)
                 			{
                 				fprintf(stderr, "None of the SNPs fall within the threshold\n");
-                				std::cerr << error.what() << std::endl;
                 			}
                 		}
                 }
