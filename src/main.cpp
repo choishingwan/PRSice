@@ -169,6 +169,7 @@ int main(int argc, char *argv[])
                 			catch(const std::runtime_error &error)
                 			{
                 				fprintf(stderr, "None of the SNPs fall within the threshold\n");
+                				std::cerr << error.what() << std::endl;
                 			}
                 		}
                 }

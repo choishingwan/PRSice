@@ -694,8 +694,6 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     size_t n_not_found=0;
     if(c_pheno.empty() || fam_name == c_pheno )
     {
-    	std::cerr << "Using fam file" << std::endl;
-    	std::cerr << fam_name << "\t" << c_pheno << std::endl;
         pheno_file.open(fam_name.c_str());
         if(!pheno_file.is_open())
         {
@@ -742,7 +740,6 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
     }
     else
     {
-    	std::cerr << "Using pheno file" << std::endl;
         std::ifstream fam;
         fam.open(fam_name.c_str());
         pheno_file.open(c_pheno.c_str());
@@ -759,7 +756,6 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index, con
         // Main problem: we want the order following the fam file
         std::unordered_map<std::string, std::string> phenotype_info;
         cur_index = 0;
-        std::cerr << "pheno_index is: " << pheno_index << std::endl;
         while(std::getline(pheno_file, line))
         {
             misc::trim(line);
