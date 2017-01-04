@@ -840,7 +840,7 @@ if (provided("intermediate", argv)) {
                        data.table = F,
                        header = T)
     if (provided("covar_header", argv)) {
-      c = strsplit(argv$cov_header, split = ",")[[1]]
+      c = strsplit(argv$covar_header, split = ",")[[1]]
       covariance = covariance[, colnames(covariance) %in% c]
     }
   }
@@ -959,7 +959,7 @@ if (provided("intermediate", argv)) {
                          data.table = F,
                          header = T)
       if (provided("covar_header", argv)) {
-        c = strsplit(argv$cov_header, split = ",")[[1]]
+        c = strsplit(argv$covar_header, split = ",")[[1]]
         covariance = covariance[, colnames(covariance) %in% c]
       }
     }
