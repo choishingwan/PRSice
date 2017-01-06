@@ -247,7 +247,16 @@ namespace Regression{
 		Eigen::VectorXd se = ((R.transpose()*R).inverse().diagonal()).array().sqrt();
 		// again, we are ony interested in one of the variable
 		r2 = (1.0 - std::exp((dev - nulldev)/(double)nobs))/(1 - std::exp(-nulldev/(double) nobs));
-		double tvalue = start(intercept)/se(intercept);
+		size_t se_index = intercept;
+		for(size_t ind=0;ind < start.rows(); ++ind)
+		{
+			if(qr.colsPermutation().indices()(ind) == intercept)
+			{
+				se_index = ind;
+				break;
+			}
+		}
+		double tvalue = start(intercept)/se(se_index);
 		coeff = start(intercept);
 		boost::math::normal_distribution<> dist(0,1);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
