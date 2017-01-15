@@ -35,7 +35,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
     m_region_count = std::vector<int>(m_region_name.size());
 }
 
-Region::Region(std::vector<std::string> &feature)
+Region::Region(std::vector<std::string> feature)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything

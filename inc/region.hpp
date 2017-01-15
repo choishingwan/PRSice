@@ -28,7 +28,7 @@
 class Region
 {
 public:
-    Region(std::vector<std::string> &feature);
+    Region(std::vector<std::string> feature);
     virtual ~Region();
     void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed);
     void reset()
