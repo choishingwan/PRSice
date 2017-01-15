@@ -35,7 +35,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
     m_region_count = std::vector<int>(m_region_name.size());
 }
 
-Region::Region()
+Region::Region(std::vector<std::string> &feature)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything
@@ -44,6 +44,7 @@ Region::Region()
 //    m_region_found.push_back(100.0);
     m_processed_regions.push_back(std::pair<std::string, double>("Base", 100.0));
     m_region_list.push_back(std::vector<boundary>(1));
+    m_feature =feature;
 }
 
 Region::~Region() {}
@@ -211,8 +212,7 @@ std::unordered_map<std::string, Region::boundary > Region::process_gtf(const std
         if(!line.empty() && line[0]!='#')
         {
             std::vector<std::string> token = misc::split(line, "\t");
-            if(token[2].compare("exon")==0 || token[2].compare("gene")==0 || token[2].compare("protein_coding")==0 ||
-            		token[2].compare("CDS")==0)
+            if(in_feature(token[2]))
             {
                 std::string chr = token[0];
                 int temp=0;

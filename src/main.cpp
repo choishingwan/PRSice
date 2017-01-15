@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
-    Region region = Region();
+    Region region = Region(commander.get_feature());
     try
     {
         region.run(commander.get_gtf(), commander.get_msigdb(), commander.get_bed(), commander.get_out(), commander.gen_bed());
