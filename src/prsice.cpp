@@ -603,7 +603,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
     {
     	m_current_prs.push_back(m_sample_names);
-        m_best_threshold.push_back(PRSice_best(0,0,0,0,0));
+        m_best_threshold.push_back(PRSice_best(0,0,0,0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
         if(prslice) break;
     }
