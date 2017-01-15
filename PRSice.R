@@ -243,6 +243,7 @@ option_list <- list(
     e.g. --proxy 0.8 means the index SNP will represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if
     it is not physically within these regions"
   ),
+  make_option("--feature", type="character", help="Features to be included from the gtf file. Default is exon, CDS, gene and protein_coding. If this parameter is provided, all default will be ignored."),
   make_option(
     "--prslice",
     type = "numeric",
@@ -262,6 +263,8 @@ option_list <- list(
     help = "Number of thread use",
     default = 1
   ),
+  make_option(
+      "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
   make_option(
     "--c_help",
     action = "store_true",
