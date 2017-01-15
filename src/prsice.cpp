@@ -602,7 +602,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     m_num_snp_included = prslice? std::vector<size_t>(1) : std::vector<size_t>(c_region.size());
     for(size_t i_region = 0; i_region < c_region.size(); ++i_region)
     {
-    		m_current_prs.push_back(m_sample_names);
+    	m_current_prs.push_back(m_sample_names);
         m_best_threshold.push_back(PRSice_best(0,0,0,0,0));
         m_prs_results.push_back(std::vector<PRSice_result>(0));
         if(prslice) break;
@@ -954,28 +954,35 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
     double r2 = 0.0, r2_adjust=0.0, p_value = 0.0, coefficient=0.0;
     for(size_t iter = region_start; iter < region_end ; ++iter)
     {
-    		if	(m_num_snp_included[iter]==0 ||
-    				(m_prs_results[iter].size()!=0 &&
-    						m_num_snp_included[iter] == std::get<+PRS::NSNP>(m_prs_results[iter].back())
-				)
-    			)	continue;
+    	if(m_num_snp_included[iter]==0 ||
+    			(m_prs_results[iter].size()!=0 &&
+    					m_num_snp_included[iter] == std::get<+PRS::NSNP>(m_prs_results[iter].back())
+    			)
+    		)	continue;
         for(auto &&prs : m_current_prs[iter])
         {
-            std::string sample = std::get<+PRS::IID>(prs);
+        	std::string sample = std::get<+PRS::IID>(prs);
             if(m_sample_with_phenotypes.find(sample)!=m_sample_with_phenotypes.end())
             {
-                if(thread_safe) m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
-                		std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
+            	if(thread_safe) m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+            			std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
                 else X(m_sample_with_phenotypes.at(sample), 1) = std::get<+PRS::PRS>(prs)/(double)m_num_snp_included[iter];
+
             }
         }
-
+        size_t num_better = 0;
         if(m_target_binary[c_pheno_index])
         {
             try
             {
                 if(thread_safe) Regression::glm(m_phenotype, m_independent_variables, p_value, r2, coefficient, 25, thread, true);
                 else Regression::glm(m_phenotype, X, p_value, r2, coefficient, 25, thread, true);
+                for(size_t i_perm = 0; i_perm < m_perm; ++i_perm){
+                	PermutationMatrix<Eigen::Dynamic,Eigen::Dynamic> perm(m_phenotype.rows());
+                	perm.setIdentity();
+                	std::random_shuffle(perm.indices().data(), perm.indices().data()+perm.indices().size());
+                	Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
+                }
             }
             catch(const std::runtime_error &error)
             {
@@ -1000,6 +1007,9 @@ void PRSice::thread_score(size_t region_start, size_t region_end, double thresho
             if(thread_safe) Regression::linear_regression(m_phenotype, m_independent_variables, p_value, r2,
             		r2_adjust, coefficient, thread, true);
             else Regression::linear_regression(m_phenotype, X, p_value, r2, r2_adjust, coefficient, thread, true);
+            for(size_t i_perm = 0; i_perm < m_perm; ++i_perm){
+
+            }
         }
         // This should be thread safe as each thread will only mind their own region
         // now add the PRS result to the vectors (hopefully won't be out off scope

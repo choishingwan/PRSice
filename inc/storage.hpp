@@ -33,7 +33,7 @@
 	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
-    enum class PRS{IID=0, PRS, RS=0, LINE, CATEGORY, INDEX, FILENAME, THRESHOLD=0, R2, NSNP, COEFF, P, R2ADJ};
+    enum class PRS{IID=0, PRS, RS=0, LINE, CATEGORY, INDEX, FILENAME, THRESHOLD=0, R2, NSNP, COEFF, P, R2ADJ, EMPIRICAL_P};
     enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
 	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
@@ -45,8 +45,8 @@
 	typedef std::pair<std::string, double> prs_score;
 	// rsid, line number in bim, category, snp_list index
 	typedef std::tuple<std::string, size_t, int, size_t, std::string> p_partition;
-	// threshold, r2,  num_snps, p, coefficient r2 adjust
-	typedef std::tuple<double, double, size_t, double, double, double> PRSice_result;
+	// threshold, r2,  num_snps, p, coefficient r2 adjust, number of better
+	typedef std::tuple<double, double, size_t, double, double, double, size_t> PRSice_result;
 	//  threshold, r2, num_snps, coefficient, pvalue (The r2 is for determining if it is the best)
 	typedef std::tuple<double, double, size_t, double, double> PRSice_best;
     typedef std::tuple<std::string, char, std::string, std::string> help;

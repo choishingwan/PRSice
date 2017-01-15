@@ -23,8 +23,8 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary): m_current_base(base_name), m_base_index(index),
-    		m_target(target), m_target_binary(target_binary)
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_current_base(base_name), m_base_index(index),
+    		m_target(target), m_target_binary(target_binary), m_perm(permutation)
     {
         if(index < 0)
         {
@@ -93,6 +93,7 @@ private:
     typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
 	std::vector<pheno_storage> m_pheno_names;
 	size_t m_pheno_index=0;
+	size_t m_perm = 0;
 	// Regression related storages
 	double m_null_r2 = 0.0;
 	Eigen::VectorXd m_phenotype;
