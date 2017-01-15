@@ -98,9 +98,9 @@ void Region::process_bed(const std::vector<std::string> &bed)
         if(!bed_file.is_open()) fprintf(stderr, "WARNING: %s cannot be open. It will be ignored\n", bed[i].c_str());
         else if(m_dup_names.find(bed[i]) == m_dup_names.end())
         {
-        		m_dup_names.insert(bed[i]);
+        	m_dup_names.insert(bed[i]);
             m_region_name.push_back(bed[i]);
-            std::vector<boundary > current_region;
+            std::vector<boundary> current_region;
             std::string line;
             while(std::getline(bed_file, line))
             {
@@ -174,6 +174,8 @@ void Region::process_bed(const std::vector<std::string> &bed)
                 }
                          );
                 m_region_list.push_back(current_region);
+                //For bed file, this will always be 100, because we don't have the gene matching problem
+                m_processed_regions.push_back(std::pair<std::string, double>(bed[i], 100));
             }
             else
             {
@@ -404,7 +406,6 @@ void Region::process_msigdb(const std::string &msigdb,
                     }
                              );
 //                    m_region_found.push_back((double)found/(double)token.size());
-                    m_processed_regions.push_back(std::pair<std::string, double>(name, (double)found/(double)(token.size()-1)));
                     if(found != 0){
                     		if(m_dup_names.find(name)!=m_dup_names.end())
                     		{
@@ -414,6 +415,7 @@ void Region::process_msigdb(const std::string &msigdb,
                     		else{
                     			m_dup_names.insert(name);
                     			m_region_name.push_back(name);
+                    			m_processed_regions.push_back(std::pair<std::string, double>(name, (double)found/(double)(token.size()-1)));
                         		m_region_list.push_back(current_region);
                     		}
                     }
