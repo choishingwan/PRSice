@@ -316,6 +316,12 @@ option_list <- list(
     help = "Colour of the highest predicting thresholds",
     default = "firebrick"
   ),
+  make_option(
+    "--bar_palatte",
+    type="character",
+    help ="Colour palatte to be used for bar plotting",
+    default = "YlOrRd"
+  ),
   make_option("--prsice", type = "character", help = "Location of the PRSice binary"),
   make_option("--dir", type = "character", help = "Location to install ggplot. Only require if ggplot is not installed")
   )
@@ -343,6 +349,7 @@ not_cpp <-
     "bar_col_r2",
     "bar_col_low",
     "bar_col_high",
+    "bar_palatte",
     "prsice",
     "dir"
   )
@@ -731,17 +738,17 @@ bar_plot <- function(PRS, prefix, argv) {
   output$print.p <- sub("e", "*x*10^", output$print.p)
   ggfig.plot <- ggplot(data = output)
   
-  if (!argv$bar_col_r2) {
+  if (argv$bar_col_r2) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),
         y = R2,
         fill = factor(Threshold)
       ), stat = "identity") +
-      scale_fill_brewer(palette = "YlOrRd",
+      scale_fill_brewer(palette = argv$palatte,
                         name = expression(italic(P) - value ~ threshold))
   }
-  if (argv$bar_col_r2) {
+  if (!argv$bar_col_r2) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),
