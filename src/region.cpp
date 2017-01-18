@@ -35,7 +35,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
     m_region_count = std::vector<int>(m_region_name.size());
 }
 
-Region::Region()
+Region::Region(std::vector<std::string> feature)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything
@@ -44,6 +44,7 @@ Region::Region()
 //    m_region_found.push_back(100.0);
     m_processed_regions.push_back(std::pair<std::string, double>("Base", 100.0));
     m_region_list.push_back(std::vector<boundary>(1));
+    m_feature =feature;
 }
 
 Region::~Region() {}
@@ -98,9 +99,9 @@ void Region::process_bed(const std::vector<std::string> &bed)
         if(!bed_file.is_open()) fprintf(stderr, "WARNING: %s cannot be open. It will be ignored\n", bed[i].c_str());
         else if(m_dup_names.find(bed[i]) == m_dup_names.end())
         {
-        		m_dup_names.insert(bed[i]);
+        	m_dup_names.insert(bed[i]);
             m_region_name.push_back(bed[i]);
-            std::vector<boundary > current_region;
+            std::vector<boundary> current_region;
             std::string line;
             while(std::getline(bed_file, line))
             {
@@ -174,6 +175,8 @@ void Region::process_bed(const std::vector<std::string> &bed)
                 }
                          );
                 m_region_list.push_back(current_region);
+                //For bed file, this will always be 100, because we don't have the gene matching problem
+                m_processed_regions.push_back(std::pair<std::string, double>(bed[i], 100));
             }
             else
             {
@@ -209,8 +212,7 @@ std::unordered_map<std::string, Region::boundary > Region::process_gtf(const std
         if(!line.empty() && line[0]!='#')
         {
             std::vector<std::string> token = misc::split(line, "\t");
-            if(token[2].compare("exon")==0 || token[2].compare("gene")==0 || token[2].compare("protein_coding")==0 ||
-            		token[2].compare("CDS")==0)
+            if(in_feature(token[2]))
             {
                 std::string chr = token[0];
                 int temp=0;
@@ -404,7 +406,6 @@ void Region::process_msigdb(const std::string &msigdb,
                     }
                              );
 //                    m_region_found.push_back((double)found/(double)token.size());
-                    m_processed_regions.push_back(std::pair<std::string, double>(name, (double)found/(double)(token.size()-1)));
                     if(found != 0){
                     		if(m_dup_names.find(name)!=m_dup_names.end())
                     		{
@@ -414,6 +415,7 @@ void Region::process_msigdb(const std::string &msigdb,
                     		else{
                     			m_dup_names.insert(name);
                     			m_region_name.push_back(name);
+                    			m_processed_regions.push_back(std::pair<std::string, double>(name, (double)found/(double)(token.size()-1)));
                         		m_region_list.push_back(current_region);
                     		}
                     }

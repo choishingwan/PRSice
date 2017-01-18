@@ -38,7 +38,9 @@ public:
     std::vector<std::string> get_bed() const { return m_bed_list; };
     std::vector<std::string> get_cov_header() const { return m_covariates; };
     std::vector<std::string> get_pheno_col() const { return m_pheno_col; };
+    std::vector<std::string> get_feature() { return m_feature; };
     size_t get_thread() const { return m_thread; };
+    size_t get_perm() const { return m_permutation; };
     size_t get_clump_kb() const { return m_clump_kb; };
     double get_clump_p() const { return m_clump; };
     double get_clump_r2() const { return m_clump_r2; };
@@ -60,6 +62,7 @@ public:
         }
         return -2;
     };
+    double get_cur_category(int i) const { return (i<0)? m_barlevel.at(0) : m_barlevel.at(i); };
     std::vector<bool> target_is_binary() const { return m_target_is_binary; };
     bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
     bool no_regression() const { return m_no_regress; };
@@ -79,6 +82,7 @@ private:
     std::vector<std::string> m_covariates;
     std::vector<std::string> m_bed_list;
     std::vector<std::string> m_pheno_col;
+    std::vector<std::string> m_feature;
     std::vector<double> m_barlevel;
     std::string m_target;
     std::string m_pheno_file;
@@ -110,6 +114,7 @@ private:
     double m_clump;
     double m_clump_r2;
     size_t m_clump_kb;
+    size_t m_permutation;
     double m_lower;
     double m_upper;
     double m_inter;

@@ -50,6 +50,8 @@ bool Commander::initialize(int argc, char *argv[])
         {"no_regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
+        {"feature",required_argument,NULL,0},
+        {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
@@ -184,6 +186,22 @@ bool Commander::initialize(int argc, char *argv[])
             {
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 m_pheno_col.insert(m_pheno_col.end(), token.begin(), token.end());
+            }
+            else if(command.compare("perm")==0)
+            {
+            	int temp = atoi(optarg);
+            	if(temp < 0.0)
+            	{
+            		error = true;
+            		error_message.append("Number of permutation must be bigger than 0\n");
+            	}
+            	else m_permutation = temp;
+
+            }
+            else if(command.compare("feature")==0)
+            {
+            	std::vector<std::string> token = misc::split(optarg, ", ");
+            	m_feature.insert(m_feature.end(), token.begin(), token.end());
             }
             else
             {
@@ -381,6 +399,13 @@ bool Commander::initialize(int argc, char *argv[])
         m_barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
     }
     std::sort(m_barlevel.begin(), m_barlevel.end());
+    if(m_feature.empty())
+    {
+    	m_feature.push_back("exon");
+    	m_feature.push_back("gene");
+    	m_feature.push_back("protein_coding");
+    	m_feature.push_back("CDS");
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }
@@ -417,6 +442,7 @@ Commander::Commander()
     m_clump = 1.0;
     m_clump_r2 = 0.1;
     m_clump_kb = 250000;
+    m_permutation = 0;
     m_lower = 0.0001;
     m_upper = 0.5;
     m_inter = 0.00005;
@@ -503,12 +529,17 @@ void Commander::info()
 			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
 			"represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if it is not physically "
 			"within these regions"));
+	m_help_messages.push_back(help("PRSet", '\0', "feature", "Features to be included from the gtf file. Default "
+			"is exon, CDS, gene and protein_coding. If this parameter is provided, all default will be ignored."));
 	m_help_messages.push_back(help("PRSlice", '\0', "prslice", "Perform PRSlice where the whole genome is first "
 			"cut into bin size specified by this option. PRSice will then be performed on each bin. Bins are "
 			"then sorted according to the their R2. PRSice is then performed again to find the best bin combination."
 			" This cannot be performed together with PRSet"));
 	m_help_messages.push_back(help("Plotting", '\0', "bar_levels", "Level of barchart to be plotted. When fastscore "
 			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
+	m_help_messages.push_back(help("Misc", '\0', "perm", "Number of permutation to perform. When this parameter is provided,"
+			" permutation will be performed to obtain an empirical P-value. This will significantly increases the run time "
+			"of PRSice."));
 	m_help_messages.push_back(help("Misc", 'T', "thread", "Number of thread use"));
 	m_help_messages.push_back(help("Misc", 'h', "help", "Display this help message"));
 }

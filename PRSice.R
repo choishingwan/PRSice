@@ -243,6 +243,7 @@ option_list <- list(
     e.g. --proxy 0.8 means the index SNP will represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if
     it is not physically within these regions"
   ),
+  make_option("--feature", type="character", help="Features to be included from the gtf file. Default is exon, CDS, gene and protein_coding. If this parameter is provided, all default will be ignored."),
   make_option(
     "--prslice",
     type = "numeric",
@@ -263,6 +264,8 @@ option_list <- list(
     default = 1
   ),
   make_option(
+      "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
+  make_option(
     "--c_help",
     action = "store_true",
     help = "Print the help message from the c++ program instead",
@@ -281,7 +284,7 @@ option_list <- list(
     help = "Number of quantiles to plot. 0 = Not producing the quantile plot",
     default = 0
   ),
-  make_option(c("--quant_extract", "-e"), type = "character", help = "File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples"),
+  make_option(c("--quant_extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples"),
   make_option(
     "--bar_level",
     type = "character",
@@ -296,22 +299,28 @@ option_list <- list(
     default = F
   ),
   make_option(
-    "--bar_col_r2",
+    "--bar_col_p",
     action = "store_true",
-    help = "Change the colour of bar to R2 instead of p-value",
+    help = "Change the colour of bar to p-value threshold instead of the association with phenotype",
     default = F
   ),
   make_option(
     "--bar_col_low",
     type = "character",
-    help = "Colour of the poorest predicting thresholds",
+    help = "Colour of the poorest predicting threshold",
     default = "dodgerblue"
   ),
   make_option(
     "--bar_col_high",
     type = "character",
-    help = "Colour of the highest predicting thresholds",
+    help = "Colour of the most predicting threshold",
     default = "firebrick"
+  ),
+  make_option(
+    "--bar_palatte",
+    type="character",
+    help ="Colour palatte to be used for bar plotting when --bar_col_p is set",
+    default = "YlOrRd"
   ),
   make_option("--prsice", type = "character", help = "Location of the PRSice binary"),
   make_option("--dir", type = "character", help = "Location to install ggplot. Only require if ggplot is not installed")
@@ -337,9 +346,10 @@ not_cpp <-
     "intermediate",
     "quant_ref",
     "scatter_r2",
-    "bar_col_r2",
+    "bar_col_p",
     "bar_col_low",
     "bar_col_high",
+    "bar_palatte",
     "prsice",
     "dir"
   )
@@ -728,17 +738,17 @@ bar_plot <- function(PRS, prefix, argv) {
   output$print.p <- sub("e", "*x*10^", output$print.p)
   ggfig.plot <- ggplot(data = output)
   
-  if (!argv$bar_col_r2) {
+  if (argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),
         y = R2,
         fill = factor(Threshold)
       ), stat = "identity") +
-      scale_fill_brewer(palette = "YlOrRd",
+      scale_fill_brewer(palette = argv$palatte,
                         name = expression(italic(P) - value ~ threshold))
   }
-  if (argv$bar_col_r2) {
+  if (!argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),

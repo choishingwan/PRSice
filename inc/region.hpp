@@ -28,7 +28,7 @@
 class Region
 {
 public:
-    Region();
+    Region(std::vector<std::string> feature);
     virtual ~Region();
     void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out, bool gen_bed);
     void reset()
@@ -69,6 +69,13 @@ public:
     int get_count(size_t i) const { return m_region_count.at(i); };
 
 private:
+    bool in_feature(std::string in) const{
+    	for(auto feature: m_feature)
+    	{
+    		if(in.compare(feature)==0) return true;
+    	}
+    	return false;
+    }
     typedef std::tuple<std::string, size_t, size_t> boundary;
     void process_bed(const std::vector<std::string> &bed);
     std::unordered_map<std::string, boundary > process_gtf(const std::string &gtf,
@@ -78,6 +85,7 @@ private:
                         const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
     std::unordered_set<std::string> m_dup_names;
     std::vector<std::string> m_region_name;
+    std::vector<std::string> m_feature;
     std::vector< std::vector<boundary> > m_region_list;
     std::vector<std::pair<std::string, double> > m_processed_regions;
     std::vector<int> m_region_count;

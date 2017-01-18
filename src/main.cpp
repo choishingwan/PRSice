@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
-    Region region = Region();
+    Region region = Region(commander.get_feature());
     try
     {
         region.run(commander.get_gtf(), commander.get_msigdb(), commander.get_bed(), commander.get_out(), commander.gen_bed());
@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
             		/**
             		 * Initialize the PRSice object
             		 */
-                PRSice prsice = PRSice(base_name, i_base, commander.get_target(), commander.target_is_binary());
-                double threshold = (full_model)? 1.0:bound_end;
+                PRSice prsice = PRSice(base_name, i_base, commander.get_target(), commander.target_is_binary(), commander.get_perm());
+                double threshold = (full_model)? 1.0:((commander.fastscore())? commander.get_bar_upper() : bound_end);
                 /**
                  * Read in SNPs from the base file. We will only include SNPs less than threhsold as
                  * they will be ignored in the whole process anyway
