@@ -609,7 +609,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     }
     m_best_score = m_current_prs;
 
-    int max_category = std::get<+PRS::CATEGORY>(m_partition.back());
+    int max_category = std::get<+PRS::CATEGORY>(m_partition.back())+1;
     int non_full_upper_category = (int)((bound_end-bound_start)/bound_inter);
     size_t num_region = c_region.size();
     size_t partition_size = m_partition.size();
