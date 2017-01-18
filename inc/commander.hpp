@@ -62,7 +62,7 @@ public:
         }
         return -2;
     };
-    int get_cur_category(int i) const { return m_barlevel.at(i); };
+    double get_cur_category(int i) const { return m_barlevel.at(i); };
     std::vector<bool> target_is_binary() const { return m_target_is_binary; };
     bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
     bool no_regression() const { return m_no_regress; };
