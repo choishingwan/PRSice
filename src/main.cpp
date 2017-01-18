@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
             		 * Initialize the PRSice object
             		 */
                 PRSice prsice = PRSice(base_name, i_base, commander.get_target(), commander.target_is_binary(), commander.get_perm());
-                double threshold = (full_model)? 1.0:bound_end;
+                double threshold = (full_model)? 1.0:((commander.fastscore())? commander.get_bar_upper() : bound_end);
                 /**
                  * Read in SNPs from the base file. We will only include SNPs less than threhsold as
                  * they will be ignored in the whole process anyway
