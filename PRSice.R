@@ -284,7 +284,7 @@ option_list <- list(
     help = "Number of quantiles to plot. 0 = Not producing the quantile plot",
     default = 0
   ),
-  make_option(c("--quant_extract", "-e"), type = "character", help = "File contain sample id to be plot on a separated quantile e.g. extra quantile containing only these samples"),
+  make_option(c("--quant_extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples"),
   make_option(
     "--bar_level",
     type = "character",
@@ -307,19 +307,19 @@ option_list <- list(
   make_option(
     "--bar_col_low",
     type = "character",
-    help = "Colour of the poorest predicting thresholds",
+    help = "Colour of the poorest predicting threshold",
     default = "dodgerblue"
   ),
   make_option(
     "--bar_col_high",
     type = "character",
-    help = "Colour of the highest predicting thresholds",
+    help = "Colour of the most predicting threshold",
     default = "firebrick"
   ),
   make_option(
     "--bar_palatte",
     type="character",
-    help ="Colour palatte to be used for bar plotting",
+    help ="Colour palatte to be used for bar plotting when --bar_col_p is set",
     default = "YlOrRd"
   ),
   make_option("--prsice", type = "character", help = "Location of the PRSice binary"),
