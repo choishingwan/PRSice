@@ -299,9 +299,9 @@ option_list <- list(
     default = F
   ),
   make_option(
-    "--bar_col_r2",
+    "--bar_col_p",
     action = "store_true",
-    help = "Change the colour of bar to R2 instead of p-value",
+    help = "Change the colour of bar to p-value threshold instead of the association with phenotype",
     default = F
   ),
   make_option(
@@ -346,7 +346,7 @@ not_cpp <-
     "intermediate",
     "quant_ref",
     "scatter_r2",
-    "bar_col_r2",
+    "bar_col_p",
     "bar_col_low",
     "bar_col_high",
     "bar_palatte",
@@ -738,7 +738,7 @@ bar_plot <- function(PRS, prefix, argv) {
   output$print.p <- sub("e", "*x*10^", output$print.p)
   ggfig.plot <- ggplot(data = output)
   
-  if (argv$bar_col_r2) {
+  if (argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),
@@ -748,7 +748,7 @@ bar_plot <- function(PRS, prefix, argv) {
       scale_fill_brewer(palette = argv$palatte,
                         name = expression(italic(P) - value ~ threshold))
   }
-  if (!argv$bar_col_r2) {
+  if (!argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
         x = factor(Threshold),
