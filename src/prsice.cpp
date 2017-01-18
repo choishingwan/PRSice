@@ -618,8 +618,10 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region, const 
     {
 
     		int cur_category = std::get<+PRS::CATEGORY>(m_partition[cur_start_index]);
+    		// This is correct only if we are not using the bar_level
     		cur_threshold = (cur_category > non_full_upper_category)? 1:
-    				std::min((cur_category+1)*bound_inter+bound_start, bound_end);
+    				((fastscore)? c_commander.get_cur_category(cur_category) :
+    				std::min((cur_category+1)*bound_inter+bound_start, bound_end));
     		if(!prslice) fprintf(stderr, "\rProcessing %03.2f%%", (double)cur_category/(double)(max_category)*100.0);
     		bool reg = get_prs_score(cur_start_index);
     		if(require_all && all_out.is_open())
