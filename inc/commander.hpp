@@ -57,7 +57,7 @@ public:
         {
             if(p < m_barlevel[i])
             {
-                return i-1;
+                return i;
             }
         }
         return -2;
