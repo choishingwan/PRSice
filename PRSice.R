@@ -30,9 +30,9 @@
 # Library handling --------------------------------------------------------
 
 if(!exists('startsWith', mode='function')){
-	startsWith <- function(x, prefix){
-		return(substring(x, 1, nchar(prefix)) == prefix)
-	}
+  startsWith <- function(x, prefix){
+    return(substring(x, 1, nchar(prefix)) == prefix)
+  }
 }
 
 libraries <-
@@ -264,7 +264,7 @@ option_list <- list(
     default = 1
   ),
   make_option(
-      "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
+    "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
   make_option(
     "--c_help",
     action = "store_true",
@@ -805,8 +805,13 @@ run_plot <- function(prefix, argv, pheno, binary, cov) {
     fread(paste(prefix, ".best", sep = ""),
           header = T,
           data.table = F)
+  
+  # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
+  # Good thing is, only quantile plot really needs the cov and phenotype information
   if (provided("quantile", argv) && argv$quantile > 0) {
+    # Main purpose, match up with PRS.best as that is the input
     if (!is.null(cov)) {
+      cov = cov[cov[,1]%in%PRS.best[,1],]
       cov = cov[!is.na(pheno), ]
     }
     cur_pheno = pheno[!is.na(pheno)]
@@ -959,9 +964,7 @@ if (provided("intermediate", argv)) {
         stop("Too many binary target information. We only have one phenotype")
       }
     }
-    # we have the correct information of phenos, bases and binary_target here
-    
-    # Now we have the correct information of phenos, bases and binary_target here
+    # Now we have the correct header of phenos, bases and binary_target information
     # Need to get the covariates
     covariance = NULL
     if (provided("covar_file", argv)) {
@@ -970,7 +973,9 @@ if (provided("intermediate", argv)) {
                          header = T)
       if (provided("covar_header", argv)) {
         c = strsplit(argv$covar_header, split = ",")[[1]]
-        covariance = covariance[, colnames(covariance) %in% c]
+        selected = colnames(covariance)%in%c
+        selected[1] = TRUE # we always want the IID information, which should be the first column
+        covariance = covariance[, selected]
       }
     }
     for (b in bases) {
@@ -988,19 +993,24 @@ if (provided("intermediate", argv)) {
           data.table = F,
           header = F
         )$V2
-        pheno_file = pheno_file[pheno_file[, 1] %in% fam, ]
+        pheno_file = pheno_file[pheno_file[, 1] %in% fam, ] # This will select only samples found within the fam file
         match_cov = NULL
         if (!is.null(covariance)) {
           match_cov = covariance[covariance[, 1] %in% fam,]
         }
         id = 1
-        for (p in phenos) {
-          cur_prefix = paste(prefix, p, region, sep = ".")
-          run_plot(cur_prefix,
-                   argv,
-                   pheno_file[[p]],
-                   binary_target[id],
-                   match_cov)
+        phenos.index <- unlist(apply(as.matrix(phenos), 1,function(x,y){z=which(x==y); if(length(z)==0){return(NA)}else{return(z)}},colnames(pheno_file)))
+        for (p in 1:length(phenos.index)) {
+          if(!is.na(phenos.index[p])){
+            cur_prefix = paste(prefix, phenos[p], region, sep = ".")
+            run_plot(cur_prefix,
+                     argv,
+                     pheno_file[,c(1,phenos.index[p])], # want to also include the iid line
+                     binary_target[id],
+                     match_cov)
+          }else{
+            writeLines(paste(phenos[p],"not found in the phenotype file. It will be ignored"))
+          }
           id = id + 1
         }
       } else{
@@ -1010,7 +1020,7 @@ if (provided("intermediate", argv)) {
           paste(argv$target, ".fam", sep = ""),
           data.table = F,
           header = F
-        )$V6
+        )$V2
         match_cov = NULL
         if (!is.null(covariance)) {
           match_cov = covariance[covariance[, 1] %in% fam,]
@@ -1020,7 +1030,7 @@ if (provided("intermediate", argv)) {
                         data.table = F,
                         header = F)
           
-          fam = pheno$V2[pheno$V1 %in% fam]
+          fam = pheno[pheno$V1 %in% fam,]
         }
         run_plot(cur_prefix, argv, fam, binary_target[1], match_cov)
       }
