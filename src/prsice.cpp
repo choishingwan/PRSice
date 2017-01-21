@@ -923,7 +923,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file, const std::vector<std
                 }
                 if(valid)
                 {
-                	valid_samples.push_back(std::pair<std::string, size_t>(index));
+                	valid_samples.push_back(std::pair<std::string, size_t>(token[0], index));
                 }
             }
         }
@@ -933,15 +933,16 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file, const std::vector<std
     {
     	int removed = m_sample_with_phenotypes.size() - valid_samples.size();
         fprintf(stderr, "Number of samples with invalid covariate: %zu\n", removed);
-    	if((double)removed/(double)m_sample_with_phenotypes.size() > 0.05)
+        double portion = (double)removed/(double)m_sample_with_phenotypes.size();
+    	if(portion > 0.05)
     	{
-    	    fprintf(stderr, "WARNING! More than 5% of the samples were removed!\n");
+    	    fprintf(stderr, "WARNING! More than %03.2f%% of the samples were removed!\n", portion*100);
     	    fprintf(stderr, "         Do check if your covariate file is correct\n");
     	}
     	std::sort(begin(valid_samples), end(valid_samples),
-    	              [](p_partition const &t1, p_partition const &t2)
+    	              [](std::pair<std::string, size_t> const &t1, std::pair<std::string, size_t> const &t2)
     	    {
-    	        if(std::get<1>(t1)==std::get<1>(t2)) return std::get<0>(t1).compare(std::get<1>(t2)) < 0;
+    	        if(std::get<1>(t1)==std::get<1>(t2)) return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
     	        else return std::get<1>(t1)<std::get<1>(t2);
     	    }
     		);
