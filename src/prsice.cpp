@@ -931,6 +931,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file, const std::vector<std
     // now we need to handle the situation where there are a different number of samples
     if(valid_samples.size() != m_sample_with_phenotypes.size())
     {
+    	m_sample_names.clear();
     	int removed = m_sample_with_phenotypes.size() - valid_samples.size();
         fprintf(stderr, "Number of samples with invalid covariate: %zu\n", removed);
         double portion = (double)removed/(double)m_sample_with_phenotypes.size();
@@ -949,6 +950,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file, const std::vector<std
     	// update the m_phenotype and m)independent
     	for(size_t cur_index= 0; cur_index < valid_samples.size(); ++cur_index)
     	{
+    		m_sample_names.push_back(prs_score(std::get<0>(valid_samples[cur_index]), 0.0));
     		size_t update_index = std::get<1>(valid_samples[cur_index]);
     		if(update_index != cur_index)
     		{
