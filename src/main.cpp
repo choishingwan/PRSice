@@ -64,9 +64,8 @@ int main(int argc, char *argv[]) {
 				std::string region_out_name = commander.get_out() + "."
 						+ base_name + ".region";
 				region.print_file(region_out_name);
-				return 0;
 				prsice.clump(commander);
-
+				return 0;
 				prsice.init_pheno(commander);
 				size_t num_pheno = prsice.num_phenotype();
 				if (!perform_prslice) {

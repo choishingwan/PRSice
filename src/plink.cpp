@@ -151,7 +151,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
             std::string error_message = "Cannot open bim file: "+bim_name;
             throw std::runtime_error(error_message);
         }
-        m_num_snp.push_back(0);
+        m_num_snp.push_back(0); // for each file, record down the number of SNPs
         while(std::getline(m_bim, line))
         {
             cur_num_line++;

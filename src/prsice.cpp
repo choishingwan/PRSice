@@ -283,6 +283,7 @@ void PRSice::clump(const Commander &c_commander) {
 	//m_snp_list = temp_snp_list;
 }
 
+// Currently does not check indel. Might want to also check it?
 void PRSice::check_inclusion(const std::string &c_target_bim_name,
 		size_t &num_ambig, size_t &not_found, size_t &num_duplicate) {
 	std::ifstream target_file;
@@ -347,7 +348,7 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 							fprintf(stderr,
 									"         It is advised that you check the files are \n");
 							fprintf(stderr,
-									"         From the same genome build\n");
+									"         from the same genome build\n");
 						}
 					}
 					m_include_snp[rsid] = index;
