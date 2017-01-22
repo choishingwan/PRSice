@@ -72,7 +72,6 @@ int main(int argc, char *argv[]) {
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
 						prsice.init_matrix(commander, i_pheno, perform_prslice);
 						try {
-							return 0;
 							prsice.prsice(commander, region, i_pheno);
 							fprintf(stderr, "\n");
 							prsice.output(commander, region, i_pheno);
