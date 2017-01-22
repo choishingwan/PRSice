@@ -1003,7 +1003,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 							m_independent_variables(update_index, i_cov + 2);
 				}
 			}
-			m_sample_with_phenotype[name]  = cur_index;
+			m_sample_with_phenotypes[name]  = cur_index;
 		}
 		m_independent_variables.conservativeResize(valid_samples.size(),
 				m_independent_variables.cols());
@@ -1046,7 +1046,7 @@ bool PRSice::get_prs_score(size_t &cur_index) {
 
 void PRSice::thread_score(size_t region_start, size_t region_end,
 		double threshold, size_t thread, const size_t c_pheno_index) {
-
+	std::cerr << "Into thread score" << std::endl;
 	Eigen::MatrixXd X;
 	bool thread_safe = false;
 	if (region_start == 0 && region_end == m_current_prs.size())
@@ -1065,6 +1065,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			std::string sample = std::get < +PRS::IID > (prs);
 			if (m_sample_with_phenotypes.find(sample)
 					!= m_sample_with_phenotypes.end()) {
+				std::cerr << "Updating the independent variables" << std::endl;
 				if (thread_safe)
 					m_independent_variables(m_sample_with_phenotypes.at(sample),
 							1) = std::get < +PRS::PRS
@@ -1077,6 +1078,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			}
 		}
 		size_t num_better = 0;
+		std::cerr << "start running regression" << std::endl;
 		if (m_target_binary[c_pheno_index]) {
 			try {
 				if (thread_safe)
@@ -1147,6 +1149,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 					num_better++;
 			}
 		}
+		std::cerr << "Regression completed" << std::endl;
 		// This should be thread safe as each thread will only mind their own region
 		// now add the PRS result to the vectors (hopefully won't be out off scope
 		PRSice_result res;
