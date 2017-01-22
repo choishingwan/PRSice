@@ -84,9 +84,12 @@ void PLINK::initialize()
         std::cerr << bim_name.c_str() << std::endl;
         while(std::getline(m_bim, line))
         {
+        	std::cerr << "Adding stuff?" << std::endl;
             if(!misc::trimmed(line).empty()) m_num_snp.back()++;
             std::cerr << "Check size: " << misc::split(line).size() << std::endl;
+            std::cerr << "Size ok" << std::endl;
             m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+            std::cerr << "Finished push back" << std::endl;
         }
         m_bim.close();
         std::cerr << "bim completed" << std::endl;
