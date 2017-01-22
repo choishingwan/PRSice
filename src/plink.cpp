@@ -88,7 +88,12 @@ void PLINK::initialize()
             if(!misc::trimmed(line).empty()) m_num_snp.back()++;
             std::cerr << "Check size: " << misc::split(line).size() << std::endl;
             std::cerr << "Size ok" << std::endl;
-            m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
+            std::vector<std::string> token = misc::split(line);
+            if(token.size() > 2)
+            {
+            	std::cerr << "Adding" << std::endl;
+            	 m_snp_id.push_back(token[1]);
+            }
             std::cerr << "Finished push back" << std::endl;
         }
         m_bim.close();
