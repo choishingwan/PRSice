@@ -53,7 +53,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"feature",required_argument,NULL,0},
         {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
-        {"no_clump",required_argument,NULL,0},
+        {"no_clump",no_argument,NULL,0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
     };
@@ -622,4 +622,38 @@ void Commander::program_info()
 	std::cerr << "####################################################################" << std::endl;
 
 
+}
+
+Commander::user_input() const{
+	fprintf(stderr, "\nUser Input\n");
+	fprintf(stderr, "==============================\n");
+	fprintf(stderr, "Base files: ");
+	for (size_t i_base = 0; i_base < m_base.size(); ++i_base) {
+			if (!m_use_beta.at(i_base)) {
+				fprintf(stderr, "%s(OR) ", m_base[i_base].c_str());
+			} else {
+				fprintf(stderr, "%s(Beta) ", m_base[i_base].c_str());
+			}
+		}
+		fprintf(stderr, "\n");
+		fprintf(stderr, "\nUser Defined Column Headers\n");
+		fprintf(stderr, "==============================\n");
+		if (!m_chr.empty())
+			fprintf(stderr, "Chr            : %s\n", m_chr.c_str());
+		fprintf(stderr, "SNP            : %s\n", m_snp.c_str());
+		if (!m_bp.empty())
+			fprintf(stderr, "BP             : %s\n", m_bp.c_str());
+		fprintf(stderr, "Ref Allele     : %s\n", m_ref_allele.c_str());
+		if (!m_alt_allele.empty())
+			fprintf(stderr, "Alt Allele     : %s\n", m_alt_allele.c_str());
+		if (!m_statistic.empty())
+			fprintf(stderr, "Statistic      : %s\n", m_statistic.c_str());
+		if (!m_standard_error.empty())
+			fprintf(stderr, "Standard Error : %s\n", m_standard_error.c_str());
+		fprintf(stderr, "P-value        : %s\n", m_p_value.c_str());
+		fprintf(stderr, "\nClumping Parameters: \n");
+		fprintf(stderr, "==============================\n");
+		fprintf(stderr, "P-Threshold  : %f\n", m_clump);
+		fprintf(stderr, "R2-Threshold : %f\n", m_clump_r2);
+		fprintf(stderr, "Window Size  : %zu\n", m_clump_kb);
 }

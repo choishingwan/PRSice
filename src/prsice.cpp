@@ -676,9 +676,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		if (!prslice)
 			fprintf(stderr, "\rProcessing %03.2f%%",
 					(double) cur_category / (double) (max_category) * 100.0);
-		std::cerr << "Before get prs score" << std::endl;
 		bool reg = get_prs_score(cur_start_index);
-		std::cerr << "After get prs score" << std::endl;
 		if (require_all && all_out.is_open()) {
 			for (size_t i_region = 0; i_region < m_current_prs.size();
 					++i_region) {
@@ -1018,7 +1016,6 @@ bool PRSice::get_prs_score(size_t &cur_index) {
 	if (m_partition.size() == 0)
 		return false; // nothing to do
 	int prev_index = std::get < +PRS::CATEGORY > (m_partition[cur_index]);
-	std::cerr << "Prev index: " << prev_index << std::endl;
 	int end_index = 0;
 	bool ended = false;
 	for (size_t i = cur_index; i < m_partition.size(); ++i) {
@@ -1039,20 +1036,17 @@ bool PRSice::get_prs_score(size_t &cur_index) {
 	}
 	if (!ended)
 		end_index = m_partition.size();
-	std::cerr << "Going into plink" << std::endl;
 	PLINK prs(m_target, m_chr_list);
-	std::cerr << "back from initialization" << std::endl;
 	prs.initialize();
-	std::cerr << "Real get score" << std::endl;
 	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
-	std::cerr << "Back" << std::endl;
+
 	cur_index = end_index;
 	return true;
 }
 
 void PRSice::thread_score(size_t region_start, size_t region_end,
 		double threshold, size_t thread, const size_t c_pheno_index) {
-	std::cerr << "Into thread score" << std::endl;
+
 	Eigen::MatrixXd X;
 	bool thread_safe = false;
 	if (region_start == 0 && region_end == m_current_prs.size())
@@ -1071,7 +1065,6 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			std::string sample = std::get < +PRS::IID > (prs);
 			if (m_sample_with_phenotypes.find(sample)
 					!= m_sample_with_phenotypes.end()) {
-				std::cerr << "Updating the independent variables" << std::endl;
 				if (thread_safe)
 					m_independent_variables(m_sample_with_phenotypes.at(sample),
 							1) = std::get < +PRS::PRS
@@ -1084,7 +1077,6 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			}
 		}
 		size_t num_better = 0;
-		std::cerr << "start running regression" << std::endl;
 		if (m_target_binary[c_pheno_index]) {
 			try {
 				if (thread_safe)
@@ -1155,7 +1147,6 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 					num_better++;
 			}
 		}
-		std::cerr << "Regression completed" << std::endl;
 		// This should be thread safe as each thread will only mind their own region
 		// now add the PRS result to the vectors (hopefully won't be out off scope
 		PRSice_result res;

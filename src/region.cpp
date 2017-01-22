@@ -47,6 +47,26 @@ Region::Region(std::vector<std::string> feature)
     m_feature =feature;
 }
 
+Region::print_file(std::string output)
+{
+	std::ofstream region_out.open(output.c_str());
+	if (!region_out.is_open()) {
+		fprintf(stderr,
+				"Cannot open region information file to write: %s\n",
+				region_out_name.c_str());
+		return -1;
+	}
+	region_out << "Region\t%Gene info\t#SNPs" << std::endl;
+	for (size_t i_region = 0; i_region < m_processed_regions.size();
+			++i_region) {
+		region_out << std::get < 0 > (m_processed_regions[i_region])
+				<< "\t" <<
+				std::get < 1 > (m_processed_regions[i_region]) << "\t"
+				<< m_region_count[i_region] << std::endl;
+	}
+	region_out.close();
+}
+
 Region::~Region() {}
 
 std::vector<Region::long_type> Region::check(std::string chr, size_t loc)
@@ -426,3 +446,11 @@ void Region::process_msigdb(const std::string &msigdb,
     }
 }
 
+void Region::info() const{
+	fprintf(stderr, "\nRegion Information\n");
+	fprintf(stderr, "==============================\n");
+	if (m_region_name.size() == 1)
+		fprintf(stderr, "1 region is included\n");
+	else if (m_region_name.size() > 1)
+		fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
+}
