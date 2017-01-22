@@ -913,6 +913,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         				{
         					if(snp_list[snp_index].in(i_region))
         					{
+        						std::cerr << "Size check: " << prs_score.size() << "\t" << i_region << std::endl;
+        						std::cerr << "Cont: " << prs_score[i_region].size() << std::endl;
+        						std::cerr << "Size: " << snp_list.size() << "\t" << snp_index << std::endl;
         						prs_score[i_region][sample_index].second += snp_list[snp_index].score(geno);
         					}
         				}
