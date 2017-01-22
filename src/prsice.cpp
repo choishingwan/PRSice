@@ -958,6 +958,9 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 						m_independent_variables(index, i_cov + 2) = temp; // + 2 because first line = intercept, second line = PRS
 					} catch (const std::runtime_error &error) {
 						valid = false;
+						std::cerr << i_cov << std::endl;
+						std::cerr << cov_index[i_cov] << std::endl;
+						std::cerr << "Invalid: " << token[cov_index[i_cov]] << std::endl;
 						m_independent_variables(index, i_cov + 2) = 0;
 					}
 				}
