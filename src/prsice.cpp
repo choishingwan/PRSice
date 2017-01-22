@@ -568,6 +568,34 @@ void PRSice::categorize(const Commander &c_commander)
                     std::get<+PRS::LINE>(part) = cur_line;
                     std::get<+PRS::INDEX>(part) = cur_snp_index;
                     std::get<+PRS::FILENAME>(part) = name;
+                    int category = -1;
+                    if(fastscore)
+                    {
+                    	category = c_commander.get_category(p);
+                    	std::get<+PRS::CATEGORY>(part) = category;
+                    	std::get<+PRS::P_THRES>(part) = c_commander.get_threshold(category);
+                    	m_partition.push_back(part);
+                    }
+                    else
+                    {
+                    	// calculate the threshold instead
+                    	if(p > bound_end && full_model)
+                    	{
+                        	std::get<+PRS::CATEGORY>(part) = std::ceil((bound_end+0.1-bound_start)/bound_inter);
+                        	std::get<+PRS::P_THRES>(part) = 1.0;
+                        	m_partition.push_back(part);
+                    	}
+                    	else if(p <= bound_start)
+                    	{
+                    		category = std::ceil((p-bound_start)/bound_inter);
+                    		category = (category < 0)? 0 : category;
+                        	std::get<+PRS::CATEGORY>(part) = category;
+                        	std::get<+PRS::P_THRES>(part) = category * bound_inter + bound_start;
+                        	m_partition.push_back(part);
+                    	}
+                    }
+
+
                     if(p<bound_end)
                     {
                         int category = -1;

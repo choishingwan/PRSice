@@ -55,7 +55,7 @@ public:
     {
         for(int i = 0; i < m_barlevel.size(); ++i)
         {
-            if(p < m_barlevel[i])
+            if(p <= m_barlevel[i])
             {
                 return i;
             }
