@@ -78,6 +78,7 @@ void PLINK::initialize()
         }
         while(std::getline(m_bim, line))
         {
+        	//wtf?
             if(!misc::trimmed(line).empty()) m_num_snp.back()++;
             m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
         }
@@ -913,9 +914,6 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         				{
         					if(snp_list[snp_index].in(i_region))
         					{
-        						std::cerr << "Size check: " << prs_score.size() << "\t" << i_region << std::endl;
-        						std::cerr << "Cont: " << prs_score[i_region].size() << std::endl;
-        						std::cerr << "Size: " << snp_list.size() << "\t" << snp_index << std::endl;
         						prs_score[i_region][sample_index].second += snp_list[snp_index].score(geno);
         					}
         				}

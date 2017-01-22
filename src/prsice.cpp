@@ -902,7 +902,6 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 	std::vector < size_t > cov_index;
 	int max_index = 0;
 	size_t found_samples = 0;
-	size_t invalid_samples = 0;
 	std::getline(cov, line);
 	// obtain the header information of the covariate file
 	if (!line.empty()) {
@@ -965,15 +964,12 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 					valid_samples.push_back(
 							std::pair<std::string, size_t>(token[0], index));
 				}
-				else invalid_samples++;
 			}
 		}
 	}
 	// now we need to handle the situation where there are a different number of samples
 	fprintf(stderr, "Number of samples found with covariate info: %zu\n",
 			found_samples);
-	fprintf(stderr, "Number of samples with invalid covariate: %zu\n",
-			invalid_samples);
 	if (valid_samples.size() != m_sample_with_phenotypes.size()) {
 		m_sample_names.clear();
 		int removed = m_sample_with_phenotypes.size() - valid_samples.size();
