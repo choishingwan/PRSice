@@ -37,6 +37,7 @@ void PLINK::initialize()
     {
         m_names.push_back(m_prefix);
     }
+    std::cerr << "name get?" << std::endl;
 //  This should be ok for sample size as that will always be the same for all file
     std::ifstream fam;
     fam.open(fam_name.c_str());
@@ -45,11 +46,12 @@ void PLINK::initialize()
         std::string error_message = "Cannot open fam file: "+fam_name;
         throw std::runtime_error(error_message);
     }
+    std::cerr << "Fam open" << std::endl;
     std::string line;
     while(std::getline(fam, line))
         if(!misc::trimmed(line).empty()) m_num_sample++;
     fam.close();
-
+    std::cerr << "Fam counted" << std::endl;
     // Check whether if the bed file is correct
     for(auto &&bed:m_names)
     {
@@ -63,9 +65,11 @@ void PLINK::initialize()
         }
         m_bed.close();
     }
+    std::cerr << "bed check" << std::endl;
     std::string bed_name = m_names.front()+".bed";
     openPlinkBinaryFile(bed_name, m_bed);
     // Check whether if the bim file is correct
+    std::cerr << "File open" << std::endl;
     for(auto &&bim: m_names)
     {
         std::string bim_name = bim+".bim";
@@ -76,17 +80,21 @@ void PLINK::initialize()
             std::string error_message = "Cannot open bim file: "+bim;
             throw std::runtime_error(error_message);
         }
+        std::cerr << "start getting the snp id" << std::endl;
         while(std::getline(m_bim, line))
         {
             if(!misc::trimmed(line).empty()) m_num_snp.back()++;
             m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
         }
         m_bim.close();
+        std::cerr << "bim completed" << std::endl;
     }
     std::string bim_name = m_names.front()+".bim";
     m_bim.open(bim_name.c_str());
     m_name_index=0;
+    std::cerr << "Cal bytes" << std::endl;
     m_num_bytes=ceil((double)m_num_sample/4.0);
+    std::cerr << "???" << std::endl;
     m_required_bit = m_num_sample*2;
     m_snp_iter=0;
     m_init = true;
