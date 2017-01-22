@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
 						+ base_name + ".region";
 				region.print_file(region_out_name);
 				prsice.clump(commander);
-				return 0;
 				prsice.init_pheno(commander);
 				size_t num_pheno = prsice.num_phenotype();
 				if (!perform_prslice) {
@@ -73,6 +72,7 @@ int main(int argc, char *argv[]) {
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
 						prsice.init_matrix(commander, i_pheno, perform_prslice);
 						try {
+							return 0;
 							prsice.prsice(commander, region, i_pheno);
 							fprintf(stderr, "\n");
 							prsice.output(commander, region, i_pheno);
