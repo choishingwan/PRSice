@@ -110,8 +110,17 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                         else
                         {
                         	// calculate the threshold instead
-
-                        	category = (int)((p-bound_start)/bound_inter);
+                        	if(p > bound_end)
+                        	{
+                        		category = std::ceil((bound_end+0.1-bound_start)/bound_inter);
+                        		threshold = 1.0;
+                        	}
+                        	else if(p <= bound_start)
+                        	{
+                        		category = std::ceil((p-bound_start)/bound_inter);
+                        		category = (category < 0)? 0 : category;
+                        		threshold = category * bound_inter + bound_start;
+                        	}
                         }
                     }
                     catch(const std::runtime_error &error)
