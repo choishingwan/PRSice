@@ -24,9 +24,10 @@ public:
 #endif
     SNP();
     SNP(const std::string rs_id, const std::string chr, const int loc,
-        const std::string ref_allele, const std::string alt_allele,
-        const double statistic, const double se, const double p_value,
-        std::vector<long_type> flag);
+    		const int category, const std::string ref_allele,
+			const std::string alt_allele, const double statistic,
+			const double se, const double p_value, const double m_threshold,
+			std::vector<long_type> flag);
     virtual ~SNP();
     static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input);
     static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
@@ -118,7 +119,8 @@ public:
     {
         return m_rs_id.compare(j.get_rs_id()) == 0;
     }
-
+    int get_category() const { return m_category; };
+    double get_threshold() const { return m_threshold; ;};
 
 protected:
 private:
@@ -138,10 +140,12 @@ private:
     std::string m_rs_id;
     std::string m_chr;
     int m_loc;
+    int m_category;
     size_t m_bit_size;
     double m_stat;
     double m_standard_error;
     double m_p_value;
+    double m_threshold;
     bool m_clumped = false;
     bool m_flipped=false;
     std::vector<size_t> m_clump_target; // index of SNPs that are clumped under this SNP

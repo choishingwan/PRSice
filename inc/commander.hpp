@@ -70,6 +70,7 @@ public:
     bool full() const { return m_full; };
     bool all() const { return m_all; };
     bool print_all() const { return m_print_all; };
+    bool no_clump() const { return m_no_clump; };
 
 protected:
 private:
@@ -110,6 +111,7 @@ private:
     bool m_print_all;
     bool m_beta_provided;
     bool m_stat_provided;
+    bool m_no_clump;
     double m_proxy;
     double m_clump;
     double m_clump_r2;

@@ -53,6 +53,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"feature",required_argument,NULL,0},
         {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
+        {"no_clump",required_argument,NULL,0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
     };
@@ -85,6 +86,7 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("all")==0) m_all = true;
             else if(command.compare("full")==0) m_full = true;
             else if(command.compare("print_all")==0) m_print_all = true;
+            else if(command.compare("no_clump")==0) m_no_clump = true;
             else if(command.compare("clump_p")==0)
             {
                 double temp = atof(optarg);
@@ -439,6 +441,7 @@ Commander::Commander()
     m_beta_provided = false;
     m_stat_provided = false;
     m_proxy = -1.0;
+    m_no_clump = false;
     m_clump = 1.0;
     m_clump_r2 = 0.1;
     m_clump_kb = 250000;

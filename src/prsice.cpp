@@ -58,10 +58,17 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
     bool read_error = false;
     bool not_converted = false;
     bool exclude=false;
+    // category related stuff
+    bool fastscore = c_commander.fastscore();
+    double bound_start = c_commander.get_lower();
+    double bound_end = c_commander.get_upper();
+    double bound_inter = c_commander.get_inter();
     std::vector<std::string> token;
     // Actual reading the file, will do a bunch of QC
     while(std::getline(snp_file, line))
     {
+    	double threshold = 0.0;
+    	int category = 0;
         misc::trim(line);
         if(!line.empty())
         {
@@ -84,6 +91,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 {
                     try
                     {
+                    	// obtain the p-value and calculate the corresponding threshold & category
                         pvalue = misc::convert<double>(token[index[+SNP_Index::P]]);
                         if(pvalue < 0.0 || pvalue > 1.0)
                         {
@@ -95,6 +103,16 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                             exclude=true;
                             num_exclude++;
                         }
+                        if(fastscore)
+                        {
+
+                        }
+                        else
+                        {
+                        	// calculate the threshold instead
+
+                        	category = (int)((p-bound_start)/bound_inter);
+                        }
                     }
                     catch(const std::runtime_error &error)
                     {
@@ -105,7 +123,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 double stat = 0.0;
                 if(index[+SNP_Index::STAT] >= 0)
                 {
-                    //Check if it is double
+                    //Obtain the test statistic
                     try
                     {
                         stat = misc::convert<double>(token[index[+SNP_Index::STAT]]);
@@ -120,6 +138,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 double se = 0.0;
                 if(index[+SNP_Index::SE] >= 0)
                 {
+                	// obtain the standard error (though it is currently useless)
                     try
                     {
                         se = misc::convert<double>(token[index[+SNP_Index::SE]]);
@@ -132,6 +151,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 int loc = -1;
                 if(index[+SNP_Index::BP]>=0)
                 {
+                	// obtain the SNP coordinate
                     try
                     {
                         int temp = misc::convert<int>(token[index[+SNP_Index::BP]].c_str());
@@ -160,7 +180,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                 }
                 else if(! not_converted && ! exclude)
                 {
-                    m_snp_list.push_back(new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue, region.empty_flag()));
+                    m_snp_list.push_back(new SNP(rs_id, chr, loc, category, ref_allele, alt_allele, stat, se, pvalue, threshold, region.empty_flag()));
                 }
                 else
                 {

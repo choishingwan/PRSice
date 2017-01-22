@@ -126,7 +126,13 @@ int main(int argc, char *argv[])
                  * P.S. The m_included_snp will not be filled without this been done first
                  * thus cause all subsequent analysis to stop
                  */
-                prsice.clump(commander);
+                if(commander.no_clump())
+                {
+
+                }
+                else{
+                	prsice.clump(commander);
+                }
                 /**
                  * Initialize the phenotype information for the target
                  * We can actually perform this outside the loop and set the

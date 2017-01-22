@@ -2,11 +2,12 @@
 
 
 SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
-         const std::string ref_allele, const std::string alt_allele,
-         const double statistic, const double se, const double p_value, std::vector<long_type> flag
-	):m_ref_allele(ref_allele), m_alt_allele(alt_allele),
-    m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se),
-    m_p_value(p_value), m_flags(flag)
+		const int category, const std::string ref_allele,
+		const std::string alt_allele, const double statistic,
+		const double se, const double p_value, const double m_threshold,
+		std::vector<long_type> flag): m_ref_allele(ref_allele), m_alt_allele(alt_allele),
+		m_rs_id(rs_id), m_chr(chr), m_loc(loc),m_category(category),  m_stat(statistic),
+		m_standard_error(se), m_p_value(p_value), m_threshold(threshold), m_flags(flag)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     m_region_clumped = std::vector<long_type>(m_flags.size());
