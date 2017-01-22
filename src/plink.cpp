@@ -951,8 +951,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
         //read_snp(1, false);
-        char genotype_list[m_num_bytes];
-        m_bed.read(genotype_list, m_num_bytes);
+        //char genotype_list[m_num_bytes];
+        std::string genotype_list(m_num_bytes, ' ');
+        m_bed.read(&genotype_list[0], m_num_bytes);
         if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
         prev++;
         size_t sample_index = 0;
