@@ -60,7 +60,7 @@ public:
                 return i;
             }
         }
-        if(p > m_barlevel.end()) return m_barlevel.size();
+        if(p > m_barlevel.back()) return m_barlevel.size();
         return -2;
     };
     double get_threshold(int i) const

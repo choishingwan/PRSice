@@ -86,7 +86,7 @@ public:
     };
     void proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold);
     void clump(boost::ptr_vector<SNP> &snp_list);
-    void set_line(size_t line) { m_plink_line = line};
+    void set_line(size_t line) { m_plink_line = line; };
     void set_loc(int loc)
     {
         m_loc = loc;

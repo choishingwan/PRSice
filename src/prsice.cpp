@@ -102,18 +102,18 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 							num_exclude++;
 						}
 						if (fastscore) {
-							category = c_commander.get_category(p);
+							category = c_commander.get_category(pvalue);
 							threshold = c_commander.get_threshold(category);
 						} else {
 							// calculate the threshold instead
-							if (p > bound_end) {
+							if (pvalue > bound_end) {
 								category = std::ceil(
 										(bound_end + 0.1 - bound_start)
 												/ bound_inter);
 								threshold = 1.0;
-							} else if (p <= bound_start) {
+							} else if (pvalue <= bound_start) {
 								category = std::ceil(
-										(p - bound_start) / bound_inter);
+										(pvalue - bound_start) / bound_inter);
 								category = (category < 0) ? 0 : category;
 								threshold = category * bound_inter
 										+ bound_start;
@@ -270,10 +270,12 @@ void PRSice::clump(const Commander &c_commander) {
 	// now update SNPs based on the inclusion
 	boost::ptr_vector<SNP> temp_snp_list;
 	m_snp_index.clear();
-	for (auto snp : m_snp_list) {
-		if (m_include_snp.find(snp.get_rs_id()) != m_include_snp.end()) {
-			temp_snp_list.push_back(snp);
-			m_snp_index[snp.get_rs_id()] = temp_snp_list.size() - 1;
+	for(boost::ptr_vector<SNP>::iterator it = m_snp_list.begin(); it != m_snp_list.end(); ++it)
+	{
+		if(m_include_snp.find((*it).get_rs_id())!= m_include_snp.end())
+		{
+			temp_snp_list.push_back(m_snp_list.release(it));
+			m_snp_index[(*it).get_rs_id()] = temp_snp_list.size() - 1;
 		}
 	}
 	m_include_snp = m_snp_index;
