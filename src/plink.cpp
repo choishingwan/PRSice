@@ -783,8 +783,9 @@ int PLINK::read_snp(int num_snp, bool ld)
         for(; m_snp_iter < m_num_snp[m_name_index] && cur_iter<num_snp; ++m_snp_iter)
         {
             cur_iter++;
-            char genotype_list[m_num_bytes];
-            m_bed.read(genotype_list, m_num_bytes);
+            //char genotype_list[m_num_bytes];
+            std::string genotype_list(m_num_bytes, ' ');
+            m_bed.read(&genotype_list[0], m_num_bytes);
             size_t i_genotype = 0;
             size_t total_allele = 0;
             size_t num_missing = 0;
