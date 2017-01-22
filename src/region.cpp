@@ -47,14 +47,13 @@ Region::Region(std::vector<std::string> feature)
     m_feature =feature;
 }
 
-Region::print_file(std::string output)
+void Region::print_file(std::string output) const
 {
-	std::ofstream region_out.open(output.c_str());
+	std::ofstream region_out;
+	region_out.open(output.c_str());
 	if (!region_out.is_open()) {
-		fprintf(stderr,
-				"Cannot open region information file to write: %s\n",
-				region_out_name.c_str());
-		return -1;
+		std::string error = "Cannot open region information file to write: " + output;
+		throw std::runtime_error(error);
 	}
 	region_out << "Region\t%Gene info\t#SNPs" << std::endl;
 	for (size_t i_region = 0; i_region < m_processed_regions.size();

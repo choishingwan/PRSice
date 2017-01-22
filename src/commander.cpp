@@ -408,6 +408,11 @@ bool Commander::initialize(int argc, char *argv[])
     	m_feature.push_back("protein_coding");
     	m_feature.push_back("CDS");
     }
+    if(m_inter <=0.0 && !m_fastscore) // double comparison error, need to optimize it
+    {
+    	error = true;
+    	error_message.append("Error: Interval cannot be 0!\n");
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }
@@ -624,7 +629,7 @@ void Commander::program_info()
 
 }
 
-Commander::user_input() const{
+void Commander::user_input() const{
 	fprintf(stderr, "\nUser Input\n");
 	fprintf(stderr, "==============================\n");
 	fprintf(stderr, "Base files: ");

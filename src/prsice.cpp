@@ -165,13 +165,14 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 					}
 				}
 				if (ref_allele.compare("-") == 0 || ref_allele.compare("I") == 0
-						|| ref_allele.compare("D") == 0
+						|| ref_allele.compare("D") == 0 || ref_allele.compare("0") == 0
 						|| ref_allele.size() > 1) {
 					num_indel++;
 				} else if (!alt_allele.empty()
 						&& (alt_allele.compare("-") == 0
 								|| alt_allele.compare("I") == 0
 								|| alt_allele.compare("D") == 0
+								|| alt_allele.compare("0") == 0
 								|| alt_allele.size() > 1)) {
 					num_indel++;
 				} else if (!not_converted && !exclude) {
@@ -190,7 +191,6 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 					"Please check if you have the correct input");
 	}
 	snp_file.close();
-
 	m_snp_list.sort();
 	size_t before = m_snp_list.size();
 	m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()),
@@ -203,7 +203,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 			unique_chr[m_snp_list[i_snp].get_chr()] = true;
 			m_chr_list.push_back(m_snp_list[i_snp].get_chr());
 		}
-		if (index[0] >= 0 && index[5] >= 0) {
+		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0) {
 			m_snp_list[i_snp].set_flag(
 					region.check(m_snp_list[i_snp].get_chr(),
 							m_snp_list[i_snp].get_loc()));
