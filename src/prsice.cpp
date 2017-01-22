@@ -268,19 +268,19 @@ void PRSice::clump(const Commander &c_commander) {
 				c_commander.get_clump_kb(), c_commander.get_proxy());
 	}
 	// now update SNPs based on the inclusion
-	boost::ptr_vector<SNP> temp_snp_list;
-	m_snp_index.clear();
-	for(boost::ptr_vector<SNP>::iterator it = m_snp_list.begin(); it != m_snp_list.end(); ++it)
-	{
-		if(m_include_snp.find((*it).get_rs_id())!= m_include_snp.end())
-		{
-			temp_snp_list.push_back(m_snp_list.release(it));
-			m_snp_index[(*it).get_rs_id()] = temp_snp_list.size() - 1;
-		}
-	}
-	m_include_snp = m_snp_index;
-	m_snp_list.clear();
-	m_snp_list = temp_snp_list;
+	//boost::ptr_vector<SNP> temp_snp_list;
+	//m_snp_index.clear();
+	//for(boost::ptr_vector<SNP>::iterator it = m_snp_list.begin(); it != m_snp_list.end(); ++it)
+	//{
+	//	if(m_include_snp.find((*it).get_rs_id())!= m_include_snp.end())
+	//	{
+	//		temp_snp_list.push_back(m_snp_list.release(it));
+	//		m_snp_index[(*it).get_rs_id()] = temp_snp_list.size() - 1;
+	//	}
+	//}
+	//m_include_snp = m_snp_index;
+	//m_snp_list.clear();
+	//m_snp_list = temp_snp_list;
 }
 
 void PRSice::check_inclusion(const std::string &c_target_bim_name,
