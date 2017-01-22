@@ -973,7 +973,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 	if (valid_samples.size() != m_sample_with_phenotypes.size()) {
 		m_sample_names.clear();
 		int removed = m_sample_with_phenotypes.size() - valid_samples.size();
-		fprintf(stderr, "Number of samples with invalid covariate: %zu\n",
+		fprintf(stderr, "Number of samples with invalid covariate: %d\n",
 				removed);
 		double portion = (double) removed
 				/ (double) m_sample_with_phenotypes.size();
