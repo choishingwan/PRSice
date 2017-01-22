@@ -105,7 +105,8 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
                         }
                         if(fastscore)
                         {
-
+                        	category = c_commander.get_category(p);
+                        	threshold = c_commander.get_threshold(category);
                         }
                         else
                         {
@@ -220,8 +221,6 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
             m_snp_list[i_snp].set_flag(region.check(m_snp_list[i_snp].get_chr(), m_snp_list[i_snp].get_loc()));
         }
     }
-
-
     num_duplicated = (int)before-(int)after;
     fprintf(stderr, "Number of SNPs from base  : %zu\n", m_snp_list.size());
     if(num_indel!=0) fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
@@ -235,7 +234,8 @@ void PRSice::get_snp(const Commander &c_commander, Region &region, const double 
 
 void PRSice::clump(const Commander &c_commander)
 {
-    bool has_ld = !c_commander.ld_prefix().empty();
+	// if we don't want clumping, then the ld file is useless
+    bool has_ld = !c_commander.ld_prefix().empty() && c_commander.no_clump();
     std::string ld_file = (has_ld)? c_commander.ld_prefix(): m_target;
     PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
     // Because we will go through the target anyway, first go through the target for inclusion
@@ -264,9 +264,26 @@ void PRSice::clump(const Commander &c_commander)
         clump.clump_initialize(m_include_snp, m_snp_list, m_snp_index);
     }
     else clump.clump_initialize(m_include_snp);
-    fprintf(stderr,"\nStart performing clumping\n");
-    clump.start_clumping(m_include_snp, m_snp_list, c_commander.get_clump_p(),
-                         c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
+    if(!c_commander.no_clump())
+    {
+		fprintf(stderr,"\nStart performing clumping\n");
+		clump.start_clumping(m_include_snp, m_snp_list, c_commander.get_clump_p(),
+							 c_commander.get_clump_r2(), c_commander.get_clump_kb(), c_commander.get_proxy());
+    }
+    // now update SNPs based on the inclusion
+    boost::ptr_vector<SNP> temp_snp_list;
+    m_snp_index.clear();
+    for(auto snp : m_snp_list)
+    {
+    	if(m_include_snp.find(snp.get_rs_id()) != m_include_snp.end())
+    	{
+    		temp_snp_list.push_back(snp);
+    		m_snp_index[snp.get_rs_id()] = temp_snp_list.size()-1;
+    	}
+    }
+    m_include_snp = m_snp_index;
+    m_snp_list.clear();
+    m_snp_list = temp_snp_list;
 }
 
 void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_ambig, size_t &not_found,
@@ -280,6 +297,7 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
         throw std::runtime_error(error_message);
     }
     std::string line;
+    size_t num_line = 0;
     while(std::getline(target_file, line))
     {
         misc::trim(line);
@@ -339,6 +357,7 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
                         }
                     }
                     m_include_snp[rsid]=index;
+                    m_snp_list[index].set_line(num_line);
                 }
             }
             else if(m_include_snp.find(rsid)!=m_include_snp.end())
@@ -349,6 +368,7 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name, size_t &num_a
             {
                 not_found++;
             }
+            num_line++;
         }
     }
     target_file.close();

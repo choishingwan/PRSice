@@ -11,6 +11,7 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     m_region_clumped = std::vector<long_type>(m_flags.size());
+    m_plink_line = 0;
 }
 
 std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input)

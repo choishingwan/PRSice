@@ -86,7 +86,7 @@ public:
     };
     void proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold);
     void clump(boost::ptr_vector<SNP> &snp_list);
-
+    void set_line(size_t line) { m_plink_line = line};
     void set_loc(int loc)
     {
         m_loc = loc;
@@ -120,8 +120,8 @@ public:
         return m_rs_id.compare(j.get_rs_id()) == 0;
     }
     int get_category() const { return m_category; };
-    double get_threshold() const { return m_threshold; ;};
-
+    double get_threshold() const { return m_threshold; };
+    size_t get_line() const { return m_plink_line; };
 protected:
 private:
     std::string complement(std::string allele)
@@ -142,6 +142,7 @@ private:
     int m_loc;
     int m_category;
     size_t m_bit_size;
+    size_t m_plink_line;
     double m_stat;
     double m_standard_error;
     double m_p_value;
