@@ -64,9 +64,9 @@ int main(int argc, char *argv[]) {
 
 				if (!perform_prslice) {
 					prsice.categorize(commander);
-
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
 						prsice.init_matrix(commander, i_pheno, perform_prslice);
+
 						try {
 							prsice.prsice(commander, region, i_pheno);
 							fprintf(stderr, "\n");
