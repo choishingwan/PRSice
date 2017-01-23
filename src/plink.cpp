@@ -865,7 +865,7 @@ int PLINK::read_snp(int num_snp, bool ld)
 // will change
 //This initialization will also perform the filtering and flipping
 void PLINK::get_score(const std::vector<p_partition> &partition,
-                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound)
 {
 
@@ -902,6 +902,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
         for(auto &&byte : genotype_list)
         {
+        	std::cerr << genotype_list << std::endl;
+        	std::cerr << byte << std::endl;
+        	exit(-1);
         		size_t geno_bit = 0;
     			int geno_batch = static_cast<int>(byte);
         		while(geno_bit < 7 && sample_index < m_num_sample)
@@ -925,7 +928,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 }
 
 void PLINK::get_score(const std::vector<p_partition> &partition,
-                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound, size_t i_region)
 {
 

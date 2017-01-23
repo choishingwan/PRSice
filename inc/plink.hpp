@@ -61,11 +61,11 @@ public:
     // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
     void get_score(const std::vector<p_partition> &quick_ref,
                    const boost::ptr_vector<SNP> &snp_list,
-				   std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+				   std::vector< std::vector<prs_score> &prs_score,
                    size_t start_index, size_t end_bound);
     void get_score(const std::vector<p_partition> &quick_ref,
                    const boost::ptr_vector<SNP> &snp_list,
-				   std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+				   std::vector< std::vector<prs_score> > &prs_score,
                    size_t start_index, size_t end_bound, size_t i_region);
     void close()
     {

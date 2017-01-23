@@ -944,7 +944,7 @@ bool PRSice::get_prs_score(size_t &cur_index)
 	if (!ended) end_index = m_partition.size();
 	PLINK prs(m_target, m_chr_list);
 	prs.initialize();
-	//prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
+	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
 	cur_index = end_index;
 	return true;
