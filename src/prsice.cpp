@@ -162,7 +162,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 
 
 
-void PRSice::clump(const Commander &c_commander) {
+void PRSice::perform_clump(const Commander &c_commander) {
 	// if we don't want clumping, then the ld file is useless
 	bool has_ld = !c_commander.ld_prefix().empty() && c_commander.no_clump();
 	std::string ld_file = (has_ld) ? c_commander.ld_prefix() : m_target;
@@ -249,12 +249,6 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 						bool same = m_snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
 						if (!same) {
 							num_diff++;
-							/*
-							fprintf(stderr,
-									"WARNING: %s differ between target and base file\n", rsid.c_str());
-							fprintf(stderr, "         It is advised that you check the files are \n");
-							fprintf(stderr, "         from the same genome build\n");
-							*/
 						}
 					}
 					m_include_snp[rsid] = index;
@@ -275,13 +269,12 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 	}
 }
 
-void PRSice::init_pheno(const Commander &c_commander) {
+void PRSice::pheno_check(const Commander &c_commander) {
 	std::vector < std::string > pheno_header = c_commander.get_pheno_col();
 	std::string pheno_file = c_commander.get_pheno();
 	m_pheno_index = 0;
 	if (pheno_header.size() != 0 && pheno_file.empty()) {
-		throw std::runtime_error(
-				"You must provide a phenotype file for multiple phenotype analysis");
+		throw std::runtime_error( "You must provide a phenotype file for multiple phenotype analysis");
 	}
 	if (pheno_file.empty()) {
 		std::string fam = m_target + ".fam";
@@ -295,15 +288,13 @@ void PRSice::init_pheno(const Commander &c_commander) {
 		std::ifstream pheno;
 		pheno.open(pheno_file.c_str());
 		if (!pheno.is_open()) {
-			std::string error_message = "Cannot open phenotype file: "
-					+ pheno_file;
+			std::string error_message = "Cannot open phenotype file: " + pheno_file;
 			throw std::runtime_error(error_message);
 		}
 		std::string line;
 		std::getline(pheno, line);
 		if (line.empty()) {
-			throw std::runtime_error(
-					"Cannot have empty header line for phenotype file!");
+			throw std::runtime_error( "Cannot have empty header line for phenotype file!");
 		}
 		pheno.close();
 		misc::trim(line);
@@ -323,24 +314,20 @@ void PRSice::init_pheno(const Commander &c_commander) {
 				if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
 					found = false;
 					dup_col[pheno_header[i_pheno]] = true;
-					for (size_t i_column = 0; i_column < col.size();
-							++i_column) {
+					for (size_t i_column = 0; i_column < col.size(); ++i_column) {
 						if (col[i_column].compare(pheno_header[i_pheno]) == 0) {
 							found = true;
 							pheno_storage temp;
-							std::get < pheno_store::FILE_NAME > (temp) =
-									pheno_file;
+							std::get < pheno_store::FILE_NAME > (temp) = pheno_file;
 							std::get < pheno_store::INDEX > (temp) = i_column;
-							std::get < pheno_store::NAME > (temp) =
-									pheno_header[i_pheno];
+							std::get < pheno_store::NAME > (temp) = pheno_header[i_pheno];
 							std::get < pheno_store::ORDER > (temp) = i_pheno;
 							m_pheno_names.push_back(temp);
 							break;
 						}
 					}
 					if (!found) {
-						fprintf(stderr,
-								"Phenotype: %s cannot be found in phenotype file\n",
+						fprintf(stderr, "Phenotype: %s cannot be found in phenotype file\n",
 								pheno_header[i_pheno].c_str());
 					}
 				}
@@ -419,72 +406,74 @@ void PRSice::init_matrix(const Commander &c_commander,
 void PRSice::categorize(const Commander &c_commander) {
 	m_partition.clear();
 	bool fastscore = c_commander.fastscore();
-	double bound_start =
-			(fastscore) ? c_commander.get_bar_lower() : c_commander.get_lower();
-	double bound_end =
-			(fastscore) ? c_commander.get_bar_upper() : c_commander.get_upper();
+	double bound_start = c_commander.get_lower();
+	double bound_end = c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
 	bool full_model = c_commander.full();
 	std::vector < std::string > file_names;
-	if (m_target.find("#") != std::string::npos) {
-		for (auto &&chr : m_chr_list) {
+	if (m_target.find("#") != std::string::npos)
+	{
+		for (auto &&chr : m_chr_list)
+		{
 			std::string name = m_target;
 			misc::replace_substring(name, "#", chr);
 			file_names.push_back(name);
 		}
-	} else {
+	}
+	else
+	{
 		file_names.push_back(m_target);
 	}
-	for (auto &&name : file_names) {
+	for (auto &&name : file_names)
+	{
 		std::ifstream bim;
 		std::string bim_name = name + ".bim";
 		bim.open(bim_name.c_str());
-		if (!bim.is_open()) {
+		if (!bim.is_open())
+		{
 			std::string error_message = "Cannot open bim file: " + bim_name;
 			throw std::runtime_error(error_message);
 		}
 		std::string line;
 		size_t cur_line = 0;
-		while (std::getline(bim, line)) {
+		while (std::getline(bim, line))
+		{
 			misc::trim(line);
 			if (!line.empty()) {
 				std::vector < std::string > token = misc::split(line);
 				if (token.size() < 6)
-					throw std::runtime_error(
-							"Malformed bim file, should contain at least 6 columns");
-				if (m_include_snp.find(token[+BIM::RS])
-						!= m_include_snp.end()) {
-					size_t cur_snp_index = m_include_snp.at(token[+BIM::RS]);
-					double p = m_snp_list.at(cur_snp_index).get_p_value();
+					throw std::runtime_error( "Malformed bim file, should contain at least 6 columns");
+				if (m_include_snp.find(token[+BIM::RS]) != m_include_snp.end()) {
+					size_t cur_snp_index = m_include_snp[token[+BIM::RS]]; //because found, we knwo it is ok
+					double p = m_snp_list[cur_snp_index].get_p_value();
 					p_partition part;
 					std::get < +PRS::RS > (part) = token[+BIM::RS];
 					std::get < +PRS::LINE > (part) = cur_line;
 					std::get < +PRS::INDEX > (part) = cur_snp_index;
 					std::get < +PRS::FILENAME > (part) = name;
 					int category = -1;
-					if (fastscore) {
+					if (fastscore)
+					{
 						category = c_commander.get_category(p);
 						std::get < +PRS::CATEGORY > (part) = category;
-						std::get < +PRS::P_THRES > (part) =
-								c_commander.get_threshold(category);
+						std::get < +PRS::P_THRES > (part) = c_commander.get_threshold(category);
 						m_partition.push_back(part);
-					} else {
+					}
+					else
+					{
 						// calculate the threshold instead
-						if (p > bound_end && full_model) {
-							std::get < +PRS::CATEGORY > (part) = std::ceil(
-									(bound_end + 0.1 - bound_start)
-											/ bound_inter);
+						if (p > bound_end && full_model)
+						{
+							std::get < +PRS::CATEGORY > (part) = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
 							std::get < +PRS::P_THRES > (part) = 1.0;
 							m_partition.push_back(part);
 						}
 						else
 						{
-							category = std::ceil(
-									(p - bound_start) / bound_inter);
+							category = std::ceil((p - bound_start) / bound_inter);
 							category = (category < 0) ? 0 : category;
 							std::get < +PRS::CATEGORY > (part) = category;
-							std::get < +PRS::P_THRES > (part) = category
-									* bound_inter + bound_start;
+							std::get < +PRS::P_THRES > (part) = category * bound_inter + bound_start;
 							m_partition.push_back(part);
 						}
 					}
@@ -494,7 +483,6 @@ void PRSice::categorize(const Commander &c_commander) {
 		}
 		bim.close();
 	}
-	std::cerr << "Check size: " << m_partition.size() << std::endl;
 	if (m_partition.size() == 0) {
 		throw std::runtime_error("None of the SNPs met the threshold\n");
 	}
@@ -512,6 +500,7 @@ void PRSice::categorize(const Commander &c_commander) {
 				else return std::get<+PRS::CATEGORY>(t1)<std::get<+PRS::CATEGORY>(t2);
 			});
 }
+
 
 void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		const size_t c_pheno_index, bool prslice) {

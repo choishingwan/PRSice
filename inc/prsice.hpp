@@ -33,23 +33,11 @@ public:
     };
     virtual ~PRSice();
     void get_snp(const Commander &c_commander, Region &region);
+    void perform_clump(const Commander &c_commander);
+    void pheno_check(const Commander &c_commander);
 
 
 
-    /**
-     * This function will perform clumping based on SNPs found in both the target and LD files
-     * All required parameters are obtained from c_commander. Index SNPs will be stored in
-     * m_include_snp. As different base file might contain different SNPs, this has to be
-     * done separately for each base files
-     * @param c_commander Contain all the parameters e.g. clumping threshold.
-     */
-    void clump(const Commander &c_commander);
-    /**
-     * This function will compute the required phenotype that will be used for PRS.
-     * Result phenotype will be stored in m_pheno_names
-     * @param c_commander Again, c_commander serves as the container of all parameters
-     */
-    void init_pheno(const Commander &c_commander);
     /**
      * This function compute the required matrix and the null r2
      * @param c_commander The paramter container

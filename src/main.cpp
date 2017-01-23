@@ -58,12 +58,13 @@ int main(int argc, char *argv[]) {
 				std::ofstream region_out;
 				std::string region_out_name = commander.get_out() + "." + base_name + ".region";
 				region.print_file(region_out_name);
-
-				prsice.clump(commander);
-				prsice.init_pheno(commander);
+				prsice.perform_clump(commander);
+				prsice.pheno_check(commander);
 				size_t num_pheno = prsice.num_phenotype();
+
 				if (!perform_prslice) {
 					prsice.categorize(commander);
+
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
 						prsice.init_matrix(commander, i_pheno, perform_prslice);
 						try {
