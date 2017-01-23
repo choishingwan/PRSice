@@ -2,15 +2,11 @@
 
 std::mutex PRSice::score_mutex;
 
-void PRSice::get_snp(const Commander &c_commander, Region &region,
-		const double &c_threshold) {
+void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	const std::string input = c_commander.get_base(m_base_index);
 	const bool beta = c_commander.get_base_binary(m_base_index);
 	// just issue the warning. would not terminate
-	if (beta && c_commander.statistic().compare("OR") == 0) {
-		fprintf(stderr,
-				"WARNING: OR detected but user suggest the input is beta!\n");
-	}
+	if (beta && c_commander.statistic().compare("OR") == 0) fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
 	// First, we need to obtain the index of different columns from the base files
 	// NOTE: -1 means missing and index is hard coded such that each index will represent
 	//       specific header
@@ -21,19 +17,19 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 					&& index[+SNP_Index::CHR] < 0)) {
 		std::string error_message =
 				"To use chromosome separated PLINK input, you must provide"
-						" the CHR header as we use the CHR information form the base file to substitute #";
+				" the CHR header as we use the CHR information form the base file to substitute #";
 		throw std::runtime_error(error_message);
 	} else if (region.size() > 1
 			&& (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0)) {
 		std::string error_message =
 				"To perform PRSet, you must provide the CHR and LOC header such"
-						" that we can determine the set membership";
+				" that we can determine the set membership";
 		throw std::runtime_error(error_message);
 	} else if (c_commander.prslice() > 0.0
 			&& (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0)) {
 		std::string error_message =
 				"To perform PRSlice, you must provide the CHR and LOC header such"
-						" that we can perform the slicing";
+				" that we can perform the slicing";
 		throw std::runtime_error(error_message);
 	}
 	// Open the file
@@ -53,21 +49,16 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 	int max_index = index[+SNP_Index::MAX];
 	std::string line;
 	// remove header if index is not provided
-	if (!c_commander.index())
-		std::getline(snp_file, line);
+	if (!c_commander.index()) std::getline(snp_file, line);
 	bool read_error = false;
 	bool not_converted = false;
 	bool exclude = false;
 	// category related stuff
-	bool fastscore = c_commander.fastscore();
-	double bound_start = c_commander.get_lower();
-	double bound_end = c_commander.get_upper();
-	double bound_inter = c_commander.get_inter();
+	double threshold = (c_commander.fastscore())? c_commander.get_bar_upper() : c_commander.get_upper();
+	threshold = (c_commander.full())? 1.0 : threshold;
 	std::vector < std::string > token;
 	// Actual reading the file, will do a bunch of QC
 	while (std::getline(snp_file, line)) {
-		double threshold = 0.0;
-		int category = 0;
 		misc::trim(line);
 		if (!line.empty()) {
 			not_converted = false;
@@ -77,16 +68,9 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 				throw std::runtime_error("More index than column in data");
 			else {
 				std::string rs_id = token[index[+SNP_Index::RS]];
-				std::string chr = "";
-				if (index[0] >= 0) {
-					chr = token[index[+SNP_Index::CHR]];
-				}
-				std::string ref_allele =
-						(index[+SNP_Index::REF] >= 0) ?
-								token[index[+SNP_Index::REF]] : "";
-				std::string alt_allele =
-						(index[+SNP_Index::ALT] >= 0) ?
-								token[index[+SNP_Index::ALT]] : "";
+				std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
+				std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
+				std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
 				double pvalue = 0.0;
 				if (index[+SNP_Index::P] >= 0) {
 					try {
@@ -95,29 +79,10 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 								token[index[+SNP_Index::P]]);
 						if (pvalue < 0.0 || pvalue > 1.0) {
 							read_error = true;
-							fprintf(stderr, "ERROR: %s's p-value is %f\n",
-									rs_id.c_str(), pvalue);
-						} else if (pvalue > c_threshold) {
+							fprintf(stderr, "ERROR: %s's p-value is %f\n", rs_id.c_str(), pvalue);
+						} else if (pvalue > threshold) {
 							exclude = true;
 							num_exclude++;
-						}
-						if (fastscore) {
-							category = c_commander.get_category(pvalue);
-							threshold = c_commander.get_threshold(category);
-						} else {
-							// calculate the threshold instead
-							if (pvalue > bound_end) {
-								category = std::ceil(
-										(bound_end + 0.1 - bound_start)
-												/ bound_inter);
-								threshold = 1.0;
-							} else if (pvalue <= bound_start) {
-								category = std::ceil(
-										(pvalue - bound_start) / bound_inter);
-								category = (category < 0) ? 0 : category;
-								threshold = category * bound_inter
-										+ bound_start;
-							}
 						}
 					} catch (const std::runtime_error &error) {
 						num_p_not_convertible++;
@@ -128,12 +93,9 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 				if (index[+SNP_Index::STAT] >= 0) {
 					//Obtain the test statistic
 					try {
-						stat = misc::convert<double>(
-								token[index[+SNP_Index::STAT]]);
-						if (!beta)
-							stat = log(stat);
-					} catch (const std::runtime_error& error) //we know only runtime error is throw
-					{
+						stat = misc::convert<double>( token[index[+SNP_Index::STAT]]);
+						if (!beta) stat = log(stat);
+					} catch (const std::runtime_error& error) {
 						num_stat_not_convertible++;
 						not_converted = true;
 					}
@@ -142,8 +104,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 				if (index[+SNP_Index::SE] >= 0) {
 					// obtain the standard error (though it is currently useless)
 					try {
-						se = misc::convert<double>(
-								token[index[+SNP_Index::SE]]);
+						se = misc::convert<double>( token[index[+SNP_Index::SE]]);
 					} catch (const std::runtime_error &error) {
 						num_se_not_convertible++;
 					}
@@ -152,82 +113,54 @@ void PRSice::get_snp(const Commander &c_commander, Region &region,
 				if (index[+SNP_Index::BP] >= 0) {
 					// obtain the SNP coordinate
 					try {
-						int temp = misc::convert<int>(
-								token[index[+SNP_Index::BP]].c_str());
+						int temp = misc::convert<int>( token[index[+SNP_Index::BP]].c_str());
 						if (temp < 0) {
 							read_error = true;
-							fprintf(stderr, "ERROR: %s has negative loci\n",
-									rs_id.c_str());
-						} else
-							loc = temp;
-					} catch (const std::runtime_error &error) {
-
-					}
+							fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+						} else loc = temp;
+					} catch (const std::runtime_error &error) { }
 				}
-				if (ref_allele.compare("-") == 0 || ref_allele.compare("I") == 0
-						|| ref_allele.compare("D") == 0 || ref_allele.compare("0") == 0
-						|| ref_allele.size() > 1) {
-					num_indel++;
-				} else if (!alt_allele.empty()
-						&& (alt_allele.compare("-") == 0
-								|| alt_allele.compare("I") == 0
-								|| alt_allele.compare("D") == 0
-								|| alt_allele.compare("0") == 0
-								|| alt_allele.size() > 1)) {
-					num_indel++;
-				} else if (!not_converted && !exclude) {
-					m_snp_list.push_back(
-							new SNP(rs_id, chr, loc, category, ref_allele,
-									alt_allele, stat, se, pvalue, threshold,
-									region.empty_flag()));
+				if (!SNP::valid_snp(ref_allele))  num_indel++;
+				else if (!alt_allele.empty() && !SNP::valid_snp(alt_allele)) num_indel++;
+				else if (!not_converted && !exclude) {
+					m_snp_list.push_back( new SNP(rs_id, chr, loc, ref_allele,
+									alt_allele, stat, se, pvalue));
 				} else {
 //		    			We skip any SNPs with non-convertible stat and p-value as we don't know how to
 //		    			handle them. Most likely those will be NA, which should be ignored anyway
 				}
 			}
 		}
-		if (read_error)
-			throw std::runtime_error(
-					"Please check if you have the correct input");
+		if (read_error) throw std::runtime_error( "Please check if you have the correct input");
 	}
 	snp_file.close();
 	m_snp_list.sort();
 	size_t before = m_snp_list.size();
-	m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()),
-			m_snp_list.end());
+	m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()), m_snp_list.end());
 	size_t after = m_snp_list.size();
 	std::map<std::string, bool> unique_chr;
 	for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp) {
 		m_snp_index[m_snp_list[i_snp].get_rs_id()] = i_snp;
-		if (unique_chr.find(m_snp_list[i_snp].get_chr()) == unique_chr.end()) {
-			unique_chr[m_snp_list[i_snp].get_chr()] = true;
-			m_chr_list.push_back(m_snp_list[i_snp].get_chr());
+		std::string cur_chr = m_snp_list[i_snp].get_chr();
+		if (unique_chr.find(cur_chr) == unique_chr.end()) {
+			unique_chr[cur_chr] = true;
+			m_chr_list.push_back(cur_chr);
 		}
 		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0) {
-			m_snp_list[i_snp].set_flag(
-					region.check(m_snp_list[i_snp].get_chr(),
-							m_snp_list[i_snp].get_loc()));
+			m_snp_list[i_snp].set_flag( region.check(cur_chr, m_snp_list[i_snp].get_loc()));
 		}
 	}
 	num_duplicated = (int) before - (int) after;
 	fprintf(stderr, "Number of SNPs from base  : %zu\n", m_snp_list.size());
-	if (num_indel != 0)
-		fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
-	if (num_exclude != 0)
-		fprintf(stderr,
-				"Number of SNPs excluded due to p-value threshold: %zu\n",
-				num_exclude);
-	if (num_duplicated != 0)
-		fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
-	if (num_stat_not_convertible != 0)
-		fprintf(stderr, "Failed to convert %zu OR/beta\n",
-				num_stat_not_convertible);
-	if (num_p_not_convertible != 0)
-		fprintf(stderr, "Failed to convert %zu p-value\n",
-				num_p_not_convertible);
-	if (num_se_not_convertible != 0)
-		fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
+	if (num_indel != 0) fprintf(stderr, "Number of Indels          : %zu\n", num_indel);
+	if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded due to p-value threshold: %zu\n", num_exclude);
+	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
+	if (num_stat_not_convertible != 0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
+	if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
+	if (num_se_not_convertible != 0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 }
+
+
 
 void PRSice::clump(const Commander &c_commander) {
 	// if we don't want clumping, then the ld file is useless

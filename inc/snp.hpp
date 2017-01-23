@@ -81,6 +81,14 @@ public:
 
     // header check
     static std::vector<int> get_index(const Commander &c_commander, const std::string &c_input);
+    static bool valid_snp(std::string allele)
+    {
+    		if(allele.compare("A")==0 || allele.compare("a")==0) return true;
+    		if(allele.compare("C")==0 || allele.compare("c")==0) return true;
+    		if(allele.compare("T")==0 || allele.compare("t")==0) return true;
+    		if(allele.compare("G")==0 || allele.compare("g")==0) return true;
+    		return false;
+    }
 protected:
 private:
     //basic info
@@ -111,14 +119,7 @@ private:
         if(allele.compare("C")==0 || allele.compare("c")==0) return "G";
         else return allele; // Cannot flip, so will just return it as is
     }
-    bool valid_snp(std::string allele)
-    {
-    		if(allele.compare("A")==0 || allele.compare("a")==0) return true;
-    		if(allele.compare("C")==0 || allele.compare("c")==0) return true;
-    		if(allele.compare("T")==0 || allele.compare("t")==0) return true;
-    		if(allele.compare("G")==0 || allele.compare("g")==0) return true;
-    		return false;
-    }
+
     //private function headers
     static size_t index_check(const std::string &c_in);
     static size_t index_check(const std::string &c_in,

@@ -23,7 +23,7 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_current_base(base_name), m_base_index(index),
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_base_name(base_name), m_base_index(index),
     		m_target(target), m_target_binary(target_binary), m_perm(permutation)
     {
         if(index < 0)
@@ -32,16 +32,10 @@ public:
         }
     };
     virtual ~PRSice();
-    /**
-     * This function will read in all SNPs with p-value less than c_threshold from
-     * the base file. Base file is determined by m_base_index
-     * @param c_commander Contain the meta information of the user input. This is where
-     *	we get the base file information
-     * @param region The region information. This is used to set the flag of the SNPs
-     * @param c_threshold The p-value threshold. Any SNPs with p-value higher than this
-     *  will be ignored
-     */
-    void get_snp(const Commander &c_commander, Region &region, const double &c_threshold);
+    void get_snp(const Commander &c_commander, Region &region);
+
+
+
     /**
      * This function will perform clumping based on SNPs found in both the target and LD files
      * All required parameters are obtained from c_commander. Index SNPs will be stored in
@@ -88,6 +82,14 @@ public:
     void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
+    //slowly update the class
+    //input related
+    std::string m_base_name;
+    int m_base_index;
+    std::string m_target;
+    std::vector<bool> m_target_binary;
+
+
     // Phenotype storages
     enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
     typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
@@ -127,19 +129,6 @@ private:
     std::unordered_map<std::string, size_t> m_include_snp; //
 
 
-    /**
-     * The name of the base file
-     * We use this as a storage as wehave already stripped off the directory
-     * information from this string
-     */
-    std::string m_current_base;
-    /**
-     * The base index indicating which base we are working with
-     */
-    int m_base_index;
-
-    std::string m_target;
-    std::vector<bool> m_target_binary;
     /**
      * Check whether if the SNP is included in the target file. This should update
      * the m_include_snp

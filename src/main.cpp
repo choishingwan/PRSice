@@ -54,16 +54,11 @@ int main(int argc, char *argv[]) {
 				PRSice prsice = PRSice(base_name, i_base,
 						commander.get_target(), commander.target_is_binary(),
 						commander.get_perm());
-				double threshold =
-						(full_model) ?
-								1.0 :
-								((commander.fastscore()) ?
-										commander.get_bar_upper() : bound_end);
-				prsice.get_snp(commander, region, threshold);
+				prsice.get_snp(commander, region);
 				std::ofstream region_out;
-				std::string region_out_name = commander.get_out() + "."
-						+ base_name + ".region";
+				std::string region_out_name = commander.get_out() + "." + base_name + ".region";
 				region.print_file(region_out_name);
+
 				prsice.clump(commander);
 				prsice.init_pheno(commander);
 				size_t num_pheno = prsice.num_phenotype();
