@@ -575,24 +575,6 @@ void PRSice::categorize(const Commander &c_commander) {
 							m_partition.push_back(part);
 						}
 					}
-
-					if (p < bound_end) {
-						int category = -1;
-						if (fastscore) {
-							category = c_commander.get_category(p);
-							if (category == -2) {
-								throw std::runtime_error("Undefined category!");
-							}
-						} else
-							category = (int) ((p - bound_start) / bound_inter);
-						std::get < +PRS::CATEGORY > (part) =
-								(category < 0) ? 0 : category;
-						m_partition.push_back(part);
-					} else if (full_model) {
-						std::get < +PRS::CATEGORY > (part) = (int) ((bound_end
-								+ 0.1) - bound_start) / bound_inter; // This ensure they all fall into the same category
-						m_partition.push_back(part);
-					}
 				}
 				cur_line++;
 			}
