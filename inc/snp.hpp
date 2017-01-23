@@ -89,6 +89,13 @@ public:
     		if(allele.compare("G")==0 || allele.compare("g")==0) return true;
     		return false;
     }
+    static bool ambiguous(std::string ref_allele, std::string alt_allele)
+    {
+    		return (ref_allele == "A" && alt_allele == "T")
+    				|| (ref_allele == "a" && alt_allele == "t")
+					|| (ref_allele == "G" && alt_allele == "C")
+					|| (ref_allele == "g" && alt_allele == "c");
+    }
 protected:
 private:
     //basic info

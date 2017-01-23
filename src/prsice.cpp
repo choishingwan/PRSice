@@ -166,54 +166,38 @@ void PRSice::clump(const Commander &c_commander) {
 	// if we don't want clumping, then the ld file is useless
 	bool has_ld = !c_commander.ld_prefix().empty() && c_commander.no_clump();
 	std::string ld_file = (has_ld) ? c_commander.ld_prefix() : m_target;
+
 	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
-	// Because we will go through the target anyway, first go through the target for inclusion
 	size_t num_ambig = 0, not_found = 0, num_duplicate = 0;
 	std::string target_bim_name = m_target + ".bim";
 	if (target_bim_name.find("#") != std::string::npos) {
 		for (auto &&chr : m_chr_list) {
 			std::string target_chr_bim_name = target_bim_name;
 			misc::replace_substring(target_chr_bim_name, "#", chr);
-			check_inclusion(target_chr_bim_name, num_ambig, not_found,
-					num_duplicate);
+			check_inclusion(target_chr_bim_name, num_ambig, not_found, num_duplicate);
 		}
-	} else
-		check_inclusion(target_bim_name, num_ambig, not_found, num_duplicate);
+	} else check_inclusion(target_bim_name, num_ambig, not_found, num_duplicate);
+
+
 	fprintf(stderr, "\nIn Target File\n");
 	fprintf(stderr, "==============================\n");
-	if (num_ambig != 0)
-		fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
-	if (num_duplicate != 0)
-		fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicate);
-	if (not_found != 0)
-		fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
+	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
+	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicate);
+	if (not_found != 0) fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
 	fprintf(stderr, "Number of SNPs in target  : %zu\n", m_include_snp.size());
+
 	if (has_ld) {
 		fprintf(stderr, "\nIn LD Reference %s\n", ld_file.c_str());
 		fprintf(stderr, "==============================\n");
 		clump.clump_initialize(m_include_snp, m_snp_list, m_snp_index);
-	} else
-		clump.clump_initialize(m_include_snp);
+	} else clump.clump_initialize(m_include_snp);
+
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
 		clump.start_clumping(m_include_snp, m_snp_list,
 				c_commander.get_clump_p(), c_commander.get_clump_r2(),
 				c_commander.get_clump_kb(), c_commander.get_proxy());
 	}
-	// now update SNPs based on the inclusion
-	//boost::ptr_vector<SNP> temp_snp_list;
-	//m_snp_index.clear();
-	//for(boost::ptr_vector<SNP>::iterator it = m_snp_list.begin(); it != m_snp_list.end(); ++it)
-	//{
-	//	if(m_include_snp.find((*it).get_rs_id())!= m_include_snp.end())
-	//	{
-	//		temp_snp_list.push_back(m_snp_list.release(it));
-	//		m_snp_index[(*it).get_rs_id()] = temp_snp_list.size() - 1;
-	//	}
-	//}
-	//m_include_snp = m_snp_index;
-	//m_snp_list.clear();
-	//m_snp_list = temp_snp_list;
 }
 
 // Currently does not check indel. Might want to also check it?
@@ -222,19 +206,19 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 	std::ifstream target_file;
 	target_file.open(c_target_bim_name.c_str());
 	if (!target_file.is_open()) {
-		std::string error_message = "Cannot open target bim file: "
-				+ c_target_bim_name;
+		std::string error_message = "Cannot open target bim file: " + c_target_bim_name;
 		throw std::runtime_error(error_message);
 	}
+
 	std::string line;
 	size_t num_line = 0;
+	size_t num_diff = 0;
 	while (std::getline(target_file, line)) {
 		misc::trim(line);
 		if (!line.empty()) {
 			std::vector < std::string > token = misc::split(line);
 			if (token.size() < 6)
-				throw std::runtime_error(
-						"Malformed bim file. Should contain at least 6 column");
+				throw std::runtime_error( "Malformed bim file. Should contain at least 6 column");
 			std::string chr = token[+BIM::CHR];
 			std::string rsid = token[+BIM::RS];
 			int loc = -1;
@@ -242,60 +226,53 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 			try {
 				temp = misc::convert<int>(token[+BIM::BP]);
 				if (temp < 0) {
-					std::string error_message = "Negative coordinate of SNP in "
-							+ c_target_bim_name;
+					std::string error_message = "Negative coordinate of SNP in " + c_target_bim_name;
 					throw std::runtime_error(error_message);
 				}
 				loc = temp;
 			} catch (std::runtime_error &error) {
-				std::string error_message = "Non-numeric coordinate of SNP in "
-						+ c_target_bim_name;
+				std::string error_message = "Non-numeric coordinate of SNP in " + c_target_bim_name;
 				throw std::runtime_error(error_message);
 			}
 			std::string ref_allele = token[+BIM::A1];
 			std::string alt_allele = token[+BIM::A2];
 
-			if (m_include_snp.find(rsid) == m_include_snp.end()
-					&& m_snp_index.find(rsid) != m_snp_index.end()) {
+			if (m_include_snp.find(rsid) == m_include_snp.end() && m_snp_index.find(rsid) != m_snp_index.end()) {
 				// will do some soft checking, will issue warning if there are any problem
 				// first check if ambiguous
-				if ((ref_allele == "A" && alt_allele == "T")
-						|| (ref_allele == "a" && alt_allele == "t")
-						|| (ref_allele == "T" && alt_allele == "A")
-						|| (ref_allele == "t" && alt_allele == "a")
-						|| (ref_allele == "G" && alt_allele == "C")
-						|| (ref_allele == "g" && alt_allele == "c")
-						|| (ref_allele == "C" && alt_allele == "G")
-						|| (ref_allele == "c" && alt_allele == "g")) {
+				if (SNP::ambiguous(ref_allele, alt_allele) || SNP::ambiguous(alt_allele, ref_allele)) {
 					num_ambig++;
 				} else {
 					// not ambiguous, now do soft checking
 					size_t index = m_snp_index.at(rsid);
 					if (loc != -1 && m_snp_list[index].get_loc() != -1) {
-						bool same = m_snp_list[index].check_loc(chr, loc,
-								ref_allele, alt_allele);
+						bool same = m_snp_list[index].check_loc(chr, loc, ref_allele, alt_allele);
 						if (!same) {
+							num_diff++;
+							/*
 							fprintf(stderr,
-									"WARNING: %s differ between target and base file\n",
-									rsid.c_str());
-							fprintf(stderr,
-									"         It is advised that you check the files are \n");
-							fprintf(stderr,
-									"         from the same genome build\n");
+									"WARNING: %s differ between target and base file\n", rsid.c_str());
+							fprintf(stderr, "         It is advised that you check the files are \n");
+							fprintf(stderr, "         from the same genome build\n");
+							*/
 						}
 					}
 					m_include_snp[rsid] = index;
-					m_snp_list[index].set_line(num_line);
 				}
-			} else if (m_include_snp.find(rsid) != m_include_snp.end()) {
-				num_duplicate++;
-			} else {
-				not_found++;
 			}
+			else if (m_include_snp.find(rsid) != m_include_snp.end())  num_duplicate++;
+			else not_found++;
 			num_line++;
 		}
 	}
 	target_file.close();
+	double portion = (double)num_diff/(double)num_line;
+	fprintf(stderr, "WARNING: %zu snp has different information between target and base file\n", num_diff);
+	if(portion > 0.05){
+		fprintf(stderr, "         This account for %03.2f%% of all SNPs\n", portion);
+		fprintf(stderr, "         It is strongly advised that you check the files are \n");
+		fprintf(stderr, "         from the same genome build\n");
+	}
 }
 
 void PRSice::init_pheno(const Commander &c_commander) {
@@ -390,7 +367,7 @@ void PRSice::init_matrix(const Commander &c_commander,
 	bool multi = m_pheno_names.size() > 1;
 	if (all && !prslice) // we don't want this output for PRSlice
 			{
-		std::string all_out_name = output_name + "." + m_current_base;
+		std::string all_out_name = output_name + "." + m_base_name;
 		if (multi) {
 			all_out_name.append(
 					"." + std::get < pheno_store::NAME
@@ -545,14 +522,12 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	bool fastscore = c_commander.fastscore();
 	bool no_regress = c_commander.no_regression() && !prslice; // for prslice, we will not allow no_regression;
 	bool require_all = c_commander.all() && !prslice; // for prslice, we will not allow require_all
-	double bound_start =
-			(fastscore) ? c_commander.get_bar_lower() : c_commander.get_lower();
-	double bound_end =
-			(fastscore) ? c_commander.get_bar_upper() : c_commander.get_upper();
+	double bound_start = (fastscore) ? c_commander.get_bar_lower() : c_commander.get_lower();
+	double bound_end = (fastscore) ? c_commander.get_bar_upper() : c_commander.get_upper();
 	double bound_inter = c_commander.get_inter();
 	std::ofstream all_out;
 	if (require_all) {
-		std::string all_out_name = c_commander.get_out() + "." + m_current_base;
+		std::string all_out_name = c_commander.get_out() + "." + m_base_name;
 		std::string pheno_name = std::get < pheno_store::NAME
 				> (m_pheno_names[m_pheno_index]);
 		if (!pheno_name.empty())
@@ -1115,7 +1090,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 		size_t pheno_index) const {
 	std::string pheno_name = std::get < pheno_store::NAME
 			> (m_pheno_names[pheno_index]);
-	std::string output_prefix = c_commander.get_out() + "." + m_current_base;
+	std::string output_prefix = c_commander.get_out() + "." + m_base_name;
 	if (!pheno_name.empty())
 		output_prefix.append("." + pheno_name + ".");
 	size_t total_perm = c_commander.get_perm();
