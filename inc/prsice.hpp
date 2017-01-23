@@ -76,45 +76,46 @@ private:
     int m_base_index;
     std::string m_target;
     std::vector<bool> m_target_binary;
-
+    // valid sample information
+	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
+	std::vector<prs_score> m_sample_names;
+	// matrix for regression
+	Eigen::VectorXd m_phenotype;
+	Eigen::MatrixXd m_independent_variables;
+	// important guide for all operation
+	std::vector<p_partition> m_partition;
+	// snp information
+    boost::ptr_vector<SNP> m_snp_list;
+    std::unordered_map<std::string, size_t> m_snp_index; // only use for reading in information
+    std::vector<std::string> m_chr_list; // chromosome information
+    std::unordered_map<std::string, size_t> m_include_snp; // the information provider until categorize
 
     // Phenotype storages
     enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
     typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
 	std::vector<pheno_storage> m_pheno_names;
 	size_t m_pheno_index=0;
-	size_t m_perm = 0;
-	// Regression related storages
+	// Null information
 	double m_null_r2 = 0.0;
-	Eigen::VectorXd m_phenotype;
-	Eigen::MatrixXd m_independent_variables;
-	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
+	// others
+	size_t m_perm = 0;
 	// For thread safety
     static std::mutex score_mutex;
 
     // Holder vector containing the sample names in the target file
-	std::vector<prs_score> m_sample_names;
-	// PRS storages
-    std::vector<p_partition> m_partition; //
-    std::vector<size_t> m_num_snp_included; //
-    std::vector<PRSice_best> m_best_threshold; //
-    std::vector<std::vector<prs_score> > m_best_score; //
-    std::vector<std::vector<prs_score> > m_current_prs; //
-    std::vector<std::vector<PRSice_result> > m_prs_results; //
-    // SNPs found in the base file
-    boost::ptr_vector<SNP> m_snp_list; //
-    std::unordered_map<std::string, size_t> m_snp_index; //
+
+    std::vector<size_t> m_num_snp_included;
+    std::vector<PRSice_best> m_best_threshold;
+    std::vector<std::vector<prs_score> > m_best_score;
+    std::vector<std::vector<prs_score> > m_current_prs;
+    std::vector<std::vector<PRSice_result> > m_prs_results;
+
     // PRSlice related storages
     enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
     typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;
     std::vector<windows> m_best_snps;
-    /**
-     * This vector contain the chromosome included in the base file
-     * Should be used to guide the plink class to read the multi-chromosome
-     * files
-     */
-    std::vector<std::string> m_chr_list;
-    std::unordered_map<std::string, size_t> m_include_snp; //
+
+
 
 
     /**

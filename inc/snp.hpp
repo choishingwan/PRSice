@@ -84,10 +84,11 @@ public:
     static bool valid_snp(std::string allele)
     {
     		if(allele.compare("A")==0 || allele.compare("a")==0) return true;
-    		if(allele.compare("C")==0 || allele.compare("c")==0) return true;
-    		if(allele.compare("T")==0 || allele.compare("t")==0) return true;
-    		if(allele.compare("G")==0 || allele.compare("g")==0) return true;
-    		return false;
+    		else if(allele.compare("C")==0 || allele.compare("c")==0) return true;
+    		else if(allele.compare("T")==0 || allele.compare("t")==0) return true;
+    		else if(allele.compare("G")==0 || allele.compare("g")==0) return true;
+    		else if(allele.compare("1")==0 || allele.compare("2")==0) return true;
+    		else return false;
     }
     static bool ambiguous(std::string ref_allele, std::string alt_allele)
     {
