@@ -471,10 +471,12 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 			std::get < pheno_store::INDEX > (m_pheno_names[c_pheno_index]),
 			std::get < pheno_store::ORDER > (m_pheno_names[c_pheno_index]),
 			!no_regress);
-	if (!no_regress) {
-		gen_cov_matrix(c_commander.get_cov_file(),
-				c_commander.get_cov_header());
+	if (!no_regress)
+	{
+		gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_header());
 	}
+
+
 	if (all && !prslice) {
 		all_out << "Threshold\tRegion";
 		for (auto &&sample : m_sample_names)
@@ -500,6 +502,8 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		}
 	}
 }
+
+
 
 void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 		const int col_index, bool regress) {
@@ -670,15 +674,16 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		const std::vector<std::string> &c_cov_header) {
 	size_t num_sample = m_sample_with_phenotypes.size();
-	if (c_cov_file.empty()) {
+	if (c_cov_file.empty())
+	{
 		m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
 		return;
 	}
 	std::ifstream cov;
 	cov.open(c_cov_file.c_str());
-	if (!cov.is_open()) {
-		std::string error_message = "ERROR: Cannot open covariate file: "
-				+ c_cov_file;
+	if (!cov.is_open())
+	{
+		std::string error_message = "ERROR: Cannot open covariate file: " + c_cov_file;
 		throw std::runtime_error(error_message);
 	}
 	std::string line;
@@ -687,65 +692,65 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 	size_t num_valid = 0;
 	std::getline(cov, line);
 	// obtain the header information of the covariate file
-	if (!line.empty()) {
+	if (!line.empty())
+	{
 		std::vector < std::string > token = misc::split(line);
-		if (c_cov_header.size() == 0) {
+		if (c_cov_header.size() == 0)
+		{
 			// if no header is provided, we will use all the covariates included
-			for (size_t i = 1; i < token.size(); ++i)
-				cov_index.push_back(i);
+			for (size_t i = 1; i < token.size(); ++i) cov_index.push_back(i);
 			max_index = cov_index.size() - 1;
-		} else {
+		}
+		else
+		{
 			std::unordered_map<std::string, bool> included;
 			// if specific headers are provided, we should only include them
-			for (size_t i = 0; i < c_cov_header.size(); ++i)
-				included[c_cov_header[i]] = true;
-			for (size_t i_header = 1; i_header < token.size(); ++i_header) {
-				if (included.find(token[i_header]) != included.end()) {
+			for (size_t i = 0; i < c_cov_header.size(); ++i) included[c_cov_header[i]] = true;
+			for (size_t i_header = 1; i_header < token.size(); ++i_header)
+			{
+				if (included.find(token[i_header]) != included.end())
+				{
 					cov_index.push_back(i_header);
-					if (i_header > max_index)
-						max_index = i_header;
+					if (i_header > max_index) max_index = i_header;
 				}
 			}
 		}
-	} else
-		throw std::runtime_error("First line of covariate file is empty!");
-	// now go through the covariate file to fill up the covariate matrix
-	// Important point here, if at the end, the number of sample doens't match
-	// those in the phenotype vector, we will have to update both. Otherwise,
-	// we can just use this matrix directly
-	// The valid sample vector should contain which samples were completely valid
-	// each line is a sample
+	}
+	else throw std::runtime_error("First line of covariate file is empty!");
+
+
 	std::vector < std::pair<std::string, size_t> > valid_samples;
-	m_independent_variables = Eigen::MatrixXd::Ones(num_sample,
-			cov_index.size() + 2);
-	while (std::getline(cov, line)) {
+	m_independent_variables = Eigen::MatrixXd::Ones(num_sample, cov_index.size() + 2);
+	bool valid = true;
+	while (std::getline(cov, line))
+	{
 		misc::trim(line);
-		if (!line.empty()) {
-			bool valid = true;
+		if (!line.empty())
+		{
+			valid = true;
 			std::vector < std::string > token = misc::split(line);
-			if (token.size() <= max_index) {
-				std::string error_message =
-						"ERROR: Malformed covariate file, should contain at least "
-								+ std::to_string(max_index + 1) + " column!";
+			if (token.size() <= max_index)
+			{
+				std::string error_message = "ERROR: Malformed covariate file, should contain at least "
+						+ std::to_string(max_index + 1) + " column!";
 				throw std::runtime_error(error_message);
 			}
-			if (m_sample_with_phenotypes.find(token[0])
-					!= m_sample_with_phenotypes.end()) { // sample is found in the phenotype vector
-
+			if (m_sample_with_phenotypes.find(token[0]) != m_sample_with_phenotypes.end())
+			{ // sample is found in the phenotype vector
 				int index = m_sample_with_phenotypes[token[0]];
-				for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
+				for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
+				{
 					try {
-						double temp = misc::convert<double>(
-								token[cov_index[i_cov]]);
+						double temp = misc::convert<double>( token[cov_index[i_cov]]);
 						m_independent_variables(index, i_cov + 2) = temp; // + 2 because first line = intercept, second line = PRS
 					} catch (const std::runtime_error &error) {
 						valid = false;
 						m_independent_variables(index, i_cov + 2) = 0;
 					}
 				}
-				if (valid) {
-					valid_samples.push_back(
-							std::pair<std::string, size_t>(token[0], index));
+				if (valid)
+				{
+					valid_samples.push_back( std::pair<std::string, size_t>(token[0], index));
 					num_valid++;
 				}
 			}
@@ -753,54 +758,44 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 	}
 	// now we need to handle the situation where there are a different number of samples
 
-	fprintf(stderr, "Number of samples found with covariate info: %zu\n",
-			num_valid);
-	if (valid_samples.size() != m_sample_with_phenotypes.size()) {
-		//m_sample_names.clear();
-		int removed = m_sample_with_phenotypes.size() - valid_samples.size();
-		fprintf(stderr, "Number of samples with invalid covariate: %d\n",
-				removed);
-		double portion = (double) removed
-				/ (double) m_sample_with_phenotypes.size();
-		m_sample_with_phenotypes.clear();
+	fprintf(stderr, "Number of samples found with covariate info: %zu\n", num_valid);
+	if (valid_samples.size() != num_sample && num_sample != 0) {
+		int removed = num_sample - valid_samples.size();
+		fprintf(stderr, "Number of samples with invalid covariate: %d\n", removed);
+		double portion = (double) removed / (double) num_sample;
 		if(valid_samples.size() == 0)
 		{
 			throw std::runtime_error("All samples removed due to missingness in covariate file!");
 		}
 		if (portion > 0.05) {
-			fprintf(stderr,
-					"WARNING! More than %03.2f%% of the samples were removed!\n",
-					portion * 100);
-			fprintf(stderr,
-					"         Do check if your covariate file is correct\n");
+			fprintf(stderr, "WARNING! More than %03.2f%% of the samples were removed!\n", portion * 100);
+			fprintf(stderr, "         Do check if your covariate file is correct\n");
 		}
 		std::sort(begin(valid_samples), end(valid_samples),
 				[](std::pair<std::string, size_t> const &t1, std::pair<std::string, size_t> const &t2)
 				{
 					if(std::get<1>(t1)==std::get<1>(t2)) return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
-					else return std::get<1>(t1)<std::get<1>(t2);
+					else return std::get<1>(t1) < std::get<1>(t2);
 				});
 
 		// update the m_phenotype and m_independent
-		for (size_t cur_index = 0; cur_index < valid_samples.size();
-				++cur_index) {
+		m_sample_names.clear();
+		m_sample_with_phenotypes.clear();
+		for (size_t cur_index = 0; cur_index < valid_samples.size(); ++cur_index) {
 			std::string name = std::get < 0 > (valid_samples[cur_index]);
-			//m_sample_names.push_back( prs_score(name, 0.0));
+			m_sample_names.push_back( prs_score(name, 0.0));
+			m_sample_with_phenotypes[name]  = cur_index;
 			size_t update_index = std::get < 1 > (valid_samples[cur_index]);
 			if (update_index != cur_index) {
 				m_phenotype(cur_index, 0) = m_phenotype(update_index, 0);
 				for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-					m_independent_variables(cur_index, i_cov + 2) =
-							m_independent_variables(update_index, i_cov + 2);
+					m_independent_variables(cur_index, i_cov + 2) = m_independent_variables(update_index, i_cov + 2);
 				}
 			}
-			m_sample_with_phenotypes[name]  = cur_index;
 		}
-		m_independent_variables.conservativeResize(valid_samples.size(),
-				m_independent_variables.cols());
+		m_independent_variables.conservativeResize(valid_samples.size(), m_independent_variables.cols());
 		m_phenotype.conservativeResize(valid_samples.size(), 1);
 	}
-
 }
 
 void PRSice::prsice(const Commander &c_commander, const Region &c_region,
