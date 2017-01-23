@@ -444,7 +444,8 @@ void PRSice::init_pheno(const Commander &c_commander) {
 
 void PRSice::init_matrix(const Commander &c_commander,
 		const size_t c_pheno_index, const bool prslice) {
-	m_null_r2 = 0.0, m_sample_names.clear();
+	m_null_r2 = 0.0;
+	m_sample_names.clear();
 	// Clean up the matrix
 	m_phenotype = Eigen::VectorXd::Zero(0);
 	m_independent_variables.resize(0, 0);
@@ -641,8 +642,19 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 			prslice ?
 					std::vector < size_t > (1) :
 					std::vector < size_t > (c_region.size());
+	std::vector<prs_score> sample_name;
+	for(auto samples : m_sample_names)
+	{
+		if(m_sample_with_phenotypes.find(std::get<+PRS::IID>(samples)) != m_sample_with_phenotypes.end())
+		{
+			prs_score individual;
+			std::get<+PRS::IID>(individual) = std::get<+PRS::IID>(samples);
+			std::get<+PRS::PRS>(individual) = std::get<+PRS::PRS>(samples);
+			sample_name.push_back(individual);
+		}
+	}
 	for (size_t i_region = 0; i_region < c_region.size(); ++i_region) {
-		m_current_prs.push_back(m_sample_names);
+		m_current_prs.push_back(sample_name);
 		m_best_threshold.push_back(PRSice_best(0, 0, 0, 0, 0, 0));
 		m_prs_results.push_back(std::vector < PRSice_result > (0));
 		if (prslice)
@@ -953,11 +965,11 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		}
 	}
 	// now we need to handle the situation where there are a different number of samples
-	/*
+
 	fprintf(stderr, "Number of samples found with covariate info: %zu\n",
 			num_valid);
 	if (valid_samples.size() != m_sample_with_phenotypes.size()) {
-		m_sample_names.clear();
+		//m_sample_names.clear();
 		int removed = m_sample_with_phenotypes.size() - valid_samples.size();
 		fprintf(stderr, "Number of samples with invalid covariate: %d\n",
 				removed);
@@ -981,11 +993,12 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 					if(std::get<1>(t1)==std::get<1>(t2)) return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
 					else return std::get<1>(t1)<std::get<1>(t2);
 				});
+
 		// update the m_phenotype and m_independent
 		for (size_t cur_index = 0; cur_index < valid_samples.size();
 				++cur_index) {
 			std::string name = std::get < 0 > (valid_samples[cur_index]);
-			m_sample_names.push_back( prs_score(name, 0.0));
+			//m_sample_names.push_back( prs_score(name, 0.0));
 			size_t update_index = std::get < 1 > (valid_samples[cur_index]);
 			if (update_index != cur_index) {
 				m_phenotype(cur_index, 0) = m_phenotype(update_index, 0);
@@ -999,9 +1012,8 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		m_independent_variables.conservativeResize(valid_samples.size(),
 				m_independent_variables.cols());
 		m_phenotype.conservativeResize(valid_samples.size(), 1);
-
 	}
-	 */
+
 }
 
 bool PRSice::get_prs_score(size_t &cur_index) {

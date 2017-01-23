@@ -78,7 +78,6 @@ void PLINK::initialize()
         }
         while(std::getline(m_bim, line))
         {
-        	//wtf?
             if(!misc::trimmed(line).empty()) m_num_snp.back()++;
             m_snp_id.push_back(misc::split(line)[1]); // This is dangerous as we don't check bim file format
         }
