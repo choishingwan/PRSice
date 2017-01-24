@@ -103,7 +103,6 @@ private:
     static std::mutex score_mutex;
 
     // Holder vector containing the sample names in the target file
-
     std::vector<size_t> m_num_snp_included;
     std::vector<PRSice_best> m_best_threshold;
     std::vector<std::vector<prs_score> > m_best_score;

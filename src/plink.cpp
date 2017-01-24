@@ -892,21 +892,21 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
         //read_snp(1, false);
-        std::string genotype_list(m_num_bytes, ' ');
-        //char genotype_list[m_num_bytes];
-        m_bed.read(&genotype_list[0], m_num_bytes);
+        //std::string genotype_list(m_num_bytes, ' ');
+        char *genotype_list = new char[m_num_bytes];
+        m_bed.read((char*)genotype_list, m_num_bytes);
         if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
         prev++;
         size_t sample_index = 0;
         int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
-        for(auto &&byte : genotype_list)
+        for(size_t i_byte = 0; i_byte < m_num_bytes; ++i_byte)
         {
-        	std::cerr << genotype_list << std::endl;
-        	std::cerr << byte << std::endl;
-        	exit(-1);
+
         		size_t geno_bit = 0;
-    			int geno_batch = static_cast<int>(byte);
+    			int geno_batch = static_cast<int>(genotype_list[i_byte]);
+    			// Problem here, we are assuming the number of samples here = number of samples required
+    			/*
         		while(geno_bit < 7 && sample_index < m_num_sample)
         		{
         			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
@@ -923,7 +923,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         			sample_index++;
         			geno_bit+=2;
         		}
+        		*/
         }
+        delete[] genotype_list;
     }
 }
 

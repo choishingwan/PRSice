@@ -140,18 +140,7 @@ void PRSice::prslice(const Commander &c_commander, const Region &c_region, const
 	m_best_score.clear(); //
 	m_current_prs.clear(); //
 	m_prs_results.clear(); //
-	std::vector<prs_score> sample_name;
-	for(auto samples : m_sample_names)
-	{
-		if(m_sample_with_phenotypes.find(std::get<+PRS::IID>(samples)) != m_sample_with_phenotypes.end())
-		{
-			prs_score individual;
-			std::get<+PRS::IID>(individual) = std::get<+PRS::IID>(samples);
-			std::get<+PRS::PRS>(individual) = std::get<+PRS::PRS>(samples);
-			sample_name.push_back(individual);
-		}
-	}
-	m_current_prs.push_back(sample_name);
+	m_current_prs.push_back(m_sample_names);
 	m_best_threshold.push_back(PRSice_best(0,0,0,0,0,0));
 	m_prs_results.push_back(std::vector<PRSice_result>(0));
 	m_best_score = m_current_prs;
