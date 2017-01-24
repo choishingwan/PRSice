@@ -566,6 +566,7 @@ quantile_plot <-
       family <- binomial
     }
     reg <- summary(glm(Pheno ~ ., family, data = pheno))
+    
     coef.quantiles <- reg$coefficients[1:num_quant, 1]
     ci.quantiles.u <-
       reg$coefficients[1:num_quant, 1] + (1.96 * reg$coefficients[1:num_quant, 2])
@@ -812,8 +813,8 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
     # Main purpose, match up with PRS.best as that is the input
     PRS.best = PRS.best[PRS.best$IID%in% pheno_matrix$IID, ]
     PRS.best = PRS.best[match(pheno_matrix$IID, PRS.best$IID),]
-    # Need to plot the quantile plot
-    quantile_plot(PRS, PRS.best, pheno_matrix, prefix, argv, binary)
+    # Need to plot the quantile plot (Remember to remove the iid)
+    quantile_plot(PRS, PRS.best, pheno_matrix[,-1], prefix, argv, binary)
   }
   # Now perform the barplotting
   if (!provided("fastscore", argv) || !argv$fastscore) {
@@ -834,63 +835,7 @@ if (provided("intermediate", argv)) {
   # So in theory, we still need argv$target
   # TODO: It is more complicated than this
   #run_plot(argv$intermediate, argv)
-  covariance = NULL
-  if (provided("covar_file", argv)) {
-    covariance = fread(argv$covar_file,
-                       data.table = F,
-                       header = T)
-    if (provided("covar_header", argv)) {
-      c = strsplit(argv$covar_header, split = ",")[[1]]
-      covariance = covariance[, colnames(covariance) %in% c]
-    }
-  }
-  prefix = argv$intermediate
-  if (!provided("target", argv)) {
-    stop("You still need to provide the target information when you use intermediate!")
-    
-  }
-  region = "Base"
-  
-  if (!is.null(phenos)) {
-    pheno_file = fread(argv$pheno_file,
-                       header = T,
-                       data.table = F)
-    fam = fread(paste(argv$target, ".fam", sep = ""),
-                data.table = F,
-                header = F)$V2
-    pheno_file = pheno_file[pheno_file[, 1] %in% fam, ]
-    match_cov = NULL
-    if (!is.null(covariance)) {
-      match_cov = covariance[covariance[, 1] %in% fam,]
-    }
-    id = 1
-    for (p in phenos) {
-      cur_prefix = paste(prefix, p, region, sep = ".")
-      run_plot(cur_prefix,
-               argv,
-               pheno_file[[p]],
-               binary_target[id],
-               match_cov)
-      id = id + 1
-    }
-  } else{
-    cur_prefix = paste(prefix, region, sep = ".")
-    fam = fread(paste(argv$target, ".fam", sep = ""),
-                data.table = F,
-                header = F)$V6
-    match_cov = NULL
-    if (!is.null(covariance)) {
-      match_cov = covariance[covariance[, 1] %in% fam,]
-    }
-    if (provided("pheno_file", argv)) {
-      pheno = fread(paste(argv$pheno_file),
-                    data.table = F,
-                    header = F)
-      
-      fam = pheno$V2[pheno$V1 %in% fam]
-    }
-    run_plot(cur_prefix, argv, fam, binary_target[1], match_cov)
-  }
+  stop("Currently not support intermediate. Use --plot instead")
 } else{
   # we need to deduce the file names
   # Now we actually require one single string for the input, separated by ,
@@ -1006,7 +951,7 @@ if (provided("intermediate", argv)) {
             }
               
             cur_pheno.clean = cur_pheno[!is.na(cur_pheno$Pheno),]
-            cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID && !is.na(apply(match_cov[,-1],1,sum)),]
+            cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID & !is.na(apply(match_cov[,-1],1,sum)),]
             cur_pheno.clean = cur_pheno.clean[cur_pheno.clean$IID%in%cov_matrix[,1],]
             colnames(cov_matrix) = c("IID", paste("Cov",1:(ncol(cov_matrix)-1)))
             # Should be of same size now
@@ -1061,14 +1006,13 @@ if (provided("intermediate", argv)) {
           }
         }
         cur_pheno.clean = fam.clean[!is.na(fam.clean$Pheno),]
-        cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID && !is.na(apply(match_cov[,-1],1,sum)),]
+        cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID & !is.na(apply(match_cov[,-1],1,sum)),]
         cur_pheno.clean = cur_pheno.clean[cur_pheno.clean$IID%in%cov_matrix[,1],]
         colnames(cov_matrix) = c("IID", paste("Cov",1:(ncol(cov_matrix)-1)))
         # Should be of same size now
         fam.final = merge(cur_pheno.clean, cov_matrix, by="IID");
         fam.ok = fam[fam$V2%in%fam.final$IID,]
         fam.final = fam.final[match(fam.ok$V2, fam.final$IID),]
-        
         
         
         run_plot(cur_prefix, argv, fam.final, binary_target[1])
