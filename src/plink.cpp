@@ -874,6 +874,14 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     if(m_bed.is_open()) m_bed.close();
     if(m_bim.is_open()) m_bim.close();
     std::string prev_name = "";
+    // safety check here
+	for(size_t i_region=0; i_region < prs_score.size(); ++i_region)
+	{
+		if(prs_score[i_region].size() < m_num_sample)
+		{
+			throw std::runtime_error("Size of vector doesn't match number of samples!!");
+		}
+	}
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
         if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
@@ -905,8 +913,6 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 
         		size_t geno_bit = 0;
     			int geno_batch = static_cast<int>(genotype_list[i_byte]);
-    			// Problem here, we are assuming the number of samples here = number of samples required
-    			/*
         		while(geno_bit < 7 && sample_index < m_num_sample)
         		{
         			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
@@ -923,7 +929,6 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         			sample_index++;
         			geno_bit+=2;
         		}
-        		*/
         }
         delete[] genotype_list;
     }
@@ -939,6 +944,12 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     if(m_bed.is_open()) m_bed.close();
     if(m_bim.is_open()) m_bim.close();
     std::string prev_name = "";
+
+    // safety check here
+    if(prs_score[i_region].size() < m_num_sample)
+    {
+    		throw std::runtime_error("Size of vector doesn't match number of samples!!");
+    }
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
         if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)

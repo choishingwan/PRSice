@@ -661,4 +661,30 @@ void Commander::user_input() const{
 		fprintf(stderr, "P-Threshold  : %f\n", m_clump);
 		fprintf(stderr, "R2-Threshold : %f\n", m_clump_r2);
 		fprintf(stderr, "Window Size  : %zu\n", m_clump_kb);
+		if(!m_no_regress)
+		{
+			fprintf(stderr, "\nThreshold Selected: \n");
+			if(m_fastscore)
+			{
+				fprintf(stderr, "Fastscore    : TRUE\n");
+				fprintf(stderr, "Barlevels    : ");
+				if(m_barlevel.empty())
+				{
+					throw std::runtime_error("Cannot perform fastscore without bar level information!");
+				}
+				fprintf(stderr, "%d", m_barlevel.front());
+				for(size_t i_bar = 1; i_bar < m_barlevel.size(); ++i_bar)
+				{
+					fprintf(stderr, ", %d", m_barlevel[i_bar]);
+				}
+				fprintf(stderr, "\n");
+			}
+			else
+			{
+				fprintf(stderr, "Fastscore    : FALSE\n");
+				fprintf(stderr, "Lower Bound  : %f\n", m_lower);
+				fprintf(stderr, "Upper Bound  : %f\n", m_upper);
+				fprintf(stderr, "Intervals    : %f\n", m_inter);
+			}
+		}
 }
