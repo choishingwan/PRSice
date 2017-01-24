@@ -67,7 +67,8 @@ public:
     		return m_processed_regions;
     }
     int get_count(size_t i) const { return m_region_count.at(i); };
-
+    void info() const;
+    void print_file(std::string output) const;
 private:
     bool in_feature(std::string in) const{
     	for(auto feature: m_feature)

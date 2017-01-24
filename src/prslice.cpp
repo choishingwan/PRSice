@@ -164,7 +164,7 @@ void PRSice::prslice(const Commander &c_commander, const Region &c_region, const
 void PRSice::output(const Commander &c_commander, size_t pheno_index) const
 {
 	std::string pheno_name = std::get<pheno_store::NAME>(m_pheno_names[pheno_index]);
-	std::string output_prefix = c_commander.get_out()+"."+m_current_base;
+	std::string output_prefix = c_commander.get_out()+"."+m_base_name;
 	if(!pheno_name.empty()) output_prefix.append("."+pheno_name+".");
 	std::string out_best = output_prefix+".best";
 	std::string out_prslice = output_prefix+".prslice";

@@ -2,14 +2,15 @@
 
 
 SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
-         const std::string ref_allele, const std::string alt_allele,
-         const double statistic, const double se, const double p_value, std::vector<long_type> flag
-	):m_ref_allele(ref_allele), m_alt_allele(alt_allele),
-    m_rs_id(rs_id), m_chr(chr), m_loc(loc), m_stat(statistic), m_standard_error(se),
-    m_p_value(p_value), m_flags(flag)
+		const std::string ref_allele, const std::string alt_allele,
+		const double statistic, const double se, const double p_value)
+	: m_ref(ref_allele), m_alt(alt_allele),
+		m_rs(rs_id), m_chr(chr), m_loc(loc),  m_stat(statistic),
+		m_se(se), m_p_value(p_value)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
-    m_region_clumped = std::vector<long_type>(m_flags.size());
+    m_flipped = false;
+    m_clumped = false;
 }
 
 std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input)
@@ -39,21 +40,14 @@ SNP::SNP()
 {
     m_loc=-1; // default is -1 to indicate that it is not provided
     m_stat=0.0;
-    m_standard_error=0.0;
+    m_se=0.0;
     m_p_value=0.0;
-//    m_flags=nullptr;
-//    m_region_clumped=nullptr;
-//    m_size_of_flag =0;
+    m_flipped = false;
+    m_clumped = false;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
 }
 
-SNP::~SNP()
-{
-    // This is not exactly safe because if we have also assign this flag
-    // to some other SNP, then the flag will be deleted twice
-//    if(m_flags != nullptr) delete [] m_flags;
-//    if(m_region_clumped != nullptr) delete [] m_region_clumped;
-}
+SNP::~SNP(){}
 
 size_t SNP::index_check(const std::string &c_in)
 {
@@ -160,7 +154,6 @@ void SNP::clump(boost::ptr_vector<SNP> &snp_list)
 			int sum_total = 0;
 			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
 			{
-
 				//TODO: ERROR IS HERE
 				// if there is any overlap this should set the snp_list to the new flag
 				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
@@ -194,30 +187,30 @@ bool SNP::check_loc(const std::string &chr, const int loc, const std::string &re
     if(chr.compare(m_chr)!=0) return false;
     if(loc!= m_loc) return false;
     //Check if allele is the same
-    if(ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)!=0 &&
-            ref_allele.compare(complement(m_ref_allele))!=0 &&
-            alt_allele.compare(complement(m_ref_allele))!=0 ) return false; // not possible even after flipping
-    if(m_alt_allele.empty())
+    if(ref_allele.compare(m_ref)!=0 && alt_allele.compare(m_ref)!=0 &&
+            ref_allele.compare(complement(m_ref))!=0 &&
+            alt_allele.compare(complement(m_ref))!=0 ) return false; // not possible even after flipping
+    if(m_alt.empty())
     {
         // can only use the reference allele to do things, more dangerous
-        if((ref_allele.compare(m_ref_allele)!=0 && alt_allele.compare(m_ref_allele)==0) ||
-                (ref_allele.compare(complement(m_ref_allele))!=0 && alt_allele.compare(complement(m_ref_allele))==0))
+        if((ref_allele.compare(m_ref)!=0 && alt_allele.compare(m_ref)==0) ||
+                (ref_allele.compare(complement(m_ref))!=0 && alt_allele.compare(complement(m_ref))==0))
         {
-            m_alt_allele = ref_allele;
-            m_ref_allele = alt_allele;
+            m_alt = ref_allele;
+            m_ref = alt_allele;
             m_flipped=true;
         }
     }
     else
     {
         // can use both
-        if((ref_allele.compare(m_alt_allele)==0 && alt_allele.compare(m_ref_allele)==0) ||
-                (ref_allele.compare(complement(m_alt_allele))==0 &&
-                 alt_allele.compare(complement(m_ref_allele))==0)	)
+        if((ref_allele.compare(m_alt)==0 && alt_allele.compare(m_ref)==0) ||
+                (ref_allele.compare(complement(m_alt))==0 &&
+                 alt_allele.compare(complement(m_ref))==0)	)
         {
             // need to flip
-            m_alt_allele = ref_allele;
-            m_ref_allele = alt_allele;
+        		m_alt = ref_allele;
+            m_ref = alt_allele;
             m_flipped=true;
         }
     }

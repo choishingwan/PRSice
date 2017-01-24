@@ -151,7 +151,7 @@ void PLINK::clump_initialize(const std::unordered_map<std::string, size_t> &incl
             std::string error_message = "Cannot open bim file: "+bim_name;
             throw std::runtime_error(error_message);
         }
-        m_num_snp.push_back(0);
+        m_num_snp.push_back(0); // for each file, record down the number of SNPs
         while(std::getline(m_bim, line))
         {
             cur_num_line++;
@@ -783,8 +783,9 @@ int PLINK::read_snp(int num_snp, bool ld)
         for(; m_snp_iter < m_num_snp[m_name_index] && cur_iter<num_snp; ++m_snp_iter)
         {
             cur_iter++;
-            char genotype_list[m_num_bytes];
-            m_bed.read(genotype_list, m_num_bytes);
+            //char genotype_list[m_num_bytes];
+            std::string genotype_list(m_num_bytes, ' ');
+            m_bed.read(&genotype_list[0], m_num_bytes);
             size_t i_genotype = 0;
             size_t total_allele = 0;
             size_t num_missing = 0;
@@ -828,7 +829,7 @@ int PLINK::read_snp(int num_snp, bool ld)
             m_genotype.push_back(genotype);
             m_missing.push_back(missing);
             double maf= 0.0;
-            if(m_required_bit - num_missing != 0) maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
+            if((m_required_bit - num_missing)!= 0) maf = (double)total_allele/((double)m_required_bit-(double)num_missing);
             maf = (maf > 0.5)? 1.0-maf: maf;
             m_maf.push_back(maf);
             m_num_missing.push_back(num_missing);
@@ -864,7 +865,7 @@ int PLINK::read_snp(int num_snp, bool ld)
 // will change
 //This initialization will also perform the filtering and flipping
 void PLINK::get_score(const std::vector<p_partition> &partition,
-                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound)
 {
 
@@ -873,6 +874,14 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     if(m_bed.is_open()) m_bed.close();
     if(m_bim.is_open()) m_bim.close();
     std::string prev_name = "";
+    // safety check here
+	for(size_t i_region=0; i_region < prs_score.size(); ++i_region)
+	{
+		if(prs_score[i_region].size() < m_num_sample)
+		{
+			throw std::runtime_error("Size of vector doesn't match number of samples!!");
+		}
+	}
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
         if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
@@ -891,17 +900,19 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
         //read_snp(1, false);
-        char genotype_list[m_num_bytes];
-        m_bed.read(genotype_list, m_num_bytes);
+        //std::string genotype_list(m_num_bytes, ' ');
+        char *genotype_list = new char[m_num_bytes];
+        m_bed.read((char*)genotype_list, m_num_bytes);
         if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
         prev++;
         size_t sample_index = 0;
         int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
-        for(auto &&byte : genotype_list)
+        for(size_t i_byte = 0; i_byte < m_num_bytes; ++i_byte)
         {
+
         		size_t geno_bit = 0;
-    			int geno_batch = static_cast<int>(byte);
+    			int geno_batch = static_cast<int>(genotype_list[i_byte]);
         		while(geno_bit < 7 && sample_index < m_num_sample)
         		{
         			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
@@ -919,11 +930,12 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         			geno_bit+=2;
         		}
         }
+        delete[] genotype_list;
     }
 }
 
 void PLINK::get_score(const std::vector<p_partition> &partition,
-                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<std::pair<std::string, double> > > &prs_score,
+                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound, size_t i_region)
 {
 
@@ -932,6 +944,12 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     if(m_bed.is_open()) m_bed.close();
     if(m_bim.is_open()) m_bim.close();
     std::string prev_name = "";
+
+    // safety check here
+    if(prs_score[i_region].size() < m_num_sample)
+    {
+    		throw std::runtime_error("Size of vector doesn't match number of samples!!");
+    }
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
         if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
@@ -950,8 +968,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev=std::get<+PRS::LINE>(partition[i_snp]);
         }
         //read_snp(1, false);
-        char genotype_list[m_num_bytes];
-        m_bed.read(genotype_list, m_num_bytes);
+        //char genotype_list[m_num_bytes];
+        std::string genotype_list(m_num_bytes, ' ');
+        m_bed.read(&genotype_list[0], m_num_bytes);
         if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
         prev++;
         size_t sample_index = 0;

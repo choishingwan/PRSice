@@ -55,14 +55,20 @@ public:
     {
         for(int i = 0; i < m_barlevel.size(); ++i)
         {
-            if(p < m_barlevel[i])
+            if(p <= m_barlevel[i])
             {
                 return i;
             }
         }
+        if(p > m_barlevel.back()) return m_barlevel.size();
         return -2;
     };
-    double get_cur_category(int i) const { return (i<0)? m_barlevel.at(0) : m_barlevel.at(i); };
+    double get_threshold(int i) const
+    {
+    	return(i < 0)? m_barlevel.at(0) :
+    			((i>=m_barlevel.size())? 1.0 :m_barlevel.at(i));
+    };
+
     std::vector<bool> target_is_binary() const { return m_target_is_binary; };
     bool get_base_binary(size_t i) const { return m_use_beta.at(i); };
     bool no_regression() const { return m_no_regress; };
@@ -70,7 +76,8 @@ public:
     bool full() const { return m_full; };
     bool all() const { return m_all; };
     bool print_all() const { return m_print_all; };
-
+    bool no_clump() const { return m_no_clump; };
+    void user_input() const;
 protected:
 private:
     void usage();
@@ -110,6 +117,7 @@ private:
     bool m_print_all;
     bool m_beta_provided;
     bool m_stat_provided;
+    bool m_no_clump;
     double m_proxy;
     double m_clump;
     double m_clump_r2;

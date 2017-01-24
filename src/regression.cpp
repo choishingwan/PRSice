@@ -40,6 +40,16 @@ namespace Regression{
 		int rdf = n-rank;
 		double resvar = rss/(double)rdf;
 		int df_int = intercept; //0 false 1 true
+
+		size_t se_index = intercept;
+		for(size_t ind=0;ind < beta.rows(); ++ind)
+		{
+			if(z.colsPermutation().indices()(ind) == intercept)
+			{
+				se_index = ind;
+				break;
+			}
+		}
 		r2 = mss/(mss+rss);
 		r2_adjust = 1.0- (1.0-r2)*((double)(n - df_int)/(double)rdf);
 		Eigen::MatrixXd R = z.matrixR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
@@ -59,6 +69,7 @@ namespace Regression{
 		coeff = beta(intercept);
 		boost::math::students_t dist(rdf);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+
 	}
 
 	Eigen::VectorXd logit_variance(const Eigen::VectorXd &eta){
@@ -265,10 +276,12 @@ namespace Regression{
 				break;
 			}
 		}
+
 		double tvalue = start(intercept)/se(se_index);
 		coeff = start(intercept);
 		boost::math::normal_distribution<> dist(0,1);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
+
 	}
 
 }

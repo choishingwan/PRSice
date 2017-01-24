@@ -23,7 +23,7 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_current_base(base_name), m_base_index(index),
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_base_name(base_name), m_base_index(index),
     		m_target(target), m_target_binary(target_binary), m_perm(permutation)
     {
         if(index < 0)
@@ -32,30 +32,12 @@ public:
         }
     };
     virtual ~PRSice();
-    /**
-     * This function will read in all SNPs with p-value less than c_threshold from
-     * the base file. Base file is determined by m_base_index
-     * @param c_commander Contain the meta information of the user input. This is where
-     *	we get the base file information
-     * @param region The region information. This is used to set the flag of the SNPs
-     * @param c_threshold The p-value threshold. Any SNPs with p-value higher than this
-     *  will be ignored
-     */
-    void get_snp(const Commander &c_commander, Region &region, const double &c_threshold);
-    /**
-     * This function will perform clumping based on SNPs found in both the target and LD files
-     * All required parameters are obtained from c_commander. Index SNPs will be stored in
-     * m_include_snp. As different base file might contain different SNPs, this has to be
-     * done separately for each base files
-     * @param c_commander Contain all the parameters e.g. clumping threshold.
-     */
-    void clump(const Commander &c_commander);
-    /**
-     * This function will compute the required phenotype that will be used for PRS.
-     * Result phenotype will be stored in m_pheno_names
-     * @param c_commander Again, c_commander serves as the container of all parameters
-     */
-    void init_pheno(const Commander &c_commander);
+    void get_snp(const Commander &c_commander, Region &region);
+    void perform_clump(const Commander &c_commander);
+    void pheno_check(const Commander &c_commander);
+
+
+
     /**
      * This function compute the required matrix and the null r2
      * @param c_commander The paramter container
@@ -88,58 +70,53 @@ public:
     void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
+    //slowly update the class
+    //input related
+    std::string m_base_name;
+    int m_base_index;
+    std::string m_target;
+    std::vector<bool> m_target_binary;
+    // valid sample information
+	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
+	std::vector<prs_score> m_sample_names;
+	// matrix for regression
+	Eigen::VectorXd m_phenotype;
+	Eigen::MatrixXd m_independent_variables;
+	// important guide for all operation
+	std::vector<p_partition> m_partition;
+	// snp information
+    boost::ptr_vector<SNP> m_snp_list;
+    std::unordered_map<std::string, size_t> m_snp_index; // only use for reading in information
+    std::vector<std::string> m_chr_list; // chromosome information
+    std::unordered_map<std::string, size_t> m_include_snp; // the information provider until categorize
+
     // Phenotype storages
     enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
     typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
 	std::vector<pheno_storage> m_pheno_names;
 	size_t m_pheno_index=0;
-	size_t m_perm = 0;
-	// Regression related storages
+	// Null information
 	double m_null_r2 = 0.0;
-	Eigen::VectorXd m_phenotype;
-	Eigen::MatrixXd m_independent_variables;
-	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
+	// others
+	size_t m_perm = 0;
 	// For thread safety
     static std::mutex score_mutex;
 
     // Holder vector containing the sample names in the target file
-	std::vector<prs_score> m_sample_names;
-	// PRS storages
-    std::vector<p_partition> m_partition; //
-    std::vector<size_t> m_num_snp_included; //
-    std::vector<PRSice_best> m_best_threshold; //
-    std::vector<std::vector<prs_score> > m_best_score; //
-    std::vector<std::vector<prs_score> > m_current_prs; //
-    std::vector<std::vector<PRSice_result> > m_prs_results; //
-    // SNPs found in the base file
-    boost::ptr_vector<SNP> m_snp_list; //
-    std::unordered_map<std::string, size_t> m_snp_index; //
+    std::vector<size_t> m_num_snp_included;
+    std::vector<PRSice_best> m_best_threshold;
+    std::vector<std::vector<prs_score> > m_best_score;
+    std::vector<std::vector<prs_score> > m_current_prs;
+    std::vector<std::vector<PRSice_result> > m_prs_results;
+
     // PRSlice related storages
     enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
     typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;
     std::vector<windows> m_best_snps;
-    /**
-     * This vector contain the chromosome included in the base file
-     * Should be used to guide the plink class to read the multi-chromosome
-     * files
-     */
-    std::vector<std::string> m_chr_list;
-    std::unordered_map<std::string, size_t> m_include_snp; //
 
 
-    /**
-     * The name of the base file
-     * We use this as a storage as wehave already stripped off the directory
-     * information from this string
-     */
-    std::string m_current_base;
-    /**
-     * The base index indicating which base we are working with
-     */
-    int m_base_index;
 
-    std::string m_target;
-    std::vector<bool> m_target_binary;
+
     /**
      * Check whether if the SNP is included in the target file. This should update
      * the m_include_snp
