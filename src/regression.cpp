@@ -56,15 +56,6 @@ namespace Regression{
 		Eigen::VectorXd se = ((R.transpose()*R).inverse().diagonal()*resvar).array().sqrt();
 		// Remember, only the coefficient's order is wrong e.g. intercept at the end
 		//Eigen::VectorXd est = beta.transpose()*Eigen::MatrixXd(z.colsPermutation());
-		size_t se_index = intercept;
-		for(size_t ind = 0; ind < beta.rows(); ++ind)
-		{
-			if(z.colsPermutation().indices()(ind) == intercept)
-			{
-				se_index = ind;
-				break;
-			}
-		}
 		double tval = beta(intercept)/se(se_index); // only interested in the one coefficient
 		coeff = beta(intercept);
 		boost::math::students_t dist(rdf);
