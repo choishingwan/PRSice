@@ -718,8 +718,8 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		}
 	}
 	else throw std::runtime_error("First line of covariate file is empty!");
-
-
+	fprintf(stderr, "\nStart processing the covariates\n");
+	fprintf(stderr, "==============================\n");
 	std::vector < std::pair<std::string, size_t> > valid_samples;
 	m_independent_variables = Eigen::MatrixXd::Ones(num_sample, cov_index.size() + 2);
 	bool valid = true;
@@ -794,7 +794,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		m_independent_variables.conservativeResize(valid_samples.size(), m_independent_variables.cols());
 		m_phenotype.conservativeResize(valid_samples.size(), 1);
 
-		fprintf(stderr, "Final number of samples: %zu\n", valid_samples.size());
+		fprintf(stderr, "\nFinal number of samples: %zu\n\n", valid_samples.size());
 	}
 }
 

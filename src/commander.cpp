@@ -672,10 +672,10 @@ void Commander::user_input() const{
 				{
 					throw std::runtime_error("Cannot perform fastscore without bar level information!");
 				}
-				fprintf(stderr, "%d", m_barlevel.front());
+				fprintf(stderr, "%f", m_barlevel.front());
 				for(size_t i_bar = 1; i_bar < m_barlevel.size(); ++i_bar)
 				{
-					fprintf(stderr, ", %d", m_barlevel[i_bar]);
+					fprintf(stderr, ", %f", m_barlevel[i_bar]);
 				}
 				fprintf(stderr, "\n");
 			}
