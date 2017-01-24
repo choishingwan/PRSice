@@ -40,16 +40,27 @@ namespace Regression{
 		int rdf = n-rank;
 		double resvar = rss/(double)rdf;
 		int df_int = intercept; //0 false 1 true
+
+		size_t se_index = intercept;
+		for(size_t ind=0;ind < beta.rows(); ++ind)
+		{
+			if(z.colsPermutation().indices()(ind) == intercept)
+			{
+				se_index = ind;
+				break;
+			}
+		}
 		r2 = mss/(mss+rss);
 		r2_adjust = 1.0- (1.0-r2)*((double)(n - df_int)/(double)rdf);
 		Eigen::MatrixXd R = z.matrixR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
 		Eigen::VectorXd se = ((R.transpose()*R).inverse().diagonal()*resvar).array().sqrt();
 		// Remember, only the coefficient's order is wrong e.g. intercept at the end
 		//Eigen::VectorXd est = beta.transpose()*Eigen::MatrixXd(z.colsPermutation());
-		double tval = beta(intercept)/se(intercept); // only interested in the one coefficient
+		double tval = beta(intercept)/se(se_index); // only interested in the one coefficient
 		coeff = beta(intercept);
 		boost::math::students_t dist(rdf);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+
 	}
 
 	Eigen::VectorXd logit_variance(const Eigen::VectorXd &eta){
@@ -256,10 +267,12 @@ namespace Regression{
 				break;
 			}
 		}
+
 		double tvalue = start(intercept)/se(se_index);
 		coeff = start(intercept);
 		boost::math::normal_distribution<> dist(0,1);
 		p_value = 2*boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
+
 	}
 
 }
