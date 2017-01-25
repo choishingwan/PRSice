@@ -54,6 +54,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
         {"no_clump",no_argument,NULL,0},
+		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
     };
@@ -457,6 +458,7 @@ Commander::Commander()
     m_prslice_size = -1.0;
     m_thread=1;
     m_print_all= false;
+
 }
 
 Commander::~Commander()

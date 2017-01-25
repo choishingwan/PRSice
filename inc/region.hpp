@@ -69,6 +69,12 @@ public:
     int get_count(size_t i) const { return m_region_count.at(i); };
     void info() const;
     void print_file(std::string output) const;
+    void prslice()
+    {
+    		std::string name = m_region_name.front();
+    		m_region_name.clear();
+    		m_region_name.push_back(name);
+    }
 private:
     bool in_feature(std::string in) const{
     	for(auto feature: m_feature)

@@ -42,7 +42,20 @@ public:
         m_required_bit = 0;
         m_snp_iter=0;
         m_name_index=0;
+        m_scoring =  SCORING::MEAN_IMPUTE;
     };
+
+    PLINK(std::string prefix, std::vector<std::string> &chr_list, SCORING scoring, size_t thread=1):
+    	m_prefix(prefix),m_chr_list(chr_list),m_thread(thread),m_scoring(scoring)
+        {
+            m_init = false;
+            m_bit_size = sizeof(long_type)*CHAR_BIT;
+            m_num_bytes=0;
+            m_num_sample=0;
+            m_required_bit = 0;
+            m_snp_iter=0;
+            m_name_index=0;
+        };
     ~PLINK();
     void initialize();
     void clump_initialize(const std::unordered_map<std::string, size_t> &inclusion);
@@ -63,10 +76,6 @@ public:
                    const boost::ptr_vector<SNP> &snp_list,
 				   std::vector< std::vector<prs_score> > &prs_score,
                    size_t start_index, size_t end_bound);
-    void get_score(const std::vector<p_partition> &quick_ref,
-                   const boost::ptr_vector<SNP> &snp_list,
-				   std::vector< std::vector<prs_score> > &prs_score,
-                   size_t start_index, size_t end_bound, size_t i_region);
     void close()
     {
         if(m_bed.is_open()) m_bed.close();
@@ -116,7 +125,7 @@ private:
     std::deque<long_type*> m_genotype;
     std::deque<long_type*> m_missing;
     std::deque<size_t> m_num_missing;
-
+    SCORING m_scoring;
     size_t m_thread;
 
 

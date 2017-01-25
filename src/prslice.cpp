@@ -150,10 +150,10 @@ void PRSice::prslice(const Commander &c_commander, const Region &c_region, const
 	for(auto &&snps : m_best_snps)
 	{
 		m_partition.insert(m_partition.end(), std::get<prslice_wind::SNPS>(snps).begin(), std::get<prslice_wind::SNPS>(snps).end());
-		PLINK prs(m_target, m_chr_list);
+		PLINK prs(m_target, m_chr_list, m_score);
 		prs.initialize();
 		// after this, the m_current_prs[i_region] will be updated
-		prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, m_partition.size(), 0);
+		prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, m_partition.size());
 		cur_index=m_partition.size();
 		m_num_snp_included.front() += m_partition.size();
 		thread_score(0, 1, bin_count,n_thread, c_pheno_index);

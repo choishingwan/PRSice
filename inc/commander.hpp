@@ -107,6 +107,7 @@ private:
     std::string m_gtf;
     std::string m_msigdb;
     std::string m_out;
+    std::string m_missing_score;
 //    bool m_target_is_binary;
     bool m_fastscore;
     bool m_index;

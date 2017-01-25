@@ -536,7 +536,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			if (!line.empty()) {
 				std::vector < std::string > token = misc::split(line);
 				if (token.size() < 6) throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
-				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0));
+				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0, 0));
 				if (token[+FAM::PHENOTYPE] != "NA")
 				{
 					try {
@@ -607,7 +607,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			{
 				std::vector < std::string > token = misc::split(line);
 				if (token.size() < 6) std::runtime_error( "Malformed fam file, should contain at least 6 columns");
-				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0));
+				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0, 0));
 				if (phenotype_info.find(token[+FAM::IID]) != phenotype_info.end())
 				{
 					std::string p = phenotype_info[token[+FAM::IID]];
@@ -870,7 +870,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 				all_out << cur_threshold << "\t" << c_region.get_name(i_region);
 				for (auto &&prs : m_current_prs[i_region])
 				{
-					all_out << "\t" << std::get < +PRS::PRS > (prs) / (double) m_num_snp_included[i_region];
+					all_out << "\t" << std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS > (prs);
 				}
 				all_out << std::endl;
 			}
@@ -938,15 +938,15 @@ bool PRSice::get_prs_score(size_t &cur_index)
 		{
 			prev_index = std::get < +PRS::CATEGORY > (m_partition[i]); // only when the category is still negative
 		}
-		// Use as part of the output
-		for (size_t i_region = 0; i_region < m_num_snp_included.size(); ++i_region)
-		{
-			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region))
-				m_num_snp_included[i_region]++;
-		}
+//		// Use as part of the output
+//		for (size_t i_region = 0; i_region < m_num_snp_included.size(); ++i_region)
+//		{
+//			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region))
+//				m_num_snp_included[i_region]++;
+//		}
 	}
 	if (!ended) end_index = m_partition.size();
-	PLINK prs(m_target, m_chr_list);
+	PLINK prs(m_target, m_chr_list, m_score);
 	prs.initialize();
 	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
@@ -975,9 +975,9 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			std::string sample = std::get < +PRS::IID > (prs);
 			if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end()) {
 				if (thread_safe)
-					m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) m_num_snp_included[iter];
+					m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs) ;
 				else
-					X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) m_num_snp_included[iter];
+					X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs);
 
 			}
 		}

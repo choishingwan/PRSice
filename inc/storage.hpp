@@ -33,16 +33,19 @@
 	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
-    enum class PRS{IID=0, PRS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2, NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
+    enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2, NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
+    // Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
+    enum class SCORING{MEAN_IMPUTE, SET_ZERO};
     enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
 	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< BIM > : enumeration_trait_indexing {};
     template<> struct enumeration_traits< FILE_INFO > : enumeration_trait_indexing {};
     template<> struct enumeration_traits< PRS > : enumeration_trait_indexing {};
+    template<> struct enumeration_traits< SCORING > : enumeration_trait_indexing {};
 	//List of const for use with the GET
-	// IID PRS
-	typedef std::pair<std::string, double> prs_score;
+	// IID PRS Number of non-missing SNP
+	typedef std::tuple<std::string, double, size_t> prs_score;
 	// rsid, line number in bim, category, snp_list index
 	typedef std::tuple<std::string, size_t, int, size_t, std::string, double> p_partition;
 	// threshold, r2,  num_snps, p, coefficient r2 adjust, number of better

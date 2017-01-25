@@ -99,6 +99,7 @@ private:
 	double m_null_r2 = 0.0;
 	// others
 	size_t m_perm = 0;
+	SCORING m_score = SCORING::MEAN_IMPUTE;
 	// For thread safety
     static std::mutex score_mutex;
 

@@ -90,6 +90,8 @@ int main(int argc, char *argv[]) {
 										"PRSset. Will only perfrom PRSlice";
 						fprintf(stderr, "%s\n", error_message.c_str());
 					}
+					// clean up the region such that it is easier to handle later on
+					region.prslice();
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
 						/**
 						 * Again, initialize the matrix, which will be used for the whole PRSlice
