@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
 			try {
 				PRSice prsice = PRSice(base_name, i_base,
 						commander.get_target(), commander.target_is_binary(),
-						commander.get_perm());
+						commander.get_perm(),
+						commander.get_scoring());
 				prsice.get_snp(commander, region);
 				std::ofstream region_out;
 				std::string region_out_name = commander.get_out() + "." + base_name + ".region";

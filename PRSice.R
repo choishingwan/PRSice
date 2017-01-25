@@ -197,6 +197,11 @@ option_list <- list(
     help = "The step size of the threshold.",
     default = 0.00005
   ),
+  make_option(c("--score"), type="character", help="Method to handle missing genotypes. By default, 
+              final scores are averages of valid per-allele scores with missing genotypes contribute an amount 
+              proportional to imputed allele frequency. To throw out missing observations instead (decreasing 
+              the denominator in the final average when this happens), use the 'no_mean_imputation' modifier.
+               Alternatively, you can use the 'center' modifier to shift all scores to mean zero."),
   make_option("--fastscore", action = "store_true", help = "Calculate the minimum amount of threshold as required by the bar_level option"),
   make_option("--chr", type = "character", help = "Column header of Chromosome <Required>"),
   make_option("--A1", type = "character", help = "Column header of Reference Allele <Required>"),

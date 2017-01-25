@@ -88,6 +88,7 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("full")==0) m_full = true;
             else if(command.compare("print_all")==0) m_print_all = true;
             else if(command.compare("no_clump")==0) m_no_clump = true;
+            else if(command.compare("score")==0) m_missing_score = optarg;
             else if(command.compare("clump_p")==0)
             {
                 double temp = atof(optarg);
@@ -508,6 +509,11 @@ void Commander::info()
 			"Default: "+std::to_string(m_inter)));
 	m_help_messages.push_back(help("Scoring options",'\0', "fastscore", "Calculate the minimum amount of threshold as "
 			"required by the bar_level option"));
+	m_help_messages.push_back(help("Scoring options",'\0', "score", "Method to handle missing genotypes. By default, "
+			"final scores are averages of valid per-allele scores with missing genotypes contribute an amount "
+			"proportional to imputed allele frequency. To throw out missing observations instead (decreasing "
+			"the denominator in the final average when this happens), use the 'no_mean_imputation' modifier."
+			" Alternatively, you can use the 'center' modifier to shift all scores to mean zero. "));
 	m_help_messages.push_back(help("File Headers", '\0', "chr", "Column header of Chromosome <Required>"));
 	m_help_messages.push_back(help("File Headers", '\0', "A1", "Column header of Reference Allele <Required>"));
 	m_help_messages.push_back(help("File Headers", '\0', "A2", "Column header of Alternaative Allele"));

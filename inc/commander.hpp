@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <iostream>
 #include "misc.hpp"
+#include "storage.hpp"
 
 class Commander
 {
@@ -77,6 +78,11 @@ public:
     bool all() const { return m_all; };
     bool print_all() const { return m_print_all; };
     bool no_clump() const { return m_no_clump; };
+    SCORING get_scoring() const{
+    		if(m_missing_score == "no_mean_imputation") return SCORING::SET_ZERO;
+    		else if(m_missing_score == "center") return SCORING::CENTER;
+    		else return SCORING::MEAN_IMPUTE;
+    }
     void user_input() const;
 protected:
 private:

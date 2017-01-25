@@ -23,8 +23,8 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation): m_base_name(base_name), m_base_index(index),
-    		m_target(target), m_target_binary(target_binary), m_perm(permutation)
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation, SCORING score): m_base_name(base_name), m_base_index(index),
+    		m_target(target), m_target_binary(target_binary), m_perm(permutation), m_score(score)
     {
         if(index < 0)
         {
