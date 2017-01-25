@@ -35,7 +35,7 @@
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
     enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2, NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
     // Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
-    enum class SCORING{MEAN_IMPUTE, SET_ZERO};
+    enum class SCORING{MEAN_IMPUTE, SET_ZERO, CENTER};
     enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
 	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};

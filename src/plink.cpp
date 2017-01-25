@@ -908,7 +908,17 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         size_t sample_index = 0;
         int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
         if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
+        std::vector<bool> in_region;
+        int num_region = 0;
+        for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
+        {
+        		num_region++;
+        		in_region.push_back(snp_list[snp_index].in(i_region));
+        }
+
+        		double stat = snp_list[snp_index].get_stat();
         std::vector<size_t> missing_samples;
+        std::vector<double> genotypes(m_num_sample);
         int total_num = 0;
         for(size_t i_byte = 0; i_byte < m_num_bytes; ++i_byte)
         {
@@ -920,15 +930,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
         			if(geno!=1) // Because 01 is coded as missing
         			{
-        				total_num+=snp_list[snp_index].geno(geno);
-        				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
-        				{
-        					if(snp_list[snp_index].in(i_region))
-        					{
-        						std::get<+PRS::PRS>(prs_score[i_region][sample_index]) += snp_list[snp_index].score(geno);
-        						std::get<+PRS::NNMISS>(prs_score[i_region][sample_index]) ++;
-        					}
-        				}
+        				int flipped_geno = snp_list[snp_index].geno(geno);
+        				total_num+=flipped_geno;
+        				genotypes[sample_index] = flipped_geno;
         			}
         			else
         			{
@@ -937,20 +941,41 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         			sample_index++;
         			geno_bit+=2;
         		}
-        		double stat = snp_list[snp_index].get_stat();
-        		if(m_scoring == SCORING::MEAN_IMPUTE)
-        		{
-        			for(auto &&s : missing_samples)
-        			{
-        				for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
-        				{
-        					std::get<+PRS::PRS>(prs_score[i_region][s]) += stat*((double)total_num/((double)m_num_sample*2.0));
-        					std::get<+PRS::NNMISS>(prs_score[i_region][s])++;
-        				}
-        			}
-        		}
         }
         delete[] genotype_list;
+
+
+		size_t i_missing = 0;
+		double center_score = stat*((double)total_num/((double)m_num_sample*2.0));
+		for(size_t i_sample=0; i_sample < m_num_sample; ++i_sample)
+		{
+			if(i_sample == missing_samples[i_missing])
+			{
+				for(size_t i_region; i_region < num_region; ++i_region)
+				{
+					if(in_region[i_region])
+					{
+						if(m_scoring == SCORING::MEAN_IMPUTE) std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += center_score;
+						if(m_scoring != SCORING::SET_ZERO) std::get<+PRS::NNMISS>(prs_score[i_region][i_sample])++;
+					}
+				}
+				i_missing++;
+			}
+			else
+			{ // not missing sample
+				for(size_t i_region; i_region < num_region; ++i_region)
+				{
+					if(in_region[i_region])
+					{
+						if(m_scoring == SCORING::CENTER){
+							std::get<+PRS::PRS>(prs_score[i_region][i_sample]) -= center_score;
+						}
+						std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += genotypes[i_sample]*stat*0.5;
+    						std::get<+PRS::NNMISS>(prs_score[i_region][i_sample]) ++;
+					}
+				}
+			}
+		}
     }
 }
 
