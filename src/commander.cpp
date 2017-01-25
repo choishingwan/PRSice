@@ -672,6 +672,7 @@ void Commander::user_input() const{
 		if(!m_no_regress)
 		{
 			fprintf(stderr, "\nThreshold Selected: \n");
+			fprintf(stderr, "==============================\n");
 			if(m_fastscore)
 			{
 				fprintf(stderr, "Fastscore    : TRUE\n");

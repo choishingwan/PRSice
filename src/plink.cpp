@@ -868,7 +868,6 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
                       const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound)
 {
-
     size_t prev =0;
 //	This allow for consistence at least in this specific use case
     if(m_bed.is_open()) m_bed.close();
@@ -915,8 +914,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         		num_region++;
         		in_region.push_back(snp_list[snp_index].in(i_region));
         }
-
-        		double stat = snp_list[snp_index].get_stat();
+        double stat = snp_list[snp_index].get_stat();
         std::vector<size_t> missing_samples;
         std::vector<double> genotypes(m_num_sample);
         int total_num = 0;
@@ -947,9 +945,10 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 
 		size_t i_missing = 0;
 		double center_score = stat*((double)total_num/((double)m_num_sample*2.0));
+		size_t num_miss = missing_samples.size();
 		for(size_t i_sample=0; i_sample < m_num_sample; ++i_sample)
 		{
-			if(i_sample == missing_samples[i_missing])
+			if(i_missing < num_miss && i_sample == missing_samples[i_missing])
 			{
 				for(size_t i_region; i_region < num_region; ++i_region)
 				{
@@ -963,7 +962,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 			}
 			else
 			{ // not missing sample
-				for(size_t i_region; i_region < num_region; ++i_region)
+				for(size_t i_region=0; i_region < num_region; ++i_region)
 				{
 					if(in_region[i_region])
 					{
