@@ -428,7 +428,7 @@ if (!argv$plot) {
     ret <- system2(argv$prsice,
                    command,
                    stdout = TRUE,
-                   stderr = "")
+                   stderr = TRUE)
   } else{
     stop("Cannot run PRSice without the PRSice binary file")
   }

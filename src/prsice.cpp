@@ -549,6 +549,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 								m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
+								if(temp == 1) num_case++;
+								if(temp == 0) num_control++;
 							}
 						}
 						else
@@ -617,9 +619,12 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 								int temp = misc::convert<int>(p);
 								if (temp  >= 0 && temp <= 2)
 								{
+									max_num = (temp>max_num)? temp:max_num;
 									m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
 									phenotype_store.push_back(temp);
 									cur_index++;
+									if(temp == 1) num_case++;
+									if(temp == 0) num_control++;
 								}
 							}
 							else
@@ -647,6 +652,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 	bool error = false;
 	if(max_num > 1 && binary)
 	{
+		num_case = 0;
+		num_control = 0;
 		for(size_t i = 0; i < phenotype_store.size(); ++i)
 		{
 			phenotype_store[i]--;
@@ -661,12 +668,12 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 	if (phenotype_store.size() == 0) throw std::runtime_error("No phenotype presented");
 	m_phenotype = Eigen::Map<Eigen::VectorXd>(phenotype_store.data(), phenotype_store.size());
 	if (binary) {
+		fprintf(stderr, "Number of controls : %zu\n", num_control);
+		fprintf(stderr, "Number of cases : %zu\n", num_case);
 		if (regress) {
 			if (num_control == 0) throw std::runtime_error("There are no control samples");
 			if (num_case == 0) throw std::runtime_error("There are no cases");
 		}
-		fprintf(stderr, "Number of controls : %zu\n", num_control);
-		fprintf(stderr, "Number of cases : %zu\n", num_case);
 	} else {
 		fprintf(stderr, "Number of sample(s) with phenotype  : %zu\n", m_phenotype.rows());
 	}
