@@ -939,11 +939,11 @@ bool PRSice::get_prs_score(size_t &cur_index)
 			prev_index = std::get < +PRS::CATEGORY > (m_partition[i]); // only when the category is still negative
 		}
 //		// Use as part of the output
-//		for (size_t i_region = 0; i_region < m_num_snp_included.size(); ++i_region)
-//		{
-//			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region))
-//				m_num_snp_included[i_region]++;
-//		}
+		for (size_t i_region = 0; i_region < m_num_snp_included.size(); ++i_region)
+		{
+			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region))
+				m_num_snp_included[i_region]++;
+		}
 	}
 	if (!ended) end_index = m_partition.size();
 	PLINK prs(m_target, m_chr_list, m_score);
