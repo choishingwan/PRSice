@@ -431,9 +431,7 @@ if (!argv$plot) {
   }
   if (provided("prsice", argv)) {
     ret <- system2(argv$prsice,
-                   command,
-                   stdout = TRUE,
-                   stderr = TRUE)
+                   command)
   } else{
     stop("Cannot run PRSice without the PRSice binary file")
   }
@@ -733,7 +731,7 @@ bar_plot <- function(PRS, prefix, argv) {
     }
   }
   PRS <- unique(PRS[order(PRS$Threshold), ])
-  
+ 	print("most done"); 
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
   output <- PRS[PRS$Threshold %in% barchart.levels,]
   output$print.p[round(output$P, digits = 3) != 0] <-
@@ -743,7 +741,7 @@ bar_plot <- function(PRS, prefix, argv) {
   output$sign <- sign(output$Coefficient)
   output$print.p <- sub("e", "*x*10^", output$print.p)
   ggfig.plot <- ggplot(data = output)
-  
+  print("output done")
   if (argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
@@ -874,7 +872,7 @@ if (provided("intermediate", argv)) {
       } else{
         header <- read.table(argv$pheno_file,
                              nrows = 1,
-                             header = FALSE)
+                             header = TRUE)
         # This will automatically filter out un-used phenos
         if (length(binary_target) != length(phenos)) {
           message <-
@@ -891,8 +889,8 @@ if (provided("intermediate", argv)) {
           )
           stop(message)
         }
-        binary_target = binary_target[phenos %in% header[1, ]]
-        phenos = phenos[phenos %in% header[1, ]]
+        binary_target = binary_target[phenos %in% colnames(header)]
+        phenos = phenos[phenos %in% colnames(header)]
       }
     } else{
       if (length(binary_target) != 1) {

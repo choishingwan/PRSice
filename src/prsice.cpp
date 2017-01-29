@@ -815,13 +815,14 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	// not allowed for prslice
 	bool no_regress = c_commander.no_regression() && !prslice;
 	bool require_all = c_commander.all() && !prslice;
-
+	bool multi = m_pheno_names.size() > 1;
 	std::ofstream all_out;
 	if (require_all)
 	{
 		std::string all_out_name = c_commander.get_out() + "." + m_base_name;
 		std::string pheno_name = std::get < pheno_store::NAME > (m_pheno_names[m_pheno_index]);
-		if (!pheno_name.empty()) all_out_name.append("." + pheno_name + ".all.score");
+		if (!pheno_name.empty() && multi) all_out_name.append("." + pheno_name);
+		all_out_name.append(".all.score");
 		all_out.open(all_out_name.c_str(), std::ofstream::app);
 		if (!all_out.is_open())
 		{
@@ -1073,7 +1074,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 			> (m_pheno_names[pheno_index]);
 	std::string output_prefix = c_commander.get_out() + "." + m_base_name;
 	if (!pheno_name.empty())
-		output_prefix.append("." + pheno_name + ".");
+		output_prefix.append("." + pheno_name);
 	size_t total_perm = c_commander.get_perm();
 	bool perm = total_perm > 0;
 
