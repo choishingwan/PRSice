@@ -1119,17 +1119,16 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 									/ (double) (total_perm + 1.0);
 				prsice_out << std::endl;
 			}
-			int best_snp_size = std::get < +PRS::NSNP
-					> (m_best_threshold[i_region]);
+			int best_snp_size = std::get < +PRS::NSNP > (m_best_threshold[i_region]);
 			if (best_snp_size == 0) {
 				fprintf(stderr,
 						"ERROR: Best R2 obtained when no SNPs were included\n");
 				fprintf(stderr, "       Cannot output the best PRS score\n");
 			} else {
 				for (auto &&prs : m_best_score[i_region]) {
-					best_out << std::get < +PRS::IID > (prs) << "\t" << std::get
-							< +PRS::PRS
-							> (prs) / (double) best_snp_size << std::endl;
+					best_out << std::get < +PRS::IID > (prs) << "\t"
+							<< std::get< +PRS::PRS> (prs) / (double) best_snp_size
+							<< std::endl;
 				}
 			}
 			prsice_out.close();
@@ -1190,12 +1189,12 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 				<< std::endl;
 		i_region = 0;
 		for (auto best_region : m_best_threshold) {
-			region_out << c_region.get_name(i_region) << "\t" << std::get
-					< +PRS::THRESHOLD > (best_region) << "\t" << std::get
-					< +PRS::R2 > (best_region) << "\t" << std::get < +PRS::COEFF
-					> (best_region) << "\t" << std::get < +PRS::P
-					> (best_region) << "\t" << std::get < +PRS::NSNP
-					> (best_region) << std::endl;
+			region_out << c_region.get_name(i_region) << "\t" <<
+					std::get< +PRS::THRESHOLD > (best_region) << "\t"
+					<< std::get< +PRS::R2 > (best_region) - m_null_r2 << "\t"
+					<< std::get < +PRS::COEFF > (best_region) << "\t"
+					<< std::get < +PRS::P> (best_region) << "\t"
+					<< std::get < +PRS::NSNP> (best_region) << std::endl;
 			i_region++;
 		}
 		region_out.close();
