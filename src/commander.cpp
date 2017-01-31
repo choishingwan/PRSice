@@ -54,6 +54,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
         {"no_clump",no_argument,NULL,0},
+        {"print_snp",no_argument,NULL,0},
 		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
@@ -89,6 +90,7 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("print_all")==0) m_print_all = true;
             else if(command.compare("no_clump")==0) m_no_clump = true;
             else if(command.compare("score")==0) m_missing_score = optarg;
+            else if(command.compare("print_snp")==0) m_print_snp = true;
             else if(command.compare("clump_p")==0)
             {
                 double temp = atof(optarg);
@@ -457,8 +459,9 @@ Commander::Commander()
     m_upper = 0.5;
     m_inter = 0.00005;
     m_prslice_size = -1.0;
-    m_thread=1;
-    m_print_all= false;
+    m_thread = 1;
+    m_print_all = false;
+    m_print_snp = false;
 
 }
 
