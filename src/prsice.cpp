@@ -1157,14 +1157,18 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 		}
 		best_out << "IID\tprs_" << std::get < +PRS::THRESHOLD
 				> (m_best_threshold[i_region]) << std::endl;
-		prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP" << std::endl;
+		prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP";
+		if (perm) prsice_out << "\tEmpirical_P";
+		prsice_out << std::endl;
 		// We want to skip the intercept for now
 		for (auto &&prs : m_prs_results[i_region]) {
 			prsice_out << std::get < +PRS::THRESHOLD > (prs) << "\t" << std::get
 					< +PRS::R2 > (prs) - m_null_r2 << "\t" << std::get < +PRS::P
 					> (prs) << "\t" << std::get < +PRS::COEFF
 					> (prs) << "\t" << std::get < +PRS::NSNP
-					> (prs) << std::endl;
+					> (prs);
+			if (perm) prsice_out << "\t" << (double) (std::get < +PRS::EMPIRICAL_P > (prs) + 1.0) / (double) (total_perm + 1.0);
+			prsice_out << std::endl;
 		}
 		int best_snp_size = std::get < +PRS::NSNP
 				> (m_best_threshold[i_region]);
