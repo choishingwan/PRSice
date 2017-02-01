@@ -483,6 +483,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		all_out << "Threshold\tRegion";
 		for (auto &&sample : m_sample_names)
 			all_out << "\t" << std::get < +PRS::IID > (sample);
+		all_out << std::endl;
 		all_out.close();
 	}
 	double null_r2_adjust = 0.0, null_p = 0.0, null_coeff = 0.0;
