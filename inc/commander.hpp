@@ -19,7 +19,7 @@ public:
     bool initialize(int argc, char *argv[]);
     bool index() const { return m_index; };
     bool gen_bed() const { return m_gen_bed; };
-    bool print_snp() const { return m_print_snp(); };
+    bool print_snp() const { return m_print_snp; };
     std::string chr() const { return m_chr; };
     std::string ref() const { return m_ref_allele; };
     std::string alt() const { return m_alt_allele; };

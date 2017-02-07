@@ -1127,7 +1127,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 		std::string output_name = output_prefix + "." + c_region.get_name(i_region);
 		std::string out_best = output_name + ".best";
 		std::string out_prsice = output_name + ".prsice";
-		std::string out_snp = output_name +".best_snps"
+		std::string out_snp = output_name +".best_snps";
 		std::ofstream best_out, prsice_out;
 		best_out.open(out_best.c_str());
 		prsice_out.open(out_prsice.c_str());
@@ -1192,13 +1192,11 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 			}
 			for(size_t i_region=0; i_region < m_best_threshold.size(); ++i_region)
 			{
-				size_t num_snp = std::get < +PRS::NSNP> (best_region);
-				snp_out << c_region.get_name(i_region);
+				size_t num_snp = std::get < +PRS::NSNP> (m_best_threshold[i_region]);
 				for(auto snp : m_partition)
 				{
-					snp_out << "\t" << std::get< +PRS::RS >(snp);
+					snp_out  << std::get< +PRS::RS >(snp) << std::endl;;
 				}
-				snp_out << std::endl;
 			}
 			snp_out.close();
 		}
