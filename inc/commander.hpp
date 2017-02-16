@@ -8,6 +8,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
 #include "misc.hpp"
 #include "storage.hpp"
 

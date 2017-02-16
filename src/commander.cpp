@@ -324,9 +324,47 @@ bool Commander::initialize(int argc, char *argv[])
         }
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
+
+
+    // Be nice and check for the statistic
+
     if(!m_stat_provided && m_beta_provided)
     {
     		m_statistic = (m_use_beta.front())? "BETA" : "OR";
+    }
+    else if(!m_stat_provided)
+    {
+    		std::ifstream base_file; // we only use the first file
+    		base_file.open(m_base.front().c_str());
+    		if(!base_file.is_open())
+    		{
+    			fprintf(stderr, "Cannot open base file: %s\n", m_base.front().c_str());
+    			std::string header;
+    			std::getline(base_file, header);
+    			base_file.close();
+    			if( misc::trimmed(header).empty())
+    			{
+    				throw std::runtime_error("Base file contain empty header!");
+    			}
+    			else
+    			{
+    				std::vector<std::string> token = misc::split(header);
+    				for(auto &col : token)
+    				{
+    					if(col.compare("BETA")==0)
+    					{
+    						m_statistic = "BETA";
+    						m_use_beta.push_back(true);
+    					}
+    					else if(col.compare("OR")==0)
+    					{
+    						m_statistic = "OR";
+    						m_use_beta.push_back(false);
+
+    					}
+    				}
+    			}
+    		}
     }
     if(m_base.size()==0)
     {

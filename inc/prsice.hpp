@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink.hpp"
