@@ -9,6 +9,7 @@
 #define PRSICE_INC_STORAGE_HPP_
 #include <memory>
 	// From http://stackoverflow.com/a/12927952/1441789
+
 	template< typename e >
 	struct enumeration_traits;
 
@@ -34,9 +35,13 @@
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
     enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2, NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
-    // Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
+    enum class BOUNDARY{CHR, START, END};
+    enum class GTF{CHR, SOURCE, FEATURE, START, END, SCORE, STRAND, FRAME, ATTRIBUTE};
+    	// Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
     enum class SCORING{MEAN_IMPUTE, SET_ZERO, CENTER};
     enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
+    template<> struct enumeration_traits< BOUNDARY > : enumeration_trait_indexing {};
+	template<> struct enumeration_traits< GTF > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< BIM > : enumeration_trait_indexing {};
@@ -53,5 +58,14 @@
 	//  threshold, r2, num_snps, coefficient, pvalue (The r2 is for determining if it is the best), number of better
 	typedef std::tuple<double, double, size_t, double, double, size_t> PRSice_best;
     typedef std::tuple<std::string, char, std::string, std::string> help;
+    typedef std::tuple<std::string, size_t, size_t> boundary;
 
+
+#if defined(__LP64__) || defined(_WIN64)
+    typedef uint64_t long_type;
+#define ONE  0x1LLU
+#else
+    typedef uint32_t long_type;
+#define ONE  0x1LU
+#endif
 #endif /* PRSICE_INC_STORAGE_HPP_ */

@@ -8,55 +8,64 @@
 #include "prsice.hpp"
 #include "region.hpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	Commander commander = Commander();
-	try {
-		if (!commander.initialize(argc, argv))
-			return 0; //only require the usage information
-	} catch (const std::runtime_error& error) {
+	try
+	{
+		if (!commander.initialize(argc, argv)) return 0; //only require the usage information
+	}
+	catch (const std::runtime_error& error)
+	{
 		std::cerr << error.what() << std::endl;
 		exit(-1);
 	}
+
 	Region region = Region(commander.get_feature());
-	try {
+	try
+	{
 		region.run(commander.get_gtf(), commander.get_msigdb(),
-				commander.get_bed(), commander.get_out(), commander.gen_bed());
-	} catch (const std::runtime_error &error) {
+				commander.get_bed(), commander.get_out());
+	}
+	catch (const std::runtime_error &error)
+	{
 		std::cerr << error.what() << std::endl;
 		exit(-1);
 	}
 
 	std::vector < std::string > base = commander.get_base();
-	// User input should be shown before other stuff to reduce the redundency
+	// Might want to generate a log file?
 	region.info();
 	commander.user_input();
-	auto region_info = region.get_info();
+
+
 	bool perform_prslice = commander.prslice() > 0.0;
 	bool full_model = commander.full();
 	double bound_end = commander.get_upper();
 	int num_base = base.size();
-	if (num_base == 0)
-		throw std::runtime_error("There is no base case to run");
-	if (num_base < 0)
-		throw std::runtime_error("Negative number of base");
-	else {
+	if (num_base == 0) throw std::runtime_error("There is no base case to run");
+	if (num_base < 0) throw std::runtime_error("Negative number of base");
+	else
+	{
 		if (num_base > 1)
-			fprintf(stderr,
-					"Multiple base phenotype detected. You might want to run separate instance of PRSice to speed up the process\n");
-		for (size_t i_base = 0; i_base < num_base; ++i_base) {
+			fprintf(stderr, "Multiple base phenotype detected. You might want to run separate instance of PRSice to speed up the process\n");
+		for (size_t i_base = 0; i_base < num_base; ++i_base)
+		{
 			region.reset();
 			fprintf(stderr, "\nStart processing: %s\n", base[i_base].c_str());
 			fprintf(stderr, "==============================\n");
 			//        	Need to handle paths in the name
 			std::string base_name = misc::remove_extension<std::string>(
 					misc::base_name<std::string>(base[i_base]));
-			try {
+			try
+			{
 				PRSice prsice = PRSice(base_name, i_base,
 						commander.get_target(), commander.target_is_binary(),
 						commander.get_perm(),
-						commander.get_scoring());
+						commander.get_scoring(),
+						region.size());
 				prsice.get_snp(commander, region);
-				std::ofstream region_out;
+
 				std::string region_out_name = commander.get_out() + "." + base_name + ".region";
 				region.print_file(region_out_name);
 				prsice.perform_clump(commander);

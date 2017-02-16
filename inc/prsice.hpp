@@ -23,8 +23,9 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary, size_t permutation, SCORING score): m_base_name(base_name), m_base_index(index),
-    		m_target(target), m_target_binary(target_binary), m_perm(permutation), m_score(score)
+    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary,
+    		size_t permutation, SCORING score, size_t num_region): m_base_name(base_name), m_base_index(index),
+    		m_target(target), m_target_binary(target_binary), m_perm(permutation), m_score(score), m_region_size(num_region)
     {
         if(index < 0)
         {
@@ -109,7 +110,8 @@ private:
     std::vector<std::vector<prs_score> > m_best_score;
     std::vector<std::vector<prs_score> > m_current_prs;
     std::vector<std::vector<PRSice_result> > m_prs_results;
-
+    // Region info
+    size_t m_region_size=1;
     // PRSlice related storages
     enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
     typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;

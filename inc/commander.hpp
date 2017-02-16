@@ -18,7 +18,6 @@ public:
     virtual ~Commander();
     bool initialize(int argc, char *argv[]);
     bool index() const { return m_index; };
-    bool gen_bed() const { return m_gen_bed; };
     bool print_snp() const { return m_print_snp; };
     std::string chr() const { return m_chr; };
     std::string ref() const { return m_ref_allele; };
@@ -118,7 +117,6 @@ private:
 //    bool m_target_is_binary;
     bool m_fastscore;
     bool m_index;
-    bool m_gen_bed;
     bool m_no_regress;
     bool m_all;
     bool m_full;

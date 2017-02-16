@@ -14,8 +14,8 @@ bool Commander::initialize(int argc, char *argv[])
     {
         {"base",required_argument,NULL,'b'},
         {"target",required_argument,NULL,'t'},
-        {"covar_header",required_argument,NULL,'c'},
-        {"covar_file",required_argument,NULL,'C'},
+        {"covar-header",required_argument,NULL,'c'},
+        {"covar-file",required_argument,NULL,'C'},
         {"ancestry",required_argument,NULL,'a'},
         {"pheno_file",required_argument,NULL,'f'},
         {"pheno_col",required_argument,NULL,0},
@@ -42,7 +42,6 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump_kb",required_argument,NULL,0},
         {"binary_target",required_argument,NULL,0},
         {"bar_levels",required_argument,NULL,0},
-        {"gen_bed",no_argument,NULL,0},
         {"index",no_argument,NULL,0},
         {"all",no_argument,NULL,0},
         {"full",no_argument,NULL,0},
@@ -78,8 +77,8 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("A2")==0) m_alt_allele=optarg;
             else if(command.compare("stat")==0)
             {
-            	m_statistic = optarg;
-            	m_stat_provided = true;
+            		m_statistic = optarg;
+            		m_stat_provided = true;
             }
             else if(command.compare("snp")==0) m_snp=optarg;
             else if(command.compare("bp")==0) m_bp=optarg;
@@ -168,7 +167,6 @@ bool Commander::initialize(int argc, char *argv[])
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
             }
-            else if(command.compare("gen_bed")==0) m_gen_bed = true;
             else if(command.compare("no_regression")==0) m_no_regress = true;
             else if(command.compare("fastscore")==0) m_fastscore = true;
             else if(command.compare("proxy")==0)
@@ -195,19 +193,18 @@ bool Commander::initialize(int argc, char *argv[])
             }
             else if(command.compare("perm")==0)
             {
-            	int temp = atoi(optarg);
-            	if(temp < 0.0)
-            	{
-            		error = true;
-            		error_message.append("Number of permutation must be bigger than 0\n");
-            	}
-            	else m_permutation = temp;
-
+            		int temp = atoi(optarg);
+            		if(temp < 0.0)
+            		{
+            			error = true;
+            			error_message.append("Number of permutation must be bigger than 0\n");
+            		}
+            		else m_permutation = temp;
             }
             else if(command.compare("feature")==0)
             {
-            	std::vector<std::string> token = misc::split(optarg, ", ");
-            	m_feature.insert(m_feature.end(), token.begin(), token.end());
+            		std::vector<std::string> token = misc::split(optarg, ", ");
+            		m_feature.insert(m_feature.end(), token.begin(), token.end());
             }
             else
             {
@@ -241,7 +238,7 @@ bool Commander::initialize(int argc, char *argv[])
         case 'a':
             m_ancestry_dim = optarg;
             if(m_ancestry_dim.compare("MDS") != 0 && m_ancestry_dim.compare("mds") != 0 &&
-                    m_ancestry_dim.compare("PCA") != 0 && m_ancestry_dim.compare("pca") != 0 )
+            		m_ancestry_dim.compare("PCA") != 0 && m_ancestry_dim.compare("pca") != 0 )
             {
                 error = true;
                 error_message.append("Only support PCA and MDS for the calculation of ancestry information\n");
@@ -329,7 +326,7 @@ bool Commander::initialize(int argc, char *argv[])
     }
     if(!m_stat_provided && m_beta_provided)
     {
-    	m_statistic = (m_use_beta.front())? "BETA" : "OR";
+    		m_statistic = (m_use_beta.front())? "BETA" : "OR";
     }
     if(m_base.size()==0)
     {
@@ -347,11 +344,6 @@ bool Commander::initialize(int argc, char *argv[])
     {
         error = true;
         error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
-    }
-    if(m_gen_bed && m_gtf.empty())
-    {
-        fprintf(stderr, "ERROR: Cannot generate gene bed file without given the gtf file!\n");
-        fprintf(stderr, "       Will not generate the gene bed file\n");
     }
     if(m_out.empty())
     {
@@ -407,15 +399,15 @@ bool Commander::initialize(int argc, char *argv[])
     std::sort(m_barlevel.begin(), m_barlevel.end());
     if(m_feature.empty())
     {
-    	m_feature.push_back("exon");
-    	m_feature.push_back("gene");
-    	m_feature.push_back("protein_coding");
-    	m_feature.push_back("CDS");
+    		m_feature.push_back("exon");
+    		m_feature.push_back("gene");
+    		m_feature.push_back("protein_coding");
+    		m_feature.push_back("CDS");
     }
     if(m_inter <=0.0 && !m_fastscore) // double comparison error, need to optimize it
     {
-    	error = true;
-    	error_message.append("Error: Interval cannot be 0!\n");
+    		error = true;
+    		error_message.append("Error: Interval cannot be 0!\n");
     }
     if(error) throw std::runtime_error(error_message);
     return true;
@@ -443,7 +435,6 @@ Commander::Commander()
     m_out = "PRSice";
     m_fastscore =false;
     m_index =false;
-    m_gen_bed = false;
     m_no_regress = false;
     m_all = false;
     m_full = false;
@@ -541,8 +532,6 @@ void Commander::info()
 			"when --msigdb is set."));
 	m_help_messages.push_back(help("PRSet", 'm', "msigdb", "MSIGDB file containing the pathway information "
 			"require the gtf file."));
-	m_help_messages.push_back(help("PRSet", '\0', "gen_bed", "Generate bed file of gene regions from "
-			" the gtf file."));
 	m_help_messages.push_back(help("PRSet", '\0', "print_all", "Print the detail report for all sets"));
 	m_help_messages.push_back(help("PRSet", '\0', "proxy", "Proxy threshold for index SNP to be considered "
 			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
