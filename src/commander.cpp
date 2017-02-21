@@ -408,14 +408,14 @@ bool Commander::initialize(int argc, char *argv[])
     }
     else if(m_use_beta.size() != m_base.size())
     {
-    		error=true;
+    	error=true;
         error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
         error_message.append("       Default value only work when all base file are using OR and\n");
         error_message.append("       when --beta is not used\n");
     }
     if(m_pheno_col.size()!=0 && m_pheno_col.size()!=m_target_is_binary.size())
     {
-    		error=true;
+    	error=true;
         error_message.append("ERROR: Number of target phenotypes doesn't match information of binary\n");
         error_message.append("       target! You must indicate whether the phenotype is binary using\n");
         error_message.append("       --binary_target\n");
@@ -427,6 +427,11 @@ bool Commander::initialize(int argc, char *argv[])
         fprintf(stderr, "         no-regress can only be used with\n");
         fprintf(stderr, "         fastscore. Will use fastscore\n");
         m_fastscore=true;
+    }
+    if(m_prslice_size > 0 && (m_bed_list.size() > 0 || !m_msigdb.empty()))
+    {
+    	error = true;
+    	error_message.append("ERROR: We do not support running PRSlice together with PRSet.\n");
     }
     if(m_no_regress) m_all=true;
     if(m_fastscore && m_barlevel.size()==0)
