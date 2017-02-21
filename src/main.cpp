@@ -65,9 +65,10 @@ int main(int argc, char *argv[])
 						commander.get_scoring(),
 						region.size());
 				prsice.get_snp(commander, region);
-
 				std::string region_out_name = commander.get_out() + "." + base_name + ".region";
 				region.print_file(region_out_name);
+
+
 				prsice.perform_clump(commander);
 				prsice.pheno_check(commander);
 				size_t num_pheno = prsice.num_phenotype();

@@ -35,36 +35,15 @@ public:
     };
     virtual ~PRSice();
     void get_snp(const Commander &c_commander, Region &region);
+
+    // Under construction
     void perform_clump(const Commander &c_commander);
     void pheno_check(const Commander &c_commander);
 
-
-
-    /**
-     * This function compute the required matrix and the null r2
-     * @param c_commander The paramter container
-     * @param c_pheno_index Current phenotype
-     * @param prslice Whether if this is for PRSlice. For PRSlice, we will not allow output of all
-     */
     void init_matrix(const Commander &c_commander, const size_t c_pheno_index, const bool prslice);
-    /**
-     * This function return the number of valid phenotype for the analysis
-     * @return Number of valid phenotype for the analysis
-     */
     size_t num_phenotype() const { return m_pheno_names.size(); };
-    /**
-     * Essentially calculate the index for PRSice run. Categorize SNPs based on
-     * their p-values. Will update the m_partition vector
-     * @param c_commander Parameter container
-     */
     void categorize(const Commander &c_commander);
     void prsice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,  bool prslice=false);
-    /**
-     * Output the results
-     * @param c_commander List of parameters
-     * @param c_region List of regions
-     * @param pheno_index Indication of which phenotype we are working with
-     */
     void output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
     void output(const Commander &c_commander, size_t pheno_index) const;
     // PRSlice related stuff
@@ -78,6 +57,11 @@ private:
     int m_base_index;
     std::string m_target;
     std::vector<bool> m_target_binary;
+	size_t m_perm = 0;
+	SCORING m_score = SCORING::MEAN_IMPUTE;
+    size_t m_region_size=1;
+
+
     // valid sample information
 	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
 	std::vector<prs_score> m_sample_names;
@@ -100,8 +84,6 @@ private:
 	// Null information
 	double m_null_r2 = 0.0;
 	// others
-	size_t m_perm = 0;
-	SCORING m_score = SCORING::MEAN_IMPUTE;
 	// For thread safety
     static std::mutex score_mutex;
 
@@ -112,7 +94,6 @@ private:
     std::vector<std::vector<prs_score> > m_current_prs;
     std::vector<std::vector<PRSice_result> > m_prs_results;
     // Region info
-    size_t m_region_size=1;
     // PRSlice related storages
     enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
     typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;

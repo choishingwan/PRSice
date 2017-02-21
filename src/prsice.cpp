@@ -57,6 +57,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	threshold = (c_commander.full())? 1.0 : threshold;
 	std::vector < std::string > token;
 	// Actual reading the file, will do a bunch of QC
+	bool chr_error = false;
 	while (std::getline(snp_file, line))
 	{
 		misc::trim(line);
@@ -71,6 +72,19 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 			{
 				std::string rs_id = token[index[+SNP_Index::RS]];
 				std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
+				if(chr.compare("X") == 0 || chr.compare("x")==0 ||
+						chr.compare("Y")==0 || chr.compare("y")==0)
+				{
+					if(!chr_error)
+					{
+						chr_error = true;
+						fprintf(stderr, "WARNING: Sex chromosome (X/Y) detected. They should be excluded\n");
+						fprintf(stderr, "         Will ignore all SNPs on the Sex chromosome. \n");
+						fprintf(stderr, "         If you are working on other organism, just rename your\n");
+						fprintf(stderr, "         chromosome to something else should be alright\n");
+					}
+					exclude=true;
+				}
 				std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
 				std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
 				double pvalue = 0.0;
@@ -198,11 +212,12 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 
 
 void PRSice::perform_clump(const Commander &c_commander) {
+	// Main reason why we don't read this earlier is because of allele matching
+	// otherwise, in theory, inclusion only need to be read once
 	// if we don't want clumping, then the ld file is useless
 	bool has_ld = !c_commander.ld_prefix().empty() && c_commander.no_clump();
 	std::string ld_file = (has_ld) ? c_commander.ld_prefix() : m_target;
 
-	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
 	size_t num_ambig = 0, not_found = 0, num_duplicate = 0;
 	std::string target_bim_name = m_target + ".bim";
 	if (target_bim_name.find("#") != std::string::npos) {
@@ -216,17 +231,27 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 	fprintf(stderr, "\nIn Target File\n");
 	fprintf(stderr, "==============================\n");
-	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
-	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicate);
-	if (not_found != 0) fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
-	fprintf(stderr, "Final Number of SNPs in target  : %zu\n", m_include_snp.size());
 
 	if (has_ld) {
 		fprintf(stderr, "\nIn LD Reference %s\n", ld_file.c_str());
 		fprintf(stderr, "==============================\n");
-		clump.clump_initialize(m_include_snp, m_snp_list, m_snp_index);
-	} else clump.clump_initialize(m_include_snp);
+		if (ld_file.find("#") != std::string::npos) {
+			for (auto &&chr : m_chr_list) {
+				std::string ld_chr_bim_name = ld_file;
+				misc::replace_substring(ld_chr_bim_name, "#", chr);
+				check_inclusion(ld_chr_bim_name, num_ambig, not_found, num_duplicate);
+			}
+		} else check_inclusion(target_bim_name, num_ambig, not_found, num_duplicate);
+	}
 
+	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs      : %zu\n", num_ambig);
+	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs     : %zu\n", num_duplicate);
+	if (not_found != 0) fprintf(stderr, "Number of SNPs not found      : %zu\n", not_found);
+	fprintf(stderr, "Final Number of SNPs included : %zu\n", m_include_snp.size());
+
+
+	// Thing is, this might be the LD file, which only need to be read once
+	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
 		clump.start_clumping(m_include_snp, m_snp_list,
