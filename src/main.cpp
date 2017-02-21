@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
 
 				prsice.perform_clump(commander);
 				prsice.pheno_check(commander);
+
 				size_t num_pheno = prsice.num_phenotype();
 
 				if (!perform_prslice) {

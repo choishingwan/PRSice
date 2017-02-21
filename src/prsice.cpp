@@ -207,6 +207,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 	if (num_se_not_convertible != 0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", m_snp_list.size());
+	PLINK::set_chromosome(m_chr_list); // update the chromosome information for PLINK
 }
 
 
@@ -251,7 +252,7 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 
 	// Thing is, this might be the LD file, which only need to be read once
-	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
+	PLINK clump(ld_file, c_commander.get_thread());
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
 		clump.start_clumping(m_include_snp, m_snp_list,
@@ -338,6 +339,10 @@ void PRSice::pheno_check(const Commander &c_commander) {
 	}
 	if (pheno_file.empty()) {
 		std::string fam = m_target + ".fam";
+		if(fam.find("#")!= std::string::npos)
+		{
+			misc::replace_substring(fam, "#", m_chr_list.front());
+		}
 		pheno_storage temp;
 		std::get < pheno_store::FILE_NAME > (temp) = fam;
 		std::get < pheno_store::INDEX > (temp) = +FAM::PHENOTYPE;
