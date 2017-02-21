@@ -62,9 +62,8 @@ public:
     void print_file(std::string output) const;
     void prslice()
     {
-    		std::string name = m_region_name.front();
     		m_region_name.clear();
-    		m_region_name.push_back(name);
+    		m_region_name.push_back("Base");
     }
 private:
     std::unordered_set<std::string> m_duplicated_names;

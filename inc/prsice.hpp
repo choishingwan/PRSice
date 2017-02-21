@@ -80,7 +80,6 @@ private:
     enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
     typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
 	std::vector<pheno_storage> m_pheno_names;
-	size_t m_pheno_index=0;
 	// Null information
 	double m_null_r2 = 0.0;
 	// others

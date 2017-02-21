@@ -89,19 +89,6 @@ int main(int argc, char *argv[])
 						}
 					}
 				} else {
-					if (region.size() != 1) {
-						/**
-						 * It doesn't make much sense for PRSet + PRSlice as PRSlice only
-						 * consider the genomic coordinates, which for most of the time,
-						 * it will not fall within the region defined by PRSet anyway.
-						 * It also complicate the algorithm and might take forever to
-						 * run
-						 */
-						std::string error_message =
-								"WARNING: It doesn't make sense to run PRSlice together with "
-										"PRSset. Will only perfrom PRSlice";
-						fprintf(stderr, "%s\n", error_message.c_str());
-					}
 					// clean up the region such that it is easier to handle later on
 					region.prslice();
 					for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
