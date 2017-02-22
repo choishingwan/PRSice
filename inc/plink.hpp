@@ -57,7 +57,7 @@ private:
 			size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
 			size_t kb_threshold, std::string next_chr, size_t next_loc);
 	size_t m_thread=1;
-	void void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
+	void clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
 			boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold);
 	static std::vector<std::string> g_chr_list;
 	FILE* m_bedfile = nullptr;
@@ -80,7 +80,8 @@ private:
 	uintptr_t* m_sample_exclude = nullptr;
 	uintptr_t* m_marker_exclude = nullptr;
 	uintptr_t* m_marker_reverse = nullptr;
-
+	uintptr_t* m_zmiss1 = nullptr;
+	uintptr_t* m_zmiss2 = nullptr;
 	uint32_t em_phase_hethet(double known11, double known12, double known21, double known22, uint32_t center_ct,
 			double* freq1x_ptr, double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr, double* freq11_ptr,
 			uint32_t* onside_sol_ct_ptr);
@@ -88,7 +89,9 @@ private:
 			double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr, double* freq11_ptr);
 	double calc_lnlike(double known11, double known12, double known21, double known22, double center_ct_d,
 			double freq11, double freq12, double freq21, double freq22, double half_hethet_share, double freq11_incr);
-
+	uint32_t load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct, uintptr_t* casebuf,
+			uintptr_t* pheno_nm, uintptr_t* pheno_c, uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse,
+			uint32_t is_case_only, uintptr_t* nm_info_ptr);
 };
 
 #endif /* PLINK_HPP_ */

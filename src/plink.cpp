@@ -30,6 +30,11 @@ PLINK::PLINK(std::string prefix, const size_t thread, const catelog &inclusion):
 	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct; // seems reasonable
 	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+
+	m_zmiss1 = new uintptr_t[m_marker_ct];
+	std::memset(m_zmiss1, 0x0, m_marker_ct*sizeof(uintptr_t));
+	m_zmiss2 = new uintptr_t[m_marker_ct];
+	std::memset(m_zmiss2, 0x0, m_marker_ct*sizeof(uintptr_t));
 	retval = load_bed();
 	fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
 	fprintf(stderr, "%zu variants included\n", m_marker_ct);
@@ -46,6 +51,8 @@ PLINK::~PLINK() {
 	delete [] m_founder_info;
 	delete [] m_sample_exclude;
 	delete [] m_marker_reverse;
+	delete [] m_zmiss1;
+	delete [] m_zmiss2;
 }
 
 int32_t PLINK::load_bed()
@@ -404,22 +411,27 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
-
+	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
 
+	uintptr_t* loadbuf= m_genotype[c_core_index];
 
-	uintptr_t* geno1 = new uintptr_t[founder_ctsplit];
-	std::memset(geno1, 0x0, founder_ctsplit*sizeof(uintptr_t))
+
+	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
+	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
 
 	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
 	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
 
-	load_and_split3(nullptr, m_genotype[c_core_index], m_founder_ct,
-			geno_1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+	load_and_split3(m_genotype[c_core_index], m_founder_ct,
+			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
 
 	if (ulii == 3) {
-		SET_BIT(block_idx1, g_epi_zmiss1); // some missingness observed
+		SET_BIT(c_core_index, m_zmiss1); // some missingness observed
 	}
+
+
+
 	/*
 	size_t snp_in_region = c_clump_snp_index.size();
     if(snp_in_region <=1 ) return; // nothing to do
@@ -469,7 +481,7 @@ void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector
 	size_t max_possible = clump_snp_index.size();
 	while(require_clump && (core_chr.compare(next_chr)!=0 || (next_loc - core_loc) > kb_threshold))
 	{ // as long as we still need to perform clumping
-		clump_thread(core_snp_index, snp_index, snp_list, r2_threshold);
+		clump_thread(core_snp_index, clump_snp_index, snp_list, r2_threshold);
 		require_clump = false;
 		for(size_t core_finder = core_snp_index+1; core_finder < clump_snp_index.size(); ++core_finder)
 		{
@@ -525,6 +537,7 @@ void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector
 	}
 }
 
+/*
 void PLINK::initialize(){
 	intptr_t malloc_size_mb = 0; //supposed to be an option in plink for people to select amount of memory use
 	intptr_t default_alloc_mb = 0;
@@ -592,7 +605,7 @@ void PLINK::initialize(){
 	free(bubble);
 }
 
-
+*/
 
 double PLINK::calc_lnlike(double known11, double known12, double known21, double known22, double center_ct_d,
 		double freq11, double freq12, double freq21, double freq22, double half_hethet_share, double freq11_incr) {
@@ -803,4 +816,93 @@ uint32_t PLINK::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1, uint32_
 		}
 	}
 	return em_phase_hethet(known11, known12, known21, known22, counts[4], freq1x_ptr, freq2x_ptr, freqx1_ptr, freqx2_ptr, freq11_ptr, nullptr);
+}
+
+
+uint32_t PLINK::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct, uintptr_t* casebuf, uintptr_t* pheno_nm, uintptr_t* pheno_c, uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse, uint32_t is_case_only, uintptr_t* nm_info_ptr)
+{
+	uintptr_t* rawbuf_end = &(rawbuf[unfiltered_sample_ct / BITCT2]);
+	uintptr_t* ctrlbuf = &(casebuf[3 * case_ctv]);
+	uintptr_t case_words[4];
+	uintptr_t ctrl_words[4];
+	uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
+	uint32_t case_rem = 0;
+	uint32_t ctrl_rem = 0;
+	uint32_t read_shift_max = BITCT2;
+	uint32_t sample_uidx = 0;
+	uint32_t offset0_case = do_reverse * 2 * case_ctv;
+	uint32_t offset2_case = (1 - do_reverse) * 2 * case_ctv;
+	uint32_t offset0_ctrl = do_reverse * 2 * ctrl_ctv;
+	uint32_t offset2_ctrl = (1 - do_reverse) * 2 * ctrl_ctv;
+	uint32_t read_shift;
+	uintptr_t read_word;
+	uintptr_t ulii;
+
+	case_words[0] = 0;
+	case_words[1] = 0;
+	case_words[2] = 0;
+	case_words[3] = 0;
+	ctrl_words[0] = 0;
+	ctrl_words[1] = 0;
+	ctrl_words[2] = 0;
+	ctrl_words[3] = 0;
+	while (1) {
+		while (rawbuf < rawbuf_end) {
+			read_word = *rawbuf++;
+			for (read_shift = 0; read_shift < read_shift_max; sample_uidx++, read_shift++) {
+				if (is_set(pheno_nm, sample_uidx)) {
+					ulii = read_word & 3;
+					if (is_set(pheno_c, sample_uidx)) { // Both is_set is always true, because dummy_nm is set
+						case_words[ulii] |= ONELU << case_rem;
+						if (++case_rem == BITCT) {
+							casebuf[offset0_case] = case_words[0];
+							casebuf[case_ctv] = case_words[2];
+							casebuf[offset2_case] = case_words[3];
+							casebuf++;
+							case_words[0] = 0;
+							case_words[2] = 0;
+							case_words[3] = 0;
+							case_rem = 0;
+						}
+					} else if (!is_case_only) {
+						ctrl_words[ulii] |= ONELU << ctrl_rem;
+						if (++ctrl_rem == BITCT) {
+							ctrlbuf[offset0_ctrl] = ctrl_words[0];
+							ctrlbuf[ctrl_ctv] = ctrl_words[2];
+							ctrlbuf[offset2_ctrl] = ctrl_words[3];
+							ctrlbuf++;
+							ctrl_words[0] = 0;
+							ctrl_words[2] = 0;
+							ctrl_words[3] = 0;
+							ctrl_rem = 0;
+						}
+					}
+				}
+				read_word >>= 2;
+			}
+		}
+		if (sample_uidx == unfiltered_sample_ct) {
+			if (case_rem) {
+				casebuf[offset0_case] = case_words[0];
+				casebuf[case_ctv] = case_words[2];
+				casebuf[offset2_case] = case_words[3];
+			}
+			if (ctrl_rem) {
+				ctrlbuf[offset0_ctrl] = ctrl_words[0];
+				ctrlbuf[ctrl_ctv] = ctrl_words[2];
+				ctrlbuf[offset2_ctrl] = ctrl_words[3];
+			}
+			ulii = 3;
+			if (case_words[1]) {
+				ulii -= 1;
+			}
+			if (ctrl_words[1]) {
+				ulii -= 2;
+			}
+			*nm_info_ptr = ulii;
+			return 0;
+		}
+		rawbuf_end++;
+		read_shift_max = unfiltered_sample_ct % BITCT2;
+  }
 }
