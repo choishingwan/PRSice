@@ -15,7 +15,7 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 # Header files
 include_directories(inc)
 
-file(GLOB SOURCES "src/*.cpp")
+file(GLOB SOURCES "src/*.c*")
 find_package (Threads)
 
 add_executable(PRSice ${SOURCES})

@@ -452,6 +452,21 @@ bool Commander::initialize(int argc, char *argv[])
     		error = true;
     		error_message.append("Error: Interval cannot be 0!\n");
     }
+    if(m_target_is_binary.size()==0)
+    {
+    	if(m_pheno_col.size() > 1)
+    	{
+    		error = true;
+    		error_message.append("Error: Cannot provide default when multiple target!\n");
+    		error_message.append("       phenotype were used\n");
+    	}
+    	else
+    	{
+    		error_message.append("Warning: Target phenotype information not provided\n");
+    		error_message.append("         assume to be binary\n");
+    		m_target_is_binary.push_back(true);
+    	}
+    }
     if(error) throw std::runtime_error(error_message);
     return true;
 }

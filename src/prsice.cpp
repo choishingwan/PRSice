@@ -252,12 +252,14 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 
 	// Thing is, this might be the LD file, which only need to be read once
-	PLINK clump(ld_file, c_commander.get_thread());
+	PLINK clump(ld_file, c_commander.get_thread(), m_include_snp);
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
-		clump.start_clumping(m_include_snp, m_snp_list,
+
+		clump.start_clumping(m_snp_list,
 				c_commander.get_clump_p(), c_commander.get_clump_r2(),
 				c_commander.get_clump_kb(), c_commander.get_proxy());
+
 	}
 }
 
@@ -333,7 +335,6 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 void PRSice::pheno_check(const Commander &c_commander) {
 	std::vector < std::string > pheno_header = c_commander.get_pheno_col();
 	std::string pheno_file = c_commander.get_pheno();
-	m_pheno_index = 0;
 	if (pheno_header.size() != 0 && pheno_file.empty()) {
 		throw std::runtime_error( "You must provide a phenotype file for multiple phenotype analysis");
 	}
@@ -601,11 +602,12 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			misc::trim(line);
 			if (!line.empty()) {
 				std::vector < std::string > token = misc::split(line);
-				if (token.size() < 6) throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
+				if (token.size() < 6)
+					throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
 				prs_score cur_score;
 				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
 				std::get<+PRS::PRS>(cur_score) = 0.0;
-				std:;get<+PRS::NNMISS>(cur_score) = 0;
+				std::get<+PRS::NNMISS>(cur_score) = 0;
 				m_sample_names.push_back(cur_score);
 				if (token[+FAM::PHENOTYPE] != "NA")
 				{
@@ -676,11 +678,12 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			if (!line.empty())
 			{
 				std::vector < std::string > token = misc::split(line);
-				if (token.size() < 6) std::runtime_error( "Malformed fam file, should contain at least 6 columns");
+				if (token.size() < 6)
+					std::runtime_error( "Malformed fam file, should contain at least 6 columns");
 				prs_score cur_score;
 				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
 				std::get<+PRS::PRS>(cur_score) = 0.0;
-				std:;get<+PRS::NNMISS>(cur_score) = 0;
+				std::get<+PRS::NNMISS>(cur_score) = 0;
 				m_sample_names.push_back(cur_score);
 				if (phenotype_info.find(token[+FAM::IID]) != phenotype_info.end())
 				{
@@ -887,7 +890,6 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 
 void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		const size_t c_pheno_index, bool prslice) {
-
 	if (m_partition.size() == 0)
 	{
 		throw std::runtime_error("None of the SNPs fall into the threshold\n");
@@ -899,8 +901,6 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	std::ofstream all_out;
 	if (require_all)
 	{
-		all_out_name.append(".all.score");
-		all_out.open(all_out_name.c_str());
 		std::string all_out_name = c_commander.get_out() + "." + m_base_name;
 		if (multi)
 		{
@@ -934,7 +934,6 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		std::get<+PRS::COEFF>(cur_best)=0;
 		std::get<+PRS::P>(cur_best)=0;
 		std::get<+PRS::EMPIRICAL_P>(cur_best)=0;
-		std::get<+PRS::R2ADJ>(cur_best)=0;
 		m_best_threshold.push_back(cur_best);
 		m_prs_results.push_back(std::vector < PRSice_result > (0));
 	}
@@ -998,7 +997,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 					for (size_t i_thread = 0; i_thread < n_thread; ++i_thread)
 					{
 						size_t ending = start + job_size + (remain > 0);
-						ending = (ending > m_region_size) ? num_region : ending;
+						ending = (ending > m_region_size) ? m_region_size : ending;
 						thread_store.push_back( std::thread(&PRSice::thread_score, this, start,
 								ending, cur_threshold, 1,
 								c_pheno_index));
@@ -1043,9 +1042,9 @@ bool PRSice::get_prs_score(size_t &cur_index)
 		}
 	}
 	if (!ended) end_index = m_partition.size();
-	PLINK prs(m_target, m_chr_list, m_score);
-	prs.initialize();
-	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
+	//PLINK prs(m_target, m_chr_list, m_score);
+	//prs.initialize();
+	//prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
 	cur_index = end_index;
 	return true;
@@ -1076,11 +1075,20 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 			std::string sample = std::get < +PRS::IID > (prs);
 			// The reason why we need to udpate the m_sample_with_phenotypes matrix
 			if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end()) {
-				if (thread_safe)
-					m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs) ;
-				else
-					X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs);
 
+				if(std::get < +PRS::NNMISS >(prs)!= 0)
+				{
+					if (thread_safe)
+						m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs) ;
+					else
+						X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs);
+				}
+				else{
+					if (thread_safe)
+						m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = 0 ;
+					else
+						X(m_sample_with_phenotypes.at(sample), 1) =0;
+				}
 			}
 		}
 		size_t num_better = 0;

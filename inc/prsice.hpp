@@ -5,6 +5,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <Eigen/Dense>
+#include <mutex>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <vector>
 #include <algorithm>

@@ -1,192 +1,94 @@
-//
-//  plink.hpp
-//  plink
-//
-//  Created by Shing Wan Choi on 18/08/2016.
-//  Copyright © 2016 Shing Wan Choi. All rights reserved.
-//
+/*
+ * plink.hpp
+ *
+ *  Created on: 19 Feb 2017
+ *      Author: shingwan
+ */
 
-#ifndef plink_hpp
-#define plink_hpp
+#ifndef PLINK_HPP_
+#define PLINK_HPP_
 
-#include <stdio.h>
-#include <string>
 #include <stdexcept>
-#include <iostream>
-#include <fstream>
-#include <thread>
-#include <mutex>
-#include <deque>
+#include <stdio.h>
 #include <cstring>
-#include <map>
-#include <limits.h>
+#include <string>
+#include <cassert>
+#include <fstream>
+#include <iostream>
 #include <vector>
-#include <emmintrin.h>
 #include <unordered_map>
+#include <tuple>
+#include <deque>
+#include <unistd.h> // for _SC_PHYS_PAGES
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <assert.h>
-#include "misc.hpp"
+#include <boost/ptr_container/ptr_deque.hpp>
 #include "snp.hpp"
+#include "plink_common.hpp"
+#include "plink_set.hpp"
 #include "storage.hpp"
+#include "misc.hpp"
 
-class PLINK
-{
+class PLINK {
 public:
-    //Initialize plink object with the bim bed fam file prefix
-    PLINK(std::string prefix, std::vector<std::string> &chr_list, size_t thread=1):m_prefix(prefix),m_chr_list(chr_list),m_thread(thread)
-    {
-        m_init = false;
-        m_bit_size = sizeof(long_type)*CHAR_BIT;
-        m_num_bytes=0;
-        m_num_sample=0;
-        m_required_bit = 0;
-        m_snp_iter=0;
-        m_name_index=0;
-        m_scoring =  SCORING::MEAN_IMPUTE;
-    };
-
-    PLINK(std::string prefix, std::vector<std::string> &chr_list, SCORING scoring, size_t thread=1):
-    	m_prefix(prefix),m_chr_list(chr_list),m_thread(thread),m_scoring(scoring)
-        {
-            m_init = false;
-            m_bit_size = sizeof(long_type)*CHAR_BIT;
-            m_num_bytes=0;
-            m_num_sample=0;
-            m_required_bit = 0;
-            m_snp_iter=0;
-            m_name_index=0;
-        };
-    ~PLINK();
-    void initialize();
-    void clump_initialize(const std::unordered_map<std::string, size_t> &inclusion);
-    void clump_initialize(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-                          const std::unordered_map<std::string, size_t> &c_snp_index);
-    void start_clumping(std::unordered_map<std::string, size_t> &inclusion, boost::ptr_vector<SNP> &snp_list,
-                        double p_threshold, double r2_threshold, size_t kb_threshold, double proxy);
-    int read_snp(int num_snp, bool ld=false);
-    void lerase(int num);
-//    size_t get_num_snp() const{return m_num_snp; };
-    size_t get_num_sample() const
-    {
-        return m_num_sample;
-    };
-
-    // std::tuple<std::string, size_t, size_t, size_t> : rsid, index, partition, snp_index
-    void get_score(const std::vector<p_partition> &quick_ref,
-                   const boost::ptr_vector<SNP> &snp_list,
-				   std::vector< std::vector<prs_score> > &prs_score,
-                   size_t start_index, size_t end_bound);
-    void close()
-    {
-        if(m_bed.is_open()) m_bed.close();
-        if(m_bim.is_open()) m_bim.close();
-        m_init=false;
-        for(size_t i = 0; i < m_genotype.size(); ++i)
-        {
-            delete [] m_genotype[i];
-            delete [] m_missing[i];
-        }
-    }
+	typedef std::unordered_map<std::string, size_t> catelog;
+	PLINK(std::string prefix, const size_t thread=1, const catelog &inclusion=catelog());
+	static void initialize();
+	virtual ~PLINK();
+	static void set_chromosome(std::vector<std::string> chr)
+	{
+		g_chr_list = chr;
+	};
+	void start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threhsold,
+			size_t kb_threshold, double proxy);
 private:
-    static std::mutex clump_mtx;
+	/*
+	 * As I am unfamiliar with the alien language used by Chris, I might run into problem
+	 * wrt memory control. So might be better for me to refer to the ld_report_dprime instead
+	 * of the clump report part
+	 * neat thing is, he also got the threading sorted there XP
+	 */
 
-    double get_r2(const size_t i, const size_t j, bool adjust=false);
-    bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
-    void perform_clump(std::deque<size_t> &snp_index, boost::ptr_vector<SNP> &snp_list, size_t &core_snp_index,
-                       bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
-                       std::string next_chr, size_t next_loc);
-    void clump_thread(const size_t index, const std::deque<size_t> &index_check, boost::ptr_vector<SNP> &snp_list, const double r2_threshold);
-    void compute_clump(const size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list, const std::deque<size_t> &snp_index_list, const double r2_threshold);
-    bool m_init;
+	// bigstack_double_reset(bigstack_mark, bigstack_end_mark); <- how chris clean the memory I guess...
+	int32_t load_bim(const catelog &inclusion=catelog());
+	int32_t load_fam();
+	int32_t load_bed();
+	void lerase(int num);
+	void perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
+			size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
+			size_t kb_threshold, std::string next_chr, size_t next_loc);
+	size_t m_thread=1;
+	void void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
+			boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold);
+	static std::vector<std::string> g_chr_list;
+	FILE* m_bedfile = nullptr;
+	std::vector<std::string> m_prefix;
+	std::vector<snp_link> m_snp_link;
+	std::vector<uintptr_t*> m_genotype;
+	size_t m_num_male;
+	size_t m_num_female;
+	size_t m_num_ambig_sex;
+	uintptr_t m_bed_offset = 3;
+	uintptr_t m_unfiltered_marker_ct = 0;
+	uintptr_t m_marker_ct = 0;
+	uintptr_t m_marker_exclude_ct = 0;
+	uintptr_t m_unfiltered_sample_ct = 0;
+	uintptr_t m_unfiltered_sample_ct4 = 0;
+	uintptr_t m_unfiltered_sample_ctl = 0;
+	uintptr_t m_founder_ct = 0;
+	uintptr_t* m_founder_info = nullptr;
+	uintptr_t* m_sex_male = nullptr;
+	uintptr_t* m_sample_exclude = nullptr;
+	uintptr_t* m_marker_exclude = nullptr;
+	uintptr_t* m_marker_reverse = nullptr;
 
-#if defined(__LP64__)
-    typedef uint64_t long_type;
-#else
-    typedef uint32_t long_type;
-#endif
+	uint32_t em_phase_hethet(double known11, double known12, double known21, double known22, uint32_t center_ct,
+			double* freq1x_ptr, double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr, double* freq11_ptr,
+			uint32_t* onside_sol_ct_ptr);
+	uint32_t em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1, uint32_t is_x2, double* freq1x_ptr,
+			double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr, double* freq11_ptr);
+	double calc_lnlike(double known11, double known12, double known21, double known22, double center_ct_d,
+			double freq11, double freq12, double freq21, double freq22, double half_hethet_share, double freq11_incr);
 
-    std::string m_prefix;
-    std::ifstream m_bed;
-    std::ifstream m_bim;
-    size_t m_num_sample;
-    size_t m_num_bytes;
-    size_t m_snp_iter;
-    size_t m_bit_size;
-    size_t m_required_bit;
-    size_t m_name_index;
-    std::vector<std::string> m_names;
-    std::vector<std::string> m_chr_list;
-    std::vector<std::string> m_snp_id;
-    typedef std::tuple<std::string, int, size_t> file_info;
-    std::vector<file_info> m_clump_ref;
-    std::deque<size_t> m_bp_list;
-    std::vector<size_t> m_num_snp;
-    std::deque<double> m_maf;
-    std::deque<long_type*> m_genotype;
-    std::deque<long_type*> m_missing;
-    std::deque<size_t> m_num_missing;
-    SCORING m_scoring;
-    size_t m_thread;
-
-
-
-#if defined(__LP64__) || defined(_WIN64)
-#if defined(_WIN64)
-#define __LP64__
-#endif
-    // LP64 machine, OS X or Linux
-#define ZEROLU 0LLU
-#define FIVEMASK ((~ZEROLU) / 3)
-//    const long_type THREE = 3LLU;
-//    const long_type THREEMASK = 0x3333333333333333LLU;
-//    const long_type OFMASK = 0x0f0f0f0f0f0f0f0fLLU;
-//    const long_type AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
-//    const long_type ONEZEROMASK = 0x0101010101010101LLU;
-#define BITCT 64
-#define VEC_BYTES 16
-#define VEC_BITS (VEC_BYTES * 8)
-    typedef union
-    {
-        __m128 vf;
-        __m128i vi;
-        __m128d vd;
-        uintptr_t u8[VEC_BITS / BITCT];
-        double d8[VEC_BYTES / sizeof(double)];
-        float f4[VEC_BYTES / sizeof(float)];
-        uint32_t u4[VEC_BYTES / sizeof(int32_t)];
-    } __univec;
-
-#else
-    // 32-bit machine, Windows or Linux or OS X
-    const long_type FIVEMASK = ((~0LU) / 3);
-    const long_type THREE = 3LU;
-    const long_type THREEMASK = 0x33333333;
-    const long_type OFMASK = 0x0f0f0f0f;
-    const long_type ONEZEROMASK = 0x01010101;
-    const long_type AAAAMASK = 0xaaaaaaaa;
-#endif
-    //code from http://stackoverflow.com/a/17355341
-    static inline int popcnt128(__m128i n)
-    {
-        const __m128i n_hi = _mm_unpackhi_epi64(n, n);
-#ifdef _MSC_VER
-        return __popcnt64(_mm_cvtsi128_si64(n)) + __popcnt64(_mm_cvtsi128_si64(n_hi));
-#else
-        // I modified this into builtin_popcountll
-        return __builtin_popcountll(_mm_cvtsi128_si64(n)) + __builtin_popcountll(_mm_cvtsi128_si64(n_hi));
-#endif
-    }
-    void ld_dot_prod_batch(__m128i* vec1, __m128i* vec2, __m128i* mask1, __m128i* mask2, int32_t* return_vals, uint32_t iters);
-    uint32_t ld_missing_ct_intersect(long_type* lptr1, long_type* lptr2, uintptr_t word12_ct, uintptr_t word12_rem, uintptr_t lshift_last);
-    static uint32_t popcount2_long(uintptr_t val)
-    {
-#ifdef __LP64__
-        val = (val & 0x3333333333333333LLU) + ((val >> 2) & 0x3333333333333333LLU);
-        return (((val + (val >> 4)) & 0x0f0f0f0f0f0f0f0fLLU) * 0x0101010101010101LLU) >> 56;
-#else
-        val = (val & 0x33333333) + ((val >> 2) & 0x33333333);
-        return (((val + (val >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
-#endif
-    }
 };
-#endif /* plink_hpp */
+
+#endif /* PLINK_HPP_ */

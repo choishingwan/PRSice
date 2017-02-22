@@ -34,7 +34,8 @@
 	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
-    enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2, NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
+    enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2,
+    	NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
     enum class BOUNDARY{CHR, START, END};
     enum class GTF{CHR, SOURCE, FEATURE, START, END, SCORE, STRAND, FRAME, ATTRIBUTE};
     	// Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
@@ -59,6 +60,7 @@
 	typedef std::tuple<double, double, size_t, double, double, size_t> PRSice_best;
     typedef std::tuple<std::string, char, std::string, std::string> help;
     typedef std::tuple<std::string, size_t, size_t> boundary;
+    typedef std::tuple<std::string, int, size_t> snp_link;
 
 
 #if defined(__LP64__) || defined(_WIN64)
