@@ -31,10 +31,6 @@ PLINK::PLINK(std::string prefix, const size_t thread, const catelog &inclusion):
 	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
 
-	m_zmiss1 = new uintptr_t[m_marker_ct];
-	std::memset(m_zmiss1, 0x0, m_marker_ct*sizeof(uintptr_t));
-	m_zmiss2 = new uintptr_t[m_marker_ct];
-	std::memset(m_zmiss2, 0x0, m_marker_ct*sizeof(uintptr_t));
 	retval = load_bed();
 	fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
 	fprintf(stderr, "%zu variants included\n", m_marker_ct);
@@ -51,8 +47,6 @@ PLINK::~PLINK() {
 	delete [] m_founder_info;
 	delete [] m_sample_exclude;
 	delete [] m_marker_reverse;
-	delete [] m_zmiss1;
-	delete [] m_zmiss2;
 }
 
 int32_t PLINK::load_bed()
@@ -407,12 +401,17 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 {
 
 	// do this without the clumping first
+	size_t wind_size = c_clump_snp_index.size();
 	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
+	uint32_t nm_fixed=0;
+	uint32_t zmiss2 = 0;
+	uint32_t tot1[6];
+	uint32_t counts[18];
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
+
 
 	uintptr_t* loadbuf= m_genotype[c_core_index];
 
@@ -425,11 +424,52 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 
 	load_and_split3(m_genotype[c_core_index], m_founder_ct,
 			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+	tot1[0] = popcount_longs(geno1, founder_ctv3);
+	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
+	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
+	// supposedly there is some checking for X chromosome. But we will ignore that
 
 	if (ulii == 3) {
-		SET_BIT(c_core_index, m_zmiss1); // some missingness observed
+		nm_fixed = 1; // just set this to 1, because we are not working on batch
+		// but just one core snp at a time
 	}
+// now we compare with all other SNPs in the region
+	for(size_t i =0; i < c_clump_snp_index.size(); ++i){
+		if(i == c_core_index) continue;
+		loadbuf= m_genotype[i];
+		uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
+		std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+		load_and_split3(loadbuf, m_founder_ct, ulptr, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+		uintptr_t* uiptr = new uintptr_t[3];
+		std::memset(ulptr, 0x0, 3*sizeof(uintptr_t));
+		uiptr[0] = popcount_longs(ulptr, founder_ctv3);
+		uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
+		uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
+		if (ulii == 3) {
+			zmiss2 = 1;
+		}
+		if (nm_fixed) {
+			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
+			if (zmiss2) {
+				counts[2] = tot1[0] - counts[0] - counts[1];
+				counts[5] = tot1[1] - counts[3] - counts[4];
+			}
+			counts[6] = uiptr[0] - counts[0] - counts[3];
+			counts[7] = uiptr[1] - counts[1] - counts[4];
+			counts[8] = uiptr[2] - counts[2] - counts[5];
+		} else {
+			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
+			if (zmiss2) {
+				counts[2] = tot1[0] - counts[0] - counts[1];
+				counts[5] = tot1[1] - counts[3] - counts[4];
+				counts[8] = tot1[2] - counts[6] - counts[7];
+			}
+		}
 
+		delete [] ulptr;
+	}
+	delete [] geno1;
+	delete [] dummy_nm;
 
 
 	/*
@@ -906,3 +946,184 @@ uint32_t PLINK::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct
 		read_shift_max = unfiltered_sample_ct % BITCT2;
   }
 }
+
+
+
+void PLINK::two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3, uint32_t sample_ctv3,
+		uint32_t is_zmiss2) {
+#ifdef __LP64__
+  uint32_t uii;
+  fill_uint_zero(9, counts_3x3);
+  if (!is_zmiss2) {
+    two_locus_3x3_tablev((__m128i*)lptr1, (__m128i*)lptr2, counts_3x3, sample_ctv3 / 2, 3);
+  } else {
+    two_locus_3x3_tablev((__m128i*)lptr2, (__m128i*)lptr1, counts_3x3, sample_ctv3 / 2, 2);
+    uii = counts_3x3[1];
+    counts_3x3[1] = counts_3x3[3];
+    counts_3x3[3] = uii;
+    counts_3x3[6] = counts_3x3[2];
+    counts_3x3[7] = counts_3x3[5];
+  }
+#else
+  counts_3x3[0] = popcount_longs_intersect(lptr2, lptr1, sample_ctv3);
+  counts_3x3[3] = popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
+  counts_3x3[6] = popcount_longs_intersect(lptr2, &(lptr1[2 * sample_ctv3]), sample_ctv3);
+  lptr2 = &(lptr2[sample_ctv3]);
+  counts_3x3[1] = popcount_longs_intersect(lptr2, lptr1, sample_ctv3);
+  counts_3x3[4] = popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
+  counts_3x3[7] = popcount_longs_intersect(lptr2, &(lptr1[2 * sample_ctv3]), sample_ctv3);
+  if (!is_zmiss2) {
+    lptr2 = &(lptr2[sample_ctv3]);
+    counts_3x3[2] = popcount_longs_intersect(lptr2, lptr1, sample_ctv3);
+    counts_3x3[5] = popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
+    counts_3x3[8] = popcount_longs_intersect(lptr2, &(lptr1[2 * sample_ctv3]), sample_ctv3);
+  }
+#endif
+}
+
+void PLINK::two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3,
+		uint32_t sample_ctv3, uint32_t is_zmiss2) {
+#ifdef __LP64__
+  fill_uint_zero(6, counts_3x3);
+  if (is_zmiss2) {
+    two_locus_3x3_zmiss_tablev((__m128i*)lptr1, (__m128i*)lptr2, counts_3x3, sample_ctv3 / 2);
+  } else {
+    two_locus_3x3_tablev((__m128i*)lptr1, (__m128i*)lptr2, counts_3x3, sample_ctv3 / 2, 2);
+  }
+#else
+  counts_3x3[0] = popcount_longs_intersect(lptr1, lptr2, sample_ctv3);
+  counts_3x3[1] = popcount_longs_intersect(lptr1, &(lptr2[sample_ctv3]), sample_ctv3);
+  if (!is_zmiss2) {
+    counts_3x3[2] = popcount_longs_intersect(lptr1, &(lptr2[2 * sample_ctv3]), sample_ctv3);
+    counts_3x3[5] = popcount_longs_intersect(&(lptr1[sample_ctv3]), &(lptr2[2 * sample_ctv3]), sample_ctv3);
+  }
+  lptr1 = &(lptr1[sample_ctv3]);
+  counts_3x3[3] = popcount_longs_intersect(lptr1, lptr2, sample_ctv3);
+  counts_3x3[4] = popcount_longs_intersect(lptr1, &(lptr2[sample_ctv3]), sample_ctv3);
+#endif
+}
+
+
+#ifdef __LP64__
+void PLINK::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2, uint32_t* counts_3x3, uint32_t sample_ctv6,
+		uint32_t iter_ct) {
+  const __m128i m1 = {FIVEMASK, FIVEMASK};
+  const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+  const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+  __m128i* vec20;
+  __m128i* vec21;
+  __m128i* vec22;
+  __m128i* vend1;
+  __m128i loader1;
+  __m128i loader20;
+  __m128i loader21;
+  __m128i loader22;
+  __m128i count10;
+  __m128i count11;
+  __m128i count12;
+  __m128i count20;
+  __m128i count21;
+  __m128i count22;
+  __univec acc0;
+  __univec acc1;
+  __univec acc2;
+  uint32_t ct;
+  uint32_t ct2;
+  while (iter_ct--) {
+    ct = sample_ctv6;
+    vec20 = vec2;
+    vec21 = &(vec20[sample_ctv6]);
+    vec22 = &(vec20[2 * sample_ctv6]);
+    while (ct >= 30) {
+      ct -= 30;
+      vend1 = &(vec1[30]);
+      acc0.vi = _mm_setzero_si128();
+      acc1.vi = _mm_setzero_si128();
+      acc2.vi = _mm_setzero_si128();
+      do {
+      two_locus_3x3_tablev_outer:
+	loader1 = *vec1++;
+	loader20 = *vec20++;
+	loader21 = *vec21++;
+	loader22 = *vec22++;
+	count10 = _mm_and_si128(loader1, loader20);
+	count11 = _mm_and_si128(loader1, loader21);
+	count12 = _mm_and_si128(loader1, loader22);
+	count10 = _mm_sub_epi64(count10, _mm_and_si128(_mm_srli_epi64(count10, 1), m1));
+	count11 = _mm_sub_epi64(count11, _mm_and_si128(_mm_srli_epi64(count11, 1), m1));
+	count12 = _mm_sub_epi64(count12, _mm_and_si128(_mm_srli_epi64(count12, 1), m1));
+      two_locus_3x3_tablev_two_left:
+        // unlike the zmiss variant, this apparently does not suffer from
+	// enough register spill to justify shrinking the inner loop
+	loader1 = *vec1++;
+	loader20 = *vec20++;
+	loader21 = *vec21++;
+	loader22 = *vec22++;
+	count20 = _mm_and_si128(loader1, loader20);
+	count21 = _mm_and_si128(loader1, loader21);
+	count22 = _mm_and_si128(loader1, loader22);
+	count20 = _mm_sub_epi64(count20, _mm_and_si128(_mm_srli_epi64(count20, 1), m1));
+	count21 = _mm_sub_epi64(count21, _mm_and_si128(_mm_srli_epi64(count21, 1), m1));
+	count22 = _mm_sub_epi64(count22, _mm_and_si128(_mm_srli_epi64(count22, 1), m1));
+      two_locus_3x3_tablev_one_left:
+	loader1 = *vec1++;
+	loader20 = *vec20++;
+	loader21 = _mm_and_si128(loader1, loader20); // half1
+	loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1), m1); // half2
+	count10 = _mm_add_epi64(count10, _mm_and_si128(loader21, m1));
+	count20 = _mm_add_epi64(count20, loader22);
+	loader20 = *vec21++;
+	loader21 = _mm_and_si128(loader1, loader20);
+	loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1), m1);
+	count11 = _mm_add_epi64(count11, _mm_and_si128(loader21, m1));
+	count21 = _mm_add_epi64(count21, loader22);
+	loader20 = *vec22++;
+	loader21 = _mm_and_si128(loader1, loader20);
+	loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1), m1);
+	count12 = _mm_add_epi64(count12, _mm_and_si128(loader21, m1));
+	count22 = _mm_add_epi64(count22, loader22);
+
+	count10 = _mm_add_epi64(_mm_and_si128(count10, m2), _mm_and_si128(_mm_srli_epi64(count10, 2), m2));
+	count11 = _mm_add_epi64(_mm_and_si128(count11, m2), _mm_and_si128(_mm_srli_epi64(count11, 2), m2));
+	count12 = _mm_add_epi64(_mm_and_si128(count12, m2), _mm_and_si128(_mm_srli_epi64(count12, 2), m2));
+	count10 = _mm_add_epi64(count10, _mm_add_epi64(_mm_and_si128(count20, m2), _mm_and_si128(_mm_srli_epi64(count20, 2), m2)));
+	count11 = _mm_add_epi64(count11, _mm_add_epi64(_mm_and_si128(count21, m2), _mm_and_si128(_mm_srli_epi64(count21, 2), m2)));
+	count12 = _mm_add_epi64(count12, _mm_add_epi64(_mm_and_si128(count22, m2), _mm_and_si128(_mm_srli_epi64(count22, 2), m2)));
+	acc0.vi = _mm_add_epi64(acc0.vi, _mm_add_epi64(_mm_and_si128(count10, m4), _mm_and_si128(_mm_srli_epi64(count10, 4), m4)));
+	acc1.vi = _mm_add_epi64(acc1.vi, _mm_add_epi64(_mm_and_si128(count11, m4), _mm_and_si128(_mm_srli_epi64(count11, 4), m4)));
+	acc2.vi = _mm_add_epi64(acc2.vi, _mm_add_epi64(_mm_and_si128(count12, m4), _mm_and_si128(_mm_srli_epi64(count12, 4), m4)));
+      } while (vec1 < vend1);
+      const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+      acc0.vi = _mm_add_epi64(_mm_and_si128(acc0.vi, m8), _mm_and_si128(_mm_srli_epi64(acc0.vi, 8), m8));
+      acc1.vi = _mm_add_epi64(_mm_and_si128(acc1.vi, m8), _mm_and_si128(_mm_srli_epi64(acc1.vi, 8), m8));
+      acc2.vi = _mm_add_epi64(_mm_and_si128(acc2.vi, m8), _mm_and_si128(_mm_srli_epi64(acc2.vi, 8), m8));
+      counts_3x3[0] += ((acc0.u8[0] + acc0.u8[1]) * 0x1000100010001LLU) >> 48;
+      counts_3x3[1] += ((acc1.u8[0] + acc1.u8[1]) * 0x1000100010001LLU) >> 48;
+      counts_3x3[2] += ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
+    }
+    if (ct) {
+      vend1 = &(vec1[ct]);
+      ct2 = ct % 3;
+      acc0.vi = _mm_setzero_si128();
+      acc1.vi = _mm_setzero_si128();
+      acc2.vi = _mm_setzero_si128();
+      ct = 0;
+      if (ct2) {
+	count10 = _mm_setzero_si128();
+	count11 = _mm_setzero_si128();
+	count12 = _mm_setzero_si128();
+	if (ct2 == 2) {
+	  goto two_locus_3x3_tablev_two_left;
+	}
+	count20 = _mm_setzero_si128();
+	count21 = _mm_setzero_si128();
+	count22 = _mm_setzero_si128();
+	goto two_locus_3x3_tablev_one_left;
+      }
+      goto two_locus_3x3_tablev_outer;
+    }
+    counts_3x3 = &(counts_3x3[3]);
+  }
+}
+
+#endif
