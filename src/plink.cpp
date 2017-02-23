@@ -135,6 +135,7 @@ int32_t PLINK::load_bed()
 		m_bedfile = nullptr;
 	}
 	uii = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+
 	m_marker_reverse = new uintptr_t[uii];
 	std::memset(m_marker_reverse, 0x0, uii*sizeof(uintptr_t));
     return 0;
@@ -316,6 +317,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 	// which suggest that PRS can be done on sex chromosome
 	// that should be something later
     std::string prev_name = "";
+    uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
 	for(size_t i_region=0; i_region < num_region; ++i_region)
 	{
 		if(prs_score[i_region].size() < m_unfiltered_sample_ct)
@@ -336,7 +338,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);
             std::string bedname = prev_name+".bed";
         	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-
+        	load_bed(); // need to load the bed file correctly
             prev=0;
         }
 

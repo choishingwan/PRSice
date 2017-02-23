@@ -1053,10 +1053,7 @@ bool PRSice::get_prs_score(size_t &cur_index)
 		}
 	}
 	if (!ended) end_index = m_partition.size();
-	//PLINK prs(m_target, m_chr_list, m_score);
-	//prs.initialize();
 	m_score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
-	//prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
 	cur_index = end_index;
 	return true;
@@ -1084,7 +1081,8 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 		) continue; // don't bother when there is no additional SNPs added
 		for (auto &&prs : m_current_prs[iter])
 		{
-			std::string sample = std::get < +PRS::IID > (prs);
+			std::string sample = (m_ignore_fid)? std::get <+PRS::IID > (prs):
+					std::get<+PRS::FID>(prs)+"_"+std::get<+PRS::IID>(prs);
 			// The reason why we need to udpate the m_sample_with_phenotypes matrix
 			if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end()) {
 
