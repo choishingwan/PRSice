@@ -28,9 +28,13 @@ PLINK::PLINK(std::string prefix, bool verbose, const size_t thread, const catelo
 	retval = load_bim(inclusion);
 	retval = load_fam();
 
+	// marker_ct is specific to individual bim file
 	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct; // seems reasonable
 	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+	uint32_t uii = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+	//m_marker_reverse = new uintptr_t[uii];
+	//std::memset(m_marker_reverse, 0x0, uii*sizeof(uintptr_t));
 
 	retval = load_bed();
 	if(verbose)
@@ -46,12 +50,94 @@ PLINK::~PLINK() {
 	// and are far worst a programmer when compared to Chris, I don't know
 	// how Chris free the memory in plink. So we will have to live with
 	// the fact that the plink code will have memory leak
-	delete [] m_marker_exclude;
-	delete [] m_sex_male;
-	delete [] m_founder_info;
-	delete [] m_sample_exclude;
-	delete [] m_marker_reverse;
+	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
+	if(m_sex_male != nullptr) delete [] m_sex_male;
+	if(m_founder_info != nullptr) delete [] m_founder_info;
+	if(m_sample_exclude != nullptr) delete [] m_sample_exclude;
+	//delete [] m_marker_reverse;
 }
+
+int32_t PLINK::load_bed(const std::string &bedname)
+{
+	uint32_t uii = 0;
+	int64_t llxx = 0;
+	int64_t llyy = 0;
+	int64_t llzz = 0;
+	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
+	if (fseeko(m_bedfile, 0, SEEK_END)) {
+		std::string error_message = "Cannot read bed file: "+bedname;
+		throw std::runtime_error(error_message);
+	}
+	llxx = ftello(m_bedfile);
+	if (!llxx) {
+		throw std::runtime_error("Error: Empty .bed file.");
+	}
+	rewind(m_bedfile);
+	// will let the g_textbuf stay for now
+	char version_check[3];
+	uii = fread(version_check, 1, 3, m_bedfile);
+	llyy = ((uint64_t)m_unfiltered_sample_ct4) * m_unfiltered_marker_ct;
+	llzz = ((uint64_t)m_unfiltered_sample_ct) * ((m_unfiltered_marker_ct + 3) / 4);
+	bool sample_major = false;
+	// compare only the first 3 bytes
+	if ((uii == 3) && (!memcmp(version_check, "l\x1b\x01", 3)))
+	{
+		llyy += 3;
+	}
+	else if ((uii == 3) && (!memcmp(version_check, "l\x1b", 3)))
+	{
+		// v1.00 sample-major
+		sample_major=true;
+		llyy = llzz + 3;
+		m_bed_offset = 2;
+	}
+	else if (uii && (*version_check == '\x01'))
+	{
+		// v0.99 SNP-major
+		llyy += 1;
+		m_bed_offset = 1;
+	}
+	else if (uii && (!(*version_check)))
+	{
+		// v0.99 sample-major
+		sample_major=true;
+		llyy = llzz + 1;
+		m_bed_offset = 2;
+	}
+	else
+	{
+		// pre-v0.99, sample-major, no header bytes
+		sample_major=true;
+		if (llxx != llzz)
+		{
+			// probably not PLINK-format at all, so give this error instead of
+			// "invalid file size"
+			throw std::runtime_error("Error: Invalid header bytes in .bed file.");
+		}
+		llyy = llzz;
+		m_bed_offset = 2;
+	}
+	if (llxx != llyy)
+	{
+		if ((*version_check == '#') || ((uii == 3) && (!memcmp(version_check, "chr", 3))))
+		{
+			throw std::runtime_error("Error: Invalid header bytes in PLINK 1 .bed file.  (Is this a UCSC Genome\nBrowser BED file instead?)");
+		}
+		else
+		{
+			throw std::runtime_error("Error: Invalid .bed file size.");
+		}
+	}
+	if(sample_major)
+	{
+		throw std::runtime_error("Error: Currently do not support sample major format");
+	}
+	fclose(m_bedfile);
+	m_bedfile = nullptr;
+    return 0;
+}
+
+
 
 int32_t PLINK::load_bed()
 {
@@ -134,10 +220,6 @@ int32_t PLINK::load_bed()
 		fclose(m_bedfile);
 		m_bedfile = nullptr;
 	}
-	uii = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-
-	m_marker_reverse = new uintptr_t[uii];
-	std::memset(m_marker_reverse, 0x0, uii*sizeof(uintptr_t));
     return 0;
 }
 
@@ -337,8 +419,8 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         	if(m_bedfile!=nullptr) fclose(m_bedfile);
             prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);
             std::string bedname = prev_name+".bed";
+            load_bed(bedname);
         	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-        	load_bed(); // need to load the bed file correctly
             prev=0;
         }
 
@@ -358,7 +440,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
-        		IS_SET(m_marker_reverse, cur_line), m_bedfile, tmp_genotype, genotype))
+        		false, m_bedfile, tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
@@ -404,8 +486,10 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         {
         	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
         	{
+
         		for(size_t i_region; i_region < num_region; ++i_region)
         		{
+
         			if(in_region[i_region])
         			{
         				if(scoring == SCORING::MEAN_IMPUTE) std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += center_score;
@@ -552,6 +636,7 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 					m_bedfile=nullptr;
 				}
 				std::string bed_name = prev_file+".bed";
+				load_bed(bed_name);
 				m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
 			}
 			prev_chr = cur_chr;
@@ -571,7 +656,7 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
         uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
         std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
-        		IS_SET(m_marker_reverse, cur_line_num), m_bedfile, tmp_genotype, genotype))
+        		false, m_bedfile, tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
@@ -726,10 +811,10 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
     			}
     			else
     			{
-    				//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
-    				dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
+    				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+    				//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
     				//dprime = dxx;
-    				r2 = dxx;
+
     			}
     		}
     		if(r2 >= r2_threshold)

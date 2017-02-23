@@ -957,7 +957,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	// With the new PLINK class, we should start the plink here instead of initializing it
 	// in the get_prs_score
 	// rewind should work like magic?
-	m_score_plink =PLINK(m_target, false, c_commander.get_thread());
+	PLINK score_plink(m_target, false, c_commander.get_thread());
 
 	size_t partition_size = m_partition.size();
 	double cur_threshold = 0.0;
@@ -970,7 +970,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		if (!prslice)
 			fprintf(stderr, "\rProcessing %03.2f%%", (double) cur_category / (double) (max_category) * 100.0);
 
-		reg = get_prs_score(cur_partition_index);
+		reg = get_prs_score(cur_partition_index, score_plink);
 		if (require_all && all_out.is_open()) {
 			for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 			{
@@ -1021,12 +1021,13 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 				thread_store.clear();
 			}
 		}
+		score_plink.clear();
 	}
 	if (all_out.is_open()) all_out.close();
 	if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
 }
 
-bool PRSice::get_prs_score(size_t &cur_index)
+bool PRSice::get_prs_score(size_t &cur_index, PLINK &score_plink)
 {
 	if (m_partition.size() == 0) return false; // nothing to do
 	int prev_index = std::get < +PRS::CATEGORY > (m_partition[cur_index]);
@@ -1053,7 +1054,7 @@ bool PRSice::get_prs_score(size_t &cur_index)
 		}
 	}
 	if (!ended) end_index = m_partition.size();
-	m_score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
+	score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
 
 	cur_index = end_index;
 	return true;

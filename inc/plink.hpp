@@ -43,9 +43,10 @@ public:
 	};
 	void start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threhsold,
 			size_t kb_threshold, double proxyy_threshold);
-	void rewind_bed()
+	void clear()
 	{
-		rewind(m_bedfile);
+		fclose(m_bedfile);
+		m_bedfile = nullptr;
 	}
 	void get_score(const std::vector<p_partition> &partition,
             const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
@@ -63,6 +64,7 @@ private:
 	int32_t load_bim(const catelog &inclusion=catelog());
 	int32_t load_fam();
 	int32_t load_bed();
+	int32_t load_bed(const std::string &bedname);
 	void lerase(int num);
 	void perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
 			size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
