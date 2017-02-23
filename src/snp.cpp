@@ -8,7 +8,7 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
 		m_rs(rs_id), m_chr(chr), m_loc(loc),  m_stat(statistic),
 		m_se(se), m_p_value(p_value)
 {
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
+    m_bit_size = sizeof(unsigned long)*CHAR_BIT;
     m_flipped = false;
     m_clumped = false;
 }
@@ -44,7 +44,7 @@ SNP::SNP()
     m_p_value=0.0;
     m_flipped = false;
     m_clumped = false;
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
+    m_bit_size = sizeof(unsigned long)*CHAR_BIT;
 }
 
 SNP::~SNP(){}

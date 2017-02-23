@@ -28,15 +28,6 @@
 class Region
 {
 public:
-#if defined(__LP64__) || defined(_WIN64)
-    typedef uint64_t long_type;
-	#define ONE  0x1LLU
-
-#else
-    typedef uint32_t long_type;
-	#define ONE  0x1LU
-#endif
-
     Region(std::vector<std::string> feature);
     virtual ~Region();
     void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out);
@@ -46,7 +37,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    std::vector<long_type> check(std::string chr, size_t loc);
+    std::vector<unsigned long> check(std::string chr, size_t loc);
     size_t flag_size() const
     {
         return (m_region_name.size()+1)/(m_bit_size)+1;
@@ -60,9 +51,9 @@ public:
         return m_region_name.at(i);
     };
 
-    std::vector<long_type> empty_flag()
+    std::vector<unsigned long> empty_flag()
     {
-        std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
+        std::vector<unsigned long> res = std::vector<unsigned long>(((m_region_name.size()+1)/m_bit_size)+1);
         res[0]=1; // base region which contains everything
         return res;
     }

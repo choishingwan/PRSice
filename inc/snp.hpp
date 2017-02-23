@@ -17,15 +17,6 @@
 class SNP
 {
 public:
-#if defined(__LP64__) || defined(_WIN64)
-    typedef uint64_t long_type;
-	#define ONE  0x1LLU
-
-#else
-    typedef uint32_t long_type;
-	#define ONE  0x1LU
-#endif
-
     SNP();
     SNP(const std::string rs_id, const std::string chr, const int loc,
     		const std::string ref_allele, const std::string alt_allele,
@@ -65,7 +56,7 @@ public:
     		if(i/m_bit_size >= m_flags.size()) throw std::out_of_range("Out of range for flag");
         return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
     }
-    void set_flag(std::vector<long_type> flag) { m_flags = flag; };
+    void set_flag(std::vector<unsigned long> flag) { m_flags = flag; };
 
     // sorting
     static std::vector<size_t> sort_by_p(const boost::ptr_vector<SNP> &input);
@@ -123,7 +114,7 @@ private:
     std::vector<double> m_clump_r2; // index of SNPs that are clumped under this SNP
     //region related
     size_t m_bit_size;
-    std::vector<long_type> m_flags;
+    std::vector<unsigned long> m_flags;
     //others
     bool m_flipped;
 
