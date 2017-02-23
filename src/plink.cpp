@@ -162,7 +162,6 @@ int32_t PLINK::load_bim(const catelog &inclusion)
 				std::vector<std::string> token = misc::split(line);
 				if(token.size() < 6)
 				{
-					std::cerr << token.size() << std::endl;
 					fprintf(stderr, "Error: Malformed bim file. Less than 6 column on line: %i\n",num_line);
 					throw std::runtime_error("");
 				}
@@ -309,7 +308,7 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
 	std::string prev_file=std::get<+FILE_INFO::FILE>(m_snp_link.front());;
 	std::string bedname = prev_file+".bed";
 	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-	size_t bp_of_core =0;
+	size_t bp_of_core =snp_list[snp_id_in_list].get_loc();
     size_t core_genotype_index=0; //index of the core SNP on our genotype deque
     bool require_clump=false; // Whether if the current interval contain the core snp
     uintptr_t final_mask = get_final_mask(m_founder_ct);
@@ -322,7 +321,7 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
     	size_t cur_loc = snp_list[cur_snp_index].get_loc();
     	if(prev_chr.compare(cur_chr)!=0)
 		{
-			perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+    		perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
 					r2_threshold, kb_threshold, cur_chr, cur_loc);
 			if(prev_file.empty() || prev_file.compare(std::get<+FILE_INFO::FILE>(m_snp_link[i_info]))!=0)
 			{
@@ -362,9 +361,14 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
         	core_genotype_index=m_genotype.size()-1; // Should store the index on genotype
         	require_clump= true;
         }
-
     	fprintf(stderr, "\rClumping Progress: %03.2f%%", (double) i_info / (double) (num_snp) * 100.0);
 	}
+    if(clump_snp_index.size()!=0)
+    {
+    	// this make sure this will be the last
+    	perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+    						r2_threshold, kb_threshold, prev_chr+"_", bp_of_core+2*kb_threshold);
+    }
 
 	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
 }
@@ -396,57 +400,155 @@ void PLINK::lerase(int num){
 }
 
 
-void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
-		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
+void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
+		const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
+		bool nm_fixed, uint32_t* tot1)
 {
-
-	// do this without the clumping first
-	size_t wind_size = c_clump_snp_index.size();
+	uintptr_t* loadbuf;
 	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
-	uint32_t nm_fixed=0;
-	uint32_t zmiss2 = 0;
+	double freq11;
+	double freq11_expected;
+	double freq1x;
+	double freq2x;
+	double freqx1;
+	double freqx2;
+	double dxx;
+	bool zmiss2=false;
+	size_t max_size = clump_snp_index.size();
+    size_t ref_index = clump_snp_index[core_snp_index];
+    double ref_p_value = snp_list[ref_index].get_p_value();
+    std::vector<double> r2_store;
+    std::vector<size_t> target_index_store; // index we want to push into the current index
+    for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
+    {
+        size_t target_index = snp_index_list[i_snp];
+        if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
+        {
+            // only calculate r2 if more significant
+        	loadbuf= m_genotype[i_snp];
+        	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
+        	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+            uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
+            std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
+        	load_and_split3(loadbuf, m_founder_ct, ulptr, dummy_nm, dummy_nm,
+        			founder_ctv3, 0, 0, 1, &ulii);
+        	delete [] dummy_nm;
+        	uintptr_t* uiptr = new uintptr_t[3];
+        	std::memset(uiptr, 0x0, 3*sizeof(uintptr_t));
+        	uiptr[0] = popcount_longs(ulptr, founder_ctv3);
+        	uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
+        	uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
+        	if (ulii == 3) {
+        		zmiss2 = true;
+        	}
+
+
+            if(r2 >= r2_threshold)
+            {
+            		target_index_store.push_back(target_index);
+                r2_store.push_back(r2);
+            }
+        }
+    }
+    PLINK::clump_mtx.lock();
+    snp_list[ref_index].add_clump(target_index_store);
+    snp_list[ref_index].add_clump_r2(r2_store);
+    PLINK::clump_mtx.unlock();
+}
+void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
+		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
+{
+	// do this without the clumping first
+	size_t wind_size = c_clump_snp_index.size();
+	if(wind_size <=1 ) return; // nothing to do
+
+	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
+	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
+	bool nm_fixed=0;
+	bool zmiss2 = 0;
 	uint32_t tot1[6];
-	uint32_t counts[18];
+	double freq11;
+	double freq11_expected;
+	double freq1x;
+	double freq2x;
+	double freqx1;
+	double freqx2;
+	double dxx;
+	double r2;
+	double dprime;
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-
-
 	uintptr_t* loadbuf= m_genotype[c_core_index];
-
-
 	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
 	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-
 	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
 	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-
 	load_and_split3(m_genotype[c_core_index], m_founder_ct,
 			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
 	tot1[0] = popcount_longs(geno1, founder_ctv3);
 	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
 	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
-	// supposedly there is some checking for X chromosome. But we will ignore that
 
-	if (ulii == 3) {
-		nm_fixed = 1; // just set this to 1, because we are not working on batch
-		// but just one core snp at a time
+	if (ulii == 3)
+	{
+		nm_fixed = true;
 	}
-// now we compare with all other SNPs in the region
-	for(size_t i =0; i < c_clump_snp_index.size(); ++i){
-		if(i == c_core_index) continue;
+
+	std::vector<std::thread> thread_store;
+	if((wind_size-1) < m_thread)
+	{
+		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
+		{
+			if(c_snp_index[i_snp]!=c_core_index)
+			{
+				thread_store.push_back(std::thread(&PLINK::compute_clump, this,
+						c_core_index,i_snp, i_snp+1, std::ref(snp_list),
+						std::cref(c_clump_snp_index), c_r2_threshold,
+						std::ref(geno1), nm_fixed, std::ref(tot1)));
+			}
+
+		}
+	}
+	else
+	{
+		int num_snp_per_thread =(int)(wind_size) / (int)m_thread;  //round down
+		int remain = (int)(wind_size) % (int)m_thread;
+		int cur_start = 0;
+		int cur_end = num_snp_per_thread;
+		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
+		{
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
+					cur_end+(remain>0), std::ref(snp_list), std::cref(c_clump_snp_index),c_r2_threshold,
+					std::ref(geno1), nm_fixed, std::ref(tot1)));
+			cur_start = cur_end+(remain>0);
+			cur_end+=num_snp_per_thread+(remain>0);
+			if(cur_end>wind_size) cur_end =wind_size;
+			remain--;
+		}
+	}
+	for(auto &&thread_runner : thread_store) thread_runner.join();
+	thread_store.clear();
+
+
+
+	// now we compare with all other SNPs in the region
+	for(size_t i =c_core_index+1; i < c_clump_snp_index.size(); ++i){
 		loadbuf= m_genotype[i];
 		uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
 		std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
 		load_and_split3(loadbuf, m_founder_ct, ulptr, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+
 		uintptr_t* uiptr = new uintptr_t[3];
-		std::memset(ulptr, 0x0, 3*sizeof(uintptr_t));
+		std::memset(uiptr, 0x0, 3*sizeof(uintptr_t));
 		uiptr[0] = popcount_longs(ulptr, founder_ctv3);
 		uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
 		uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
 		if (ulii == 3) {
-			zmiss2 = 1;
+			zmiss2 = true;
 		}
 		if (nm_fixed) {
 			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
@@ -465,8 +567,28 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 				counts[8] = tot1[2] - counts[6] - counts[7];
 			}
 		}
+		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
+		{
+			//Cannot calculate?
+			dprime = -1;
+			continue;
+		}
+		else
+		{
+			freq11_expected = freqx1 * freq1x;
+			dxx = freq11 - freq11_expected;
 
+			if (fabs(dxx) < SMALL_EPSILON) {
+				r2 = 0.0;
+				dprime=0.0;
+			} else {
+				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+				dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
+				dprime = dxx;
+			}
+		}
 		delete [] ulptr;
+		delete [] uiptr;
 	}
 	delete [] geno1;
 	delete [] dummy_nm;
@@ -983,6 +1105,7 @@ void PLINK::two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* 
 
 void PLINK::two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3,
 		uint32_t sample_ctv3, uint32_t is_zmiss2) {
+
 #ifdef __LP64__
   fill_uint_zero(6, counts_3x3);
   if (is_zmiss2) {
