@@ -28,6 +28,15 @@
 class Region
 {
 public:
+#if defined(__LP64__) || defined(_WIN64)
+    typedef uint64_t long_type;
+	#define ONE  0x1LLU
+
+#else
+    typedef uint32_t long_type;
+	#define ONE  0x1LU
+#endif
+
     Region(std::vector<std::string> feature);
     virtual ~Region();
     void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out);

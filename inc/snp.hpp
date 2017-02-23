@@ -17,6 +17,15 @@
 class SNP
 {
 public:
+#if defined(__LP64__) || defined(_WIN64)
+    typedef uint64_t long_type;
+	#define ONE  0x1LLU
+
+#else
+    typedef uint32_t long_type;
+	#define ONE  0x1LU
+#endif
+
     SNP();
     SNP(const std::string rs_id, const std::string chr, const int loc,
     		const std::string ref_allele, const std::string alt_allele,

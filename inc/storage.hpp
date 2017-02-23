@@ -8,6 +8,7 @@
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
 #include <memory>
+#include <cstdint>
 	// From http://stackoverflow.com/a/12927952/1441789
 
 	template< typename e >
@@ -62,12 +63,4 @@
     typedef std::tuple<std::string, size_t, size_t> boundary;
     typedef std::tuple<std::string, int, size_t> snp_link;
 
-
-#if defined(__LP64__) || defined(_WIN64)
-    typedef uint64_t long_type;
-#define ONE  0x1LLU
-#else
-    typedef uint32_t long_type;
-#define ONE  0x1LU
-#endif
 #endif /* PRSICE_INC_STORAGE_HPP_ */
