@@ -63,4 +63,13 @@
     typedef std::tuple<std::string, size_t, size_t> boundary;
     typedef std::tuple<std::string, int, size_t> snp_link;
 
+
+#if defined(__LP64__) || defined(_WIN64)
+    typedef std::uint64_t long_type;
+	#define ONE  0x1LLU
+
+#else
+    typedef std::uint32_t long_type;
+	#define ONE  0x1LU
+#endif
 #endif /* PRSICE_INC_STORAGE_HPP_ */

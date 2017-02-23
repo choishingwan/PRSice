@@ -37,7 +37,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    std::vector<unsigned long> check(std::string chr, size_t loc);
+    std::vector<long_type> check(std::string chr, size_t loc);
     size_t flag_size() const
     {
         return (m_region_name.size()+1)/(m_bit_size)+1;
@@ -51,9 +51,9 @@ public:
         return m_region_name.at(i);
     };
 
-    std::vector<unsigned long> empty_flag()
+    std::vector<long_type> empty_flag()
     {
-        std::vector<unsigned long> res = std::vector<unsigned long>(((m_region_name.size()+1)/m_bit_size)+1);
+        std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
         res[0]=1; // base region which contains everything
         return res;
     }

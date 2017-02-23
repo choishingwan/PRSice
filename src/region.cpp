@@ -9,7 +9,7 @@
 
 Region::Region(std::vector<std::string> feature)
 {
-    m_bit_size = sizeof(unsigned long)*CHAR_BIT;
+    m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything
     m_duplicated_names.insert("Base");
     m_region_name.push_back("Base");
@@ -362,15 +362,15 @@ void Region::print_file(std::string output) const
 
 Region::~Region() {}
 
-std::vector<unsigned long> Region::check(std::string chr, size_t loc)
+std::vector<long_type> Region::check(std::string chr, size_t loc)
 {
-    std::vector<unsigned long> res = std::vector<unsigned long>(((m_region_name.size()+1)/m_bit_size)+1);
+    std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
     res[0]=1; // base region which contains everything
     for(size_t i_region = 0; i_region < m_region_list.size(); ++i_region)
     {
         if(i_region==0)
         {
-            res[0] |= 0x1LU;
+            res[0] |= ONE;
         }
         else
         {
@@ -388,7 +388,7 @@ std::vector<unsigned long> Region::check(std::string chr, size_t loc)
                     if(region_start <= loc && region_end >=loc)
                     {
                         // This is the region
-                        res[i_region/m_bit_size] |= 0x1LU << i_region%m_bit_size;
+                        res[i_region/m_bit_size] |= ONE << i_region%m_bit_size;
                         m_region_snp_count[i_region]++;
                         break;
                     }
