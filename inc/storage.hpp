@@ -34,7 +34,7 @@
 	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX  }; // This is for clumping in PLINK
-    enum class PRS{IID=0, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2,
+    enum class PRS{FID=0, IID, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2,
     	NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
     enum class BOUNDARY{CHR, START, END};
     enum class GTF{CHR, SOURCE, FEATURE, START, END, SCORE, STRAND, FRAME, ATTRIBUTE};
@@ -50,8 +50,8 @@
     template<> struct enumeration_traits< PRS > : enumeration_trait_indexing {};
     template<> struct enumeration_traits< SCORING > : enumeration_trait_indexing {};
 	//List of const for use with the GET
-	// IID PRS Number of non-missing SNP
-	typedef std::tuple<std::string, double, size_t> prs_score;
+	// FID IID PRS Number of non-missing SNP
+	typedef std::tuple<std::string, std::string, double, size_t> prs_score;
 	// rsid, line number in bim, category, snp_list index
 	typedef std::tuple<std::string, size_t, int, size_t, std::string, double> p_partition;
 	// threshold, r2,  num_snps, p, coefficient r2 adjust, number of better

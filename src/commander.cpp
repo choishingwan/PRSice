@@ -54,6 +54,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"prslice",required_argument,NULL,0},
         {"no_clump",no_argument,NULL,0},
         {"print_snp",no_argument,NULL,0},
+        {"ignore_fid",no_argument,NULL,0},
 		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
@@ -206,6 +207,7 @@ bool Commander::initialize(int argc, char *argv[])
             		std::vector<std::string> token = misc::split(optarg, ", ");
             		m_feature.insert(m_feature.end(), token.begin(), token.end());
             }
+            else if(command.compare("ignore_fid")==0) m_ignore_fid = true;
             else
             {
                 std::string er = "Undefined operator: "+command+", please use --help for more information!";
@@ -511,6 +513,7 @@ Commander::Commander()
     m_thread = 1;
     m_print_all = false;
     m_print_snp = false;
+    m_ignore_fid = false;
 
 }
 
@@ -603,6 +606,9 @@ void Commander::info()
 			" This cannot be performed together with PRSet"));
 	m_help_messages.push_back(help("Plotting", '\0', "bar_levels", "Level of barchart to be plotted. When fastscore "
 			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
+	m_help_messages.push_back(help("Misc", '\0', "ignore_fid", "Ignore the FID field for covariate and phenotype "
+			"matching. When set, assume first column of phenotype file as IID, otherwise, assume first column "
+			"of phenotype file as FID and the second column as IID."));
 	m_help_messages.push_back(help("Misc", '\0', "perm", "Number of permutation to perform. When this parameter is provided,"
 			" permutation will be performed to obtain an empirical P-value. This will significantly increases the run time "
 			"of PRSice."));

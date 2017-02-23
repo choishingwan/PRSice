@@ -10,10 +10,12 @@
 
 #include <stdexcept>
 #include <stdio.h>
+#include <mutex>
 #include <cstring>
 #include <string>
 #include <cassert>
 #include <fstream>
+#include <thread>
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -31,15 +33,23 @@
 class PLINK {
 public:
 	typedef std::unordered_map<std::string, size_t> catelog;
-	PLINK(std::string prefix, const size_t thread=1, const catelog &inclusion=catelog());
+	PLINK();
+	PLINK(std::string prefix, bool verbose=false, const size_t thread=1, const catelog &inclusion=catelog());
 	static void initialize();
 	virtual ~PLINK();
 	static void set_chromosome(std::vector<std::string> chr)
 	{
 		g_chr_list = chr;
 	};
-	void start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threhsold,
-			size_t kb_threshold, double proxy);
+	void start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threhsold,
+			size_t kb_threshold, double proxyy_threshold);
+	void rewind_bed()
+	{
+		rewind(m_bedfile);
+	}
+	void get_score(const std::vector<p_partition> &partition,
+            const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
+            size_t start_index, size_t end_bound, size_t num_region, SCORING scoring);
 private:
 	/*
 	 * As I am unfamiliar with the alien language used by Chris, I might run into problem
@@ -49,6 +59,7 @@ private:
 	 */
 
 	// bigstack_double_reset(bigstack_mark, bigstack_end_mark); <- how chris clean the memory I guess...
+	static std::mutex clump_mtx;
 	int32_t load_bim(const catelog &inclusion=catelog());
 	int32_t load_fam();
 	int32_t load_bed();
@@ -94,6 +105,9 @@ private:
 			uint32_t is_zmiss2);
 	void two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3,
 			uint32_t sample_ctv3, uint32_t is_zmiss2);
+	void compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
+			const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
+			bool nm_fixed, uint32_t* tot1);
 #ifdef __LP64__
 	void two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2, uint32_t* counts_3x3, uint32_t sample_ctv6,
 			uint32_t iter_ct);

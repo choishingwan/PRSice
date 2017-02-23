@@ -26,9 +26,10 @@ class PRSice
 {
 public:
     PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary,
-    		size_t permutation, SCORING score, size_t num_region): m_base_name(base_name), m_base_index(index),
-    		m_target(target), m_target_binary(target_binary), m_perm(permutation), m_score(score), m_region_size(num_region)
-    {
+    		size_t permutation, SCORING score, size_t num_region, bool ignore_fid):
+    			m_base_name(base_name), m_base_index(index), m_target(target),
+				m_target_binary(target_binary), m_perm(permutation), m_score(score),
+				m_region_size(num_region), m_ignore_fid(ignore_fid){
         if(index < 0)
         {
             throw std::out_of_range("Index cannot be less than 0");
@@ -52,6 +53,7 @@ public:
     void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
+    PLINK m_score_plink;
     //slowly update the class
     //input related
     std::string m_base_name;
@@ -61,7 +63,7 @@ private:
 	size_t m_perm = 0;
 	SCORING m_score = SCORING::MEAN_IMPUTE;
     size_t m_region_size=1;
-
+    bool m_ignore_fid = false;
 
     // valid sample information
 	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;

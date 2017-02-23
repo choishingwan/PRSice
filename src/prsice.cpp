@@ -252,11 +252,11 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 
 	// Thing is, this might be the LD file, which only need to be read once
-	PLINK clump(ld_file, c_commander.get_thread(), m_include_snp);
+	PLINK clump(ld_file, true, c_commander.get_thread(), m_include_snp);
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
 
-		clump.start_clumping(m_snp_list,
+		clump.start_clumping(m_include_snp, m_snp_list,
 				c_commander.get_clump_p(), c_commander.get_clump_r2(),
 				c_commander.get_clump_kb(), c_commander.get_proxy());
 
@@ -367,20 +367,24 @@ void PRSice::pheno_check(const Commander &c_commander) {
 		std::vector < std::string > col = misc::split(line);
 		bool found = false;
 		std::unordered_map<std::string, bool> dup_col;
-		if (pheno_header.size() == 0) {
+		if (pheno_header.size() == 0)
+		{
 			// use the second column from the pheno file
 			pheno_storage temp;
 			std::get < pheno_store::FILE_NAME > (temp) = pheno_file;
-			std::get < pheno_store::INDEX > (temp) = 1;
+			std::get < pheno_store::INDEX > (temp) = 1+!m_ignore_fid; // should +1 if fid is here
 			std::get < pheno_store::NAME > (temp) = "";
 			std::get < pheno_store::ORDER > (temp) = 0;
 			m_pheno_names.push_back(temp);
-		} else {
+		}
+		else
+		{
 			for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno) {
 				if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
 					found = false;
 					dup_col[pheno_header[i_pheno]] = true;
-					for (size_t i_column = 0; i_column < col.size(); ++i_column) {
+					// start from 1+!m_ignore_fid to skip the iid and fid part
+					for (size_t i_column = 1+!m_ignore_fid; i_column < col.size(); ++i_column) {
 						if (col[i_column].compare(pheno_header[i_pheno]) == 0) {
 							found = true;
 							pheno_storage temp;
@@ -605,10 +609,12 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 				if (token.size() < 6)
 					throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
 				prs_score cur_score;
+				std::get<+PRS::FID>(cur_score) = token[+FAM::FID];
 				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
 				std::get<+PRS::PRS>(cur_score) = 0.0;
 				std::get<+PRS::NNMISS>(cur_score) = 0;
 				m_sample_names.push_back(cur_score);
+				std::string id =(m_ignore_fid)? token[+FAM::IID]:token[+FAM::FID]+"_"+token[+FAM::IID];
 				if (token[+FAM::PHENOTYPE] != "NA")
 				{
 					try {
@@ -618,7 +624,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							if (temp >= 0 && temp <= 2)
 							{
 								max_num = (temp>max_num)? temp:max_num;
-								m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+								m_sample_with_phenotypes[id] = cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
 								if(temp == 1) num_case++;
@@ -628,7 +634,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 						else
 						{
 							double temp = misc::convert<double>( token[+FAM::PHENOTYPE]);
-							m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+							m_sample_with_phenotypes[id] = cur_index;
 							phenotype_store.push_back(temp);
 							cur_index++;
 						}
@@ -668,7 +674,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							+ std::to_string(pheno_index + 1) + " columns";
 					throw std::runtime_error(error_message);
 				}
-				phenotype_info[token[0]] = token[pheno_index];
+				std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
+				phenotype_info[id] = token[pheno_index];
 			}
 		}
 		pheno_file.close();
@@ -681,13 +688,15 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 				if (token.size() < 6)
 					std::runtime_error( "Malformed fam file, should contain at least 6 columns");
 				prs_score cur_score;
+				std::get<+PRS::FID>(cur_score) = token[+FAM::FID];
 				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
 				std::get<+PRS::PRS>(cur_score) = 0.0;
 				std::get<+PRS::NNMISS>(cur_score) = 0;
 				m_sample_names.push_back(cur_score);
-				if (phenotype_info.find(token[+FAM::IID]) != phenotype_info.end())
+				std::string id =(m_ignore_fid)? token[+FAM::IID]:token[+FAM::FID]+"_"+token[+FAM::IID];
+				if (phenotype_info.find(id) != phenotype_info.end())
 				{
-					std::string p = phenotype_info[token[+FAM::IID]];
+					std::string p = phenotype_info[id];
 					if (p.compare("NA") != 0)
 					{
 						try {
@@ -697,7 +706,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 								if (temp  >= 0 && temp <= 2)
 								{
 									max_num = (temp>max_num)? temp:max_num;
-									m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+									m_sample_with_phenotypes[id] = cur_index;
 									phenotype_store.push_back(temp);
 									cur_index++;
 									if(temp == 1) num_case++;
@@ -707,7 +716,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							else
 							{
 								double temp = misc::convert<double>(p);
-								m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+								m_sample_with_phenotypes[id] = cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
 							}
@@ -783,7 +792,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		if (c_cov_header.size() == 0)
 		{
 			// if no header is provided, we will use all the covariates included
-			for (size_t i = 1; i < token.size(); ++i) cov_index.push_back(i);
+			for (size_t i = 1+!m_ignore_fid; i < token.size(); ++i) cov_index.push_back(i); //FID, therefore+1
 			max_index = cov_index.size() - 1;
 		}
 		else
@@ -797,7 +806,8 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 						included.insert(cov);
 					}
 			}
-			for (size_t i_header = 1; i_header < token.size(); ++i_header)
+			// same, +1 when fid is include
+			for (size_t i_header = 1+!m_ignore_fid; i_header < token.size(); ++i_header)
 			{
 				if (included.find(token[i_header]) != included.end())
 				{
@@ -826,9 +836,10 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 						+ std::to_string(max_index + 1) + " column!";
 				throw std::runtime_error(error_message);
 			}
-			if (m_sample_with_phenotypes.find(token[0]) != m_sample_with_phenotypes.end())
+			std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
+			if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
 			{ // sample is found in the phenotype vector
-				int index = m_sample_with_phenotypes[token[0]];
+				int index = m_sample_with_phenotypes[id];
 				for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
 				{
 					try {
@@ -841,7 +852,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 				}
 				if (valid)
 				{
-					valid_samples.push_back( std::pair<std::string, size_t>(token[0], index));
+					valid_samples.push_back( std::pair<std::string, size_t>(id, index));
 					num_valid++;
 				}
 			}
@@ -946,7 +957,7 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	// With the new PLINK class, we should start the plink here instead of initializing it
 	// in the get_prs_score
 	// rewind should work like magic?
-
+	m_score_plink =PLINK(m_target, false, c_commander.get_thread());
 
 	size_t partition_size = m_partition.size();
 	double cur_threshold = 0.0;
@@ -1044,6 +1055,7 @@ bool PRSice::get_prs_score(size_t &cur_index)
 	if (!ended) end_index = m_partition.size();
 	//PLINK prs(m_target, m_chr_list, m_score);
 	//prs.initialize();
+	m_score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
 	//prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
 
 	cur_index = end_index;

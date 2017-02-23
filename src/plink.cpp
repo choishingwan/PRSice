@@ -7,11 +7,12 @@
 
 #include "plink.hpp"
 std::vector<std::string> PLINK::g_chr_list;
+std::mutex PLINK::clump_mtx;
+PLINK::PLINK(){}
 
-
-PLINK::PLINK(std::string prefix, const size_t thread, const catelog &inclusion):m_thread(thread){
+PLINK::PLINK(std::string prefix, bool verbose, const size_t thread, const catelog &inclusion):m_thread(thread){
 	// TODO Auto-generated constructor stub
-
+	// All three file is CLOSED after this
 	if(prefix.find("#")!=std::string::npos)
 	{
 		for(auto &&chr: g_chr_list)
@@ -32,8 +33,11 @@ PLINK::PLINK(std::string prefix, const size_t thread, const catelog &inclusion):
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
 
 	retval = load_bed();
-	fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
-	fprintf(stderr, "%zu variants included\n", m_marker_ct);
+	if(verbose)
+	{
+		fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
+		fprintf(stderr, "%zu variants included\n", m_marker_ct);
+	}
 }
 
 PLINK::~PLINK() {
@@ -128,6 +132,7 @@ int32_t PLINK::load_bed()
 			throw std::runtime_error("Error: Currently do not support sample major format");
 		}
 		fclose(m_bedfile);
+		m_bedfile = nullptr;
 	}
 	uii = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
 	m_marker_reverse = new uintptr_t[uii];
@@ -289,18 +294,231 @@ int32_t PLINK::load_fam(){
 		}
 
 	}
+	famfile.close();
 	return 0;
 }
 
+void PLINK::get_score(const std::vector<p_partition> &partition,
+                      const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
+                      size_t start_index, size_t end_bound, size_t num_region, SCORING scoring)
+{
+    size_t prev =0;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uintptr_t ulii = 0;
+    uintptr_t sample_idx;
+    int32_t delta1 = 1;
+	int32_t delta2 = 2;
+	int32_t deltam = 0;
+    uintptr_t final_mask = get_final_mask(m_founder_ct);
+	// a lot of code in PLINK is to handle the sex chromosome
+	// which suggest that PRS can be done on sex chromosome
+	// that should be something later
+    std::string prev_name = "";
+	for(size_t i_region=0; i_region < num_region; ++i_region)
+	{
+		if(prs_score[i_region].size() < m_unfiltered_sample_ct)
+		{
+			throw std::runtime_error("Size of vector doesn't match number of samples!!");
+		}
+	}
 
-void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threshold,
-		size_t kb_threshold, double proxyy){
+	std::vector<bool> in_region;
+	// index is w.r.t. partition, which contain all the information
+    uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+    uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+    for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
+    { // for each SNP
+        if(prev_name.empty() || prev_name.compare(std::get<+PRS::FILENAME>(partition[i_snp]))!=0)
+        {
+        	if(m_bedfile!=nullptr) fclose(m_bedfile);
+            prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);
+            std::string bedname = prev_name+".bed";
+        	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
+
+            prev=0;
+        }
+
+        int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
+
+    	for(size_t i_region = 0; i_region <num_region; ++i_region)
+    	{
+    		in_region.push_back(snp_list[snp_index].in(i_region));
+    	}
+        size_t cur_line = std::get<+PRS::LINE>(partition[i_snp]);
+        if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
+        		, SEEK_SET)) {
+        	throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+        //loadbuf_raw is the temporary
+        //loadbuff is where the genotype will be located
+        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
+        		IS_SET(m_marker_reverse, cur_line), m_bedfile, tmp_genotype, genotype))
+        {
+        	throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+        uintptr_t* lbptr = genotype;
+        uii = 0;
+        // normally, sample_ct is the number of samples remain "after" excluding them
+        // but as PRSice does not allow sample exclusion, we can just use m_unfiltered_sample_ct
+        // Also, it is tempting to use PLINK's version of PRS counting. But that'd be too much
+        // for me
+
+
+        std::vector<size_t> missing_samples;
+        double stat = snp_list[snp_index].get_stat();
+        std::vector<double> genotypes(m_unfiltered_sample_ct);
+        int total_num = 0;
+        do {
+        	ulii = ~(*lbptr++);
+        	if (uii + BITCT2 > m_unfiltered_sample_ct) {
+        		ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2)) - ONELU;
+        	}
+        	while (ulii) {
+        		ujj = CTZLU(ulii) & (BITCT - 2);
+        		ukk = (ulii >> ujj) & 3;
+        		sample_idx = uii + (ujj / 2);
+        		if(ukk!=1) // Because 01 is coded as missing
+        		{
+        			int flipped_geno = snp_list[snp_index].geno(ukk!=1);
+        			total_num+=flipped_geno;
+        			genotypes[sample_idx] = flipped_geno;
+        		}
+        		else
+        		{
+        			missing_samples.push_back(sample_idx);
+        		}
+        		ulii &= ~((3 * ONELU) << ujj);
+        	}
+        	uii += BITCT2;
+        } while (uii < m_unfiltered_sample_ct);
+        size_t i_missing = 0;
+        double center_score = stat*((double)total_num/((double)m_unfiltered_sample_ct*2.0));
+        size_t num_miss = missing_samples.size();
+        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        {
+        	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
+        	{
+        		for(size_t i_region; i_region < num_region; ++i_region)
+        		{
+        			if(in_region[i_region])
+        			{
+        				if(scoring == SCORING::MEAN_IMPUTE) std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += center_score;
+        				if(scoring != SCORING::SET_ZERO) std::get<+PRS::NNMISS>(prs_score[i_region][i_sample])++;
+        			}
+        		}
+        		i_missing++;
+        	}
+        	else
+        	{ // not missing sample
+        		for(size_t i_region=0; i_region < num_region; ++i_region)
+        		{
+        			if(in_region[i_region])
+        			{
+        				if(scoring == SCORING::CENTER)
+        				{
+        					// if centering, we want to keep missing at 0
+        					std::get<+PRS::PRS>(prs_score[i_region][i_sample]) -= center_score;
+        				}
+        				std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += genotypes[i_sample]*stat*0.5;
+        				std::get<+PRS::NNMISS>(prs_score[i_region][i_sample]) ++;
+        			}
+        		}
+        	}
+        }
+    }
+    delete [] genotype;
+    delete [] tmp_genotype;
+}
+/*
+        char *genotype_list = new char[m_num_bytes];
+        m_bed.read((char*)genotype_list, m_num_bytes);
+        if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+        prev++;
+        size_t sample_index = 0;
+        int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
+        if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
+        std::vector<bool> in_region;
+        int num_region = 0;
+        for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
+        {
+        		num_region++;
+        		in_region.push_back(snp_list[snp_index].in(i_region));
+        }
+        double stat = snp_list[snp_index].get_stat();
+        std::vector<size_t> missing_samples;
+        std::vector<double> genotypes(m_num_sample);
+        int total_num = 0;
+        for(size_t i_byte = 0; i_byte < m_num_bytes; ++i_byte)
+        {
+
+        		size_t geno_bit = 0;
+    			int geno_batch = static_cast<int>(genotype_list[i_byte]);
+        		while(geno_bit < 7 && sample_index < m_num_sample)
+        		{
+        			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
+        			if(geno!=1) // Because 01 is coded as missing
+        			{
+        				int flipped_geno = snp_list[snp_index].geno(geno);
+        				total_num+=flipped_geno;
+        				genotypes[sample_index] = flipped_geno;
+        			}
+        			else
+        			{
+        				missing_samples.push_back(sample_index);
+        			}
+        			sample_index++;
+        			geno_bit+=2;
+        		}
+        }
+        delete[] genotype_list;
+
+
+		size_t i_missing = 0;
+		double center_score = stat*((double)total_num/((double)m_num_sample*2.0));
+		size_t num_miss = missing_samples.size();
+		for(size_t i_sample=0; i_sample < m_num_sample; ++i_sample)
+		{
+			if(i_missing < num_miss && i_sample == missing_samples[i_missing])
+			{
+				for(size_t i_region; i_region < num_region; ++i_region)
+				{
+					if(in_region[i_region])
+					{
+						if(m_scoring == SCORING::MEAN_IMPUTE) std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += center_score;
+						if(m_scoring != SCORING::SET_ZERO) std::get<+PRS::NNMISS>(prs_score[i_region][i_sample])++;
+					}
+				}
+				i_missing++;
+			}
+			else
+			{ // not missing sample
+				for(size_t i_region=0; i_region < num_region; ++i_region)
+				{
+					if(in_region[i_region])
+					{
+						if(m_scoring == SCORING::CENTER){
+							std::get<+PRS::PRS>(prs_score[i_region][i_sample]) -= center_score;
+						}
+						std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += genotypes[i_sample]*stat*0.5;
+    						std::get<+PRS::NNMISS>(prs_score[i_region][i_sample]) ++;
+					}
+				}
+			}
+		}
+    }
+    */
+
+void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threshold,
+		size_t kb_threshold, double proxy_threshold){
 	assert(m_snp_link.size()!=0);
 	// The m_snp_link vector should contain the bim file name and the line number for
 	// the SNP at certain index in the m_snp_list vector
 	// This is cryptic but then, hopefully that should work
 	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
-
 	std::deque<size_t> clump_snp_index; // Index for SNP within the clumping region
 	size_t snp_id_in_list = std::get<+FILE_INFO::INDEX>(m_snp_link.front());
 	std::string prev_chr= snp_list[snp_id_in_list].get_chr();
@@ -326,7 +544,11 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
 			if(prev_file.empty() || prev_file.compare(std::get<+FILE_INFO::FILE>(m_snp_link[i_info]))!=0)
 			{
 				prev_file = std::get<+FILE_INFO::FILE>(m_snp_link[i_info]);
-				if (m_bedfile != NULL) fclose(m_bedfile);
+				if (m_bedfile != nullptr)
+				{
+					fclose(m_bedfile);
+					m_bedfile=nullptr;
+				}
 				std::string bed_name = prev_file+".bed";
 				m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
 			}
@@ -342,10 +564,10 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
         }
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
-        uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctv2];
-        std::memset(genotype, 0x0, unfiltered_sample_ctv2*sizeof(uintptr_t));
-        uintptr_t* tmp_genotype = new uintptr_t[unfiltered_sample_ctv2];
-        std::memset(tmp_genotype, 0x0, unfiltered_sample_ctv2*sizeof(uintptr_t));
+        uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+        std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
         		IS_SET(m_marker_reverse, cur_line_num), m_bedfile, tmp_genotype, genotype))
         {
@@ -371,6 +593,31 @@ void PLINK::start_clumping(boost::ptr_vector<SNP> &snp_list, double p_threshold,
     }
 
 	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
+
+
+	std::unordered_map<std::string, size_t> inclusion_backup = inclusion;
+	inclusion.clear();
+	std::vector<size_t> p_sort_order = SNP::sort_by_p(snp_list);
+	bool proxy = proxy_threshold > 0.0;
+	for(auto &&i_snp : p_sort_order){
+		if(inclusion_backup.find(snp_list.at(i_snp).get_rs_id()) != inclusion_backup.end() &&
+				snp_list[i_snp].get_p_value() < p_threshold)
+		{
+			if(proxy && !snp_list[i_snp].clumped() )
+			{
+				snp_list[i_snp].proxy_clump(snp_list, proxy_threshold);
+				inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
+			}
+			else if(!snp_list[i_snp].clumped())
+			{
+				snp_list[i_snp].clump(snp_list);
+				inclusion[snp_list[i_snp].get_rs_id()]=i_snp;
+			}
+		}
+		else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
+
+	}
+	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", inclusion.size());
 }
 
 void PLINK::lerase(int num){
@@ -409,6 +656,7 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
+	uint32_t counts[18];
 	double freq11;
 	double freq11_expected;
 	double freq1x;
@@ -416,28 +664,28 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
 	double freqx1;
 	double freqx2;
 	double dxx;
+	double r2 =0.0;
 	bool zmiss2=false;
+	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
 	size_t max_size = clump_snp_index.size();
-    size_t ref_index = clump_snp_index[core_snp_index];
-    double ref_p_value = snp_list[ref_index].get_p_value();
+    size_t ref_index = clump_snp_index.at(core_snp_index);
+    double ref_p_value = snp_list.at(ref_index).get_p_value();
     std::vector<double> r2_store;
     std::vector<size_t> target_index_store; // index we want to push into the current index
+	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
+    uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
     for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
     {
-        size_t target_index = snp_index_list[i_snp];
+        zmiss2 = false;
+        size_t target_index = clump_snp_index[i_snp];
         if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
         {
             // only calculate r2 if more significant
-        	loadbuf= m_genotype[i_snp];
-        	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
         	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-            uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
             std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-        	load_and_split3(loadbuf, m_founder_ct, ulptr, dummy_nm, dummy_nm,
+        	load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
         			founder_ctv3, 0, 0, 1, &ulii);
-        	delete [] dummy_nm;
-        	uintptr_t* uiptr = new uintptr_t[3];
-        	std::memset(uiptr, 0x0, 3*sizeof(uintptr_t));
+        	uintptr_t uiptr[3];
         	uiptr[0] = popcount_longs(ulptr, founder_ctv3);
         	uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
         	uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
@@ -445,19 +693,58 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
         		zmiss2 = true;
         	}
 
-
-            if(r2 >= r2_threshold)
+    		if (nm_fixed) {
+    			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
+    			if (zmiss2) {
+    				counts[2] = tot1[0] - counts[0] - counts[1];
+    				counts[5] = tot1[1] - counts[3] - counts[4];
+    			}
+    			counts[6] = uiptr[0] - counts[0] - counts[3];
+    			counts[7] = uiptr[1] - counts[1] - counts[4];
+    			counts[8] = uiptr[2] - counts[2] - counts[5];
+    		} else {
+    			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
+    			if (zmiss2) {
+    				counts[2] = tot1[0] - counts[0] - counts[1];
+    				counts[5] = tot1[1] - counts[3] - counts[4];
+    				counts[8] = tot1[2] - counts[6] - counts[7];
+    			}
+    		}
+    		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
+    		{
+    			r2 = -1;
+    		}
+    		else
+    		{
+    			freq11_expected = freqx1 * freq1x;
+    			dxx = freq11 - freq11_expected;
+    			if (fabs(dxx) < SMALL_EPSILON)
+    			{
+    				r2 = 0.0;
+    			}
+    			else
+    			{
+    				//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+    				dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
+    				//dprime = dxx;
+    				r2 = dxx;
+    			}
+    		}
+    		if(r2 >= r2_threshold)
             {
-            		target_index_store.push_back(target_index);
-                r2_store.push_back(r2);
+            	target_index_store.push_back(target_index);
+   	            r2_store.push_back(r2);
             }
         }
     }
+    delete [] ulptr;
+	delete [] dummy_nm;
     PLINK::clump_mtx.lock();
     snp_list[ref_index].add_clump(target_index_store);
     snp_list[ref_index].add_clump_r2(r2_store);
     PLINK::clump_mtx.unlock();
 }
+
 void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
 		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
 {
@@ -469,26 +756,17 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
-	bool nm_fixed=0;
-	bool zmiss2 = 0;
+	bool nm_fixed=false;
 	uint32_t tot1[6];
-	double freq11;
-	double freq11_expected;
-	double freq1x;
-	double freq2x;
-	double freqx1;
-	double freqx2;
-	double dxx;
-	double r2;
-	double dprime;
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	uintptr_t* loadbuf= m_genotype[c_core_index];
 	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
 	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
 	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
 	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
 	load_and_split3(m_genotype[c_core_index], m_founder_ct,
 			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+	delete [] dummy_nm;
+
 	tot1[0] = popcount_longs(geno1, founder_ctv3);
 	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
 	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
@@ -503,7 +781,7 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	{
 		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
 		{
-			if(c_snp_index[i_snp]!=c_core_index)
+			if(c_clump_snp_index[i_snp]!=c_core_index)
 			{
 				thread_store.push_back(std::thread(&PLINK::compute_clump, this,
 						c_core_index,i_snp, i_snp+1, std::ref(snp_list),
@@ -533,103 +811,7 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	for(auto &&thread_runner : thread_store) thread_runner.join();
 	thread_store.clear();
 
-
-
-	// now we compare with all other SNPs in the region
-	for(size_t i =c_core_index+1; i < c_clump_snp_index.size(); ++i){
-		loadbuf= m_genotype[i];
-		uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
-		std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-		load_and_split3(loadbuf, m_founder_ct, ulptr, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
-
-		uintptr_t* uiptr = new uintptr_t[3];
-		std::memset(uiptr, 0x0, 3*sizeof(uintptr_t));
-		uiptr[0] = popcount_longs(ulptr, founder_ctv3);
-		uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
-		uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
-		if (ulii == 3) {
-			zmiss2 = true;
-		}
-		if (nm_fixed) {
-			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
-			if (zmiss2) {
-				counts[2] = tot1[0] - counts[0] - counts[1];
-				counts[5] = tot1[1] - counts[3] - counts[4];
-			}
-			counts[6] = uiptr[0] - counts[0] - counts[3];
-			counts[7] = uiptr[1] - counts[1] - counts[4];
-			counts[8] = uiptr[2] - counts[2] - counts[5];
-		} else {
-			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
-			if (zmiss2) {
-				counts[2] = tot1[0] - counts[0] - counts[1];
-				counts[5] = tot1[1] - counts[3] - counts[4];
-				counts[8] = tot1[2] - counts[6] - counts[7];
-			}
-		}
-		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
-		{
-			//Cannot calculate?
-			dprime = -1;
-			continue;
-		}
-		else
-		{
-			freq11_expected = freqx1 * freq1x;
-			dxx = freq11 - freq11_expected;
-
-			if (fabs(dxx) < SMALL_EPSILON) {
-				r2 = 0.0;
-				dprime=0.0;
-			} else {
-				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
-				dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
-				dprime = dxx;
-			}
-		}
-		delete [] ulptr;
-		delete [] uiptr;
-	}
 	delete [] geno1;
-	delete [] dummy_nm;
-
-
-	/*
-	size_t snp_in_region = c_clump_snp_index.size();
-    if(snp_in_region <=1 ) return; // nothing to do
-    std::vector<std::thread> thread_store;
-    if((snp_in_region-1) < m_thread)
-    {
-        for(size_t i_snp = 0; i_snp < c_snp_index.size(); ++i_snp)
-        {
-            if(c_snp_index[i_snp]!=c_core_index)
-            	{
-            		thread_store.push_back(std::thread(&PLINK::compute_clump, this,
-            				c_core_index,i_snp, i_snp+1, std::ref(snp_list), std::cref(c_clump_snp_index),
-							c_r2_threshold));
-            	}
-
-        }
-    }
-    else
-    {
-        int num_snp_per_thread =(int)(snp_in_region) / (int)m_thread;  //round down
-        int remain = (int)(snp_in_region) % (int)m_thread;
-        int cur_start = 0;
-        int cur_end = num_snp_per_thread;
-        for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
-        {
-            thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
-            		cur_end+(remain>0), std::ref(snp_list), std::cref(c_clump_snp_index),c_r2_threshold ));
-            cur_start = cur_end+(remain>0);
-            cur_end+=num_snp_per_thread+(remain>0);
-            if(cur_end>snp_in_region) cur_end =snp_in_region;
-            remain--;
-        }
-    }
-    for(auto &&thread_runner : thread_store) thread_runner.join();
-    thread_store.clear();
-    */
 }
 
 void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
@@ -847,14 +1029,21 @@ uint32_t PLINK::em_phase_hethet(double known11, double known12, double known21, 
 	freqx2 = 1.0 - freqx1;
 	if (center_ct) {
 		if ((prod_1122 != 0.0) || (prod_1221 != 0.0)) {
-			sol_end_idx = cubic_real_roots(0.5 * (freq11 + freq22 - freq12 - freq21 - 3 * half_hethet_share), 0.5 * (prod_1122 + prod_1221 + half_hethet_share * (freq12 + freq21 - freq11 - freq22 + half_hethet_share)), -0.5 * half_hethet_share * prod_1122, solutions);
-			while (sol_end_idx && (solutions[sol_end_idx - 1] > half_hethet_share + SMALLISH_EPSILON)) {
+			sol_end_idx = cubic_real_roots(0.5 * (freq11 + freq22 - freq12 - freq21 - 3 * half_hethet_share),
+					0.5 * (prod_1122 + prod_1221 + half_hethet_share * (freq12 + freq21 - freq11 - freq22 + half_hethet_share)),
+					-0.5 * half_hethet_share * prod_1122, solutions);
+			while (sol_end_idx && (solutions[sol_end_idx - 1] > half_hethet_share + SMALLISH_EPSILON))
+			{
 				sol_end_idx--;
+				assert(sol_end_idx && sol_end_idx-1 >= 0);
 			}
-			while ((sol_start_idx < sol_end_idx) && (solutions[sol_start_idx] < -SMALLISH_EPSILON)) {
+			while ((sol_start_idx < sol_end_idx) && (solutions[sol_start_idx] < -SMALLISH_EPSILON))
+			{
 				sol_start_idx++;
+				assert((sol_start_idx < sol_end_idx) &&sol_start_idx < 3);
 			}
-			if (sol_start_idx == sol_end_idx) {
+			if (sol_start_idx == sol_end_idx)
+			{
 				// Lost a planet Master Obi-Wan has.  How embarrassing...
 				// lost root must be a double root at one of the boundary points, just
 				// check their likelihoods
@@ -862,12 +1051,17 @@ uint32_t PLINK::em_phase_hethet(double known11, double known12, double known21, 
 				sol_end_idx = 2;
 				solutions[0] = 0;
 				solutions[1] = half_hethet_share;
-			} else {
-				if (solutions[sol_start_idx] < 0) {
+			}
+			else
+			{
+				if (solutions[sol_start_idx] < 0)
+				{
 					solutions[sol_start_idx] = 0;
 				}
-				if (solutions[sol_end_idx] > half_hethet_share) {
-					solutions[sol_end_idx] = half_hethet_share;
+				// checking here
+				if (solutions[sol_end_idx-1] > half_hethet_share)
+				{
+					solutions[sol_end_idx-1] = half_hethet_share;
 				}
 			}
 		} else {

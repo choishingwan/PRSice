@@ -79,6 +79,7 @@ public:
     bool all() const { return m_all; };
     bool print_all() const { return m_print_all; };
     bool no_clump() const { return m_no_clump; };
+    bool ignore_fid() const { return m_ignore_fid; };
     SCORING get_scoring() const{
     		if(m_missing_score == "no_mean_imputation") return SCORING::SET_ZERO;
     		else if(m_missing_score == "center") return SCORING::CENTER;
@@ -126,6 +127,7 @@ private:
     bool m_stat_provided;
     bool m_no_clump;
     bool m_print_snp;
+    bool m_ignore_fid;
     double m_proxy;
     double m_clump;
     double m_clump_r2;
