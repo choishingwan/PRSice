@@ -35,6 +35,6 @@ You can compile a static version using the following command
 ```bash
 git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-/opt/apps/compilers/gcc/4.7.4/bin/g++ --std=c++11 -I inc/ -isystem lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -O2 -static-libgcc -static src/*.cpp -o PRSice
+/opt/apps/compilers/gcc/4.8.2/bin/g++ --std=c++11 -I inc/ -isystem lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -O2 -static-libgcc -static src/*.cpp src/*.c -o PRSice
 ```
 
