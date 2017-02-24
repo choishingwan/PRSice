@@ -1214,11 +1214,6 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 		std::string out_snp = output_name +".snps";
 		std::ofstream best_out, prsice_out, snp_out;
 		prsice_out.open(out_prsice.c_str());
-		if (!best_out.is_open())
-		{
-			std::string error_message = "ERROR: Cannot open file: " + out_best + " to write";
-			throw std::runtime_error(error_message);
-		}
 		if (!prsice_out.is_open())
 		{
 			std::string error_message = "ERROR: Cannot open file: " + out_prsice + " to write";
@@ -1238,6 +1233,11 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 		prsice_out.close();
 
 		best_out.open(out_best.c_str());
+		if (!best_out.is_open())
+		{
+			std::string error_message = "ERROR: Cannot open file: " + out_best + " to write";
+			throw std::runtime_error(error_message);
+		}
 		best_out << "FID\tIID\tIncluded\tprs_" << std::get < +PRS::THRESHOLD > (m_best_threshold[i_region]) << std::endl;
 		int best_snp_size = std::get < +PRS::NSNP > (m_best_threshold[i_region]);
 		if (best_snp_size == 0) {

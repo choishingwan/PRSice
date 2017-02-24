@@ -14,11 +14,11 @@ bool Commander::initialize(int argc, char *argv[])
     {
         {"base",required_argument,NULL,'b'},
         {"target",required_argument,NULL,'t'},
-        {"covar-header",required_argument,NULL,'c'},
-        {"covar-file",required_argument,NULL,'C'},
+        {"cov-header",required_argument,NULL,'c'},
+        {"cov-file",required_argument,NULL,'C'},
         {"ancestry",required_argument,NULL,'a'},
-        {"pheno_file",required_argument,NULL,'f'},
-        {"pheno_col",required_argument,NULL,0},
+        {"pheno-file",required_argument,NULL,'f'},
+        {"pheno-col",required_argument,NULL,0},
         {"ld",required_argument,NULL,'L'},
         {"pvalue",required_argument,NULL,'p'},
         {"thread",required_argument,NULL,'T'},
@@ -37,24 +37,24 @@ bool Commander::initialize(int argc, char *argv[])
         {"snp",required_argument,NULL,0},
         {"bp",required_argument,NULL,0},
         {"se",required_argument,NULL,0},
-        {"clump_p",required_argument,NULL,0},
-        {"clump_r2",required_argument,NULL,0},
-        {"clump_kb",required_argument,NULL,0},
-        {"binary_target",required_argument,NULL,0},
-        {"bar_levels",required_argument,NULL,0},
+        {"clump-p",required_argument,NULL,0},
+        {"clump-r2",required_argument,NULL,0},
+        {"clump-kb",required_argument,NULL,0},
+        {"binary-target",required_argument,NULL,0},
+        {"bar-levels",required_argument,NULL,0},
         {"index",no_argument,NULL,0},
         {"all",no_argument,NULL,0},
         {"full",no_argument,NULL,0},
-        {"print_all",no_argument,NULL,0},
-        {"no_regression",no_argument,NULL,0},
+        {"print-all",no_argument,NULL,0},
+        {"no-regression",no_argument,NULL,0},
         {"fastscore",no_argument,NULL,0},
         {"proxy",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
         {"perm",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
-        {"no_clump",no_argument,NULL,0},
-        {"print_snp",no_argument,NULL,0},
-        {"ignore_fid",no_argument,NULL,0},
+        {"no-clump",no_argument,NULL,0},
+        {"print-snp",no_argument,NULL,0},
+        {"ignore-fid",no_argument,NULL,0},
 		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
@@ -87,11 +87,11 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("index")==0) m_index = true;
             else if(command.compare("all")==0) m_all = true;
             else if(command.compare("full")==0) m_full = true;
-            else if(command.compare("print_all")==0) m_print_all = true;
-            else if(command.compare("no_clump")==0) m_no_clump = true;
+            else if(command.compare("print-all")==0) m_print_all = true;
+            else if(command.compare("no-clump")==0) m_no_clump = true;
             else if(command.compare("score")==0) m_missing_score = optarg;
-            else if(command.compare("print_snp")==0) m_print_snp = true;
-            else if(command.compare("clump_p")==0)
+            else if(command.compare("print-snp")==0) m_print_snp = true;
+            else if(command.compare("clump-p")==0)
             {
                 double temp = atof(optarg);
                 if(temp < 0.0 || temp > 1.0)
@@ -101,7 +101,7 @@ bool Commander::initialize(int argc, char *argv[])
                 }
                 else m_clump = temp;
             }
-            else if(command.compare("clump_r2")==0)
+            else if(command.compare("clump-r2")==0)
             {
                 double temp = atof(optarg);
                 if(temp < 0.0 || temp > 1.0)
@@ -115,7 +115,7 @@ bool Commander::initialize(int argc, char *argv[])
                 }
                 else m_clump_r2 = temp;
             }
-            else if(command.compare("clump_kb")==0)
+            else if(command.compare("clump-kb")==0)
             {
                 int temp = atoi(optarg);
                 if(temp <= 0.0)
@@ -135,12 +135,12 @@ bool Commander::initialize(int argc, char *argv[])
                 }
                 else m_prslice_size = temp*1000; //change it to kb, might want to allow different units
             }
-            else if(command.compare("binary_target")==0)
+            else if(command.compare("binary-target")==0)
             {
             		std::vector<std::string> token = misc::split(optarg, ", ");
             	    for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
             }
-            else if(command.compare("bar_levels")==0)
+            else if(command.compare("bar-levels")==0)
             {
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 try
@@ -168,7 +168,7 @@ bool Commander::initialize(int argc, char *argv[])
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
             }
-            else if(command.compare("no_regression")==0) m_no_regress = true;
+            else if(command.compare("no-regression")==0) m_no_regress = true;
             else if(command.compare("fastscore")==0) m_fastscore = true;
             else if(command.compare("proxy")==0)
             {
@@ -187,7 +187,7 @@ bool Commander::initialize(int argc, char *argv[])
                     error=true;
                 }
             }
-            else if(command.compare("pheno_col")==0)
+            else if(command.compare("pheno-col")==0)
             {
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 m_pheno_col.insert(m_pheno_col.end(), token.begin(), token.end());
@@ -207,7 +207,7 @@ bool Commander::initialize(int argc, char *argv[])
             		std::vector<std::string> token = misc::split(optarg, ", ");
             		m_feature.insert(m_feature.end(), token.begin(), token.end());
             }
-            else if(command.compare("ignore_fid")==0) m_ignore_fid = true;
+            else if(command.compare("ignore-fid")==0) m_ignore_fid = true;
             else
             {
                 std::string er = "Undefined operator: "+command+", please use --help for more information!";
@@ -534,25 +534,25 @@ void Commander::info()
 			"Please note that the substitute is based on your base file. So if your base file code chromosome "
 			"with chr, e.g. chr1 chr2 etc, then in our example case, you should code your plink file as "
 			"genotype_#_test"));
-	m_help_messages.push_back(help("Required", '\0', "binary_target", "Indicate whether the target sample has "
+	m_help_messages.push_back(help("Required", '\0', "binary-target", "Indicate whether the target sample has "
 			"binary phenotype or not. For each phenotype, user need to provide either T or F where T"
 			" means the phenotype is binary"));
 	m_help_messages.push_back(help("Required", '\0', "beta", "Indicate whether the test statistic is beta "
 			"instead of OR. Must be of the same length as base"));
-	m_help_messages.push_back(help("Options", 'f', "pheno_file", "Phenotype file containing the target "
+	m_help_messages.push_back(help("Options", 'f', "pheno-file", "Phenotype file containing the target "
 			"phenotype(s). If provided, the fam file of the target is ignored. First column must be "
 			"IID of the samples. Must contain a header if pheno_col is specified"));
-	m_help_messages.push_back(help("Options", '\0',"pheno_col", "Headers of pheenotypes from phenotype file"));
+	m_help_messages.push_back(help("Options", '\0',"pheno-col", "Headers of pheenotypes from phenotype file"));
 	m_help_messages.push_back(help("Options", 'L',"ld", "Plink binary file prefix for the reference file "
 			"used for LD calculation. If not provided, will use the target genotype for the LD calculation. "
 			"Can also use multiple chromosome plink file. Please see --target for more information."));
-	m_help_messages.push_back(help("Options", 'c', "covar_header", "Header of covariates. If not provided, "
+	m_help_messages.push_back(help("Options", 'c', "cov-header", "Header of covariates. If not provided, "
 			"will use all variable in the covariate file as the covarite."));
-	m_help_messages.push_back(help("Options", 'C', "covar_file", "Covarite file. Formate should be: ID Cov1 Cov2"));
+	m_help_messages.push_back(help("Options", 'C', "cov-file", "Covarite file. Formate should be: ID Cov1 Cov2"));
 	m_help_messages.push_back(help("Options", '\0', "full", "Also include the full model in the PRSice output"));
 	m_help_messages.push_back(help("Options", '\0', "all", "Output PRS for ALL threshold. Can only be used together "
 			"with fastscore to avoid huge output files."));
-	m_help_messages.push_back(help("Options",'\0', "no_regress", "Do not perform the regression analysis and "
+	m_help_messages.push_back(help("Options",'\0', "no-regress", "Do not perform the regression analysis and "
 			"simply output all PRS. Can only be used together with fastscore to avoid huge output files. If "
 			"you must, you can modify bar_levels to obtain the fine scale PRS outputs"));
 	m_help_messages.push_back(help("Options",'o', "out", "Prefix of all output. Default: "+m_out));
@@ -580,12 +580,12 @@ void Commander::info()
 	m_help_messages.push_back(help("File Headers", '\0', "index", "Indicate all the above options are providing "
 			"the INDEX of the corresponding column. (Index should be 0-based). Useful when your base file "
 			"each have a different header but the column index remains the same"));
-	m_help_messages.push_back(help("Clumping", '\0', "clump_p", "The p-value threshold use for clumping."
+	m_help_messages.push_back(help("Clumping", '\0', "clump-p", "The p-value threshold use for clumping."
 			"Default: "+std::to_string(m_clump)));
-	m_help_messages.push_back(help("Clumping", '\0', "clump_r2", "The R2 threshold for clumping. Please note that "
+	m_help_messages.push_back(help("Clumping", '\0', "clump-r2", "The R2 threshold for clumping. Please note that "
 			"as we did not implement the maximum likelihood R2 calculation, the clumping result can differ "
 			"slightly from plink. Default: "+std::to_string(m_clump_r2)));
-	m_help_messages.push_back(help("Clumping", '\0', "clump_kb", "The distance for clumping in kb."
+	m_help_messages.push_back(help("Clumping", '\0', "clump-kb", "The distance for clumping in kb."
 			"Default: "+std::to_string(m_clump_kb/1000)));
 	m_help_messages.push_back(help("PRSet", 'B', "bed", "Bed file containing the selected regions. "
 			"Name of bed file will be used as the region identifier."));
@@ -593,7 +593,7 @@ void Commander::info()
 			"when --msigdb is set."));
 	m_help_messages.push_back(help("PRSet", 'm', "msigdb", "MSIGDB file containing the pathway information "
 			"require the gtf file."));
-	m_help_messages.push_back(help("PRSet", '\0', "print_all", "Print the detail report for all sets"));
+	m_help_messages.push_back(help("PRSet", '\0', "print-all", "Print the detail report for all sets"));
 	m_help_messages.push_back(help("PRSet", '\0', "proxy", "Proxy threshold for index SNP to be considered "
 			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
 			"represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if it is not physically "
@@ -604,11 +604,13 @@ void Commander::info()
 			"cut into bin size specified by this option. PRSice will then be performed on each bin. Bins are "
 			"then sorted according to the their R2. PRSice is then performed again to find the best bin combination."
 			" This cannot be performed together with PRSet"));
-	m_help_messages.push_back(help("Plotting", '\0', "bar_levels", "Level of barchart to be plotted. When fastscore "
+	m_help_messages.push_back(help("Plotting", '\0', "bar-levels", "Level of barchart to be plotted. When fastscore "
 			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
 	m_help_messages.push_back(help("Misc", '\0', "ignore_fid", "Ignore the FID field for covariate and phenotype "
 			"matching. When set, assume first column of phenotype file as IID, otherwise, assume first column "
 			"of phenotype file as FID and the second column as IID."));
+	m_help_messages.push_back(help("Misc", '\0', "print-snp", "Print out the SNP(s) used for constructing "
+			"the best PRS score"));
 	m_help_messages.push_back(help("Misc", '\0', "perm", "Number of permutation to perform. When this parameter is provided,"
 			" permutation will be performed to obtain an empirical P-value. This will significantly increases the run time "
 			"of PRSice."));

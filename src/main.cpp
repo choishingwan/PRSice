@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 							fprintf(stderr, "\n");
 							prsice.output(commander, region, i_pheno);
 						} catch (const std::runtime_error &error) {
+							std::cerr << "Error is: " << error.what() << std::endl;
 							fprintf(stderr,
 									"None of the SNPs fall within the threshold\n");
 						}
