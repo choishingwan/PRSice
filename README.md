@@ -50,7 +50,9 @@ cd PRSice
 If you PRSice in any published work, please cite both the software (as an electronic resource/URL):
 
 Package: PRSice [version]
+
 Authors: Jack Euesden, Cathryn Lewis & Paul O'Reilly
+
 URL: https://github.com/choishingwan/PRSice
 
 and the manuscript(s):
