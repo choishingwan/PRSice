@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
 						prsice.init_matrix(commander, i_pheno, perform_prslice);
 						try {
 							prsice.prsice(commander, region, i_pheno);
-
 							fprintf(stderr, "\n");
 							prsice.output(commander, region, i_pheno);
 						} catch (const std::runtime_error &error) {
