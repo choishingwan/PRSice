@@ -38,3 +38,16 @@ cd PRSice
 /opt/apps/compilers/gcc/4.7.4/bin/g++ --std=c++11 -I inc/ -isystem lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -O2 -static-libgcc -static src/*.cpp -o PRSice
 ```
 
+### Citation 
+If you PRSice in any published work, please cite both the software (as an electronic resource/URL):
+
+Package: PRSice [version]
+Authors: Jack Euesden, Cathryn Lewis & Paul O'Reilly
+URL: https://github.com/choishingwan/PRSice
+
+and the manuscript(s):
+Jack Euesden  Cathryn M. Lewis  Paul F. O’Reilly (2015) PRSice: Polygenic Risk Score software . Bioinformatics 31 (9): 1466-1468
+
+As PRSice is heavily rely on PLINK, please also cite:
+
+Chang CC, Chow CC, Tellier LCAM, Vattikuti S, Purcell SM, Lee JJ (2015) Second-generation PLINK: rising to the challenge of larger and richer datasets. GigaScience, 4.
