@@ -54,6 +54,7 @@ Authors: Jack Euesden, Cathryn Lewis & Paul O'Reilly
 URL: https://github.com/choishingwan/PRSice
 
 and the manuscript(s):
+
 Jack Euesden  Cathryn M. Lewis  Paul F. O’Reilly (2015) PRSice: Polygenic Risk Score software . Bioinformatics 31 (9): 1466-1468
 
 As PRSice is heavily rely on PLINK, please also cite:
