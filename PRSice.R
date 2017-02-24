@@ -136,21 +136,23 @@ option_list <- list(
     file as genotype_#_test"
   ),
   make_option(
-    "--binary_target",
+    "--binary-target",
     type = "character",
     help = "Indicate whether the target sample has binary phenotype or not.
-    For each phenotype, user need to provide either T or F where T means the phenotype is binary"
+    For each phenotype, user need to provide either T or F where T means the phenotype is binary",
+    dest = "binary_target"
   ),
   
   make_option("--beta", help = "Indicate whether the test statistic is beta instead of OR. Must be of the same length as base"),
   make_option(
-    c("--pheno_file", "-f"),
+    c("--pheno-file", "-f"),
     type = "character",
     help = "Phenotype file containing the target phenotype(s).
     If provided, the fam file of the target is ignored. First column must be IID of the samples. Must contain a header
-    if --pheno_col is specified"
+    if --pheno_col is specified",
+    dest="pheno_file"
   ),
-  make_option("--pheno_col", type = "character", help = "Headers of pheenotypes from phenotype file"),
+  make_option("--pheno-col", type = "character", help = "Headers of pheenotypes from phenotype file", dest="pheno_col"),
   make_option(
     c("--ld", "-L"),
     type = "character",
@@ -159,19 +161,22 @@ option_list <- list(
     plink file. Please see --target for more information."
   ),
   make_option(
-    c("--covar_header", "-c"),
+    c("--cov-header", "-c"),
     type = "character",
     help = "Header of covariates. If not provided, will use all variable in the
-    covariate file as the covarite."
+    covariate file as the covarite.",
+    dest="covar_header"
   ),
-  make_option(c("--covar_file", "-C"), type = "character", help = "Covarite file. Formate should be: ID Cov1 Cov2 ..."),
+  make_option(c("--cov-file", "-C"), type = "character", help = "Covarite file. Formate should be: ID Cov1 Cov2 ...",
+              dest="covar_file"),
   make_option("--full", action = "store_true", help = "Also include the full model in the PRSice output"),
   make_option("--all", action = "store_true", help = "Output PRS for ALL threshold. Can only be used together with fastscore to avoid huge output files."),
   make_option(
-    "--no_regress",
+    "--no-regress",
     action = "store_true",
     help = "Do not perform the regression analysis and simply output all PRS. Can only be used together
-    with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs"
+    with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs",
+    dest = "no_regress"
   ),
   make_option(
     c("--out", "-o"),
@@ -219,28 +224,32 @@ option_list <- list(
     index remains the same"
   ),
   make_option(
-    "--clump_p",
+    "--clump-p",
     type = "numeric",
     help = "The p-value threshold use for clumping.",
-    default = 1
+    default = 1,
+    dest = "clump_p"
   ),
   make_option(
-    "--clump_r2",
+    "--clump-r2",
     type = "numeric",
     help = "The R2 threshold for clumping. Please note that as we did not implement the
     maximum likelihood R2 calculation, the clumping result can differ slightly from plink.",
-    default = 0.1
+    default = 0.1,
+    dest="clump_r2"
   ),
   make_option(
-    "--clump_kb",
+    "--clump-kb",
     type = "numeric",
     help = "The distance for clumping in kb.",
-    default = 250
+    default = 250,
+    dest="clump_kb"
   ),
   make_option(c("--bed", "-B"), type = "character", help = "Bed file containing the selected regions. Name of bed file will be used as the region identifier."),
   make_option(c("--gtf", "-g"), type = "character", help = "GTF file containing gene boundaries. Required when --msigdb is set."),
   make_option(c("--msigdb", "-m"), type = "character", help = "MSIGDB file containing the pathway information require the gtf file."),
-  make_option("--gen_bed", action = "store_true", help = "Generate bed file of gene regions from the gtf file."),
+  make_option("--gen-bed", action = "store_true", help = "Generate bed file of gene regions from the gtf file.",
+              dest="gen_bed"),
   make_option(
     "--proxy",
     type = "numeric",
@@ -257,10 +266,11 @@ option_list <- list(
     to find the best bin combination. This cannot be performed together with PRSet"
   ),
   make_option(
-    "--bar_levels",
+    "--bar-levels",
     type = "character",
     help = "Level of barchart to be plotted. When fastscore is set, PRSice will
-    only calculate the PRS for threshold within the bar level"
+    only calculate the PRS for threshold within the bar level",
+    dest="bar_levels"
   ),
   make_option(
     c("--thread", "-T"),
@@ -271,10 +281,11 @@ option_list <- list(
   make_option(
     "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
   make_option(
-    "--c_help",
+    "--c-help",
     action = "store_true",
     help = "Print the help message from the c++ program instead",
-    default = F
+    default = F,
+    dest="c_help"
   ),
   make_option(
     "--plot",
@@ -289,43 +300,50 @@ option_list <- list(
     help = "Number of quantiles to plot. 0 = Not producing the quantile plot",
     default = 0
   ),
-  make_option(c("--quant_extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples"),
+  make_option(c("--quant-extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples",
+              dest="quant_extract"),
   make_option(
-    "--bar_level",
+    "--bar-level",
     type = "character",
     help = "barchar level used for plotting",
-    default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
+    default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5",
+    dest="bar_level"
   ),
-  make_option("--quant_ref", type = "numeric", help = "Reference quantile for quantile plot"),
+  make_option("--quant-ref", type = "numeric", help = "Reference quantile for quantile plot", dest="quant_ref"),
   make_option(
-    "--scatter_r2",
+    "--scatter-r2",
     action = "store_true",
     help = "y-axis of the high resolution scatter plot should be R2",
-    default = F
+    default = F,
+    dest="scatter_r2"
   ),
   make_option(
-    "--bar_col_p",
+    "--bar-col-p",
     action = "store_true",
     help = "Change the colour of bar to p-value threshold instead of the association with phenotype",
-    default = F
+    default = F,
+    dest="bar_col_p"
   ),
   make_option(
-    "--bar_col_low",
+    "--bar-col-low",
     type = "character",
     help = "Colour of the poorest predicting threshold",
-    default = "dodgerblue"
+    default = "dodgerblue",
+    dest="bar_col_low"
   ),
   make_option(
-    "--bar_col_high",
+    "--bar-col-high",
     type = "character",
     help = "Colour of the most predicting threshold",
-    default = "firebrick"
+    default = "firebrick",
+    dest="bar_col_high"
   ),
   make_option(
-    "--bar_palatte",
+    "--bar-palatte",
     type="character",
     help ="Colour palatte to be used for bar plotting when --bar_col_p is set",
-    default = "YlOrRd"
+    default = "YlOrRd",
+    dest="bar_palatte"
   ),
   make_option("--prsice", type = "character", help = "Location of the PRSice binary"),
   make_option("--dir", type = "character", help = "Location to install ggplot. Only require if ggplot is not installed")
@@ -344,17 +362,17 @@ argv <- parse_args(OptionParser(option_list = option_list))
 not_cpp <-
   c(
     "help",
-    "c_help",
+    "c-help",
     "plot",
     "quantile",
-    "quant_extract",
+    "quant-extract",
     "intermediate",
-    "quant_ref",
-    "scatter_r2",
-    "bar_col_p",
-    "bar_col_low",
-    "bar_col_high",
-    "bar_palatte",
+    "quant-ref",
+    "scatter-r2",
+    "bar-col-p",
+    "bar-col-low",
+    "bar-col-high",
+    "bar-palatte",
     "prsice",
     "dir"
   )
@@ -380,7 +398,7 @@ if (provided("prsice", argv)) {
 
 if (argv$c_help) {
   if (!provided("prsice", argv)) {
-    stop("Cannot use c_help without specifying the location of the PRSice binary!")
+    stop("Cannot use c-help without specifying the location of the PRSice binary!")
     
   }
   system(paste(argv$prsice, " --help", sep = ""))
@@ -407,13 +425,14 @@ add_command <- function(input) {
   }
 }
 command = ""
+names(argv) = gsub("_", "-", names(argv))
 if (!argv$plot) {
   for (i in names(argv)) {
     # only need special processing for flags and specific inputs
     if (i == "index" ||
-        i == "gen_bed" ||
+        i == "gen-bed" ||
         i == "fastscore" ||
-        i == "full" || i == "all" || i == "no_regress") {
+        i == "full" || i == "all" || i == "no-regress") {
       if (argv[[i]])
         command = paste(command, " --", i, sep = "")
     } else if (i %in% not_cpp) {
