@@ -606,7 +606,7 @@ void Commander::info()
 			" This cannot be performed together with PRSet"));
 	m_help_messages.push_back(help("Plotting", '\0', "bar-levels", "Level of barchart to be plotted. When fastscore "
 			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
-	m_help_messages.push_back(help("Misc", '\0', "ignore_fid", "Ignore the FID field for covariate and phenotype "
+	m_help_messages.push_back(help("Misc", '\0', "ignore-fid", "Ignore the FID field for covariate and phenotype "
 			"matching. When set, assume first column of phenotype file as IID, otherwise, assume first column "
 			"of phenotype file as FID and the second column as IID."));
 	m_help_messages.push_back(help("Misc", '\0', "print-snp", "Print out the SNP(s) used for constructing "
