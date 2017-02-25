@@ -37,7 +37,7 @@ public:
     {
         int g = (geno-1 > 0)? (geno-1) : 0;
         if(!m_flipped) g=2-g;
-        return (g>0)? (0.5*(double)g)*m_stat: g;
+        return (g>0)? ((double)g)*0.5*m_stat: g;
     }
     // location checker
     void set_loc(int loc) { m_loc = loc; };

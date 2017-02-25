@@ -439,19 +439,13 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         //loadbuff is where the genotype will be located
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, final_mask,
         		false, m_bedfile, tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
         uintptr_t* lbptr = genotype;
         uii = 0;
-        // normally, sample_ct is the number of samples remain "after" excluding them
-        // but as PRSice does not allow sample exclusion, we can just use m_unfiltered_sample_ct
-        // Also, it is tempting to use PLINK's version of PRS counting. But that'd be too much
-        // for me
-
-
         std::vector<size_t> missing_samples;
         double stat = snp_list[snp_index].get_stat();
         std::vector<double> genotypes(m_unfiltered_sample_ct);
@@ -465,13 +459,14 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         		ujj = CTZLU(ulii) & (BITCT - 2);
         		ukk = (ulii >> ujj) & 3;
         		sample_idx = uii + (ujj / 2);
-        		if(ukk!=1) // Because 01 is coded as missing
+        		if(ukk==1 || ukk==3) // Because 01 is coded as missing
         		{
-        			int flipped_geno = snp_list[snp_index].geno(ukk!=1);
+        			// 3 is homo alternative
+        			int flipped_geno = snp_list[snp_index].geno(ukk);
         			total_num+=flipped_geno;
         			genotypes[sample_idx] = flipped_geno;
         		}
-        		else
+        		else // this should be 2
         		{
         			missing_samples.push_back(sample_idx);
         		}
@@ -817,6 +812,8 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
 
     			}
     		}
+    		//std::cout << snp_list[ref_index].get_rs_id() << "\t" <<
+    		//		snp_list[target_index].get_rs_id() << "\t" << r2<< std::endl;
     		if(r2 >= r2_threshold)
             {
             	target_index_store.push_back(target_index);
