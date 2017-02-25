@@ -450,6 +450,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         double stat = snp_list[snp_index].get_stat();
         std::vector<double> genotypes(m_unfiltered_sample_ct);
         int total_num = 0;
+    	uint32_t sample_idx=0;
         do {
         	ulii = ~(*lbptr++);
         	if (uii + BITCT2 > m_unfiltered_sample_ct) {

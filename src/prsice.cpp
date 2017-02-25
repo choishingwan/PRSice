@@ -247,7 +247,6 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs      : %zu\n", num_ambig);
 	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs     : %zu\n", num_duplicate);
-	if (not_found != 0) fprintf(stderr, "Number of SNPs not found      : %zu\n", not_found);
 	fprintf(stderr, "Final Number of SNPs included : %zu\n", m_include_snp.size());
 
 
