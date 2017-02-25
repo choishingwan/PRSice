@@ -390,7 +390,6 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     uint32_t ujj;
     uint32_t ukk;
     uintptr_t ulii = 0;
-    uintptr_t sample_idx;
     int32_t delta1 = 1;
 	int32_t delta2 = 2;
 	int32_t deltam = 0;
@@ -410,7 +409,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 
 	std::vector<bool> in_region;
 	// index is w.r.t. partition, which contain all the information
-    uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
     uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
@@ -420,23 +419,24 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
             prev_name= std::get<+PRS::FILENAME>(partition[i_snp]);
             std::string bedname = prev_name+".bed";
             load_bed(bedname);
-        	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
+            m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
             prev=0;
         }
 
         int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
 
-    	for(size_t i_region = 0; i_region <num_region; ++i_region)
-    	{
-    		in_region.push_back(snp_list[snp_index].in(i_region));
-    	}
-        size_t cur_line = std::get<+PRS::LINE>(partition[i_snp]);
-        if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
-        		, SEEK_SET)) {
-        	throw std::runtime_error("ERROR: Cannot read the bed file!");
-        }
+    		for(size_t i_region = 0; i_region <num_region; ++i_region)
+    		{
+    			in_region.push_back(snp_list[snp_index].in(i_region));
+    		}
+    		size_t cur_line = std::get<+PRS::LINE>(partition[i_snp]);
+    		if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
+    				, SEEK_SET)) {
+    			throw std::runtime_error("ERROR: Cannot read the bed file!");
+    		}
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
+
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, final_mask,
