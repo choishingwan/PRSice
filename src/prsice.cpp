@@ -57,7 +57,6 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	threshold = (c_commander.full())? 1.0 : threshold;
 	std::vector < std::string > token;
 	// Actual reading the file, will do a bunch of QC
-	bool chr_error = false;
 	while (std::getline(snp_file, line))
 	{
 		misc::trim(line);
@@ -72,6 +71,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 			{
 				std::string rs_id = token[index[+SNP_Index::RS]];
 				std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
+				/*
 				if(chr.compare("X") == 0 || chr.compare("x")==0 ||
 						chr.compare("Y")==0 || chr.compare("y")==0)
 				{
@@ -85,6 +85,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 					}
 					exclude=true;
 				}
+				*/
 				std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
 				std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
 				double pvalue = 0.0;
@@ -429,6 +430,10 @@ void PRSice::categorize(const Commander &c_commander) {
 	{
 		file_names.push_back(m_target);
 	}
+	// WARNING: In someway, this should be the same as the plink read sequence because both uses the same
+	// chromosome list. But then, we should always be away that it is possible for the two to be out of
+	// sync.
+
 	for (auto &&name : file_names)
 	{
 		std::ifstream bim;

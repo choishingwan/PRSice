@@ -381,6 +381,32 @@ int32_t PLINK::load_fam(){
 	return 0;
 }
 
+void PLINK::lerase(int num){
+	if(num <0)
+	{
+		std::string error_message = "Number of removed SNPs cannot be less than 1: "+std::to_string(num);
+		throw std::runtime_error(error_message);
+	}
+	if(num > m_genotype.size())
+	{
+		std::string error_message = "Number of removed SNPs exceed number of SNPs available "+std::to_string(num)+" "+std::to_string(m_genotype.size());
+		throw std::runtime_error(error_message);
+	}
+	for(size_t i = 0; i < num; ++i)
+	{
+		delete [] m_genotype[i];
+	}
+	if(num==m_genotype.size())
+	{
+		m_genotype.clear();
+	}
+	else
+	{
+		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
+	}
+
+}
+
 void PLINK::get_score(const std::vector<p_partition> &partition,
                       const boost::ptr_vector<SNP> &snp_list, std::vector< std::vector<prs_score> > &prs_score,
                       size_t start_index, size_t end_bound, size_t num_region, SCORING scoring)
@@ -475,6 +501,8 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         	}
         	uii += BITCT2;
         } while (uii < m_unfiltered_sample_ct);
+
+
         size_t i_missing = 0;
         double center_score = stat*((double)total_num/((double)m_unfiltered_sample_ct*2.0));
         size_t num_miss = missing_samples.size();
@@ -656,6 +684,13 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+        // is_haploid is related to chromosome. It is true for sex and mt
+        /*
+        if (is_haploid) {
+        	haploid_fix(hh_exists, founder_include2, founder_male_include2, founder_ct, is_x,
+        			is_y, (unsigned char*)genotype);
+        }
+        */
         m_genotype.push_back(genotype);
         delete [] tmp_genotype;// don't need the temporary now
 
@@ -703,202 +738,7 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", inclusion.size());
 }
 
-void PLINK::lerase(int num){
-	if(num <0)
-	{
-		std::string error_message = "Number of removed SNPs cannot be less than 1: "+std::to_string(num);
-		throw std::runtime_error(error_message);
-	}
-	if(num > m_genotype.size())
-	{
-		std::string error_message = "Number of removed SNPs exceed number of SNPs available "+std::to_string(num)+" "+std::to_string(m_genotype.size());
-		throw std::runtime_error(error_message);
-	}
-	for(size_t i = 0; i < num; ++i)
-	{
-		delete [] m_genotype[i];
-	}
-	if(num==m_genotype.size())
-	{
-		m_genotype.clear();
-	}
-	else
-	{
-		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
-	}
-
-}
-
-
-void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
-		const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
-		bool nm_fixed, uint32_t* tot1)
-{
-	uintptr_t* loadbuf;
-	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
-	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
-	uint32_t counts[18];
-	double freq11;
-	double freq11_expected;
-	double freq1x;
-	double freq2x;
-	double freqx1;
-	double freqx2;
-	double dxx;
-	double r2 =0.0;
-	bool zmiss2=false;
-	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	size_t max_size = clump_snp_index.size();
-    size_t ref_index = clump_snp_index.at(core_snp_index);
-    double ref_p_value = snp_list.at(ref_index).get_p_value();
-    std::vector<double> r2_store;
-    std::vector<size_t> target_index_store; // index we want to push into the current index
-	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
-    uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
-    for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
-    {
-        zmiss2 = false;
-        size_t target_index = clump_snp_index[i_snp];
-        if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
-        {
-            // only calculate r2 if more significant
-        	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-            std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-        	load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
-        			founder_ctv3, 0, 0, 1, &ulii);
-        	uintptr_t uiptr[3];
-        	uiptr[0] = popcount_longs(ulptr, founder_ctv3);
-        	uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
-        	uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
-        	if (ulii == 3) {
-        		zmiss2 = true;
-        	}
-
-    		if (nm_fixed) {
-    			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
-    			if (zmiss2) {
-    				counts[2] = tot1[0] - counts[0] - counts[1];
-    				counts[5] = tot1[1] - counts[3] - counts[4];
-    			}
-    			counts[6] = uiptr[0] - counts[0] - counts[3];
-    			counts[7] = uiptr[1] - counts[1] - counts[4];
-    			counts[8] = uiptr[2] - counts[2] - counts[5];
-    		} else {
-    			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
-    			if (zmiss2) {
-    				counts[2] = tot1[0] - counts[0] - counts[1];
-    				counts[5] = tot1[1] - counts[3] - counts[4];
-    				counts[8] = tot1[2] - counts[6] - counts[7];
-    			}
-    		}
-    		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
-    		{
-    			r2 = -1;
-    		}
-    		else
-    		{
-    			freq11_expected = freqx1 * freq1x;
-    			dxx = freq11 - freq11_expected;
-    			if (fabs(dxx) < SMALL_EPSILON)
-    			{
-    				r2 = 0.0;
-    			}
-    			else
-    			{
-    				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
-    				//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
-    				//dprime = dxx;
-
-    			}
-    		}
-    		//std::cout << snp_list[ref_index].get_rs_id() << "\t" <<
-    		//		snp_list[target_index].get_rs_id() << "\t" << r2<< std::endl;
-    		if(r2 >= r2_threshold)
-            {
-            	target_index_store.push_back(target_index);
-   	            r2_store.push_back(r2);
-            }
-        }
-    }
-    delete [] ulptr;
-	delete [] dummy_nm;
-    PLINK::clump_mtx.lock();
-    snp_list[ref_index].add_clump(target_index_store);
-    snp_list[ref_index].add_clump_r2(r2_store);
-    PLINK::clump_mtx.unlock();
-}
-
-void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
-		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
-{
-	// do this without the clumping first
-	size_t wind_size = c_clump_snp_index.size();
-	if(wind_size <=1 ) return; // nothing to do
-
-	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
-	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
-	bool nm_fixed=false;
-	uint32_t tot1[6];
-	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
-	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
-	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-	load_and_split3(m_genotype[c_core_index], m_founder_ct,
-			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
-	delete [] dummy_nm;
-
-	tot1[0] = popcount_longs(geno1, founder_ctv3);
-	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
-	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
-
-	if (ulii == 3)
-	{
-		nm_fixed = true;
-	}
-
-	std::vector<std::thread> thread_store;
-	if((wind_size-1) < m_thread)
-	{
-		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
-		{
-			if(c_clump_snp_index[i_snp]!=c_core_index)
-			{
-				thread_store.push_back(std::thread(&PLINK::compute_clump, this,
-						c_core_index,i_snp, i_snp+1, std::ref(snp_list),
-						std::cref(c_clump_snp_index), c_r2_threshold,
-						std::ref(geno1), nm_fixed, std::ref(tot1)));
-			}
-
-		}
-	}
-	else
-	{
-		int num_snp_per_thread =(int)(wind_size) / (int)m_thread;  //round down
-		int remain = (int)(wind_size) % (int)m_thread;
-		int cur_start = 0;
-		int cur_end = num_snp_per_thread;
-		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
-		{
-			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
-					cur_end+(remain>0), std::ref(snp_list), std::cref(c_clump_snp_index),c_r2_threshold,
-					std::ref(geno1), nm_fixed, std::ref(tot1)));
-			cur_start = cur_end+(remain>0);
-			cur_end+=num_snp_per_thread+(remain>0);
-			if(cur_end>wind_size) cur_end =wind_size;
-			remain--;
-		}
-	}
-	for(auto &&thread_runner : thread_store) thread_runner.join();
-	thread_store.clear();
-
-	delete [] geno1;
-}
-
+//uintptr_t*  geno_male for the X stuff
 void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
 		size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
 		size_t kb_threshold, std::string next_chr, size_t next_loc){
@@ -964,6 +804,201 @@ void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector
 			clump_snp_index.erase(clump_snp_index.begin(), clump_snp_index.begin()+num_remove);
 		}
 	}
+}
+
+void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
+		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
+{
+	// do this without the clumping first
+	size_t wind_size = c_clump_snp_index.size();
+	if(wind_size <=1 ) return; // nothing to do
+
+	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
+	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
+	bool nm_fixed=false;
+	uint32_t tot1[6];
+	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
+	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
+	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+	uintptr_t* geno_male = new uintptr_t[3*founder_ctsplit +founder_ctv3];
+	std::memset(geno_male, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
+	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
+	load_and_split3(m_genotype[c_core_index], m_founder_ct,
+			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
+	delete [] dummy_nm;
+
+	tot1[0] = popcount_longs(geno1, founder_ctv3);
+	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
+	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
+	// in theory, std::fill, std::copy should be safer than these mem thing
+	// but as a safety guard from my stupidity, let's just follow plink
+/*
+	if (is_x1 || x2_present) {
+		memcpy(geno_male, geno1, founder_ctsplit * sizeof(intptr_t));
+		bitvec_and(m_sex_male, founder_ctv3, geno_male);
+		tot1[3] = popcount_longs(geno_male, founder_ctv3);
+		bitvec_and(m_sex_male, founder_ctv3, &(geno_male[founder_ctv3]));
+		tot1[4] = popcount_longs(&(geno_male[founder_ctv3]), founder_ctv3);
+		bitvec_and(m_sex_male, founder_ctv3, &(geno_male[2 * founder_ctv3]));
+		tot1[5] = popcount_longs(&(geno_male[2 * founder_ctv3]), founder_ctv3);
+	}
+*/
+	if (ulii == 3)
+	{
+		nm_fixed = true;
+	}
+
+	std::vector<std::thread> thread_store;
+	if((wind_size-1) < m_thread)
+	{
+		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
+		{
+			if(c_clump_snp_index[i_snp]!=c_core_index)
+			{
+				thread_store.push_back(std::thread(&PLINK::compute_clump, this,
+						c_core_index,i_snp, i_snp+1, std::ref(snp_list),
+						std::cref(c_clump_snp_index), c_r2_threshold,
+						std::ref(geno1), nm_fixed, std::ref(tot1)));
+			}
+
+		}
+	}
+	else
+	{
+		int num_snp_per_thread =(int)(wind_size) / (int)m_thread;  //round down
+		int remain = (int)(wind_size) % (int)m_thread;
+		int cur_start = 0;
+		int cur_end = num_snp_per_thread;
+		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
+		{
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
+					cur_end+(remain>0), std::ref(snp_list), std::cref(c_clump_snp_index),c_r2_threshold,
+					std::ref(geno1), nm_fixed, std::ref(tot1)));
+			cur_start = cur_end+(remain>0);
+			cur_end+=num_snp_per_thread+(remain>0);
+			if(cur_end>wind_size) cur_end =wind_size;
+			remain--;
+		}
+	}
+	for(auto &&thread_runner : thread_store) thread_runner.join();
+	thread_store.clear();
+
+	delete [] geno1;
+	delete [] geno_male;
+}
+
+void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
+		const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
+		bool nm_fixed, uint32_t* tot1)
+{
+	uintptr_t* loadbuf;
+	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
+	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
+	uint32_t counts[18];
+	double freq11;
+	double freq11_expected;
+	double freq1x;
+	double freq2x;
+	double freqx1;
+	double freqx2;
+	double dxx;
+	double r2 =0.0;
+	bool zmiss2=false;
+	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
+	size_t max_size = clump_snp_index.size();
+    size_t ref_index = clump_snp_index.at(core_snp_index);
+    double ref_p_value = snp_list.at(ref_index).get_p_value();
+    std::vector<double> r2_store;
+    std::vector<size_t> target_index_store; // index we want to push into the current index
+	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
+    uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
+    for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
+    {
+        zmiss2 = false;
+        size_t target_index = clump_snp_index[i_snp];
+        if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
+        {
+            // only calculate r2 if more significant
+        	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+            std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
+        	load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
+        			founder_ctv3, 0, 0, 1, &ulii);
+        	uintptr_t uiptr[3];
+        	uiptr[0] = popcount_longs(ulptr, founder_ctv3);
+        	uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
+        	uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
+        	if (ulii == 3) {
+        		zmiss2 = true;
+        	}
+
+    		if (nm_fixed) {
+    			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
+    			if (zmiss2) {
+    				counts[2] = tot1[0] - counts[0] - counts[1];
+    				counts[5] = tot1[1] - counts[3] - counts[4];
+    			}
+    			counts[6] = uiptr[0] - counts[0] - counts[3];
+    			counts[7] = uiptr[1] - counts[1] - counts[4];
+    			counts[8] = uiptr[2] - counts[2] - counts[5];
+    		} else {
+    			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
+    			if (zmiss2) {
+    				counts[2] = tot1[0] - counts[0] - counts[1];
+    				counts[5] = tot1[1] - counts[3] - counts[4];
+    				counts[8] = tot1[2] - counts[6] - counts[7];
+    			}
+    		}
+    		/*
+    		if (is_x1 || is_x2) {
+    			two_locus_count_table(geno_male, ulptr, &(counts[9]), founder_ctv3, zmiss2);
+    			if (zmiss2) {
+    				counts[11] = tot1[3] - counts[9] - counts[10];
+    				counts[14] = tot1[4] - counts[12] - counts[13];
+    				counts[17] = tot1[5] - counts[15] - counts[16];
+    			}
+    		}
+    		*/
+    		// below, the false are basically is_x1 is_x2
+    		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
+    		{
+    			r2 = -1;
+    		}
+    		else
+    		{
+    			freq11_expected = freqx1 * freq1x;
+    			dxx = freq11 - freq11_expected;
+    			if (fabs(dxx) < SMALL_EPSILON)
+    			{
+    				r2 = 0.0;
+    			}
+    			else
+    			{
+    				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+    				//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
+    				//dprime = dxx;
+
+    			}
+    		}
+    		//std::cout << snp_list[ref_index].get_rs_id() << "\t" <<
+    		//		snp_list[target_index].get_rs_id() << "\t" << r2<< std::endl;
+    		if(r2 >= r2_threshold)
+            {
+            	target_index_store.push_back(target_index);
+   	            r2_store.push_back(r2);
+            }
+        }
+    }
+    delete [] ulptr;
+	delete [] dummy_nm;
+    PLINK::clump_mtx.lock();
+    snp_list[ref_index].add_clump(target_index_store);
+    snp_list[ref_index].add_clump_r2(r2_store);
+    PLINK::clump_mtx.unlock();
 }
 
 /*
