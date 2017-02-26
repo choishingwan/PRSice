@@ -11,6 +11,7 @@
 #include <fstream>
 #include "misc.hpp"
 #include "storage.hpp"
+#include "plink.hpp"
 
 class Commander
 {
@@ -138,6 +139,7 @@ private:
     double m_inter;
     int m_prslice_size;
     size_t m_thread;
+    uint32_t m_species;
     std::vector<help> m_help_messages;
 };
 

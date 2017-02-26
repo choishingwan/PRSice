@@ -33,7 +33,6 @@
 class PLINK {
 public:
 	typedef std::unordered_map<std::string, size_t> catelog;
-	PLINK();
 	PLINK(std::string prefix, bool verbose=false, const size_t thread=1, const catelog &inclusion=catelog());
 	static void initialize();
 	virtual ~PLINK();

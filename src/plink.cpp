@@ -8,7 +8,7 @@
 #include "plink.hpp"
 std::vector<std::string> PLINK::g_chr_list;
 std::mutex PLINK::clump_mtx;
-PLINK::PLINK(){}
+
 
 PLINK::PLINK(std::string prefix, bool verbose, const size_t thread, const catelog &inclusion):m_thread(thread){
 	// TODO Auto-generated constructor stub
@@ -256,6 +256,7 @@ int32_t PLINK::load_bim(const catelog &inclusion)
 				//	for filtering snps
 				//	SAM: with my way of memory control, this will likely cause problem
 				//	SET_BIT(marker_uidx, marker_exclude);
+				std::string chr = token[+BIM::CHR];
 				if(!inclusion.empty() && //we don't want this when inclusion isn't provided
 						inclusion.find(token[+BIM::RS])==inclusion.end()) // this avoid reading the file twice
 				{
@@ -543,88 +544,11 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
     delete [] genotype;
     delete [] tmp_genotype;
 }
-/*
-        char *genotype_list = new char[m_num_bytes];
-        m_bed.read((char*)genotype_list, m_num_bytes);
-        if (!m_bed) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
-        prev++;
-        size_t sample_index = 0;
-        int snp_index = std::get<+PRS::INDEX>(partition[i_snp]);
-        if(snp_index >= snp_list.size()) throw std::runtime_error("Out of bound! In PRS score calculation");
-        std::vector<bool> in_region;
-        int num_region = 0;
-        for(size_t i_region = 0; i_region < prs_score.size(); ++i_region)
-        {
-        		num_region++;
-        		in_region.push_back(snp_list[snp_index].in(i_region));
-        }
-        double stat = snp_list[snp_index].get_stat();
-        std::vector<size_t> missing_samples;
-        std::vector<double> genotypes(m_num_sample);
-        int total_num = 0;
-        for(size_t i_byte = 0; i_byte < m_num_bytes; ++i_byte)
-        {
-
-        		size_t geno_bit = 0;
-    			int geno_batch = static_cast<int>(genotype_list[i_byte]);
-        		while(geno_bit < 7 && sample_index < m_num_sample)
-        		{
-        			int geno = geno_batch>>geno_bit & 3; // This will access the corresponding genotype
-        			if(geno!=1) // Because 01 is coded as missing
-        			{
-        				int flipped_geno = snp_list[snp_index].geno(geno);
-        				total_num+=flipped_geno;
-        				genotypes[sample_index] = flipped_geno;
-        			}
-        			else
-        			{
-        				missing_samples.push_back(sample_index);
-        			}
-        			sample_index++;
-        			geno_bit+=2;
-        		}
-        }
-        delete[] genotype_list;
-
-
-		size_t i_missing = 0;
-		double center_score = stat*((double)total_num/((double)m_num_sample*2.0));
-		size_t num_miss = missing_samples.size();
-		for(size_t i_sample=0; i_sample < m_num_sample; ++i_sample)
-		{
-			if(i_missing < num_miss && i_sample == missing_samples[i_missing])
-			{
-				for(size_t i_region; i_region < num_region; ++i_region)
-				{
-					if(in_region[i_region])
-					{
-						if(m_scoring == SCORING::MEAN_IMPUTE) std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += center_score;
-						if(m_scoring != SCORING::SET_ZERO) std::get<+PRS::NNMISS>(prs_score[i_region][i_sample])++;
-					}
-				}
-				i_missing++;
-			}
-			else
-			{ // not missing sample
-				for(size_t i_region=0; i_region < num_region; ++i_region)
-				{
-					if(in_region[i_region])
-					{
-						if(m_scoring == SCORING::CENTER){
-							std::get<+PRS::PRS>(prs_score[i_region][i_sample]) -= center_score;
-						}
-						std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += genotypes[i_sample]*stat*0.5;
-    						std::get<+PRS::NNMISS>(prs_score[i_region][i_sample]) ++;
-					}
-				}
-			}
-		}
-    }
-    */
 
 void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threshold,
 		size_t kb_threshold, double proxy_threshold){
 	assert(m_snp_link.size()!=0);
+	// KEY CONCEPT: PLINK is the king here, the snp_link follows PLINK's read order
 	// The m_snp_link vector should contain the bim file name and the line number for
 	// the SNP at certain index in the m_snp_list vector
 	// This is cryptic but then, hopefully that should work

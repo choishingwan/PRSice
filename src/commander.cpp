@@ -55,11 +55,16 @@ bool Commander::initialize(int argc, char *argv[])
         {"no-clump",no_argument,NULL,0},
         {"print-snp",no_argument,NULL,0},
         {"ignore-fid",no_argument,NULL,0},
+        {"cow",no_argument,NULL,0},
+        {"dog",no_argument,NULL,0},
+        {"horse",no_argument,NULL,0},
+        {"mouse",no_argument,NULL,0},
+        {"rice",no_argument,NULL,0},
+        {"sheep",no_argument,NULL,0},
 		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
     };
-
     bool error = false;
     int longIndex=0;
     int opt = 0;
@@ -91,6 +96,54 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("no-clump")==0) m_no_clump = true;
             else if(command.compare("score")==0) m_missing_score = optarg;
             else if(command.compare("print-snp")==0) m_print_snp = true;
+            else if(command.compare("cow")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_COW;
+            }
+            else if(command.compare("dog")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_DOG;
+            }
+            else if(command.compare("horse")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_HORSE;
+            }
+            else if(command.compare("mouse")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_MOUSE;
+            }
+            else if(command.compare("rice")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_RICE;
+            }
+            else if(command.compare("sheep")==0){
+            	if(m_species!=SPECIES_DEFAULT)
+            	{
+            		error = true;
+            		error_message.append("Can only specify one species\n");
+            	}
+            	m_species =SPECIES_COW;
+            }
             else if(command.compare("clump-p")==0)
             {
                 double temp = atof(optarg);
@@ -514,7 +567,7 @@ Commander::Commander()
     m_print_all = false;
     m_print_snp = false;
     m_ignore_fid = false;
-
+    m_species = SPECIES_DEFAULT;
 }
 
 Commander::~Commander()
