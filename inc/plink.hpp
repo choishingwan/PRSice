@@ -34,6 +34,7 @@ class PLINK {
 public:
 	typedef std::unordered_map<std::string, size_t> catelog;
 	PLINK(std::string prefix, bool verbose=false, const size_t thread=1, const catelog &inclusion=catelog());
+	static void set_species(uint32_t species_code);
 	static void initialize();
 	virtual ~PLINK();
 	static void set_chromosome(std::vector<std::string> chr)
@@ -92,6 +93,11 @@ private:
 	uintptr_t* m_sample_exclude = nullptr;
 	uintptr_t* m_marker_exclude = nullptr;
 	uintptr_t* m_marker_reverse = nullptr;
+	static uintptr_t* g_haploid_mask;
+	static uintptr_t* g_xymt_codes;
+	static uint32_t g_autosome_ct;
+	static uint32_t g_max_code;
+
 	uint32_t em_phase_hethet(double known11, double known12, double known21, double known22, uint32_t center_ct,
 			double* freq1x_ptr, double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr, double* freq11_ptr,
 			uint32_t* onside_sol_ct_ptr);

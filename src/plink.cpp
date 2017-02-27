@@ -8,6 +8,74 @@
 #include "plink.hpp"
 std::vector<std::string> PLINK::g_chr_list;
 std::mutex PLINK::clump_mtx;
+uintptr_t* PLINK::g_haploid_mask = nullptr;
+uintptr_t* PLINK::g_xymt_codes = nullptr;
+uint32_t PLINK::g_autosome_ct=0;
+uint32_t PLINK::g_max_code=0;
+
+void PLINK::set_species(uint32_t species_code)
+{
+	  // human: 22, X, Y, XY, MT
+	  // cow: 29, X, Y, MT
+	  // dog: 38, X, Y, XY, MT
+	  // horse: 31, X, Y
+	  // mouse: 19, X, Y
+	  // rice: 12
+	  // sheep: 26, X, Y
+	const int32_t species_xymt_codes[] = {
+			23, 24, 25, 26,
+			30, 31, -1, 33,
+			39, 40, 41, 42,
+			32, 33, -1, -1,
+			20, 21, -1, -1,
+			-1, -1, -1, -1,
+			27, 28, -1, -1};
+	const uint32_t species_autosome_ct[] = {22, 29, 38, 31, 19, 12, 26};
+	const uint32_t species_max_code[] = {26, 33, 42, 33, 21, 12, 28};
+	if (species_code != SPECIES_UNKNOWN) {
+	    // these are assumed to be already initialized in the SPECIES_UNKNOWN case
+	    // bugfix: haploid_mask was being cleared in --chr-set case
+		g_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
+	    fill_ulong_zero(CHROM_MASK_WORDS, g_haploid_mask);
+	    g_xymt_codes = new uintptr_t[4];
+	    // copy the correct xymt code to the chrom info ptr
+	    // so for human, it'd be 23, 24, 25, 26
+	    memcpy(g_xymt_codes, &(species_xymt_codes[species_code * XYMT_OFFSET_CT]), XYMT_OFFSET_CT * sizeof(int32_t));
+	    g_autosome_ct = species_autosome_ct[species_code];
+	    g_max_code = species_max_code[species_code];
+	    switch (species_code) {
+	    case SPECIES_HUMAN:
+	    	g_haploid_mask[0] = 0x1800000;
+	    	break;
+	    case SPECIES_COW:
+	    	g_haploid_mask[0] = 0xc0000000LU;
+	    	break;
+	    case SPECIES_DOG:
+#ifdef __LP64__
+	    	g_haploid_mask[0] = 0x18000000000LLU;
+#else
+	    	g_haploid_mask[1] = 0x180;
+#endif
+	    	break;
+	    case SPECIES_HORSE:
+#ifdef __LP64__
+	    	g_haploid_mask[0] = 0x300000000LLU;
+#else
+	    	g_haploid_mask[1] = 3;
+#endif
+	    	break;
+	    case SPECIES_MOUSE:
+	    	g_haploid_mask[0] = 0x300000;
+	    	break;
+	    case SPECIES_RICE:
+	    	g_haploid_mask[0] = 0x1fff;
+	    	break;
+	    case SPECIES_SHEEP:
+	    	g_haploid_mask[0] = 0x18000000;
+	    	break;
+	    }
+	}
+}
 
 
 PLINK::PLINK(std::string prefix, bool verbose, const size_t thread, const catelog &inclusion):m_thread(thread){
@@ -241,6 +309,12 @@ int32_t PLINK::load_bim(const catelog &inclusion)
 		}
 		std::string line;
 		int num_line = 0;
+		std::string prev_chr="";
+		int32_t chr_code=0;
+		bool is_haploid = false;
+		// check if it is x or y chromosome
+		bool is_x = false;
+		bool is_y = false;
 		while(std::getline(bimfile, line))
 		{
 
@@ -257,6 +331,22 @@ int32_t PLINK::load_bim(const catelog &inclusion)
 				//	SAM: with my way of memory control, this will likely cause problem
 				//	SET_BIT(marker_uidx, marker_exclude);
 				std::string chr = token[+BIM::CHR];
+				if(chr.compare(prev_chr)!=0)
+				{
+					chr_code = get_chrom_code_raw(chr.c_str());
+					if (((const uint32_t)chr_code) > g_max_code) {
+						if (chr_code != -1) {
+							if (chr_code >= MAX_POSSIBLE_CHROM) {
+								return g_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+							}
+							std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
+					    	throw std::runtime_error(error_message);
+						}
+					}
+					is_haploid = is_set(g_haploid_mask, chr_code);
+					is_x = (chr_code == (uint32_t)g_xymt_codes[X_OFFSET]);
+					is_y = (chr_code == (uint32_t)g_xymt_codes[Y_OFFSET]);
+				}
 				if(!inclusion.empty() && //we don't want this when inclusion isn't provided
 						inclusion.find(token[+BIM::RS])==inclusion.end()) // this avoid reading the file twice
 				{
@@ -266,9 +356,13 @@ int32_t PLINK::load_bim(const catelog &inclusion)
 				else if(inclusion.find(token[+BIM::RS])!=inclusion.end())
 				{
 					snp_link info;
+
 					std::get < +FILE_INFO::FILE >(info) =prefix;
 					std::get < +FILE_INFO::INDEX >(info) =inclusion.at(token[+BIM::RS]);
 					std::get < +FILE_INFO::LINE >(info) =num_line;;
+					std::get < +FILE_INFO::HAPLOID >(info)  =is_haploid;
+					std::get < +FILE_INFO::X >(info)  =is_x;
+					std::get < +FILE_INFO::Y >(info)  =is_y;
 					m_snp_link.push_back(info);
 				}
 			}

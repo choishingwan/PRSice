@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	// Might want to generate a log file?
 	region.info();
 	commander.user_input();
-
+	PLINK::set_species(commander.get_species());
 
 	bool perform_prslice = commander.prslice() > 0.0;
 	bool full_model = commander.full();

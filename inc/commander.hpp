@@ -11,11 +11,20 @@
 #include <fstream>
 #include "misc.hpp"
 #include "storage.hpp"
-#include "plink.hpp"
 
 class Commander
 {
 public:
+	// so that we don't need to include plink_common.hpp here
+#define SPECIES_HUMAN 0
+#define SPECIES_COW 1
+#define SPECIES_DOG 2
+#define SPECIES_HORSE 3
+#define SPECIES_MOUSE 4
+#define SPECIES_RICE 5
+#define SPECIES_SHEEP 6
+#define SPECIES_UNKNOWN 7
+#define SPECIES_DEFAULT SPECIES_HUMAN
     Commander();
     virtual ~Commander();
     bool initialize(int argc, char *argv[]);
@@ -87,6 +96,7 @@ public:
     		else return SCORING::MEAN_IMPUTE;
     }
     void user_input() const;
+    uint32_t get_species() const{ return m_species;};
 protected:
 private:
     void usage();

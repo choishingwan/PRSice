@@ -208,6 +208,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 	if (num_se_not_convertible != 0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", m_snp_list.size());
+
 	PLINK::set_chromosome(m_chr_list); // update the chromosome information for PLINK
 }
 
