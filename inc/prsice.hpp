@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include "commander.hpp"
 #include "misc.hpp"
+#include "plink_common.hpp"
 #include "plink.hpp"
 #include "snp.hpp"
 #include "region.hpp"

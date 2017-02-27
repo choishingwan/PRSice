@@ -731,23 +731,6 @@ void Commander::program_info()
 	std::cerr << "####################################################################" << std::endl;
 	std::cerr << "#                                                                  #" << std::endl;
 	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#     WARNING! Cannot Handle Sex Chromosomes Just yet!             #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "####################################################################" << std::endl;
-
-
-
-	std::cerr << "####################################################################" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
 	std::cerr << "# PRSice: Polygenic Risk Score software                            #" << std::endl;
 	std::cerr << "#                                                                  #" << std::endl;
 	std::cerr << "# Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly 2014            #" << std::endl;

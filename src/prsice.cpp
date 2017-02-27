@@ -52,6 +52,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	bool read_error = false;
 	bool not_converted = false;
 	bool exclude = false;
+	bool chr_error =false;
 	// category related stuff
 	double threshold = (c_commander.fastscore())? c_commander.get_bar_upper() : c_commander.get_upper();
 	threshold = (c_commander.full())? 1.0 : threshold;
@@ -71,21 +72,26 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 			{
 				std::string rs_id = token[index[+SNP_Index::RS]];
 				std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
-				/*
-				if(chr.compare("X") == 0 || chr.compare("x")==0 ||
-						chr.compare("Y")==0 || chr.compare("y")==0)
+				int32_t chr_code = get_chrom_code_raw(chr.c_str());
+				if (((const uint32_t)chr_code) > PLINK::g_max_code) {
+					if (chr_code != -1) {
+						if (chr_code >= MAX_POSSIBLE_CHROM) {
+							chr_code= PLINK::g_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+						}
+						std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
+						throw std::runtime_error(error_message);
+					}
+				}
+				if(chr_code == (uint32_t)PLINK::g_xymt_codes[X_OFFSET] ||
+						chr_code == (uint32_t)PLINK::g_xymt_codes[Y_OFFSET])
 				{
+					exclude= true;
 					if(!chr_error)
 					{
+						fprintf(stderr, "WARNING: Sex chromosome detected. They will be ignored\n");
 						chr_error = true;
-						fprintf(stderr, "WARNING: Sex chromosome (X/Y) detected. They should be excluded\n");
-						fprintf(stderr, "         Will ignore all SNPs on the Sex chromosome. \n");
-						fprintf(stderr, "         If you are working on other organism, just rename your\n");
-						fprintf(stderr, "         chromosome to something else should be alright\n");
 					}
-					exclude=true;
 				}
-				*/
 				std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
 				std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
 				double pvalue = 0.0;
@@ -202,7 +208,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 
 	num_duplicated = (int) before - (int) after;
 	if (num_indel != 0) fprintf(stderr, "Number of invalid SNPs    : %zu\n", num_indel);
-	if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded due to p-value threshold: %zu\n", num_exclude);
+	if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_exclude);
 	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
 	if (num_stat_not_convertible != 0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
