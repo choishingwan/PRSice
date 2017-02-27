@@ -1,3 +1,4 @@
+
 # Here is the guide to this protentially long R code
 # To go to each section, just search for the corresponding header as stated here
 # The code structure are as follow
@@ -136,21 +137,23 @@ option_list <- list(
     file as genotype_#_test"
   ),
   make_option(
-    "--binary_target",
+    "--binary-target",
     type = "character",
     help = "Indicate whether the target sample has binary phenotype or not.
-    For each phenotype, user need to provide either T or F where T means the phenotype is binary"
+    For each phenotype, user need to provide either T or F where T means the phenotype is binary",
+    dest = "binary_target"
   ),
   
   make_option("--beta", help = "Indicate whether the test statistic is beta instead of OR. Must be of the same length as base"),
   make_option(
-    c("--pheno_file", "-f"),
+    c("--pheno-file", "-f"),
     type = "character",
     help = "Phenotype file containing the target phenotype(s).
     If provided, the fam file of the target is ignored. First column must be IID of the samples. Must contain a header
-    if --pheno_col is specified"
+    if --pheno_col is specified",
+    dest="pheno_file"
   ),
-  make_option("--pheno_col", type = "character", help = "Headers of pheenotypes from phenotype file"),
+  make_option("--pheno-col", type = "character", help = "Headers of pheenotypes from phenotype file", dest="pheno_col"),
   make_option(
     c("--ld", "-L"),
     type = "character",
@@ -159,19 +162,22 @@ option_list <- list(
     plink file. Please see --target for more information."
   ),
   make_option(
-    c("--covar_header", "-c"),
+    c("--cov-header", "-c"),
     type = "character",
     help = "Header of covariates. If not provided, will use all variable in the
-    covariate file as the covarite."
+    covariate file as the covarite.",
+    dest="covar_header"
   ),
-  make_option(c("--covar_file", "-C"), type = "character", help = "Covarite file. Formate should be: ID Cov1 Cov2 ..."),
+  make_option(c("--cov-file", "-C"), type = "character", help = "Covarite file. Formate should be: ID Cov1 Cov2 ...",
+              dest="covar_file"),
   make_option("--full", action = "store_true", help = "Also include the full model in the PRSice output"),
   make_option("--all", action = "store_true", help = "Output PRS for ALL threshold. Can only be used together with fastscore to avoid huge output files."),
   make_option(
-    "--no_regress",
+    "--no-regress",
     action = "store_true",
     help = "Do not perform the regression analysis and simply output all PRS. Can only be used together
-    with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs"
+    with fastscore to avoid huge output files. If you must, you can modify bar_levels to obtain the fine scale PRS outputs",
+    dest = "no_regress"
   ),
   make_option(
     c("--out", "-o"),
@@ -219,28 +225,32 @@ option_list <- list(
     index remains the same"
   ),
   make_option(
-    "--clump_p",
+    "--clump-p",
     type = "numeric",
     help = "The p-value threshold use for clumping.",
-    default = 1
+    default = 1,
+    dest = "clump_p"
   ),
   make_option(
-    "--clump_r2",
+    "--clump-r2",
     type = "numeric",
     help = "The R2 threshold for clumping. Please note that as we did not implement the
     maximum likelihood R2 calculation, the clumping result can differ slightly from plink.",
-    default = 0.1
+    default = 0.1,
+    dest="clump_r2"
   ),
   make_option(
-    "--clump_kb",
+    "--clump-kb",
     type = "numeric",
     help = "The distance for clumping in kb.",
-    default = 250
+    default = 250,
+    dest="clump_kb"
   ),
   make_option(c("--bed", "-B"), type = "character", help = "Bed file containing the selected regions. Name of bed file will be used as the region identifier."),
   make_option(c("--gtf", "-g"), type = "character", help = "GTF file containing gene boundaries. Required when --msigdb is set."),
   make_option(c("--msigdb", "-m"), type = "character", help = "MSIGDB file containing the pathway information require the gtf file."),
-  make_option("--gen_bed", action = "store_true", help = "Generate bed file of gene regions from the gtf file."),
+  make_option("--gen-bed", action = "store_true", help = "Generate bed file of gene regions from the gtf file.",
+              dest="gen_bed"),
   make_option(
     "--proxy",
     type = "numeric",
@@ -257,10 +267,11 @@ option_list <- list(
     to find the best bin combination. This cannot be performed together with PRSet"
   ),
   make_option(
-    "--bar_levels",
+    "--bar-levels",
     type = "character",
     help = "Level of barchart to be plotted. When fastscore is set, PRSice will
-    only calculate the PRS for threshold within the bar level"
+    only calculate the PRS for threshold within the bar level",
+    dest="bar_levels"
   ),
   make_option(
     c("--thread", "-T"),
@@ -271,10 +282,11 @@ option_list <- list(
   make_option(
     "--perm", type="numeric", help="Number of permutation to perform. When this parameter is provided, permutation will be performed to obtain an empirical P-value. This will significantly increases the run time of PRSice."),
   make_option(
-    "--c_help",
+    "--c-help",
     action = "store_true",
     help = "Print the help message from the c++ program instead",
-    default = F
+    default = F,
+    dest="c_help"
   ),
   make_option(
     "--plot",
@@ -289,45 +301,56 @@ option_list <- list(
     help = "Number of quantiles to plot. 0 = Not producing the quantile plot",
     default = 0
   ),
-  make_option(c("--quant_extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples"),
+  make_option(c("--quant-extract", "-e"), type = "character", help = "File containing sample ID to be plot on a separated quantile e.g. extra quantile containing only schizophrenia samples. Should contain FID and IID",
+              dest="quant_extract"),
   make_option(
-    "--bar_level",
+    "--bar-level",
     type = "character",
     help = "barchar level used for plotting",
-    default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
+    default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5",
+    dest="bar_level"
   ),
-  make_option("--quant_ref", type = "numeric", help = "Reference quantile for quantile plot"),
+  make_option("--quant-ref", type = "numeric", help = "Reference quantile for quantile plot", dest="quant_ref"),
   make_option(
-    "--scatter_r2",
+    "--scatter-r2",
     action = "store_true",
     help = "y-axis of the high resolution scatter plot should be R2",
-    default = F
+    default = F,
+    dest="scatter_r2"
   ),
   make_option(
-    "--bar_col_p",
+    "--bar-col-p",
     action = "store_true",
     help = "Change the colour of bar to p-value threshold instead of the association with phenotype",
-    default = F
+    default = F,
+    dest="bar_col_p"
   ),
   make_option(
-    "--bar_col_low",
+    "--bar-col-low",
     type = "character",
     help = "Colour of the poorest predicting threshold",
-    default = "dodgerblue"
+    default = "dodgerblue",
+    dest="bar_col_low"
   ),
   make_option(
-    "--bar_col_high",
+    "--bar-col-high",
     type = "character",
     help = "Colour of the most predicting threshold",
-    default = "firebrick"
+    default = "firebrick",
+    dest="bar_col_high"
   ),
   make_option(
-    "--bar_palatte",
+    "--bar-palatte",
     type="character",
     help ="Colour palatte to be used for bar plotting when --bar_col_p is set",
-    default = "YlOrRd"
+    default = "YlOrRd",
+    dest="bar_palatte"
   ),
   make_option("--prsice", type = "character", help = "Location of the PRSice binary"),
+  make_option("--print-snp", action = "store_true", 
+              help = "Print SNPs selected for best threshold", dest="print_snp"),
+  make_option("--ignore-fid", action = "store_true", 
+              help = "Ignore FID in all files (e.g. phenotype file, covariate file, etc", dest="ignore_fid"),
   make_option("--dir", type = "character", help = "Location to install ggplot. Only require if ggplot is not installed")
   )
 
@@ -344,17 +367,17 @@ argv <- parse_args(OptionParser(option_list = option_list))
 not_cpp <-
   c(
     "help",
-    "c_help",
+    "c-help",
     "plot",
     "quantile",
-    "quant_extract",
+    "quant-extract",
     "intermediate",
-    "quant_ref",
-    "scatter_r2",
-    "bar_col_p",
-    "bar_col_low",
-    "bar_col_high",
-    "bar_palatte",
+    "quant-ref",
+    "scatter-r2",
+    "bar-col-p",
+    "bar-col-low",
+    "bar-col-high",
+    "bar-palatte",
     "prsice",
     "dir"
   )
@@ -380,7 +403,7 @@ if (provided("prsice", argv)) {
 
 if (argv$c_help) {
   if (!provided("prsice", argv)) {
-    stop("Cannot use c_help without specifying the location of the PRSice binary!")
+    stop("Cannot use c-help without specifying the location of the PRSice binary!")
     
   }
   system(paste(argv$prsice, " --help", sep = ""))
@@ -407,19 +430,21 @@ add_command <- function(input) {
   }
 }
 command = ""
+argv_c = argv
+names(argv_c) = gsub("_", "-", names(argv))
 if (!argv$plot) {
-  for (i in names(argv)) {
+  for (i in names(argv_c)) {
     # only need special processing for flags and specific inputs
     if (i == "index" ||
-        i == "gen_bed" ||
+        i == "gen-bed" ||
         i == "fastscore" ||
-        i == "full" || i == "all" || i == "no_regress") {
-      if (argv[[i]])
+        i == "full" || i == "all" || i == "no-regress") {
+      if (argv_c[[i]])
         command = paste(command, " --", i, sep = "")
     } else if (i %in% not_cpp) {
       # ignore
     } else{
-      temp = add_command(argv[[i]])
+      temp = add_command(argv_c[[i]])
       if (!is.na(temp)) {
         command = paste(command, " --", i, " ", temp, sep = "")
       }
@@ -429,8 +454,8 @@ if (!argv$plot) {
     print.arg.parser(p)
     quit()
   }
-  if (provided("prsice", argv)) {
-    ret <- system2(argv$prsice,
+  if (provided("prsice", argv_c)) {
+    ret <- system2(argv_c$prsice,
                    command)
   } else{
     stop("Cannot run PRSice without the PRSice binary file")
@@ -491,6 +516,10 @@ multiplot <-
 quantile_plot <-
   function(PRS, PRS.best, pheno, prefix, argv, binary) {
     writeLines("Plotting the quantile plot")
+    num_cov <- ncol(pheno)-2
+    if(!provided("ignore_fid", argv)){
+      num_cov <- num_cov-1
+    }
     extract = NULL
     if (provided("quant_extract", argv)) {
       extract = fread(argv$quant_extract,
@@ -499,11 +528,19 @@ quantile_plot <-
     }
     num_quant <- argv$quantile
     # Need to check if we have less pehnotypes than quantile
-    if (length(unique(PRS.best[, 2])) < num_quant) {
+    colnames(PRS.best)[ncol(PRS.best)] <- "PRS"
+    pheno.include <- NULL #Because we always name the phenotype as pheno, it will never be PRS
+    
+    if(provided("ignore_fid", argv)){
+      pheno.merge<-merge(PRS.best, pheno, by="IID")
+    }else{
+      pheno.merge <- merge(PRS.best, pheno, by=c("FID", "IID"))
+    }
+    if (length(unique(pheno.merge$PRS)) < num_quant) {
       writeLines(
         paste(
           "WARNING: There are only ",
-          length(unique(PRS.best[, 2])),
+          length(unique(pheno.merge$PRS)),
           " unique PRS but asked for ",
           num_quant,
           " quantiles",
@@ -516,12 +553,12 @@ quantile_plot <-
     }
     quants <-
       as.numeric(cut(
-        PRS.best[, 2],
-        breaks = unique(quantile(PRS.best[, 2], probs = seq(0, 1, 1 / num_quant))),
+        pheno.merge$PRS,
+        breaks = unique(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant))),
         include.lowest = T
       ))
     
-    if (anyDuplicated(quantile(PRS.best[, 2], probs = seq(0, 1, 1 / num_quant)))) {
+    if (anyDuplicated(quantile(pheno.merge[, 4], probs = seq(0, 1, 1 / num_quant)))) {
       writeLines(paste(
         "Duplicate quantiles formed. Will use less quantiles: ",
         length(unique(quants)),
@@ -531,7 +568,9 @@ quantile_plot <-
     }
     num_quant = sum(!is.na(unique(quants)))
     if (!is.null(extract)) {
-      quants[PRS.best[, 1] %in% extract$V2] <- num_quant + 1
+      extract_ID <- paste(extract$V1,extract$V2,sep="_")
+      best_ID <- paste(pheno.merge$FID,pheno.merge$IID,sep="_")
+      quants[best_ID %in% extract_ID] <- num_quant + 1 # We only matched based on the IID here
       num_quant <- num_quant + 1
     }
     quant.ref <- ceiling(argv$quantile / 2)
@@ -551,25 +590,23 @@ quantile_plot <-
         )
       }
     }
-    
     quants <-
       factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
-    pheno$quantile <- quants
+    pheno.merge$quantile <- quants
     
-    if (ncol(pheno) > 2) {
-      pheno <-
-        pheno[, c(colnames(pheno)[1], "quantile", colnames(pheno)[2:(ncol(pheno) -
-                                                                       1)])]
+    if (num_cov > 0) {
+      pheno.merge <-
+        pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
     } else{
-      pheno <- pheno[, c(colnames(pheno)[1], "quantile")]
+      pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
     }
+    
     
     family <- gaussian
     if (binary) {
       family <- binomial
     }
-    reg <- summary(glm(Pheno ~ ., family, data = pheno))
-    
+    reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
     coef.quantiles <- reg$coefficients[1:num_quant, 1]
     ci.quantiles.u <-
       reg$coefficients[1:num_quant, 1] + (1.96 * reg$coefficients[1:num_quant, 2])
@@ -644,6 +681,7 @@ quantile_plot <-
 high_res_plot <- function(PRS, prefix, argv) {
   # we will always include the best threshold
   writeLines("Plotting the high resolution plot")
+  
   barchart.levels <-
     c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
   barchart.levels <-
@@ -731,7 +769,6 @@ bar_plot <- function(PRS, prefix, argv) {
     }
   }
   PRS <- unique(PRS[order(PRS$Threshold), ])
- 	print("most done"); 
   # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
   output <- PRS[PRS$Threshold %in% barchart.levels,]
   output$print.p[round(output$P, digits = 3) != 0] <-
@@ -741,7 +778,6 @@ bar_plot <- function(PRS, prefix, argv) {
   output$sign <- sign(output$Coefficient)
   output$print.p <- sub("e", "*x*10^", output$print.p)
   ggfig.plot <- ggplot(data = output)
-  print("output done")
   if (argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(
@@ -800,8 +836,7 @@ bar_plot <- function(PRS, prefix, argv) {
 # run_plot: The function used for calling different plotting functions
 run_plot <- function(prefix, argv, pheno_matrix, binary) {
   writeLines("")
-  writeLines(prefix)
-  
+  #writeLines(prefix)
   PRS <- fread(paste(prefix, ".prsice", sep = ""),
                header = T,
                data.table = F)
@@ -814,10 +849,9 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
   # Good thing is, only quantile plot really needs the cov and phenotype information
   if (provided("quantile", argv) && argv$quantile > 0) {
     # Main purpose, match up with PRS.best as that is the input
-    PRS.best = PRS.best[PRS.best$IID%in% pheno_matrix$IID, ]
-    PRS.best = PRS.best[match(pheno_matrix$IID, PRS.best$IID),]
-    # Need to plot the quantile plot (Remember to remove the iid)
-    quantile_plot(PRS, PRS.best, pheno_matrix[,-1], prefix, argv, binary)
+    PRS.best.reduce <- subset(PRS.best, PRS.best$Included=="Y")
+    # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
+    quantile_plot(PRS, PRS.best.reduce, pheno_matrix, prefix, argv, binary)
   }
   # Now perform the barplotting
   if (!provided("fastscore", argv) || !argv$fastscore) {
@@ -830,6 +864,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
 
 
 # Process file names for plotting------------------------------------------------------
+ignore_fid <- provided("ignore_fid", argv)
 
 # CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
 if (provided("intermediate", argv)) {
@@ -854,9 +889,16 @@ if (provided("intermediate", argv)) {
       )
     }
     if (!provided("binary_target", argv)) {
-      stop(
-        "We do need to know if the target file is binary or not in order to decide whether if we will run logistic or linear regression."
-      )
+      if(!provided("pheno_col", argv)){
+        argv$binary_target = "T"
+      }else if(length(strsplit(argv$pheno_col, split = ",")[[1]])==1){
+        argv$binary_target = "T"
+      }else{
+        stop(
+          "We do need to know if the target file is binary or not in order to decide whether if we will run logistic or linear regression."
+        )
+      }
+      
     }
     binary_target = strsplit(argv$binary_target, split = ",")[[1]]
     if (provided("pheno_col", argv)) {
@@ -907,40 +949,80 @@ if (provided("intermediate", argv)) {
       if (provided("covar_header", argv)) {
         c = strsplit(argv$covar_header, split = ",")[[1]]
         selected = colnames(covariance)%in%c
-        selected[1] = TRUE # we always want the IID information, which should be the first column
-        covariance = covariance[, selected]
+        if(!ignore_fid){
+          selected[2] <- TRUE #When ignore_fid isn't provided, then we need to also include the FID information
+        }
+        selected[1] <- TRUE # we always want the IID information, which should be the first column
+        covariance <- covariance[, selected]
+      }
+      if(ignore_fid){
+        colnames(covariance)<-c("IID", paste("Cov",1:(ncol(covariance)-1)))
+      }else{
+        colnames(covariance)<-c("FID","IID", paste("Cov",1:(ncol(covariance)-2)))
       }
     }
     for (b in bases) {
       base_name = file_path_sans_ext(basename(b))
       # region will always have at least one item -> Base
       prefix = paste(argv$out, base_name, sep = ".")
+      num_region = nrow(read.table(paste(prefix, "region", sep="."), header=T));
       region = "Base"
-      
       if (!is.null(phenos)) {
         pheno_file = fread(argv$pheno_file,
                            header = T,
                            data.table = F)
+        if(ignore_fid){
+          colnames(pheno_file)[1] <- "IID"
+        }else{
+          colnames(pheno_file)[1:2] <- c("FID", "IID")
+        }
         fam = fread(
           paste(argv$target, ".fam", sep = ""),
           data.table = F,
           header = F
         )
-        pheno_file = pheno_file[pheno_file[, 1] %in% fam$V2, ] # This will select only samples found within the fam file
-        pheno_file = pheno_file[match(fam$V2, pheno_file[,1]),] # match the ordering
-        
+        colnames(fam)[1:2] = c("FID", "IID")
+        if(ignore_fid){
+          #Only care about the IID
+          pheno_file <- pheno_file[pheno_file$IID %in% fam$IID, ] # This will select only samples found within the fam file
+          pheno_file <- pheno_file[match(fam$IID, pheno_file$IID),] # match the ordering
+        }else{
+          pheno_id <- paste(pheno_file$FID, pheno_file$IID, sep="_")
+          fam_id <- paste(fam$FID, fam$IID, sep="_")
+          pheno_file <- pheno_file[pheno_id %in% fam_id,]
+          pheno_id <- paste(pheno_file$FID, pheno_file$IID, sep="_")
+          pheno_file <- pheno_file[match(fam_id, pheno_id),]
+        }
         match_cov = NULL
         if (!is.null(covariance)) {
-          match_cov = covariance[covariance[, 1] %in% fam$V2,]
-          match_cov = match_cov[match(fam$V2, match_cov[,1]),] # match the ordering
+          if(ignore_fid){
+            match_cov <- covariance[covariance$IID %in% fam$IID,]
+            match_cov <- match_cov[match(fam$IID, match_cov$IID),] # match the ordering
+            match_cov <- match_cov[ !is.na(apply(match_cov[,-1],1,sum)),]
+          }else{
+              cov_ID <- paste(covariance$FID, covariance$IID, sep="_")
+              fam_id <- paste(fam$FID, fam$IID, sep="_")
+              match_cov = covariance[cov_ID %in% fam_id,]
+              cov_ID <- paste(match_cov$FID, match_cov$IID, sep="_")
+              match_cov = match_cov[match(fam_id, cov_ID),] # match the ordering
+              match_cov <- match_cov[ !is.na(apply(match_cov[,-c(1:2)],1,sum)),]
+          }
         }
         id = 1
         phenos.index <- unlist(apply(as.matrix(phenos), 1, function(x,y){z=which(x==y); if(length(z)==0){return(NA)}else{return(z)}},colnames(pheno_file)))
         for (p in 1:length(phenos.index)) {
           if(!is.na(phenos.index[p])){
             cur_prefix = paste(prefix, phenos[p], region, sep = ".")
+            if(num_region==1){
+              cur_prefix = paste(prefix, phenos[p], sep = ".")
+            }
             # Give run_plot a ready to use matrix
-            cur_pheno = data.frame(IID=pheno_file[,1], Pheno=pheno_file[phenos.index[p]])
+            cur_pheno = NULL
+            if(ignore_fid){
+              cur_pheno = data.frame(IID=pheno_file[,1], Pheno=pheno_file[phenos.index[p]])
+            }else{
+              cur_pheno = data.frame(FID=pheno_file[,1], IID=pheno_file[,2], Pheno=pheno_file[phenos.index[p]])
+            }
             if(binary_target[id]){
               # Update the cur_pheno
               cur_pheno$Pheno = as.numeric(as.character(cur_pheno$Pheno))
@@ -954,13 +1036,16 @@ if (provided("intermediate", argv)) {
             }
               
             cur_pheno.clean = cur_pheno[!is.na(cur_pheno$Pheno),]
-            cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID & !is.na(apply(match_cov[,-1],1,sum)),]
-            cur_pheno.clean = cur_pheno.clean[cur_pheno.clean$IID%in%cov_matrix[,1],]
-            colnames(cov_matrix) = c("IID", paste("Cov",1:(ncol(cov_matrix)-1)))
-            # Should be of same size now
-            fam.final = merge(cur_pheno.clean, cov_matrix, by="IID");
-            fam.ok = fam[fam$V2%in%fam.final$IID,]
-            fam.final = fam.final[match(fam.ok$V2, fam.final$IID),]
+            fam.final = cur_pheno.clean
+            if(!is.null(match_cov)){
+              if(ignore_fid){
+                fam.final = merge(cur_pheno.clean, match_cov, by="IID");
+              }else{
+                fam.final = merge(cur_pheno.clean, match_cov, by=c("FID", "IID"));
+              }
+            }
+            fam.ok = fam[fam$IID%in%fam.final$IID,]
+            fam.final = fam.final[match(fam.ok$IID, fam.final$IID),]
             run_plot(cur_prefix,
                      argv,
                      fam.final,
@@ -971,32 +1056,61 @@ if (provided("intermediate", argv)) {
           id = id + 1
         }
       } else{
+        # No phenotype headers
         cur_prefix = paste(prefix, region, sep = ".")
-        
+        if(num_region==1){
+          cur_prefix = paste(prefix, sep = ".")
+        }
         fam = fread(
           paste(argv$target, ".fam", sep = ""),
           data.table = F,
           header = F
         )
+        
+        colnames(fam)[1:2] <- c("FID", "IID")
+        
         match_cov = NULL
-        pheno=NULL
         if (!is.null(covariance)) {
-          match_cov = covariance[covariance[, 1] %in% fam$V2,]
-          match_cov = match_cov[match(fam$V2, match_cov[,1]), ]
+          if(ignore_fid){
+            match_cov <- covariance[covariance$IID %in% fam$IID,]
+            match_cov <- match_cov[match(fam$IID, match_cov$IID),] # match the ordering
+            match_cov <- match_cov[ !is.na(apply(match_cov[,-1],1,sum)),]
+          }else{
+            cov_ID <- paste(covariance$FID, covariance$IID, sep="_")
+            fam_id <- paste(fam$FID, fam$IID, sep="_")
+            match_cov = covariance[cov_ID %in% fam_id,]
+            cov_ID <- paste(match_cov$FID, match_cov$IID, sep="_")
+            match_cov = match_cov[match(fam_id, cov_ID),] # match the ordering
+            match_cov <- match_cov[ !is.na(apply(match_cov[,-c(1:2)],1,sum)),]
+          }
         }
+        
+        pheno=NULL
         if (provided("pheno_file", argv)) {
           pheno = fread(paste(argv$pheno_file),
                         data.table = F,
-                        header = F)
+                        header = F) 
+          if(ignore_fid){
+            colnames(pheno)[1] <- "IID"
+          }else{
+            colnames(pheno[1:2]) <- c("FID", "IID")
+          }
+          
+          #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
         }
-        # Doesn't matter if pheno file has a header or not
-
+        
+        
         # Give run_plot a ready to use matrix
-        fam.clean = data.frame(IID=fam$V2, Pheno=fam$V6);
+        fam.clean = data.frame(FID=fam$FID, IID=fam$IID, Pheno=fam$V6);
         if(!is.null(pheno))
         {
-          fam.clean = data.frame(IID=pheno$V1, Pheno=pheno$V2)
+          if(ignore_fid){
+            fam.clean = data.frame(IID=pheno$IID, Pheno=pheno$V2)
+          }else{
+            fam.clean = data.frame(FID=pheno$FID, IID=pheno$IID, Pheno=pheno$V2)
+          }
         }
+        
         if(binary_target[1]){
           # Update the cur_pheno
           fam.clean$Pheno = as.numeric(as.character(fam.clean$Pheno))
@@ -1008,14 +1122,18 @@ if (provided("intermediate", argv)) {
             fam.clean$Pheno = fam.clean$Pheno-1
           }
         }
+        
         cur_pheno.clean = fam.clean[!is.na(fam.clean$Pheno),]
-        cov_matrix = match_cov[match_cov[,1]%in% cur_pheno.clean$IID & !is.na(apply(match_cov[,-1],1,sum)),]
-        cur_pheno.clean = cur_pheno.clean[cur_pheno.clean$IID%in%cov_matrix[,1],]
-        colnames(cov_matrix) = c("IID", paste("Cov",1:(ncol(cov_matrix)-1)))
-        # Should be of same size now
-        fam.final = merge(cur_pheno.clean, cov_matrix, by="IID");
-        fam.ok = fam[fam$V2%in%fam.final$IID,]
-        fam.final = fam.final[match(fam.ok$V2, fam.final$IID),]
+        fam.final = cur_pheno.clean
+        if(!is.null(match_cov)){
+          if(ignore_fid){
+            fam.final <- merge(cur_pheno.clean, match_cov, by="IID")
+          }else{
+            fam.final <- merge(cur_pheno.clean, match_cov, by=c("FID", "IID"))
+          }
+        }
+        fam.ok = fam[fam$IID%in%fam.final$IID,]
+        fam.final = fam.final[match(fam.ok$IID, fam.final$IID),]
         
         
         run_plot(cur_prefix, argv, fam.final, binary_target[1])

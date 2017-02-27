@@ -8,17 +8,28 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
 #include "misc.hpp"
 #include "storage.hpp"
 
 class Commander
 {
 public:
+	// so that we don't need to include plink_common.hpp here
+#define SPECIES_HUMAN 0
+#define SPECIES_COW 1
+#define SPECIES_DOG 2
+#define SPECIES_HORSE 3
+#define SPECIES_MOUSE 4
+#define SPECIES_RICE 5
+#define SPECIES_SHEEP 6
+#define SPECIES_UNKNOWN 7
+#define SPECIES_DEFAULT SPECIES_HUMAN
     Commander();
     virtual ~Commander();
     bool initialize(int argc, char *argv[]);
     bool index() const { return m_index; };
-    bool gen_bed() const { return m_gen_bed; };
+    bool print_snp() const { return m_print_snp; };
     std::string chr() const { return m_chr; };
     std::string ref() const { return m_ref_allele; };
     std::string alt() const { return m_alt_allele; };
@@ -78,12 +89,14 @@ public:
     bool all() const { return m_all; };
     bool print_all() const { return m_print_all; };
     bool no_clump() const { return m_no_clump; };
+    bool ignore_fid() const { return m_ignore_fid; };
     SCORING get_scoring() const{
     		if(m_missing_score == "no_mean_imputation") return SCORING::SET_ZERO;
     		else if(m_missing_score == "center") return SCORING::CENTER;
     		else return SCORING::MEAN_IMPUTE;
     }
     void user_input() const;
+    uint32_t get_species() const{ return m_species;};
 protected:
 private:
     void usage();
@@ -117,7 +130,6 @@ private:
 //    bool m_target_is_binary;
     bool m_fastscore;
     bool m_index;
-    bool m_gen_bed;
     bool m_no_regress;
     bool m_all;
     bool m_full;
@@ -125,6 +137,8 @@ private:
     bool m_beta_provided;
     bool m_stat_provided;
     bool m_no_clump;
+    bool m_print_snp;
+    bool m_ignore_fid;
     double m_proxy;
     double m_clump;
     double m_clump_r2;
@@ -135,6 +149,7 @@ private:
     double m_inter;
     int m_prslice_size;
     size_t m_thread;
+    uint32_t m_species;
     std::vector<help> m_help_messages;
 };
 

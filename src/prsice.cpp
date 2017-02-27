@@ -11,35 +11,34 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	// NOTE: -1 means missing and index is hard coded such that each index will represent
 	//       specific header
 	std::vector<int> index = SNP::get_index(c_commander, input);
-	if ((c_commander.get_target().find("#") != std::string::npos
-			&& index[+SNP_Index::CHR] < 0)
-			|| (c_commander.ld_prefix().find("#") != std::string::npos
-					&& index[+SNP_Index::CHR] < 0)) {
-		std::string error_message =
-				"To use chromosome separated PLINK input, you must provide"
+	if ((c_commander.get_target().find("#") != std::string::npos && index[+SNP_Index::CHR] < 0)
+			|| (c_commander.ld_prefix().find("#") != std::string::npos && index[+SNP_Index::CHR] < 0))
+	{
+		std::string error_message = "To use chromosome separated PLINK input, you must provide"
 				" the CHR header as we use the CHR information form the base file to substitute #";
 		throw std::runtime_error(error_message);
-	} else if (region.size() > 1
-			&& (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0)) {
-		std::string error_message =
-				"To perform PRSet, you must provide the CHR and LOC header such"
+	}
+	else if (region.size() > 1 && (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0))
+	{
+		std::string error_message = "To perform PRSet, you must provide the CHR and LOC header such"
 				" that we can determine the set membership";
 		throw std::runtime_error(error_message);
-	} else if (c_commander.prslice() > 0.0
-			&& (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0)) {
-		std::string error_message =
-				"To perform PRSlice, you must provide the CHR and LOC header such"
+	}
+	else if (c_commander.prslice() > 0.0 && (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0))
+	{
+		std::string error_message = "To perform PRSlice, you must provide the CHR and LOC header such"
 				" that we can perform the slicing";
 		throw std::runtime_error(error_message);
 	}
 	// Open the file
 	std::ifstream snp_file;
 	snp_file.open(input.c_str());
-	if (!snp_file.is_open()) {
+	if (!snp_file.is_open())
+	{
 		std::string error_message = "Cannot open base file: " + input;
 		throw std::runtime_error(error_message);
 	}
-	// Some QC counts
+	// Some QC countss
 	int num_duplicated = 0;
 	size_t num_stat_not_convertible = 0;
 	size_t num_p_not_convertible = 0;
@@ -53,34 +52,62 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	bool read_error = false;
 	bool not_converted = false;
 	bool exclude = false;
+	bool chr_error =false;
 	// category related stuff
 	double threshold = (c_commander.fastscore())? c_commander.get_bar_upper() : c_commander.get_upper();
 	threshold = (c_commander.full())? 1.0 : threshold;
 	std::vector < std::string > token;
 	// Actual reading the file, will do a bunch of QC
-	while (std::getline(snp_file, line)) {
+	while (std::getline(snp_file, line))
+	{
 		misc::trim(line);
-		if (!line.empty()) {
+		if (!line.empty())
+		{
 			not_converted = false;
 			exclude = false;
 			token = misc::split(line);
 			if (token.size() <= max_index)
 				throw std::runtime_error("More index than column in data");
-			else {
+			else
+			{
 				std::string rs_id = token[index[+SNP_Index::RS]];
 				std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
+				int32_t chr_code = get_chrom_code_raw(chr.c_str());
+				if (((const uint32_t)chr_code) > PLINK::g_max_code) {
+					if (chr_code != -1) {
+						if (chr_code >= MAX_POSSIBLE_CHROM) {
+							chr_code= PLINK::g_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+						}
+						std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
+						throw std::runtime_error(error_message);
+					}
+				}
+				if(chr_code == (uint32_t)PLINK::g_xymt_codes[X_OFFSET] ||
+						chr_code == (uint32_t)PLINK::g_xymt_codes[Y_OFFSET])
+				{
+					exclude= true;
+					if(!chr_error)
+					{
+						fprintf(stderr, "WARNING: Sex chromosome detected. They will be ignored\n");
+						chr_error = true;
+					}
+				}
 				std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
 				std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
 				double pvalue = 0.0;
-				if (index[+SNP_Index::P] >= 0) {
+				if (index[+SNP_Index::P] >= 0)
+				{
 					try {
 						// obtain the p-value and calculate the corresponding threshold & category
 						pvalue = misc::convert<double>(
 								token[index[+SNP_Index::P]]);
-						if (pvalue < 0.0 || pvalue > 1.0) {
+						if (pvalue < 0.0 || pvalue > 1.0)
+						{
 							read_error = true;
 							fprintf(stderr, "ERROR: %s's p-value is %f\n", rs_id.c_str(), pvalue);
-						} else if (pvalue > threshold) {
+						}
+						else if (pvalue > threshold)
+						{
 							exclude = true;
 							num_exclude++;
 						}
@@ -90,7 +117,8 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 					}
 				}
 				double stat = 0.0;
-				if (index[+SNP_Index::STAT] >= 0) {
+				if (index[+SNP_Index::STAT] >= 0)
+				{
 					//Obtain the test statistic
 					try {
 						stat = misc::convert<double>( token[index[+SNP_Index::STAT]]);
@@ -101,7 +129,8 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 					}
 				}
 				double se = 0.0;
-				if (index[+SNP_Index::SE] >= 0) {
+				if (index[+SNP_Index::SE] >= 0)
+				{
 					// obtain the standard error (though it is currently useless)
 					try {
 						se = misc::convert<double>( token[index[+SNP_Index::SE]]);
@@ -110,23 +139,27 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 					}
 				}
 				int loc = -1;
-				if (index[+SNP_Index::BP] >= 0) {
+				if (index[+SNP_Index::BP] >= 0)
+				{
 					// obtain the SNP coordinate
 					try {
 						int temp = misc::convert<int>( token[index[+SNP_Index::BP]].c_str());
-						if (temp < 0) {
+						if (temp < 0)
+						{
 							read_error = true;
 							fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
-						} else loc = temp;
+						}
+						else loc = temp;
 					} catch (const std::runtime_error &error) { }
 				}
-				if (!SNP::valid_snp(ref_allele)){
+				if (!SNP::valid_snp(ref_allele))
+				{
 					num_indel++;
 				}
 				else if (!alt_allele.empty() && !SNP::valid_snp(alt_allele)) num_indel++;
-				else if (!not_converted && !exclude) {
-					m_snp_list.push_back( new SNP(rs_id, chr, loc, ref_allele,
-									alt_allele, stat, se, pvalue));
+				else if (!not_converted && !exclude)
+				{
+					m_snp_list.push_back( new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue));
 				} else {
 //		    			We skip any SNPs with non-convertible stat and p-value as we don't know how to
 //		    			handle them. Most likely those will be NA, which should be ignored anyway
@@ -136,40 +169,64 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 		if (read_error) throw std::runtime_error( "Please check if you have the correct input");
 	}
 	snp_file.close();
+
 	m_snp_list.sort();
+
+	// The problem of this filtering is that if the same SNP is duplicated but with different
+	// p-value etc, they will not be removed
 	size_t before = m_snp_list.size();
 	m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()), m_snp_list.end());
 	size_t after = m_snp_list.size();
-	std::map<std::string, bool> unique_chr;
-	for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp) {
+
+	std::unordered_set<std::string> unique_chr;
+	std::unordered_set<std::string> unique_rsid;
+
+	for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp)
+	{
 		m_snp_index[m_snp_list[i_snp].get_rs_id()] = i_snp;
 		std::string cur_chr = m_snp_list[i_snp].get_chr();
-		if (unique_chr.find(cur_chr) == unique_chr.end()) {
-			unique_chr[cur_chr] = true;
+		if (unique_chr.find(cur_chr) == unique_chr.end())
+		{
+			unique_chr.insert(cur_chr);
 			m_chr_list.push_back(cur_chr);
 		}
-		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0) {
+		std::string rs = m_snp_list[i_snp].get_rs_id();
+		if(unique_rsid.find(rs)==unique_rsid.end())
+		{
+			unique_rsid.insert(rs);
+		}
+		else
+		{
+			std::string error_message = "WARNING: Duplicated SNP ID: " + rs;
+			throw std::runtime_error(error_message);
+		}
+		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0)
+		{
 			m_snp_list[i_snp].set_flag( region.check(cur_chr, m_snp_list[i_snp].get_loc()));
 		}
 	}
+
 	num_duplicated = (int) before - (int) after;
 	if (num_indel != 0) fprintf(stderr, "Number of invalid SNPs    : %zu\n", num_indel);
-	if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded due to p-value threshold: %zu\n", num_exclude);
+	if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_exclude);
 	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
 	if (num_stat_not_convertible != 0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
 	if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
 	if (num_se_not_convertible != 0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
 	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", m_snp_list.size());
+
+	PLINK::set_chromosome(m_chr_list); // update the chromosome information for PLINK
 }
 
 
 
 void PRSice::perform_clump(const Commander &c_commander) {
+	// Main reason why we don't read this earlier is because of allele matching
+	// otherwise, in theory, inclusion only need to be read once
 	// if we don't want clumping, then the ld file is useless
 	bool has_ld = !c_commander.ld_prefix().empty() && c_commander.no_clump();
 	std::string ld_file = (has_ld) ? c_commander.ld_prefix() : m_target;
 
-	PLINK clump(ld_file, m_chr_list, c_commander.get_thread());
 	size_t num_ambig = 0, not_found = 0, num_duplicate = 0;
 	std::string target_bim_name = m_target + ".bim";
 	if (target_bim_name.find("#") != std::string::npos) {
@@ -183,22 +240,33 @@ void PRSice::perform_clump(const Commander &c_commander) {
 
 	fprintf(stderr, "\nIn Target File\n");
 	fprintf(stderr, "==============================\n");
-	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs  : %zu\n", num_ambig);
-	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicate);
-	if (not_found != 0) fprintf(stderr, "Number of SNPs not found  : %zu\n", not_found);
-	fprintf(stderr, "Final Number of SNPs in target  : %zu\n", m_include_snp.size());
 
 	if (has_ld) {
 		fprintf(stderr, "\nIn LD Reference %s\n", ld_file.c_str());
 		fprintf(stderr, "==============================\n");
-		clump.clump_initialize(m_include_snp, m_snp_list, m_snp_index);
-	} else clump.clump_initialize(m_include_snp);
+		if (ld_file.find("#") != std::string::npos) {
+			for (auto &&chr : m_chr_list) {
+				std::string ld_chr_bim_name = ld_file;
+				misc::replace_substring(ld_chr_bim_name, "#", chr);
+				check_inclusion(ld_chr_bim_name, num_ambig, not_found, num_duplicate);
+			}
+		} else check_inclusion(target_bim_name, num_ambig, not_found, num_duplicate);
+	}
 
+	if (num_ambig != 0) fprintf(stderr, "Number of ambiguous SNPs      : %zu\n", num_ambig);
+	if (num_duplicate != 0) fprintf(stderr, "Number of duplicated SNPs     : %zu\n", num_duplicate);
+	fprintf(stderr, "Final Number of SNPs included : %zu\n", m_include_snp.size());
+
+
+	// Thing is, this might be the LD file, which only need to be read once
+	PLINK clump(ld_file, true, c_commander.get_thread(), m_include_snp);
 	if (!c_commander.no_clump()) {
 		fprintf(stderr, "\nStart performing clumping\n");
+
 		clump.start_clumping(m_include_snp, m_snp_list,
 				c_commander.get_clump_p(), c_commander.get_clump_r2(),
 				c_commander.get_clump_kb(), c_commander.get_proxy());
+
 	}
 }
 
@@ -274,12 +342,15 @@ void PRSice::check_inclusion(const std::string &c_target_bim_name,
 void PRSice::pheno_check(const Commander &c_commander) {
 	std::vector < std::string > pheno_header = c_commander.get_pheno_col();
 	std::string pheno_file = c_commander.get_pheno();
-	m_pheno_index = 0;
 	if (pheno_header.size() != 0 && pheno_file.empty()) {
 		throw std::runtime_error( "You must provide a phenotype file for multiple phenotype analysis");
 	}
 	if (pheno_file.empty()) {
 		std::string fam = m_target + ".fam";
+		if(fam.find("#")!= std::string::npos)
+		{
+			misc::replace_substring(fam, "#", m_chr_list.front());
+		}
 		pheno_storage temp;
 		std::get < pheno_store::FILE_NAME > (temp) = fam;
 		std::get < pheno_store::INDEX > (temp) = +FAM::PHENOTYPE;
@@ -303,20 +374,24 @@ void PRSice::pheno_check(const Commander &c_commander) {
 		std::vector < std::string > col = misc::split(line);
 		bool found = false;
 		std::unordered_map<std::string, bool> dup_col;
-		if (pheno_header.size() == 0) {
+		if (pheno_header.size() == 0)
+		{
 			// use the second column from the pheno file
 			pheno_storage temp;
 			std::get < pheno_store::FILE_NAME > (temp) = pheno_file;
-			std::get < pheno_store::INDEX > (temp) = 1;
+			std::get < pheno_store::INDEX > (temp) = 1+!m_ignore_fid; // should +1 if fid is here
 			std::get < pheno_store::NAME > (temp) = "";
 			std::get < pheno_store::ORDER > (temp) = 0;
 			m_pheno_names.push_back(temp);
-		} else {
+		}
+		else
+		{
 			for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno) {
 				if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
 					found = false;
 					dup_col[pheno_header[i_pheno]] = true;
-					for (size_t i_column = 0; i_column < col.size(); ++i_column) {
+					// start from 1+!m_ignore_fid to skip the iid and fid part
+					for (size_t i_column = 1+!m_ignore_fid; i_column < col.size(); ++i_column) {
 						if (col[i_column].compare(pheno_header[i_pheno]) == 0) {
 							found = true;
 							pheno_storage temp;
@@ -358,10 +433,14 @@ void PRSice::categorize(const Commander &c_commander) {
 			file_names.push_back(name);
 		}
 	}
-	else
+	else if(file_names.size()==0) // in the case where the file name really do have the # sign
 	{
 		file_names.push_back(m_target);
 	}
+	// WARNING: In someway, this should be the same as the plink read sequence because both uses the same
+	// chromosome list. But then, we should always be away that it is possible for the two to be out of
+	// sync.
+
 	for (auto &&name : file_names)
 	{
 		std::ifstream bim;
@@ -458,7 +537,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		std::string all_out_name = output_name + "." + m_base_name;
 		if (multi)
 		{
-			all_out_name.append("." + std::get < pheno_store::NAME > (m_pheno_names[c_pheno_index]));
+			all_out_name.append("." + std::get < pheno_store::NAME > (m_pheno_names.at(c_pheno_index)));
 		}
 		all_out_name.append(".all.score");
 		all_out.open(all_out_name.c_str());
@@ -487,6 +566,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t c_pheno_inde
 		all_out.close();
 	}
 	double null_r2_adjust = 0.0, null_p = 0.0, null_coeff = 0.0;
+	// calculate the null r2
 	int n_thread = c_commander.get_thread();
 	if (m_independent_variables.cols() > 2) {
 		Eigen::MatrixXd covariates_only;
@@ -514,7 +594,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 	std::ifstream pheno_file;
 	std::string fam_name = m_target + ".fam";
 	bool binary = m_target_binary.at(col_index);
-	if (fam_name.find("#") != std::string::npos)
+	if (fam_name.find("#") != std::string::npos && m_chr_list.size() > 0) // prevent undefine behaviour when chr_list ==0
 	{
 		misc::replace_substring(fam_name, "#", m_chr_list.front());
 	}
@@ -523,7 +603,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 	size_t num_case = 0, num_control = 0;
 	size_t n_not_found = 0;
 	size_t max_num = 0;
-	if (c_pheno.empty() || fam_name == c_pheno)
+
+	if (c_pheno.empty() || fam_name == c_pheno) // the phenotype file = fam file
 	{
 		pheno_file.open(fam_name.c_str());
 		if (!pheno_file.is_open())
@@ -536,8 +617,15 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			misc::trim(line);
 			if (!line.empty()) {
 				std::vector < std::string > token = misc::split(line);
-				if (token.size() < 6) throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
-				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0, 0));
+				if (token.size() < 6)
+					throw std::runtime_error( "Malformed fam file, should contain at least 6 columns");
+				prs_score cur_score;
+				std::get<+PRS::FID>(cur_score) = token[+FAM::FID];
+				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
+				std::get<+PRS::PRS>(cur_score) = 0.0;
+				std::get<+PRS::NNMISS>(cur_score) = 0;
+				m_sample_names.push_back(cur_score);
+				std::string id =(m_ignore_fid)? token[+FAM::IID]:token[+FAM::FID]+"_"+token[+FAM::IID];
 				if (token[+FAM::PHENOTYPE] != "NA")
 				{
 					try {
@@ -547,7 +635,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							if (temp >= 0 && temp <= 2)
 							{
 								max_num = (temp>max_num)? temp:max_num;
-								m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+								m_sample_with_phenotypes[id] = cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
 								if(temp == 1) num_case++;
@@ -557,7 +645,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 						else
 						{
 							double temp = misc::convert<double>( token[+FAM::PHENOTYPE]);
-							m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+							m_sample_with_phenotypes[id] = cur_index;
 							phenotype_store.push_back(temp);
 							cur_index++;
 						}
@@ -597,7 +685,8 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							+ std::to_string(pheno_index + 1) + " columns";
 					throw std::runtime_error(error_message);
 				}
-				phenotype_info[token[0]] = token[pheno_index];
+				std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
+				phenotype_info[id] = token[pheno_index];
 			}
 		}
 		pheno_file.close();
@@ -607,11 +696,18 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 			if (!line.empty())
 			{
 				std::vector < std::string > token = misc::split(line);
-				if (token.size() < 6) std::runtime_error( "Malformed fam file, should contain at least 6 columns");
-				m_sample_names.push_back(prs_score(token[+FAM::IID], 0.0, 0));
-				if (phenotype_info.find(token[+FAM::IID]) != phenotype_info.end())
+				if (token.size() < 6)
+					std::runtime_error( "Malformed fam file, should contain at least 6 columns");
+				prs_score cur_score;
+				std::get<+PRS::FID>(cur_score) = token[+FAM::FID];
+				std::get<+PRS::IID>(cur_score) = token[+FAM::IID];
+				std::get<+PRS::PRS>(cur_score) = 0.0;
+				std::get<+PRS::NNMISS>(cur_score) = 0;
+				m_sample_names.push_back(cur_score);
+				std::string id =(m_ignore_fid)? token[+FAM::IID]:token[+FAM::FID]+"_"+token[+FAM::IID];
+				if (phenotype_info.find(id) != phenotype_info.end())
 				{
-					std::string p = phenotype_info[token[+FAM::IID]];
+					std::string p = phenotype_info[id];
 					if (p.compare("NA") != 0)
 					{
 						try {
@@ -621,7 +717,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 								if (temp  >= 0 && temp <= 2)
 								{
 									max_num = (temp>max_num)? temp:max_num;
-									m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+									m_sample_with_phenotypes[id] = cur_index;
 									phenotype_store.push_back(temp);
 									cur_index++;
 									if(temp == 1) num_case++;
@@ -631,7 +727,7 @@ void PRSice::gen_pheno_vec(const std::string c_pheno, const int pheno_index,
 							else
 							{
 								double temp = misc::convert<double>(p);
-								m_sample_with_phenotypes[token[+FAM::IID]] = cur_index;
+								m_sample_with_phenotypes[id] = cur_index;
 								phenotype_store.push_back(temp);
 								cur_index++;
 							}
@@ -707,15 +803,22 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 		if (c_cov_header.size() == 0)
 		{
 			// if no header is provided, we will use all the covariates included
-			for (size_t i = 1; i < token.size(); ++i) cov_index.push_back(i);
+			for (size_t i = 1+!m_ignore_fid; i < token.size(); ++i) cov_index.push_back(i); //FID, therefore+1
 			max_index = cov_index.size() - 1;
 		}
 		else
 		{
-			std::unordered_map<std::string, bool> included;
+			std::unordered_set<std::string> included;
 			// if specific headers are provided, we should only include them
-			for (size_t i = 0; i < c_cov_header.size(); ++i) included[c_cov_header[i]] = true;
-			for (size_t i_header = 1; i_header < token.size(); ++i_header)
+			for (auto &&cov: c_cov_header)
+			{
+				if(included.find(cov) == included.end())// to avoid duplicated covariance headers
+					{
+						included.insert(cov);
+					}
+			}
+			// same, +1 when fid is include
+			for (size_t i_header = 1+!m_ignore_fid; i_header < token.size(); ++i_header)
 			{
 				if (included.find(token[i_header]) != included.end())
 				{
@@ -744,9 +847,10 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 						+ std::to_string(max_index + 1) + " column!";
 				throw std::runtime_error(error_message);
 			}
-			if (m_sample_with_phenotypes.find(token[0]) != m_sample_with_phenotypes.end())
+			std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
+			if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
 			{ // sample is found in the phenotype vector
-				int index = m_sample_with_phenotypes[token[0]];
+				int index = m_sample_with_phenotypes[id];
 				for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
 				{
 					try {
@@ -759,7 +863,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 				}
 				if (valid)
 				{
-					valid_samples.push_back( std::pair<std::string, size_t>(token[0], index));
+					valid_samples.push_back( std::pair<std::string, size_t>(id, index));
 					num_valid++;
 				}
 			}
@@ -808,7 +912,6 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 
 void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		const size_t c_pheno_index, bool prslice) {
-
 	if (m_partition.size() == 0)
 	{
 		throw std::runtime_error("None of the SNPs fall into the threshold\n");
@@ -821,8 +924,10 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	if (require_all)
 	{
 		std::string all_out_name = c_commander.get_out() + "." + m_base_name;
-		std::string pheno_name = std::get < pheno_store::NAME > (m_pheno_names[m_pheno_index]);
-		if (!pheno_name.empty() && multi) all_out_name.append("." + pheno_name);
+		if (multi)
+		{
+			all_out_name.append("." + std::get < pheno_store::NAME > (m_pheno_names.at(c_pheno_index)));
+		}
 		all_out_name.append(".all.score");
 		all_out.open(all_out_name.c_str(), std::ofstream::app);
 		if (!all_out.is_open())
@@ -838,21 +943,32 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 	m_best_threshold.clear();
 	m_current_prs.clear();
 	m_prs_results.clear();
-	size_t num_region = c_region.size();
 	// below is also initialization
-	m_num_snp_included = prslice ? std::vector < size_t > (1) : std::vector < size_t > (num_region);
-	for (size_t i_region = 0; i_region < num_region; ++i_region)
+	// no need to worry about PRSlice as that should always follow
+	m_num_snp_included = std::vector < size_t > (m_region_size);
+	for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 	{
 		m_current_prs.push_back(m_sample_names);
-		m_best_threshold.push_back(PRSice_best(0, 0, 0, 0, 0, 0));
+		PRSice_best cur_best;
+		std::get<+PRS::THRESHOLD>(cur_best)=0;
+		std::get<+PRS::R2>(cur_best)=0;
+		std::get<+PRS::NSNP>(cur_best)=0;
+		std::get<+PRS::COEFF>(cur_best)=0;
+		std::get<+PRS::P>(cur_best)=0;
+		std::get<+PRS::EMPIRICAL_P>(cur_best)=-1;
+		m_best_threshold.push_back(cur_best);
 		m_prs_results.push_back(std::vector < PRSice_result > (0));
-		if (prslice) break; // only do once
 	}
 
 	m_best_score = m_current_prs;
 
 	// avoid 100% before complete
 	int max_category = std::get < +PRS::CATEGORY > (m_partition.back()) + 1;
+
+	// With the new PLINK class, we should start the plink here instead of initializing it
+	// in the get_prs_score
+	// rewind should work like magic?
+	PLINK score_plink(m_target, false, c_commander.get_thread());
 
 	size_t partition_size = m_partition.size();
 	double cur_threshold = 0.0;
@@ -865,9 +981,9 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		if (!prslice)
 			fprintf(stderr, "\rProcessing %03.2f%%", (double) cur_category / (double) (max_category) * 100.0);
 
-		reg = get_prs_score(cur_partition_index);
+		reg = get_prs_score(cur_partition_index, score_plink);
 		if (require_all && all_out.is_open()) {
-			for (size_t i_region = 0; i_region < m_current_prs.size(); ++i_region)
+			for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 			{
 				all_out << cur_threshold << "\t" << c_region.get_name(i_region);
 				for (auto &&prs : m_current_prs[i_region])
@@ -880,15 +996,15 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 		reg = reg && !no_regress;
 		if (reg)
 		{
-			if (n_thread == 1 || m_current_prs.size() == 1)
+			if (n_thread == 1 || m_region_size == 1)
 			{
-				thread_score(0, m_current_prs.size(), cur_threshold, n_thread, c_pheno_index);
+				thread_score(0, m_region_size, cur_threshold, n_thread, c_pheno_index);
 			}
 			else
 			{
-				if (c_region.size() < n_thread)
+				if (m_region_size < n_thread)
 				{
-					for (size_t i_region = 0; i_region < num_region; ++i_region)
+					for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 					{
 						thread_store.push_back( std::thread(&PRSice::thread_score, this,
 								i_region, i_region + 1, cur_threshold,
@@ -897,13 +1013,13 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 				}
 				else
 				{
-					int job_size = num_region / n_thread;
-					int remain = num_region % n_thread;
+					int job_size = m_region_size / n_thread;
+					int remain = m_region_size % n_thread;
 					size_t start = 0;
 					for (size_t i_thread = 0; i_thread < n_thread; ++i_thread)
 					{
 						size_t ending = start + job_size + (remain > 0);
-						ending = (ending > num_region) ? num_region : ending;
+						ending = (ending > m_region_size) ? m_region_size : ending;
 						thread_store.push_back( std::thread(&PRSice::thread_score, this, start,
 								ending, cur_threshold, 1,
 								c_pheno_index));
@@ -916,12 +1032,13 @@ void PRSice::prsice(const Commander &c_commander, const Region &c_region,
 				thread_store.clear();
 			}
 		}
+		score_plink.clear();
 	}
 	if (all_out.is_open()) all_out.close();
-	if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
+	if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
 }
 
-bool PRSice::get_prs_score(size_t &cur_index)
+bool PRSice::get_prs_score(size_t &cur_index, PLINK &score_plink)
 {
 	if (m_partition.size() == 0) return false; // nothing to do
 	int prev_index = std::get < +PRS::CATEGORY > (m_partition[cur_index]);
@@ -941,16 +1058,14 @@ bool PRSice::get_prs_score(size_t &cur_index)
 			prev_index = std::get < +PRS::CATEGORY > (m_partition[i]); // only when the category is still negative
 		}
 //		// Use as part of the output
-		for (size_t i_region = 0; i_region < m_num_snp_included.size(); ++i_region)
+		for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 		{
 			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region))
 				m_num_snp_included[i_region]++;
 		}
 	}
 	if (!ended) end_index = m_partition.size();
-	PLINK prs(m_target, m_chr_list, m_score);
-	prs.initialize();
-	prs.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index);
+	score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
 
 	cur_index = end_index;
 	return true;
@@ -969,21 +1084,36 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 	double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
 	for (size_t iter = region_start; iter < region_end; ++iter)
 	{
-		if (m_num_snp_included[iter] == 0 || (m_prs_results[iter].size() != 0
-				&& m_num_snp_included[iter] == std::get < +PRS::NSNP > (m_prs_results[iter].back())))
-			continue; // don't bother when there is no additional SNPs added
+		// The m_prs size check is just so that the back will be valid
+		// m_prs will only be empty for the first run
+		if (m_num_snp_included[iter] == 0 ||
+				(m_prs_results[iter].size() != 0 &&
+						m_num_snp_included[iter] == std::get < +PRS::NSNP > (m_prs_results[iter].back())
+				)
+		) continue; // don't bother when there is no additional SNPs added
 		for (auto &&prs : m_current_prs[iter])
 		{
-			std::string sample = std::get < +PRS::IID > (prs);
+			std::string sample = (m_ignore_fid)? std::get <+PRS::IID > (prs):
+					std::get<+PRS::FID>(prs)+"_"+std::get<+PRS::IID>(prs);
+			// The reason why we need to udpate the m_sample_with_phenotypes matrix
 			if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end()) {
-				if (thread_safe)
-					m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs) ;
-				else
-					X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs);
 
+				if(std::get < +PRS::NNMISS >(prs)!= 0)
+				{
+					if (thread_safe)
+						m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs) ;
+					else
+						X(m_sample_with_phenotypes.at(sample), 1) = std::get < +PRS::PRS > (prs) / (double) std::get < +PRS::NNMISS >(prs);
+				}
+				else{
+					if (thread_safe)
+						m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = 0 ;
+					else
+						X(m_sample_with_phenotypes.at(sample), 1) =0;
+				}
 			}
 		}
-		size_t num_better = 0;
+		int num_better = -1;
 		if (m_target_binary[c_pheno_index])
 		{
 			try {
@@ -991,19 +1121,6 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 					Regression::glm(m_phenotype, m_independent_variables, p_value, r2, coefficient, 25, thread, true);
 				else
 					Regression::glm(m_phenotype, X, p_value, r2, coefficient, 25, thread, true);
-				Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-				for (size_t i_perm = 0; i_perm < m_perm; ++i_perm)
-				{
-					perm.setIdentity();
-					std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
-					Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
-					double perm_p, perm_r2, perm_coefficient;
-					if (thread_safe)
-						Regression::glm(A_perm, m_independent_variables, perm_p, perm_r2, perm_coefficient, 25, thread, true);
-					else
-						Regression::glm(A_perm, X, perm_p, perm_r2, perm_coefficient, 25, thread, true);
-					if (perm_p < p_value)num_better++;
-				}
 			} catch (const std::runtime_error &error) {
 				// This should only happen when the glm doesn't converge.
 				// Let's hope that won't happen...
@@ -1028,19 +1145,54 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 						coefficient, thread, true);
 			else
 				Regression::linear_regression(m_phenotype, X, p_value, r2, r2_adjust, coefficient, thread, true);
-			Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-			for (size_t i_perm = 0; i_perm < m_perm; ++i_perm) {
-				perm.setIdentity();
-				std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
-				Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
-				double perm_p, perm_r2, perm_coefficient, perm_r2_adj;
-				if (thread_safe)
-					Regression::linear_regression(A_perm, m_independent_variables, perm_p, perm_r2,
-							perm_r2_adj, perm_coefficient, thread, true);
-				else
-					Regression::linear_regression(A_perm, X, perm_p, perm_r2, perm_r2_adj, perm_coefficient, thread, true);
-				if (perm_p < p_value) num_better++;
+		}
+
+
+		// It this is the best r2, then we will add it
+		if (std::get < +PRS::R2 > (m_best_threshold[iter]) < r2) {
+			num_better = 0;
+			if(m_target_binary[c_pheno_index]){
+				Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
+				for (size_t i_perm = 0; i_perm < m_perm; ++i_perm)
+				{
+					perm.setIdentity();
+					std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
+					Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
+					double perm_p, perm_r2, perm_coefficient;
+					if (thread_safe)
+						Regression::glm(A_perm, m_independent_variables, perm_p, perm_r2, perm_coefficient, 25, thread, true);
+					else
+						Regression::glm(A_perm, X, perm_p, perm_r2, perm_coefficient, 25, thread, true);
+					if (perm_p < p_value)num_better++;
+				}
 			}
+			else{
+				Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
+				for (size_t i_perm = 0; i_perm < m_perm; ++i_perm) {
+					perm.setIdentity();
+					std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
+					Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
+					double perm_p, perm_r2, perm_coefficient, perm_r2_adj;
+					if (thread_safe)
+						Regression::linear_regression(A_perm, m_independent_variables, perm_p, perm_r2,
+								perm_r2_adj, perm_coefficient, thread, true);
+					else
+						Regression::linear_regression(A_perm, X, perm_p, perm_r2, perm_r2_adj, perm_coefficient, thread, true);
+					if (perm_p < p_value) num_better++;
+				}
+			}
+
+
+
+			PRSice_best best;
+			std::get < +PRS::THRESHOLD > (best) = threshold;
+			std::get < +PRS::R2 > (best) = r2;
+			std::get < +PRS::NSNP > (best) = m_num_snp_included[iter];
+			std::get < +PRS::COEFF > (best) = coefficient;
+			std::get < +PRS::P > (best) = p_value;
+			std::get < +PRS::EMPIRICAL_P > (best) = num_better;
+			m_best_threshold[iter] = best;
+			m_best_score[iter] = m_current_prs.at(iter);
 		}
 		// This should be thread safe as each thread will only mind their own region
 		// now add the PRS result to the vectors (hopefully won't be out off scope
@@ -1053,158 +1205,111 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 		std::get < +PRS::COEFF > (res) = coefficient;
 		std::get < +PRS::EMPIRICAL_P > (res) = num_better;
 		m_prs_results[iter].push_back(res);
-
-		// It this is the best r2, then we will add it
-		if (std::get < +PRS::R2 > (m_best_threshold[iter]) < r2) {
-			PRSice_best best;
-			std::get < +PRS::THRESHOLD > (best) = threshold;
-			std::get < +PRS::R2 > (best) = r2;
-			std::get < +PRS::NSNP > (best) = m_num_snp_included[iter];
-			std::get < +PRS::COEFF > (best) = coefficient;
-			std::get < +PRS::P > (best) = p_value;
-			std::get < +PRS::EMPIRICAL_P > (best) = num_better;
-			m_best_threshold[iter] = best;
-			m_best_score[iter] = m_current_prs.at(iter);
-		}
 	}
 }
 
 void PRSice::output(const Commander &c_commander, const Region &c_region,
 		size_t pheno_index) const {
-	std::string pheno_name = std::get < pheno_store::NAME
-			> (m_pheno_names[pheno_index]);
+	// this is ugly, need to make it better
+	std::string pheno_name = std::get < pheno_store::NAME > (m_pheno_names[pheno_index]);
 	std::string output_prefix = c_commander.get_out() + "." + m_base_name;
-	if (!pheno_name.empty())
-		output_prefix.append("." + pheno_name);
+	if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
 	size_t total_perm = c_commander.get_perm();
 	bool perm = total_perm > 0;
-
-	if (c_commander.print_all()) {
-		for (size_t i_region = 0; i_region < m_prs_results.size(); ++i_region) {
-			if (std::get < +PRS::NSNP > (m_best_threshold[i_region]) <= 0)
-				continue;
-			std::string output_name = output_prefix + "."
-					+ c_region.get_name(i_region);
-			std::string out_best = output_name + ".best";
-			std::string out_prsice = output_name + ".prsice";
-			std::ofstream best_out, prsice_out;
-			best_out.open(out_best.c_str());
-			prsice_out.open(out_prsice.c_str());
-			if (!best_out.is_open()) {
-				std::string error_message = "ERROR: Cannot open file: "
-						+ out_best + " to write";
-				throw std::runtime_error(error_message);
-			}
-			if (!prsice_out.is_open()) {
-				std::string error_message = "ERROR: Cannot open file: "
-						+ out_prsice + " to write";
-				throw std::runtime_error(error_message);
-			}
-			best_out << "IID\tprs_" << std::get < +PRS::THRESHOLD
-					> (m_best_threshold[i_region]) << std::endl;
-			prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP";
-			if (perm)
-				prsice_out << "\tEmpirical_P";
-			prsice_out << std::endl;
-			// We want to skip the intercept for now
-			for (auto &&prs : m_prs_results[i_region]) {
-				prsice_out << std::get < +PRS::THRESHOLD
-						> (prs) << "\t" << std::get < +PRS::R2
-						> (prs) - m_null_r2 << "\t" << std::get < +PRS::P
-						> (prs) << "\t" << std::get < +PRS::COEFF
-						> (prs) << "\t" << std::get < +PRS::NSNP > (prs);
-				if (perm)
-					prsice_out << "\t"
-							<< (double) (std::get < +PRS::EMPIRICAL_P
-									> (prs) + 1.0)
-									/ (double) (total_perm + 1.0);
-				prsice_out << std::endl;
-			}
-			int best_snp_size = std::get < +PRS::NSNP > (m_best_threshold[i_region]);
-			if (best_snp_size == 0) {
-				fprintf(stderr,
-						"ERROR: Best R2 obtained when no SNPs were included\n");
-				fprintf(stderr, "       Cannot output the best PRS score\n");
-			} else {
-				for (auto &&prs : m_best_score[i_region]) {
-					best_out << std::get < +PRS::IID > (prs) << "\t"
-							<< std::get< +PRS::PRS> (prs) / (double) best_snp_size
-							<< std::endl;
-				}
-			}
-			prsice_out.close();
-			best_out.close();
-		}
-	} else {
-		// only for the base region
-		size_t i_region = 0;
-		std::string output_name = output_prefix + "."
-				+ c_region.get_name(i_region);
+	std::string output_name = output_prefix;
+	for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+	{
+		if(m_region_size > 1) output_name = output_prefix+"."+c_region.get_name(i_region);
 		std::string out_best = output_name + ".best";
 		std::string out_prsice = output_name + ".prsice";
-		std::ofstream best_out, prsice_out;
-		best_out.open(out_best.c_str());
+		std::string out_snp = output_name +".snps";
+		std::ofstream best_out, prsice_out, snp_out;
 		prsice_out.open(out_prsice.c_str());
-		if (!best_out.is_open()) {
-			std::string error_message = "ERROR: Cannot open file: " + out_best
-					+ " to write";
+		if (!prsice_out.is_open())
+		{
+			std::string error_message = "ERROR: Cannot open file: " + out_prsice + " to write";
 			throw std::runtime_error(error_message);
 		}
-		if (!prsice_out.is_open()) {
-			std::string error_message = "ERROR: Cannot open file: " + out_prsice
-					+ " to write";
-			throw std::runtime_error(error_message);
-		}
-		best_out << "IID\tprs_" << std::get < +PRS::THRESHOLD
-				> (m_best_threshold[i_region]) << std::endl;
 		prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP";
 		if (perm) prsice_out << "\tEmpirical_P";
 		prsice_out << std::endl;
-		// We want to skip the intercept for now
 		for (auto &&prs : m_prs_results[i_region]) {
-			prsice_out << std::get < +PRS::THRESHOLD > (prs) << "\t" << std::get
-					< +PRS::R2 > (prs) - m_null_r2 << "\t" << std::get < +PRS::P
-					> (prs) << "\t" << std::get < +PRS::COEFF
-					> (prs) << "\t" << std::get < +PRS::NSNP
-					> (prs);
+			prsice_out << std::get < +PRS::THRESHOLD > (prs) << "\t"
+					<< std::get < +PRS::R2 > (prs) - m_null_r2 << "\t"
+					<< std::get < +PRS::P > (prs) << "\t"
+					<< std::get < +PRS::COEFF > (prs) << "\t" << std::get < +PRS::NSNP > (prs);
 			if (perm) prsice_out << "\t" << (double) (std::get < +PRS::EMPIRICAL_P > (prs) + 1.0) / (double) (total_perm + 1.0);
 			prsice_out << std::endl;
 		}
-		int best_snp_size = std::get < +PRS::NSNP
-				> (m_best_threshold[i_region]);
+		prsice_out.close();
+
+		best_out.open(out_best.c_str());
+		if (!best_out.is_open())
+		{
+			std::string error_message = "ERROR: Cannot open file: " + out_best + " to write";
+			throw std::runtime_error(error_message);
+		}
+		best_out << "FID\tIID\tIncluded\tprs_" << std::get < +PRS::THRESHOLD > (m_best_threshold[i_region]) << std::endl;
+		int best_snp_size = std::get < +PRS::NSNP > (m_best_threshold[i_region]);
 		if (best_snp_size == 0) {
-			fprintf(stderr,
-					"ERROR: Best R2 obtained when no SNPs were included\n");
+			fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
 			fprintf(stderr, "       Cannot output the best PRS score\n");
 		} else {
 			for (auto &&prs : m_best_score[i_region]) {
-				best_out << std::get < +PRS::IID > (prs) << "\t" << std::get
-						< +PRS::PRS
-						> (prs) / (double) best_snp_size << std::endl;
+				std::string id = (m_ignore_fid)? std::get < +PRS::IID > (prs) :
+						std::get<+PRS::FID>(prs)+"_"+std::get < +PRS::IID > (prs);
+				char in = (m_sample_with_phenotypes.find(id)==m_sample_with_phenotypes.end())? 'N':'Y';
+				best_out << std::get<+PRS::FID>(prs) << "\t"
+						<< std::get < +PRS::IID > (prs) << "\t"
+						<< in << "\t"
+						<< std::get< +PRS::PRS> (prs) / (double) best_snp_size
+						<< std::endl;
 			}
 		}
-		prsice_out.close();
 		best_out.close();
+		if(c_commander.print_snp())
+		{
+			snp_out.open(out_snp);
+			if (!snp_out.is_open()) {
+				std::string error_message = "ERROR: Cannot open file: " + out_snp + " to write";
+				throw std::runtime_error(error_message);
+			}
+			size_t num_snp = std::get < +PRS::NSNP> (m_best_threshold[i_region]);
+			for(auto snp : m_partition)
+			{
+				if(m_snp_list.at(m_include_snp.at(std::get< +PRS::RS >(snp))).in(i_region))
+				{
+						snp_out  << std::get< +PRS::RS >(snp) << std::endl;;
+				}
+			}
+			snp_out.close();
+		}
+		if(!c_commander.print_all()) break;
+	}
 
+	if(m_region_size > 1)
+	{
 		// now print the group information
 		std::string out_region = output_prefix + ".prset";
 		std::ofstream region_out;
 		region_out.open(out_region.c_str());
-		region_out << "Region\tThreshold\tR2\tCoefficient\tP\tNum_SNP"
-				<< std::endl;
-		i_region = 0;
+		region_out << "Region\tThreshold\tR2\tCoefficient\tP\tNum_SNP";
+		if (perm) region_out << "\tEmpirical_P";
+		region_out	<< std::endl;
+		size_t i_region = 0;
 		for (auto best_region : m_best_threshold) {
 			region_out << c_region.get_name(i_region) << "\t" <<
 					std::get< +PRS::THRESHOLD > (best_region) << "\t"
 					<< std::get< +PRS::R2 > (best_region) - m_null_r2 << "\t"
 					<< std::get < +PRS::COEFF > (best_region) << "\t"
 					<< std::get < +PRS::P> (best_region) << "\t"
-					<< std::get < +PRS::NSNP> (best_region) << std::endl;
+					<< std::get < +PRS::NSNP> (best_region);
+			if(perm) region_out << (double) (std::get < +PRS::EMPIRICAL_P > (best_region) + 1.0) / (double) (total_perm + 1.0);
+			region_out << std::get < +PRS::NSNP> (best_region) << std::endl;
 			i_region++;
 		}
 		region_out.close();
 	}
-
 }
 
 PRSice::~PRSice() {

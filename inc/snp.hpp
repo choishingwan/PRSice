@@ -17,13 +17,6 @@
 class SNP
 {
 public:
-#if defined(__LP64__) || defined(_WIN64)
-    typedef uint64_t long_type;
-    long_type ONE = 1LLU;
-#else
-    typedef uint32_t long_type;
-    long_type ONE = 1LU;
-#endif
     SNP();
     SNP(const std::string rs_id, const std::string chr, const int loc,
     		const std::string ref_allele, const std::string alt_allele,
@@ -31,12 +24,11 @@ public:
     virtual ~SNP();
 
 
-
+    // for future me, plink encoding is 00 hom alt, 10 het, 11 hom ref and 01 missing
+    // in binary. So by converting into integer, we've got 0, 2, 3, 1
+    // and we should filter out 1 before anyway
     inline int geno(int geno_in) const
     {
-    		// for future me, plink encoding is 00 hom alt, 10 het, 11 hom ref and 01 missing
-    		// in binary. So by converting into integer, we've got 0, 2, 3, 1
-    		// and we should filter out 1 before anyway
     		int g = (geno_in -1 > 0)? (geno_in -1) : 0;
     		if(!m_flipped) g= 2-g;
     		return g;
@@ -45,7 +37,7 @@ public:
     {
         int g = (geno-1 > 0)? (geno-1) : 0;
         if(!m_flipped) g=2-g;
-        return (g>0)? (0.5*(double)g)*m_stat: g;
+        return (g>0)? ((double)g)*0.5*m_stat: g;
     }
     // location checker
     void set_loc(int loc) { m_loc = loc; };
