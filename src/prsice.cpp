@@ -78,8 +78,11 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 						if (chr_code >= MAX_POSSIBLE_CHROM) {
 							chr_code= PLINK::g_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
 						}
-						std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
-						throw std::runtime_error(error_message);
+						else
+						{
+							std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
+							throw std::runtime_error(error_message);
+						}
 					}
 				}
 				if(chr_code == (uint32_t)PLINK::g_xymt_codes[X_OFFSET] ||
