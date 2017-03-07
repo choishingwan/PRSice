@@ -769,6 +769,12 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 		else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
 
 	}
+	std::ofstream DEBUG;
+	DEBUG.open("DEBUG");
+	for(auto &&check : inclusion){
+		DEBUG << snp_list[check.second].get_rs_id() << "\t" << snp_list[check.second].get_p_value() <<std::endl;
+	}
+	DEBUG.close();
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", inclusion.size());
 }
 
@@ -961,38 +967,46 @@ void PLINK::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_
     {
         zmiss2 = false;
         size_t target_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link.at(i_snp));
-        if(i_snp != core_genotype_index && snp_list[target_snp_index].get_p_value() > ref_p_value)
+        if(i_snp != core_genotype_index &&
+        		(
+        			(snp_list[target_snp_index].get_p_value() > ref_p_value)||
+					(snp_list[target_snp_index].get_p_value()==ref_p_value &&
+							(snp_list[target_snp_index].get_loc() > snp_list[ref_snp_index].get_loc())
+					)
+        			)
+			)
         {
-            // only calculate r2 if more significant
-        	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+        	// if the target is not as significant as the reference SNP or if it is the same significance but with
+        	// appear later in the genome
+        		std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
             std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-        	load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
-        			founder_ctv3, 0, 0, 1, &ulii);
-        	uintptr_t uiptr[3];
-        	uiptr[0] = popcount_longs(ulptr, founder_ctv3);
-        	uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
-        	uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
-        	if (ulii == 3) {
-        		zmiss2 = true;
-        	}
+            load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
+            		founder_ctv3, 0, 0, 1, &ulii);
+            uintptr_t uiptr[3];
+            uiptr[0] = popcount_longs(ulptr, founder_ctv3);
+            uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
+            uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
+            if (ulii == 3) {
+            		zmiss2 = true;
+            }
 
-    		if (nm_fixed) {
-    			two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
-    			if (zmiss2) {
-    				counts[2] = tot1[0] - counts[0] - counts[1];
-    				counts[5] = tot1[1] - counts[3] - counts[4];
-    			}
-    			counts[6] = uiptr[0] - counts[0] - counts[3];
-    			counts[7] = uiptr[1] - counts[1] - counts[4];
-    			counts[8] = uiptr[2] - counts[2] - counts[5];
-    		} else {
-    			two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
-    			if (zmiss2) {
-    				counts[2] = tot1[0] - counts[0] - counts[1];
-    				counts[5] = tot1[1] - counts[3] - counts[4];
-    				counts[8] = tot1[2] - counts[6] - counts[7];
-    			}
-    		}
+            if (nm_fixed) {
+            		two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
+            		if (zmiss2) {
+            			counts[2] = tot1[0] - counts[0] - counts[1];
+            			counts[5] = tot1[1] - counts[3] - counts[4];
+            		}
+            		counts[6] = uiptr[0] - counts[0] - counts[3];
+            		counts[7] = uiptr[1] - counts[1] - counts[4];
+            		counts[8] = uiptr[2] - counts[2] - counts[5];
+            } else {
+            		two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
+            		if (zmiss2) {
+            			counts[2] = tot1[0] - counts[0] - counts[1];
+            			counts[5] = tot1[1] - counts[3] - counts[4];
+            			counts[8] = tot1[2] - counts[6] - counts[7];
+            		}
+            }
     		/*
     		// good thing is that the x1 and x2 must always be the same
     		if (is_x1 || is_x2) {
@@ -1005,34 +1019,33 @@ void PLINK::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_
     		}
     		*/
     		// below, the false are basically is_x1 is_x2
-    		if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
-    		{
-    			r2 = -1;
-    		}
-    		else
-    		{
-    			freq11_expected = freqx1 * freq1x;
-    			dxx = freq11 - freq11_expected;
-    			if (fabs(dxx) < SMALL_EPSILON)
-    			{
-    				r2 = 0.0;
-    			}
-    			else
-    			{
-    				// plink tried to keep the direction here, but use the fabs of r2
-    				// when doing the threshold
-    				//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
-    				r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-    				//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
-    				//dprime = dxx;
-
-    			}
-    		}
-
-    		if(r2 >= r2_threshold)
+            if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
             {
-    			target_index_store.push_back(target_snp_index);
-   	            r2_store.push_back(r2);
+            		r2 = -1;
+            }
+            else
+            {
+            		freq11_expected = freqx1 * freq1x;
+            		dxx = freq11 - freq11_expected;
+            		if (fabs(dxx) < SMALL_EPSILON)
+            		{
+            			r2 = 0.0;
+            		}
+            		else
+            		{
+            			// plink tried to keep the direction here, but use the fabs of r2
+            			// when doing the threshold
+            			//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+            			r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+            			//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
+            			//dprime = dxx;
+
+            		}
+            }
+    			if(r2 >= r2_threshold)
+    			{
+    				target_index_store.push_back(target_snp_index);
+    				r2_store.push_back(r2);
             }
         }
     }

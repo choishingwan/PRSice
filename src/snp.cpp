@@ -148,7 +148,7 @@ std::vector<int> SNP::get_index(const Commander &c_commander, const std::string 
 
 void SNP::clump(boost::ptr_vector<SNP> &snp_list)
 {
-	for(auto target : m_clump_target){
+	for(auto &&target : m_clump_target){
 		if(!snp_list[target].clumped())
 		{
 			int sum_total = 0;
