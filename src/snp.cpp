@@ -160,7 +160,6 @@ void SNP::clump(boost::ptr_vector<SNP> &snp_list)
 						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
 				sum_total+=snp_list[target].m_flags[i_flag];
 			}
-			std::cout << snp_list[target].get_rs_id() << "\t" << sum_total << std::endl;
 			if(sum_total==0)  snp_list[target].set_clumped();
 		}
 	}

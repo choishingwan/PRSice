@@ -1047,7 +1047,6 @@ bool PRSice::get_prs_score(size_t &cur_index, PLINK &score_plink)
 	int prev_index = std::get < +PRS::CATEGORY > (m_partition[cur_index]);
 	int end_index = 0;
 	bool ended = false;
-	std::cerr << "Starting index:" << cur_index << std::endl;
 	for (size_t i = cur_index; i < m_partition.size(); ++i)
 	{
 		if (std::get < +PRS::CATEGORY > (m_partition[i]) != prev_index
