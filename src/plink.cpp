@@ -650,48 +650,54 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 	// the SNP at certain index in the m_snp_list vector
 	// This is cryptic but then, hopefully that should work
 	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
-	std::deque<size_t> clump_snp_index; // Index for SNP within the clumping region
-	size_t snp_id_in_list = std::get<+FILE_INFO::INDEX>(m_snp_link.front());
-	std::string prev_chr= snp_list[snp_id_in_list].get_chr();
+    uintptr_t final_mask = get_final_mask(m_founder_ct);
 
-	std::string prev_file=std::get<+FILE_INFO::FILE>(m_snp_link.front());;
+	size_t snp_id_in_list = std::get<+FILE_INFO::INDEX>(m_snp_link.front());
+	std::string prev_file=std::get<+FILE_INFO::FILE>(m_snp_link.front());
+	std::string prev_chr= snp_list[snp_id_in_list].get_chr();
+	size_t bp_of_core =snp_list[snp_id_in_list].get_loc();
+
+
 	std::string bedname = prev_file+".bed";
 	m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-	size_t bp_of_core =snp_list[snp_id_in_list].get_loc();
-    size_t core_genotype_index=0; //index of the core SNP on our genotype deque
+
+
+	size_t core_genotype_index=0; //index of the core SNP on our genotype deque
     bool require_clump=false; // Whether if the current interval contain the core snp
-    uintptr_t final_mask = get_final_mask(m_founder_ct);
     size_t num_snp = m_snp_link.size();
     size_t progress=0;
+
+    uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
     for(auto &&info : m_snp_link)
 	{
     		size_t cur_snp_index = std::get<+FILE_INFO::INDEX>(info);
     		size_t cur_line_num = std::get<+FILE_INFO::LINE>(info);
     		std::string cur_chr = snp_list[cur_snp_index].get_chr();
     		size_t cur_loc = snp_list[cur_snp_index].get_loc();
-    		if(prev_chr.compare(cur_chr)!=0)
+    		if(prev_chr.empty() || prev_chr.compare(cur_chr)!=0)
     		{
-    			perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+    			perform_clump(snp_list, core_genotype_index, require_clump, p_threshold,
     					r2_threshold, kb_threshold, cur_chr, cur_loc);
     			if(prev_file.empty() || prev_file.compare(std::get<+FILE_INFO::FILE>(info))!=0)
     			{
-				prev_file = std::get<+FILE_INFO::FILE>(info);
-				if (m_bedfile != nullptr)
-				{
-					fclose(m_bedfile);
-					m_bedfile=nullptr;
-				}
-				std::string bed_name = prev_file+".bed";
-				load_bed(bed_name);
-				m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-			}
-			prev_chr = cur_chr;
+    				prev_file = std::get<+FILE_INFO::FILE>(info);
+    				if (m_bedfile != nullptr)
+    				{
+    					fclose(m_bedfile);
+    					m_bedfile=nullptr;
+    				}
+    				std::string bed_name = prev_file+".bed";
+    				load_bed(bed_name);
+    				m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
+    			}
+    			prev_chr = cur_chr;
 		}
         else if((cur_loc-bp_of_core) > kb_threshold)
         {
-			perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+			perform_clump(snp_list, core_genotype_index, require_clump, p_threshold,
 					r2_threshold, kb_threshold, cur_chr, cur_loc);
         }
+    	// Now read in the current SNP
         if (fseeko(m_bedfile, m_bed_offset + (cur_line_num* ((uint64_t)m_unfiltered_sample_ct4))
         		, SEEK_SET))
         {
@@ -701,7 +707,6 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
         //loadbuff is where the genotype will be located
         uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
         std::memset(tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, final_mask,
         		false, m_bedfile, tmp_genotype, genotype))
@@ -710,33 +715,37 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
         }
         // is_haploid is related to chromosome. It is true for sex and mt
 
-        if (std::get<+FILE_INFO::HAPLOID>(info)) {
+        //if (std::get<+FILE_INFO::HAPLOID>(info)) {
         		//haploid_fix(hh_exists, founder_include2, founder_male_include2, m_founder_ct,
         		// std::get<+FILE_INFO::X>(info), std::get<+FILE_INFO::Y>(info), (unsigned char*)genotype);
-        }
+        //}
 
         m_cur_link.push_back(info);
         m_genotype.push_back(genotype);
-        delete [] tmp_genotype;// don't need the temporary now
+        //clump_snp_index.push_back(cur_snp_index); //Index of SNP in SNP List
 
-        clump_snp_index.push_back(cur_snp_index);
         if(!require_clump && snp_list[cur_snp_index].get_p_value() < p_threshold)
-        {
+        { // Set this as the core SNP
         		bp_of_core =snp_list[cur_snp_index].get_loc();
         		core_genotype_index=m_genotype.size()-1; // Should store the index on genotype
         		require_clump= true;
         }
         fprintf(stderr, "\rClumping Progress: %03.2f%%", (double) progress++ / (double) (num_snp) * 100.0);
 	}
-    if(clump_snp_index.size()!=0)
+
+    delete [] tmp_genotype;// don't need the temporary now
+
+    if(m_cur_link.size()!=0)
     {
     	// this make sure this will be the last
-    	perform_clump(clump_snp_index, snp_list, core_genotype_index, require_clump, p_threshold,
+    	perform_clump(snp_list, core_genotype_index, require_clump, p_threshold,
     						r2_threshold, kb_threshold, prev_chr+"_", bp_of_core+2*kb_threshold);
     }
 
 	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
 
+
+	// Below is the actual clumping
 
 	std::unordered_map<std::string, size_t> inclusion_backup = inclusion;
 	inclusion.clear();
@@ -764,26 +773,33 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 }
 
 //uintptr_t*  geno_male for the X stuff
-void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
-		size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
-		size_t kb_threshold, std::string next_chr, size_t next_loc){
-	// The next_chr and next_loc basically = currently start_clump is pointing to this snp
-	if(clump_snp_index.size()==0) return; // got nothing to do
+void PLINK::perform_clump(boost::ptr_vector<SNP> &snp_list, size_t &core_genotype_index,
+		bool &require_clump, double p_threshold, double r2_threshold, size_t kb_threshold,
+		std::string next_chr, size_t next_loc)
+{
+	if(m_cur_link.size()==0) return; // got nothing to do
+	/**
+	 * DON'T MIX UP SNP INDEX AND GENOTYPE INDEX!!!
+	 * SNP INDEX SHOULD ONLY BE USED FOR GETTING THE CHR, LOC AND P-VALUE
+	 */
+	size_t core_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link[core_genotype_index]);
 	std::string core_chr = snp_list[core_snp_index].get_chr();
 	size_t core_loc = snp_list[core_snp_index].get_loc();
-	size_t infinite_guard = 0;
-	size_t max_possible = clump_snp_index.size();
+
+	size_t infinite_guard = 0; // guard against infinite while loop
+	size_t max_possible = m_cur_link.size();
 	while(require_clump && (core_chr.compare(next_chr)!=0 || (next_loc - core_loc) > kb_threshold))
 	{ // as long as we still need to perform clumping
-		clump_thread(core_snp_index, clump_snp_index, snp_list, r2_threshold);
+		clump_thread(core_genotype_index, snp_list, r2_threshold);
 		require_clump = false;
-		for(size_t core_finder = core_snp_index+1; core_finder < clump_snp_index.size(); ++core_finder)
+		for(size_t core_finder = core_genotype_index+1; core_finder < m_cur_link.size(); ++core_finder)
 		{
-			if(snp_list[clump_snp_index[core_finder]].get_p_value() < p_threshold)
+			size_t run_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link[core_finder]);
+			if(snp_list[run_snp_index].get_p_value() < p_threshold)
 			{
-				core_snp_index=core_finder;
-				core_chr = snp_list[core_snp_index].get_chr();
-				core_loc = snp_list[core_snp_index].get_loc();
+				core_genotype_index = core_finder; //update the core genotype index
+				core_chr = snp_list[run_snp_index].get_chr();
+				core_loc = snp_list[run_snp_index].get_loc();
 				require_clump= true;
 				break;
 			}
@@ -792,16 +808,16 @@ void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector
 		if(require_clump)
 		{
 			size_t num_remove = 0;
-			for(size_t remover = 0; remover < core_snp_index; ++remover)
+			for(size_t remover = 0; remover < core_genotype_index; ++remover)
 			{
-				if(core_loc-snp_list[clump_snp_index[remover]].get_loc() > kb_threshold) num_remove++;
+				size_t run_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link[remover]);
+				if(core_loc-snp_list[run_snp_index].get_loc() > kb_threshold) num_remove++;
 				else break;
 			}
 			if(num_remove!=0)
 			{
 				lerase(num_remove);
-				clump_snp_index.erase(clump_snp_index.begin(), clump_snp_index.begin()+num_remove);
-				core_snp_index-=num_remove;
+				core_genotype_index-=num_remove; // only update the index when we remove stuff
 			}
 		}
 		infinite_guard++;
@@ -813,29 +829,28 @@ void PLINK::perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector
 	{ 	// new chromosome
 		// just remove everything
 		lerase(m_genotype.size());
-		clump_snp_index.clear();
 	}
 	else if(!require_clump){
 		//remove anything that is too far ahead
 		size_t num_remove = 0;
-		for(auto &&remover : clump_snp_index)
+
+		for(auto &&remover : m_cur_link)
 		{
-			if(next_loc-snp_list[remover].get_loc()>kb_threshold) num_remove++;
+			if(next_loc-snp_list[std::get<+FILE_INFO::INDEX>(remover)].get_loc()>kb_threshold) num_remove++;
 			else break;
 		}
 		if(num_remove!=0)
 		{
 			lerase(num_remove);
-			clump_snp_index.erase(clump_snp_index.begin(), clump_snp_index.begin()+num_remove);
 		}
 	}
 }
 
-void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
-		boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold)
+void PLINK::clump_thread(const size_t c_core_genotype_index, boost::ptr_vector<SNP> &snp_list,
+		const double c_r2_threshold)
 {
 	// do this without the clumping first
-	size_t wind_size = c_clump_snp_index.size();
+	size_t wind_size = m_cur_link.size();
 	if(wind_size <=1 ) return; // nothing to do
 
 	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
@@ -847,13 +862,13 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
 	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
 	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-	uintptr_t* geno_male = new uintptr_t[3*founder_ctsplit +founder_ctv3];
-	std::memset(geno_male, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+	//uintptr_t* geno_male = new uintptr_t[3*founder_ctsplit +founder_ctv3];
+	//std::memset(geno_male, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
 	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
 	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-	load_and_split3(m_genotype[c_core_index], m_founder_ct,
+	load_and_split3(m_genotype[c_core_genotype_index], m_founder_ct,
 			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
-	bool is_x = std::get<+FILE_INFO::X>(m_cur_link[c_core_index]);
+	//bool is_x = std::get<+FILE_INFO::X>(m_cur_link[c_core_index]);
 
 	delete [] dummy_nm;
 	tot1[0] = popcount_longs(geno1, founder_ctv3);
@@ -861,7 +876,7 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
 	// in theory, std::fill, std::copy should be safer than these mem thing
 	// but as a safety guard from my stupidity, let's just follow plink
-
+	/*
 	if (is_x) {
 		memcpy(geno_male, geno1, founder_ctsplit * sizeof(intptr_t));
 		bitvec_and(m_sex_male, founder_ctv3, geno_male);
@@ -871,7 +886,7 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 		bitvec_and(m_sex_male, founder_ctv3, &(geno_male[2 * founder_ctv3]));
 		tot1[5] = popcount_longs(&(geno_male[2 * founder_ctv3]), founder_ctv3);
 	}
-
+	 */
 	if (ulii == 3)
 	{
 		nm_fixed = true;
@@ -882,12 +897,11 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	{
 		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
 		{
-			if(c_clump_snp_index[i_snp]!=c_core_index)
+			if(i_snp!=c_core_genotype_index)
 			{
 				thread_store.push_back(std::thread(&PLINK::compute_clump, this,
-						c_core_index,i_snp, i_snp+1, std::ref(snp_list),
-						std::cref(c_clump_snp_index), c_r2_threshold,
-						std::ref(geno1), nm_fixed, std::ref(tot1)));
+						c_core_genotype_index,i_snp, i_snp+1, std::ref(snp_list),
+						c_r2_threshold, std::ref(geno1), nm_fixed, std::ref(tot1)));
 			}
 
 		}
@@ -900,8 +914,8 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 		int cur_end = num_snp_per_thread;
 		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
 		{
-			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_index, cur_start,
-					cur_end+(remain>0), std::ref(snp_list), std::cref(c_clump_snp_index),c_r2_threshold,
+			thread_store.push_back(std::thread(&PLINK::compute_clump, this, c_core_genotype_index,
+					cur_start, cur_end+(remain>0), std::ref(snp_list), c_r2_threshold,
 					std::ref(geno1), nm_fixed, std::ref(tot1)));
 			cur_start = cur_end+(remain>0);
 			cur_end+=num_snp_per_thread+(remain>0);
@@ -913,11 +927,11 @@ void PLINK::clump_thread(const size_t c_core_index, const std::deque<size_t> &c_
 	thread_store.clear();
 
 	delete [] geno1;
-	delete [] geno_male;
+	//delete [] geno_male;
 }
 
-void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
-		const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
+void PLINK::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end,
+		boost::ptr_vector<SNP> &snp_list, const double r2_threshold, uintptr_t* geno1,
 		bool nm_fixed, uint32_t* tot1)
 {
 	uintptr_t* loadbuf;
@@ -936,9 +950,9 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
 	double r2 =0.0;
 	bool zmiss2=false;
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	size_t max_size = clump_snp_index.size();
-    size_t ref_index = clump_snp_index.at(core_snp_index);
-    double ref_p_value = snp_list.at(ref_index).get_p_value();
+	size_t max_size = m_cur_link.size();
+    size_t ref_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link.at(core_genotype_index));
+    double ref_p_value = snp_list.at(ref_snp_index).get_p_value();
     std::vector<double> r2_store;
     std::vector<size_t> target_index_store; // index we want to push into the current index
 	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
@@ -946,8 +960,8 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
     for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
     {
         zmiss2 = false;
-        size_t target_index = clump_snp_index[i_snp];
-        if(i_snp != core_snp_index && snp_list[target_index].get_p_value() > ref_p_value)
+        size_t target_snp_index = std::get<+FILE_INFO::INDEX>(m_cur_link.at(i_snp));
+        if(i_snp != core_genotype_index && snp_list[target_snp_index].get_p_value() > ref_p_value)
         {
             // only calculate r2 if more significant
         	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
@@ -1005,17 +1019,19 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
     			}
     			else
     			{
-    				r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+    				// plink tried to keep the direction here, but use the fabs of r2
+    				// when doing the threshold
+    				//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
+    				r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
     				//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
     				//dprime = dxx;
 
     			}
     		}
-    		//std::cout << snp_list[ref_index].get_rs_id() << "\t" <<
-    		//		snp_list[target_index].get_rs_id() << "\t" << r2<< std::endl;
+
     		if(r2 >= r2_threshold)
             {
-    				target_index_store.push_back(target_index);
+    			target_index_store.push_back(target_snp_index);
    	            r2_store.push_back(r2);
             }
         }
@@ -1023,8 +1039,8 @@ void PLINK::compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, 
     delete [] ulptr;
 	delete [] dummy_nm;
     PLINK::clump_mtx.lock();
-    snp_list[ref_index].add_clump(target_index_store);
-    snp_list[ref_index].add_clump_r2(r2_store);
+    snp_list[ref_snp_index].add_clump(target_index_store);
+    snp_list[ref_snp_index].add_clump_r2(r2_store);
     PLINK::clump_mtx.unlock();
 }
 

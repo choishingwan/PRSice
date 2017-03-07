@@ -71,13 +71,18 @@ private:
 	int32_t load_bed();
 	int32_t load_bed(const std::string &bedname);
 	void lerase(int num);
-	void perform_clump(std::deque<size_t> &clump_snp_index, boost::ptr_vector<SNP> &snp_list,
-			size_t &core_snp_index, bool &require_clump, double p_threshold, double r2_threshold,
+	void perform_clump(boost::ptr_vector<SNP> &snp_list,
+			size_t &core_genotype_index, bool &require_clump, double p_threshold, double r2_threshold,
 			size_t kb_threshold, std::string next_chr, size_t next_loc);
 	size_t m_thread=1;
-	void clump_thread(const size_t c_core_index, const std::deque<size_t> &c_clump_snp_index,
-			boost::ptr_vector<SNP> &snp_list, const double c_r2_threshold);
-	static std::vector<std::string> g_chr_list;
+	void clump_thread(const size_t c_core_index, boost::ptr_vector<SNP> &snp_list,
+			const double c_r2_threshold);
+	void compute_clump( size_t core_snp_index, size_t i_start, size_t i_end,
+			boost::ptr_vector<SNP> &snp_list, const double r2_threshold, uintptr_t* geno1,
+			bool nm_fixed, uint32_t* tot1);
+
+
+static std::vector<std::string> g_chr_list;
 	FILE* m_bedfile = nullptr;
 	std::vector<std::string> m_prefix;
 	std::vector<snp_link> m_snp_link;
@@ -114,10 +119,7 @@ private:
 			uint32_t is_zmiss2);
 	void two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3,
 			uint32_t sample_ctv3, uint32_t is_zmiss2);
-	void compute_clump( size_t core_snp_index, size_t i_start, size_t i_end, boost::ptr_vector<SNP> &snp_list,
-			const std::deque<size_t> &clump_snp_index, const double r2_threshold, uintptr_t* geno1,
-			bool nm_fixed, uint32_t* tot1);
-#ifdef __LP64__
+	#ifdef __LP64__
 	void two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2, uint32_t* counts_3x3, uint32_t sample_ctv6,
 			uint32_t iter_ct);
 
