@@ -203,7 +203,7 @@ void PRSice::get_snp(const Commander &c_commander, Region &region) {
 			std::string error_message = "WARNING: Duplicated SNP ID: " + rs;
 			throw std::runtime_error(error_message);
 		}
-		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0)
+		if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0) // if we have chr and bp information
 		{
 			m_snp_list[i_snp].set_flag( region.check(cur_chr, m_snp_list[i_snp].get_loc()));
 		}
@@ -1053,8 +1053,6 @@ bool PRSice::get_prs_score(size_t &cur_index, PLINK &score_plink)
 		if (std::get < +PRS::CATEGORY > (m_partition[i]) != prev_index
 				&& std::get < +PRS::CATEGORY > (m_partition[i]) >= 0)
 		{
-			std::cerr << "Not same category: " << std::get < +PRS::CATEGORY > (m_partition[i]) << "\t"
-					<< prev_index << std::endl;
 			end_index = i;
 			ended = true;
 			break;
@@ -1067,12 +1065,8 @@ bool PRSice::get_prs_score(size_t &cur_index, PLINK &score_plink)
 		for (size_t i_region = 0; i_region < m_region_size; ++i_region)
 		{
 			if (m_snp_list[std::get < +PRS::INDEX > (m_partition[i])].in( i_region)) m_num_snp_included[i_region]++;
-			else if(i_region==0){
-				std::cerr << "Problem: " << m_snp_list[std::get<+PRS::INDEX>(m_partition[i])].get_rs_id() << std::endl;
-			}
 		}
 	}
-	std::cerr << "Get PRS size: "<< m_num_snp_included[0] << "\t" << m_partition.size() << std::endl;
 	if (!ended) end_index = m_partition.size();
 	score_plink.get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_score);
 
