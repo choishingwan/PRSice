@@ -19,17 +19,22 @@ std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input)
     std::iota(idx.begin(), idx.end(),0);
     std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2)
     {
+    	// plink do it with respect to the location instead of statistic
         if(input[i1].m_p_value==input[i2].m_p_value)
         {
-            if(fabs(input[i1].m_stat)==fabs(input[i2].m_stat))
-            {
-                if(input[i1].m_chr.compare(input[i2].m_chr)==0)
-                {
-                    return input[i1].m_loc < input[i2].m_loc;
-                }
-                else return input[i1].m_chr.compare(input[i2].m_chr)<0;
-            }
-            else return fabs(input[i1].m_stat) > fabs(input[2].m_stat);
+        	if(input[i1].m_chr.compare(input[i2].m_chr)==0)
+        	{
+        		if(input[i1].m_loc == input[i2].m_loc)
+        		{
+        			if(fabs(input[i1].m_stat)==fabs(input[i2].m_stat))
+        			{
+        				return input[i1].m_se < input[i2].m_se;
+        			}
+        			else return fabs(input[i1].m_stat) > fabs(input[2].m_stat);
+        		}
+        		else return input[i1].m_loc < input[i2].m_loc;
+        	}
+			else return input[i1].m_chr.compare(input[i2].m_chr)<0;
         }
         else return input[i1].m_p_value < input[i2].m_p_value;
     });
