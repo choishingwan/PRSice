@@ -572,9 +572,12 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         uii = 0;
         std::vector<size_t> missing_samples;
         double stat = snp_list[snp_index].get_stat();
+        bool flipped = snp_list[snp_index].flipped();
         std::vector<double> genotypes(m_unfiltered_sample_ct);
         int total_num = 0;
     	uint32_t sample_idx=0;
+    	int nmiss = 0;
+    	// This whole thing is wrong...
         do {
         	ulii = ~(*lbptr++);
         	if (uii + BITCT2 > m_unfiltered_sample_ct) {
@@ -587,13 +590,14 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         		if(ukk==1 || ukk==3) // Because 01 is coded as missing
         		{
         			// 3 is homo alternative
-        			int flipped_geno = snp_list[snp_index].geno(ukk);
-        			total_num+=flipped_geno;
-        			genotypes[sample_idx] = flipped_geno;
+        			//int flipped_geno = snp_list[snp_index].geno(ukk);
+        			total_num+=(ukk==3)? 2: ukk;
+        			genotypes[sample_idx] = (ukk==3)? 2: ukk;
         		}
         		else // this should be 2
         		{
         			missing_samples.push_back(sample_idx);
+        			nmiss++;
         		}
         		ulii &= ~((3 * ONELU) << ujj);
         	}
@@ -602,7 +606,9 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 
 
         size_t i_missing = 0;
-        double center_score = stat*((double)total_num/((double)m_unfiltered_sample_ct*2.0));
+        double maf = ((double)total_num/((double)((int)m_unfiltered_sample_ct-nmiss)*2.0)); // MAF does not count missing
+        if(flipped) maf = 1.0-maf;
+        double center_score = stat*maf;
         size_t num_miss = missing_samples.size();
         for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
         {
@@ -631,7 +637,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         					// if centering, we want to keep missing at 0
         					std::get<+PRS::PRS>(prs_score[i_region][i_sample]) -= center_score;
         				}
-        				std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += genotypes[i_sample]*stat*0.5;
+        				std::get<+PRS::PRS>(prs_score[i_region][i_sample]) += ((flipped)?fabs(genotypes[i_sample]-2):genotypes[i_sample])*stat*0.5;
         				std::get<+PRS::NNMISS>(prs_score[i_region][i_sample]) ++;
         			}
         		}
@@ -645,6 +651,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list, double p_threshold, double r2_threshold,
 		size_t kb_threshold, double proxy_threshold){
 	assert(m_snp_link.size()!=0);
+	if(m_snp_link.size() <= 1) return; // Can't perfrom clumping with only 1 SNP
 	// KEY CONCEPT: PLINK is the king here, the snp_link follows PLINK's read order
 	// The m_snp_link vector should contain the bim file name and the line number for
 	// the SNP at certain index in the m_snp_list vector
@@ -769,12 +776,6 @@ void PLINK::start_clumping(catelog& inclusion, boost::ptr_vector<SNP> &snp_list,
 		else if(snp_list[i_snp].get_p_value() >= p_threshold) break;
 
 	}
-	std::ofstream DEBUG;
-	DEBUG.open("DEBUG");
-	for(auto &&check : inclusion){
-		DEBUG << snp_list[check.second].get_rs_id() << "\t" << snp_list[check.second].get_p_value() <<std::endl;
-	}
-	DEBUG.close();
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", inclusion.size());
 }
 
