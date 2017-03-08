@@ -978,7 +978,7 @@ void PLINK::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_
         {
         	// if the target is not as significant as the reference SNP or if it is the same significance but with
         	// appear later in the genome
-        		std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
+        	std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
             std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
             load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
             		founder_ctv3, 0, 0, 1, &ulii);
@@ -1042,8 +1042,8 @@ void PLINK::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_
 
             		}
             }
-    			if(r2 >= r2_threshold)
-    			{
+            if(r2 >= r2_threshold)
+            {
     				target_index_store.push_back(target_snp_index);
     				r2_store.push_back(r2);
             }

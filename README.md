@@ -62,3 +62,7 @@ Jack Euesden  Cathryn M. Lewis  Paul F. O’Reilly (2015) PRSice: Polygenic Risk
 As PRSice is heavily rely on PLINK, please also cite:
 
 Chang CC, Chow CC, Tellier LCAM, Vattikuti S, Purcell SM, Lee JJ (2015) Second-generation PLINK: rising to the challenge of larger and richer datasets. GigaScience, 4.
+
+
+### Note to Self
+PLINK PRS range is inclusive. e.g. 0 - 0.5 includes also SNPs with p-value of 0 and 0.5
