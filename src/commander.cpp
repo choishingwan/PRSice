@@ -220,6 +220,7 @@ bool Commander::initialize(int argc, char *argv[])
             {
                 std::vector<std::string> token = misc::split(optarg, ", ");
                 for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
+                m_beta_provided=true;
             }
             else if(command.compare("no-regression")==0) m_no_regress = true;
             else if(command.compare("fastscore")==0) m_fastscore = true;
