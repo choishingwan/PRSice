@@ -319,10 +319,10 @@ void Region::process_msigdb(const std::string &msigdb,
                     					}
                     				}
                     			}
-                    			else
-                    			{
-                            		current_region.push_back(gtf_info.at(gene));
-                    			}
+                    		}
+                    		else
+                    		{
+                    			current_region.push_back(gtf_info.at(gene));
                     		}
                     }
                     std::sort(begin(current_region), end(current_region),
