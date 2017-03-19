@@ -1212,12 +1212,12 @@ uint32_t PLINK::em_phase_hethet(double known11, double known12, double known21, 
 			while (sol_end_idx && (solutions[sol_end_idx - 1] > half_hethet_share + SMALLISH_EPSILON))
 			{
 				sol_end_idx--;
-				assert(sol_end_idx && sol_end_idx-1 >= 0);
+				//assert(sol_end_idx && sol_end_idx-1 >= 0);
 			}
 			while ((sol_start_idx < sol_end_idx) && (solutions[sol_start_idx] < -SMALLISH_EPSILON))
 			{
 				sol_start_idx++;
-				assert((sol_start_idx < sol_end_idx) &&sol_start_idx < 3);
+				//assert((sol_start_idx < sol_end_idx) &&sol_start_idx < 3);
 			}
 			if (sol_start_idx == sol_end_idx)
 			{
