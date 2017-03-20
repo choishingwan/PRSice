@@ -381,6 +381,7 @@ std::vector<long_type> Region::check(std::string chr, size_t loc)
         if(i_region==0)
         {
             res[0] |= ONE;
+            m_region_snp_count[0]++;
         }
         else
         {
