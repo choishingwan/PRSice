@@ -134,7 +134,8 @@ void Region::process_bed(const std::vector<std::string> &bed)
 							else return std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))<0;
 						}
 					);
-				m_region_list.push_back(current_region);m_region_name.push_back(b);
+				m_region_list.push_back(current_region);
+				m_region_name.push_back(b);
 				m_duplicated_names.insert(b);
 			}
             bed_file.close();
@@ -300,30 +301,30 @@ void Region::process_msigdb(const std::string &msigdb,
                     fprintf(stderr, "Each line require at least 2 information\n");
                     fprintf(stderr, "%s\n", line.c_str());
                 }
-                else
+                else if(m_duplicated_names.find(token[0])==m_duplicated_names.end())
                 {
                     std::string name = token[0];
                     std::vector<boundary> current_region;
                     for(auto &gene: token)
                     {
-                    		if(gtf_info.find(gene)==gtf_info.end())
+                    	if(gtf_info.find(gene)==gtf_info.end())
+                    	{
+                    		if(id_to_name.find(gene)!= id_to_name.end())
                     		{
-                    			if(id_to_name.find(gene)!= id_to_name.end())
+                    			auto name = id_to_name.at(gene);
+                    			for(auto &translate: name)
                     			{
-                    				auto name = id_to_name.at(gene);
-                    				for(auto &translate: name)
+                    				if(gtf_info.find(translate) != gtf_info.end())
                     				{
-                    					if(gtf_info.find(translate) != gtf_info.end())
-                    					{
-                    						current_region.push_back(gtf_info.at(translate));
-                    					}
+                    					current_region.push_back(gtf_info.at(translate));
                     				}
                     			}
                     		}
-                    		else
-                    		{
-                    			current_region.push_back(gtf_info.at(gene));
-                    		}
+                    	}
+                    	else
+                    	{
+                    		current_region.push_back(gtf_info.at(gene));
+                    	}
                     }
                     std::sort(begin(current_region), end(current_region),
                     		[](boundary const &t1, boundary const &t2)
@@ -337,10 +338,19 @@ void Region::process_msigdb(const std::string &msigdb,
                         			else return std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))<0;
 							}
                     );
+
+    				m_region_list.push_back(current_region);
+    				m_region_name.push_back(name);
+    				m_duplicated_names.insert(name);
+                }
+                else if(m_duplicated_names.find(token[0])!=m_duplicated_names.end())
+                {
+                	fprintf(stderr, "Duplicated Set: %s. It will be ignored\n", token[0].c_str());
                 }
             }
         }
         input.close();
+
     }
 }
 
