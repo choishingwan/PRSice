@@ -531,7 +531,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 		}
 	}
 
-	std::vector<bool> in_region;
+	std::vector<bool> in_region(num_region);
 	// index is w.r.t. partition, which contain all the information
 	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
     uintptr_t* tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
@@ -551,7 +551,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
 
     		for(size_t i_region = 0; i_region <num_region; ++i_region)
     		{
-    			in_region.push_back(snp_list[snp_index].in(i_region));
+    			in_region[i_region]=snp_list[snp_index].in(i_region);
     		}
     		size_t cur_line = std::get<+PRS::LINE>(partition[i_snp]);
     		if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
@@ -615,7 +615,7 @@ void PLINK::get_score(const std::vector<p_partition> &partition,
         	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
         	{
 
-        		for(size_t i_region; i_region < num_region; ++i_region)
+        		for(size_t i_region=0; i_region < num_region; ++i_region)
         		{
 
         			if(in_region[i_region])

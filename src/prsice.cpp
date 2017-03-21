@@ -1241,7 +1241,8 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 			prsice_out << std::get < +PRS::THRESHOLD > (prs) << "\t"
 					<< std::get < +PRS::R2 > (prs) - m_null_r2 << "\t"
 					<< std::get < +PRS::P > (prs) << "\t"
-					<< std::get < +PRS::COEFF > (prs) << "\t" << std::get < +PRS::NSNP > (prs);
+					<< std::get < +PRS::COEFF > (prs) << "\t"
+					<< std::get < +PRS::NSNP > (prs);
 			if (perm) prsice_out << "\t" << (double) (std::get < +PRS::EMPIRICAL_P > (prs) + 1.0) / (double) (total_perm + 1.0);
 			prsice_out << std::endl;
 		}
@@ -1308,8 +1309,8 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 					<< std::get < +PRS::COEFF > (best_region) << "\t"
 					<< std::get < +PRS::P> (best_region) << "\t"
 					<< std::get < +PRS::NSNP> (best_region);
-			if(perm) region_out << (double) (std::get < +PRS::EMPIRICAL_P > (best_region) + 1.0) / (double) (total_perm + 1.0);
-			region_out << std::get < +PRS::NSNP> (best_region) << std::endl;
+			if(perm) region_out << "\t" << (double) (std::get < +PRS::EMPIRICAL_P > (best_region) + 1.0) / (double) (total_perm + 1.0);
+			region_out << std::endl;
 			i_region++;
 		}
 		region_out.close();
