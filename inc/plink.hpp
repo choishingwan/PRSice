@@ -8,6 +8,7 @@
 #ifndef PLINK_HPP_
 #define PLINK_HPP_
 
+// need to reconfigurate the plink class such that it becomes the parent class
 #include <stdexcept>
 #include <stdio.h>
 #include <mutex>

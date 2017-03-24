@@ -1334,8 +1334,8 @@ uint32_t PLINK::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1, uint32_
 		if (is_x1 && is_x2) {
 			known11 -= (double)((int32_t)counts[9]);
 			known12 -= (double)((int32_t)counts[11]);
-      	  known21 -= (double)((int32_t)counts[15]);
-      	  known22 -= (double)((int32_t)counts[17]);
+			known21 -= (double)((int32_t)counts[15]);
+			known22 -= (double)((int32_t)counts[17]);
 		} else if (is_x1) {
 			known11 -= ((double)(2 * counts[9] + counts[10])) * (1.0 - SQRT_HALF);
 			known12 -= ((double)(2 * counts[11] + counts[10])) * (1.0 - SQRT_HALF);
