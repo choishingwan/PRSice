@@ -105,7 +105,7 @@ bool Commander::initialize(int argc, char *argv[])
             	}
             	species_set=true;
             	m_num_auto = 29;
-            	no_xy=true;
+            	m_no_xy=true;
             }
             else if(command.compare("dog")==0){
             	if(species_set)
@@ -125,10 +125,10 @@ bool Commander::initialize(int argc, char *argv[])
             	species_set=true;
             	m_num_auto = 31;
             	m_no_xy=true;
-            	no_mt=true;
+            	m_no_mt=true;
             }
             else if(command.compare("mouse")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");
@@ -139,7 +139,7 @@ bool Commander::initialize(int argc, char *argv[])
             	m_no_mt=true;
             }
             else if(command.compare("rice")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");
@@ -148,7 +148,7 @@ bool Commander::initialize(int argc, char *argv[])
             	m_num_auto = -12;
             }
             else if(command.compare("sheep")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");

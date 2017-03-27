@@ -35,6 +35,7 @@
 	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
 	enum class BIM{CHR, RS, CM, BP, A1, A2};
     enum class FILE_INFO { FILE, LINE, INDEX, HAPLOID, X, Y  }; // This is for clumping in PLINK
+    enum class EXIST_SNP{CHR, REF, ALT, BP, FILE, LINE, INCLUDED};
     enum class PRS{FID=0, IID, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2,
     	NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
     enum class BOUNDARY{CHR, START, END};
@@ -43,6 +44,7 @@
     enum class SCORING{MEAN_IMPUTE, SET_ZERO, CENTER};
     enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
     template<> struct enumeration_traits< BOUNDARY > : enumeration_trait_indexing {};
+    template<> struct enumeration_traits< EXIST_SNP > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< GTF > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
@@ -62,6 +64,7 @@
     typedef std::tuple<std::string, char, std::string, std::string> help;
     typedef std::tuple<std::string, size_t, size_t> boundary;
     typedef std::tuple<std::string, int, size_t, bool, bool, bool> snp_link;
+    typedef std::tuple<std::string, std::string, std::string, size_t, std::string, size_t, bool> existed_snp_info;
 
 
 #if defined(__LP64__) || defined(_WIN64)

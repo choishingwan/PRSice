@@ -13,7 +13,10 @@
 #include <vector>
 #include <fstream>
 #include <unordered_map>
+#include <cstring>
 #include "plink_common.hpp"
+#include "misc.hpp"
+#include "storage.hpp"
 
 class Genotype {
 public:
@@ -21,18 +24,6 @@ public:
 			const size_t thread=1, bool verbose=false);
 	virtual ~Genotype();
 protected:
-	struct SNP{
-		inline SNP(std::string chr, size_t loc, std::string ref, std::string alt, std::string file,
-				size_t line, bool include): chr(chr), ref(ref), alt(alt), loc(loc), file(file),
-						line(line), include(include);
-		std::string chr;
-		std::string ref;
-		std::string alt;
-		size_t loc;
-		std::string file;
-		size_t line;
-		bool include;
-	};
 
 	void set_genotype_files(std::string prefix);
 	std::vector<std::string> m_genotype_files;
@@ -45,7 +36,7 @@ protected:
 	uintptr_t* m_haploid_mask;
 
 
-	virtual void load_sample();
+	virtual void load_sample(){};
 	uintptr_t* m_founder_info = nullptr;
 	uintptr_t* m_sex_male = nullptr;
 	uintptr_t* m_sample_exclude = nullptr;
@@ -57,18 +48,19 @@ protected:
 	uintptr_t m_unfiltered_sample_ctl = 0;
 	uintptr_t m_unfiltered_sample_ct4 = 0;
 
-	virtual void load_snps();
+	virtual void load_snps(){};
 	uintptr_t m_unfiltered_marker_ct = 0;
 	uintptr_t m_unfiltered_marker_ctl = 0;
 	uintptr_t m_marker_ct = 0;
 	uintptr_t m_marker_exclude_ct = 0;
 	uintptr_t* m_marker_exclude = nullptr;
-	std::unordered_map<std::string, SNP> m_existed_snps;
+	std::unordered_map<std::string, existed_snp_info> m_existed_snps;
 
-	virtual void read_genotype();
+	virtual void read_genotype(){};
 	//hh_exists
 
-
+	void update_existed(const Genotype &reference);
+	void update_existed(const std::unordered_map<std::string, int> &reference);
 };
 
 class Plink: public Genotype{
@@ -89,6 +81,8 @@ private:
 	uintptr_t m_bed_offset = 3;
 	void load_sample();
 	void load_snps();
+	void load_bed();
+	FILE* m_bedfile = nullptr;
 };
 
 
@@ -97,16 +91,16 @@ class GenomeFactory {
 	 std::unique_ptr<BinaryPlink> createBinaryPlink(std::string prefix, int num_auto=22, bool x=true,
 			 bool y=true, bool xy=true, bool mt=true, const size_t thread=1, bool verbose=false)
 	 {
-		 return std::unique_ptr<BinaryPlink>(new BinaryPlink(prefix, num_auto, x, y, xy, mt
+		 return std::unique_ptr<BinaryPlink>(new BinaryPlink(prefix, num_auto, x, y, xy, mt,
 				 thread, verbose));
 	 };
 
 	 std::unique_ptr<Plink> createPlink(std::string prefix, int num_auto=22, bool x=true,
 			 bool y=true, bool xy=true, bool mt=true, const size_t thread=1, bool verbose=false)
 	{
-		 return std::unique_ptr<Plink>(new BinaryPlink(prefix, num_auto, x, y, xy, mt,
+		 return std::unique_ptr<Plink>(new Plink(prefix, num_auto, x, y, xy, mt,
 				 thread, verbose));
-	}
+	};
 
 };
 

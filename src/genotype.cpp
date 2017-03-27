@@ -98,11 +98,34 @@ Genotype::Genotype(std::string prefix, int num_auto,
 
 Genotype::~Genotype() {
 	// TODO Auto-generated destructor stub
-	if(!m_founder_info==nullptr) delete [] m_founder_info;
-	if(!m_sex_male == nullptr) delete [] m_sex_male;
-	if(!m_sample_exclude == nullptr) delete [] m_sample_exclude;
-	if(!m_marker_exclude == nullptr) delete [] m_marker_exclude;
-	if(!m_haploid_mask == nullptr) delete [] m_haploid_mask;
+	if(m_founder_info!=nullptr) delete [] m_founder_info;
+	if(m_sex_male != nullptr) delete [] m_sex_male;
+	if(m_sample_exclude != nullptr) delete [] m_sample_exclude;
+	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
+	if(m_haploid_mask != nullptr) delete [] m_haploid_mask;
 }
 
+
+
+void Genotype::update_existed(const Genotype &reference)
+{
+	for(auto &&snp : m_existed_snps)
+	{
+		if(reference.m_existed_snps.find(snp.first)==reference.m_existed_snps.end())
+		{
+			std::get<+EXIST_SNP::INCLUDED>(snp.second)=false;
+		}
+	}
+}
+
+void Genotype::update_existed(const std::unordered_map<std::string, int> &reference)
+{
+	for(auto &&snp : m_existed_snps)
+	{
+		if(reference.find(snp.first)==reference.end())
+		{
+			std::get<+EXIST_SNP::INCLUDED>(snp.second)=false;
+		}
+	}
+}
 
