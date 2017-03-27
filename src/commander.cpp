@@ -71,6 +71,7 @@ bool Commander::initialize(int argc, char *argv[])
     std::string command ="";
     opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string error_message = "";
+    bool species_set = false;
     //Start reading all the parameters and perform the qc at the same time
     while(opt!=-1)
     {
@@ -97,28 +98,34 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("score")==0) m_missing_score = optarg;
             else if(command.compare("print-snp")==0) m_print_snp = true;
             else if(command.compare("cow")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_COW;
+            	species_set=true;
+            	m_num_auto = 29;
+            	no_xy=true;
             }
             else if(command.compare("dog")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_DOG;
+            	species_set=true;
+            	m_num_auto = 38;
             }
             else if(command.compare("horse")==0){
-            	if(m_species!=SPECIES_DEFAULT)
+            	if(species_set)
             	{
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_HORSE;
+            	species_set=true;
+            	m_num_auto = 31;
+            	m_no_xy=true;
+            	no_mt=true;
             }
             else if(command.compare("mouse")==0){
             	if(m_species!=SPECIES_DEFAULT)
@@ -126,7 +133,10 @@ bool Commander::initialize(int argc, char *argv[])
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_MOUSE;
+            	species_set=true;
+            	m_num_auto = 19;
+            	m_no_xy=true;
+            	m_no_mt=true;
             }
             else if(command.compare("rice")==0){
             	if(m_species!=SPECIES_DEFAULT)
@@ -134,7 +144,8 @@ bool Commander::initialize(int argc, char *argv[])
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_RICE;
+            	species_set=true;
+            	m_num_auto = -12;
             }
             else if(command.compare("sheep")==0){
             	if(m_species!=SPECIES_DEFAULT)
@@ -142,7 +153,10 @@ bool Commander::initialize(int argc, char *argv[])
             		error = true;
             		error_message.append("Can only specify one species\n");
             	}
-            	m_species =SPECIES_COW;
+            	species_set=true;
+            	m_num_auto = 26;
+            	m_no_xy=true;
+            	m_no_mt=true;
             }
             else if(command.compare("clump-p")==0)
             {
@@ -568,7 +582,11 @@ Commander::Commander()
     m_print_all = false;
     m_print_snp = false;
     m_ignore_fid = false;
-    m_species = SPECIES_DEFAULT;
+    m_num_auto = 22;
+    m_no_x=false;
+    m_no_y=false;
+    m_no_xy=false;
+    m_no_mt=false;
 }
 
 Commander::~Commander()

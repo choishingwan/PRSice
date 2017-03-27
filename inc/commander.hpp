@@ -16,15 +16,6 @@ class Commander
 {
 public:
 	// so that we don't need to include plink_common.hpp here
-#define SPECIES_HUMAN 0
-#define SPECIES_COW 1
-#define SPECIES_DOG 2
-#define SPECIES_HORSE 3
-#define SPECIES_MOUSE 4
-#define SPECIES_RICE 5
-#define SPECIES_SHEEP 6
-#define SPECIES_UNKNOWN 7
-#define SPECIES_DEFAULT SPECIES_HUMAN
     Commander();
     virtual ~Commander();
     bool initialize(int argc, char *argv[]);
@@ -139,6 +130,10 @@ private:
     bool m_no_clump;
     bool m_print_snp;
     bool m_ignore_fid;
+    bool m_no_x;
+    bool m_no_y;
+    bool m_no_xy;
+    bool m_no_mt;
     double m_proxy;
     double m_clump;
     double m_clump_r2;
@@ -148,6 +143,7 @@ private:
     double m_upper;
     double m_inter;
     int m_prslice_size;
+    int m_num_auto;
     size_t m_thread;
     uint32_t m_species;
     std::vector<help> m_help_messages;
