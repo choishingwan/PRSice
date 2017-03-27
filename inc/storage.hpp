@@ -64,7 +64,7 @@
     typedef std::tuple<std::string, char, std::string, std::string> help;
     typedef std::tuple<std::string, size_t, size_t> boundary;
     typedef std::tuple<std::string, int, size_t, bool, bool, bool> snp_link;
-    typedef std::tuple<std::string, std::string, std::string, size_t, std::string, size_t, bool> existed_snp_info;
+    typedef std::tuple<int32_t, std::string, std::string, size_t, std::string, size_t, bool> existed_snp_info;
 
 
 #if defined(__LP64__) || defined(_WIN64)

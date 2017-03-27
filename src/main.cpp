@@ -7,6 +7,7 @@
 #include "commander.hpp"
 #include "prsice.hpp"
 #include "region.hpp"
+#include "genotype.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -32,6 +33,25 @@ int main(int argc, char *argv[])
 		std::cerr << error.what() << std::endl;
 		exit(-1);
 	}
+	GenomeFactory factory;
+	// change the factory according to the file type
+	// to get the file type, we might want to revemp the commander class
+	// such that we can have a more elegant handling of the files.
+	std::unique_ptr<Genotype> target_file =  factory.createBinaryPlink(commander.get_target(), commander.num_auto(),
+			commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+			commander.get_thread(), true);
+	std::unique_ptr<Genotype> ld_file;
+	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.get_target())!=0){
+		ld_file = factory.createBinaryPlink(commander.ld_prefix(), commander.num_auto(),
+				commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+				commander.get_thread(), true);
+	}
+	if(ld_file!=nullptr)
+	{
+		target_file->update_existed(*ld_file);
+		ld_file->update_existed(*target_file);
+	}
+
 
 	std::vector < std::string > base = commander.get_base();
 	// Might want to generate a log file?

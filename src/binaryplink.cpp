@@ -1,10 +1,11 @@
 #include "genotype.hpp"
 
 
-BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool x, bool y, bool xy, bool mt,
-		const size_t thread, bool verbose):Genotype(prefix,num_auto, x, y, xy, mt, thread, verbose)
+BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
+		const size_t thread, bool verbose):
+		Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 {
-
+	load_bed();
 }
 
 void BinaryPlink::load_sample()
@@ -136,6 +137,7 @@ void BinaryPlink::load_snps()
 	}
 	size_t marker_uidx=0;
 	bool chr_error=false;
+	m_existed_snps.resize(m_unfiltered_marker_ct);
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -187,14 +189,21 @@ void BinaryPlink::load_snps()
 						size_t loc = temp;
 						// better way is to use struct. But for some reason that doesn't work
 						existed_snp_info cur_info;
-						std::get<+EXIST_SNP::CHR>(cur_info) = token[+BIM::CHR];
+						/*
+						std::transform(token[+BIM::A1].begin(), token[+BIM::A1].end(),
+								token[+BIM::A1].begin(), [](unsigned char c) { return std::toupper(c); });
+						std::transform(token[+BIM::A2].begin(), token[+BIM::A2].end(),
+								token[+BIM::A2].begin(), [](unsigned char c) { return std::toupper(c); });
+						*/
+						std::get<+EXIST_SNP::CHR>(cur_info) = chr_code;
 						std::get<+EXIST_SNP::REF>(cur_info) = token[+BIM::A1];
 						std::get<+EXIST_SNP::ALT>(cur_info) = token[+BIM::A2];
 						std::get<+EXIST_SNP::BP>(cur_info) = loc;
 						std::get<+EXIST_SNP::FILE>(cur_info) = prefix;
 						std::get<+EXIST_SNP::LINE>(cur_info) = num_line;
-						std::get<+EXIST_SNP::INCLUDED>(cur_info) = true;
-						m_existed_snps[token[+BIM::RS]] = cur_info;
+						std::get<+EXIST_SNP::INCLUDED>(cur_info) = !(ambiguous(token[+BIM::A1], token[+BIM::A2]) || ambiguous(token[+BIM::A2], token[+BIM::A1]));
+						m_existed_snps[marker_uidx] = cur_info;
+						m_existed_snps_index[token[+BIM::RS]] = marker_uidx;
 					}
 				}
 			}

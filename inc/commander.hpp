@@ -21,6 +21,10 @@ public:
     bool initialize(int argc, char *argv[]);
     bool index() const { return m_index; };
     bool print_snp() const { return m_print_snp; };
+    bool no_x() const { return m_no_x; };
+    bool no_y() const { return m_no_y; };
+    bool no_xy() const { return m_no_xy; };
+    bool no_mt() const { return m_no_mt; };
     std::string chr() const { return m_chr; };
     std::string ref() const { return m_ref_allele; };
     std::string alt() const { return m_alt_allele; };
@@ -54,6 +58,7 @@ public:
     double get_bar_upper() const { return *max_element(m_barlevel.begin(), m_barlevel.end()); };
     double get_bar_lower() const { return *min_element(m_barlevel.begin(), m_barlevel.end()); };
     int prslice() const { return m_prslice_size; };
+    int num_auto() const { return m_num_auto; };
     int get_category(double p) const
     {
         for(int i = 0; i < m_barlevel.size(); ++i)

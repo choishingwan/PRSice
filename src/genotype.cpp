@@ -7,7 +7,7 @@
 
 #include "genotype.hpp"
 
-void Genotype::init_chr(int num_auto, bool x, bool y, bool xy, bool mt)
+void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt)
 {
 	// this initialize haploid mask as the maximum possible number
 	m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
@@ -33,20 +33,20 @@ void Genotype::init_chr(int num_auto, bool x, bool y, bool xy, bool mt)
 		m_xymt_codes[MT_OFFSET] = num_auto+4;
 		set_bit(num_auto + 1, m_haploid_mask);
 		set_bit(num_auto + 2, m_haploid_mask);
-		if(!x){
+		if(no_x){
 			m_xymt_codes[X_OFFSET] = -1;
 			clear_bit(num_auto + 1, m_haploid_mask);
 		}
-		if(!y)
+		if(no_y)
 		{
 			m_xymt_codes[Y_OFFSET] = -1;
 			clear_bit(num_auto + 2, m_haploid_mask);
 		}
-		if(!xy)
+		if(no_xy)
 		{
 			m_xymt_codes[XY_OFFSET] = -1;
 		}
-		if(!mt)
+		if(no_mt)
 		{
 			m_xymt_codes[MT_OFFSET] = -1;
 		}
@@ -82,9 +82,9 @@ void Genotype::set_genotype_files(std::string prefix)
 }
 
 Genotype::Genotype(std::string prefix, int num_auto,
-		bool x, bool y, bool xy, bool mt, const size_t thread, bool verbose) {
+		bool no_x, bool no_y, bool no_xy, bool no_mt, const size_t thread, bool verbose) {
 	// TODO Auto-generated constructor stub
-	init_chr(num_auto, x, y, xy, mt);
+	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 	// obtain files
 	set_genotype_files(prefix);
 	load_sample();
@@ -107,13 +107,18 @@ Genotype::~Genotype() {
 
 
 
-void Genotype::update_existed(const Genotype &reference)
+void Genotype::update_existed( Genotype &reference)
 {
 	for(auto &&snp : m_existed_snps)
 	{
-		if(reference.m_existed_snps.find(snp.first)==reference.m_existed_snps.end())
+		if(reference.m_existed_snps_index.find(snp.first)==reference.m_existed_snps_index.end())
 		{
 			std::get<+EXIST_SNP::INCLUDED>(snp.second)=false;
+		}
+		else
+		{
+			// check if they are the same
+
 		}
 	}
 }
@@ -129,3 +134,10 @@ void Genotype::update_existed(const std::unordered_map<std::string, int> &refere
 	}
 }
 
+void Genotype::reset_existed()
+{
+	for(auto &&snp : m_existed_snps)
+	{
+		std::get<+EXIST_SNP::INCLUDED>(snp.second)=true;
+	}
+}
