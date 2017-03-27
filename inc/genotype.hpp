@@ -12,23 +12,19 @@
 #include <string>
 #include "plink_common.hpp"
 
-#define SPECIES_HUMAN 0
-#define SPECIES_COW 1
-#define SPECIES_DOG 2
-#define SPECIES_HORSE 3
-#define SPECIES_MOUSE 4
-#define SPECIES_RICE 5
-#define SPECIES_SHEEP 6
-#define SPECIES_UNKNOWN 7
-#define SPECIES_DEFAULT SPECIES_HUMAN
-
 class Genotype {
 public:
-	Genotype(std::string prefix, const size_t thread=1, uint32_t species_code=SPECIES_HUMAN, bool verbose=false);
+	Genotype(std::string prefix, int num_auto=22, bool x=true, bool y=true, bool xy=true, bool mt=true,
+			const size_t thread=1, bool verbose=false);
 	virtual ~Genotype();
 protected:
+	void init_chr(int num_auto, bool x, bool y, bool xy, bool mt);
 	virtual void read_genotype();
-	Chrom_info m_chrom_info;
+	uint32_t m_autosome_ct;
+	int32_t m_xymt_codes[XYMT_OFFSET_CT];
+	uint32_t m_max_code;
+	uintptr_t* m_haploid_mask;
+	//hh_exists
 	/*
 	uintptr_t* m_haploid_mask;
 	uintptr_t* m_xymt_codes;
