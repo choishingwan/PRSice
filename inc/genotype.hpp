@@ -16,6 +16,9 @@
 #include <cstring>
 #include <cctype>
 #include <algorithm>
+#include "snp.hpp"
+#include "commander.hpp"
+#include "region.hpp"
 #include "plink_common.hpp"
 #include "misc.hpp"
 #include "storage.hpp"
@@ -25,9 +28,23 @@ public:
 	Genotype(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
 			bool no_mt=false, const size_t thread=1, bool verbose=false);
 	virtual ~Genotype();
-	int update_existed( Genotype &reference);
-	int update_existed(const std::unordered_map<std::string, int> &reference);
+	double update_existed( Genotype &reference);
+	double update_existed(const std::unordered_map<std::string, int> &ref_index,
+			const std::vector<SNP> &reference);
 	void reset_existed();
+	inline bool existed (const std::string &rs) const
+	{
+		return m_existed_snps_index.find(rs)!=m_existed_snps_index.end();
+	};
+	inline bool matched (const SNP &target) const
+	{
+		if(existed(target.get_rs())){
+			return m_existed_snps.at(m_existed_snps_index.at(target.get_rs()))==target;
+		}
+		return false;
+	};
+	void read_snps(const Commander &commander, const Region &region);
+
 protected:
 
 	void set_genotype_files(std::string prefix);
@@ -53,14 +70,16 @@ protected:
 	uintptr_t m_unfiltered_sample_ctl = 0;
 	uintptr_t m_unfiltered_sample_ct4 = 0;
 
-	virtual void load_snps(){};
+	// normally, the vector might go our of scope. Key is, use this as return value
+	// then use c++11 which move instead of copy the variable if allowed
+	virtual std::vector<SNP> load_snps(){};
 	uintptr_t m_unfiltered_marker_ct = 0;
 	uintptr_t m_unfiltered_marker_ctl = 0;
 	uintptr_t m_marker_ct = 0;
 	uintptr_t m_marker_exclude_ct = 0;
 	uintptr_t* m_marker_exclude = nullptr;
 	std::unordered_map<std::string, size_t> m_existed_snps_index;
-	std::vector<existed_snp_info> m_existed_snps;
+	std::vector<SNP> m_existed_snps;
 
 	virtual void read_genotype(){};
 	//hh_exists
@@ -79,7 +98,7 @@ public:
 			bool no_mt=false, const size_t thread=1, bool verbose=false);
 private:
 	void load_sample();
-	void load_snps();
+	std::vector<SNP> load_snps();
 };
 
 
@@ -90,7 +109,7 @@ public:
 private:
 	uintptr_t m_bed_offset = 3;
 	void load_sample();
-	void load_snps();
+	std::vector<SNP> load_snps();
 	void load_bed();
 	FILE* m_bedfile = nullptr;
 };

@@ -90,13 +90,13 @@ void BinaryPlink::load_sample()
 	famfile.close();
 }
 
-void BinaryPlink::load_snps()
+std::vector<SNP> BinaryPlink::load_snps()
 {
 	assert(m_genotype_files.size()>0);
 	m_unfiltered_marker_ct = 0;
 	m_unfiltered_marker_ctl=0;
 	std::ifstream bimfile;
-
+	std::vector<SNP> snp_info;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -128,16 +128,15 @@ void BinaryPlink::load_snps()
 	m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
 	m_marker_exclude = new uintptr_t[m_unfiltered_marker_ctl];
 	std::memset(m_marker_exclude, 0x0, m_unfiltered_marker_ctl*sizeof(uintptr_t));
-
 	if(m_unfiltered_marker_ct > 2147483645)
 	{
 		throw std::runtime_error("Error: PLINK does not suport more than 2^31 -3 variants. "
 			"As we are using PLINK for some of our functions, we might encounter problem too. "
 			"Sorry.");
 	}
+	snp_info.resize(m_unfiltered_marker_ct);
 	size_t marker_uidx=0;
 	bool chr_error=false;
-	m_existed_snps.resize(m_unfiltered_marker_ct);
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -188,22 +187,9 @@ void BinaryPlink::load_snps()
 						}
 						size_t loc = temp;
 						// better way is to use struct. But for some reason that doesn't work
-						existed_snp_info cur_info;
-						/*
-						std::transform(token[+BIM::A1].begin(), token[+BIM::A1].end(),
-								token[+BIM::A1].begin(), [](unsigned char c) { return std::toupper(c); });
-						std::transform(token[+BIM::A2].begin(), token[+BIM::A2].end(),
-								token[+BIM::A2].begin(), [](unsigned char c) { return std::toupper(c); });
-						*/
-						std::get<+EXIST_SNP::CHR>(cur_info) = chr_code;
-						std::get<+EXIST_SNP::REF>(cur_info) = token[+BIM::A1];
-						std::get<+EXIST_SNP::ALT>(cur_info) = token[+BIM::A2];
-						std::get<+EXIST_SNP::BP>(cur_info) = loc;
-						std::get<+EXIST_SNP::FILE>(cur_info) = prefix;
-						std::get<+EXIST_SNP::LINE>(cur_info) = num_line;
-						std::get<+EXIST_SNP::INCLUDED>(cur_info) = !(ambiguous(token[+BIM::A1], token[+BIM::A2]) || ambiguous(token[+BIM::A2], token[+BIM::A1]));
-						m_existed_snps[marker_uidx] = cur_info;
 						m_existed_snps_index[token[+BIM::RS]] = marker_uidx;
+						snp_info[marker_uidx] = SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
+								token[+BIM::A2]);
 					}
 				}
 			}
@@ -213,6 +199,7 @@ void BinaryPlink::load_snps()
 		bimfile.close();
 	}
 	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct;
+	return snp_info;
 }
 
 void BinaryPlink::load_bed()

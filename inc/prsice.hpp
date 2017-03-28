@@ -14,6 +14,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include "genotype.hpp"
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
@@ -38,7 +39,7 @@ public:
     };
     virtual ~PRSice();
     void get_snp(const Commander &c_commander, Region &region);
-
+    std::vector<SNP> static get_snp(const Commander &c_commander);
     // Under construction
     void perform_clump(const Commander &c_commander);
     void pheno_check(const Commander &c_commander);

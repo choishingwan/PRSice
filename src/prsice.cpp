@@ -2,6 +2,7 @@
 
 std::mutex PRSice::score_mutex;
 
+
 void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	const std::string input = c_commander.get_base(m_base_index);
 	const bool beta = c_commander.get_base_binary(m_base_index);

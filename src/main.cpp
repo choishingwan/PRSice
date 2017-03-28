@@ -48,7 +48,16 @@ int main(int argc, char *argv[])
 	}
 	if(ld_file!=nullptr)
 	{
-		target_file->update_existed(*ld_file);
+		double matched = target_file->update_existed(*ld_file);
+		if(matched==-1)
+		{
+			fprintf(stderr, "ERROR: None of the SNP matched between the target and LD file\n");
+			return -1;
+		}
+		else if(matched !=1)
+		{
+			fprintf(stderr, "WARNING: %03.2f%% mismatched SNPs between target and LD reference\n", matched*100);
+		}
 		ld_file->update_existed(*target_file);
 	}
 
@@ -57,7 +66,6 @@ int main(int argc, char *argv[])
 	// Might want to generate a log file?
 	region.info();
 	commander.user_input();
-	PLINK::set_species(commander.get_species());
 
 	bool perform_prslice = commander.prslice() > 0.0;
 	bool full_model = commander.full();
@@ -68,7 +76,8 @@ int main(int argc, char *argv[])
 	else
 	{
 		if (num_base > 1)
-			fprintf(stderr, "Multiple base phenotype detected. You might want to run separate instance of PRSice to speed up the process\n");
+			fprintf(stderr, "Multiple base phenotype detected. "
+					"You might want to run separate instance of PRSice to speed up the process\n");
 		for (size_t i_base = 0; i_base < num_base; ++i_base)
 		{
 			region.reset();
@@ -79,6 +88,8 @@ int main(int argc, char *argv[])
 					misc::base_name<std::string>(base[i_base]));
 			try
 			{
+				target_file->read_snps(commander, region);
+
 				PRSice prsice = PRSice(base_name, i_base,
 						commander.get_target(), commander.target_is_binary(),
 						commander.get_perm(),

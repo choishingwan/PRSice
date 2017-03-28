@@ -93,6 +93,7 @@ public:
     }
     void user_input() const;
     uint32_t get_species() const{ return m_species;};
+    std::vector<int> get_base_index (size_t base_index) const;
 protected:
 private:
     void usage();
