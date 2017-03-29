@@ -9,69 +9,80 @@ bool Commander::initialize(int argc, char *argv[])
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    static const char *optString = "b:t:c:C:a:f:L:p:T:u:l:i:B:g:m:o:h?";
+    static const char *optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
     static const struct option longOpts[]=
     {
-        {"base",required_argument,NULL,'b'},
-        {"target",required_argument,NULL,'t'},
+    	// parameters with short flags
+    	{"ancestry",required_argument,NULL,'a'},
+		{"base",required_argument,NULL,'b'},
+		{"bed",required_argument,NULL,'B'},
         {"cov-header",required_argument,NULL,'c'},
         {"cov-file",required_argument,NULL,'C'},
-        {"ancestry",required_argument,NULL,'a'},
         {"pheno-file",required_argument,NULL,'f'},
-        {"pheno-col",required_argument,NULL,0},
-        {"ld",required_argument,NULL,'L'},
-        {"pvalue",required_argument,NULL,'p'},
-        {"thread",required_argument,NULL,'T'},
-        {"upper",required_argument,NULL,'u'},
-        {"lower",required_argument,NULL,'l'},
-        {"interval",required_argument,NULL,'i'},
-        {"bed",required_argument,NULL,'B'},
         {"gtf",required_argument,NULL,'g'},
+        {"interval",required_argument,NULL,'i'},
+        {"lower",required_argument,NULL,'l'},
+        {"ld",required_argument,NULL,'L'},
         {"msigdb",required_argument,NULL,'m'},
+        {"thread",required_argument,NULL,'n'},
         {"out",required_argument,NULL,'o'},
-        {"beta",required_argument,NULL,0},
-        {"chr",required_argument,NULL,0},
+        {"pvalue",required_argument,NULL,'p'},
+        {"target",required_argument,NULL,'t'},
+        {"upper",required_argument,NULL,'u'},
+		// flags, only need to set them to true
+    	{"all",no_argument,&misc.all,1},
+        {"beta",required_argument,&base.beta,1},
+        {"full",no_argument,&prsice.full,1},
+        {"ignore-fid",no_argument,&misc.ignore_fid,1},
+        {"index",no_argument,&base.index,1},
+		{"no-clump",no_argument,&clumping.no_clump,1},
+		{"no-regression",no_argument,&prsice.no_regress,1},
+		{"no-x",no_argument,&species.no_x,1},
+		{"no-y",no_argument,&species.no_y,1},
+		{"no-xy",no_argument,&species.no_xy,1},
+		{"no-mt",no_argument,&species.no_mt,1},
+		{"fastscore",no_argument,&prsice.fastscore,1},
+        {"print-snp",no_argument,&misc.print_snp,1},
+		// long flags, need to work on them
         {"A1",required_argument,NULL,0},
         {"A2",required_argument,NULL,0},
-        {"stat",required_argument,NULL,0},
-        {"snp",required_argument,NULL,0},
+        {"bar-levels",required_argument,NULL,0},
+        {"binary-target",required_argument,NULL,0},
         {"bp",required_argument,NULL,0},
-        {"se",required_argument,NULL,0},
+        {"chr",required_argument,NULL,0},
+        {"clump-kb",required_argument,NULL,0},
         {"clump-p",required_argument,NULL,0},
         {"clump-r2",required_argument,NULL,0},
-        {"clump-kb",required_argument,NULL,0},
-        {"binary-target",required_argument,NULL,0},
-        {"bar-levels",required_argument,NULL,0},
-        {"index",no_argument,NULL,0},
-        {"all",no_argument,NULL,0},
-        {"full",no_argument,NULL,0},
-        {"print-all",no_argument,NULL,0},
-        {"no-regression",no_argument,NULL,0},
-        {"fastscore",no_argument,NULL,0},
-        {"proxy",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
+		{"ld-type", required_argument, NULL, 0},
+		{"num-auto", required_argument, NULL, 0},
+        {"pheno-col",required_argument,NULL,0},
+        {"se",required_argument,NULL,0},
+        {"snp",required_argument,NULL,0},
+        {"stat",required_argument,NULL,0},
         {"perm",required_argument,NULL,0},
+        {"proxy",required_argument,NULL,0},
         {"prslice",required_argument,NULL,0},
-        {"no-clump",no_argument,NULL,0},
-        {"print-snp",no_argument,NULL,0},
-        {"ignore-fid",no_argument,NULL,0},
+		{"score", required_argument, NULL, 0},
+		{"type", required_argument, NULL, 0},
+		//species flag
         {"cow",no_argument,NULL,0},
         {"dog",no_argument,NULL,0},
         {"horse",no_argument,NULL,0},
         {"mouse",no_argument,NULL,0},
         {"rice",no_argument,NULL,0},
         {"sheep",no_argument,NULL,0},
-		{"score", required_argument, NULL, 0},
         {"help",no_argument,NULL,'h'},
         {NULL, 0, 0, 0}
     };
     bool error = false;
+    bool species_error = false;
     int longIndex=0;
     int opt = 0;
+
     std::string command ="";
     opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string error_message = "";
-    bool species_set = false;
     //Start reading all the parameters and perform the qc at the same time
     while(opt!=-1)
     {
@@ -79,175 +90,106 @@ bool Commander::initialize(int argc, char *argv[])
         {
         case 0:
             command = longOpts[longIndex].name;
-            if(command.compare("chr")==0) m_chr=optarg;
-            else if(command.compare("A1")==0) m_ref_allele = optarg;
-            else if(command.compare("A2")==0) m_alt_allele=optarg;
-            else if(command.compare("stat")==0)
+            if(command.compare("chr")==0)  set_chr(optarg);
+            else if(command.compare("A1")==0) set_ref(optarg);
+            else if(command.compare("A2")==0) set_alt(optarg);
+            else if(command.compare("stat")==0) set_stat(optarg);
+            else if(command.compare("snp")==0) set_snp(optarg);
+            else if(command.compare("bp")==0) set_bp(optarg);
+            else if(command.compare("se")==0) set_se(optarg);
+            else if(command.compare("ld-type")==0) clumping.type = optarg;
+            else if(command.compare("type")==0) target.type = optarg;
+            else if(command.compare("score")==0) prsice.missing_score = optarg;
+            else if(command.compare("cow")==0) set_species(29, false, false, true, false,
+            		error, error_message, species_error);
+            else if(command.compare("dog")==0) set_species(38, false, false, false, false,
+            		error, error_message, species_error);
+            else if(command.compare("horse")==0) set_species(31, false, false, true, true,
+            		error, error_message, species_error);
+            else if(command.compare("mouse")==0) set_species(19, false, false, true, true,
+            		error, error_message, species_error);
+            else if(command.compare("rice")==0) set_species(-12, false, false, false, false,
+            		error, error_message, species_error);
+            else if(command.compare("sheep")==0) set_species(26, false, false, true, true,
+            		error, error_message, species_error);
+            else if(command.compare("num-auto")==0)
             {
-            		m_statistic = optarg;
-            		m_stat_provided = true;
-            }
-            else if(command.compare("snp")==0) m_snp=optarg;
-            else if(command.compare("bp")==0) m_bp=optarg;
-            else if(command.compare("se")==0) m_standard_error = optarg;
-            else if(command.compare("index")==0) m_index = true;
-            else if(command.compare("all")==0) m_all = true;
-            else if(command.compare("full")==0) m_full = true;
-            else if(command.compare("print-all")==0) m_print_all = true;
-            else if(command.compare("no-clump")==0) m_no_clump = true;
-            else if(command.compare("score")==0) m_missing_score = optarg;
-            else if(command.compare("print-snp")==0) m_print_snp = true;
-            else if(command.compare("cow")==0){
-            	if(species_set)
-            	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
+            	try{
+            		species.num_auto = misc::convert<int>(optarg);
             	}
-            	species_set=true;
-            	m_num_auto = 29;
-            	m_no_xy=true;
-            }
-            else if(command.compare("dog")==0){
-            	if(species_set)
+            	catch(const std::runtime_error &er)
             	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
+            		error_message.append("ERROR: Number of autosomal chromosome provided isn't numeric\n");
+            		error=true;
             	}
-            	species_set=true;
-            	m_num_auto = 38;
-            }
-            else if(command.compare("horse")==0){
-            	if(species_set)
-            	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
-            	}
-            	species_set=true;
-            	m_num_auto = 31;
-            	m_no_xy=true;
-            	m_no_mt=true;
-            }
-            else if(command.compare("mouse")==0){
-            	if(species_set)
-            	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
-            	}
-            	species_set=true;
-            	m_num_auto = 19;
-            	m_no_xy=true;
-            	m_no_mt=true;
-            }
-            else if(command.compare("rice")==0){
-            	if(species_set)
-            	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
-            	}
-            	species_set=true;
-            	m_num_auto = -12;
-            }
-            else if(command.compare("sheep")==0){
-            	if(species_set)
-            	{
-            		error = true;
-            		error_message.append("Can only specify one species\n");
-            	}
-            	species_set=true;
-            	m_num_auto = 26;
-            	m_no_xy=true;
-            	m_no_mt=true;
             }
             else if(command.compare("clump-p")==0)
             {
-                double temp = atof(optarg);
-                if(temp < 0.0 || temp > 1.0)
-                {
-                    error = true;
-                    error_message.append("Clumping p-values must be >=0 and <= 1.0\n");
-                }
-                else m_clump = temp;
+            	try{
+            		clumping.p_value = misc::convert<double>(optarg);
+            	}
+            	catch(const std::runtime_error &er)
+            	{
+            		error_message.append("ERROR: Clump P-value threshold provided isn't numeric\n");
+            		error=true;
+            	}
             }
             else if(command.compare("clump-r2")==0)
             {
-                double temp = atof(optarg);
-                if(temp < 0.0 || temp > 1.0)
-                {
-                    error = true;
-                    error_message.append("Clumping R2 must be >=0 and <= 1.0\n");
-                }
-                if(temp == 0.0)
-                {
-                    std::cerr << "WARNING: As clumping R2==0, no clumping will be performed" << std::endl;
-                }
-                else m_clump_r2 = temp;
+            	try{
+            		clumping.r2 = misc::convert<double>(optarg);
+            	}
+            	catch(const std::runtime_error &er)
+            	{
+            		error_message.append("ERROR: Clump R2 threshold provided isn't numeric\n");
+            		error=true;
+            	}
             }
             else if(command.compare("clump-kb")==0)
             {
-                int temp = atoi(optarg);
-                if(temp <= 0.0)
-                {
-                    error = true;
-                    error_message.append("Clumping window size must be larger than 0kb\n");
-                }
-                else m_clump_kb = temp*1000; //change it to kb, might want to allow different units
+            	try{
+            		clumping.distance = misc::convert<int>(optarg)*1000; //kb
+            	}
+            	catch(const std::runtime_error &er)
+            	{
+            		error_message.append("ERROR: Clump Distance provided isn't numeric\n");
+            		error=true;
+            	}
             }
             else if(command.compare("prslice")==0)
             {
-                int temp = atoi(optarg);
-                if(temp <= 0.0)
-                {
-                    error = true;
-                    error_message.append("PRSlice bin size must be larger than 0\n");
-                }
-                else m_prslice_size = temp*1000; //change it to kb, might want to allow different units
+            	try{
+            		set_prslice(misc::convert<int>(optarg));
+            	}
+            	catch(const std::runtime_error &er)
+            	{
+            		error_message.append("ERROR: PRSlice size provided isn't numeric\n");
+            		error=true;
+            	}
             }
             else if(command.compare("binary-target")==0)
             {
-            		std::vector<std::string> token = misc::split(optarg, ", ");
-            	    for(size_t i = 0; i < token.size(); ++i) m_target_is_binary.push_back(misc::to_bool(token[i]));
+            		std::vector<std::string> token = misc::split(optarg, ",");
+            	    for(auto &&bin : token) target.is_binary.push_back(misc::to_bool(bin));
             }
             else if(command.compare("bar-levels")==0)
             {
-                std::vector<std::string> token = misc::split(optarg, ", ");
+                std::vector<std::string> token = misc::split(optarg, ",");
                 try
                 {
-                    for(size_t i = 0; i < token.size(); ++i)
-                    {
-                        double temp = misc::convert<double>(token[i]);
-                        if(temp < 0)
-                        {
-                            error_message.append("ERROR: Negative barchart level\n");
-                            error=true;
-                            break;
-                        }
-                        m_barlevel.push_back(temp);
-                    }
+                    for(auto &&bar : token) prsice.barlevel.push_back(misc::convert<double>(bar));
                 }
                 catch(const std::runtime_error &er)
                 {
                     error_message.append("ERROR: None numeric barchart level\n");
                     error=true;
                 }
-            }
-            else if(command.compare("beta")==0)
-            {
-                std::vector<std::string> token = misc::split(optarg, ", ");
-                for(size_t i = 0; i < token.size(); ++i) m_use_beta.push_back(misc::to_bool(token[i]));
-                m_beta_provided=true;
-            }
-            else if(command.compare("no-regression")==0) m_no_regress = true;
-            else if(command.compare("fastscore")==0) m_fastscore = true;
-            else if(command.compare("proxy")==0)
+            }else if(command.compare("proxy")==0)
             {
                 try
                 {
-                    m_proxy = misc::convert<double>(optarg);
-                    if(m_proxy<=0.0)
-                    {
-                        error_message.append("ERROR: Proxy must be bigger than 0.0\n");
-                        error=true;
-                    }
+                    clumping.proxy = misc::convert<double>(optarg);
+                    clumping.provide_proxy = true;
                 }
                 catch(const std::runtime_error &er)
                 {
@@ -257,133 +199,115 @@ bool Commander::initialize(int argc, char *argv[])
             }
             else if(command.compare("pheno-col")==0)
             {
-                std::vector<std::string> token = misc::split(optarg, ", ");
-                m_pheno_col.insert(m_pheno_col.end(), token.begin(), token.end());
+                std::vector<std::string> token = misc::split(optarg, ",");
+                target.pheno_col.insert(target.pheno_col.end(), token.begin(), token.end());
             }
             else if(command.compare("perm")==0)
             {
-            		int temp = atoi(optarg);
-            		if(temp < 0.0)
-            		{
-            			error = true;
-            			error_message.append("Number of permutation must be bigger than 0\n");
-            		}
-            		else m_permutation = temp;
+            	try{
+            		misc.permutation = misc::convert<int>(optarg);
+            	}
+            	catch(const std::runtime_error &er)
+            	{
+            		error_message.append("ERROR: Number of Permutation provided isn't numeric\n");
+            		error=true;
+            	}
             }
             else if(command.compare("feature")==0)
             {
-            		std::vector<std::string> token = misc::split(optarg, ", ");
-            		m_feature.insert(m_feature.end(), token.begin(), token.end());
+            	std::vector<std::string> token = misc::split(optarg, ",");
+            	prset.feature.insert(prset.feature.end(), token.begin(), token.end());
             }
-            else if(command.compare("ignore-fid")==0) m_ignore_fid = true;
             else
             {
                 std::string er = "Undefined operator: "+command+", please use --help for more information!";
                 throw std::runtime_error(er);
             }
             break;
+
+        case 'a':
+        	covariate.ancestry_dim = optarg;
+        	fprintf(stderr, "Currently we have not implement this function\n");
+        	break;
         case 'b':
+        	base.name = optarg;
+        	break;
+        case 'B':
         {
-            std::vector<std::string> token= misc::split(optarg, ", ");
-            m_base.insert(m_base.end(), token.begin(), token.end());
-            if(m_base.size() ==0)
-            {
-                error = true;
-                error_message.append("You must provide at least one valid base file name\n");
-            }
+        	std::vector<std::string> token = misc::split(optarg, ",");
+        	prset.bed.insert(prset.bed.end(), token.begin(), token.end());
         }
         break;
-        case 't':
-            m_target = optarg;
-            break;
         case 'c':
         {
-            std::vector<std::string> token= misc::split(optarg, ", ");
-            m_covariates.insert(m_covariates.end(), token.begin(), token.end());
+            std::vector<std::string> token= misc::split(optarg, ",");
+            covariate.covariates.insert(covariate.covariates.end(), token.begin(), token.end());
         }
         break;
         case 'C':
-            m_covariate_file = optarg;
-            break;
-        case 'a':
-            m_ancestry_dim = optarg;
-            if(m_ancestry_dim.compare("MDS") != 0 && m_ancestry_dim.compare("mds") != 0 &&
-            		m_ancestry_dim.compare("PCA") != 0 && m_ancestry_dim.compare("pca") != 0 )
-            {
-                error = true;
-                error_message.append("Only support PCA and MDS for the calculation of ancestry information\n");
-            }
-            fprintf(stderr, "Currently we have not implement this function\n");
-            break;
+        	covariate.name = optarg;
+        	break;
         case 'f':
-            m_pheno_file = optarg;
-            break;
-        case 'p': // the index/header of p-value in the file
-            m_p_value = optarg;
-            break;
-        case 'L':
-            m_ld_prefix=optarg;
-            break;
-        case 'T':
-        {
-            int temp = atoi(optarg);
-            if(temp<=0)
-            {
-                std::cerr << "Number of thread cannot be less than 1" << std::endl;
-                std::cerr << "Will set to 1 instead" << std::endl;
-                m_thread = 1;
-            }
-            else m_thread = temp;
-        }
-        break;
-        case 'u':
-        {
-            double temp = atof(optarg);
-            if(temp <= 0.0 || temp > 1.0)
-            {
-                error = true;
-                error_message.append("Upper interval must be > 0 and <= 1.0\n");
-            }
-            else m_upper = temp;
-        }
-        break;
-        case 'l':
-        {
-            double temp = atof(optarg);
-            if(temp < 0.0 || temp >1.0)
-            {
-                error = true;
-                error_message.append("Lower interval must be >= 0 and < 1.0\n");
-            }
-            else m_lower = temp;
-        }
-        break;
-        case 'i':
-        {
-            double temp = atof(optarg);
-            if(temp <= 0.0 || temp > 1.0)
-            {
-                error = true;
-                error_message.append("Interval must be >=0 and <= 1.0\n");
-            }
-            else m_inter = temp;
-        }
-        break;
-        case 'B':
-        {
-            std::vector<std::string> token = misc::split(optarg, ", ");
-            m_bed_list.insert(m_bed_list.end(), token.begin(), token.end());
-        }
-        break;
+        	target.pheno_file = optarg;
+        	break;
         case 'g':
-            m_gtf = optarg;
-            break;
+        	prset.gtf = optarg;
+        	break;
+        case 'i':
+        	try{
+        		prsice.inter = misc::convert<double>(optarg);
+        	}
+        	catch(const std::runtime_error &er)
+        	{
+        		error_message.append("ERROR: Interval provided isn't numeric\n");
+        		error=true;
+        	}
+        	break;
+        case 'l':
+        	try{
+        		prsice.lower = misc::convert<double>(optarg);
+        	}
+        	catch(const std::runtime_error &er)
+        	{
+        		error_message.append("ERROR: Lower bound provided isn't numeric\n");
+        		error=true;
+        	}
+        	break;
+        case 'L':
+        	clumping.ld = optarg;
+        	break;
         case 'm':
-            m_msigdb= optarg;
-            break;
+        	prset.msigdb = optarg;
+        	break;
+        case 'n':
+        	try{
+        		misc.thread = misc::convert<int>(optarg);
+        	}
+        	catch(const std::runtime_error &er)
+        	{
+        		error_message.append("ERROR: Number of thread provided isn't numeric\n");
+        		error=true;
+        	}
+        	break;
         case 'o':
-            m_out = optarg;
-            break;
+        	misc.out = optarg;
+        	break;
+        case 'p':
+        	set_p(optarg);
+        	break;
+        case 't':
+        	target.name = optarg;
+        	break;
+        case 'u':
+        	try{
+        		prsice.upper = misc::convert<double>(optarg);
+        	}
+        	catch(const std::runtime_error &er)
+        	{
+        		error_message.append("ERROR: Upper bound provided isn't numeric\n");
+        		error=true;
+        	}
+        	break;
         case 'h':
         case '?':
             usage();
@@ -395,147 +319,17 @@ bool Commander::initialize(int argc, char *argv[])
         opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
 
-
-    // Be nice and check for the statistic
-
-    if(!m_stat_provided && m_beta_provided)
-    {
-    		m_statistic = (m_use_beta.front())? "BETA" : "OR";
-    }
-    else if(!m_stat_provided)
-    {
-    		std::ifstream base_file; // we only use the first file
-    		base_file.open(m_base.front().c_str());
-    		if(!base_file.is_open())
-    		{
-    			fprintf(stderr, "Cannot open base file: %s\n", m_base.front().c_str());
-    			std::string header;
-    			std::getline(base_file, header);
-    			base_file.close();
-    			if( misc::trimmed(header).empty())
-    			{
-    				throw std::runtime_error("Base file contain empty header!");
-    			}
-    			else
-    			{
-    				std::vector<std::string> token = misc::split(header);
-    				for(auto &col : token)
-    				{
-    					if(col.compare("BETA")==0)
-    					{
-    						m_statistic = "BETA";
-    						m_use_beta.push_back(true);
-    					}
-    					else if(col.compare("OR")==0)
-    					{
-    						m_statistic = "OR";
-    						m_use_beta.push_back(false);
-
-    					}
-    				}
-    			}
-    		}
-    }
-    if(m_base.size()==0)
-    {
-        error=true;
-        error_message.append("There are no base file to run\n");
-    }
-    if(m_target.size()==0)
-    {
-        error=true;
-        error_message.append("There are no target file to run\n");
-    }
-    // Start performing the check on the inputs
-
-    if(!m_msigdb.empty() && m_gtf.empty())
-    {
-        error = true;
-        error_message.append("Must provide the GTF file when only MSIGDB file is provided\n");
-    }
-    if(m_out.empty())
-    {
-        fprintf(stderr, "WARNING: Output prefix is empty, will set it to PRSice\n");
-        m_out = "PRSice";
-    }
-    // add default binary
-    if((!m_msigdb.empty() || m_bed_list.size() != 0) && m_chr.empty() && m_bp.empty())
-    {
-        fprintf(stderr, "WARNING: For pathway/region PRSice to work, you must provide\n");
-        fprintf(stderr, "         the chromosome and bp information\n");
-        fprintf(stderr, "         As chromosome / bp information were not provided, we\n");
-        fprintf(stderr, "         will disable the pathwya/region PRSice analysis\n");
-        m_msigdb = "";
-        m_bed_list.clear();
-    }
-    if(m_use_beta.size()==0)
-    {
-        for(size_t i = 0; i < m_base.size(); ++i)
-        {
-            m_use_beta.push_back(false); // default is binary
-        }
-        m_beta_provided = true;
-    }
-    else if(m_use_beta.size() != m_base.size())
-    {
-    	error=true;
-        error_message.append("ERROR: Number of beta doesn't match number of base file!\n");
-        error_message.append("       Default value only work when all base file are using OR and\n");
-        error_message.append("       when --beta is not used\n");
-    }
-    if(m_pheno_col.size()!=0 && m_pheno_col.size()!=m_target_is_binary.size())
-    {
-    	error=true;
-        error_message.append("ERROR: Number of target phenotypes doesn't match information of binary\n");
-        error_message.append("       target! You must indicate whether the phenotype is binary using\n");
-        error_message.append("       --binary_target\n");
-
-    }
-    if(m_no_regress && !m_fastscore)
-    {
-        fprintf(stderr, "WARNING: To limit the amount of output,\n");
-        fprintf(stderr, "         no-regress can only be used with\n");
-        fprintf(stderr, "         fastscore. Will use fastscore\n");
-        m_fastscore=true;
-    }
-    if(m_prslice_size > 0 && (m_bed_list.size() > 0 || !m_msigdb.empty()))
+    base_check(error, error_message);
+    clump_check(error, error_message);
+    misc_check(error, error_message);
+    prset_check(error, error_message);
+    prsice_check(error, error_message);
+    prslice_check(error, error_message);
+    target_check(error, error_message);
+    if((prset.bed.size() != 0 || !prset.gtf.empty()) && prslice.provided)
     {
     	error = true;
-    	error_message.append("ERROR: We do not support running PRSlice together with PRSet.\n");
-    }
-    if(m_no_regress) m_all=true;
-    if(m_fastscore && m_barlevel.size()==0)
-    {
-        fprintf(stderr, "barlevel not provided. Will set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
-        m_barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
-    }
-    std::sort(m_barlevel.begin(), m_barlevel.end());
-    if(m_feature.empty())
-    {
-    		m_feature.push_back("exon");
-    		m_feature.push_back("gene");
-    		m_feature.push_back("protein_coding");
-    		m_feature.push_back("CDS");
-    }
-    if(m_inter <=0.0 && !m_fastscore) // double comparison error, need to optimize it
-    {
-    		error = true;
-    		error_message.append("Error: Interval cannot be 0!\n");
-    }
-    if(m_target_is_binary.size()==0)
-    {
-    	if(m_pheno_col.size() > 1)
-    	{
-    		error = true;
-    		error_message.append("Error: Cannot provide default when multiple target!\n");
-    		error_message.append("       phenotype were used\n");
-    	}
-    	else
-    	{
-    		error_message.append("Warning: Target phenotype information not provided\n");
-    		error_message.append("         assume to be binary\n");
-    		m_target_is_binary.push_back(true);
-    	}
+    	error_message.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     if(error) throw std::runtime_error(error_message);
     return true;
@@ -544,49 +338,71 @@ bool Commander::initialize(int argc, char *argv[])
 
 Commander::Commander()
 {
-    // should gives the default here
-    m_target="";
-    m_pheno_file="";
-    m_covariate_file="";
-    m_ancestry_dim="MDS";
-    m_chr = "CHR";
-    m_ref_allele="A1";
-    m_alt_allele="A2";
-    m_statistic = "OR";
-    m_snp="SNP";
-    m_bp="BP";
-    m_standard_error = "SE";
-    m_p_value = "P";
-    m_ld_prefix="";
-    m_gtf="";
-    m_msigdb="";
-    m_out = "PRSice";
-    m_fastscore =false;
-    m_index =false;
-    m_no_regress = false;
-    m_all = false;
-    m_full = false;
-    m_beta_provided = false;
-    m_stat_provided = false;
-    m_proxy = -1.0;
-    m_no_clump = false;
-    m_clump = 1.0;
-    m_clump_r2 = 0.1;
-    m_clump_kb = 250000;
-    m_permutation = 0;
-    m_lower = 0.0001;
-    m_upper = 0.5;
-    m_inter = 0.00005;
-    m_prslice_size = -1.0;
-    m_thread = 1;
-    m_print_all = false;
-    m_print_snp = false;
-    m_ignore_fid = false;
-    m_num_auto = 22;
-    m_no_x=false;
-    m_no_y=false;
-    m_no_xy=false;
-    m_no_mt=false;
+	base.beta = false;
+	base.name = "";
+	base.chr = "CHR";
+	base.ref_allele = "A1";
+	base.alt_allele = "A2";
+	base.statistic = "OR";
+	base.snp = "RS";
+	base.bp = "BP";
+	base.standard_error = "SE";
+	base.p_value = "P";
+	base.index = false;
+    base.provided_chr = false;
+    base.provided_ref = false;
+    base.provided_alt = false;
+    base.provided_stat = false;
+    base.provided_snp = false;
+    base.provided_bp = false;
+    base.provided_se = false;
+    base.provided_p = false;
+    base.provided_beta = false;
+    base.col_index.resize(+BASE_INDEX::MAX, -1);
+
+	clumping.ld = "";
+	clumping.type = "bed";
+	clumping.no_clump = false;
+	clumping.provide_proxy = false;
+	clumping.proxy =-1.0;
+	clumping.p_value =1.0;
+	clumping.r2 = 0.1;
+	clumping.distance = 250000;
+
+	covariate.name = "";
+	covariate.ancestry_dim="MDS";
+
+	misc.all = false;
+	misc.out = "PRSice";
+	misc.print_snp = false;
+	misc.ignore_fid = false;
+	misc.permutation = 0;
+	misc.thread = 1;
+
+	prset.gtf = "";
+	prset.msigdb = "";
+
+	prsice.missing_score = "";
+	prsice.lower = 0.0001;
+	prsice.upper = 0.5;
+	prsice.inter = 0.00005;
+	prsice.fastscore = false;
+	prsice.no_regress = false;
+	prsice.full = true;
+
+	prslice.size = -1;
+	prslice.provided = false;
+
+	species.num_auto = 22;
+	species.no_x = false;
+	species.no_y = false;
+	species.no_xy = false;
+	species.no_mt = false;
+	species.double_set = false;
+
+	target.name = "";
+	target.type = "bed";
+	target.pheno_file = "";
 }
 
 Commander::~Commander()
@@ -596,6 +412,7 @@ Commander::~Commander()
 
 void Commander::info()
 {
+	/*
 	m_help_messages.push_back(help("Required", 'b', "base", "Base association files. "
 			"User can provide multiple base files"));
 	m_help_messages.push_back(help("Required", 't', "target", "Plink binary file prefix for target files. "
@@ -688,9 +505,12 @@ void Commander::info()
 			"of PRSice."));
 	m_help_messages.push_back(help("Misc", 'T', "thread", "Number of thread use"));
 	m_help_messages.push_back(help("Misc", 'h', "help", "Display this help message"));
+
+	*/
 }
 void Commander::usage()
 {
+	/*
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
     std::string category = "";
     size_t width = 80;
@@ -743,87 +563,355 @@ void Commander::usage()
     			}
     		}
     }
+    */
 }
 
 void Commander::program_info()
 {
-	std::cerr << "####################################################################" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "# PRSice: Polygenic Risk Score software                            #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "# Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly 2014            #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "# If you use PRSice in published work, please cite:                #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "# \"PRSice: Polygenic Risk Score software\"                          #" << std::endl;
-	std::cerr << "# Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468 #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "#                                                                  #" << std::endl;
-	std::cerr << "####################################################################" << std::endl;
-
-
+	std::cerr << "PRSice "<< version << " (" << date << ") https://github.com/choishingwan/PRSice"<< std::endl;
+	std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
+	std::cerr << "GNU General Public License v3" << std::endl;
 }
 
 void Commander::user_input() const{
 	fprintf(stderr, "\nUser Input\n");
 	fprintf(stderr, "==============================\n");
-	fprintf(stderr, "Base files: ");
-	for (size_t i_base = 0; i_base < m_base.size(); ++i_base) {
-			if (!m_use_beta.at(i_base)) {
-				fprintf(stderr, "%s(OR) ", m_base[i_base].c_str());
-			} else {
-				fprintf(stderr, "%s(Beta) ", m_base[i_base].c_str());
-			}
-		}
-		fprintf(stderr, "\n");
-		fprintf(stderr, "\nUser Defined Column Headers\n");
+	fprintf(stderr, "Base file: ");
+	if (!base.beta) {
+		fprintf(stderr, "%s(OR) ", base.name.c_str());
+	} else {
+		fprintf(stderr, "%s(Beta) ", base.name.c_str());
+	}
+	fprintf(stderr, "\n");
+	fprintf(stderr, "\nUser Defined Column Headers\n");
+	fprintf(stderr, "==============================\n");
+	if (!base.col_index[+BASE_INDEX::CHR]!=-1)
+		fprintf(stderr, "Chr            : %s\n", base.chr.c_str());
+	fprintf(stderr, "SNP            : %s\n",base.snp.c_str());
+	if (!base.col_index[+BASE_INDEX::BP]!=-1)
+		fprintf(stderr, "BP             : %s\n", base.bp.c_str());
+	fprintf(stderr, "Ref Allele     : %s\n", base.ref_allele.c_str());
+	if (!base.col_index[+BASE_INDEX::ALT]!=-1)
+		fprintf(stderr, "Alt Allele     : %s\n", base.alt_allele.c_str());
+	fprintf(stderr, "Statistic      : %s\n", base.statistic.c_str());
+	if (!base.col_index[+BASE_INDEX::SE]!=-1)
+		fprintf(stderr, "Standard Error : %s\n", base.standard_error.c_str());
+	fprintf(stderr, "P-value        : %s\n", base.p_value.c_str());
+	fprintf(stderr, "\nClumping Parameters: \n");
+	fprintf(stderr, "==============================\n");
+	fprintf(stderr, "P-Threshold  : %f\n", clumping.p_value);
+	fprintf(stderr, "R2-Threshold : %f\n", clumping.r2);
+	fprintf(stderr, "Window Size  : %d\n", clumping.distance);
+	if(!prsice.no_regress)
+	{
+		fprintf(stderr, "\nThreshold Selected: \n");
 		fprintf(stderr, "==============================\n");
-		if (!m_chr.empty())
-			fprintf(stderr, "Chr            : %s\n", m_chr.c_str());
-		fprintf(stderr, "SNP            : %s\n", m_snp.c_str());
-		if (!m_bp.empty())
-			fprintf(stderr, "BP             : %s\n", m_bp.c_str());
-		fprintf(stderr, "Ref Allele     : %s\n", m_ref_allele.c_str());
-		if (!m_alt_allele.empty())
-			fprintf(stderr, "Alt Allele     : %s\n", m_alt_allele.c_str());
-		if (!m_statistic.empty())
-			fprintf(stderr, "Statistic      : %s\n", m_statistic.c_str());
-		if (!m_standard_error.empty())
-			fprintf(stderr, "Standard Error : %s\n", m_standard_error.c_str());
-		fprintf(stderr, "P-value        : %s\n", m_p_value.c_str());
-		fprintf(stderr, "\nClumping Parameters: \n");
-		fprintf(stderr, "==============================\n");
-		fprintf(stderr, "P-Threshold  : %f\n", m_clump);
-		fprintf(stderr, "R2-Threshold : %f\n", m_clump_r2);
-		fprintf(stderr, "Window Size  : %zu\n", m_clump_kb);
-		if(!m_no_regress)
+		if(prsice.fastscore)
 		{
-			fprintf(stderr, "\nThreshold Selected: \n");
-			fprintf(stderr, "==============================\n");
-			if(m_fastscore)
+			fprintf(stderr, "Fastscore    : TRUE\n");
+			fprintf(stderr, "Barlevels    : ");
+			if(prsice.barlevel.empty())
 			{
-				fprintf(stderr, "Fastscore    : TRUE\n");
-				fprintf(stderr, "Barlevels    : ");
-				if(m_barlevel.empty())
-				{
-					throw std::runtime_error("Cannot perform fastscore without bar level information!");
-				}
-				fprintf(stderr, "%f", m_barlevel.front());
-				for(size_t i_bar = 1; i_bar < m_barlevel.size(); ++i_bar)
-				{
-					fprintf(stderr, ", %f", m_barlevel[i_bar]);
-				}
-				fprintf(stderr, "\n");
+				throw std::runtime_error("Cannot perform fastscore without bar level information!");
+			}
+			fprintf(stderr, "%f", prsice.barlevel.front());
+			for(auto &&bar : prsice.barlevel)
+			{
+				fprintf(stderr, ", %f", bar);
+			}
+			fprintf(stderr, "\n");
+		}
+		else
+		{
+			fprintf(stderr, "Fastscore    : FALSE\n");
+			fprintf(stderr, "Lower Bound  : %f\n", prsice.lower);
+			fprintf(stderr, "Upper Bound  : %f\n", prsice.upper);
+			fprintf(stderr, "Intervals    : %f\n", prsice.inter);
+		}
+	}
+}
+
+
+
+void Commander::base_check(bool &error, std::string &error_message)
+{
+	if(!base.provided_p)
+	{
+		error = true;
+		error_message.append("ERROR: You must provide the p-value information!\n");
+	}
+	if(!base.provided_snp)
+	{
+		error = true;
+		error_message.append("ERROR: You must provide the SNP identity!\n");
+	}
+	if(!base.provided_ref)
+	{
+		error = true;
+		error_message.append("ERROR: You must provide the reference allele information!\n");
+	}
+	if(!base.provided_stat && base.provided_beta)
+	{
+		base.statistic = (base.beta)? "BETA" : "OR";
+		base.provided_stat = true;
+	}
+	else if(!base.provided_beta && base.provided_stat)
+	{
+		if(base.statistic.compare("BETA")==0)
+		{
+			base.beta = true;
+			base.provided_beta = true;
+		}
+		else if(base.statistic.compare("OR")==0)
+		{
+			base.beta = false;
+			base.provided_beta = true;
+		}
+		else
+		{
+			error = true;
+			error_message.append("ERROR: Please indicate if base statistic is beta or not\n");
+		}
+	}
+	if(base.name.empty())
+	{
+		error = true;
+		error_message.append("ERROR: You must provide a base file\n");
+	}
+	else
+	{
+		// check the base file and get the corresponding index
+		std::ifstream base_test;
+		base_test.open(base.name.c_str());
+		if(!base_test.is_open())
+		{
+			error =true;
+			error_message.append("ERROR: Cannot open base file to read!\n");
+		}
+		else
+		{
+			std::string line;
+			std::getline(base_test, line);
+			base_test.close();
+			std::vector<std::string> token = misc::split(line);
+			int max_size = token.size();
+			if(!base.index)
+			{
+				base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
+				base.col_index[+BASE_INDEX::REF] = index_check(base.ref_allele, token);
+				base.col_index[+BASE_INDEX::ALT] = index_check(base.alt_allele, token);
+				base.col_index[+BASE_INDEX::STAT] = index_check(base.statistic, token);
+				base.col_index[+BASE_INDEX::RS] = index_check(base.snp, token);
+				base.col_index[+BASE_INDEX::BP] = index_check(base.bp, token);
+				base.col_index[+BASE_INDEX::SE] = index_check(base.standard_error, token);
+				base.col_index[+BASE_INDEX::P] = index_check(base.p_value, token);
 			}
 			else
+			{ // only required for index, as the defaults are in string
+				if(base.provided_chr)
+				{
+					base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, max_size, error, error_message, "CHR");
+				}
+				if(base.provided_ref)
+				{
+					base.col_index[+BASE_INDEX::REF] = index_check(base.ref_allele, max_size, error, error_message, "REF");
+				}
+				if(base.provided_alt)
+				{
+					base.col_index[+BASE_INDEX::ALT] = index_check(base.alt_allele, max_size, error, error_message, "ALT");
+				}
+				if(base.provided_bp)
+				{
+					base.col_index[+BASE_INDEX::BP] = index_check(base.bp, max_size, error, error_message, "BP");
+				}
+				if(base.provided_se)
+				{
+					base.col_index[+BASE_INDEX::SE] = index_check(base.standard_error, max_size, error, error_message, "SE");
+				}
+
+				base.col_index[+BASE_INDEX::P] = index_check(base.p_value, max_size, error, error_message, "P");
+				base.col_index[+BASE_INDEX::STAT] = index_check(base.statistic, max_size, error, error_message, "STAT");
+				base.col_index[+BASE_INDEX::RS] = index_check(base.snp, max_size, error, error_message, "RS");
+
+			}
+			if(base.col_index[+BASE_INDEX::P]==-1)
 			{
-				fprintf(stderr, "Fastscore    : FALSE\n");
-				fprintf(stderr, "Lower Bound  : %f\n", m_lower);
-				fprintf(stderr, "Upper Bound  : %f\n", m_upper);
-				fprintf(stderr, "Intervals    : %f\n", m_inter);
+				error = true;
+				error_message.append("ERROR: No p-value column ("+base.p_value+") in file!\n");
+			}
+			if(base.col_index[+BASE_INDEX::STAT]==-1)
+			{
+				error = true;
+				error_message.append("ERROR: No statistic column ("+base.statistic+") in file!\n");
+			}
+			if(base.col_index[+BASE_INDEX::RS]==-1)
+			{
+				error = true;
+				error_message.append("ERROR: No SNP name column ("+base.snp+") in file!\n");
+			}
+			double max_index = *max_element(base.col_index.begin(), base.col_index.end());
+			base.col_index[+BASE_INDEX::MAX] = max_index;
+		}
+	}
+}
+
+void Commander::clump_check(bool &error, std::string &error_message)
+{
+	if(!clumping.no_clump)
+	{
+		// require clumping
+		if(clumping.provide_proxy && clumping.proxy <= 0)
+		{
+			error = true;
+			error_message.append("ERROR: Proxy threshold cannot be negative!\n");
+		}
+		if(clumping.p_value < 0.0  || clumping.p_value > 1.0)
+		{
+			error = true;
+			error_message.append("ERROR: P-value threshold must be within 0 and 1!\n");
+		}
+		if(clumping.r2 < 0.0  || clumping.r2 > 1.0)
+		{
+			error = true;
+			error_message.append("ERROR: R2 threshold must be within 0 and 1!\n");
+		}
+		if(clumping.distance < 0.0)
+		{
+			error = true;
+			error_message.append("ERROR: Clumping distance must be positive!\n");
+		}
+		if(!clumping.type.empty())
+		{
+			bool alright = false;
+			for(auto &&type: supported_types)
+			{
+				if(clumping.type.compare(type)==0)
+				{
+					alright = true;
+					break;
+				}
+			}
+			if(!alright)
+			{
+				error =true;
+				error_message.append("ERROR: Unsupported LD format: "+clumping.type+"\n");
 			}
 		}
+	}
+}
+
+void Commander::misc_check(bool &error, std::string &error_message)
+{
+	if(misc.permutation < 0)
+	{
+		error =true;
+		error_message.append("ERROR: Negative number of permutation!\n");
+	}
+	if(misc.thread <= 0)
+	{
+		error = true;
+		error_message.append("ERROR: Number of thread must be larger than 1\n");
+	}
+}
+
+void Commander::prset_check(bool &error, std::string &error_message)
+{
+	if(!prset.gtf.empty() && prset.msigdb.empty())
+	{
+		error = true;
+		error_message.append("ERROR: Must provide a gtf file if msigdb is specified\n");
+	}
+	if(prset.feature.empty())
+	{
+		prset.feature.push_back("exon");
+		prset.feature.push_back("gene");
+		prset.feature.push_back("protein_coding");
+		prset.feature.push_back("CDS");
+	}
+}
+
+
+void Commander::prsice_check(bool &error, std::string &error_message)
+{
+	if(prsice.fastscore && prsice.barlevel.size()==0)
+	{
+		fprintf(stderr, "barlevel not provided.\n");
+		fprintf(stderr, "Will set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
+		prsice.barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
+	}
+	std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
+	if(!prsice.fastscore)
+	{
+		if(prsice.no_regress)
+		{
+			error = true;
+			error_message.append("ERROR: no-regress can only be used with fastscore!\n");
+		}
+		if(prsice.inter)
+		{
+			error = true;
+			error_message.append("ERROR: Cannot have negative interval!\n");
+		}
+		if(prsice.upper < prsice.lower)
+		{
+			error = true;
+			error_message.append("ERROR: Upper bound must be larger than lower bound!\n");
+		}
+	}
+}
+
+void Commander::prslice_check(bool &error, std::string &error_message)
+{
+	if(prslice.provided)
+	{
+		if(prslice.size <=0)
+		{
+			error = true;
+			error_message.append("ERROR: PRSlice size cannot be less than 1!\n");
+		}
+	}
+}
+
+void Commander::target_check(bool &error, std::string &error_message)
+{
+	if(target.name.empty())
+	{
+		error = true;
+		error_message.append("ERROR: You must provide a target file!\n");
+	}
+	bool alright = false;
+	for(auto &&type: supported_types)
+	{
+		if(target.type.compare(type)==0)
+		{
+			alright = true;
+			break;
+		}
+	}
+	if(!alright)
+	{
+		error =true;
+		error_message.append("ERROR: Unsupported target format: "+target.type+"\n");
+	}
+	if(target.pheno_file.empty() && target.is_binary.empty())
+	{
+		fprintf(stderr, "Target assumed to be binary\n");
+		target.is_binary.push_back(true);
+	}
+	else
+	{
+		if(target.pheno_col.size() == 1 && target.is_binary.empty())
+		{
+			fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
+			target.is_binary.push_back(true);
+		}
+		else if(target.pheno_col.size() != target.is_binary.size())
+		{
+			error = true;
+	        error_message.append("ERROR: Number of target phenotypes doesn't match information of binary\n");
+	        error_message.append("       target! You must indicate whether the phenotype is binary using\n");
+	        error_message.append("       --binary-target\n");
+		}
+	}
+
 }
