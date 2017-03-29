@@ -21,7 +21,10 @@ public:
 
     //base
     std::vector<int> index() const { return base.col_index; };
+    bool has_index() const { return base.index; };
+    bool beta() const { return base.beta; };
     std::string base_name() const { return base.name; };
+
     //clump
     std::string ld_prefix() const { return clumping.ld; };
     std::string ld_type() const { return clumping.type; };

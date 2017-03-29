@@ -43,6 +43,7 @@ public:
     	m_category = category;
     	m_p_threshold = p_threshold;
     };
+    void set_flipped() { m_flipped = true; };
     bool is_required() const { return m_required; };
     std::string get_rs() const { return m_rs; };
 
@@ -84,6 +85,39 @@ public:
     	}
     };
 
+
+    inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped) const{
+    	if(chr != -1 && chr!= m_chr) return false;
+    	if(loc != -1 && loc != m_loc) return false;
+    	if(m_ref.compare(ref)==0){
+    		if(!m_alt.empty() && !alt.empty())
+    		{
+    			return m_alt.compare(alt)==0;
+    		}else return true;
+    	}
+    	else if(complement(m_ref).compare(ref)==0)
+    	{
+    		if(!m_alt.empty() && !alt.empty())
+    		{
+    			return complement(m_alt).compare(alt)==0;
+    		}else return true;
+    	}
+    	else if(!m_alt.empty() && !alt.empty())
+    	{
+    		if(m_ref.compare(alt)==0 && m_alt.compare(ref)==0)
+    		{
+    			flipped = true;
+    			return true;
+    		}
+    		if(complement(m_ref).compare(alt)==0 && complement(m_alt).compare(alt)==0)
+    		{
+    			flipped = true;
+    			return true;
+    		}
+    		return false;
+    	}
+    	else return false; // cannot flip nor match
+    };
 private:
     //basic info
     std::string m_ref;
@@ -106,6 +140,8 @@ private:
     //clump related
     bool m_clumped;
     bool m_required;
+    bool m_flipped;
+
     inline std::string complement(const std::string &allele) const
     {
     	if(allele.compare("A")==0 || allele.compare("a")==0) return "T";

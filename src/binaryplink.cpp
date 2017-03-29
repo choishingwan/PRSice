@@ -97,6 +97,8 @@ std::vector<SNP> BinaryPlink::load_snps()
 	m_unfiltered_marker_ctl=0;
 	std::ifstream bimfile;
 	std::vector<SNP> snp_info;
+	std::string prev_chr = "";
+	int order = 0;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -148,7 +150,6 @@ std::vector<SNP> BinaryPlink::load_snps()
 		}
 		std::string line;
 		int num_line = 0;
-		std::string prev_chr="";
 		int32_t chr_code=0;
 		while(std::getline(bimfile, line))
 		{
@@ -168,6 +169,7 @@ std::vector<SNP> BinaryPlink::load_snps()
 				std::string chr = token[+BIM::CHR];
 				if(chr.compare(prev_chr)!=0)
 				{
+					m_chr_order[chr] = order++;
 					chr_code = get_chrom_code_raw(chr.c_str());
 					if (((const uint32_t)chr_code) > m_max_code) { // bigger than the maximum code, ignore it
 						if(!chr_error)
@@ -187,6 +189,10 @@ std::vector<SNP> BinaryPlink::load_snps()
 						}
 						size_t loc = temp;
 						// better way is to use struct. But for some reason that doesn't work
+						if(m_existed_snps_index.find(token[+BIM::RS])!= m_existed_snps_index.end())
+						{
+							throw std::runtime_error("ERROR: Duplicated SNP ID detected!\n");
+						}
 						m_existed_snps_index[token[+BIM::RS]] = marker_uidx;
 						snp_info[marker_uidx] = SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
 								token[+BIM::A2]);

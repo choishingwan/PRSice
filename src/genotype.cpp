@@ -150,183 +150,186 @@ double Genotype::update_existed(const std::unordered_map<std::string, int> &ref_
 	return (matched==0)? -1 : (double)miss_match/matched;
 }
 
-void Genotype::reset_existed()
+void Genotype::read_base(const Commander &c_commander, const Region &region)
 {
-	for(auto &&snp : m_existed_snps)
-	{
-		snp.required();
-	}
-}
-
-
-void Genotype::read_snps(const Commander &commander, const Region &region)
-{
-	// want to also sort out the partitioning here
-	const std::string input = c_commander.base_name()
+	// can assume region is of the same order as m_existed_snp
+	const std::string input = c_commander.base_name();
 	const bool beta = c_commander.beta();
-	if (beta && c_commander.statistic().compare("OR") == 0)
-		fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
-	std::vector<int> index = SNP::get_index(c_commander, input); // more appropriate for commander
+	const bool fastscore = c_commander.fastscore();
+	const bool full = c_commander.full();
+	std::vector<int> index = c_commander.index(); // more appropriate for commander
 	// now coordinates obtained from target file instead. Coordinate information
 	// in base file only use for validation
+	std::ifstream snp_file;
+	snp_file.open(input.c_str());
+	if(!snp_file.is_open())
+	{
+		std::string error_message = "ERROR: Cannot open base file: " +input;
+		throw std::runtime_error(error_message);
+	}
+	int max_index = index[+BASE_INDEX::MAX];
+	std::string line;
+	if (!c_commander.has_index()) std::getline(snp_file, line);
 
-		// Open the file
-		std::ifstream snp_file;
-		snp_file.open(input.c_str());
-		if (!snp_file.is_open())
+	// category related stuff
+	double threshold = (c_commander.fastscore())? c_commander.bar_upper() : c_commander.upper();
+	double bound_start = c_commander.lower();
+	double bound_end = c_commander.upper();
+	double bound_inter = c_commander.inter();
+
+	threshold = (full)? 1.0 : threshold;
+	std::vector < std::string > token;
+
+	bool exclude = false;
+	// Some QC countss
+	size_t num_duplicated = 0;
+	size_t num_excluded = 0;
+	size_t num_not_found = 0;
+	size_t num_mismatched = 0;
+	size_t num_not_converted = 0; // this is for NA
+	size_t num_negative_stat = 0;
+	std::unordered_set<std::string> dup_index;
+	// Actual reading the file, will do a bunch of QC
+	while (std::getline(snp_file, line))
+	{
+		misc::trim(line);
+		if (!line.empty())
 		{
-			std::string error_message = "Cannot open base file: " + input;
-			throw std::runtime_error(error_message);
-		}
-		// Some QC countss
-		int num_duplicated = 0;
-		size_t num_stat_not_convertible = 0;
-		size_t num_p_not_convertible = 0;
-		size_t num_indel = 0;
-		size_t num_se_not_convertible = 0;
-		size_t num_exclude = 0;
-		int max_index = index[+SNP_Index::MAX];
-		std::string line;
-		// remove header if index is not provided
-		if (!c_commander.index()) std::getline(snp_file, line);
-		bool read_error = false;
-		bool not_converted = false;
-		bool exclude = false;
-		bool chr_error =false;
-		// category related stuff
-		double threshold = (c_commander.fastscore())? c_commander.get_bar_upper() : c_commander.get_upper();
-		threshold = (c_commander.full())? 1.0 : threshold;
-		std::vector < std::string > token;
-		// Actual reading the file, will do a bunch of QC
-		while (std::getline(snp_file, line))
-		{
-			misc::trim(line);
-			if (!line.empty())
+			exclude = false;
+			token = misc::split(line);
+			if (token.size() <= max_index)
+				throw std::runtime_error("More index than column in data");
+			else
 			{
-				not_converted = false;
-				exclude = false;
-				token = misc::split(line);
-				if (token.size() <= max_index)
-					throw std::runtime_error("More index than column in data");
-				else
+				std::string rs_id = token[index[+BASE_INDEX::RS]];
+				auto target = m_existed_snps_index.find(rs_id);
+				if(target!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
 				{
-					std::string rs_id = token[index[+SNP_Index::RS]];
-					std::string chr = (index[+SNP_Index::CHR] >= 0)? token[index[+SNP_Index::CHR]] : "";
-					int32_t chr_code = get_chrom_code_raw(chr.c_str());
-					if (((const uint32_t)chr_code) > PLINK::g_max_code) {
-						if (chr_code != -1) {
-							if (chr_code >= MAX_POSSIBLE_CHROM) {
-								chr_code= PLINK::g_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+					dup_index.insert(rs_id);
+					auto &cur_snp = m_existed_snps[target->second];
+					if(!cur_snp.is_required()) num_excluded++;
+					else
+					{
+						int32_t chr_code = -1;
+						if (index[+BASE_INDEX::CHR] >= 0)
+						{
+							chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
+							if (((const uint32_t)chr_code) > m_max_code) {
+								if (chr_code != -1) {
+									if (chr_code >= MAX_POSSIBLE_CHROM) {
+										chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+									}
+									else
+									{
+										std::string error_message ="ERROR: Cannot parse chromosome code: "
+												+ token[index[+BASE_INDEX::CHR]];
+										throw std::runtime_error(error_message);
+									}
+								}
 							}
-							else
-							{
-								std::string error_message ="ERROR: Cannot parse chromosome code: " + chr;
+						}
+						std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
+						std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ? token[index[+BASE_INDEX::ALT]] : "";
+						int loc = -1;
+						if (index[+BASE_INDEX::BP] >= 0)
+						{
+							// obtain the SNP coordinate
+							try {
+								loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
+								if (loc < 0)
+								{
+									std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
+									throw std::runtime_error(error_message);
+								}
+							} catch (const std::runtime_error &error) {
+								std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
 								throw std::runtime_error(error_message);
 							}
 						}
-					}
-					if(chr_code == (uint32_t)PLINK::g_xymt_codes[X_OFFSET] ||
-							chr_code == (uint32_t)PLINK::g_xymt_codes[Y_OFFSET])
-					{
-						exclude= true;
-						if(!chr_error)
+						bool flipped = false;
+						if(!cur_snp.matching(chr_code, loc, ref_allele, alt_allele, flipped))
 						{
-							fprintf(stderr, "WARNING: Sex chromosome detected. They will be ignored\n");
-							chr_error = true;
+							num_mismatched++;
+							exclude = true; // hard check, as we can't tell if that is correct or not anyway
 						}
-					}
-					std::string ref_allele = (index[+SNP_Index::REF] >= 0) ? token[index[+SNP_Index::REF]] : "";
-					std::string alt_allele = (index[+SNP_Index::ALT] >= 0) ? token[index[+SNP_Index::ALT]] : "";
-					double pvalue = 0.0;
-					if (index[+SNP_Index::P] >= 0)
-					{
-						try {
-							// obtain the p-value and calculate the corresponding threshold & category
-							pvalue = misc::convert<double>(
-									token[index[+SNP_Index::P]]);
+						double pvalue = 2.0;
+						try{
+							misc::convert<double>( token[index[+BASE_INDEX::P]]);
 							if (pvalue < 0.0 || pvalue > 1.0)
 							{
-								read_error = true;
-								fprintf(stderr, "ERROR: %s's p-value is %f\n", rs_id.c_str(), pvalue);
+								std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
+								throw std::runtime_error(error_message);
 							}
 							else if (pvalue > threshold)
 							{
 								exclude = true;
-								num_exclude++;
+								num_excluded++;
 							}
-						} catch (const std::runtime_error &error) {
-							num_p_not_convertible++;
-							not_converted = true;
+						}catch (const std::runtime_error& error) {
+							exclude = true;
+							num_not_converted = true;
 						}
-					}
-					double stat = 0.0;
-					if (index[+SNP_Index::STAT] >= 0)
-					{
-						//Obtain the test statistic
+						double stat = 0.0;
 						try {
-							stat = misc::convert<double>( token[index[+SNP_Index::STAT]]);
-							if (!beta) stat = log(stat);
-						} catch (const std::runtime_error& error) {
-							num_stat_not_convertible++;
-							not_converted = true;
-						}
-					}
-					double se = 0.0;
-					if (index[+SNP_Index::SE] >= 0)
-					{
-						// obtain the standard error (though it is currently useless)
-						try {
-							se = misc::convert<double>( token[index[+SNP_Index::SE]]);
-						} catch (const std::runtime_error &error) {
-							num_se_not_convertible++;
-						}
-					}
-					int loc = -1;
-					if (index[+SNP_Index::BP] >= 0)
-					{
-						// obtain the SNP coordinate
-						try {
-							int temp = misc::convert<int>( token[index[+SNP_Index::BP]].c_str());
-							if (temp < 0)
+							stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
+							if(stat <0 && !beta)
 							{
-								read_error = true;
-								fprintf(stderr, "ERROR: %s has negative loci\n", rs_id.c_str());
+								num_negative_stat++;
+								exclude = true;
 							}
-							else loc = temp;
-						} catch (const std::runtime_error &error) { }
-					}
-					if (!SNP::valid_snp(ref_allele))
-					{
-						num_indel++;
-					}
-					else if (!alt_allele.empty() && !SNP::valid_snp(alt_allele)) num_indel++;
-					else if(!alt_allele.empty() && SNP::ambiguous(ref_allele, alt_allele)){
-						num_exclude++;
-					}
-					else if (!not_converted && !exclude)
-					{
-						m_snp_list.push_back( new SNP(rs_id, chr, loc, ref_allele, alt_allele, stat, se, pvalue));
-					} else {
-	//		    			We skip any SNPs with non-convertible stat and p-value as we don't know how to
-	//		    			handle them. Most likely those will be NA, which should be ignored anyway
+							else if (!beta) stat = log(stat);
+						} catch (const std::runtime_error& error) {
+							num_not_converted++;
+							exclude = true;
+						}
+
+
+						if(!alt_allele.empty() && SNP::ambiguous(ref_allele, alt_allele)){
+							num_excluded++;
+							exclude= true;
+						}
+						if(!exclude)
+						{
+							int category = -1;
+							double pthres = 0.0;
+							if (fastscore)
+							{
+								category = c_commander.get_category(pvalue);
+								pthres = c_commander.get_threshold(category);
+							}
+							else
+							{
+								// calculate the threshold instead
+								if (pvalue > bound_end && full)
+								{
+									category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
+									pthres = 1.0;
+								}
+								else
+								{
+									category = std::ceil((pvalue - bound_start) / bound_inter);
+									category = (category < 0) ? 0 : category;
+									pthres = category * bound_inter + bound_start;
+								}
+							}
+							if(flipped) cur_snp.set_flipped();
+							cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
+						}
 					}
 				}
+				else if(dup_index.find(rs_id)!=dup_index.end())
+				{
+					num_duplicated++;
+				}
+				else
+				{
+					num_not_found++;
+				}
 			}
-			if (read_error) throw std::runtime_error( "Please check if you have the correct input");
 		}
-		snp_file.close();
-
-		m_snp_list.sort();
-
-		// The problem of this filtering is that if the same SNP is duplicated but with different
-		// p-value etc, they will not be removed
-		size_t before = m_snp_list.size();
-		m_snp_list.erase(std::unique(m_snp_list.begin(), m_snp_list.end()), m_snp_list.end());
-		size_t after = m_snp_list.size();
-
-		std::unordered_set<std::string> unique_chr;
-		std::unordered_set<std::string> unique_rsid;
-
+	}
+	snp_file.close();
+/*
 		for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp)
 		{
 			m_snp_index[m_snp_list[i_snp].get_rs_id()] = i_snp;
@@ -351,16 +354,9 @@ void Genotype::read_snps(const Commander &commander, const Region &region)
 				m_snp_list[i_snp].set_flag( region.check(cur_chr, m_snp_list[i_snp].get_loc()));
 			}
 		}
-
-		num_duplicated = (int) before - (int) after;
-		if (num_indel != 0) fprintf(stderr, "Number of invalid SNPs    : %zu\n", num_indel);
-		if (num_exclude != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_exclude);
-		if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
-		if (num_stat_not_convertible != 0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_convertible);
-		if (num_p_not_convertible != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_convertible);
-		if (num_se_not_convertible != 0) fprintf(stderr, "Failed to convert %zu SE\n", num_se_not_convertible);
-		fprintf(stderr, "Final Number of SNPs from base  : %zu\n", m_snp_list.size());
-		PLINK::set_chromosome(m_chr_list); // update the chromosome information for PLINK
-	}
-
+		*/
+	if (num_excluded != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_excluded);
+	if (num_not_found != 0) fprintf(stderr, "Number of SNPs not found in target: %zu\n", num_not_found);
+	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
+	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", dup_index.size());
 }

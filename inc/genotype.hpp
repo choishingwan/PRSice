@@ -31,7 +31,7 @@ public:
 	double update_existed( Genotype &reference);
 	double update_existed(const std::unordered_map<std::string, int> &ref_index,
 			const std::vector<SNP> &reference);
-	void reset_existed();
+
 	inline bool existed (const std::string &rs) const
 	{
 		return m_existed_snps_index.find(rs)!=m_existed_snps_index.end();
@@ -43,7 +43,7 @@ public:
 		}
 		return false;
 	};
-	void read_snps(const Commander &commander, const Region &region);
+	void read_base(const Commander &commander, const Region &region);
 
 protected:
 
@@ -80,7 +80,9 @@ protected:
 	uintptr_t* m_marker_exclude = nullptr;
 	std::unordered_map<std::string, size_t> m_existed_snps_index;
 	std::vector<SNP> m_existed_snps;
+	std::unordered_map<std::string, int> m_chr_order;
 
+	std::unordered_map<std::string, int> get_chr_order() const { return m_chr_order; };
 	virtual void read_genotype(){};
 	//hh_exists
 	inline bool ambiguous(std::string ref_allele, std::string alt_allele)

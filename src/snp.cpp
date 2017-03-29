@@ -5,7 +5,7 @@ SNP::SNP()
     m_loc=-1; // default is -1 to indicate that it is not provided
     m_stat=0.0;
     m_se=0.0;
-    m_p_value=0.0;
+    m_p_value=2.0; // set this to 2 such that only SNPs in base file have valid P-value
     m_p_threshold=0.0;
     m_category=0;
     m_flipped = false;
