@@ -117,21 +117,12 @@ private:
 
 class GenomeFactory {
   public:
-	 std::unique_ptr<Genotype> createBinaryPlink(std::string prefix, int num_auto=22,
-			 bool no_x=false, bool no_y=false, bool no_xy=false, bool no_mt=false,
-			 const size_t thread=1, bool verbose=false)
-	 {
-		 return std::unique_ptr<Genotype>(new BinaryPlink(prefix, num_auto, no_x, no_y, no_xy, no_mt,
-				 thread, verbose));
-	 };
-
-	 std::unique_ptr<Plink> createPlink(std::string prefix, int num_auto=22,
-			 bool no_x=false, bool no_y=false, bool no_xy=false, bool no_mt=false,
-			 const size_t thread=1, bool verbose=false)
+	std::unique_ptr<Genotype> createGenotype(const Commander &commander, const std::string &prefix, bool verbose)
 	{
-		 return std::unique_ptr<Plink>(new Plink(prefix, num_auto, no_x, no_y, no_xy, no_mt,
-				 thread, verbose));
-	};
+		return std::unique_ptr<Genotype>(new BinaryPlink(prefix, commander.num_auto(),
+				commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+				commander.thread(), verbose));
+	}
 
 };
 

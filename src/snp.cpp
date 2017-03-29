@@ -31,17 +31,18 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
     m_required=true;
 }
 
+
+SNP::SNP(const std::string rs_id, const int chr, const int loc,
+		const std::string ref_allele, const std::string alt_allele,
+		const int bound_start, const int bound_end)
+	: SNP(rs_id, chr, loc, ref_allele, alt_allele), m_bound_start(bound_start), m_bound_end(bound_end){}
+
 SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
 		const std::string ref_allele, const std::string alt_allele,
 		const double statistic, const double se, const double p_value, const int category,
 		const double p_threshold)
 	: SNP(rs_id, chr, loc, ref_allele, alt_allele),  m_category(category), m_stat(statistic),
-		m_se(se), m_p_value(p_value), m_p_threshold(p_threshold)
-{
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
-    m_clumped = false;
-    m_required=true;
-}
+		m_se(se), m_p_value(p_value), m_p_threshold(p_threshold){}
 
 SNP::~SNP(){}
 

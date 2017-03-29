@@ -159,34 +159,17 @@ void Genotype::reset_existed()
 }
 
 
-void Genotype::read_snps(const Commander &commander, const Region &region, const size_t base_index)
+void Genotype::read_snps(const Commander &commander, const Region &region)
 {
 	// want to also sort out the partitioning here
-	const std::string input = c_commander.get_base(base_index)
-	const bool beta = c_commander.get_base_binary(base_index);
+	const std::string input = c_commander.base_name()
+	const bool beta = c_commander.beta();
 	if (beta && c_commander.statistic().compare("OR") == 0)
 		fprintf(stderr, "WARNING: OR detected but user suggest the input is beta!\n");
 	std::vector<int> index = SNP::get_index(c_commander, input); // more appropriate for commander
+	// now coordinates obtained from target file instead. Coordinate information
+	// in base file only use for validation
 
-		if ((c_commander.get_target().find("#") != std::string::npos && index[+SNP_Index::CHR] < 0)
-				|| (c_commander.ld_prefix().find("#") != std::string::npos && index[+SNP_Index::CHR] < 0))
-		{
-			std::string error_message = "To use chromosome separated PLINK input, you must provide"
-					" the CHR header as we use the CHR information form the base file to substitute #";
-			throw std::runtime_error(error_message);
-		}
-		else if (region.size() > 1 && (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0))
-		{
-			std::string error_message = "To perform PRSet, you must provide the CHR and LOC header such"
-					" that we can determine the set membership";
-			throw std::runtime_error(error_message);
-		}
-		else if (c_commander.prslice() > 0.0 && (index[+SNP_Index::CHR] < 0 || index[+SNP_Index::BP] < 0))
-		{
-			std::string error_message = "To perform PRSlice, you must provide the CHR and LOC header such"
-					" that we can perform the slicing";
-			throw std::runtime_error(error_message);
-		}
 		// Open the file
 		std::ifstream snp_file;
 		snp_file.open(input.c_str());

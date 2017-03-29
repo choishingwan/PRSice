@@ -17,6 +17,9 @@ public:
     		const std::string ref_allele, const std::string alt_allele);
     SNP(const std::string rs_id, const int chr, const int loc,
     		const std::string ref_allele, const std::string alt_allele,
+			const int bound_start, const int bound_end);
+    SNP(const std::string rs_id, const int chr, const int loc,
+    		const std::string ref_allele, const std::string alt_allele,
 			const double statistic, const double se, const double p_value,
 			const int category, const double p_threshold);
     virtual ~SNP();
@@ -89,6 +92,13 @@ private:
     int m_chr;
     int m_loc;
     int m_category;
+    // This indicate where this SNP's bound is at
+    // useful for PRSlice and also clumping
+    // thinking about it. Even if the location isn't given for
+    // PRSet or PRSlice, we can still use the coordinates from
+    // the target / reference file
+    int m_bound_start;
+    int m_bound_end;
     double m_stat;
     double m_se;
     double m_p_value;
