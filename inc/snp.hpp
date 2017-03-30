@@ -44,6 +44,11 @@ public:
     	m_p_threshold = p_threshold;
     };
     void set_flipped() { m_flipped = true; };
+    void set_line(std::string file, int line)
+    {
+    	m_file = file;
+    	m_line = line;
+    };
     bool is_required() const { return m_required; };
     std::string get_rs() const { return m_rs; };
 
@@ -123,6 +128,7 @@ private:
     std::string m_ref;
     std::string m_alt;
     std::string m_rs;
+    std::string m_file;
     int m_chr;
     int m_loc;
     int m_category;
@@ -133,6 +139,7 @@ private:
     // the target / reference file
     int m_bound_start;
     int m_bound_end;
+    int m_line;
     double m_stat;
     double m_se;
     double m_p_value;
