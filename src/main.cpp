@@ -22,17 +22,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	Region region = Region(commander.get_feature());
-	try
-	{
-		region.run(commander.get_gtf(), commander.get_msigdb(),
-				commander.get_bed(), commander.get_out());
-	}
-	catch (const std::runtime_error &error)
-	{
-		std::cerr << error.what() << std::endl;
-		exit(-1);
-	}
 	GenomeFactory factory;
 	// change the factory according to the file type
 	// to get the file type, we might want to revemp the commander class
@@ -58,14 +47,25 @@ int main(int argc, char *argv[])
 	}
 
 
-	std::vector < std::string > base = commander.get_base();
+	Region region = Region(commander.feature(), target_file->get_chr_order());
+	try
+	{
+		region.run(commander.gtf(), commander.msigdb(),
+				commander.bed(), commander.out());
+	}
+	catch (const std::runtime_error &error)
+	{
+		std::cerr << error.what() << std::endl;
+		exit(-1);
+	}
+
+
+	std::string base = commander.base_name();
 	// Might want to generate a log file?
 	region.info();
 	commander.user_input();
 
-	bool perform_prslice = commander.prslice() > 0.0;
-	bool full_model = commander.full();
-	double bound_end = commander.get_upper();
+	bool perform_prslice = commander.perform_prslice();
 	fprintf(stderr, "\nStart processing: %s\n", commander.base_name().c_str());
 	fprintf(stderr, "==============================\n");
 	//        	Need to handle paths in the name
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	try
 	{
 		target_file->read_snps(commander, region);
-
+		/*
 		PRSice prsice = PRSice(base_name, i_base,
 				commander.get_target(), commander.target_is_binary(),
 				commander.get_perm(),
@@ -110,30 +110,18 @@ int main(int argc, char *argv[])
 							"None of the SNPs fall within the threshold\n");
 				}
 			}
+
 		} else {
 			// clean up the region such that it is easier to handle later on
 			region.prslice();
 			for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-				/**
-				 * Again, initialize the matrix, which will be used for the whole PRSlice
-				 */
 				prsice.init_matrix(commander, i_pheno, perform_prslice);
-				/**
-				 * Perform PRSice on each window
-				 * region here is only a place holder required by some of
-				 * the functions from PRSice
-				 */
 				prsice.prslice_windows(commander, region);
-				/**
-				 * Now calculate the best window combination
-				 */
 				prsice.prslice(commander, region, i_pheno);
-				/**
-				 * This should produce the output
-				 */
 				prsice.output(commander, i_pheno);
 			}
 		}
+		*/
 	} catch (const std::out_of_range &error) {
 		std::cerr << error.what() << std::endl;
 		exit(-1);
