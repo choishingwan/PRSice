@@ -7,7 +7,8 @@
 
 #include "region.hpp"
 
-Region::Region(std::vector<std::string> feature)
+Region::Region(std::vector<std::string> feature, const std::unordered_map<std::string, int> &chr_order)
+: m_chr_order(chr_order)
 {
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     // Make the base region which includes everything
@@ -113,11 +114,14 @@ void Region::process_bed(const std::vector<std::string> &bed)
                     		error=true;
                     		break;
                     }
-                    boundary cur_bound;
-                    std::get<+BOUNDARY::CHR>(cur_bound) = token[0];
-                    std::get<+BOUNDARY::START>(cur_bound) = start;
-                    std::get<+BOUNDARY::END>(cur_bound) = end;
-                    current_region.push_back(cur_bound);
+                    if(m_chr_order.find(token[0])!= m_chr_order.end())
+                    {
+                    	boundary cur_bound;
+                    	std::get<+BOUNDARY::CHR>(cur_bound) = token[0];
+                    	std::get<+BOUNDARY::START>(cur_bound) = start;
+                    	std::get<+BOUNDARY::END>(cur_bound) = end;
+                    	current_region.push_back(cur_bound);
+                    }
 				}
 			}
 			if(!error)
@@ -125,13 +129,15 @@ void Region::process_bed(const std::vector<std::string> &bed)
 				std::sort(begin(current_region), end(current_region),
 						[](boundary const &t1, boundary const &t2)
 						{
-							if(std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))==0)
+							if(m_chr_order.at(std::get<+BOUNDARY::CHR>(t1))==
+									m_chr_order.at(std::get<+BOUNDARY::CHR>(t2)))
 							{
 								if(std::get<+BOUNDARY::START>(t1)==std::get<+BOUNDARY::START>(t2))
 									return std::get<+BOUNDARY::END>(t1)<std::get<+BOUNDARY::END>(t2);
 								return std::get<+BOUNDARY::START>(t1) < std::get<+BOUNDARY::START>(t2);
 							}
-							else return std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))<0;
+							else return m_chr_order.at(std::get<+BOUNDARY::CHR>(t1)) <
+									m_chr_order.at(std::get<+BOUNDARY::CHR>(t2));
 						}
 					);
 				m_region_list.push_back(current_region);
@@ -169,9 +175,9 @@ std::unordered_map<std::string, boundary > Region::process_gtf(const std::string
         if(!line.empty() && line[0]!='#')
         {
             std::vector<std::string> token = misc::split(line, "\t");
-            if(in_feature(token[+GTF::FEATURE]))
+            std::string chr = token[+GTF::CHR];
+            if(in_feature(token[+GTF::FEATURE]) && m_chr_order.find(chr)!=m_chr_order.end())
             {
-                std::string chr = token[+GTF::CHR];
                 int temp=0;
                 size_t start=0, end=0;
                 try
@@ -329,13 +335,15 @@ void Region::process_msigdb(const std::string &msigdb,
                     std::sort(begin(current_region), end(current_region),
                     		[](boundary const &t1, boundary const &t2)
 							{
-                        			if(std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))==0)
+                        			if(m_chr_order.at(std::get<+BOUNDARY::CHR>(t1))==
+                        					m_chr_order.at(std::get<+BOUNDARY::CHR>(t2)))
                         			{
                         				if(std::get<+BOUNDARY::START>(t1)==std::get<+BOUNDARY::START>(t2))
                         					return std::get<+BOUNDARY::END>(t1)<std::get<+BOUNDARY::END>(t2);
                         				return std::get<+BOUNDARY::START>(t1) < std::get<+BOUNDARY::START>(t2);
                         			}
-                        			else return std::get<+BOUNDARY::CHR>(t1).compare(std::get<+BOUNDARY::CHR>(t2))<0;
+                        			else return m_chr_order.at(std::get<+BOUNDARY::CHR>(t1)) <
+                        					m_chr_order.at(std::get<+BOUNDARY::CHR>(t2));
 							}
                     );
 

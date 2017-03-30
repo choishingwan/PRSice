@@ -28,7 +28,7 @@
 class Region
 {
 public:
-    Region(std::vector<std::string> feature);
+    Region(std::vector<std::string> feature, const std::unordered_map<std::string, int> &chr_order);
     virtual ~Region();
     void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out);
     void reset()
@@ -67,6 +67,7 @@ public:
     }
 private:
     std::unordered_set<std::string> m_duplicated_names;
+    std::unordered_map<std::string, int> m_chr_order;
     std::vector<std::string> m_region_name;
     std::vector<std::string> m_gtf_feature;
     std::vector< std::vector<boundary> > m_region_list;
