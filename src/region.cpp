@@ -153,10 +153,10 @@ void Region::process_bed(const std::vector<std::string> &bed)
     }
 }
 
-std::unordered_map<std::string, boundary > Region::process_gtf(const std::string &gtf,
+std::unordered_map<std::string, Region::region_bound > Region::process_gtf(const std::string &gtf,
 		std::unordered_map<std::string, std::set<std::string> > &id_to_name, const std::string &out_prefix)
 {
-    std::unordered_map<std::string, boundary > result_boundary;
+    std::unordered_map<std::string, Region::region_bound > result_boundary;
     if(gtf.empty()) return result_boundary; // basically return an empty map
 
     std::ifstream gtf_file;
@@ -257,7 +257,7 @@ std::unordered_map<std::string, boundary > Region::process_gtf(const std::string
                 //Now add the information to the map using the id
                 if(result_boundary.find(id)!=result_boundary.end())
                 {
-                		if(std::get<+BOUNDARY::CHR>(result_boundary[id]).compare(chr)!=0)
+                		if(result_boundary[id].chr.compare(chr)!=0)
                 		{
                 			fprintf(stderr, "ERROR: Same gene occur on two separate chromosome!\n");
                 			fprintf(stderr, "       Will ignore the gtf file\n");
@@ -265,17 +265,17 @@ std::unordered_map<std::string, boundary > Region::process_gtf(const std::string
                 			id_to_name.clear();
                 			return result_boundary;
                 		}
-                		if(std::get<+BOUNDARY::START>(result_boundary[id]) > start)
-                				std::get<+BOUNDARY::START>(result_boundary[id]) = start;
-                		if(std::get<+BOUNDARY::END>(result_boundary[id]) < end)
-                				std::get<+BOUNDARY::END>(result_boundary[id]) = end;
+                		if(result_boundary[id].start > start)
+                				result_boundary[id].start = start;
+                		if(result_boundary[id].end < end)
+                				result_boundary[id].end = end;
                 }
                 else
                 {
-                		boundary cur_bound;
-                		std::get<+BOUNDARY::CHR>(cur_bound) = chr;
-                		std::get<+BOUNDARY::START>(cur_bound) = start;
-                		std::get<+BOUNDARY::END>(cur_bound) = end;
+                		region_bound cur_bound;
+                		cur_bound.chr = chr;
+                		cur_bound.start = start;
+                		cur_bound.end = end;
                 		result_boundary[id]=boundary(cur_bound);
                 }
             }
@@ -285,7 +285,7 @@ std::unordered_map<std::string, boundary > Region::process_gtf(const std::string
 }
 
 void Region::process_msigdb(const std::string &msigdb,
-                            const std::unordered_map<std::string, boundary > &gtf_info,
+                            const std::unordered_map<std::string, Region::region_bound > &gtf_info,
                             const std::unordered_map<std::string, std::set<std::string> > &id_to_name)
 {
     if(msigdb.empty() || gtf_info.size()==0) return; // Got nothing to do
@@ -298,67 +298,66 @@ void Region::process_msigdb(const std::string &msigdb,
         std::string line;
         while(std::getline(input, line))
         {
-            misc::trim(line);
-            if(!line.empty())
+        		misc::trim(line);
+        		if(!line.empty())
             {
-                std::vector<std::string> token = misc::split(line);
-                if(token.size() < 2)  // Will treat the url as gene just in case
-                {
-                    fprintf(stderr, "Each line require at least 2 information\n");
-                    fprintf(stderr, "%s\n", line.c_str());
-                }
-                else if(m_duplicated_names.find(token[0])==m_duplicated_names.end())
-                {
-                    std::string name = token[0];
-                    std::vector<boundary> current_region;
-                    for(auto &gene: token)
-                    {
-                    	if(gtf_info.find(gene)==gtf_info.end())
-                    	{
-                    		if(id_to_name.find(gene)!= id_to_name.end())
-                    		{
-                    			auto name = id_to_name.at(gene);
-                    			for(auto &translate: name)
-                    			{
-                    				if(gtf_info.find(translate) != gtf_info.end())
-                    				{
-                    					current_region.push_back(gtf_info.at(translate));
-                    				}
-                    			}
-                    		}
-                    	}
-                    	else
-                    	{
-                    		current_region.push_back(gtf_info.at(gene));
-                    	}
-                    }
-                    std::sort(begin(current_region), end(current_region),
-                    		[](boundary const &t1, boundary const &t2)
+        			std::vector<std::string> token = misc::split(line);
+        			if(token.size() < 2)  // Will treat the url as gene just in case
+        			{
+        				fprintf(stderr, "Each line require at least 2 information\n");
+        				fprintf(stderr, "%s\n", line.c_str());
+        			}
+        			else if(m_duplicated_names.find(token[0])==m_duplicated_names.end())
+        			{
+        				std::string name = token[0];
+        				std::vector<region_bound> current_region;
+        				for(auto &gene: token)
+        				{
+        					if(gtf_info.find(gene)==gtf_info.end())
+        					{
+        						if(id_to_name.find(gene)!= id_to_name.end())
+        						{
+        							auto &name = id_to_name.at(gene);
+        							for(auto &&translate: name)
+        							{
+        								if(gtf_info.find(translate) != gtf_info.end())
+        								{
+        									current_region.push_back(gtf_info.at(translate));
+        								}
+        							}
+        						}
+        					}
+        					else
+        					{
+        						current_region.push_back(gtf_info.at(gene));
+        					}
+        				}
+        				std::sort(begin(current_region), end(current_region),
+        						[](region_bound const &t1, region_bound const &t2)
 							{
-                        			if(m_chr_order.at(std::get<+BOUNDARY::CHR>(t1))==
-                        					m_chr_order.at(std::get<+BOUNDARY::CHR>(t2)))
+                        			if(m_chr_order.at(t1.chr)==
+                        					m_chr_order.at(t2.chr))
                         			{
-                        				if(std::get<+BOUNDARY::START>(t1)==std::get<+BOUNDARY::START>(t2))
-                        					return std::get<+BOUNDARY::END>(t1)<std::get<+BOUNDARY::END>(t2);
-                        				return std::get<+BOUNDARY::START>(t1) < std::get<+BOUNDARY::START>(t2);
+                        				if(t1.start==t2.start)
+                        					return t1.end < t2.end;
+                        				return t1.start < t2.end;
                         			}
-                        			else return m_chr_order.at(std::get<+BOUNDARY::CHR>(t1)) <
-                        					m_chr_order.at(std::get<+BOUNDARY::CHR>(t2));
+                        			else return m_chr_order.at(t1.chr) <
+                        					m_chr_order.at(t2.chr);
 							}
                     );
 
-    				m_region_list.push_back(current_region);
-    				m_region_name.push_back(name);
-    				m_duplicated_names.insert(name);
-                }
-                else if(m_duplicated_names.find(token[0])!=m_duplicated_names.end())
-                {
-                	fprintf(stderr, "Duplicated Set: %s. It will be ignored\n", token[0].c_str());
-                }
+        				m_region_list.push_back(current_region);
+        				m_region_name.push_back(name);
+        				m_duplicated_names.insert(name);
+        			}
+        			else if(m_duplicated_names.find(token[0])!=m_duplicated_names.end())
+        			{
+        				fprintf(stderr, "Duplicated Set: %s. It will be ignored\n", token[0].c_str());
+        			}
             }
         }
         input.close();
-
     }
 }
 
@@ -380,7 +379,7 @@ void Region::print_file(std::string output) const
 
 Region::~Region() {}
 
-std::vector<long_type> Region::check(std::string chr, size_t loc)
+std::vector<long_type> Region::check(int chr, size_t loc)
 {
     std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
     res[0]=1; // base region which contains everything
@@ -397,11 +396,11 @@ std::vector<long_type> Region::check(std::string chr, size_t loc)
             while(m_snp_check_index[i_region]< current_region_size)
             {
                 // do the checking
-                boundary current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
-                std::string region_chr = std::get<+BOUNDARY::CHR>(current_bound);
-                size_t region_start = std::get<+BOUNDARY::START>(current_bound);
-                size_t region_end = std::get<+BOUNDARY::END>(current_bound);
-                if(chr.compare(region_chr) != 0) m_snp_check_index[i_region]++;
+                auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
+                int region_chr = m_chr_order[current_bound.chr];
+                size_t region_start = current_bound.start;
+                size_t region_end = current_bound.end;
+                if(chr != region_chr) m_snp_check_index[i_region]++;
                 else  // same chromosome
                 {
                     if(region_start <= loc && region_end >=loc)

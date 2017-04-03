@@ -37,7 +37,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    std::vector<long_type> check(std::string chr, size_t loc);
+    std::vector<long_type> check(int chr, size_t loc);
     size_t flag_size() const
     {
         return (m_region_name.size()+1)/(m_bit_size)+1;
@@ -66,11 +66,18 @@ public:
     		m_region_name.push_back("Base");
     }
 private:
+
+    struct region_bound{
+    		std::string chr;
+    		int start;
+    		int end;
+    };
+
     std::unordered_set<std::string> m_duplicated_names;
     std::unordered_map<std::string, int> m_chr_order;
     std::vector<std::string> m_region_name;
     std::vector<std::string> m_gtf_feature;
-    std::vector< std::vector<boundary> > m_region_list;
+    std::vector< std::vector<region_bound> > m_region_list;
     // This is to indicate the current location of each region
     // This work because we assume all SNPs are sorted by their coordinates
     // in the same way as the region files.
@@ -88,14 +95,13 @@ private:
 
 
 
-
     void process_bed(const std::vector<std::string> &bed);
 
-    std::unordered_map<std::string, boundary > process_gtf(const std::string &gtf,
+    std::unordered_map<std::string, region_bound > process_gtf(const std::string &gtf,
     		std::unordered_map<std::string, std::set<std::string> > &id_to_name, const std::string &out_prefix);
 
     void process_msigdb(const std::string &msigdb,
-                        const std::unordered_map<std::string, boundary > &gtf_info,
+                        const std::unordered_map<std::string, region_bound > &gtf_info,
                         const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
 
 
