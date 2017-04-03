@@ -94,10 +94,12 @@ protected:
 
 	struct{
 		double maf;
-		double geno_missing;
-		double ind_missing; // likely ignored
+		double geno;
 		double info_score;
-	} filters;
+		bool filter_maf;
+		bool filter_geno;
+		bool filter_info;
+	} filter;
 
 	std::unordered_map<std::string, int> get_chr_order() const { return m_chr_order; };
 	virtual void read_genotype(){};
@@ -109,6 +111,8 @@ protected:
 				|| (ref_allele == "G" && alt_allele == "C")
 				|| (ref_allele == "g" && alt_allele == "c");
 	}
+
+	void filter_mind(double mind);
 };
 
 class Plink: public Genotype{

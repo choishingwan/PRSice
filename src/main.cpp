@@ -75,7 +75,11 @@ int main(int argc, char *argv[])
 	try
 	{
 		target_file->read_base(commander, region);
-		target_file->clump();
+		if(commander.filter_mind())
+		{
+			target_file->filter_mind(commander.mind());
+		}
+		//target_file->clump();
 		/*
 		PRSice prsice = PRSice(base_name, i_base,
 				commander.get_target(), commander.target_is_binary(),

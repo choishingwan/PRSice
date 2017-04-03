@@ -365,6 +365,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	clump_info.r2 =  c_commander.clump_r2();
 	clump_info.proxy = c_commander.proxy();
 	clump_info.use_proxy = c_commander.use_proxy();
+	filter.filter_geno = c_commander.filter_geno();
+	filter.filter_maf = c_commander.filter_maf();
+	filter.filter_info = c_commander.filter_info();
+	filter.geno = c_commander.geno();
+	filter.info_score = c_commander.info_score();
+	filter.maf = c_commander.maf();
 }
 
 
