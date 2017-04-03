@@ -39,6 +39,16 @@ public:
     std::string get_cov_file() const { return covariate.name; };
     std::vector<std::string> get_cov_header() const { return covariate.covariates; };
 
+    //filtering
+    bool filter_maf() const { return filter.use_maf; };
+    bool filter_geno() const { return filter.use_geno; };
+    bool filter_mind() const { return filter.use_mind; };
+    bool filter_info() const { return filter.use_info; };
+    double maf() const { return filter.maf; };
+    double geno() const { return filter.geno; };
+    double mind() const { return filter.mind; };
+    double info_score() const { return filter.info_score(); };
+
     //misc
     bool all() const { return misc.all; };
     bool print_snp() const { return misc.print_snp; };
