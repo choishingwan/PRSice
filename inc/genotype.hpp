@@ -85,6 +85,20 @@ protected:
 	std::vector<SNP> m_existed_snps;
 	std::unordered_map<std::string, int> m_chr_order;
 
+	struct{
+		double r2;
+		double proxy;
+		double p_value;
+		bool use_proxy;
+	} clump_info;
+
+	struct{
+		double maf;
+		double geno_missing;
+		double ind_missing; // likely ignored
+		double info_score;
+	} filters;
+
 	std::unordered_map<std::string, int> get_chr_order() const { return m_chr_order; };
 	virtual void read_genotype(){};
 	//hh_exists
@@ -121,12 +135,30 @@ private:
 
 
 class GenomeFactory {
-  public:
-	std::unique_ptr<Genotype> createGenotype(const Commander &commander, const std::string &prefix, bool verbose)
+private:
+	std::unordered_map<std::string, int> file_type {
+		{ "bed", 0 },
+		{ "ped", 1 },
+		{ "bgen", 2}
+	};
+public:
+	std::unique_ptr<Genotype> createGenotype(const Commander &commander, const std::string &prefix, const std::string &type, bool verbose)
 	{
-		return std::unique_ptr<Genotype>(new BinaryPlink(prefix, commander.num_auto(),
-				commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
-				commander.thread(), verbose));
+		int code = (file_type.find(type)!=file_type.end())? file_type[type]: 0;
+		switch(code)
+		{
+		case 1:
+			return std::unique_ptr<Genotype>(new Plink(prefix, commander.num_auto(),
+							commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+							commander.thread(), verbose));
+		case 2:
+		default:
+		case 0:
+			return std::unique_ptr<Genotype>(new BinaryPlink(prefix, commander.num_auto(),
+							commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+							commander.thread(), verbose));
+
+		}
 	}
 
 };

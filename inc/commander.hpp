@@ -60,6 +60,7 @@ public:
     		else if(prsice.missing_score == "center") return SCORING::CENTER;
     		else return SCORING::MEAN_IMPUTE;
     }
+
     double lower() const { return prsice.lower; };
     double upper() const { return prsice.upper; };
     double inter() const { return prsice.inter; };
@@ -155,9 +156,20 @@ private:
     } covariate;
 
     struct{
+    		double maf;
+    		double mind;
+    		double geno;
+    		double info_score;
+    		int use_maf;
+    		int use_mind;
+    		int use_geno;
+    		int use_info;
+    } filter;
+
+    struct{
         int all;
-    	std::string out;
-    	int print_snp;
+        std::string out;
+        int print_snp;
         int ignore_fid;
         int permutation;
         int thread;

@@ -358,11 +358,13 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		m_existed_snps.erase(last, m_existed_snps.end());
 	}
 	// now m_existed_snps is ok and can be used directly
-	finalized_snps(region, distance);
-	if (num_excluded != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_excluded);
-	if (num_not_found != 0) fprintf(stderr, "Number of SNPs not found in target: %zu\n", num_not_found);
-	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
-	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", dup_index.size());
+	finalize_snps(region, c_commander.clump_dist());
+	fprintf(stderr, "Final Number of SNPs included  : %zu\n", m_existed_snps.size());
+
+	clump_info.p_value = c_commander.clump_p();
+	clump_info.r2 =  c_commander.clump_r2();
+	clump_info.proxy = c_commander.proxy();
+	clump_info.use_proxy = c_commander.use_proxy();
 }
 
 

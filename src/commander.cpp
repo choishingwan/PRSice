@@ -372,6 +372,15 @@ Commander::Commander()
 	covariate.name = "";
 	covariate.ancestry_dim="MDS";
 
+	filter.geno = 0.0;
+	filter.mind = 0.0;
+	filter.info_score = 0.8;
+	filter.maf = 0.01;
+	filter.use_maf = false;
+	filter.use_mind = false;
+	filter.use_info = false;
+	filter.use_geno = false;
+
 	misc.all = false;
 	misc.out = "PRSice";
 	misc.print_snp = false;
@@ -585,16 +594,16 @@ void Commander::user_input() const{
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\nUser Defined Column Headers\n");
 	fprintf(stderr, "==============================\n");
-	if (!base.col_index[+BASE_INDEX::CHR]!=-1)
+	if (base.col_index[+BASE_INDEX::CHR]!=-1)
 		fprintf(stderr, "Chr            : %s\n", base.chr.c_str());
 	fprintf(stderr, "SNP            : %s\n",base.snp.c_str());
-	if (!base.col_index[+BASE_INDEX::BP]!=-1)
+	if (base.col_index[+BASE_INDEX::BP]!=-1)
 		fprintf(stderr, "BP             : %s\n", base.bp.c_str());
 	fprintf(stderr, "Ref Allele     : %s\n", base.ref_allele.c_str());
-	if (!base.col_index[+BASE_INDEX::ALT]!=-1)
+	if (base.col_index[+BASE_INDEX::ALT]!=-1)
 		fprintf(stderr, "Alt Allele     : %s\n", base.alt_allele.c_str());
 	fprintf(stderr, "Statistic      : %s\n", base.statistic.c_str());
-	if (!base.col_index[+BASE_INDEX::SE]!=-1)
+	if (base.col_index[+BASE_INDEX::SE]!=-1)
 		fprintf(stderr, "Standard Error : %s\n", base.standard_error.c_str());
 	fprintf(stderr, "P-value        : %s\n", base.p_value.c_str());
 	fprintf(stderr, "\nClumping Parameters: \n");

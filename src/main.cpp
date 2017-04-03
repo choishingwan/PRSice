@@ -26,11 +26,12 @@ int main(int argc, char *argv[])
 	// change the factory according to the file type
 	// to get the file type, we might want to revemp the commander class
 	// such that we can have a more elegant handling of the files.
-	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(), true);
+	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(), commander.target_type(), true);
 	std::unique_ptr<Genotype> ld_file;
-	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.get_target())!=0){
-		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), true);
+	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.target_name())!=0){
+		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), commander.ld_type(), true);
 	}
+
 	if(ld_file!=nullptr)
 	{
 		double matched = target_file->update_existed(*ld_file);
@@ -73,7 +74,8 @@ int main(int argc, char *argv[])
 			misc::base_name<std::string>(commander.base_name()));
 	try
 	{
-		target_file->read_snps(commander, region);
+		target_file->read_base(commander, region);
+		target_file->clump();
 		/*
 		PRSice prsice = PRSice(base_name, i_base,
 				commander.get_target(), commander.target_is_binary(),
