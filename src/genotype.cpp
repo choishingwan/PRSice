@@ -313,6 +313,7 @@ void Genotype::read_base(const Commander &c_commander, const Region &region)
 								}
 							}
 							if(flipped) cur_snp.set_flipped();
+							// ignore the SE as it currently serves no purpose
 							cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
 						}
 					}
@@ -329,6 +330,14 @@ void Genotype::read_base(const Commander &c_commander, const Region &region)
 		}
 	}
 	snp_file.close();
+	// now loop through our vector and add the region flags to it
+	// at the same time, add the boundary
+	int bound_start = 0, bound_end = 0;
+	std::string prev_chr = "";
+	for(size_t i = 0; i < m_existed_snps.size(); ++i)
+	{
+		//
+	}
 /*
 		for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp)
 		{
