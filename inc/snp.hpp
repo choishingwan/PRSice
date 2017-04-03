@@ -37,17 +37,17 @@ public:
     void set_statistic(const double statistic, const double se, const double p_value, const int category,
     		const double p_threshold)
     {
-    	m_stat = statistic;
-    	m_se = se;
-    	m_p_value = p_value;
-    	m_category = category;
-    	m_p_threshold = p_threshold;
+    		m_stat = statistic;
+    		m_se = se;
+    		m_p_value = p_value;
+    		m_category = category;
+    		m_p_threshold = p_threshold;
     };
     void set_flipped() { m_flipped = true; };
-    void set_line(std::string file, int line)
+    void set_id(std::string file, int line)
     {
-    	m_file = file;
-    	m_line = line;
+    		m_file = file;
+    		m_file_snp_id = line;
     };
     bool is_required() const { return m_required; };
     std::string get_rs() const { return m_rs; };
@@ -92,37 +92,44 @@ public:
 
 
     inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped) const{
-    	if(chr != -1 && chr!= m_chr) return false;
-    	if(loc != -1 && loc != m_loc) return false;
-    	if(m_ref.compare(ref)==0){
-    		if(!m_alt.empty() && !alt.empty())
-    		{
-    			return m_alt.compare(alt)==0;
-    		}else return true;
-    	}
-    	else if(complement(m_ref).compare(ref)==0)
-    	{
-    		if(!m_alt.empty() && !alt.empty())
-    		{
-    			return complement(m_alt).compare(alt)==0;
-    		}else return true;
-    	}
-    	else if(!m_alt.empty() && !alt.empty())
-    	{
-    		if(m_ref.compare(alt)==0 && m_alt.compare(ref)==0)
-    		{
-    			flipped = true;
-    			return true;
+    		if(chr != -1 && chr!= m_chr) return false;
+    		if(loc != -1 && loc != m_loc) return false;
+    		if(m_ref.compare(ref)==0){
+    			if(!m_alt.empty() && !alt.empty())
+    			{
+    				return m_alt.compare(alt)==0;
+    			}else return true;
     		}
-    		if(complement(m_ref).compare(alt)==0 && complement(m_alt).compare(alt)==0)
+    		else if(complement(m_ref).compare(ref)==0)
     		{
-    			flipped = true;
-    			return true;
+    			if(!m_alt.empty() && !alt.empty())
+    			{
+    				return complement(m_alt).compare(alt)==0;
+    			}else return true;
     		}
-    		return false;
-    	}
-    	else return false; // cannot flip nor match
+    		else if(!m_alt.empty() && !alt.empty())
+    		{
+    			if(m_ref.compare(alt)==0 && m_alt.compare(ref)==0)
+    			{
+    				flipped = true;
+    				return true;
+    			}
+    			if(complement(m_ref).compare(alt)==0 && complement(m_alt).compare(alt)==0)
+    			{
+    				flipped = true;
+    				return true;
+    			}
+    			return false;
+    		}
+    		else return false; // cannot flip nor match
     };
+
+    int chr() const { return m_chr; };
+    int loc() const { return m_loc; };
+
+    void set_upper(int upper){ m_range_end = upper; };
+    void set_lower(int lower){ m_range_start = lower;};
+    void set_flag(std::vector<long_type> flag) { m_flags = flag; };
 private:
     //basic info
     std::string m_ref;
@@ -137,9 +144,10 @@ private:
     // thinking about it. Even if the location isn't given for
     // PRSet or PRSlice, we can still use the coordinates from
     // the target / reference file
-    int m_bound_start;
-    int m_bound_end;
-    int m_line;
+    // the bound is [ )
+    int m_range_start;
+    int m_range_end;
+    int m_file_snp_id;
     double m_stat;
     double m_se;
     double m_p_value;
@@ -148,6 +156,8 @@ private:
     bool m_clumped;
     bool m_required;
     bool m_flipped;
+    //prset related
+    std::vector<long_type> m_flags;
 
     inline std::string complement(const std::string &allele) const
     {

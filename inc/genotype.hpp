@@ -36,6 +36,7 @@ public:
 	{
 		return m_existed_snps_index.find(rs)!=m_existed_snps_index.end();
 	};
+
 	inline bool matched (const SNP &target) const
 	{
 		if(existed(target.get_rs())){
@@ -43,9 +44,11 @@ public:
 		}
 		return false;
 	};
-	void read_base(const Commander &commander, const Region &region);
+	void read_base(const Commander &commander, Region &region);
 
 protected:
+
+	void finalize_snps(Region &region, const int distance);
 
 	void set_genotype_files(std::string prefix);
 	std::vector<std::string> m_genotype_files;
@@ -72,7 +75,7 @@ protected:
 
 	// normally, the vector might go our of scope. Key is, use this as return value
 	// then use c++11 which move instead of copy the variable if allowed
-	virtual std::vector<SNP> load_snps(){};
+	virtual std::vector<SNP> load_snps(){ return std::vector<SNP>(0); };
 	uintptr_t m_unfiltered_marker_ct = 0;
 	uintptr_t m_unfiltered_marker_ctl = 0;
 	uintptr_t m_marker_ct = 0;

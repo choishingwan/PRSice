@@ -150,7 +150,7 @@ double Genotype::update_existed(const std::unordered_map<std::string, int> &ref_
 	return (matched==0)? -1 : (double)miss_match/matched;
 }
 
-void Genotype::read_base(const Commander &c_commander, const Region &region)
+void Genotype::read_base(const Commander &c_commander, Region &region)
 {
 	// can assume region is of the same order as m_existed_snp
 	const std::string input = c_commander.base_name();
@@ -189,6 +189,7 @@ void Genotype::read_base(const Commander &c_commander, const Region &region)
 	size_t num_not_converted = 0; // this is for NA
 	size_t num_negative_stat = 0;
 	std::unordered_set<std::string> dup_index;
+	std::vector<int> exist_index; // try to use this as quick search
 	// Actual reading the file, will do a bunch of QC
 	while (std::getline(snp_file, line))
 	{
@@ -314,6 +315,7 @@ void Genotype::read_base(const Commander &c_commander, const Region &region)
 							}
 							if(flipped) cur_snp.set_flipped();
 							// ignore the SE as it currently serves no purpose
+							exist_index.push_back(target->second);
 							cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
 						}
 					}
@@ -330,42 +332,82 @@ void Genotype::read_base(const Commander &c_commander, const Region &region)
 		}
 	}
 	snp_file.close();
-	// now loop through our vector and add the region flags to it
-	// at the same time, add the boundary
-	int bound_start = 0, bound_end = 0;
-	std::string prev_chr = "";
-	for(size_t i = 0; i < m_existed_snps.size(); ++i)
-	{
-		//
-	}
-/*
-		for (size_t i_snp = 0; i_snp < m_snp_list.size(); ++i_snp)
+
+	if(exist_index.size() != m_existed_snps.size())
+	{ // only do this if we need to remove some SNPs
+		// we assume exist_index doesn't have any duplicated index
+		std::sort(exist_index.begin(), exist_index.end());
+		int start = (exist_index.empty())? -1:exist_index.front();
+		int end = start;
+		std::vector<SNP>::iterator last = m_existed_snps.begin();;
+		for(auto && ind : exist_index)
 		{
-			m_snp_index[m_snp_list[i_snp].get_rs_id()] = i_snp;
-			std::string cur_chr = m_snp_list[i_snp].get_chr();
-			if (unique_chr.find(cur_chr) == unique_chr.end())
-			{
-				unique_chr.insert(cur_chr);
-				m_chr_list.push_back(cur_chr);
-			}
-			std::string rs = m_snp_list[i_snp].get_rs_id();
-			if(unique_rsid.find(rs)==unique_rsid.end())
-			{
-				unique_rsid.insert(rs);
-			}
-			else
-			{
-				std::string error_message = "WARNING: Duplicated SNP ID: " + rs;
-				throw std::runtime_error(error_message);
-			}
-			if (index[+SNP_Index::CHR] >= 0 && index[+SNP_Index::BP] >= 0) // if we have chr and bp information
-			{
-				m_snp_list[i_snp].set_flag( region.check(cur_chr, m_snp_list[i_snp].get_loc()));
+			if(ind==start||ind-end==1) end=ind; // try to perform the copy as a block
+			else{
+				std::copy(m_existed_snps.begin()+start, m_existed_snps.begin()+end+1,last);
+				last += end+1-start;
+				start =ind;
+				end = ind;
 			}
 		}
-		*/
+		if(!exist_index.empty())
+		{
+			std::copy(m_existed_snps.begin()+start, m_existed_snps.begin()+end+1, last);
+			last+= end+1-start;
+		}
+		m_existed_snps.erase(last, m_existed_snps.end());
+	}
+	// now m_existed_snps is ok and can be used directly
+	finalized_snps(region, distance);
 	if (num_excluded != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_excluded);
 	if (num_not_found != 0) fprintf(stderr, "Number of SNPs not found in target: %zu\n", num_not_found);
 	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %zu\n", num_duplicated);
 	fprintf(stderr, "Final Number of SNPs from base  : %zu\n", dup_index.size());
+}
+
+
+void Genotype::finalize_snps(Region &region, const int distance)
+{
+	int range_index = 0;
+	int prev_chr = m_existed_snps.front().chr();
+	int prev_loc = m_existed_snps.front().loc();
+	int range_loc = prev_loc;
+
+	for(size_t cur_index=0; cur_index < m_existed_snps.size(); ++cur_index)
+	{
+		auto &&cur_snp = m_existed_snps[cur_index];
+		int cur_chr = cur_snp.chr();
+		int cur_loc = cur_snp.loc();
+		if(cur_chr != prev_chr) // new chromosome
+		{
+			// everything before the current SNP will update their upper range bound
+			for(;range_index<cur_index; ++range_index)
+			{
+				m_existed_snps[range_index].set_upper(cur_index);
+			}
+			// now set the current index
+			prev_chr = cur_chr;
+			range_index = cur_index;
+			range_loc = cur_loc;
+		}
+		else if(cur_loc - range_loc > distance) // this is too far away
+		{
+			// find new range_index and set new range_loc
+			for(; range_index < cur_index; ++range_index)
+			{
+				range_loc = m_existed_snps[range_index].loc();
+				if(cur_loc-range_loc <= distance) break;
+				else m_existed_snps[range_index].set_upper(cur_index); // they are all too far from current SNP
+			} // now range_loc should be pointing to the first SNP within range
+		}
+		// the current SNP is now within range of the previous SNP
+		cur_snp.set_lower(range_index);
+		// now set flags
+		cur_snp.set_flag( region.check(cur_chr, cur_loc));
+	}
+	for(;range_index < m_existed_snps.size(); ++range_index)
+	{
+		m_existed_snps[range_index].set_upper(m_existed_snps.size());
+	}
+	// now the flag is set and the range is also set appropriately
 }

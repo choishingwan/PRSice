@@ -196,7 +196,7 @@ std::vector<SNP> BinaryPlink::load_snps()
 						m_existed_snps_index[token[+BIM::RS]] = marker_uidx;
 						snp_info[marker_uidx] = SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
 								token[+BIM::A2]);
-						snp_info[marker_uidx].set_line(prefix, num_line);
+						snp_info[marker_uidx].set_id(prefix, num_line);
 					}
 				}
 			}
