@@ -2,6 +2,175 @@
 
 std::mutex PRSice::score_mutex;
 
+std::vector<SNP> read_base(unordered_map<std::string, int> &snp_index,
+		const Commander &c_commander, const std::vector<int32_t> &xymt_codes,
+		const uint32_t max_code)
+{
+	// do region later on
+	const std::string input = c_commander.base_name();
+	const bool beta = c_commander.beta();
+	const bool fastscore = c_commander.fastscore();
+	const bool full = c_commander.full();
+	std::vector<int> index = c_commander.index();
+	std::ifstream snp_file;
+	snp_file.open(input.c_str());
+	if(!snp_file.is_open())
+	{
+		std::string error_message = "ERROR: Cannot open base file: " +input;
+		throw std::runtime_error(error_message);
+	}
+	int max_index = index[+BASE_INDEX::MAX]; // a struct will actually be better, but nvm
+	std::string line;
+	if (!c_commander.has_index()) std::getline(snp_file, line);
+
+	// category related stuff
+	double threshold = (c_commander.fastscore())? c_commander.bar_upper() : c_commander.upper();
+	double bound_start = c_commander.lower();
+	double bound_end = c_commander.upper();
+	double bound_inter = c_commander.inter();
+	threshold = (full)? 1.0 : threshold;
+	std::vector < std::string > token;
+
+	bool exclude = false;
+	// Some QC countss
+	size_t num_duplicated = 0;
+	size_t num_excluded = 0;
+	size_t num_stat_not_converted = 0; // this is for NA
+	size_t num_p_not_converted = 0; // this is for NA
+	size_t num_negative_stat = 0;
+	size_t num_ambiguous = 0;
+	std::unordered_set<std::string> dup_index;
+	std::vector<SNP> base_snps;
+	while (std::getline(snp_file, line))
+	{
+		misc::trim(line);
+		if (line.empty()) continue;
+
+		exclude = false;
+		token = misc::split(line);
+		if (token.size() <= max_index)
+			throw std::runtime_error("More index than column in data");
+		std::string rs_id = token[index[+BASE_INDEX::RS]];
+		if(dup_index.find(rs_id)==dup_index.end())
+		{
+			dup_index.insert(rs_id);
+			int32_t chr_code = -1;
+			if (index[+BASE_INDEX::CHR] >= 0)
+			{
+				chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
+				if (((const uint32_t)chr_code) > max_code) {
+					if (chr_code != -1) {
+						if (chr_code >= MAX_POSSIBLE_CHROM) {
+							chr_code= xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+						}
+						else
+						{
+							std::string error_message ="ERROR: Cannot parse chromosome code: "
+									+ token[index[+BASE_INDEX::CHR]];
+							throw std::runtime_error(error_message);
+						}
+					}
+				}
+			}
+			std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ?
+					token[index[+BASE_INDEX::REF]] : "";
+			std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ?
+					token[index[+BASE_INDEX::ALT]] : "";
+			int loc = -1;
+			if (index[+BASE_INDEX::BP] >= 0)
+			{
+				// obtain the SNP coordinate
+				try {
+					loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
+					if (loc < 0)
+					{
+						std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
+						throw std::runtime_error(error_message);
+					}
+				} catch (const std::runtime_error &error) {
+					std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
+					throw std::runtime_error(error_message);
+				}
+			}
+			double pvalue = 2.0;
+			try{
+				misc::convert<double>( token[index[+BASE_INDEX::P]]);
+				if (pvalue < 0.0 || pvalue > 1.0)
+				{
+					std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
+					throw std::runtime_error(error_message);
+				}
+				else if (pvalue > threshold)
+				{
+					exclude = true;
+					num_excluded++;
+				}
+			}catch (const std::runtime_error& error) {
+				exclude = true;
+				num_p_not_converted++;
+			}
+			double stat = 0.0;
+			try {
+				stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
+				if(stat <0 && !beta)
+				{
+					num_negative_stat++;
+					exclude = true;
+				}
+				else if (!beta) stat = log(stat);
+			} catch (const std::runtime_error& error) {
+				num_stat_not_converted++;
+				exclude = true;
+			}
+			if(!alt_allele.empty() && SNP::ambiguous(ref_allele, alt_allele)){
+				num_ambiguous++;
+				exclude= true;
+			}
+			if(!exclude)
+			{
+				int category = -1;
+				double pthres = 0.0;
+				if (fastscore)
+				{
+					category = c_commander.get_category(pvalue);
+					pthres = c_commander.get_threshold(category);
+				}
+				else
+				{
+					// calculate the threshold instead
+					if (pvalue > bound_end && full)
+					{
+						category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
+						pthres = 1.0;
+					}
+					else
+					{
+						category = std::ceil((pvalue - bound_start) / bound_inter);
+						category = (category < 0) ? 0 : category;
+						pthres = category * bound_inter + bound_start;
+					}
+				}
+				// ignore the SE as it currently serves no purpose
+				snp_index[rs_id] = base_snps.size();
+				base_snps.push_back(SNP(rs_id, chr_code, loc, ref_allele, alt_allele, stat, 0,
+						pvalue, category, pthres));
+			}
+		}
+		else
+		{
+			num_duplicated++;
+		}
+	}
+	snp_file.close();
+	if (num_excluded != 0) fprintf(stderr, "Number of SNPs excluded: %zu\n", num_excluded);
+	if (num_ambiguous != 0) fprintf(stderr, "%zu ambiguous SNPs\n", num_ambiguous);
+	if (num_duplicated != 0) fprintf(stderr, "Number of duplicated SNPs : %d\n", num_duplicated);
+	if (num_stat_not_converted != 0) fprintf(stderr, "Failed to convert %zu OR/beta\n", num_stat_not_converted);
+	if (num_p_not_converted != 0) fprintf(stderr, "Failed to convert %zu p-value\n", num_p_not_converted);
+	if (num_negative_stat != 0) fprintf(stderr, "%zu negative OR\n", num_negative_stat);
+		fprintf(stderr, "Number of SNPs from base  : %zu\n", base_snps.size());
+	return base_snps;
+}
 
 void PRSice::get_snp(const Commander &c_commander, Region &region) {
 	const std::string input = c_commander.get_base(m_base_index);

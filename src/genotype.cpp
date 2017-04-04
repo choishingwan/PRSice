@@ -87,6 +87,7 @@ Genotype::Genotype(std::string prefix, int num_auto,
 	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 	// obtain files
 	set_genotype_files(prefix);
+	/*
 	load_sample();
 	m_existed_snps=load_snps();
 	if(verbose)
@@ -94,6 +95,7 @@ Genotype::Genotype(std::string prefix, int num_auto,
 		fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
 		fprintf(stderr, "%zu variants included\n", m_marker_ct);
 	}
+	*/
 }
 
 Genotype::~Genotype() {
@@ -150,6 +152,7 @@ double Genotype::update_existed(const std::unordered_map<std::string, int> &ref_
 	return (matched==0)? -1 : (double)miss_match/matched;
 }
 
+/*
 void Genotype::read_base(const Commander &c_commander, Region &region)
 {
 	// can assume region is of the same order as m_existed_snp
@@ -372,7 +375,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	filter.info_score = c_commander.info_score();
 	filter.maf = c_commander.maf();
 }
-
+*/
 
 void Genotype::finalize_snps(Region &region, const int distance)
 {
@@ -411,7 +414,7 @@ void Genotype::finalize_snps(Region &region, const int distance)
 		// the current SNP is now within range of the previous SNP
 		cur_snp.set_lower(range_index);
 		// now set flags
-		cur_snp.set_flag( region.check(cur_chr, cur_loc));
+		//cur_snp.set_flag( region.check(cur_chr, cur_loc));
 	}
 	for(;range_index < m_existed_snps.size(); ++range_index)
 	{
@@ -419,3 +422,23 @@ void Genotype::finalize_snps(Region &region, const int distance)
 	}
 	// now the flag is set and the range is also set appropriately
 }
+
+void Genotype::clump(Genotype &reference)
+{
+	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t final_mask = get_final_mask(m_founder_ct);
+	std::vector<size_t> p_order = SNP::sort_by_p(m_existed_snps);
+	// now p_order will have the order of all the SNPs, with the smallest p-value comes first
+	int total_num = p_order.size();
+	int completed = 0;
+	for(auto &&ind : p_order)
+	{
+		auto &&cur_snp = m_existed_snps[ind];
+		int start = cur_snp.range_start();
+		int end = cur_snp.range_end();
+		// flow -> Read snps from file, check if
+	}
+}
+
+
+

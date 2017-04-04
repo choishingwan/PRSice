@@ -45,7 +45,8 @@ public:
 		return false;
 	};
 	void read_base(const Commander &commander, Region &region);
-
+	std::vector<int32_t>  xymt_codes() const { return m_xymt_codes; };
+	uint32_t max_code() const { return m_max_code; };
 protected:
 
 	void finalize_snps(Region &region, const int distance);
@@ -56,7 +57,7 @@ protected:
 
 	void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
 	uint32_t m_autosome_ct;
-	int32_t m_xymt_codes[XYMT_OFFSET_CT];
+	std::vector<int32_t> m_xymt_codes(XYMT_OFFSET_CT, 0);
 	uint32_t m_max_code;
 	uintptr_t* m_haploid_mask;
 
@@ -84,6 +85,7 @@ protected:
 	std::unordered_map<std::string, size_t> m_existed_snps_index;
 	std::vector<SNP> m_existed_snps;
 	std::unordered_map<std::string, int> m_chr_order;
+	uint32_t m_hh_exists; // might be a bit harsh, but should also read in maf when loading SNPs
 
 	struct{
 		double r2;
@@ -113,6 +115,7 @@ protected:
 	}
 
 	void filter_mind(double mind);
+	void clump(Genotype &reference);
 };
 
 class Plink: public Genotype{

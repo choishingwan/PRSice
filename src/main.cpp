@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <utility>
+#include <unordered_map>
 
 #include "commander.hpp"
 #include "prsice.hpp"
@@ -27,7 +28,14 @@ int main(int argc, char *argv[])
 	// to get the file type, we might want to revemp the commander class
 	// such that we can have a more elegant handling of the files.
 	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(), commander.target_type(), true);
-	std::unique_ptr<Genotype> ld_file;
+	// do filtering here. For now, this is just a place holder
+	if(commander.filter_mind())
+	{
+		target_file->filter_mind(commander.mind());
+	}
+	// calculate the maf and genotype missingness here? This will give us the hh_exist information required
+	// for processing sex chromosomes
+	std::unique_ptr<Genotype> ld_file = nullptr;
 	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.target_name())!=0){
 		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), commander.ld_type(), true);
 	}
@@ -47,6 +55,15 @@ int main(int argc, char *argv[])
 		ld_file->update_existed(*target_file);
 	}
 
+	fprintf(stderr, "\nStart processing: %s\n", commander.base_name().c_str());
+	fprintf(stderr, "==============================\n");
+	std::unordered_map<std::string, int> snp_index;
+	std::vector<SNP> snp_info = PRSice::read_base(snp_index, commander, target_file->xymt_codes(),
+			target_file->max_code());
+
+	// given the information from the base file, we will now propergate the ld_file and
+	// target_file separately. After that, we will exclude any SNPs that are not found
+	// on both of the file.
 
 	Region region = Region(commander.feature(), target_file->get_chr_order());
 	try
@@ -61,25 +78,20 @@ int main(int argc, char *argv[])
 	}
 
 
-	std::string base = commander.base_name();
+
 	// Might want to generate a log file?
 	region.info();
 	commander.user_input();
 
 	bool perform_prslice = commander.perform_prslice();
-	fprintf(stderr, "\nStart processing: %s\n", commander.base_name().c_str());
-	fprintf(stderr, "==============================\n");
+
 	//        	Need to handle paths in the name
 	std::string base_name = misc::remove_extension<std::string>(
 			misc::base_name<std::string>(commander.base_name()));
 	try
 	{
 		target_file->read_base(commander, region);
-		if(commander.filter_mind())
-		{
-			target_file->filter_mind(commander.mind());
-		}
-		//target_file->clump();
+		target_file->clump(*ld_file);
 		/*
 		PRSice prsice = PRSice(base_name, i_base,
 				commander.get_target(), commander.target_is_binary(),

@@ -8461,23 +8461,23 @@ void copy_quaterarr_nonempty_subset_excl(const uintptr_t* __restrict raw_quatera
 }
 
 uint32_t load_and_collapse(uint32_t unfiltered_sample_ct, uint32_t sample_ct, const uintptr_t* __restrict sample_exclude, uintptr_t final_mask, uint32_t do_reverse, FILE* bedfile, uintptr_t* __restrict rawbuf, uintptr_t* __restrict mainbuf) {
-  assert(unfiltered_sample_ct);
-  uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-  if (unfiltered_sample_ct == sample_ct) {
-    rawbuf = mainbuf;
-  }
-  if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
-    return RET_READ_FAIL;
-  }
-  if (unfiltered_sample_ct != sample_ct) {
-    copy_quaterarr_nonempty_subset_excl(rawbuf, sample_exclude, unfiltered_sample_ct, sample_ct, mainbuf);
-  } else {
-    rawbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
-  }
-  if (do_reverse) {
-    reverse_loadbuf(sample_ct, (unsigned char*)mainbuf);
-  }
-  return 0;
+	assert(unfiltered_sample_ct);
+	uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
+	if (unfiltered_sample_ct == sample_ct) {
+		rawbuf = mainbuf;
+	}
+	if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
+		return RET_READ_FAIL;
+	}
+	if (unfiltered_sample_ct != sample_ct) {
+		copy_quaterarr_nonempty_subset_excl(rawbuf, sample_exclude, unfiltered_sample_ct, sample_ct, mainbuf);
+	} else {
+		rawbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+	}
+	if (do_reverse) {
+		reverse_loadbuf(sample_ct, (unsigned char*)mainbuf);
+	}
+	return 0;
 }
 
 void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr, const uintptr_t* __restrict subset_mask, uint32_t raw_quaterarr_size, uint32_t subset_size, uintptr_t* __restrict output_quaterarr) {

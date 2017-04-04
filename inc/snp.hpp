@@ -32,51 +32,46 @@ public:
 				|| (ref_allele == "g" && alt_allele == "c");
     };
 
-    void not_required() { m_required=false; };
-    void required() { m_required=true; };
-    void set_statistic(const double statistic, const double se, const double p_value, const int category,
+    void set_statistic(const double stat, const double se, const double p_value, const int category,
     		const double p_threshold)
     {
-    		m_stat = statistic;
-    		m_se = se;
-    		m_p_value = p_value;
-    		m_category = category;
-    		m_p_threshold = p_threshold;
+    		statistic.stat = stat;
+    		statistic.se = se;
+    		statistic.p_value = p_value;
+    		threshold.category = category;
+    		threshold.p_threshold = p_threshold;
     };
-    void set_flipped() { m_flipped = true; };
-    void set_id(std::string file, int line)
-    {
-    		m_file = file;
-    		m_file_snp_id = line;
-    };
-    bool is_required() const { return m_required; };
-    std::string get_rs() const { return m_rs; };
-
+    void set_flipped() { statistic.flipped = true; };
+    std::string get_rs() const { return basic.rs; };
+    int range_start() const { return m_range_start; };
+    int range_end() const { return m_range_end; };
+    static std::vector<size_t> sort_by_p(const std::vector<SNP> &input);
 
     bool operator == (const SNP &Ref) const
     {
-    	if(m_chr == Ref.m_chr && m_loc==Ref.m_loc && m_rs.compare(Ref.m_rs)==0)
+    	if(basic.chr == Ref.basic.chr && basic.loc==Ref.basic.loc && basic.rs.compare(Ref.basic.rs)==0)
     	{
-    		if(m_ref.compare(Ref.m_ref)==0){
-    			if(!m_alt.empty() && !Ref.m_alt.empty())
+    		if(basic.ref.compare(Ref.basic.ref)==0){
+    			if(!basic.alt.empty() && !Ref.basic.alt.empty())
     			{
-    				return m_alt.compare(Ref.m_alt)==0;
+    				return basic.alt.compare(Ref.basic.alt)==0;
     			}else return true;
     		}
-    		else if(complement(m_ref).compare(Ref.m_ref)==0)
+    		else if(complement(basic.ref).compare(Ref.basic.ref)==0)
     		{
-    			if(!m_alt.empty() && !Ref.m_alt.empty())
+    			if(!basic.alt.empty() && !Ref.basic.alt.empty())
     			{
-    				return complement(m_alt).compare(Ref.m_alt)==0;
+    				return complement(basic.alt).compare(Ref.basic.alt)==0;
     			}else return true;
     		}
-    		else if(!m_alt.empty() && !Ref.m_alt.empty())
+    		else if(!basic.alt.empty() && !Ref.basic.alt.empty())
     		{
-    			if(m_ref.compare(Ref.m_alt)==0 && m_alt.compare(Ref.m_ref)==0)
+    			if(basic.ref.compare(Ref.basic.alt)==0 && basic.alt.compare(Ref.basic.ref)==0)
     			{
     				return true;
     			}
-    			if(complement(m_ref).compare(Ref.m_alt)==0 && complement(m_alt).compare(Ref.m_alt)==0)
+    			if(complement(basic.ref).compare(Ref.basic.alt)==0 &&
+    					complement(basic.alt).compare(Ref.basic.alt)==0)
     			{
     				return true;
     			}
@@ -92,29 +87,29 @@ public:
 
 
     inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped) const{
-    		if(chr != -1 && chr!= m_chr) return false;
-    		if(loc != -1 && loc != m_loc) return false;
-    		if(m_ref.compare(ref)==0){
-    			if(!m_alt.empty() && !alt.empty())
+    		if(chr != -1 && chr!= basic.chr) return false;
+    		if(loc != -1 && loc != basic.loc) return false;
+    		if(basic.ref.compare(ref)==0){
+    			if(!basic.alt.empty() && !alt.empty())
     			{
-    				return m_alt.compare(alt)==0;
+    				return basic.alt.compare(alt)==0;
     			}else return true;
     		}
-    		else if(complement(m_ref).compare(ref)==0)
+    		else if(complement(basic.ref).compare(ref)==0)
     		{
-    			if(!m_alt.empty() && !alt.empty())
+    			if(!basic.alt.empty() && !alt.empty())
     			{
-    				return complement(m_alt).compare(alt)==0;
+    				return complement(basic.alt).compare(alt)==0;
     			}else return true;
     		}
-    		else if(!m_alt.empty() && !alt.empty())
+    		else if(!basic.alt.empty() && !alt.empty())
     		{
-    			if(m_ref.compare(alt)==0 && m_alt.compare(ref)==0)
+    			if(basic.ref.compare(alt)==0 && basic.alt.compare(ref)==0)
     			{
     				flipped = true;
     				return true;
     			}
-    			if(complement(m_ref).compare(alt)==0 && complement(m_alt).compare(alt)==0)
+    			if(complement(basic.ref).compare(alt)==0 && complement(basic.alt).compare(alt)==0)
     			{
     				flipped = true;
     				return true;
@@ -124,21 +119,45 @@ public:
     		else return false; // cannot flip nor match
     };
 
-    int chr() const { return m_chr; };
-    int loc() const { return m_loc; };
+    int chr() const { return basic.chr; };
+    int loc() const { return basic.loc; };
 
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
 private:
     //basic info
-    std::string m_ref;
-    std::string m_alt;
-    std::string m_rs;
-    std::string m_file;
-    int m_chr;
-    int m_loc;
-    int m_category;
+    struct{
+    	std::string ref;
+    	std::string alt;
+    	std::string rs;
+    	int chr;
+    	int loc;
+    }basic;
+
+    struct{
+    	std::string file;
+    	int id;
+    }target;
+
+    struct{
+    	std::string file;
+    	int id;
+    	bool use_ld;
+    } ld_file;
+
+    struct{
+    	double stat;
+        double se;
+        double p_value;
+        bool flipped;
+    }statistic;
+
+    struct{
+    	int category;
+        double p_threshold;
+    }threshold;
+
     // This indicate where this SNP's bound is at
     // useful for PRSlice and also clumping
     // thinking about it. Even if the location isn't given for
@@ -147,15 +166,8 @@ private:
     // the bound is [ )
     int m_range_start;
     int m_range_end;
-    int m_file_snp_id;
-    double m_stat;
-    double m_se;
-    double m_p_value;
-    double m_p_threshold;
     //clump related
     bool m_clumped;
-    bool m_required;
-    bool m_flipped;
     //prset related
     std::vector<long_type> m_flags;
 

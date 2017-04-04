@@ -47,7 +47,7 @@ public:
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
-    double info_score() const { return filter.info_score(); };
+    double info_score() const { return filter.info_score; };
 
     //misc
     bool all() const { return misc.all; };

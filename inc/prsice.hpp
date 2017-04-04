@@ -27,6 +27,9 @@
 class PRSice
 {
 public:
+	static std::vector<SNP> read_base(unordered_map<std::string, int> &snp_index,
+			const Commander &c_commander, const std::vector<int32_t> &xymt_codes,
+			const uint32_t max_code);
     PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary,
     		size_t permutation, SCORING score, size_t num_region, bool ignore_fid):
     			m_base_name(base_name), m_base_index(index), m_target(target),
