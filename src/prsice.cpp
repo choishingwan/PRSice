@@ -2,7 +2,7 @@
 
 std::mutex PRSice::score_mutex;
 
-std::vector<SNP> read_base(unordered_map<std::string, int> &snp_index,
+std::vector<SNP> read_base(std::unordered_map<std::string, int> &snp_index,
 		const Commander &c_commander, const std::vector<int32_t> &xymt_codes,
 		const uint32_t max_code)
 {

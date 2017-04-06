@@ -125,6 +125,8 @@ public:
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
+    void not_required(){ m_required = false; };
+    bool is_required() const { return m_required; };
 private:
     //basic info
     struct{
@@ -164,6 +166,7 @@ private:
     // PRSet or PRSlice, we can still use the coordinates from
     // the target / reference file
     // the bound is [ )
+    bool m_required = true;
     int m_range_start;
     int m_range_end;
     //clump related

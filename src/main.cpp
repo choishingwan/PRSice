@@ -27,12 +27,15 @@ int main(int argc, char *argv[])
 	// change the factory according to the file type
 	// to get the file type, we might want to revemp the commander class
 	// such that we can have a more elegant handling of the files.
-	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(), commander.target_type(), true);
+	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(),
+			commander.target_type(), true);
 	// do filtering here. For now, this is just a place holder
+	/*
 	if(commander.filter_mind())
 	{
 		target_file->filter_mind(commander.mind());
 	}
+	*/
 	// calculate the maf and genotype missingness here? This will give us the hh_exist information required
 	// for processing sex chromosomes
 	std::unique_ptr<Genotype> ld_file = nullptr;
@@ -55,11 +58,6 @@ int main(int argc, char *argv[])
 		ld_file->update_existed(*target_file);
 	}
 
-	fprintf(stderr, "\nStart processing: %s\n", commander.base_name().c_str());
-	fprintf(stderr, "==============================\n");
-	std::unordered_map<std::string, int> snp_index;
-	std::vector<SNP> snp_info = PRSice::read_base(snp_index, commander, target_file->xymt_codes(),
-			target_file->max_code());
 
 	// given the information from the base file, we will now propergate the ld_file and
 	// target_file separately. After that, we will exclude any SNPs that are not found
@@ -88,6 +86,8 @@ int main(int argc, char *argv[])
 	//        	Need to handle paths in the name
 	std::string base_name = misc::remove_extension<std::string>(
 			misc::base_name<std::string>(commander.base_name()));
+	fprintf(stderr, "\nStart processing: %s\n", base_name.c_str());
+	fprintf(stderr, "==============================\n");
 	try
 	{
 		target_file->read_base(commander, region);
@@ -148,6 +148,5 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 	fprintf(stderr, "\n");
-	}
 	return 0;
 }

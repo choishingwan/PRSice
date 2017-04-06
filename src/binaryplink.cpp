@@ -98,7 +98,9 @@ std::vector<SNP> BinaryPlink::load_snps()
 	std::ifstream bimfile;
 	std::vector<SNP> snp_info;
 	std::string prev_chr = "";
+	int chr_code=0;
 	int order = 0;
+	bool chr_error = false, chr_sex_error = false;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -113,15 +115,52 @@ std::vector<SNP> BinaryPlink::load_snps()
 		while(std::getline(bimfile, line))
 		{
 			misc::trim(line);
-			if(!line.empty())
+			if(line.empty()) continue;
+			std::vector<std::string> token = misc::split(line);
+			if(token.size() < 6)
 			{
-				std::vector<std::string> token = misc::split(line);
-				if(token.size() < 6)
+				fprintf(stderr, "Error: Malformed bim file. Less than 6 column on line: %i\n",num_line);
+				throw std::runtime_error("");
+			}
+			std::string chr = token[+BIM::CHR];
+			if(chr.compare(prev_chr)!=0)
+			{
+				if(m_chr_order.find(chr)!= m_chr_order.end())
 				{
-					fprintf(stderr, "Error: Malformed bim file. Less than 6 column on line: %i\n",num_line);
-					throw std::runtime_error("");
+					throw std::runtime_error("ERROR: SNPs on the same chromosome must be clustered together!");
+				}
+				m_chr_order[chr] = order++;
+				chr_code = get_chrom_code_raw(chr.c_str());
+				if (((const uint32_t)chr_code) > m_max_code) { // bigger than the maximum code, ignore it
+					if(!chr_error)
+					{
+						fprintf(stderr, "WARNING: SNPs with chromosome number larger than %du\n", m_max_code);
+						fprintf(stderr, "         They will be ignored!\n");
+						chr_error=true;
+						continue;
+					}
+					else if(!chr_sex_error)
+					{
+						fprintf(stderr, "WARNING: Sex chromosome currently not supported\n");
+						chr_sex_error;
+						continue;
+					}
 				}
 			}
+			int loc = misc::convert<int>(token[+BIM::BP]);
+			if(loc < 0)
+			{
+				fprintf(stderr, "ERROR: SNP with negative corrdinate: %s:%s\n", token[+BIM::RS].c_str(), token[+BIM::BP].c_str());
+				throw std::runtime_error("Please check you have the correct input");
+			}
+			// better way is to use struct. But for some reason that doesn't work
+			if(m_existed_snps_index.find(token[+BIM::RS])!= m_existed_snps_index.end())
+			{
+				throw std::runtime_error("ERROR: Duplicated SNP ID detected!\n");
+			}
+			m_existed_snps_index[token[+BIM::RS]] = m_unfiltered_marker_ct;
+			snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
+					token[+BIM::A2]));
 			m_unfiltered_marker_ct++; //add in the checking later on
 			num_line++;
 		}
@@ -135,75 +174,6 @@ std::vector<SNP> BinaryPlink::load_snps()
 		throw std::runtime_error("Error: PLINK does not suport more than 2^31 -3 variants. "
 			"As we are using PLINK for some of our functions, we might encounter problem too. "
 			"Sorry.");
-	}
-	snp_info.resize(m_unfiltered_marker_ct);
-	size_t marker_uidx=0;
-	bool chr_error=false;
-	for(auto &&prefix : m_genotype_files)
-	{
-		std::string bimname = prefix+".bim";
-		bimfile.open(bimname.c_str());
-		if(!bimfile.is_open())
-		{
-			std::string error_message = "Error: Cannot open bim file: "+bimname;
-			throw std::runtime_error(error_message);
-		}
-		std::string line;
-		int num_line = 0;
-		int32_t chr_code=0;
-		while(std::getline(bimfile, line))
-		{
-			misc::trim(line);
-			if(!line.empty())
-			{
-				std::vector<std::string> token = misc::split(line);
-				if(token.size() < 6)
-				{
-					fprintf(stderr, "Error: Malformed bim file. Less than 6 column on line: %i\n",num_line);
-					throw std::runtime_error("");
-				}
-
-				//	for filtering snps
-				//	SAM: with my way of memory control, this will likely cause problem
-				//	SET_BIT(marker_uidx, marker_exclude);
-				std::string chr = token[+BIM::CHR];
-				if(chr.compare(prev_chr)!=0)
-				{
-					m_chr_order[chr] = order++;
-					chr_code = get_chrom_code_raw(chr.c_str());
-					if (((const uint32_t)chr_code) > m_max_code) { // bigger than the maximum code, ignore it
-						if(!chr_error)
-						{
-							fprintf(stderr, "WARNING: SNPs with chromosome number larger than %du\n", m_max_code);
-							fprintf(stderr, "         They will be ignored!\n");
-							chr_error=true;
-						}
-					}
-					else
-					{
-						int temp = misc::convert<int>(token[+BIM::BP]);
-						if(temp < 0)
-						{
-							fprintf(stderr, "ERROR: SNP with negative corrdinate: %s:%s\n", token[+BIM::RS].c_str(), token[+BIM::BP].c_str());
-							throw std::runtime_error("Please check you have the correct input");
-						}
-						size_t loc = temp;
-						// better way is to use struct. But for some reason that doesn't work
-						if(m_existed_snps_index.find(token[+BIM::RS])!= m_existed_snps_index.end())
-						{
-							throw std::runtime_error("ERROR: Duplicated SNP ID detected!\n");
-						}
-						m_existed_snps_index[token[+BIM::RS]] = marker_uidx;
-						snp_info[marker_uidx] = SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
-								token[+BIM::A2]);
-					//	snp_info[marker_uidx].set_id(prefix, num_line);
-					}
-				}
-			}
-			marker_uidx++;
-			num_line++;
-		}
-		bimfile.close();
 	}
 	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct;
 	return snp_info;
