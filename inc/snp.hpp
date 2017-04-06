@@ -85,10 +85,16 @@ public:
     	}
     };
 
-
+    inline void flipped(){ statistic.flipped = true; };
+    inline void fill_info(int chr, int loc, std::string alt)
+    {
+    		if(basic.chr==-1) basic.chr = chr;
+    		if(basic.loc==-1) basic.loc = loc;
+    		if(basic.alt.empty()) basic.alt=alt;
+    };
     inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped) const{
-    		if(chr != -1 && chr!= basic.chr) return false;
-    		if(loc != -1 && loc != basic.loc) return false;
+    		if(chr != -1 && basic.chr != -1 && chr != basic.chr) return false;
+    		if(loc != -1 && basic.loc != -1 && loc != basic.loc) return false;
     		if(basic.ref.compare(ref)==0){
     			if(!basic.alt.empty() && !alt.empty())
     			{
@@ -121,11 +127,14 @@ public:
 
     int chr() const { return basic.chr; };
     int loc() const { return basic.loc; };
-
+    std::string rs() const { return basic.rs; };
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
     void not_required(){ m_required = false; };
+
+    std::string file_name() const { return file_info.file; };
+    int snp_id() const { return file_info.id; };
     bool is_required() const { return m_required; };
 private:
     //basic info
@@ -140,13 +149,7 @@ private:
     struct{
     	std::string file;
     	int id;
-    }target;
-
-    struct{
-    	std::string file;
-    	int id;
-    	bool use_ld;
-    } ld_file;
+    }file_info;
 
     struct{
     	double stat;

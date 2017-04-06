@@ -9,8 +9,12 @@
 #define PRSICE_INC_STORAGE_HPP_
 #include <memory>
 #include <cstdint>
+#include <string>
 	// From http://stackoverflow.com/a/12927952/1441789
-
+	struct Sample{
+		std::string FID;
+		std::string IID;
+	};
 	template< typename e >
 	struct enumeration_traits;
 
