@@ -14,6 +14,7 @@
 	struct Sample{
 		std::string FID;
 		std::string IID;
+		std::string pheno;
 	};
 	template< typename e >
 	struct enumeration_traits;

@@ -109,7 +109,7 @@ protected:
 	uint32_t m_num_ambig;
 
 	uint32_t m_thread;
-	virtual void read_genotype(uintptr_t* genotype){genotype=nullptr;};
+	virtual void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name){genotype=nullptr;};
 	//hh_exists
 	inline bool ambiguous(std::string ref_allele, std::string alt_allele)
 	{
@@ -138,14 +138,17 @@ class BinaryPlink: public Genotype{
 public:
 	BinaryPlink(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
 			bool no_mt=false, const size_t thread=1, bool verbose=false);
+	 ~BinaryPlink();
 private:
 	uintptr_t m_bed_offset = 3;
 	std::vector<Sample> load_samples();
 	std::vector<SNP> load_snps();
 	void check_bed();
-	void read_genotype(uintptr_t* genotype);
+	void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name);
 	FILE* m_bedfile = nullptr;
+	std::string m_cur_file;
 	uintptr_t m_final_mask;
+	uintptr_t *m_tmp_genotype;
 };
 
 

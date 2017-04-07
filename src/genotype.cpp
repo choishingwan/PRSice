@@ -166,133 +166,128 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		if (line.empty()) continue;
 		exclude = false;
 		token = misc::split(line);
-		if (token.size() <= max_index)
-			throw std::runtime_error("More index than column in data");
+		if (token.size() <= max_index) throw std::runtime_error("More index than column in data");
 		else
 		{
 			std::string rs_id = token[index[+BASE_INDEX::RS]];
-			auto target = m_existed_snps_index.find(rs_id);
+			auto &&target = m_existed_snps_index.find(rs_id);
 			if(target!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
 			{
 				dup_index.insert(rs_id);
 				auto &&cur_snp = m_existed_snps[target->second];
-				if(!cur_snp.is_required()) num_excluded++;
-				else
+				int32_t chr_code = -1;
+				if (index[+BASE_INDEX::CHR] >= 0)
 				{
-					int32_t chr_code = -1;
-					if (index[+BASE_INDEX::CHR] >= 0)
-					{
-						chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
-						if (((const uint32_t)chr_code) > m_max_code) {
-							if (chr_code != -1) {
-								if (chr_code >= MAX_POSSIBLE_CHROM) {
-									chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
-								}
-								else
-								{
-									std::string error_message ="ERROR: Cannot parse chromosome code: "
-											+ token[index[+BASE_INDEX::CHR]];
-									throw std::runtime_error(error_message);
-								}
-							}
-						}
-						else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
-								chr_code==m_xymt_codes[Y_OFFSET])
-						{
-							fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
-							exclude = true;
-							num_excluded++;
-						}
-					}
-					std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
-					std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ? token[index[+BASE_INDEX::ALT]] : "";
-					int loc = -1;
-					if (index[+BASE_INDEX::BP] >= 0)
-					{
-						// obtain the SNP coordinate
-						try {
-							loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
-							if (loc < 0)
-							{
-								std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
-								throw std::runtime_error(error_message);
-							}
-						} catch (const std::runtime_error &error) {
-							std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
-							throw std::runtime_error(error_message);
-						}
-					}
-					bool flipped = false;
-					if(!cur_snp.matching(chr_code, loc, ref_allele, alt_allele, flipped))
-					{
-						num_mismatched++;
-						exclude = true; // hard check, as we can't tell if that is correct or not anyway
-					}
-					double pvalue = 2.0;
-					try{
-						misc::convert<double>( token[index[+BASE_INDEX::P]]);
-						if (pvalue < 0.0 || pvalue > 1.0)
-						{
-							std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
-							throw std::runtime_error(error_message);
-						}
-						else if (pvalue > threshold)
-						{
-							exclude = true;
-							num_excluded++;
-						}
-					}catch (const std::runtime_error& error) {
-						exclude = true;
-						num_not_converted = true;
-					}
-					double stat = 0.0;
-					try {
-						stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
-						if(stat <0 && !beta)
-						{
-							num_negative_stat++;
-							exclude = true;
-						}
-						else if (!beta) stat = log(stat);
-					} catch (const std::runtime_error& error) {
-						num_not_converted++;
-						exclude = true;
-					}
-
-
-					if(!alt_allele.empty() && SNP::ambiguous(ref_allele, alt_allele)){
-						num_excluded++;
-						exclude= true;
-					}
-					if(!exclude)
-					{
-						int category = -1;
-						double pthres = 0.0;
-						if (fastscore)
-						{
-							category = c_commander.get_category(pvalue);
-							pthres = c_commander.get_threshold(category);
-						}
-						else
-						{
-							// calculate the threshold instead
-							if (pvalue > bound_end && full)
-							{
-								category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
-								pthres = 1.0;
+					chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
+					if (((const uint32_t)chr_code) > m_max_code) {
+						if (chr_code != -1) {
+							if (chr_code >= MAX_POSSIBLE_CHROM) {
+								chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
 							}
 							else
 							{
-								category = std::ceil((pvalue - bound_start) / bound_inter);
-								category = (category < 0) ? 0 : category;
-								pthres = category * bound_inter + bound_start;
+								std::string error_message ="ERROR: Cannot parse chromosome code: "
+										+ token[index[+BASE_INDEX::CHR]];
+								throw std::runtime_error(error_message);
 							}
 						}
-						if(flipped) cur_snp.set_flipped();
-						// ignore the SE as it currently serves no purpose
-						exist_index.push_back(target->second);
-						cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
 					}
+					else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
+							chr_code==m_xymt_codes[Y_OFFSET])
+					{
+						fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
+						exclude = true;
+						num_excluded++;
+					}
+				}
+				std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
+				std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ? token[index[+BASE_INDEX::ALT]] : "";
+				int loc = -1;
+				if (index[+BASE_INDEX::BP] >= 0)
+				{
+					// obtain the SNP coordinate
+					try {
+						loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
+						if (loc < 0)
+						{
+							std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
+							throw std::runtime_error(error_message);
+						}
+					} catch (const std::runtime_error &error) {
+						std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
+						throw std::runtime_error(error_message);
+					}
+				}
+				bool flipped = false;
+				if(!cur_snp.matching(chr_code, loc, ref_allele, alt_allele, flipped))
+				{
+					num_mismatched++;
+					exclude = true; // hard check, as we can't tell if that is correct or not anyway
+				}
+				double pvalue = 2.0;
+				try{
+					misc::convert<double>( token[index[+BASE_INDEX::P]]);
+					if (pvalue < 0.0 || pvalue > 1.0)
+					{
+						std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
+						throw std::runtime_error(error_message);
+					}
+					else if (pvalue > threshold)
+					{
+						exclude = true;
+						num_excluded++;
+					}
+				}catch (const std::runtime_error& error) {
+					exclude = true;
+					num_not_converted = true;
+				}
+				double stat = 0.0;
+				try {
+					stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
+					if(stat <0 && !beta)
+					{
+						num_negative_stat++;
+						exclude = true;
+					}
+					else if (!beta) stat = log(stat);
+				} catch (const std::runtime_error& error) {
+					num_not_converted++;
+					exclude = true;
+				}
+
+
+				if(!alt_allele.empty() && SNP::ambiguous(ref_allele, alt_allele)){
+					num_excluded++;
+					exclude= true;
+				}
+				if(!exclude)
+				{
+					int category = -1;
+					double pthres = 0.0;
+					if (fastscore)
+					{
+						category = c_commander.get_category(pvalue);
+						pthres = c_commander.get_threshold(category);
+					}
+					else
+					{
+						// calculate the threshold instead
+						if (pvalue > bound_end && full)
+						{
+							category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
+							pthres = 1.0;
+						}
+						else
+						{
+							category = std::ceil((pvalue - bound_start) / bound_inter);
+							category = (category < 0) ? 0 : category;
+							pthres = category * bound_inter + bound_start;
+						}
+					}
+					if(flipped) cur_snp.set_flipped();
+					// ignore the SE as it currently serves no purpose
+					exist_index.push_back(target->second);
+					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
 				}
 			}
 			else if(dup_index.find(rs_id)!=dup_index.end())
@@ -413,7 +408,7 @@ void Genotype::clump(Genotype &reference)
 		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		clump_index.push_back(snp_index-1);// because we use ++ first
-		read_genotype(genotype);
+		read_genotype(genotype, cur_snp.snp_id(), cur_snp.file_name());
 		m_genotype.push_back(genotype);
 		if(!require_clump && snp.p_value() < clump_info.p_value)
 		{ // Set this as the core SNP

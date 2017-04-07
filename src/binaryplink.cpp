@@ -6,8 +6,13 @@ BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y,
 		Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 {
 	check_bed();
+	m_cur_file="";
 }
 
+BinaryPlink::~BinaryPlink()
+{
+	if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
+}
 std::vector<Sample> BinaryPlink::load_samples()
 {
 	assert(m_genotype_files.size()>0);
@@ -70,6 +75,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 			Sample cur_sample;
 			cur_sample.FID = token[+FAM::FID];
 			cur_sample.IID = token[+FAM::IID];
+			cur_sample.pheno = token[+FAM::PHENOTYPE];
 			m_sample_names.push_back(cur_sample);
 			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0)
 			{
@@ -94,8 +100,8 @@ std::vector<Sample> BinaryPlink::load_samples()
 		}
 	}
 	famfile.close();
-
 	m_final_mask = get_final_mask(m_founder_ct);
+	m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 }
 
 std::vector<SNP> BinaryPlink::load_snps()
@@ -134,6 +140,7 @@ std::vector<SNP> BinaryPlink::load_snps()
 			std::string chr = token[+BIM::CHR];
 			if(chr.compare(prev_chr)!=0)
 			{
+				prev_chr = chr;
 				if(m_chr_order.find(chr)!= m_chr_order.end())
 				{
 					throw std::runtime_error("ERROR: SNPs on the same chromosome must be clustered together!");
@@ -148,9 +155,9 @@ std::vector<SNP> BinaryPlink::load_snps()
 						chr_error=true;
 						continue;
 					}
-					else if(!chr_sex_error && is_set(m_haploid_mask, chr_code) ||
+					else if(!chr_sex_error && (is_set(m_haploid_mask, chr_code) ||
 							chr_code==m_xymt_codes[X_OFFSET] ||
-							chr_code==m_xymt_codes[Y_OFFSET])
+							chr_code==m_xymt_codes[Y_OFFSET]))
 					{
 						fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
 						chr_sex_error=true;
@@ -164,7 +171,6 @@ std::vector<SNP> BinaryPlink::load_snps()
 				fprintf(stderr, "ERROR: SNP with negative corrdinate: %s:%s\n", token[+BIM::RS].c_str(), token[+BIM::BP].c_str());
 				throw std::runtime_error("Please check you have the correct input");
 			}
-			// better way is to use struct. But for some reason that doesn't work
 			if(m_existed_snps_index.find(token[+BIM::RS])!= m_existed_snps_index.end())
 			{
 				throw std::runtime_error("ERROR: Duplicated SNP ID detected!\n");
@@ -279,5 +285,32 @@ void BinaryPlink::check_bed()
 		}
 		fclose(m_bedfile);
 		m_bedfile = nullptr;
+	}
+}
+
+void BinaryPlink::read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name)
+{
+	if(m_cur_file.empty() || m_cur_file.compare(file_name)!=0)
+	{
+		if (m_bedfile != nullptr)
+		{
+			fclose(m_bedfile);
+			m_bedfile=nullptr;
+		}
+		std::string bedname = file_name+".bed";
+		m_bedfile = fopen(bedname.c_str(), FOPEN_RB); // assume there is no error
+	}
+	if (fseeko(m_bedfile, m_bed_offset + (snp_index* ((uint64_t)m_unfiltered_sample_ct4))
+			, SEEK_SET))
+	{
+		throw std::runtime_error("ERROR: Cannot read the bed file!");
+	}
+	genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+	std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+	if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
+			false, m_bedfile, m_tmp_genotype, genotype))
+	{
+		throw std::runtime_error("ERROR: Cannot read the bed file!");
 	}
 }
