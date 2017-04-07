@@ -2,8 +2,8 @@
 
 
 BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
-		const size_t thread):
-		Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread)
+		const size_t thread, bool verbose):
+		Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 {
 	check_bed();
 }
@@ -67,7 +67,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 				fprintf(stderr, "Error: Malformed fam file. Less than 6 column on line: %zu\n",sample_uidx+1);
 				throw std::runtime_error("");
 			}
-			sample_id cur_sample;
+			Sample cur_sample;
 			cur_sample.FID = token[+FAM::FID];
 			cur_sample.IID = token[+FAM::IID];
 			m_sample_names.push_back(cur_sample);
@@ -94,10 +94,11 @@ std::vector<Sample> BinaryPlink::load_samples()
 		}
 	}
 	famfile.close();
+
+	m_final_mask = get_final_mask(m_founder_ct);
 }
 
-void BinaryPlink::load_snps(std::vector<SNP> &snp_info, std::unordered_map<std::string, int> &snp_index,
-		const Commander &c_commander)
+std::vector<SNP> BinaryPlink::load_snps()
 {
 	assert(m_genotype_files.size()>0);
 	m_unfiltered_marker_ct = 0;
@@ -108,6 +109,7 @@ void BinaryPlink::load_snps(std::vector<SNP> &snp_info, std::unordered_map<std::
 	int order = 0;
 	bool chr_error = false, chr_sex_error = false;
 	m_num_ambig = 0;
+	std::vector<SNP> snp_info;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -146,10 +148,12 @@ void BinaryPlink::load_snps(std::vector<SNP> &snp_info, std::unordered_map<std::
 						chr_error=true;
 						continue;
 					}
-					else if(!chr_sex_error)
+					else if(!chr_sex_error && is_set(m_haploid_mask, chr_code) ||
+							chr_code==m_xymt_codes[X_OFFSET] ||
+							chr_code==m_xymt_codes[Y_OFFSET])
 					{
-						fprintf(stderr, "WARNING: Sex chromosome currently not supported\n");
-						chr_sex_error;
+						fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
+						chr_sex_error=true;
 						continue;
 					}
 				}
@@ -180,10 +184,6 @@ void BinaryPlink::load_snps(std::vector<SNP> &snp_info, std::unordered_map<std::
 		}
 		bimfile.close();
 	}
-	if(y_end==0)
-	{
-		y_end=m_unfiltered_marker_ct;
-	}
 
 	m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
 	m_marker_exclude = new uintptr_t[m_unfiltered_marker_ctl];
@@ -195,57 +195,10 @@ void BinaryPlink::load_snps(std::vector<SNP> &snp_info, std::unordered_map<std::
 			"Sorry.");
 	}
 	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct;
-	uint32_t sample_idx = 0;
-	uint32_t removed_ct = 0;
-	if(filter_mind)
-	{
-		mind_int_thresh[0] = (int32_t)(mind * ((int32_t)nony_marker_ct) * (1 + SMALL_EPSILON));
-		mind_int_thresh[1] = (int32_t)(mind * ((int32_t)m_marker_ct) * (1 + SMALL_EPSILON));
-		do {
-			if (missing_cts[sample_idx] > mind_int_thresh[is_set(m_sex_male, sample_idx)]) {
-				SET_BIT(sample_idx, m_sample_exclude);
-				removed_ct++;
-			}
-		} while (sample_idx < m_unfiltered_sample_ct);
-	}
-	if(removed_ct!=0) fprintf(stderr, "%u sample(s) removed due to individual missingness\n", removed_ct);
+	return snp_info;
 }
 
-void BinaryPlink::filter_mind(uintptr_t  unfiltered_sample_ct4, uintptr_t unfiltered_sample_ctl2m1,
-		uintptr_t final_mask, uintptr_t *loadbuf, size_t marker_uidx, uint32_t y_start, uint32_t y_end,
-		std::vector<int> &missing_cts, uintptr_t *sample_male_include2, uintptr_t unfiltered_sample_ctl2)
-{
-	uint32_t uii;
-	uint32_t ujj = unfiltered_sample_ctl2 * BITCT2;
-	uintptr_t ulii;
-	uintptr_t* lptr;
-	uintptr_t* mptr;
-	if (load_raw2(unfiltered_sample_ct4, unfiltered_sample_ctl2m1, final_mask, m_bedfile, loadbuf)) {
-		throw std::runtime_error("Cannot read file!");
-	}
-	lptr = loadbuf;
-	if ((marker_uidx >= y_end) || (marker_uidx < y_start)) {
-		for (uii = 0; uii < ujj; uii += BITCT2) {
-			ulii = *lptr++;
-			ulii = (ulii & FIVEMASK) & ((~ulii) >> 1);
-			// now ulii has single bit set only at missing positions
-			while (ulii) {
-				missing_cts[uii + CTZLU(ulii) / 2] += 1;
-				ulii &= ulii - 1;
-			}
-		}
-	} else {
-		mptr = sample_male_include2;
-		for (uii = 0; uii < ujj; uii += BITCT2) {
-			ulii = *lptr++;
-			ulii = (ulii & (*mptr++)) & ((~ulii) >> 1);
-			while (ulii) {
-				missing_cts[uii + CTZLU(ulii) / 2] += 1;
-				ulii &= ulii - 1;
-			}
-		}
-	}
-}
+
 void BinaryPlink::check_bed()
 {
 	uint32_t uii = 0;

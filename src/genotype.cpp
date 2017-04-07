@@ -10,75 +10,75 @@
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt)
 {
 	// this initialize haploid mask as the maximum possible number
-	chrom_info.haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
-	fill_ulong_zero(CHROM_MASK_WORDS, chrom_info.haploid_mask);
+	m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
 
 	if(num_auto < 0)
 	{
 		num_auto = -num_auto;
-		chrom_info.autosome_ct = num_auto;
-		chrom_info.xymt_codes[X_OFFSET] = -1;
-		chrom_info.xymt_codes[Y_OFFSET] = -1;
-		chrom_info.xymt_codes[XY_OFFSET] = -1;
-		chrom_info.xymt_codes[MT_OFFSET] = -1;
-		chrom_info.max_code = num_auto;
-		fill_all_bits(((uint32_t)num_auto) + 1, chrom_info.haploid_mask);
+		m_autosome_ct = num_auto;
+		m_xymt_codes[X_OFFSET] = -1;
+		m_xymt_codes[Y_OFFSET] = -1;
+		m_xymt_codes[XY_OFFSET] = -1;
+		m_xymt_codes[MT_OFFSET] = -1;
+		m_max_code = num_auto;
+		fill_all_bits(((uint32_t)num_auto) + 1, m_haploid_mask);
 	}
 	else
 	{
-		chrom_info.autosome_ct = num_auto;
-		chrom_info.xymt_codes[X_OFFSET] = num_auto+1;
-		chrom_info.xymt_codes[Y_OFFSET] = num_auto+2;
-		chrom_info.xymt_codes[XY_OFFSET] = num_auto+3;
-		chrom_info.xymt_codes[MT_OFFSET] = num_auto+4;
-		set_bit(num_auto + 1, chrom_info.haploid_mask);
-		set_bit(num_auto + 2, chrom_info.haploid_mask);
+		m_autosome_ct = num_auto;
+		m_xymt_codes[X_OFFSET] = num_auto+1;
+		m_xymt_codes[Y_OFFSET] = num_auto+2;
+		m_xymt_codes[XY_OFFSET] = num_auto+3;
+		m_xymt_codes[MT_OFFSET] = num_auto+4;
+		set_bit(num_auto + 1, m_haploid_mask);
+		set_bit(num_auto + 2, m_haploid_mask);
 		if(no_x){
-			chrom_info.xymt_codes[X_OFFSET] = -1;
-			clear_bit(num_auto + 1, chrom_info.haploid_mask);
+			m_xymt_codes[X_OFFSET] = -1;
+			clear_bit(num_auto + 1, m_haploid_mask);
 		}
 		if(no_y)
 		{
-			chrom_info.xymt_codes[Y_OFFSET] = -1;
-			clear_bit(num_auto + 2, chrom_info.haploid_mask);
+			m_xymt_codes[Y_OFFSET] = -1;
+			clear_bit(num_auto + 2, m_haploid_mask);
 		}
 		if(no_xy)
 		{
-			chrom_info.xymt_codes[XY_OFFSET] = -1;
+			m_xymt_codes[XY_OFFSET] = -1;
 		}
 		if(no_mt)
 		{
-			chrom_info.xymt_codes[MT_OFFSET] = -1;
+			m_xymt_codes[MT_OFFSET] = -1;
 		}
-		if (chrom_info.xymt_codes[MT_OFFSET] != -1) {
-			chrom_info.max_code = num_auto + 4;
-		} else if (chrom_info.xymt_codes[XY_OFFSET] != -1) {
-			chrom_info.max_code = num_auto + 3;
-		} else if (chrom_info.xymt_codes[Y_OFFSET] != -1) {
-			chrom_info.max_code = num_auto + 2;
-		} else if (chrom_info.xymt_codes[X_OFFSET] != -1) {
-			chrom_info.max_code = num_auto + 1;
+		if (m_xymt_codes[MT_OFFSET] != -1) {
+			m_max_code = num_auto + 4;
+		} else if (m_xymt_codes[XY_OFFSET] != -1) {
+			m_max_code = num_auto + 3;
+		} else if (m_xymt_codes[Y_OFFSET] != -1) {
+			m_max_code = num_auto + 2;
+		} else if (m_xymt_codes[X_OFFSET] != -1) {
+			m_max_code = num_auto + 1;
 		} else {
-			chrom_info.max_code = num_auto;
+			m_max_code = num_auto;
 		}
 	}
-	chrom_info.chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
-	fill_ulong_zero(CHROM_MASK_WORDS, chrom_info.chrom_mask);
-	fill_all_bits(chrom_info.autosome_ct + 1, chrom_info.chrom_mask);
+	m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+	fill_all_bits(m_autosome_ct + 1, m_chrom_mask);
 	for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
-		int32_t cur_code = chrom_info.xymt_codes[xymt_idx];
+		int32_t cur_code = m_xymt_codes[xymt_idx];
 		if (cur_code != -1) {
-			set_bit(chrom_info.xymt_codes[xymt_idx], chrom_info.chrom_mask);
+			set_bit(m_xymt_codes[xymt_idx], m_chrom_mask);
 		}
 	}
-	chrom_info.chrom_start.resize(chrom_info.max_code);// 1 extra for the info
+	m_chrom_start.resize(m_max_code);// 1 extra for the info
 }
 
 void Genotype::set_genotype_files(std::string prefix)
 {
 	if(prefix.find("#")!=std::string::npos)
 	{
-		for(size_t chr = 1; chr < chrom_info.max_code; ++chr)
+		for(size_t chr = 1; chr < m_max_code; ++chr)
 		{
 			std::string name = prefix;
 			misc::replace_substring(name, "#", std::to_string(chr));
@@ -96,34 +96,14 @@ Genotype::Genotype(std::string prefix, int num_auto,
 {
 	m_xymt_codes.resize(XYMT_OFFSET_CT);
 	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+	m_thread = thread;
 	set_genotype_files(prefix);
 	m_sample_names = load_samples();
 	m_existed_snps = load_snps();
 	if(verbose)
 	{
 		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
-		if(m_num_ambig!=0) fprintf(stderr, "%zu ambiguous variants excluded\n", m_num_ambig);
-		fprintf(stderr, "%zu variants included\n", m_marker_ct);
-	}
-}
-
-void Genotype::load(std::vector<SNP> &snp_info, std::unordered_map<std::string, int> &snp_index,
-		const Commander &c_commander, bool verbose)
-{
-	// load sample should always be straightforward
-	load_sample();
-	// now load snps, this is complicated because we want
-	// 1. hh_exist (Most important!)
-	// 2. filtering by mind if required (On all genes, before extract?)
-	// 3. filtering by maf and geno if required
-	// need to remember what SNPs causes the hh_exist.
-	// maybe after filtering, hh_exist is no longer required
-	// sequence is mind -> geno -> maf
-	// let the user worries about the sequence of filtering
-	load_snps(snp_info, snp_index, c_commander);
-	if(verbose)
-	{
-		fprintf(stderr, "%zu people (%zu males, %zu females) loaded from .fam\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
+		if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
 		fprintf(stderr, "%zu variants included\n", m_marker_ct);
 	}
 }
@@ -134,8 +114,8 @@ Genotype::~Genotype() {
 	if(m_sex_male != nullptr) delete [] m_sex_male;
 	if(m_sample_exclude != nullptr) delete [] m_sample_exclude;
 	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
-	if(chrom_info.haploid_mask != nullptr) delete [] chrom_info.haploid_mask;
-	if(chrom_info.chrom_mask != nullptr) delete [] chrom_info.chrom_mask;
+	if(m_haploid_mask != nullptr) delete [] m_haploid_mask;
+	if(m_chrom_mask != nullptr) delete [] m_chrom_mask;
 }
 
 void Genotype::read_base(const Commander &c_commander, Region &region)
@@ -327,13 +307,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	}
 	snp_file.close();
 
-	if(!num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
-	if(!num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
-	if(!num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
-	if(!num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
-	if(!num_not_converted) fprintf(stderr, "%zu NA statistic observed\n", num_not_converted);
-	if(!num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
-	fprintf(stderr, "%zu total SNPs included from base file\n");
 	if(exist_index.size() != m_existed_snps.size())
 	{ // only do this if we need to remove some SNPs
 		// we assume exist_index doesn't have any duplicated index
@@ -366,10 +339,19 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		m_existed_snps_index[cur_snp.rs()] = vector_index++;
 		cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
 	}
+
+	if(!num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
+	if(!num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
+	if(!num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
+	if(!num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
+	if(!num_not_converted) fprintf(stderr, "%zu NA statistic observed\n", num_not_converted);
+	if(!num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
+	fprintf(stderr, "%zu total SNPs included from base file\n", m_existed_snps.size());
 	clump_info.p_value = c_commander.clump_p();
 	clump_info.r2 =  c_commander.clump_r2();
 	clump_info.proxy = c_commander.proxy();
 	clump_info.use_proxy = c_commander.use_proxy();
+	clump_info.distance = c_commander.clump_dist();
 	filter.filter_geno = c_commander.filter_geno();
 	filter.filter_maf = c_commander.filter_maf();
 	filter.filter_info = c_commander.filter_info();
@@ -382,7 +364,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 void Genotype::clump(Genotype &reference)
 {
 	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
-	uintptr_t final_mask = get_final_mask(m_founder_ct);
 	// use the old algorithm to speed up development time. Current focus should be
 	// to get bgen working asap
 	auto &&cur_snp = m_existed_snps.front();
@@ -390,14 +371,71 @@ void Genotype::clump(Genotype &reference)
 	std::string prev_file=cur_snp.file_name();
 	int prev_chr= cur_snp.chr();
 	size_t bp_of_core =cur_snp.loc();
-	for(auto &&snp = m_existed_snps)
+	int mismatch =0;
+	int total = 0;
+	int core_genotype_index = 0;
+	int progress = 0;
+	int num_snp = m_existed_snps.size();
+	int snp_index =0;
+	bool mismatch_error = false;
+	bool require_clump = false;
+	std::deque<int> clump_index;
+	for(auto &&snp : m_existed_snps)
 	{
+		snp_index++;
 		auto &&target = reference.m_existed_snps_index.find(snp.rs());
 		if(target==reference.m_existed_snps_index.end()) continue; // only work on SNPs that are in both
+		auto &&ld_snp = reference.m_existed_snps[target->second];
+		total++;
+		bool flipped = false;
+		if(!snp.matching(ld_snp.chr(), ld_snp.loc(), ld_snp.ref(), ld_snp.alt(), flipped))
+		{
+			mismatch++;
+			if(!mismatch_error)
+			{
+				fprintf(stderr, "WARNING: Mismatched SNPs between LD reference and target!\n");
+				fprintf(stderr, "         Will use information from target file\n");
+				fprintf(stderr, "         You should check the files are based on same genome build\n");
+				mismatch_error = true;
+			}
+		}
+		if(prev_chr!=snp.chr())
+		{
+			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+			prev_chr = snp.chr();
+		}
+		else if((snp.loc()-bp_of_core) > clump_info.distance)
+		{
+			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+		}
+		// Now read in the current SNP
 
-
+		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		clump_index.push_back(snp_index-1);// because we use ++ first
+		read_genotype(genotype);
+		m_genotype.push_back(genotype);
+		if(!require_clump && snp.p_value() < clump_info.p_value)
+		{ // Set this as the core SNP
+			bp_of_core =snp.loc();
+			core_genotype_index=m_genotype.size()-1; // Should store the index on genotype
+			require_clump= true;
+		}
+		fprintf(stderr, "\rClumping Progress: %03.2f%%", (double) progress++ / (double) (num_snp) * 100.0);
 	}
+	if(m_genotype.size()!=0)
+	{
+		// this make sure this will be the last
+		perform_clump(core_genotype_index, require_clump, prev_chr+1, bp_of_core+2*clump_info.distance, clump_index);
+	}
+
+	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
+
 }
 
 
+void Genotype::perform_clump(int core_genotype_index, bool require_clump, int chr, int loc,
+			std::deque<int> &clump_index)
+{
 
+}

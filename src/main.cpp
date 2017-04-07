@@ -33,13 +33,8 @@ int main(int argc, char *argv[])
 	// for processing sex chromosomes
 	std::unique_ptr<Genotype> ld_file = nullptr;
 	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.target_name())!=0){
-		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), commander.ld_type());
+		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), commander.ld_type(), true);
 	}
-
-	// given the information from the base file, we will now propergate the ld_file and
-	// target_file separately. After that, we will exclude any SNPs that are not found
-	// on both of the file.
-	target_file->load(snp_info, snp_index, commander, true);
 
 	Region region = Region(commander.feature(), target_file->get_chr_order());
 	try

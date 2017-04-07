@@ -127,14 +127,17 @@ public:
 
     int chr() const { return basic.chr; };
     int loc() const { return basic.loc; };
+    int snp_id() const { return file_info.id; };
+    double p_value() const { return statistic.p_value; };
     std::string rs() const { return basic.rs; };
+    std::string ref() const { return basic.ref; };
+    std::string alt() const { return basic.alt; };
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
     void not_required(){ m_required = false; };
 
     std::string file_name() const { return file_info.file; };
-    int snp_id() const { return file_info.id; };
     bool is_required() const { return m_required; };
 private:
     //basic info
