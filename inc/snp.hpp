@@ -136,9 +136,19 @@ public:
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
+    void add_clump( std::vector<size_t> &i) { clump.target.insert( clump.target.end(), i.begin(), i.end() ); };
+    void add_clump_r2( std::vector<double> &i) { clump.r2.insert( clump.r2.end(), i.begin(), i.end() ); };
+    void set_clumped() { clump.clumped = true; };
+
 
 private:
     //basic info
+    struct{
+    	bool clumped;
+    	std::vector<size_t> target;
+    	std::vector<double> r2;
+    } clump;
+
     struct{
     	std::string ref;
     	std::string alt;
@@ -172,8 +182,6 @@ private:
     // the bound is [ )
     int m_range_start;
     int m_range_end;
-    //clump related
-    bool m_clumped;
     //prset related
     std::vector<long_type> m_flags;
 

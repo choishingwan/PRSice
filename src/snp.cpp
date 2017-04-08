@@ -10,8 +10,8 @@ SNP::SNP()
     statistic.p_value=2.0; // set this to 2 such that only SNPs in base file have valid P-value
     threshold.p_threshold=0.0;
     threshold.category=0;
-    m_clumped = false;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
+    clump.clumped=false;
 }
 
 
@@ -28,7 +28,7 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
     threshold.p_threshold=0.0;
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
-    m_clumped = false;
+    clump.clumped=false;
 }
 
 

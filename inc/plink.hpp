@@ -17,6 +17,7 @@
 #include <cassert>
 #include <fstream>
 #include <thread>
+#include <mutex>
 #include <iostream>
 #include <vector>
 #include <unordered_map>
