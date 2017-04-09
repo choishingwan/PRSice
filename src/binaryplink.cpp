@@ -76,6 +76,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 			cur_sample.FID = token[+FAM::FID];
 			cur_sample.IID = token[+FAM::IID];
 			cur_sample.pheno = token[+FAM::PHENOTYPE];
+			cur_sample.included = true;
 			m_sample_names.push_back(cur_sample);
 			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0)
 			{

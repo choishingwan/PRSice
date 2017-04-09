@@ -18,7 +18,6 @@
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "plink.hpp"
 #include "snp.hpp"
 #include "region.hpp"
 #include "regression.hpp"
@@ -27,26 +26,17 @@
 class PRSice
 {
 public:
-	static std::vector<SNP> read_base(std::unordered_map<std::string, int> &snp_index,
-			const Commander &c_commander, const std::vector<int32_t> &xymt_codes,
-			const uint32_t max_code);
-    PRSice(std::string base_name, int index, std::string target, std::vector<bool> target_binary,
+
+    PRSice(std::string base_name, std::string target, std::vector<bool> target_binary,
     		size_t permutation, SCORING score, size_t num_region, bool ignore_fid):
-    			m_base_name(base_name), m_base_index(index), m_target(target),
-				m_target_binary(target_binary), m_perm(permutation), m_score(score),
-				m_region_size(num_region), m_ignore_fid(ignore_fid){
-        if(index < 0)
-        {
-            throw std::out_of_range("Index cannot be less than 0");
-        }
-    };
+    			m_base_name(base_name), m_target(target), m_target_binary(target_binary),
+				m_perm(permutation), m_score(score), m_region_size(num_region),
+				m_ignore_fid(ignore_fid){ };
     virtual ~PRSice();
-    void get_snp(const Commander &c_commander, Region &region);
-    std::vector<SNP> static get_snp(const Commander &c_commander);
-    // Under construction
-    void perform_clump(const Commander &c_commander);
     void pheno_check(const Commander &c_commander);
 
+
+    //working in progress
     void init_matrix(const Commander &c_commander, const size_t c_pheno_index, const bool prslice);
     size_t num_phenotype() const { return m_pheno_names.size(); };
     void categorize(const Commander &c_commander);
@@ -58,10 +48,26 @@ public:
     void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
+    struct{
+    	std::vector<int> col;
+    	std::vector<std::string> name;
+    	std::vector<int> order;
+    	std::vector<bool> binary;
+    	bool use_pheno;
+    }pheno_info;
+
+    struct prsice_result{
+    	double threshold;
+    	double r2;
+    	double r2_adk;
+    	double coeff;
+    	double p;
+    	double emp_p;
+    	int num_snp;
+    };
     //slowly update the class
     //input related
     std::string m_base_name;
-    int m_base_index;
     std::string m_target;
     std::vector<bool> m_target_binary;
 	size_t m_perm = 0;
@@ -69,12 +75,21 @@ private:
     size_t m_region_size=1;
     bool m_ignore_fid = false;
 
-    // valid sample information
+    std::vector<Sample> m_sample_names;
 	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
-	std::vector<prs_score> m_sample_names;
-	// matrix for regression
+
 	Eigen::VectorXd m_phenotype;
 	Eigen::MatrixXd m_independent_variables;
+
+	/**
+	 * function area
+	 */
+	void gen_pheno_vec(const std::string &pheno_file_name, const int pheno_index, bool regress);
+	std::vector<size_t> get_cov_index(const std::string &c_cov_file,
+			const std::vector<std::string> &c_cov_header);
+    // valid sample information
+
+	// matrix for regression
 	// important guide for all operation
 	std::vector<p_partition> m_partition;
 	// snp information
@@ -116,11 +131,8 @@ private:
      * @param not_found Number of base SNPs not found in the target file
      * @param num_duplicate Number of duplicated SNPs found in the target file
      */
-    void check_inclusion(const std::string &c_target_bim_name,
-    		size_t &num_ambig, size_t &not_found, size_t &num_duplicate);
 
     void update_line(std::unordered_map<std::string, size_t> &partition_index);
-    void gen_pheno_vec(const std::string c_pheno, const int pheno_index, const int col_index, bool regress);
     void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
     bool get_prs_score(size_t &cur_index, PLINK &score_plink);
     void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);

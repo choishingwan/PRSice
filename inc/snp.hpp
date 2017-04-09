@@ -136,10 +136,12 @@ public:
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
-    void add_clump( std::vector<size_t> &i) { clump.target.insert( clump.target.end(), i.begin(), i.end() ); };
-    void add_clump_r2( std::vector<double> &i) { clump.r2.insert( clump.r2.end(), i.begin(), i.end() ); };
-    void set_clumped() { clump.clumped = true; };
-
+    void add_clump( std::vector<size_t> &i) { clump_info.target.insert( clump_info.target.end(), i.begin(), i.end() ); };
+    void add_clump_r2( std::vector<double> &i) { clump_info.r2.insert( clump_info.r2.end(), i.begin(), i.end() ); };
+    void set_clumped() { clump_info.clumped = true; };
+    void proxy_clump(std::vector<SNP> &snp_list, double r2_threshold);
+    void clump(std::vector<SNP> &snp_list);
+    bool clumped() const { return clump_info.clumped; };
 
 private:
     //basic info
@@ -147,7 +149,7 @@ private:
     	bool clumped;
     	std::vector<size_t> target;
     	std::vector<double> r2;
-    } clump;
+    } clump_info;
 
     struct{
     	std::string ref;

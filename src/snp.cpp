@@ -11,7 +11,7 @@ SNP::SNP()
     threshold.p_threshold=0.0;
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
-    clump.clumped=false;
+    clump_info.clumped=false;
 }
 
 
@@ -28,7 +28,7 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
     threshold.p_threshold=0.0;
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
-    clump.clumped=false;
+    clump_info.clumped=false;
 }
 
 
@@ -75,3 +75,39 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
     return idx;
 }
 
+
+void SNP::clump(std::vector<SNP> &snp_list)
+{
+	for(auto &&target : clump_info.target){
+		if(!snp_list[target].clumped())
+		{
+			int sum_total = 0;
+			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
+			{
+				//TODO: ERROR IS HERE
+				// if there is any overlap this should set the snp_list to the new flag
+				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
+						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
+				sum_total+=snp_list[target].m_flags[i_flag];
+			}
+			if(sum_total==0)  snp_list[target].set_clumped();
+		}
+	}
+	clump_info.clumped=true; // protect from other SNPs tempering its flags
+}
+
+void SNP::proxy_clump(std::vector<SNP> &snp_list, double r2_threshold)
+{
+    for(size_t i_target = 0; i_target < clump_info.target.size(); ++i_target)
+    {
+        if(!snp_list[clump_info.target[i_target]].clumped())
+        {
+            snp_list[clump_info.target[i_target]].set_clumped();
+            if(clump_info.r2[i_target] >= r2_threshold)
+            {
+                for(size_t j = 0; j < m_flags.size(); ++j)  m_flags[j] |= snp_list[clump_info.target[i_target]].m_flags[j];
+            }
+        }
+    }
+	clump_info.clumped=true; // protect from other SNPs tempering its flags
+}

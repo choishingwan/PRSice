@@ -48,7 +48,7 @@ public:
 		}
 		return false;
 	};
-
+	std::vector<Sample> sample_names() const { return m_sample_names;};
 
 protected:
 	static std::mutex clump_mtx;

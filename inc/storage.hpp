@@ -15,6 +15,7 @@
 		std::string FID;
 		std::string IID;
 		std::string pheno;
+		bool included;
 	};
 	template< typename e >
 	struct enumeration_traits;

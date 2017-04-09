@@ -359,13 +359,9 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 void Genotype::clump(Genotype &reference)
 {
 	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
-	// use the old algorithm to speed up development time. Current focus should be
-	// to get bgen working asap
 	auto &&cur_snp = m_existed_snps.front();
-	size_t snp_id_in_list = cur_snp.snp_id();
-	std::string prev_file=cur_snp.file_name();
-	int prev_chr= cur_snp.chr();
 	size_t bp_of_core =cur_snp.loc();
+	int prev_chr= cur_snp.chr();
 	int mismatch =0;
 	int total = 0;
 	int core_genotype_index = 0;
@@ -375,6 +371,7 @@ void Genotype::clump(Genotype &reference)
 	bool mismatch_error = false;
 	bool require_clump = false;
 	std::deque<int> clump_index;
+	std::unordered_set<int> overlapped_snps;
 	for(auto &&snp : m_existed_snps)
 	{
 		snp_index++;
@@ -382,7 +379,7 @@ void Genotype::clump(Genotype &reference)
 		if(target==reference.m_existed_snps_index.end()) continue; // only work on SNPs that are in both
 		auto &&ld_snp = reference.m_existed_snps[target->second];
 		total++;
-		bool flipped = false;
+		bool flipped = false; //place holder
 		if(!snp.matching(ld_snp.chr(), ld_snp.loc(), ld_snp.ref(), ld_snp.alt(), flipped))
 		{
 			mismatch++;
@@ -407,8 +404,9 @@ void Genotype::clump(Genotype &reference)
 
 		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-		clump_index.push_back(snp_index-1);// because we use ++ first
-		read_genotype(genotype, cur_snp.snp_id(), cur_snp.file_name());
+		clump_index.push_back(snp_index-1); // allow us to know that target SNPs from the clump core
+		overlapped_snps.insert(snp_index-1);
+		reference.read_genotype(genotype, cur_snp.snp_id(), cur_snp.file_name());
 		m_genotype.push_back(genotype);
 		if(!require_clump && snp.p_value() < clump_info.p_value)
 		{ // Set this as the core SNP
@@ -426,13 +424,65 @@ void Genotype::clump(Genotype &reference)
 
 	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
 
+
+	std::vector<int> remain_snps;
+	m_existed_snps_index.clear();
+	std::vector<size_t> p_sort_order = SNP::sort_by_p(m_existed_snps);
+	bool proxy = clump_info.use_proxy;
+	for(auto &&i_snp : p_sort_order){
+		if(overlapped_snps.find(i_snp)!=overlapped_snps.end() &&
+				m_existed_snps[i_snp].p_value() < clump_info.p_value)
+		{
+			if(proxy && !m_existed_snps[i_snp].clumped() )
+			{
+				m_existed_snps[i_snp].proxy_clump(m_existed_snps, clump_info.proxy);
+				remain_snps.push_back(i_snp);
+			}
+			else if(!m_existed_snps[i_snp].clumped())
+			{
+				m_existed_snps[i_snp].clump(m_existed_snps);
+				remain_snps.push_back(i_snp);
+			}
+		}
+		else if(m_existed_snps[i_snp].p_value() >= clump_info.p_value) break;
+
+	}
+
+	if(remain_snps.size() != m_existed_snps.size())
+	{ // only do this if we need to remove some SNPs
+		// we assume exist_index doesn't have any duplicated index
+		std::sort(remain_snps.begin(), remain_snps.end());
+		int start = (remain_snps.empty())? -1:remain_snps.front();
+		int end = start;
+		std::vector<SNP>::iterator last = m_existed_snps.begin();;
+		for(auto && ind : remain_snps)
+		{
+			if(ind==start||ind-end==1) end=ind; // try to perform the copy as a block
+			else{
+				std::copy(m_existed_snps.begin()+start, m_existed_snps.begin()+end+1,last);
+				last += end+1-start;
+				start =ind;
+				end = ind;
+			}
+		}
+		if(!remain_snps.empty())
+		{
+			std::copy(m_existed_snps.begin()+start, m_existed_snps.begin()+end+1, last);
+			last+= end+1-start;
+		}
+		m_existed_snps.erase(last, m_existed_snps.end());
+	}
+	m_existed_snps_index.clear();
+	// we don't need the index any more because we don't need to match SNPs anymore
+	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", m_existed_snps.size());
+
 }
 
 
 void Genotype::perform_clump(int core_genotype_index, bool require_clump, int next_chr, int next_loc,
 			std::deque<int> &clump_index)
 {
-	if(clump_index.size()==0) return; // got nothing to do
+	if(m_genotype.size()==0) return; // got nothing to do
 	/**
 	 * DON'T MIX UP SNP INDEX AND GENOTYPE INDEX!!!
 	 * SNP INDEX SHOULD ONLY BE USED FOR GETTING THE CHR, LOC AND P-VALUE
@@ -472,6 +522,10 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 			if(num_remove!=0)
 			{
 				lerase(num_remove);
+				if(num_remove != clump_index.size())
+					clump_index.erase(clump_index.begin(), clump_index.begin()+num_remove);
+				else
+					clump_index.clear();
 				core_genotype_index-=num_remove; // only update the index when we remove stuff
 			}
 		}
@@ -481,7 +535,7 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 	// for this to be true, the require clump should be false or the core_snp is now within reach of the
 	// new snp
 	if(core_chr!= next_chr)
-	{
+	{ // next_chr is not within m_genotype and clump_index yet
 		lerase(m_genotype.size());
 		clump_index.clear();
 	}
@@ -498,6 +552,10 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 		if(num_remove!=0)
 		{
 			lerase(num_remove);
+			if(num_remove!=clump_index.size())
+				clump_index.erase(clump_index.begin(), clump_index.begin()+num_remove);
+			else
+				clump_index.clear();
 		}
 	}
 }

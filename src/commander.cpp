@@ -873,6 +873,11 @@ void Commander::prslice_check(bool &error, std::string &error_message)
 {
 	if(prslice.provided)
 	{
+		if(misc.all)
+		{
+			error = true;
+			error_message.append("ERROR: Cannot output PRS for all threshold when using PRSlice!\n");
+		}
 		if(prslice.size <=0)
 		{
 			error = true;
