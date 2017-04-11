@@ -50,7 +50,7 @@ public:
     {
         return m_region_name.at(i);
     };
-
+    std::vector<std::string> names() const { return m_region_name; };
     std::vector<long_type> empty_flag()
     {
         std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
