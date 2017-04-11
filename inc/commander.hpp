@@ -110,7 +110,8 @@ public:
             }
         }
         if(p > prsice.barlevel.back()) return prsice.barlevel.size();
-        return -2;
+        return -2;// this is impossible because something will always either be bigger than the end or smaller than the front
+
     };
     double get_threshold(int i) const
     {
