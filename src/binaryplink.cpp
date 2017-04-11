@@ -48,7 +48,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 	sample_uidx=0;
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
 	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-	m_sample_names.resize(m_unfiltered_sample_ct);
+	std::vector<Sample> sample_name(m_unfiltered_sample_ct);
 
 	m_sex_male = new uintptr_t[m_unfiltered_sample_ctl];
 	std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
@@ -77,7 +77,8 @@ std::vector<Sample> BinaryPlink::load_samples()
 			cur_sample.IID = token[+FAM::IID];
 			cur_sample.pheno = token[+FAM::PHENOTYPE];
 			cur_sample.included = true;
-			m_sample_names.push_back(cur_sample);
+			cur_sample.prs = 0;
+			sample_name.push_back(cur_sample);
 			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0)
 			{
 				m_founder_ct++;
@@ -103,6 +104,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 	famfile.close();
 	m_final_mask = get_final_mask(m_founder_ct);
 	m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	return sample_name;
 }
 
 std::vector<SNP> BinaryPlink::load_snps()
