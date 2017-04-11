@@ -15,8 +15,21 @@
 		std::string FID;
 		std::string IID;
 		std::string pheno;
+		double prs;
 		bool included;
 	};
+
+    struct prsice_result{
+    		double threshold;
+    		double r2;
+    		double r2_adj;
+    		double coeff;
+    		double p;
+    		double emp_p;
+    		int num_snp;
+    };
+
+
 	template< typename e >
 	struct enumeration_traits;
 
