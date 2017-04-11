@@ -8,23 +8,25 @@
 #ifndef SRC_GENOTYPE_HPP_
 #define SRC_GENOTYPE_HPP_
 
-#include <memory>
-#include <string>
-#include <vector>
-#include <deque>
-#include <fstream>
-#include <thread>
-#include <mutex>
-#include <cstdio>
-#include <unordered_map>
-#include <cstring>
-#include <cctype>
+
 #include <algorithm>
-#include "snp.hpp"
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <Eigen/Dense>
+#include <fstream>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 #include "commander.hpp"
-#include "region.hpp"
-#include "plink_common.hpp"
 #include "misc.hpp"
+#include "plink_common.hpp"
+#include "region.hpp"
+#include "snp.hpp"
 #include "storage.hpp"
 
 class Genotype {
@@ -49,9 +51,16 @@ public:
 		return false;
 	};
 	std::vector<Sample> sample_names() const { return m_sample_names;};
+	size_t max_category() const { return m_max_category; };
+	bool get_score(Eigen::MatrixXd &current_prs_score, int &cur_index, int &cur_category,
+			std::vector<size_t> &num_snp_included);
+	bool prepare_prsice();
 
 protected:
 	static std::mutex clump_mtx;
+	size_t m_max_category = 0;
+	size_t m_region_size = 1;
+	SCORING m_scoring;
 	void lerase(int num);
 	std::deque<uintptr_t*> m_genotype;
 	struct{
@@ -114,6 +123,7 @@ protected:
 
 	uint32_t m_thread;
 	virtual void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name){genotype=nullptr;};
+	void  virtual read_score(std::vector< std::vector<Sample> > &current_prs_score, size_t start_index, size_t end_bound);
 	//hh_exists
 	inline bool ambiguous(std::string ref_allele, std::string alt_allele)
 	{
@@ -275,6 +285,7 @@ private:
 	std::vector<SNP> load_snps();
 	void check_bed();
 	void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name);
+	void read_score(Eigen::MatrixXd &current_prs_score, size_t start_index, size_t end_bound);
 	FILE* m_bedfile = nullptr;
 	std::string m_cur_file;
 	uintptr_t m_final_mask;

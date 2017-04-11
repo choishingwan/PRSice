@@ -71,22 +71,18 @@ int main(int argc, char *argv[])
 				commander.permutation(), commander.get_scoring(),
 					region.size(), commander.ignore_fid());
 		prsice.pheno_check(commander);
-		/*
-		PRSice prsice = PRSice(base_name, i_base,
-				commander.get_target(), commander.target_is_binary(),
-				commander.get_perm(),
-				commander.get_scoring(),
-				region.size(),
-				commander.ignore_fid());
-		prsice.get_snp(commander, region);
-		std::string region_out_name = commander.get_out() + "." + base_name + ".region";
-		region.print_file(region_out_name);
-
-
-		prsice.perform_clump(commander);
-
-		prsice.pheno_check(commander);
 		size_t num_pheno = prsice.num_phenotype();
+		if(!perform_prslice)
+		{
+			fprintf(stderr, "\nPRSice Analysis\n");
+			fprintf(stderr, "==============================\n");
+			if(!target_file->prepare_prsice()) return -1;
+			for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
+			{
+				prsice.prsice(commander, region.names(), i_pheno, *target_file);
+			}
+		}
+		/*
 
 		if (!perform_prslice) {
 			prsice.categorize(commander);

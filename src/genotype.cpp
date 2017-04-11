@@ -121,6 +121,7 @@ Genotype::~Genotype() {
 void Genotype::read_base(const Commander &c_commander, Region &region)
 {
 	// can assume region is of the same order as m_existed_snp
+	m_scoring = c_commander.get_scoring();
 	const std::string input = c_commander.base_name();
 	const bool beta = c_commander.beta();
 	const bool fastscore = c_commander.fastscore();
@@ -157,6 +158,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	size_t num_mismatched = 0;
 	size_t num_not_converted = 0; // this is for NA
 	size_t num_negative_stat = 0;
+
 	std::unordered_set<std::string> dup_index;
 	std::vector<int> exist_index; // try to use this as quick search
 	// Actual reading the file, will do a bunch of QC
@@ -288,6 +290,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					// ignore the SE as it currently serves no purpose
 					exist_index.push_back(target->second);
 					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
+					m_max_category = (m_max_category< category)? category:m_max_category;
 				}
 			}
 			else if(dup_index.find(rs_id)!=dup_index.end())
@@ -334,6 +337,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		m_existed_snps_index[cur_snp.rs()] = vector_index++;
 		cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
 	}
+	m_region_size = region.size();
 
 	if(!num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
 	if(!num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
@@ -475,7 +479,6 @@ void Genotype::clump(Genotype &reference)
 	m_existed_snps_index.clear();
 	// we don't need the index any more because we don't need to match SNPs anymore
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", m_existed_snps.size());
-
 }
 
 
@@ -782,7 +785,52 @@ void Genotype::lerase(int num)
 
 }
 
+bool Genotype::prepare_prsice()
+{
+	if(m_existed_snps.size()==0) return false;
+	std::sort(begin(m_existed_snps), end(m_existed_snps),
+			[](SNP const &t1, SNP const &t2)
+	      {
+	        if(t1.category()==t2.category())
+	        {
+	          if(t1.file_name().compare(t2.file_name())==0)
+	          {
+	            return t1.snp_id()<t2.snp_id();
+	          }
+	          else return t1.file_name().compare(t2.file_name())<0;
+	        }
+	        else return t1.category()<t2.category();
+	      });
+	return true;
+}
 
+bool Genotype::get_score(Eigen::MatrixXd &prs_score, int &cur_index, int &cur_category,
+		std::vector<size_t> &num_snp_included)
+{
+	if(m_existed_snps.size() ==0) return false;
+	int end_index = 0;
+	bool ended = false;
+	for (size_t i = cur_index; i < m_existed_snps.size(); ++i)
+	{
+		if (m_existed_snps[i].category() != cur_index)
+		{
+			end_index = i;
+			ended = true;
+			break;
+		}
+//		// Use as part of the output
+		for (size_t i_region = 0; i_region < m_region_size; ++i_region)
+		{
+			if (m_existed_snps[i].in( i_region)) num_snp_included[i_region]++;
+		}
+	}
+	if (!ended) end_index = m_existed_snps.size();
+	//get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_scoring);
+
+	read_score(current_prs_score, cur_index, end_index);
+	cur_index = end_index;
+	return true;
+}
 
 /**
  * DON'T TOUCH AREA

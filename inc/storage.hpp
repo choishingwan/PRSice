@@ -16,6 +16,7 @@
 		std::string IID;
 		std::string pheno;
 		double prs;
+		int num_snp;
 		bool included;
 	};
 

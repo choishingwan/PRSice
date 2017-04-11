@@ -128,11 +128,20 @@ public:
     int chr() const { return basic.chr; };
     int loc() const { return basic.loc; };
     int snp_id() const { return file_info.id; };
-    std::string file_name() const { return file_info.file; };
+    int category() const { return threshold.category; };
     double p_value() const { return statistic.p_value; };
+    double stat() const { return statistic.stat; };
+    std::string file_name() const { return file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };
     std::string alt() const { return basic.alt; };
+    bool is_flipped(){ return statistic.flipped; };
+    inline bool in(size_t i) const
+    {
+    		if(i/m_bit_size >= m_flags.size()) throw std::out_of_range("Out of range for flag");
+    		return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
+    }
+
     void set_upper(int upper){ m_range_end = upper; };
     void set_lower(int lower){ m_range_start = lower;};
     void set_flag(std::vector<long_type> flag) { m_flags = flag; };
@@ -145,34 +154,35 @@ public:
 
 private:
     //basic info
+    size_t m_bit_size;
     struct{
-    	bool clumped;
-    	std::vector<size_t> target;
-    	std::vector<double> r2;
+    		bool clumped;
+    		std::vector<size_t> target;
+    		std::vector<double> r2;
     } clump_info;
 
     struct{
-    	std::string ref;
-    	std::string alt;
-    	std::string rs;
-    	int chr;
-    	int loc;
+    		std::string ref;
+    		std::string alt;
+    		std::string rs;
+    		int chr;
+    		int loc;
     }basic;
 
     struct{
-    	std::string file;
-    	int id;
+    		std::string file;
+    		int id;
     }file_info;
 
     struct{
-    	double stat;
+    		double stat;
         double se;
         double p_value;
         bool flipped;
     }statistic;
 
     struct{
-    	int category;
+    		int category;
         double p_threshold;
     }threshold;
 
