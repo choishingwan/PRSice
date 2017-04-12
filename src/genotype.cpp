@@ -231,7 +231,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 				}
 				double pvalue = 2.0;
 				try{
-					misc::convert<double>( token[index[+BASE_INDEX::P]]);
+					pvalue = misc::convert<double>( token[index[+BASE_INDEX::P]]);
 					if (pvalue < 0.0 || pvalue > 1.0)
 					{
 						std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
@@ -267,7 +267,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 				}
 				if(!exclude)
 				{
-					std::cerr << "Check" << std::endl;
 					int category = -1;
 					double pthres = 0.0;
 					if (fastscore)
@@ -308,7 +307,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		}
 	}
 	snp_file.close();
-	std::cerr << "Final size: " << exist_index.size() << std::endl;
 	if(exist_index.size() != m_existed_snps.size())
 	{ // only do this if we need to remove some SNPs
 		// we assume exist_index doesn't have any duplicated index
@@ -347,7 +345,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	if(num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
 	if(num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
 	if(num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
-	if(num_not_converted) fprintf(stderr, "%zu NA statistic observed\n", num_not_converted);
+	if(num_not_converted) fprintf(stderr, "%zu NA stat/p-value observed\n", num_not_converted);
 	if(num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
 	fprintf(stderr, "%zu total SNPs included from base file\n", m_existed_snps.size());
 	clump_info.p_value = c_commander.clump_p();
@@ -378,7 +376,6 @@ void Genotype::clump(Genotype &reference)
 	int snp_index =0;
 	bool mismatch_error = false;
 	bool require_clump = false;
-	std::deque<int> clump_index;
 	std::unordered_set<int> overlapped_snps;
 	for(auto &&snp : m_existed_snps)
 	{
@@ -401,18 +398,17 @@ void Genotype::clump(Genotype &reference)
 		}
 		if(prev_chr!=snp.chr())
 		{
-			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+			//perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
 			prev_chr = snp.chr();
 		}
 		else if((snp.loc()-bp_of_core) > clump_info.distance)
 		{
-			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+			//perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
 		}
 		// Now read in the current SNP
 
-		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
-		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-		clump_index.push_back(snp_index-1); // allow us to know that target SNPs from the clump core
+		uintptr_t* genotype;
+		clump_info.clump_index.push_back(snp_index-1); // allow us to know that target SNPs from the clump core
 		overlapped_snps.insert(snp_index-1);
 		reference.read_genotype(genotype, cur_snp.snp_id(), cur_snp.file_name());
 		m_genotype.push_back(genotype);
@@ -427,7 +423,7 @@ void Genotype::clump(Genotype &reference)
 	if(m_genotype.size()!=0)
 	{
 		// this make sure this will be the last
-		perform_clump(core_genotype_index, require_clump, prev_chr+1, bp_of_core+2*clump_info.distance, clump_index);
+		perform_clump(core_genotype_index, require_clump, prev_chr+1, bp_of_core+2*clump_info.distance);
 	}
 
 	fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
@@ -486,27 +482,26 @@ void Genotype::clump(Genotype &reference)
 }
 
 
-void Genotype::perform_clump(int core_genotype_index, bool require_clump, int next_chr, int next_loc,
-			std::deque<int> &clump_index)
+void Genotype::perform_clump(int core_genotype_index, bool require_clump, int next_chr, int next_loc)
 {
 	if(m_genotype.size()==0) return; // got nothing to do
 	/**
 	 * DON'T MIX UP SNP INDEX AND GENOTYPE INDEX!!!
 	 * SNP INDEX SHOULD ONLY BE USED FOR GETTING THE CHR, LOC AND P-VALUE
 	 */
-	size_t core_snp_index = clump_index[core_genotype_index];
+	size_t core_snp_index = clump_info.clump_index[core_genotype_index];
 	int core_chr = m_existed_snps[core_snp_index].chr();
 	size_t core_loc = m_existed_snps[core_snp_index].loc();
 
 	size_t infinite_guard = 0; // guard against infinite while loop
-	size_t max_possible = clump_index.size();
+	size_t max_possible = clump_info.clump_index.size();
 	while(require_clump && (core_chr != next_chr || (next_loc - core_loc) > clump_info.distance))
 	{ // as long as we still need to perform clumping
-		clump_thread(core_genotype_index, clump_index);
+		clump_thread(core_genotype_index);
 		require_clump = false;
-		for(size_t core_finder = core_genotype_index+1; core_finder < clump_index.size(); ++core_finder)
+		for(size_t core_finder = core_genotype_index+1; core_finder < clump_info.clump_index.size(); ++core_finder)
 		{
-			size_t run_snp_index = clump_index[core_finder];
+			size_t run_snp_index = clump_info.clump_index[core_finder];
 			if(m_existed_snps[run_snp_index].p_value() < clump_info.p_value)
 			{
 				core_genotype_index = core_finder; //update the core genotype index
@@ -522,17 +517,13 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 			size_t num_remove = 0;
 			for(size_t remover = 0; remover < core_genotype_index; ++remover)
 			{
-				size_t run_snp_index =clump_index[remover];
+				size_t run_snp_index =clump_info.clump_index[remover];
 				if(core_loc-m_existed_snps[run_snp_index].loc() > clump_info.distance) num_remove++;
 				else break;
 			}
 			if(num_remove!=0)
 			{
 				lerase(num_remove);
-				if(num_remove != clump_index.size())
-					clump_index.erase(clump_index.begin(), clump_index.begin()+num_remove);
-				else
-					clump_index.clear();
 				core_genotype_index-=num_remove; // only update the index when we remove stuff
 			}
 		}
@@ -544,14 +535,13 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 	if(core_chr!= next_chr)
 	{ // next_chr is not within m_genotype and clump_index yet
 		lerase(m_genotype.size());
-		clump_index.clear();
 	}
 	else if(!require_clump)
 	{
 		//remove anything that is too far ahead
 		size_t num_remove = 0;
 
-		for(auto &&remover : clump_index)
+		for(auto &&remover : clump_info.clump_index)
 		{
 			if(next_loc-m_existed_snps[remover].loc()>clump_info.distance) num_remove++;
 			else break;
@@ -559,17 +549,13 @@ void Genotype::perform_clump(int core_genotype_index, bool require_clump, int ne
 		if(num_remove!=0)
 		{
 			lerase(num_remove);
-			if(num_remove!=clump_index.size())
-				clump_index.erase(clump_index.begin(), clump_index.begin()+num_remove);
-			else
-				clump_index.clear();
 		}
 	}
 }
 
-void Genotype::clump_thread(const size_t c_core_genotype_index, std::deque<int> &clump_index)
+void Genotype::clump_thread(const size_t c_core_genotype_index)
 {
-	size_t wind_size = clump_index.size();
+	size_t wind_size = clump_info.clump_index.size();
 	if(wind_size <=1 ) return; // nothing to do
 	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
 	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
@@ -618,7 +604,7 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, std::deque<int> 
 			if(i_snp==c_core_genotype_index) continue;
 			thread_store.push_back(std::thread(&Genotype::compute_clump, this,
 					c_core_genotype_index,i_snp, i_snp+1, std::ref(geno1), nm_fixed,
-					std::ref(tot1), std::cref(clump_index)));
+					std::ref(tot1)));
 		}
 	}
 	else
@@ -630,8 +616,7 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, std::deque<int> 
 		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
 		{
 			thread_store.push_back(std::thread(&Genotype::compute_clump, this, c_core_genotype_index,
-					cur_start, cur_end+(remain>0), std::ref(geno1), nm_fixed, std::ref(tot1),
-					std::cref(clump_index)));
+					cur_start, cur_end+(remain>0), std::ref(geno1), nm_fixed, std::ref(tot1)));
 			cur_start = cur_end+(remain>0);
 			cur_end+=num_snp_per_thread+(remain>0);
 			if(cur_end>wind_size) cur_end =wind_size;
@@ -646,7 +631,7 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, std::deque<int> 
 }
 
 void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end,
-		uintptr_t* geno1, bool nm_fixed, uint32_t* tot1, const std::deque<int> &clump_index)
+		uintptr_t* geno1, bool nm_fixed, uint32_t* tot1)
 {
 	uintptr_t* loadbuf;
 	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
@@ -664,8 +649,8 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	double r2 =0.0;
 	bool zmiss2=false;
 	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	size_t max_size = clump_index.size();
-	size_t ref_snp_index = clump_index.at(core_genotype_index);
+	size_t max_size = clump_info.clump_index.size();
+	size_t ref_snp_index = clump_info.clump_index[core_genotype_index];
 	double ref_p_value = m_existed_snps.at(ref_snp_index).p_value();
 	std::vector<double> r2_store;
 	std::vector<size_t> target_index_store; // index we want to push into the current index
@@ -674,7 +659,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
 	{
 		zmiss2 = false;
-		size_t target_snp_index = clump_index.at(i_snp);
+		size_t target_snp_index = clump_info.clump_index[i_snp];
 		if(i_snp != core_genotype_index && (
 				(m_existed_snps[target_snp_index].p_value() > ref_p_value)||
 				(m_existed_snps[target_snp_index].p_value()==ref_p_value &&
@@ -781,10 +766,12 @@ void Genotype::lerase(int num)
 	if(num==m_genotype.size())
 	{
 		m_genotype.clear();
+		clump_info.clump_index.clear();
 	}
 	else
 	{
 		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
+		clump_info.clump_index.erase(clump_info.clump_index.begin(), clump_info.clump_index.begin()+num);
 	}
 
 }

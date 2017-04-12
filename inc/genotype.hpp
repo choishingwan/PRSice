@@ -70,6 +70,7 @@ protected:
 		double p_value;
 		int distance;
 		bool use_proxy;
+		std::deque<int> clump_index;
 	} clump_info;
 
 	struct{
@@ -135,11 +136,10 @@ protected:
 				|| (ref_allele == "g" && alt_allele == "c");
 	}
 
-	void perform_clump(int core_genotype_index, bool require_clump, int chr, int loc,
-			std::deque<int> &clump_index);
-	void clump_thread(const size_t c_core_genotype_index, std::deque<int> &clump_index);
+	void perform_clump(int core_genotype_index, bool require_clump, int chr, int loc);
+	void clump_thread(const size_t c_core_genotype_index);
 	void compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end,
-			uintptr_t* geno1, bool nm_fixed, uint32_t* tot1, const std::deque<int> &clump_index);
+			uintptr_t* geno1, bool nm_fixed, uint32_t* tot1);
 
 
 

@@ -333,6 +333,7 @@ bool Commander::initialize(int argc, char *argv[])
     	error_message.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     if(error) throw std::runtime_error(error_message);
+    fprintf(stderr, "\n");
     return true;
 }
 
@@ -831,7 +832,7 @@ void Commander::prsice_check(bool &error, std::string &error_message)
 			error = true;
 			error_message.append("ERROR: no-regress can only be used with fastscore!\n");
 		}
-		if(prsice.inter)
+		if(prsice.inter <= 0)
 		{
 			error = true;
 			error_message.append("ERROR: Cannot have negative interval!\n");

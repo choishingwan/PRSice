@@ -27,7 +27,6 @@ BinaryPlink::~BinaryPlink()
 }
 std::vector<Sample> BinaryPlink::load_samples()
 {
-	std::cerr << "Loading samples" << std::endl;
 	assert(m_genotype_files.size()>0);
 	std::string famName = m_genotype_files.front()+".fam";
 	std::ifstream famfile;
@@ -118,7 +117,6 @@ std::vector<Sample> BinaryPlink::load_samples()
 	famfile.close();
 	m_final_mask = get_final_mask(m_founder_ct);
 	m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
-	std::cerr << "total of " << m_founder_ct << " founders" << std::endl;
 	return sample_name;
 }
 
@@ -334,7 +332,8 @@ void BinaryPlink::read_genotype(uintptr_t* genotype, const uint32_t snp_index, c
 	}
 }
 
-void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound)
+void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index,
+		size_t end_bound)
 {
     size_t prev =0;
     uint32_t uii;
