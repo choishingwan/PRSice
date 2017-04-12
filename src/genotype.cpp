@@ -670,7 +670,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 				zmiss2 = true;
 			}
 
-			/*
+
 			if (nm_fixed) {
 				two_locus_count_table_zmiss1(m_genotype[core_genotype_index], m_genotype[i_snp],
 						counts, m_founder_ctv3, zmiss2);
@@ -690,7 +690,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 					counts[8] = tot1[2] - counts[6] - counts[7];
 				}
 			}
-		*/
+
 			/*
 	    		// good thing is that the x1 and x2 must always be the same
 	    		if (is_x1 || is_x2) {
@@ -703,7 +703,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	    		}
 			 */
 			// below, the false are basically is_x1 is_x2
-			/*
+
 			if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
 			{
 				r2 = -1;
@@ -721,7 +721,9 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 					r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
 				}
 			}
-			*/
+			std::cerr << r2 << "\t" << clump_info.r2 << "\t" << m_existed_snps[target_snp_index].rs() << "\t" <<
+					m_existed_snps[ref_snp_index].rs() << std::endl;
+			exit(0);
 			if(r2 >= clump_info.r2)
 			{
 				target_index_store.push_back(target_snp_index);
