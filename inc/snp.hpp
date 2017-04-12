@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <numeric>
+#include <limits.h>
 #include "storage.hpp"
 #include "commander.hpp"
 #include "misc.hpp"
@@ -14,14 +15,8 @@ class SNP
 public:
     SNP();
     SNP(const std::string rs_id, const int chr, const int loc,
-    		const std::string ref_allele, const std::string alt_allele);
-    SNP(const std::string rs_id, const int chr, const int loc,
     		const std::string ref_allele, const std::string alt_allele,
-			const int bound_start, const int bound_end);
-    SNP(const std::string rs_id, const int chr, const int loc,
-    		const std::string ref_allele, const std::string alt_allele,
-			const double statistic, const double se, const double p_value,
-			const int category, const double p_threshold);
+			const std::string file_name, const int num_line);
     virtual ~SNP();
 
     static bool ambiguous(std::string ref_allele, std::string alt_allele)
@@ -88,41 +83,45 @@ public:
     inline void flipped(){ statistic.flipped = true; };
     inline void fill_info(int chr, int loc, std::string alt)
     {
-    		if(basic.chr==-1) basic.chr = chr;
-    		if(basic.loc==-1) basic.loc = loc;
-    		if(basic.alt.empty()) basic.alt=alt;
+    	if(basic.chr==-1) basic.chr = chr;
+    	if(basic.loc==-1) basic.loc = loc;
+    	if(basic.alt.empty()) basic.alt=alt;
     };
-    inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped) const{
-    		if(chr != -1 && basic.chr != -1 && chr != basic.chr) return false;
-    		if(loc != -1 && basic.loc != -1 && loc != basic.loc) return false;
-    		if(basic.ref.compare(ref)==0){
-    			if(!basic.alt.empty() && !alt.empty())
-    			{
-    				return basic.alt.compare(alt)==0;
-    			}else return true;
-    		}
-    		else if(complement(basic.ref).compare(ref)==0)
+    inline bool matching (int chr, int loc, std::string ref, std::string alt, bool &flipped){
+    	misc::trim(ref);
+    	misc::trim(alt);
+    	misc::trim(basic.ref);
+    	misc::trim(basic.alt);
+    	if(chr != -1 && basic.chr != -1 && chr != basic.chr) return false;
+    	if(loc != -1 && basic.loc != -1 && loc != basic.loc) return false;
+    	if(basic.ref.compare(ref)==0){
+    		if(!basic.alt.empty() && !alt.empty())
     		{
-    			if(!basic.alt.empty() && !alt.empty())
-    			{
-    				return complement(basic.alt).compare(alt)==0;
-    			}else return true;
-    		}
-    		else if(!basic.alt.empty() && !alt.empty())
+    			return basic.alt.compare(alt)==0;
+    		}else return true;
+    	}
+    	else if(complement(basic.ref).compare(ref)==0)
+    	{
+    		if(!basic.alt.empty() && !alt.empty())
     		{
-    			if(basic.ref.compare(alt)==0 && basic.alt.compare(ref)==0)
-    			{
-    				flipped = true;
-    				return true;
-    			}
-    			if(complement(basic.ref).compare(alt)==0 && complement(basic.alt).compare(alt)==0)
-    			{
-    				flipped = true;
-    				return true;
-    			}
-    			return false;
+    			return complement(basic.alt).compare(alt)==0;
+    		}else return true;
+    	}
+    	else if(!basic.alt.empty() && !alt.empty())
+    	{
+    		if(basic.ref.compare(alt)==0 && basic.alt.compare(ref)==0)
+    		{
+    			flipped = true;
+    			return true;
     		}
-    		else return false; // cannot flip nor match
+    		if(complement(basic.ref).compare(alt)==0 && complement(basic.alt).compare(ref)==0)
+    		{
+    			flipped = true;
+    			return true;
+    		}
+    		return false;
+    	}
+    	else return false; // cannot flip nor match
     };
 
     int chr() const { return basic.chr; };
@@ -131,6 +130,7 @@ public:
     int category() const { return threshold.category; };
     double p_value() const { return statistic.p_value; };
     double stat() const { return statistic.stat; };
+    double get_threshold() const { return threshold.p_threshold; };
     std::string file_name() const { return file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };
@@ -156,33 +156,33 @@ private:
     //basic info
     size_t m_bit_size;
     struct{
-    		bool clumped;
-    		std::vector<size_t> target;
-    		std::vector<double> r2;
+    	bool clumped;
+    	std::vector<size_t> target;
+    	std::vector<double> r2;
     } clump_info;
 
     struct{
-    		std::string ref;
-    		std::string alt;
-    		std::string rs;
-    		int chr;
-    		int loc;
+    	std::string ref;
+    	std::string alt;
+    	std::string rs;
+    	int chr;
+    	int loc;
     }basic;
 
     struct{
-    		std::string file;
-    		int id;
+    	std::string file;
+    	int id;
     }file_info;
 
     struct{
-    		double stat;
+    	double stat;
         double se;
         double p_value;
         bool flipped;
     }statistic;
 
     struct{
-    		int category;
+    	int category;
         double p_threshold;
     }threshold;
 

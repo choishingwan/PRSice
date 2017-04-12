@@ -27,11 +27,11 @@ int main(int argc, char *argv[])
 	// change the factory according to the file type
 	// to get the file type, we might want to revemp the commander class
 	// such that we can have a more elegant handling of the files.
-	std::unique_ptr<Genotype> target_file = factory.createGenotype(commander, commander.target_name(),
+	Genotype *target_file = factory.createGenotype(commander, commander.target_name(),
 			commander.target_type(), true);
 	// calculate the maf and genotype missingness here? This will give us the hh_exist information required
 	// for processing sex chromosomes
-	std::unique_ptr<Genotype> ld_file = nullptr;
+	Genotype *ld_file = nullptr;
 	if(!commander.ld_prefix().empty() && commander.ld_prefix().compare(commander.target_name())!=0){
 		ld_file =  factory.createGenotype(commander, commander.ld_prefix(), commander.ld_type(), true);
 	}

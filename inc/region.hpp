@@ -68,7 +68,7 @@ public:
 private:
 
     struct region_bound{
-    		std::string chr;
+    		int chr;
     		int start;
     		int end;
     };

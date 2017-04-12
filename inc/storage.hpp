@@ -20,14 +20,19 @@
 		bool included;
 	};
 
+	struct Sample_lite{
+		double prs;
+		int num_snp;
+	};
+
     struct prsice_result{
-    		double threshold;
-    		double r2;
-    		double r2_adj;
-    		double coeff;
-    		double p;
-    		double emp_p;
-    		int num_snp;
+		double threshold;
+		double r2;
+		double r2_adj;
+		double coefficient;
+		double p;
+		double emp_p;
+		int num_snp;
     };
 
 

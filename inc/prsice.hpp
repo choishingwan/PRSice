@@ -36,25 +36,25 @@ public:
     void pheno_check(const Commander &c_commander);
     void init_matrix(const Commander &c_commander, const size_t pheno_index, Genotype &target,
     		const bool prslice=false);
-    size_t num_phenotype() const { return m_pheno_names.size(); };
+    size_t num_phenotype() const { return pheno_info.name.size(); };
     void prsice(const Commander &c_commander, const std::vector<std::string> &region_name, const size_t c_pheno_index,
     		Genotype &target, bool prslice=false);
 
     //working in progress
     void prsice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,  bool prslice=false);
     void output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
-    void output(const Commander &c_commander, size_t pheno_index) const;
+    //void output(const Commander &c_commander, size_t pheno_index) const;
     // PRSlice related stuff
-    void prslice_windows(const Commander &c_commander, const Region &c_region);
-    void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
+    //void prslice_windows(const Commander &c_commander, const Region &c_region);
+    //void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
     struct{
-    		std::vector<int> col;
-    		std::vector<std::string> name;
-    		std::vector<int> order;
-    		std::vector<bool> binary;
-    		bool use_pheno;
+    	std::vector<int> col;
+    	std::vector<std::string> name;
+    	std::vector<int> order;
+    	std::vector<bool> binary;
+    	bool use_pheno;
     }pheno_info;
 
     //slowly update the class
@@ -79,9 +79,9 @@ private:
 	std::vector<size_t> m_best_index; // only need to store the index for the best region
 	// we are safe to assume that the order of samples follow the read in from fam
 	// due to the way we initialize the m_pheno and m_independent_variable
-	Eigen::MatrixXd m_best_score; // PRS for the best threshold
-	Eigen::MatrixXd m_current_score; // PRS for the current threshold
-
+	std::vector< std::vector<Sample_lite> > m_best_score; // PRS for the best threshold
+	std::vector< std::vector<Sample_lite> > m_current_score; // PRS for the current threshold
+	std::vector<size_t> m_num_snp_included;
 	/**
 	 * function area
 	 */
@@ -96,24 +96,13 @@ private:
 	// important guide for all operation
 	std::vector<p_partition> m_partition;
 	// snp information
-    boost::ptr_vector<SNP> m_snp_list;
-    std::unordered_map<std::string, size_t> m_snp_index; // only use for reading in information
-    std::vector<std::string> m_chr_list; // chromosome information
-    std::unordered_map<std::string, size_t> m_include_snp; // the information provider until categorize
 
-    // Phenotype storages
-    enum pheno_store{FILE_NAME, INDEX, NAME, ORDER};
-    typedef std::tuple<std::string, size_t, std::string, size_t> pheno_storage;
-	std::vector<pheno_storage> m_pheno_names;
 	// Null information
 	double m_null_r2 = 0.0;
 	// others
 	// For thread safety
     static std::mutex score_mutex;
 
-    // Holder vector containing the sample names in the target file
-    std::vector<size_t> m_num_snp_included;
-    std::vector<std::vector<prs_score> > m_current_prs;
     // Region info
     // PRSlice related storages
     enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
@@ -132,8 +121,7 @@ private:
      * @param num_duplicate Number of duplicated SNPs found in the target file
      */
 
-    void update_line(std::unordered_map<std::string, size_t> &partition_index);
-    bool get_prs_score(size_t &cur_index, PLINK &score_plink);
+    //void update_line(std::unordered_map<std::string, size_t> &partition_index);
     void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);
 
 };

@@ -31,6 +31,7 @@
 
 class Genotype {
 public:
+	Genotype(){};
 	Genotype(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
 			bool no_mt=false, const size_t thread=1, bool verbose=false);
 	virtual ~Genotype();
@@ -52,8 +53,8 @@ public:
 	};
 	std::vector<Sample> sample_names() const { return m_sample_names;};
 	size_t max_category() const { return m_max_category; };
-	bool get_score(Eigen::MatrixXd &current_prs_score, int &cur_index, int &cur_category,
-			std::vector<size_t> &num_snp_included);
+	bool get_score(std::vector< std::vector<Sample_lite> > &current_prs_score, int &cur_index, int &cur_category,
+			double &cur_threshold, std::vector<size_t> &num_snp_included);
 	bool prepare_prsice();
 
 protected:
@@ -109,7 +110,7 @@ protected:
 	size_t m_num_ambig_sex=0;
 	uintptr_t m_founder_ct = 0;
 
-	virtual std::vector<SNP> load_snps();
+	virtual std::vector<SNP> load_snps(){return std::vector<SNP>(0); };
 	uintptr_t m_unfiltered_marker_ct = 0;
 	uintptr_t m_unfiltered_marker_ctl = 0;
 	uintptr_t m_marker_ct = 0;
@@ -123,7 +124,8 @@ protected:
 
 	uint32_t m_thread;
 	virtual void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name){genotype=nullptr;};
-	void  virtual read_score(std::vector< std::vector<Sample> > &current_prs_score, size_t start_index, size_t end_bound);
+	virtual void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound){};
+
 	//hh_exists
 	inline bool ambiguous(std::string ref_allele, std::string alt_allele)
 	{
@@ -285,7 +287,7 @@ private:
 	std::vector<SNP> load_snps();
 	void check_bed();
 	void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name);
-	void read_score(Eigen::MatrixXd &current_prs_score, size_t start_index, size_t end_bound);
+	void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound);
 	FILE* m_bedfile = nullptr;
 	std::string m_cur_file;
 	uintptr_t m_final_mask;
@@ -301,10 +303,10 @@ private:
 		{ "bgen", 2}
 	};
 public:
-	std::unique_ptr<Genotype> createGenotype(const Commander &commander, const std::string &prefix,
+	Genotype* createGenotype(const Commander &commander, const std::string &prefix,
 			const std::string &type, bool verbose)
 	{
-		fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
+		fprintf(stderr, "\nLoading Genotype file: %s ", prefix.c_str());
 		int code = (file_type.find(type)!=file_type.end())? file_type[type]: 0;
 		switch(code)
 		{
@@ -318,9 +320,9 @@ public:
 		default:
 		case 0:
 			fprintf(stderr, "(bed)\n");
-			return std::unique_ptr<Genotype>(new BinaryPlink(prefix, commander.num_auto(),
-							commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
-							commander.thread(), verbose));
+			return new BinaryPlink(prefix, commander.num_auto(),
+					commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+					commander.thread(), verbose);
 
 		}
 	}

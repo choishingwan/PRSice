@@ -2,9 +2,21 @@
 
 
 BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
-		const size_t thread, bool verbose):
-		Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
+		const size_t thread, bool verbose)
 {
+	m_xymt_codes.resize(XYMT_OFFSET_CT);
+	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+	m_thread = thread;
+	set_genotype_files(prefix);
+	m_sample_names = load_samples();
+	m_existed_snps = load_snps();
+	if(verbose)
+	{
+		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
+		if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+		fprintf(stderr, "%zu variants included\n", m_marker_ct);
+	}
+	//Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 	check_bed();
 	m_cur_file="";
 }
@@ -15,6 +27,7 @@ BinaryPlink::~BinaryPlink()
 }
 std::vector<Sample> BinaryPlink::load_samples()
 {
+	std::cerr << "Loading samples" << std::endl;
 	assert(m_genotype_files.size()>0);
 	std::string famName = m_genotype_files.front()+".fam";
 	std::ifstream famfile;
@@ -96,8 +109,8 @@ std::vector<Sample> BinaryPlink::load_samples()
 			}
 			else
 			{
-				 m_num_ambig_sex++;
-				 SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
+				 m_num_ambig_sex++; //currently ignore as we don't do sex chromosome
+				 //SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
 			}
 			sample_uidx++;
 		}
@@ -105,6 +118,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 	famfile.close();
 	m_final_mask = get_final_mask(m_founder_ct);
 	m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	std::cerr << "total of " << m_founder_ct << " founders" << std::endl;
 	return sample_name;
 }
 
@@ -185,9 +199,10 @@ std::vector<SNP> BinaryPlink::load_snps()
 			}
 			else
 			{
-				m_existed_snps_index[token[+BIM::RS]] = m_unfiltered_marker_ct;
+				m_existed_snps_index[token[+BIM::RS]] = snp_info.size();
 				snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
-					token[+BIM::A2]));
+					token[+BIM::A2], prefix, num_line));
+				// directly ignore all others?
 			}
 			m_unfiltered_marker_ct++; //add in the checking later on
 			num_line++;
@@ -319,7 +334,7 @@ void BinaryPlink::read_genotype(uintptr_t* genotype, const uint32_t snp_index, c
 	}
 }
 
-void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_index, size_t end_bound)
+void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound)
 {
     size_t prev =0;
     uint32_t uii;
@@ -338,18 +353,17 @@ void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_in
 	if(m_bedfile!=nullptr) fclose(m_bedfile);
 
     uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-    if(current_prs_score.cols() != m_region_size || current_prs_score.rows()!=m_unfiltered_sample_ct)
+    if(current_prs_score.size() != m_region_size)
     {
-    		throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
+    		throw std::runtime_error("Size of Matrix doesn't match number of region!!");
     }
-	for(size_t i_region=0; i_region < m_region_size; ++i_region)
-	{
-		if(current_prs_score.rows() < m_unfiltered_sample_ct)
-		{
-			throw std::runtime_error("Size of vector doesn't match number of samples!!");
-		}
-	}
-
+    for(size_t i = 0; i < m_region_size; ++i)
+    {
+    	 if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
+    	 {
+    		 throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
+    	 }
+    }
 	std::vector<bool> in_region(m_region_size);
 	// index is w.r.t. partition, which contain all the information
 	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
@@ -357,22 +371,22 @@ void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_in
     { // for each SNP
         if(m_cur_file.empty() || m_cur_file.compare(m_existed_snps[i_snp].file_name())!=0)
         {
-        		if(m_bedfile!=nullptr) fclose(m_bedfile);
-        		m_cur_file= m_existed_snps[i_snp].file_name();
+        	if(m_bedfile!=nullptr) fclose(m_bedfile);
+        	m_cur_file= m_existed_snps[i_snp].file_name();
             std::string bedname = m_cur_file+".bed";
             m_bedfile = fopen(bedname.c_str(), FOPEN_RB); //again, we are assuming that the file is correct
             prev=0;
         }
 
-    		for(size_t i_region = 0; i_region <m_region_size; ++i_region)
-    		{
-    			in_region[i_region]=m_existed_snps[i_snp].in(i_region);
-    		}
-    		size_t cur_line = m_existed_snps[i_snp].snp_id();
-    		if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
-    				, SEEK_SET)) {
-    			throw std::runtime_error("ERROR: Cannot read the bed file!");
-    		}
+        for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+        {
+        	in_region[i_region]=m_existed_snps[i_snp].in(i_region);
+        }
+        size_t cur_line = m_existed_snps[i_snp].snp_id();
+        if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
+        		, SEEK_SET)) {
+        	throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
 
@@ -381,7 +395,7 @@ void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_in
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {
-        		throw std::runtime_error("ERROR: Cannot read the bed file!");
+        	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
         uintptr_t* lbptr = genotype;
         uii = 0;
@@ -395,31 +409,31 @@ void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_in
         // This whole thing is wrong...
         do
         {
-        		ulii = ~(*lbptr++);
-        		if (uii + BITCT2 > m_unfiltered_sample_ct)
+        	ulii = ~(*lbptr++);
+        	if (uii + BITCT2 > m_unfiltered_sample_ct)
+        	{
+        		ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2)) - ONELU;
+        	}
+        	while (ulii)
+        	{
+        		ujj = CTZLU(ulii) & (BITCT - 2);
+        		ukk = (ulii >> ujj) & 3;
+        		sample_idx = uii + (ujj / 2);
+        		if(ukk==1 || ukk==3) // Because 01 is coded as missing
         		{
-        			ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2)) - ONELU;
+        			// 3 is homo alternative
+        			//int flipped_geno = snp_list[snp_index].geno(ukk);
+        			total_num+=(ukk==3)? 2: ukk;
+        			genotypes[sample_idx] = (ukk==3)? 2: ukk;
         		}
-        		while (ulii)
+        		else // this should be 2
         		{
-        			ujj = CTZLU(ulii) & (BITCT - 2);
-        			ukk = (ulii >> ujj) & 3;
-        			sample_idx = uii + (ujj / 2);
-        			if(ukk==1 || ukk==3) // Because 01 is coded as missing
-        			{
-        				// 3 is homo alternative
-        				//int flipped_geno = snp_list[snp_index].geno(ukk);
-        				total_num+=(ukk==3)? 2: ukk;
-        				genotypes[sample_idx] = (ukk==3)? 2: ukk;
-        			}
-        			else // this should be 2
-        			{
-        				missing_samples.push_back(sample_idx);
-        				nmiss++;
-        			}
-        			ulii &= ~((3 * ONELU) << ujj);
+        			missing_samples.push_back(sample_idx);
+        			nmiss++;
         		}
-        		uii += BITCT2;
+        		ulii &= ~((3 * ONELU) << ujj);
+        	}
+        	uii += BITCT2;
         } while (uii < m_unfiltered_sample_ct);
 
 
@@ -432,10 +446,8 @@ void BinaryPlink::read_score(Eigen::MatrixXd &current_prs_score, size_t start_in
         {
         	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
         	{
-
         		for(size_t i_region=0; i_region < m_region_size; ++i_region)
         		{
-
         			if(in_region[i_region])
         			{
         				if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += center_score;

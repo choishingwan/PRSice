@@ -7,6 +7,8 @@
 
 #include "genotype.hpp"
 
+std::mutex Genotype::clump_mtx;
+
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt)
 {
 	// this initialize haploid mask as the maximum possible number
@@ -172,11 +174,11 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		else
 		{
 			std::string rs_id = token[index[+BASE_INDEX::RS]];
-			auto &&target = m_existed_snps_index.find(rs_id);
-			if(target!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
+
+			if(m_existed_snps_index.find(rs_id)!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
 			{
 				dup_index.insert(rs_id);
-				auto &&cur_snp = m_existed_snps[target->second];
+				auto &&cur_snp = m_existed_snps[m_existed_snps_index[rs_id]];
 				int32_t chr_code = -1;
 				if (index[+BASE_INDEX::CHR] >= 0)
 				{
@@ -197,7 +199,8 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
 							chr_code==m_xymt_codes[Y_OFFSET])
 					{
-						fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
+						if(!hap_error) fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
+						hap_error =true;
 						exclude = true;
 						num_excluded++;
 					}
@@ -241,7 +244,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					}
 				}catch (const std::runtime_error& error) {
 					exclude = true;
-					num_not_converted = true;
+					num_not_converted++;
 				}
 				double stat = 0.0;
 				try {
@@ -264,6 +267,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 				}
 				if(!exclude)
 				{
+					std::cerr << "Check" << std::endl;
 					int category = -1;
 					double pthres = 0.0;
 					if (fastscore)
@@ -288,7 +292,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					}
 					if(flipped) cur_snp.set_flipped();
 					// ignore the SE as it currently serves no purpose
-					exist_index.push_back(target->second);
+					exist_index.push_back(m_existed_snps_index[rs_id]);
 					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
 					m_max_category = (m_max_category< category)? category:m_max_category;
 				}
@@ -304,7 +308,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		}
 	}
 	snp_file.close();
-
+	std::cerr << "Final size: " << exist_index.size() << std::endl;
 	if(exist_index.size() != m_existed_snps.size())
 	{ // only do this if we need to remove some SNPs
 		// we assume exist_index doesn't have any duplicated index
@@ -339,12 +343,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	}
 	m_region_size = region.size();
 
-	if(!num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
-	if(!num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
-	if(!num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
-	if(!num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
-	if(!num_not_converted) fprintf(stderr, "%zu NA statistic observed\n", num_not_converted);
-	if(!num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
+	if(num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
+	if(num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
+	if(num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
+	if(num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
+	if(num_not_converted) fprintf(stderr, "%zu NA statistic observed\n", num_not_converted);
+	if(num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
 	fprintf(stderr, "%zu total SNPs included from base file\n", m_existed_snps.size());
 	clump_info.p_value = c_commander.clump_p();
 	clump_info.r2 =  c_commander.clump_r2();
@@ -804,12 +808,13 @@ bool Genotype::prepare_prsice()
 	return true;
 }
 
-bool Genotype::get_score(Eigen::MatrixXd &prs_score, int &cur_index, int &cur_category,
-		std::vector<size_t> &num_snp_included)
+bool Genotype::get_score(std::vector< std::vector<Sample_lite> > &prs_score, int &cur_index, int &cur_category,
+		double &cur_threshold, std::vector<size_t> &num_snp_included)
 {
 	if(m_existed_snps.size() ==0) return false;
 	int end_index = 0;
 	bool ended = false;
+	cur_threshold = m_existed_snps[cur_index].get_threshold();
 	for (size_t i = cur_index; i < m_existed_snps.size(); ++i)
 	{
 		if (m_existed_snps[i].category() != cur_index)
@@ -827,7 +832,7 @@ bool Genotype::get_score(Eigen::MatrixXd &prs_score, int &cur_index, int &cur_ca
 	if (!ended) end_index = m_existed_snps.size();
 	//get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_scoring);
 
-	read_score(current_prs_score, cur_index, end_index);
+	read_score(prs_score, cur_index, end_index);
 	cur_index = end_index;
 	return true;
 }

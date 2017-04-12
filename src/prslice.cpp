@@ -1,5 +1,6 @@
 #include "prsice.hpp"
 
+/*
 void PRSice::prslice_windows(const Commander &c_commander, const Region &c_region)
 {
 	std::string prev_chr = "";
@@ -257,4 +258,4 @@ void PRSice::update_line(std::unordered_map<std::string, size_t> &partition_inde
 	}
 	bim.close();
 }
-
+*/

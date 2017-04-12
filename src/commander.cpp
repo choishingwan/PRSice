@@ -90,7 +90,8 @@ bool Commander::initialize(int argc, char *argv[])
         {
         case 0:
             command = longOpts[longIndex].name;
-            if(command.compare("chr")==0)  set_chr(optarg);
+            if (longOpts[longIndex].flag != 0) break;
+            else if(command.compare("chr")==0)  set_chr(optarg);
             else if(command.compare("A1")==0) set_ref(optarg);
             else if(command.compare("A2")==0) set_alt(optarg);
             else if(command.compare("stat")==0) set_stat(optarg);
@@ -344,7 +345,7 @@ Commander::Commander()
 	base.ref_allele = "A1";
 	base.alt_allele = "A2";
 	base.statistic = "OR";
-	base.snp = "RS";
+	base.snp = "SNP";
 	base.bp = "BP";
 	base.standard_error = "SE";
 	base.p_value = "P";
@@ -358,7 +359,7 @@ Commander::Commander()
     base.provided_se = false;
     base.provided_p = false;
     base.provided_beta = false;
-    base.col_index.resize(+BASE_INDEX::MAX, -1);
+    base.col_index.resize(+BASE_INDEX::MAX+1, -1);
 
 	clumping.ld = "";
 	clumping.type = "bed";
@@ -624,9 +625,9 @@ void Commander::user_input() const{
 				throw std::runtime_error("Cannot perform fastscore without bar level information!");
 			}
 			fprintf(stderr, "%f", prsice.barlevel.front());
-			for(auto &&bar : prsice.barlevel)
+			for(size_t i_bar = 1; i_bar < prsice.barlevel.size(); ++i_bar)
 			{
-				fprintf(stderr, ", %f", bar);
+				fprintf(stderr, ", %f", prsice.barlevel[i_bar]);
 			}
 			fprintf(stderr, "\n");
 		}
@@ -644,44 +645,7 @@ void Commander::user_input() const{
 
 void Commander::base_check(bool &error, std::string &error_message)
 {
-	if(!base.provided_p)
-	{
-		error = true;
-		error_message.append("ERROR: You must provide the p-value information!\n");
-	}
-	if(!base.provided_snp)
-	{
-		error = true;
-		error_message.append("ERROR: You must provide the SNP identity!\n");
-	}
-	if(!base.provided_ref)
-	{
-		error = true;
-		error_message.append("ERROR: You must provide the reference allele information!\n");
-	}
-	if(!base.provided_stat && base.provided_beta)
-	{
-		base.statistic = (base.beta)? "BETA" : "OR";
-		base.provided_stat = true;
-	}
-	else if(!base.provided_beta && base.provided_stat)
-	{
-		if(base.statistic.compare("BETA")==0)
-		{
-			base.beta = true;
-			base.provided_beta = true;
-		}
-		else if(base.statistic.compare("OR")==0)
-		{
-			base.beta = false;
-			base.provided_beta = true;
-		}
-		else
-		{
-			error = true;
-			error_message.append("ERROR: Please indicate if base statistic is beta or not\n");
-		}
-	}
+
 	if(base.name.empty())
 	{
 		error = true;
@@ -748,16 +712,25 @@ void Commander::base_check(bool &error, std::string &error_message)
 				error = true;
 				error_message.append("ERROR: No p-value column ("+base.p_value+") in file!\n");
 			}
+			else base.provided_p = true;
 			if(base.col_index[+BASE_INDEX::STAT]==-1)
 			{
 				error = true;
 				error_message.append("ERROR: No statistic column ("+base.statistic+") in file!\n");
 			}
+			else base.provided_stat = true;
 			if(base.col_index[+BASE_INDEX::RS]==-1)
 			{
 				error = true;
 				error_message.append("ERROR: No SNP name column ("+base.snp+") in file!\n");
 			}
+			else base.provided_snp = true;
+			if(base.col_index[+BASE_INDEX::REF]==-1)
+			{
+				error = true;
+				error_message.append("ERROR: No Reference allele column ("+base.ref_allele+") in file!\n");
+			}else base.provided_ref = true;
+
 			double max_index = *max_element(base.col_index.begin(), base.col_index.end());
 			base.col_index[+BASE_INDEX::MAX] = max_index;
 		}
@@ -849,6 +822,8 @@ void Commander::prsice_check(bool &error, std::string &error_message)
 		prsice.barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
 	}
 	std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
+	prsice.barlevel.erase( std::unique(prsice.barlevel.begin(), prsice.barlevel.end()),
+			prsice.barlevel.end());
 	if(!prsice.fastscore)
 	{
 		if(prsice.no_regress)
@@ -914,10 +889,14 @@ void Commander::target_check(bool &error, std::string &error_message)
 	}
 	else
 	{
-		if(target.pheno_col.size() == 1 && target.is_binary.empty())
+		if(target.pheno_col.size() <= 1 && target.is_binary.empty())
 		{
 			fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
 			target.is_binary.push_back(true);
+		}
+		else if(target.pheno_col.empty() && target.is_binary.size()==1)
+		{
+			// this is ok
 		}
 		else if(target.pheno_col.size() != target.is_binary.size())
 		{

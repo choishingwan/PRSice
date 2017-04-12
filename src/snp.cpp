@@ -15,12 +15,15 @@ SNP::SNP()
 }
 
 
-SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
+SNP::SNP(const std::string rs_id, const int chr, const int loc,
 		const std::string ref_allele, const std::string alt_allele,
-		)
-	: basic.ref(ref_allele), basic.alt(alt_allele),
-	  basic.rs(rs_id), basic.chr(chr), basic.loc(loc)
+		const std::string file_name, const int num_line)
 {
+	basic.ref=ref_allele;
+	basic.alt=alt_allele;
+	basic.rs=rs_id;
+	basic.chr=chr;
+	basic.loc=loc;
 	statistic.se = 0.0;
 	statistic.p_value = 0.0;
 	statistic.stat = 0.0;
@@ -29,21 +32,12 @@ SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     clump_info.clumped=false;
+    file_info.file = file_name;
+    file_info.id = num_line;
 }
 
 
-SNP::SNP(const std::string rs_id, const int chr, const int loc,
-		const std::string ref_allele, const std::string alt_allele,
-		const int range_start, const int range_end)
-	: SNP(rs_id, chr, loc, ref_allele, alt_allele), m_range_start(range_start), m_range_end(range_end){}
 
-SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
-		const std::string ref_allele, const std::string alt_allele,
-		const double statistic, const double se, const double p_value, const int category,
-		const double p_threshold)
-	: SNP(rs_id, chr, loc, ref_allele, alt_allele), statistic.stat(statistic),
-	  statistic.se(se), statistic.p_value(p_value),
-	  threshold.p_threshold(p_threshold), threshold.category(category){}
 
 SNP::~SNP(){}
 
