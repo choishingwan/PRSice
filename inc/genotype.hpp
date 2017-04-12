@@ -70,6 +70,7 @@ protected:
 		double p_value;
 		int distance;
 		bool use_proxy;
+		std::deque<uintptr_t> missing;
 		std::deque<int> clump_index;
 	} clump_info;
 
@@ -110,6 +111,9 @@ protected:
 	size_t m_num_female=0;
 	size_t m_num_ambig_sex=0;
 	uintptr_t m_founder_ct = 0;
+	uintptr_t m_founder_ctl;
+	uint32_t m_founder_ctv3;
+	uint32_t m_founder_ctsplit;
 
 	virtual std::vector<SNP> load_snps(){return std::vector<SNP>(0); };
 	uintptr_t m_unfiltered_marker_ct = 0;
@@ -124,7 +128,7 @@ protected:
 	uint32_t m_num_ambig;
 
 	uint32_t m_thread;
-	virtual void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name){genotype=nullptr;};
+	virtual inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name){genotype=nullptr;};
 	virtual void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound){};
 
 	//hh_exists
@@ -138,8 +142,7 @@ protected:
 
 	void perform_clump(int core_genotype_index, bool require_clump, int chr, int loc);
 	void clump_thread(const size_t c_core_genotype_index);
-	void compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end,
-			uintptr_t* geno1, bool nm_fixed, uint32_t* tot1);
+	void compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end, bool nm_fixed, uint32_t* tot1);
 
 
 
@@ -152,7 +155,7 @@ protected:
 	double calc_lnlike(double known11, double known12, double known21, double known22, double center_ct_d,
 			double freq11, double freq12, double freq21, double freq22, double half_hethet_share, double freq11_incr);
 	uint32_t load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct, uintptr_t* casebuf,
-			uintptr_t* pheno_nm, uintptr_t* pheno_c, uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse,
+			uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse,
 			uint32_t is_case_only, uintptr_t* nm_info_ptr);
 	void two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2, uint32_t* counts_3x3, uint32_t sample_ctv3,
 			uint32_t is_zmiss2);
@@ -286,7 +289,31 @@ private:
 	std::vector<Sample> load_samples();
 	std::vector<SNP> load_snps();
 	void check_bed();
-	void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name);
+
+	inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name)
+	{
+		if(m_cur_file.empty() || m_cur_file.compare(file_name)!=0)
+		{
+			if (m_bedfile != nullptr)
+			{
+				fclose(m_bedfile);
+				m_bedfile=nullptr;
+			}
+			std::string bedname = file_name+".bed";
+			m_bedfile = fopen(bedname.c_str(), FOPEN_RB); // assume there is no error
+		}
+		if (fseeko(m_bedfile, m_bed_offset + (snp_index* ((uint64_t)m_unfiltered_sample_ct4))
+				, SEEK_SET))
+		{
+			throw std::runtime_error("ERROR: Cannot read the bed file!");
+		}
+		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
+				false, m_bedfile, m_tmp_genotype, genotype))
+		{
+			throw std::runtime_error("ERROR: Cannot read the bed file!");
+		}
+	}
 	void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound);
 	FILE* m_bedfile = nullptr;
 	std::string m_cur_file;
@@ -306,7 +333,7 @@ public:
 	Genotype* createGenotype(const Commander &commander, const std::string &prefix,
 			const std::string &type, bool verbose)
 	{
-		fprintf(stderr, "\nLoading Genotype file: %s ", prefix.c_str());
+		fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
 		int code = (file_type.find(type)!=file_type.end())? file_type[type]: 0;
 		switch(code)
 		{

@@ -108,6 +108,9 @@ Genotype::Genotype(std::string prefix, int num_auto,
 		if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
 		fprintf(stderr, "%zu variants included\n", m_marker_ct);
 	}
+	m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+	m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+	m_founder_ctsplit = 3 * m_founder_ctv3;
 }
 
 Genotype::~Genotype() {
@@ -347,7 +350,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	if(num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
 	if(num_not_converted) fprintf(stderr, "%zu NA stat/p-value observed\n", num_not_converted);
 	if(num_negative_stat) fprintf(stderr, "%zu negative statistic observed. Please make sure it is really OR\n", num_negative_stat);
-	fprintf(stderr, "%zu total SNPs included from base file\n", m_existed_snps.size());
+	fprintf(stderr, "%zu total SNPs included from base file\n\n", m_existed_snps.size());
 	clump_info.p_value = c_commander.clump_p();
 	clump_info.r2 =  c_commander.clump_r2();
 	clump_info.proxy = c_commander.proxy();
@@ -398,20 +401,27 @@ void Genotype::clump(Genotype &reference)
 		}
 		if(prev_chr!=snp.chr())
 		{
-			//perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc());
 			prev_chr = snp.chr();
 		}
 		else if((snp.loc()-bp_of_core) > clump_info.distance)
 		{
-			//perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc(), clump_index);
+			perform_clump(core_genotype_index, require_clump, snp.chr(), snp.loc());
 		}
 		// Now read in the current SNP
 
-		uintptr_t* genotype;
 		clump_info.clump_index.push_back(snp_index-1); // allow us to know that target SNPs from the clump core
 		overlapped_snps.insert(snp_index-1);
-		reference.read_genotype(genotype, cur_snp.snp_id(), cur_snp.file_name());
-		m_genotype.push_back(genotype);
+		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		reference.read_genotype(genotype, snp.snp_id(), snp.file_name());
+
+		uintptr_t ulii = m_founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + (m_marker_ct - 1) * 2 * sizeof(double);
+		uintptr_t* geno1 = new uintptr_t[3*m_founder_ctsplit +m_founder_ctv3];
+		std::memset(geno1, 0x0, (3*m_founder_ctsplit +m_founder_ctv3)*sizeof(uintptr_t));
+		load_and_split3(genotype, m_founder_ct, geno1, m_founder_ctv3, 0, 0, 1, &ulii);
+		m_genotype.push_back(geno1);
+		clump_info.missing.push_back(ulii);
 		if(!require_clump && snp.p_value() < clump_info.p_value)
 		{ // Set this as the core SNP
 			bp_of_core =snp.loc();
@@ -557,27 +567,11 @@ void Genotype::clump_thread(const size_t c_core_genotype_index)
 {
 	size_t wind_size = clump_info.clump_index.size();
 	if(wind_size <=1 ) return; // nothing to do
-	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
-	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
-	bool nm_fixed=false;
 	uint32_t tot1[6];
-	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
-	uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
-	std::memset(geno1, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-	//uintptr_t* geno_male = new uintptr_t[3*founder_ctsplit +founder_ctv3];
-	//std::memset(geno_male, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
-	std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-	load_and_split3(m_genotype[c_core_genotype_index], m_founder_ct,
-			geno1, dummy_nm, dummy_nm, founder_ctv3, 0, 0, 1, &ulii);
-	//bool is_x = std::get<+FILE_INFO::X>(m_cur_link[c_core_index]);
-
-	delete [] dummy_nm;
-	tot1[0] = popcount_longs(geno1, founder_ctv3);
-	tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
-	tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
+	bool nm_fixed = false;
+	tot1[0] = popcount_longs(m_genotype[c_core_genotype_index], m_founder_ctv3);
+	tot1[1] = popcount_longs(&(m_genotype[c_core_genotype_index][m_founder_ctv3]), m_founder_ctv3);
+	tot1[2] = popcount_longs(&(m_genotype[c_core_genotype_index][2 * m_founder_ctv3]), m_founder_ctv3);
 	// in theory, std::fill, std::copy should be safer than these mem thing
 	// but as a safety guard from my stupidity, let's just follow plink
 	/*
@@ -591,7 +585,7 @@ void Genotype::clump_thread(const size_t c_core_genotype_index)
 			tot1[5] = popcount_longs(&(geno_male[2 * founder_ctv3]), founder_ctv3);
 		}
 	 */
-	if (ulii == 3)
+	if (clump_info.missing[c_core_genotype_index] == 3)
 	{
 		nm_fixed = true;
 	}
@@ -602,9 +596,11 @@ void Genotype::clump_thread(const size_t c_core_genotype_index)
 		for(size_t i_snp = 0; i_snp < wind_size; ++i_snp)
 		{
 			if(i_snp==c_core_genotype_index) continue;
+
 			thread_store.push_back(std::thread(&Genotype::compute_clump, this,
-					c_core_genotype_index,i_snp, i_snp+1, std::ref(geno1), nm_fixed,
+					c_core_genotype_index,i_snp, i_snp+1, nm_fixed,
 					std::ref(tot1)));
+
 		}
 	}
 	else
@@ -615,8 +611,10 @@ void Genotype::clump_thread(const size_t c_core_genotype_index)
 		int cur_end = num_snp_per_thread;
 		for(size_t i_thread = 0; i_thread < m_thread; ++i_thread)
 		{
+
 			thread_store.push_back(std::thread(&Genotype::compute_clump, this, c_core_genotype_index,
-					cur_start, cur_end+(remain>0), std::ref(geno1), nm_fixed, std::ref(tot1)));
+					cur_start, cur_end+(remain>0), nm_fixed, std::ref(tot1)));
+
 			cur_start = cur_end+(remain>0);
 			cur_end+=num_snp_per_thread+(remain>0);
 			if(cur_end>wind_size) cur_end =wind_size;
@@ -626,17 +624,12 @@ void Genotype::clump_thread(const size_t c_core_genotype_index)
 	for(auto &&thread_runner : thread_store) thread_runner.join();
 	thread_store.clear();
 
-	delete [] geno1;
 	//delete [] geno_male;
 }
 
-void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end,
-		uintptr_t* geno1, bool nm_fixed, uint32_t* tot1)
+void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end, bool nm_fixed, uint32_t* tot1)
 {
 	uintptr_t* loadbuf;
-	uintptr_t founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	uint32_t founder_ctsplit = 3 * founder_ctv3; // Required
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
 	uint32_t counts[18];
 	double freq11;
@@ -648,14 +641,12 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	double dxx;
 	double r2 =0.0;
 	bool zmiss2=false;
-	uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + marker_idx2_maxw * 2 * sizeof(double);
 	size_t max_size = clump_info.clump_index.size();
 	size_t ref_snp_index = clump_info.clump_index[core_genotype_index];
 	double ref_p_value = m_existed_snps.at(ref_snp_index).p_value();
 	std::vector<double> r2_store;
 	std::vector<size_t> target_index_store; // index we want to push into the current index
-	uintptr_t* ulptr =  new uintptr_t[3*founder_ctsplit +founder_ctv3];
-	uintptr_t* dummy_nm = new uintptr_t[founder_ctl];
+
 	for(size_t i_snp = i_start; i_snp < i_end && i_snp < max_size; ++i_snp)
 	{
 		zmiss2 = false;
@@ -669,34 +660,37 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 		{
 			// if the target is not as significant as the reference SNP or if it is the same significance but with
 			// appear later in the genome
-			std::memset(ulptr, 0x0, (3*founder_ctsplit +founder_ctv3)*sizeof(uintptr_t));
-			std::memset(dummy_nm, ~0, founder_ctl*sizeof(uintptr_t)); // set all bits to 1
-			load_and_split3(m_genotype[i_snp], m_founder_ct, ulptr, dummy_nm, dummy_nm,
-					founder_ctv3, 0, 0, 1, &ulii);
+
+
 			uintptr_t uiptr[3];
-			uiptr[0] = popcount_longs(ulptr, founder_ctv3);
-			uiptr[1] = popcount_longs(&(ulptr[founder_ctv3]), founder_ctv3);
-			uiptr[2] = popcount_longs(&(ulptr[2 * founder_ctv3]), founder_ctv3);
-			if (ulii == 3) {
+			uiptr[0] = popcount_longs(m_genotype[i_snp], m_founder_ctv3);
+			uiptr[1] = popcount_longs(&(m_genotype[i_snp][m_founder_ctv3]), m_founder_ctv3);
+			uiptr[2] = popcount_longs(&(m_genotype[i_snp][2 * m_founder_ctv3]), m_founder_ctv3);
+			if (clump_info.missing[i_snp] == 3) {
 				zmiss2 = true;
 			}
+
+			/*
 			if (nm_fixed) {
-				two_locus_count_table_zmiss1(geno1, ulptr, counts, founder_ctv3, zmiss2);
+				two_locus_count_table_zmiss1(m_genotype[core_genotype_index], m_genotype[i_snp],
+						counts, m_founder_ctv3, zmiss2);
 				if (zmiss2) {
 					counts[2] = tot1[0] - counts[0] - counts[1];
 					counts[5] = tot1[1] - counts[3] - counts[4];
 				}
 				counts[6] = uiptr[0] - counts[0] - counts[3];
-				counts[7] = uiptr[1] - counts[1] - counts[4];
-				counts[8] = uiptr[2] - counts[2] - counts[5];
+            		counts[7] = uiptr[1] - counts[1] - counts[4];
+            		counts[8] = uiptr[2] - counts[2] - counts[5];
 			} else {
-				two_locus_count_table(geno1, ulptr, counts, founder_ctv3, zmiss2);
+				two_locus_count_table(m_genotype[core_genotype_index], m_genotype[i_snp],
+						counts, m_founder_ctv3, zmiss2);
 				if (zmiss2) {
 					counts[2] = tot1[0] - counts[0] - counts[1];
 					counts[5] = tot1[1] - counts[3] - counts[4];
 					counts[8] = tot1[2] - counts[6] - counts[7];
 				}
 			}
+		*/
 			/*
 	    		// good thing is that the x1 and x2 must always be the same
 	    		if (is_x1 || is_x2) {
@@ -709,6 +703,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	    		}
 			 */
 			// below, the false are basically is_x1 is_x2
+			/*
 			if(em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1, &freqx2, &freq11))
 			{
 				r2 = -1;
@@ -723,15 +718,10 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 				}
 				else
 				{
-					// plink tried to keep the direction here, but use the fabs of r2
-					// when doing the threshold
-					//r2 = fabs(dxx) * dxx / (freq11_expected * freq2x * freqx2);
 					r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-					//dxx/= MINV(freqx1 * freq2x, freqx2 * freq1x);
-					//dprime = dxx;
-
 				}
 			}
+			*/
 			if(r2 >= clump_info.r2)
 			{
 				target_index_store.push_back(target_snp_index);
@@ -739,12 +729,14 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 			}
 		}
 	}
-	delete [] ulptr;
-	delete [] dummy_nm;
+
+
+	/*
 	Genotype::clump_mtx.lock();
 	m_existed_snps[ref_snp_index].add_clump(target_index_store);
 	m_existed_snps[ref_snp_index].add_clump_r2(r2_store);
 	Genotype::clump_mtx.unlock();
+	*/
 }
 
 void Genotype::lerase(int num)
@@ -767,11 +759,13 @@ void Genotype::lerase(int num)
 	{
 		m_genotype.clear();
 		clump_info.clump_index.clear();
+		clump_info.missing.clear();
 	}
 	else
 	{
 		m_genotype.erase(m_genotype.begin(), m_genotype.begin()+num);
 		clump_info.clump_index.erase(clump_info.clump_index.begin(), clump_info.clump_index.begin()+num);
+		clump_info.missing.erase(clump_info.missing.begin(), clump_info.missing.begin()+num);
 	}
 
 }
@@ -1053,7 +1047,7 @@ uint32_t Genotype::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1, uint
 }
 
 
-uint32_t Genotype::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct, uintptr_t* casebuf, uintptr_t* pheno_nm, uintptr_t* pheno_c, uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse, uint32_t is_case_only, uintptr_t* nm_info_ptr)
+uint32_t Genotype::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct, uintptr_t* casebuf, uint32_t case_ctv, uint32_t ctrl_ctv, uint32_t do_reverse, uint32_t is_case_only, uintptr_t* nm_info_ptr)
 {
 	uintptr_t* rawbuf_end = &(rawbuf[unfiltered_sample_ct / BITCT2]);
 	uintptr_t* ctrlbuf = &(casebuf[3 * case_ctv]);
@@ -1084,33 +1078,17 @@ uint32_t Genotype::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample
 		while (rawbuf < rawbuf_end) {
 			read_word = *rawbuf++;
 			for (read_shift = 0; read_shift < read_shift_max; sample_uidx++, read_shift++) {
-				if (is_set(pheno_nm, sample_uidx)) {
-					ulii = read_word & 3;
-					if (is_set(pheno_c, sample_uidx)) { // Both is_set is always true, because dummy_nm is set
-						case_words[ulii] |= ONELU << case_rem;
-						if (++case_rem == BITCT) {
-							casebuf[offset0_case] = case_words[0];
-							casebuf[case_ctv] = case_words[2];
-							casebuf[offset2_case] = case_words[3];
-							casebuf++;
-							case_words[0] = 0;
-							case_words[2] = 0;
-							case_words[3] = 0;
-							case_rem = 0;
-						}
-					} else if (!is_case_only) {
-						ctrl_words[ulii] |= ONELU << ctrl_rem;
-						if (++ctrl_rem == BITCT) {
-							ctrlbuf[offset0_ctrl] = ctrl_words[0];
-							ctrlbuf[ctrl_ctv] = ctrl_words[2];
-							ctrlbuf[offset2_ctrl] = ctrl_words[3];
-							ctrlbuf++;
-							ctrl_words[0] = 0;
-							ctrl_words[2] = 0;
-							ctrl_words[3] = 0;
-							ctrl_rem = 0;
-						}
-					}
+				ulii = read_word & 3; // Both is_set is always true, because dummy_nm is set
+				case_words[ulii] |= ONELU << case_rem;
+				if (++case_rem == BITCT) {
+					casebuf[offset0_case] = case_words[0];
+					casebuf[case_ctv] = case_words[2];
+					casebuf[offset2_case] = case_words[3];
+					casebuf++;
+					case_words[0] = 0;
+					case_words[2] = 0;
+					case_words[3] = 0;
+					case_rem = 0;
 				}
 				read_word >>= 2;
 			}

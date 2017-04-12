@@ -4,7 +4,7 @@ include(ExternalProject)
 set(CMAKE_BUILD_TYPE Release)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-c++11-narrowing" )
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-c++11-narrowing -g" )
 endif()
 # To compile a static library on Rosalind, we can use 
 # g++ --std=c++11 -I ../inc/ -isystem ../lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -static-libgcc -static ../src/*.cpp -o PRSice

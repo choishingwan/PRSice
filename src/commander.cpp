@@ -579,6 +579,7 @@ void Commander::usage()
 
 void Commander::program_info()
 {
+	std::cerr << std::endl;
 	std::cerr << "PRSice "<< version << " (" << date << ") https://github.com/choishingwan/PRSice"<< std::endl;
 	std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
 	std::cerr << "GNU General Public License v3" << std::endl;
