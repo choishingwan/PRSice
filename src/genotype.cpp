@@ -721,9 +721,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 					r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
 				}
 			}
-			std::cerr << r2 << "\t" << clump_info.r2 << "\t" << m_existed_snps[target_snp_index].rs() << "\t" <<
-					m_existed_snps[ref_snp_index].rs() << std::endl;
-			exit(0);
+
 			if(r2 >= clump_info.r2)
 			{
 				target_index_store.push_back(target_snp_index);
@@ -733,12 +731,12 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	}
 
 
-	/*
+
 	Genotype::clump_mtx.lock();
-	m_existed_snps[ref_snp_index].add_clump(target_index_store);
-	m_existed_snps[ref_snp_index].add_clump_r2(r2_store);
+		m_existed_snps[ref_snp_index].add_clump(target_index_store);
+		m_existed_snps[ref_snp_index].add_clump_r2(r2_store);
 	Genotype::clump_mtx.unlock();
-	*/
+
 }
 
 void Genotype::lerase(int num)
