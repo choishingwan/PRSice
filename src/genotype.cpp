@@ -721,7 +721,6 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 					r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
 				}
 			}
-
 			if(r2 >= clump_info.r2)
 			{
 				target_index_store.push_back(target_snp_index);
@@ -729,8 +728,6 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 			}
 		}
 	}
-
-
 
 	Genotype::clump_mtx.lock();
 		m_existed_snps[ref_snp_index].add_clump(target_index_store);

@@ -9,7 +9,7 @@ void PRSice::pheno_check(const Commander &c_commander) {
 	if (pheno_header.size() != 0 && pheno_file.empty()) {
 		throw std::runtime_error( "You must provide a phenotype file for multiple phenotype analysis");
 	}
-	if (!pheno_file.empty()) {
+	if (pheno_file.empty()) {
 		pheno_info.use_pheno = false;
 		pheno_info.binary.push_back(c_commander.is_binary(0));
 	} else {
