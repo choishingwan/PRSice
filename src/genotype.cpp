@@ -380,6 +380,7 @@ void Genotype::clump(Genotype &reference)
 	bool mismatch_error = false;
 	bool require_clump = false;
 	std::unordered_set<int> overlapped_snps;
+	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 	for(auto &&snp : m_existed_snps)
 	{
 		snp_index++;
@@ -412,7 +413,6 @@ void Genotype::clump(Genotype &reference)
 
 		clump_info.clump_index.push_back(snp_index-1); // allow us to know that target SNPs from the clump core
 		overlapped_snps.insert(snp_index-1);
-		uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		reference.read_genotype(genotype, snp.snp_id(), snp.file_name());
 
@@ -430,6 +430,7 @@ void Genotype::clump(Genotype &reference)
 		}
 		fprintf(stderr, "\rClumping Progress: %03.2f%%", (double) progress++ / (double) (num_snp) * 100.0);
 	}
+	delete [] genotype;
 	if(m_genotype.size()!=0)
 	{
 		// this make sure this will be the last
@@ -489,6 +490,7 @@ void Genotype::clump(Genotype &reference)
 	m_existed_snps_index.clear();
 	// we don't need the index any more because we don't need to match SNPs anymore
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", m_existed_snps.size());
+	cleanup();
 }
 
 
@@ -789,13 +791,13 @@ bool Genotype::prepare_prsice()
 bool Genotype::get_score(std::vector< std::vector<Sample_lite> > &prs_score, int &cur_index, int &cur_category,
 		double &cur_threshold, std::vector<size_t> &num_snp_included)
 {
-	if(m_existed_snps.size() ==0) return false;
+	if(m_existed_snps.size() ==0 || cur_index==m_existed_snps.size()) return false;
 	int end_index = 0;
 	bool ended = false;
 	cur_threshold = m_existed_snps[cur_index].get_threshold();
 	for (size_t i = cur_index; i < m_existed_snps.size(); ++i)
 	{
-		if (m_existed_snps[i].category() != cur_index)
+		if (m_existed_snps[i].category() != cur_category)
 		{
 			end_index = i;
 			ended = true;
@@ -807,14 +809,36 @@ bool Genotype::get_score(std::vector< std::vector<Sample_lite> > &prs_score, int
 			if (m_existed_snps[i].in( i_region)) num_snp_included[i_region]++;
 		}
 	}
-	if (!ended) end_index = m_existed_snps.size();
+	if (!ended)
+	{
+		end_index = m_existed_snps.size();
+		cur_category = m_existed_snps.back().category();
+	}
+	else cur_category = m_existed_snps[end_index].category();
 	//get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_scoring);
-
 	read_score(prs_score, cur_index, end_index);
 	cur_index = end_index;
 	return true;
 }
 
+
+void Genotype::print_snp(std::string &output, double threshold)
+{
+	std::ofstream snp_out;
+	snp_out.open(output);
+    if (!snp_out.is_open()) {
+        std::string error_message = "ERROR: Cannot open file: " + output + " to write";
+        throw std::runtime_error(error_message);
+    }
+    for(auto &&snp : m_existed_snps)
+    {
+    	if(snp.get_threshold() <= threshold)
+    	{
+    		snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc() << "\t" << snp.p_value() << std::endl;
+    	}
+    }
+    snp_out.close();
+}
 /**
  * DON'T TOUCH AREA
  *

@@ -76,10 +76,15 @@ int main(int argc, char *argv[])
 		{
 			fprintf(stderr, "\nPRSice Analysis\n");
 			fprintf(stderr, "==============================\n");
-			if(!target_file->prepare_prsice()) return -1;
+			if(!target_file->prepare_prsice())
+			{
+				return -1;
+			}
 			for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
 			{
+				prsice.init_matrix(commander, i_pheno, *target_file, false);
 				prsice.prsice(commander, region.names(), i_pheno, *target_file);
+				prsice.output(commander, region, i_pheno, *target_file);
 			}
 		}
 		/*

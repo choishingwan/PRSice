@@ -56,13 +56,16 @@ public:
 	bool get_score(std::vector< std::vector<Sample_lite> > &current_prs_score, int &cur_index, int &cur_category,
 			double &cur_threshold, std::vector<size_t> &num_snp_included);
 	bool prepare_prsice();
+	void print_snp(std::string &output, double threshold);
 
 protected:
 	static std::mutex clump_mtx;
 	size_t m_max_category = 0;
 	size_t m_region_size = 1;
 	SCORING m_scoring;
+	virtual void cleanup(){};
 	void lerase(int num);
+
 	std::deque<uintptr_t*> m_genotype;
 	struct{
 		double r2;
@@ -290,6 +293,10 @@ private:
 	std::vector<SNP> load_snps();
 	void check_bed();
 
+	void cleanup(){
+		fclose(m_bedfile);
+		m_bedfile=nullptr;
+	};
 	inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name)
 	{
 		if(m_cur_file.empty() || m_cur_file.compare(file_name)!=0)
@@ -314,6 +321,7 @@ private:
 			throw std::runtime_error("ERROR: Cannot read the bed file!");
 		}
 	}
+
 	void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound);
 	FILE* m_bedfile = nullptr;
 	std::string m_cur_file;

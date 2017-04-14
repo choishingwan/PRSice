@@ -64,7 +64,6 @@ std::vector<Sample> BinaryPlink::load_samples()
 	sample_uidx=0;
 	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
 	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-	std::vector<Sample> sample_name(m_unfiltered_sample_ct);
 
 	m_sex_male = new uintptr_t[m_unfiltered_sample_ctl];
 	std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
@@ -76,7 +75,7 @@ std::vector<Sample> BinaryPlink::load_samples()
 	std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
 	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0;
-	std::vector<Sample> sample_names;
+	std::vector<Sample> sample_name;
 	while(std::getline(famfile, line))
 	{
 		misc::trim(line);
@@ -327,8 +326,11 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
 	// which suggest that PRS can be done on sex chromosome
 	// that should be something later
 	m_cur_file =""; // just close it
-	if(m_bedfile!=nullptr) fclose(m_bedfile);
-
+	if(m_bedfile!=nullptr)
+	{
+		fclose(m_bedfile);
+		m_bedfile = nullptr;
+	}
     uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
     if(current_prs_score.size() != m_region_size)
     {
@@ -344,18 +346,20 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
 	std::vector<bool> in_region(m_region_size);
 	// index is w.r.t. partition, which contain all the information
 	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
-    for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
+	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
         if(m_cur_file.empty() || m_cur_file.compare(m_existed_snps[i_snp].file_name())!=0)
         {
-        	if(m_bedfile!=nullptr) fclose(m_bedfile);
+        	if(m_bedfile!=nullptr){
+        		fclose(m_bedfile);
+        		m_bedfile= nullptr;
+        	}
         	m_cur_file= m_existed_snps[i_snp].file_name();
             std::string bedname = m_cur_file+".bed";
             m_bedfile = fopen(bedname.c_str(), FOPEN_RB); //again, we are assuming that the file is correct
             prev=0;
         }
-
-        for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+       for(size_t i_region = 0; i_region < m_region_size; ++i_region)
         {
         	in_region[i_region]=m_existed_snps[i_snp].in(i_region);
         }
@@ -367,8 +371,8 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
 
-        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {

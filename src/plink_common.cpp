@@ -8460,7 +8460,11 @@ void copy_quaterarr_nonempty_subset_excl(const uintptr_t* __restrict raw_quatera
   }
 }
 
-uint32_t load_and_collapse(uint32_t unfiltered_sample_ct, uint32_t sample_ct, const uintptr_t* __restrict sample_exclude, uintptr_t final_mask, uint32_t do_reverse, FILE* bedfile, uintptr_t* __restrict rawbuf, uintptr_t* __restrict mainbuf) {
+uint32_t load_and_collapse(uint32_t unfiltered_sample_ct, uint32_t sample_ct,
+		const uintptr_t* __restrict sample_exclude, uintptr_t final_mask,
+		uint32_t do_reverse, FILE* bedfile, uintptr_t* __restrict rawbuf,
+		uintptr_t* __restrict mainbuf)
+{
 	assert(unfiltered_sample_ct);
 	uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
 	if (unfiltered_sample_ct == sample_ct) {

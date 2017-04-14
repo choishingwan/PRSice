@@ -36,13 +36,14 @@ public:
     void pheno_check(const Commander &c_commander);
     void init_matrix(const Commander &c_commander, const size_t pheno_index, Genotype &target,
     		const bool prslice=false);
-    size_t num_phenotype() const { return pheno_info.name.size(); };
+    size_t num_phenotype() const { return (pheno_info.use_pheno)? pheno_info.name.size() : 1; };
     void prsice(const Commander &c_commander, const std::vector<std::string> &region_name, const size_t c_pheno_index,
     		Genotype &target, bool prslice=false);
 
     //working in progress
     void prsice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index,  bool prslice=false);
-    void output(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
+    void output(const Commander &c_commander, const Region &c_region, size_t pheno_index,
+    		Genotype &target) const;
     //void output(const Commander &c_commander, size_t pheno_index) const;
     // PRSlice related stuff
     //void prslice_windows(const Commander &c_commander, const Region &c_region);
