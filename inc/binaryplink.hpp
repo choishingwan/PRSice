@@ -7,12 +7,13 @@
 
 class BinaryPlink: public Genotype{
 public:
-	BinaryPlink(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
+	BinaryPlink(std::string prefix,  std::string remove_sample, std::string keep_sample,
+			bool ignore_fid, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
 			bool no_mt=false, const size_t thread=1, bool verbose=false);
 	 ~BinaryPlink();
 private:
 	uintptr_t m_bed_offset = 3;
-	std::vector<Sample> load_samples();
+	std::vector<Sample> load_samples(bool ignore_fid);
 	std::vector<SNP> load_snps();
 	void check_bed();
 

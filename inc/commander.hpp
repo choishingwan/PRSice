@@ -96,8 +96,8 @@ public:
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };
     std::string pheno_col(size_t index) const { return target.pheno_col.at(index); };
-    std::string keep_sample_file() const { return target.keep_file; };
-    std::string remove_sample_file() const { return target.remove_file; };
+    std::string keep_sample_file() const { return target.keep_sample? target.keep_file : ""; };
+    std::string remove_sample_file() const { return target.remove_sample? target.remove_file : ""; };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };

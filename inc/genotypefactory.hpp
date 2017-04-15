@@ -1,6 +1,6 @@
 
-#ifndef GENOTYPEFACTORY
-#define GENOTYPEFACTORY
+#ifndef SRC_GENOTYPEFACTORY_HPP_
+#define SRC_GENOTYPEFACTORY_HPP_
 #include "genotype.hpp"
 #include "binaryplink.hpp"
 
@@ -29,8 +29,9 @@ public:
 		default:
 		case 0:
 			fprintf(stderr, "(bed)\n");
-			return new BinaryPlink(prefix, commander.num_auto(),
-					commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
+			return new BinaryPlink(prefix, commander.remove_sample_file(), commander.keep_sample_file(),
+					commander.ignore_fid(), commander.num_auto(), commander.no_x(),
+					commander.no_y(), commander.no_xy(), commander.no_mt(),
 					commander.thread(), verbose);
 
 		}

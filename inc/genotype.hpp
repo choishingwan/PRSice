@@ -21,6 +21,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "commander.hpp"
 #include "misc.hpp"
@@ -32,8 +33,11 @@
 class Genotype {
 public:
 	Genotype(){};
-	Genotype(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
-			bool no_mt=false, const size_t thread=1, bool verbose=false);
+	Genotype(std::string prefix, std::string remove_sample, std::string keep_sample,
+			bool ignore_fid, int num_auto=22, bool no_x=false, bool no_y=false,
+			bool no_xy=false, bool no_mt=false, const size_t thread=1,
+			bool verbose=false);
+
 	virtual ~Genotype();
 	std::unordered_map<std::string, int> get_chr_order() const { return m_chr_order; };
 	void read_base(const Commander &c_commander, Region &region);
@@ -84,7 +88,7 @@ protected:
 	} filter;
 
 	void finalize_snps(Region &region, const int distance);
-
+	std::unordered_set<std::string> load_ref(std::string input, bool ignore_fid);
 	void set_genotype_files(std::string prefix);
 	std::vector<std::string> m_genotype_files;
 
@@ -97,11 +101,15 @@ protected:
 	uintptr_t* m_chrom_mask;
 
 
-	virtual std::vector<Sample> load_samples(){ return std::vector<Sample>(0); };
+	virtual std::vector<Sample> load_samples(bool ignore_fid){ return std::vector<Sample>(0); };
 	uintptr_t m_unfiltered_sample_ct = 0;
 	uintptr_t m_unfiltered_sample_ctl = 0;
 	uintptr_t m_unfiltered_sample_ct4 = 0;
 	std::vector<Sample> m_sample_names;
+	bool m_remove_sample = false;
+	bool m_keep_sample = false;
+	std::unordered_set<std::string> m_remove_sample_list;
+	std::unordered_set<std::string> m_keep_sample_list;
 
 	void init_sample_vectors(){};
 	uintptr_t* m_founder_info = nullptr;

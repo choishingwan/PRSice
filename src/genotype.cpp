@@ -93,14 +93,52 @@ void Genotype::set_genotype_files(std::string prefix)
 	}
 }
 
-Genotype::Genotype(std::string prefix, int num_auto,
-		bool no_x, bool no_y, bool no_xy, bool no_mt, const size_t thread, bool verbose)
+
+std::unordered_set<std::string> Genotype::load_ref(std::string input, bool ignore_fid)
 {
+	std::ifstream in;
+	in.open(input.c_str());
+	if(!in.is_open())
+	{
+		std::string error_message = "ERROR: Cannot open file: "+input;
+		throw std::runtime_error(error_message);
+	}
+	std::string line;
+	std::unordered_set<std::string> result;
+	while(std::getline(in, line))
+	{
+		misc::trim(line);
+		if(line.empty()) continue;
+		std::vector<std::string> token = misc::split(line);
+		if(ignore_fid)
+		{
+			result.insert(token[0]);
+		}
+		else
+		{
+			if(token.size() < 2) throw std::runtime_error("ERROR: Require FID and IID for extraction. "
+					"You can ignore the FID by using the --ignore-fid flag");
+			result.insert(token[0]+"_"+token[1]);
+		}
+	}
+	in.close();
+	return result;
+}
+
+Genotype::Genotype(std::string prefix, std::string remove_sample, std::string keep_sample,
+		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
+		const size_t thread, bool verbose)
+{
+
+	if(remove_sample.empty()) m_remove_sample = false;
+	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+	if(keep_sample.empty()) m_keep_sample = false;
+	else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
 	m_xymt_codes.resize(XYMT_OFFSET_CT);
 	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 	m_thread = thread;
 	set_genotype_files(prefix);
-	m_sample_names = load_samples();
+	m_sample_names = load_samples(ignore_fid);
 	m_existed_snps = load_snps();
 	if(verbose)
 	{

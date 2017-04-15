@@ -1,14 +1,20 @@
 #include "binaryplink.hpp"
 
 
-BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
+BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::string keep_sample,
+		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
 		const size_t thread, bool verbose)
 {
+	if(remove_sample.empty()) m_remove_sample = false;
+	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+	if(keep_sample.empty()) m_keep_sample = false;
+	else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+
 	m_xymt_codes.resize(XYMT_OFFSET_CT);
 	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 	m_thread = thread;
 	set_genotype_files(prefix);
-	m_sample_names = load_samples();
+	m_sample_names = load_samples(ignore_fid);
 	m_existed_snps = load_snps();
 	if(verbose)
 	{
@@ -29,7 +35,7 @@ BinaryPlink::~BinaryPlink()
 {
 	if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
-std::vector<Sample> BinaryPlink::load_samples()
+std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 {
 	assert(m_genotype_files.size()>0);
 	std::string famName = m_genotype_files.front()+".fam";
@@ -90,8 +96,23 @@ std::vector<Sample> BinaryPlink::load_samples()
 			Sample cur_sample;
 			cur_sample.FID = token[+FAM::FID];
 			cur_sample.IID = token[+FAM::IID];
+			std::string id = (ignore_fid)? token[+FAM::IID] : token[+FAM::FID]+"_"+token[+FAM::IID];
 			cur_sample.pheno = token[+FAM::PHENOTYPE];
-			cur_sample.included = true;
+			cur_sample.included = false;
+			if(m_keep_sample)
+			{
+				cur_sample.included=(m_keep_sample_list.find(id)!=m_keep_sample_list.end());
+			}
+			if(m_remove_sample)
+			{
+				if(m_keep_sample && cur_sample.included)
+				{
+					std::string error_message = "ERROR: Sample ID: "+id+" existed in both remove and keep option!";
+					throw std::runtime_error(error_message);
+				}
+				cur_sample.included = !(m_remove_sample_list.find(id)!=m_remove_sample_list.end());
+			}
+			else cur_sample.included = true;
 			cur_sample.prs = 0;
 			cur_sample.num_snp = 0;
 			sample_name.push_back(cur_sample);
