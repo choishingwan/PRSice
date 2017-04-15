@@ -64,7 +64,6 @@ protected:
 	size_t m_region_size = 1;
 	SCORING m_scoring;
 	virtual void cleanup(){};
-	void lerase(int num);
 
 	std::deque<uintptr_t*> m_genotype;
 	struct{
@@ -73,8 +72,6 @@ protected:
 		double p_value;
 		int distance;
 		bool use_proxy;
-		std::deque<uintptr_t> missing;
-		std::deque<int> clump_index;
 	} clump_info;
 
 	struct{
@@ -143,8 +140,9 @@ protected:
 				|| (ref_allele == "g" && alt_allele == "c");
 	}
 
-	void perform_clump(int core_genotype_index, bool require_clump, int chr, int loc);
-	void clump_thread(const size_t c_core_genotype_index);
+	void perform_clump(int &core_genotype_index, int &begin_index, int current_index, bool require_clump);
+	void clump_thread(const size_t c_core_genotype_index, const size_t c_begin_index,
+			const size_t c_current_index);
 	void compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end, bool nm_fixed, uint32_t* tot1);
 
 

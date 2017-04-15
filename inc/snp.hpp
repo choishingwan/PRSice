@@ -151,14 +151,30 @@ public:
     void proxy_clump(std::vector<SNP> &snp_list, double r2_threshold);
     void clump(std::vector<SNP> &snp_list);
     bool clumped() const { return clump_info.clumped; };
-
-private:
+    void set_clump_geno(uintptr_t *geno, int contain_miss)
+    {
+    	clump_info.genotype = geno;
+    	clump_info.contain_missing = (contain_miss==3);
+    }
+    uintptr_t *clump_geno() const { return clump_info.genotype; };
+    bool clump_missing() const { return clump_info.contain_missing; };
+    void clean_clump()
+    {
+    	if(clump_info.genotype!=nullptr)
+    	{
+    		delete [] clump_info.genotype;
+    		clump_info.genotype = nullptr;
+    	}
+    }
+ private:
     //basic info
     size_t m_bit_size;
     struct{
     	bool clumped;
     	std::vector<size_t> target;
     	std::vector<double> r2;
+    	uintptr_t *genotype;
+    	bool contain_missing;
     } clump_info;
 
     struct{

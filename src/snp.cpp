@@ -12,6 +12,8 @@ SNP::SNP()
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     clump_info.clumped=false;
+	clump_info.genotype = nullptr;
+	clump_info.contain_missing = false;
 }
 
 
@@ -32,6 +34,8 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
     threshold.category=0;
     m_bit_size = sizeof(long_type)*CHAR_BIT;
     clump_info.clumped=false;
+	clump_info.genotype = nullptr;
+	clump_info.contain_missing = false;
     file_info.file = file_name;
     file_info.id = num_line;
 }
@@ -72,6 +76,10 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
 
 void SNP::clump(std::vector<SNP> &snp_list)
 {
+	if(basic.rs.compare("rs12125525")==0)
+	{
+		std::cerr << "clumping this" << std::endl;
+	}
 	for(auto &&target : clump_info.target){
 		if(!snp_list[target].clumped())
 		{
@@ -79,6 +87,9 @@ void SNP::clump(std::vector<SNP> &snp_list)
 			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
 			{
 				//TODO: ERROR IS HERE
+				if(snp_list[target].rs().compare("rs12125525")==0){
+					std::cerr << "Clumped by: " << basic.rs << std::endl;
+				}
 				// if there is any overlap this should set the snp_list to the new flag
 				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
 						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
