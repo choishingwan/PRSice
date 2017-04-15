@@ -54,16 +54,18 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump-p",required_argument,NULL,0},
         {"clump-r2",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
+        {"keep",required_argument,NULL,0},
 		{"ld-type", required_argument, NULL, 0},
 		{"num-auto", required_argument, NULL, 0},
+        {"perm",required_argument,NULL,0},
         {"pheno-col",required_argument,NULL,0},
+        {"proxy",required_argument,NULL,0},
+        {"prslice",required_argument,NULL,0},
+        {"remove",required_argument,NULL,0},
+		{"score", required_argument, NULL, 0},
         {"se",required_argument,NULL,0},
         {"snp",required_argument,NULL,0},
         {"stat",required_argument,NULL,0},
-        {"perm",required_argument,NULL,0},
-        {"proxy",required_argument,NULL,0},
-        {"prslice",required_argument,NULL,0},
-		{"score", required_argument, NULL, 0},
 		{"type", required_argument, NULL, 0},
 		//species flag
         {"cow",no_argument,NULL,0},
@@ -98,6 +100,8 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("snp")==0) set_snp(optarg);
             else if(command.compare("bp")==0) set_bp(optarg);
             else if(command.compare("se")==0) set_se(optarg);
+            else if(command.compare("keep")==0) set_keep(optarg);
+            else if(command.compare("remove")==0) set_remove(optarg);
             else if(command.compare("ld-type")==0) clumping.type = optarg;
             else if(command.compare("type")==0) target.type = optarg;
             else if(command.compare("score")==0) prsice.missing_score = optarg;
@@ -411,9 +415,11 @@ Commander::Commander()
 	species.no_mt = false;
 	species.double_set = false;
 
+	target.remove_sample = false;
+	target.keep_sample = false;
 	target.name = "";
-	target.type = "bed";
 	target.pheno_file = "";
+	target.type = "bed";
 }
 
 Commander::~Commander()
@@ -870,6 +876,7 @@ void Commander::target_check(bool &error, std::string &error_message)
 		error = true;
 		error_message.append("ERROR: You must provide a target file!\n");
 	}
+
 	bool alright = false;
 	for(auto &&type: supported_types)
 	{

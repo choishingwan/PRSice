@@ -1,4 +1,4 @@
-#include "genotype.hpp"
+#include "binaryplink.hpp"
 
 
 BinaryPlink::BinaryPlink(std::string prefix, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,

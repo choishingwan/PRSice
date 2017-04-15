@@ -5,8 +5,8 @@
  *      Author: shingwanchoi
  */
 
-#ifndef SRC_GENOTYPE_HPP_
-#define SRC_GENOTYPE_HPP_
+#ifndef GENOTYPE
+#define GENOTYPE
 
 
 #include <algorithm>
@@ -280,86 +280,6 @@ private:
 };
 */
 
-class BinaryPlink: public Genotype{
-public:
-	BinaryPlink(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false, bool no_xy=false,
-			bool no_mt=false, const size_t thread=1, bool verbose=false);
-	 ~BinaryPlink();
-private:
-	uintptr_t m_bed_offset = 3;
-	std::vector<Sample> load_samples();
-	std::vector<SNP> load_snps();
-	void check_bed();
 
-	void cleanup(){
-		fclose(m_bedfile);
-		m_bedfile=nullptr;
-	};
-	inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index, const std::string &file_name)
-	{
-		if(m_cur_file.empty() || m_cur_file.compare(file_name)!=0)
-		{
-			if (m_bedfile != nullptr)
-			{
-				fclose(m_bedfile);
-				m_bedfile=nullptr;
-			}
-			std::string bedname = file_name+".bed";
-			m_bedfile = fopen(bedname.c_str(), FOPEN_RB); // assume there is no error
-		}
-		if (fseeko(m_bedfile, m_bed_offset + (snp_index* ((uint64_t)m_unfiltered_sample_ct4))
-				, SEEK_SET))
-		{
-			throw std::runtime_error("ERROR: Cannot read the bed file!");
-		}
-		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-		if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
-				false, m_bedfile, m_tmp_genotype, genotype))
-		{
-			throw std::runtime_error("ERROR: Cannot read the bed file!");
-		}
-	}
-
-	void read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index, size_t end_bound);
-	FILE* m_bedfile = nullptr;
-	std::string m_cur_file;
-	uintptr_t m_final_mask;
-	uintptr_t *m_tmp_genotype;
-};
-
-
-class GenomeFactory {
-private:
-	std::unordered_map<std::string, int> file_type {
-		{ "bed", 0 },
-		{ "ped", 1 },
-		{ "bgen", 2}
-	};
-public:
-	Genotype* createGenotype(const Commander &commander, const std::string &prefix,
-			const std::string &type, bool verbose)
-	{
-		fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
-		int code = (file_type.find(type)!=file_type.end())? file_type[type]: 0;
-		switch(code)
-		{
-		case 1:
-			/*
-			return std::unique_ptr<Genotype>(new Plink(prefix, commander.num_auto(),
-							commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
-							commander.thread(), verbose));
-							*/
-		case 2:
-		default:
-		case 0:
-			fprintf(stderr, "(bed)\n");
-			return new BinaryPlink(prefix, commander.num_auto(),
-					commander.no_x(), commander.no_y(), commander.no_xy(), commander.no_mt(),
-					commander.thread(), verbose);
-
-		}
-	}
-
-};
 
 #endif /* SRC_GENOTYPE_HPP_ */

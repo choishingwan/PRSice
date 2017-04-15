@@ -187,7 +187,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
         for(auto &&sample : m_sample_names)
         {
             std::string id = (m_ignore_fid)? sample.IID : sample.FID+"_"+sample.IID;
-            if(phenotype_info.find(id)!=phenotype_info.end())
+            if(phenotype_info.find(id)!=phenotype_info.end() && sample.included)
             {
                 try{
                     if(binary)
@@ -228,7 +228,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
         size_t cur_index =0;
         for(auto &&sample: m_sample_names)
         {
-            if(sample.pheno.compare("NA")==0){
+            if(sample.pheno.compare("NA")==0 || !sample.included){
                 sample.included=false;
                 continue;
             }

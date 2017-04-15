@@ -9,6 +9,7 @@
 #include "prsice.hpp"
 #include "region.hpp"
 #include "genotype.hpp"
+#include "genotypefactory.hpp"
 
 int main(int argc, char *argv[])
 {

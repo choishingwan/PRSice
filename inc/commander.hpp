@@ -96,9 +96,13 @@ public:
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };
     std::string pheno_col(size_t index) const { return target.pheno_col.at(index); };
+    std::string keep_sample_file() const { return target.keep_file; };
+    std::string remove_sample_file() const { return target.remove_file; };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
+    bool keep_sample() const { return target.keep_sample; };
+    bool remove_sample() const { return target.remove_sample; };
 
     int get_category(double p) const
     {
@@ -220,10 +224,14 @@ private:
 
     struct{
     	std::string name;
+    	std::string keep_file;
+    	std::string remove_file;
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
     	std::vector<bool> is_binary;
+    	bool keep_sample;
+    	bool remove_sample;
     } target;
 
 
@@ -312,8 +320,19 @@ private:
     {
     	prslice.size = size;
     	prslice.provided = true;
-    }
+    };
 
+    inline void set_remove(std::string file)
+    {
+    	target.remove_file = file;
+    	target.remove_sample = true;
+    };
+
+    inline void set_keep(std::string file)
+    {
+    	target.keep_file = file;
+    	target.keep_sample = true;
+    };
     inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {
     	for(size_t i = 0; i < ref.size(); ++i)

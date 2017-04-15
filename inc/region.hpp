@@ -5,8 +5,8 @@
  *      Author: shingwanchoi
  */
 
-#ifndef PRSICE_INC_REGION_HPP_
-#define PRSICE_INC_REGION_HPP_
+#ifndef REGION_H
+#define REGION_H
 
 #include <string>
 #include <vector>
