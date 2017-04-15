@@ -5,8 +5,8 @@
  *      Author: shingwanchoi
  */
 
-#ifndef GENOTYPE
-#define GENOTYPE
+#ifndef GENOTYPE_H
+#define GENOTYPE_H
 
 
 #include <algorithm>
