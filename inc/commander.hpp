@@ -53,6 +53,7 @@ public:
     bool all() const { return misc.all; };
     bool print_snp() const { return misc.print_snp; };
     bool ignore_fid() const { return misc.ignore_fid; };
+    void set_ignore_fid() { misc.ignore_fid = true; };
     std::string out() const { return misc.out; };
     int permutation() const { return misc.permutation; };
     int thread() const { return misc.thread; };

@@ -8,7 +8,7 @@ class GenomeFactory
     private:
         std::unordered_map<std::string, int> file_type { { "bed", 0 }, { "ped", 1 }, { "bgen", 2 } };
     public:
-        Genotype* createGenotype(const Commander &commander,
+        Genotype* createGenotype(Commander &commander,
                 const std::string &prefix, const std::string &type,
                 bool verbose)
         {
@@ -25,6 +25,15 @@ class GenomeFactory
                      commander.thread(), verbose));
                      */
                 case 2:
+                    if(commander.pheno_file().empty() && !commander.no_regress())
+                    {
+                        throw std::runtime_error("ERROR: You must provide a phenotype file for bgen format!");
+                    }
+                    if(!commander.ignore_fid())
+                    {
+                        fprintf(stderr, "WARNING: Bgen file does not contain FID. Will set --ignore-fid flag");
+                        commander.set_ignore_fid();
+                    }
                 default:
                 case 0:
                     fprintf(stderr, "(bed)\n");
