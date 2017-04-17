@@ -10,8 +10,7 @@ class BinaryPlink: public Genotype
         BinaryPlink(std::string prefix, std::string remove_sample,
                 std::string keep_sample, bool ignore_fid, int num_auto = 22,
                 bool no_x = false, bool no_y = false, bool no_xy = false,
-                bool no_mt = false, const size_t thread = 1, bool verbose =
-                        false);
+                bool no_mt = false, const size_t thread = 1, bool verbose = false);
         ~BinaryPlink();
     private:
         uintptr_t m_bed_offset = 3;
@@ -23,8 +22,7 @@ class BinaryPlink: public Genotype
         {
             fclose(m_bedfile);
             m_bedfile = nullptr;
-        }
-        ;
+        };
         inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
                 const std::string &file_name)
         {
@@ -49,7 +47,7 @@ class BinaryPlink: public Genotype
             {
                 throw std::runtime_error("ERROR: Cannot read the bed file!");
             }
-        }
+        };
 
         void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
                 size_t start_index, size_t end_bound);

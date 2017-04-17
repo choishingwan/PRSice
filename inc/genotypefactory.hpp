@@ -2,6 +2,7 @@
 #define SRC_GENOTYPEFACTORY_HPP_
 #include "genotype.hpp"
 #include "binaryplink.hpp"
+#include "binarygen.hpp"
 
 class GenomeFactory
 {
@@ -13,9 +14,7 @@ class GenomeFactory
                 bool verbose)
         {
             fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
-            int code =
-                    (file_type.find(type) != file_type.end()) ?
-                            file_type[type] : 0;
+            int code = (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
             switch (code)
             {
                 case 1:
@@ -25,15 +24,21 @@ class GenomeFactory
                      commander.thread(), verbose));
                      */
                 case 2:
+                    fprintf(stderr, "(bgen)\n");
                     if(commander.pheno_file().empty() && !commander.no_regress())
                     {
-                        throw std::runtime_error("ERROR: You must provide a phenotype file for bgen format!");
+                        throw std::runtime_error("ERROR: You must provide a phenotype file for bgen format!\n");
                     }
-                    if(!commander.ignore_fid())
-                    {
-                        fprintf(stderr, "WARNING: Bgen file does not contain FID. Will set --ignore-fid flag");
-                        commander.set_ignore_fid();
-                    }
+
+                    return new BinaryGen(prefix,
+                            commander.pheno_file(),
+                            commander.has_pheno_col(),
+                            commander.remove_sample_file(),
+                            commander.keep_sample_file(),
+                            commander.ignore_fid(), commander.num_auto(),
+                            commander.no_x(), commander.no_y(),
+                            commander.no_xy(), commander.no_mt(),
+                            commander.thread(), verbose);
                 default:
                 case 0:
                     fprintf(stderr, "(bed)\n");

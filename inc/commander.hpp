@@ -104,6 +104,7 @@ public:
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
     bool keep_sample() const { return target.keep_sample; };
     bool remove_sample() const { return target.remove_sample; };
+    bool has_pheno_col() const { return !target.pheno_col.empty(); };
 
     int get_category(double p) const
     {

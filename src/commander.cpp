@@ -898,15 +898,21 @@ void Commander::target_check(bool &error, std::string &error_message)
 	}
 	else
 	{
-		if(target.pheno_col.size() <= 1 && target.is_binary.empty())
-		{
-			fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
-			target.is_binary.push_back(true);
-		}
-		else if(target.pheno_col.empty() && target.is_binary.size()==1)
+
+		if(target.pheno_col.empty() && target.is_binary.size()==1)
 		{
 			// this is ok
 		}
+		else if(target.pheno_col.empty() && target.is_binary.empty())
+		{
+		    fprintf(stderr, "Phenotype assumed to be binary\n");
+		    target.is_binary.push_back(true);
+		}
+		else if(target.pheno_col.size() <= 1 && target.is_binary.empty())
+        {
+            fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
+            target.is_binary.push_back(true);
+        }
 		else if(target.pheno_col.size() != target.is_binary.size())
 		{
 			error = true;
