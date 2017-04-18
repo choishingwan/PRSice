@@ -26,9 +26,14 @@ class BinaryGen: public Genotype
             uint32_t offset;
             std::string magic;
         };
+        Sample get_sample(std::vector<std::string> &token, bool ignore_fid,
+                bool has_sex, int sex_col, std::vector<int> &sex_info);
         std::vector<Sample> preload_samples(std::string pheno, bool has_header, bool ignore_fid);
         std::unordered_map<std::string, int> m_sample_index_check;
+
         std::vector<Sample> load_samples(bool ignore_fid);
+
+
         std::vector<SNP> load_snps();
         void cleanup();
         inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
@@ -39,8 +44,7 @@ class BinaryGen: public Genotype
 
         void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
                 size_t start_index, size_t end_bound);
-
-        void set_offset();
+        std::unordered_map<std::string, Context> load_bgen_info();
         std::unordered_map<std::string, Context> m_bgen_info;
         std::ifstream m_bgen_file;
 
@@ -86,8 +90,22 @@ class BinaryGen: public Genotype
             string_ptr->assign( buffer.begin(), buffer.end() ) ;
         }
 
+        void read_genotype_data_block(std::string &file_name, std::vector< byte_t >* buffer)
+        {
+            uint32_t payload_size = 0 ;
+            uint32_t flags = m_bgen_info[file_name].flags;
+            if( (flags & e_Layout) == e_Layout2 || ((flags & e_CompressedSNPBlocks) != e_NoCompression ) )
+            {
+                read_little_endian_integer( &payload_size ) ;
+            }
+            else
+            {
 
-
+                payload_size = 6 * m_bgen_info[file_name].number_of_samples; ;
+            }
+            buffer->resize( payload_size ) ;
+            m_bgen_file.read( reinterpret_cast< char* >( &(*buffer)[0] ), payload_size ) ;
+        }
 
 };
 

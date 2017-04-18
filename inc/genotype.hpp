@@ -129,7 +129,6 @@ class Genotype
         std::unordered_set<std::string> m_remove_sample_list;
         std::unordered_set<std::string> m_keep_sample_list;
 
-        void init_sample_vectors(){};
         uintptr_t* m_founder_info = nullptr;
         uintptr_t* m_sex_male = nullptr;
         uintptr_t* m_sample_exclude =nullptr;
@@ -145,6 +144,8 @@ class Genotype
         {
             return std::vector < SNP > (0);
         };
+        // due to the type of operation we did, most of the following uintptr_t were not in
+        // use
         uintptr_t m_unfiltered_marker_ct = 0;
         uintptr_t m_unfiltered_marker_ctl = 0;
         uintptr_t m_marker_ct = 0;

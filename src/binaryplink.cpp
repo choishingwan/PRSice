@@ -241,7 +241,7 @@ std::vector<SNP> BinaryPlink::load_snps()
 			"As we are using PLINK for some of our functions, we might encounter problem too. "
 			"Sorry.");
 	}
-	m_marker_ct = m_unfiltered_marker_ct - m_marker_exclude_ct;
+	m_marker_ct = snp_info.size();
 	return snp_info;
 }
 
