@@ -408,7 +408,7 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         int total_num = 0;
         uint32_t sample_idx=0;
         int nmiss = 0;
-        // This whole thing is wrong...
+        // This whole thing was wrong...
         do
         {
         	ulii = ~(*lbptr++);

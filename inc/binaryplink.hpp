@@ -26,6 +26,8 @@ class BinaryPlink: public Genotype
         inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
                 const std::string &file_name)
         {
+            // the bgen library seems over complicated
+            // try to use PLINK one. The difficulty is ifstream vs FILE
             if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0)
             {
                 if (m_bedfile != nullptr)

@@ -452,6 +452,7 @@ void Genotype::clump(Genotype &reference)
 
 		overlapped_snps.insert(i_snp);
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		std::cerr << "SNP RS: " << snp.rs() << std::endl;
 		reference.read_genotype(genotype, snp.snp_id(), snp.file_name());
 
 		uintptr_t ulii = m_founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + (m_marker_ct - 1) * 2 * sizeof(double);

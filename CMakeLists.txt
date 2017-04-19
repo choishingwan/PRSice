@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(PRSice)
 include(ExternalProject)
+
 set(CMAKE_BUILD_TYPE Release)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g" )
@@ -22,6 +23,11 @@ file(GLOB SOURCES "src/*.c*")
 find_package (Threads)
 
 add_executable(PRSice ${SOURCES})
+find_package( ZLIB REQUIRED )
+if ( ZLIB_FOUND )
+    include_directories( ${ZLIB_INCLUDE_DIRS} )
+    target_link_libraries( PRSice ${ZLIB_LIBRARIES} )
+endif( ZLIB_FOUND )
 target_link_libraries (PRSice ${CMAKE_THREAD_LIBS_INIT})
 target_compile_features(PRSice PRIVATE cxx_range_for)
 

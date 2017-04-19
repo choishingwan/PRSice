@@ -26,8 +26,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
     }
-    //get_header();
-    exit(0);
+
 
 }
 
@@ -85,7 +84,7 @@ std::vector<SNP> BinaryGen::load_snps()
 
         for(size_t i_snp =0; i_snp < num_snp; ++i_snp)
         {
-            if(m_unfiltered_marker_ct%1000==0)
+            if(m_unfiltered_marker_ct%1000==0 && m_unfiltered_marker_ct>0)
             {
                 fprintf(stderr, "\r%zuK SNPs processed\r", m_unfiltered_marker_ct/1000);
             }
@@ -327,8 +326,18 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
         // this is just a normal line
         if(!has_header)
         {
-            sample_res.push_back(get_sample(possible_header, ignore_fid, has_sex, sex_col, sex_info));
-            m_sample_index_check[sample_res.back().IID] = sample_res.size()-1;
+            // need to check that for normal pheno file, whether there is
+            // a header
+            if(possible_header.front().compare("FID")==0 ||
+                    (possible_header.size()> 2 && possible_header[1].compare("IID")==0))
+            {
+                // these are simple test. might not be correct though
+            }
+            else
+            {
+                sample_res.push_back(get_sample(possible_header, ignore_fid, has_sex, sex_col, sex_info));
+                m_sample_index_check[sample_res.back().IID] = sample_res.size()-1;
+            }
         }
         sample_res.push_back(get_sample(token, ignore_fid, has_sex, sex_col, sex_info));
         m_sample_index_check[sample_res.back().IID] = sample_res.size()-1;

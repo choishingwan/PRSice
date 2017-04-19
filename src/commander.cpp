@@ -661,6 +661,7 @@ void Commander::base_check(bool &error, std::string &error_message)
 	}
 	else
 	{
+
 		// check the base file and get the corresponding index
 		std::ifstream base_test;
 		base_test.open(base.name.c_str());
@@ -671,14 +672,67 @@ void Commander::base_check(bool &error, std::string &error_message)
 		}
 		else
 		{
-			std::string line;
+		    std::string line;
 			std::getline(base_test, line);
 			base_test.close();
 			std::vector<std::string> token = misc::split(line);
 			int max_size = token.size();
 			if(!base.index)
 			{
-				base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
+			    if(!base.provided_beta && base.provided_stat){
+	                if(base.statistic.length() ==2 && toupper(base.statistic[0])=='O'
+	                        && toupper(base.statistic[1])=='R')
+	                {
+                        base.provided_beta = true;
+                        base.beta = false;
+                        fprintf(stderr, "Base assumed be OR\n");
+	                }
+	                else if(base.statistic.length()==4 && toupper(base.statistic[0])=='B'
+	                        && toupper(base.statistic[1])=='E' && toupper(base.statistic[2])=='T'
+	                                && toupper(base.statistic[3])=='A')
+	                {
+                        base.provided_beta = true;
+                        base.beta = true;
+                        fprintf(stderr, "Base assumed be BETA\n");
+	                }
+	            }
+	            else if(!base.provided_stat && base.provided_beta)
+	            {
+	                base.provided_stat = true;
+	                base.statistic = (base.beta)? "BETA" : "OR";
+	                fprintf(stderr, "Base statistic not provided, assumed to be %s\n", base.statistic.c_str());
+	            }
+	            else if(!base.provided_stat && !base.provided_beta)
+	            {
+	                for(size_t i = 0; i < token.size(); ++i)
+	                {
+	                    if(token[i].length()==2 && toupper(token[i][0])=='O'
+	                        && toupper(token[i][1]=='R'))
+	                    {
+	                        base.provided_stat = true;
+	                        base.provided_beta = true;
+	                        base.beta = false;
+	                        base.statistic = token[i];
+	                        fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
+	                                token[i].c_str(),"OR");
+	                        break;
+	                    }
+	                    else if(token[i].length()==4 && toupper(token[i][0])=='B'
+                            && toupper(token[i][1])=='E' && toupper(token[i][2])=='T'
+                                    && toupper(token[i][3])=='A')
+	                    {
+                            base.provided_stat = true;
+                            base.provided_beta = true;
+                            base.beta = true;
+                            base.statistic = token[i];
+                            fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
+                                    token[i].c_str(),"BETA");
+                            break;
+	                    }
+	                }
+	            }
+
+			    base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
 				base.col_index[+BASE_INDEX::REF] = index_check(base.ref_allele, token);
 				base.col_index[+BASE_INDEX::ALT] = index_check(base.alt_allele, token);
 				base.col_index[+BASE_INDEX::STAT] = index_check(base.statistic, token);
