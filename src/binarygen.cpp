@@ -1,5 +1,7 @@
 #include "binarygen.hpp"
 
+namespace bgenlib=genfile::bgen;
+
 BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         bool header, std::string remove_sample, std::string keep_sample,
         bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy,
@@ -30,25 +32,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
 
 }
 
-std::unordered_map<std::string, BinaryGen::Context> BinaryGen::load_bgen_info()
-{
-    std::unordered_map<std::string, Context> info;
-    for(auto &&prefix : m_genotype_files)
-    {
-        Context cur_context;
-        cur_context.flags =0;
-        cur_context.number_of_samples=0;
-        cur_context.number_of_variants = 0;
-        cur_context.offset = 0;
-        info[prefix] = cur_context;
-    }
-    return info;
-}
-
-BinaryGen::~BinaryGen()
-{
-    std::cerr << "Destroy!" << std::endl;
-}
+BinaryGen::~BinaryGen(){}
 
 std::vector<SNP> BinaryGen::load_snps()
 {
@@ -74,10 +58,10 @@ std::vector<SNP> BinaryGen::load_snps()
             std::string error_message = "ERROR: Cannot open bgen file "+bgen_name;
             throw std::runtime_error(error_message);
         }
-        uint32_t offset = m_bgen_info[prefix].offset;
+        uint32_t offset = m_offset_map[prefix];
         m_bgen_file.seekg(offset+4);
         uint32_t num_snp = m_bgen_info[prefix].number_of_variants;
-        uint32_t const layout = m_bgen_info[prefix].flags & e_Layout ;
+        uint32_t const layout = m_bgen_info[prefix].flags & genfile::bgen::e_Layout ;
         uint32_t num_sample = m_bgen_info[prefix].number_of_samples;
         std::string prev_chr="";
         int chr_code=0;
@@ -98,23 +82,23 @@ std::vector<SNP> BinaryGen::load_snps()
             std::string RSID;
             std::string chromosome;
             uint32_t SNP_position;
-            if( layout == e_Layout1 || layout == e_Layout0 ) {
+            if( layout == genfile::bgen::e_Layout1 || layout == genfile::bgen::e_Layout0 ) {
                 uint32_t number_of_samples ;
-                read_little_endian_integer( &number_of_samples ) ;
+                bgenlib::read_little_endian_integer( m_bgen_file, &number_of_samples ) ;
                 if( number_of_samples != num_sample ) {
                     throw std::runtime_error("ERROR: Number of sample doesn't match!");
                 }
-                read_length_followed_by_data( &SNPID_size, &SNPID ) ;
-            } else if( layout == e_Layout2 ) {
-                read_length_followed_by_data( &SNPID_size, &SNPID ) ;
+                bgenlib::read_length_followed_by_data( m_bgen_file, &SNPID_size, &SNPID ) ;
+            } else if( layout == genfile::bgen::e_Layout2 ) {
+                bgenlib::read_length_followed_by_data( m_bgen_file, &SNPID_size, &SNPID ) ;
             } else {
                 assert(0) ;
             }
-            read_length_followed_by_data( &RSID_size, &RSID ) ;
-            read_length_followed_by_data( &chromosome_size, &chromosome ) ;
-            read_little_endian_integer( &SNP_position ) ;
-            if( layout == e_Layout2 ) {
-                read_little_endian_integer( &numberOfAlleles ) ;
+            bgenlib::read_length_followed_by_data( m_bgen_file, &RSID_size, &RSID ) ;
+            bgenlib::read_length_followed_by_data( m_bgen_file, &chromosome_size, &chromosome ) ;
+            bgenlib::read_little_endian_integer( m_bgen_file, &SNP_position ) ;
+            if( layout == bgenlib::e_Layout2 ) {
+                bgenlib::read_little_endian_integer( m_bgen_file, &numberOfAlleles ) ;
             } else {
                 numberOfAlleles = 2 ;
             }
@@ -126,7 +110,7 @@ std::vector<SNP> BinaryGen::load_snps()
             }
             std::vector<std::string> final_alleles(numberOfAlleles);
             for( uint16_t i = 0; i < numberOfAlleles; ++i ) {
-                read_length_followed_by_data( &allele_size, &allele ) ;
+                bgenlib::read_length_followed_by_data( m_bgen_file, &allele_size, &allele ) ;
                 final_alleles[i] = allele;
             }
 
@@ -139,8 +123,8 @@ std::vector<SNP> BinaryGen::load_snps()
             }
 
             size_t snp_id = (unsigned int)m_bgen_file.tellg();
-            std::vector< byte_t > buffer;
-            read_genotype_data_block(prefix, &buffer); // move read pointer forward
+            std::vector< genfile::byte_t > buffer;
+            read_genotype_data_block(m_bgen_file, m_bgen_info[prefix], &buffer); // move read pointer forward
             if(chromosome.compare(prev_chr)!=0)
             {
                 prev_chr = chromosome;
@@ -405,19 +389,20 @@ std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
             throw std::runtime_error(error_message);
         }
         uint32_t offset = 0;
-        read_little_endian_integer(&offset);
-        uint32_t header_size = 0, number_of_snp_blocks = 0, number_of_samples = 0, flags = 0 ;
+        bgenlib::read_little_endian_integer(m_bgen_file, &offset);
+        uint32_t header_size = 0, number_of_snp_blocks = 0, number_of_samples = 0,
+                flags = 0 ;
         char magic[4] ;
         std::size_t fixed_data_size = 20 ;
         std::vector<char> free_data ;
-        read_little_endian_integer( &header_size ) ;
+        bgenlib::read_little_endian_integer( m_bgen_file, &header_size ) ;
         assert( header_size >= fixed_data_size ) ;
-        read_little_endian_integer( &number_of_snp_blocks ) ;
-        read_little_endian_integer( &number_of_samples ) ;
+        bgenlib::read_little_endian_integer( m_bgen_file, &number_of_snp_blocks ) ;
+        bgenlib::read_little_endian_integer( m_bgen_file, &number_of_samples ) ;
         m_bgen_file.read( &magic[0], 4 ) ;
         free_data.resize( header_size - fixed_data_size ) ;
         m_bgen_file.read( &free_data[0], free_data.size() ) ;
-        read_little_endian_integer( &flags ) ;
+        bgenlib::read_little_endian_integer( m_bgen_file, &flags ) ;
         if(( magic[0] != 'b' || magic[1] != 'g' || magic[2] != 'e' || magic[3] != 'n' )
                 && ( magic[0] != 0 || magic[1] != 0 || magic[2] != 0 || magic[3] != 0 ))
         {
@@ -425,14 +410,14 @@ std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
         }
         if( m_bgen_file )
         {
-            Context current_context;
-            current_context.offset = offset;
+            bgenlib::Context current_context;
             current_context.number_of_samples = number_of_samples ;
             current_context.number_of_variants = number_of_snp_blocks ;
             current_context.magic.assign( &magic[0], &magic[0] + 4 ) ;
             //current_context.free_data.assign( free_data.begin(), free_data.end() ) ;
             current_context.flags = flags ;
             m_bgen_info[prefix] = current_context;
+            m_offset_map[prefix] = offset;
         }
         else
         {
@@ -446,12 +431,12 @@ std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
             throw std::runtime_error(error_message);
         }
 
-        uint32_t const compressionType = m_bgen_info[prefix] .flags & e_CompressedSNPBlocks;
-        if( compressionType == e_ZstdCompression )
+        uint32_t const compressionType = m_bgen_info[prefix].flags & bgenlib::e_CompressedSNPBlocks;
+        if( compressionType == bgenlib::e_ZstdCompression )
         {
             throw std::runtime_error("ERROR: zstd compression currently not supported");
         }
-        if((m_bgen_info[prefix] .flags & e_SampleIdentifiers) && first)
+        if((m_bgen_info[prefix] .flags & bgenlib::e_SampleIdentifiers) && first)
         { // only read in the sample information for the first bgen
             first = false;
             uint32_t sample_block_size = 0 ;
@@ -461,12 +446,12 @@ std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
             std::size_t bytes_read = 0 ;
             // the bgen format actually double stored the number of samples and
             // the block size is the sample_block size
-            read_little_endian_integer( &sample_block_size ) ;
-            read_little_endian_integer( &actual_number_of_samples ) ;
+            bgenlib::read_little_endian_integer(m_bgen_file, &sample_block_size ) ;
+            bgenlib::read_little_endian_integer( m_bgen_file, &actual_number_of_samples ) ;
             bytes_read += 8 ;
             assert( actual_number_of_samples == m_bgen_info[prefix] .number_of_samples ) ;
             for( uint32_t i = 0; i < actual_number_of_samples; ++i ) {
-                read_length_followed_by_data( &identifier_size, &identifier ) ;
+                bgenlib::read_length_followed_by_data( m_bgen_file, &identifier_size, &identifier ) ;
                 if( m_bgen_file ) {
                     bytes_read += sizeof( identifier_size ) + identifier_size ;
                     if(m_sample_index_check.find(identifier)== m_sample_index_check.end())
