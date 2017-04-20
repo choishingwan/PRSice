@@ -329,7 +329,8 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
             // need to check that for normal pheno file, whether there is
             // a header
             if(possible_header.front().compare("FID")==0 ||
-                    (possible_header.size()> 2 && possible_header[1].compare("IID")==0))
+                    (possible_header.size()> 2 && possible_header[1].compare("IID")==0) ||
+                    possible_header.front().compare("IID")==0)
             {
                 // these are simple test. might not be correct though
             }

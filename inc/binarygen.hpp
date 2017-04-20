@@ -57,6 +57,7 @@ class BinaryGen: public Genotype
             std::vector< byte_t > buffer1, buffer2;
             read_genotype_data_block( file_name, &buffer1 ) ;
             uncompress_probability_data( file_name, buffer1, &buffer2 ) ;
+
             // super difficult here... if we use plink method,
             // we need both the compressed and uncompressed handling
             // but then if we use the bgen library, then it is
