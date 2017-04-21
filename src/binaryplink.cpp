@@ -103,7 +103,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 			{
 				cur_sample.included=(m_keep_sample_list.find(id)!=m_keep_sample_list.end());
 			}
-			if(m_remove_sample)
+			else if(m_remove_sample)
 			{
 				if(m_keep_sample && cur_sample.included)
 				{

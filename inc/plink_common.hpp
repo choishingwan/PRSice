@@ -27,6 +27,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <iostream>
 
 //#define NDEBUG // don't know wha that's for
 #include <assert.h>

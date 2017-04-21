@@ -28,11 +28,19 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
     }
+    m_final_mask = get_final_mask(m_founder_ct);
+    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+    m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+    m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    m_founder_ctsplit = 3 * m_founder_ctv3;
 
 
 }
 
-BinaryGen::~BinaryGen(){}
+BinaryGen::~BinaryGen()
+{
+    if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
+}
 
 std::vector<SNP> BinaryGen::load_snps()
 {
@@ -104,6 +112,8 @@ std::vector<SNP> BinaryGen::load_snps()
             }
             if(numberOfAlleles!=2)
             {
+                // after we finish writing up the papers, we can come back and work on this.
+                // only use the 2 most common allele and set the remaining to missing
                 throw std::runtime_error("ERROR: Currently only support bgen with 2 alleles!");
                 // we can, in the future, allow for more than 2 alleles by setting anything
                 // but the 2 most common alleles to missing
@@ -189,7 +199,128 @@ void BinaryGen::cleanup()
 void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
                size_t start_index, size_t end_bound)
 {
-    std::cerr << "Testing" << std::endl;
+    m_cur_file = "";
+    size_t prev =0;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uintptr_t ulii = 0;
+    int32_t delta1 = 1;
+    int32_t delta2 = 2;
+    int32_t deltam = 0;
+    //m_final_mask
+
+    // a lot of code in PLINK is to handle the sex chromosome
+    // which suggest that PRS can be done on sex chromosome
+    // that should be something later
+    uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+    if(current_prs_score.size() != m_region_size)
+    {
+            throw std::runtime_error("Size of Matrix doesn't match number of region!!");
+    }
+    for(size_t i = 0; i < m_region_size; ++i)
+    {
+         if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
+         {
+             throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
+         }
+    }
+    std::vector<bool> in_region(m_region_size);
+    // index is w.r.t. partition, which contain all the information
+    uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+    for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
+    { // for each SNP
+       for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+        {
+            in_region[i_region]=m_existed_snps[i_snp].in(i_region);
+        }
+        size_t cur_line = m_existed_snps[i_snp].snp_id();
+        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        if(load_and_collapse_incl(m_existed_snps[i_snp].snp_id(), m_existed_snps[i_snp].file_name(),
+                m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, m_final_mask,
+                false, m_tmp_genotype, genotype))
+        {
+            throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+        uintptr_t* lbptr = genotype;
+        uii = 0;
+        std::vector<size_t> missing_samples;
+        double stat = m_existed_snps[i_snp].stat();
+        bool flipped = m_existed_snps[i_snp].is_flipped();
+        std::vector<double> genotypes(m_unfiltered_sample_ct);
+        int total_num = 0;
+        uint32_t sample_idx=0;
+        int nmiss = 0;
+        // This whole thing was wrong...
+        do
+        {
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct)
+            {
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2)) - ONELU;
+            }
+            while (ulii)
+            {
+                ujj = CTZLU(ulii) & (BITCT - 2);
+                ukk = (ulii >> ujj) & 3;
+                sample_idx = uii + (ujj / 2);
+                if(ukk==1 || ukk==3) // Because 01 is coded as missing
+                {
+                    // 3 is homo alternative
+                    //int flipped_geno = snp_list[snp_index].geno(ukk);
+                    total_num+=(ukk==3)? 2: ukk;
+                    genotypes[sample_idx] = (ukk==3)? 2: ukk;
+                }
+                else // this should be 2
+                {
+                    missing_samples.push_back(sample_idx);
+                    nmiss++;
+                }
+                ulii &= ~((3 * ONELU) << ujj);
+            }
+            uii += BITCT2;
+        } while (uii < m_unfiltered_sample_ct);
+
+
+        size_t i_missing = 0;
+        double maf = ((double)total_num/((double)((int)m_unfiltered_sample_ct-nmiss)*2.0)); // MAF does not count missing
+        if(flipped) maf = 1.0-maf;
+        double center_score = stat*maf;
+        size_t num_miss = missing_samples.size();
+        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        {
+            if(i_missing < num_miss && i_sample == missing_samples[i_missing])
+            {
+                for(size_t i_region=0; i_region < m_region_size; ++i_region)
+                {
+                    if(in_region[i_region])
+                    {
+                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += center_score;
+                        if(m_scoring != SCORING::SET_ZERO) current_prs_score[i_region][i_sample].num_snp++;
+                    }
+                }
+                i_missing++;
+            }
+            else
+            { // not missing sample
+                for(size_t i_region=0; i_region < m_region_size; ++i_region)
+                {
+                    if(in_region[i_region])
+                    {
+                        if(m_scoring == SCORING::CENTER)
+                        {
+                            // if centering, we want to keep missing at 0
+                            current_prs_score[i_region][i_sample].prs -= center_score;
+                        }
+                        current_prs_score[i_region][i_sample].prs += ((flipped)?fabs(genotypes[i_sample]-2):genotypes[i_sample])*stat*0.5;
+                        current_prs_score[i_region][i_sample].num_snp++;
+                    }
+                }
+            }
+        }
+    }
+    delete [] genotype;
 }
 
 
@@ -212,7 +343,7 @@ Sample BinaryGen::get_sample(std::vector<std::string> &token, bool ignore_fid,
         {
             cur_sample.included=(m_keep_sample_list.find(id)!=m_keep_sample_list.end());
         }
-        if(m_remove_sample)
+        else if(m_remove_sample)
         {
             if(m_keep_sample && cur_sample.included)
             {
@@ -350,6 +481,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
 
     // assume all are founder
     m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
+    m_founder_ct = m_unfiltered_sample_ct;
     std::memset(m_founder_info, ~0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];

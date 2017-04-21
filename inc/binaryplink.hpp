@@ -54,7 +54,9 @@ class BinaryPlink: public Genotype
         void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
                 size_t start_index, size_t end_bound);
         FILE* m_bedfile = nullptr;
-        std::string m_cur_file;uintptr_t m_final_mask;uintptr_t *m_tmp_genotype;
+        std::string m_cur_file;
+        uintptr_t m_final_mask;
+        uintptr_t *m_tmp_genotype;
 };
 
 #endif

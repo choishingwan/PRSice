@@ -4,7 +4,15 @@
 
 #include "genotype.hpp"
 #include "bgen_lib.hpp"
+#include <stdexcept>
 
+/**
+ * Potential problem:
+ * Where multi-allelic variants exist in these data, they have been
+ * split into a series of bi-allelic variants. This implies that
+ * several variants may share the same genomic position but with
+ * different alternative alleles.
+ */
 class BinaryGen: public Genotype
 {
     public:
@@ -17,7 +25,6 @@ class BinaryGen: public Genotype
     private:
 
         typedef std::vector< std::vector< double > > Data ;
-        std::vector< genfile::byte_t > m_buffer1, m_buffer2 ;
         Sample get_sample(std::vector<std::string> &token, bool ignore_fid,
                 bool has_sex, int sex_col, std::vector<int> &sex_info);
         std::vector<Sample> preload_samples(std::string pheno, bool has_header, bool ignore_fid);
@@ -29,7 +36,7 @@ class BinaryGen: public Genotype
         std::vector<SNP> load_snps();
         void cleanup();
         std::string m_cur_file;
-        inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
+        inline void load_raw(uintptr_t* genotype, const uint32_t snp_index,
                 const std::string &file_name)
         {
             if(m_cur_file.empty() || file_name.compare(m_cur_file)!=0)
@@ -45,32 +52,95 @@ class BinaryGen: public Genotype
                 m_cur_file = file_name;
             }
             m_bgen_file.seekg(snp_index, std::ios_base::beg);
-            Data probs ;
-            ProbSetter setter( &probs ) ;
+
+            Data probability ;
+            ProbSetter setter( &probability ) ;
+            std::vector< genfile::byte_t > buffer1, buffer2 ;
+
             genfile::bgen::read_and_parse_genotype_data_block< ProbSetter >(
                     m_bgen_file,
                     m_bgen_info[file_name],
                     setter,
-                    &m_buffer1,
-                    &m_buffer2
+                    &buffer1,
+                    &buffer2
             ) ;
+            for(size_t i_sample=0; i_sample < probability.size(); ++i_sample)
+            {
+                auto &&prob = probability[i_sample];
+                if(prob.size() != 3)
+                {
+                    // this is likely phased
+                    fprintf(stderr, "ERROR: Currently don't support phased data\n");
+                    fprintf(stderr, "       (It is because the lack of development time)\n");
+                    throw std::runtime_error("");
+                }
+                uintptr_t cur_geno = 1;
+                for(size_t g = 0; g < prob.size(); ++g)
+                {
+                    if(prob[g] >= filter.info_score)
+                    {
+                        cur_geno = (g==2)? 0: 3-g; // binary code for plink
+                        break;
+                    }
+                }
+                // now genotype contain the genotype of this sample after filtering
+                // need to bit shift here
+                int shift = (i_sample%BITCT*2);
+                int index = (i_sample*2)/BITCT;
+                genotype[index] |= cur_geno << shift;
 
-            std::cerr << "Probability check: " << snp_index <<"\t" << probs[0][0] << std::endl;
-            exit(0);
+            }
         };
+
+        inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
+                const std::string &file_name)
+        {
+            // the bgen library seems over complicated
+            // try to use PLINK one. The difficulty is ifstream vs FILE
+            std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 * sizeof(uintptr_t));
+            if (load_and_collapse_incl(snp_index, file_name, m_unfiltered_sample_ct, m_founder_ct,
+                    m_founder_info, m_final_mask, false,
+                    m_tmp_genotype, genotype))
+            {
+                throw std::runtime_error("ERROR: Cannot read the bed file!");
+            }
+        };
+
+        // borrowed from plink
+        uint32_t load_and_collapse_incl(const uint32_t snp_index,
+                const std::string &file_name, uint32_t unfiltered_sample_ct, uint32_t sample_ct,
+                const uintptr_t* __restrict sample_include, uintptr_t final_mask,
+                uint32_t do_reverse, uintptr_t* __restrict rawbuf, uintptr_t* __restrict mainbuf) {
+            assert(unfiltered_sample_ct);
+            uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
+            if (unfiltered_sample_ct == sample_ct) {
+                rawbuf = mainbuf;
+            }
+            load_raw(rawbuf, snp_index, file_name);
+
+            if (unfiltered_sample_ct != sample_ct) {
+                copy_quaterarr_nonempty_subset(rawbuf, sample_include, unfiltered_sample_ct, sample_ct, mainbuf);
+            } else {
+                mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            }
+            if (do_reverse) {
+                reverse_loadbuf(sample_ct, (unsigned char*)mainbuf);
+            }
+
+            // mainbuf should contains the information
+            return 0;
+        }
 
         void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
                 size_t start_index, size_t end_bound);
         std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
         std::unordered_map<std::string, uint32_t> m_offset_map;
         std::ifstream m_bgen_file;
-
+        uintptr_t m_final_mask;
+        uintptr_t *m_tmp_genotype;
         /** DON'T TOUCH      */
         struct ProbSetter {
-            ProbSetter( Data* result ):
-                m_result( result ),
-                m_sample_i(0)
-            {}
+            ProbSetter( Data* result ): m_result( result ), m_sample_i(0) {}
 
             // Called once allowing us to set storage.
             void initialise( std::size_t number_of_samples, std::size_t number_of_alleles ) {
