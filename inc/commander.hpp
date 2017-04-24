@@ -190,6 +190,9 @@ private:
         int ignore_fid;
         int permutation;
         int thread;
+        // I want to include cross-validation here
+        // do it after writing up the paper. A useful resource is here
+        // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
     } misc;
 
     struct{
@@ -205,6 +208,7 @@ private:
         double lower;
         double upper;
         double inter;
+        double prevalence; // for adjusting R2
         int fastscore;
         int no_regress;
         int full;
@@ -225,15 +229,15 @@ private:
     } species;
 
     struct{
-    	std::string name;
-    	std::string keep_file;
-    	std::string remove_file;
+        std::string name;
+        std::string keep_file;
+        std::string remove_file;
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
-    	std::vector<bool> is_binary;
-    	bool keep_sample;
-    	bool remove_sample;
+    	    std::vector<bool> is_binary;
+    	    bool keep_sample;
+    	    bool remove_sample;
     } target;
 
 
