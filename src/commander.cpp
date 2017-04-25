@@ -363,17 +363,19 @@ Commander::Commander()
     base.provided_bp = false;
     base.provided_se = false;
     base.provided_p = false;
-    base.provided_beta = false;
     base.col_index.resize(+BASE_INDEX::MAX+1, -1);
 
+
+    clumping.distance = 250000;
+    clumping.keep_sample = false;
 	clumping.ld = "";
-	clumping.type = "bed";
 	clumping.no_clump = false;
 	clumping.provide_proxy = false;
 	clumping.proxy =-1.0;
 	clumping.p_value =1.0;
 	clumping.r2 = 0.1;
-	clumping.distance = 250000;
+    clumping.remove_sample = false;
+    clumping.type = "bed";
 
 	covariate.name = "";
 	covariate.ancestry_dim="MDS";
@@ -420,6 +422,7 @@ Commander::Commander()
 	target.name = "";
 	target.pheno_file = "";
 	target.type = "bed";
+	target.provided_prevalence = false;
 }
 
 Commander::~Commander()
@@ -429,102 +432,157 @@ Commander::~Commander()
 
 void Commander::info()
 {
-	/*
-	m_help_messages.push_back(help("Required", 'b', "base", "Base association files. "
-			"User can provide multiple base files"));
-	m_help_messages.push_back(help("Required", 't', "target", "Plink binary file prefix for target files. "
-			"Currently only support plink binary inputs. For multiple target phenotypes, user should use the "
-			"--pheno_file option together with the pheno_col option. For multiple chromosome input, one "
-			"should substitute the chromosome number with #. For example, if you files are presented as "
-			"genotype_chr1_test, genotype_chr2_test, genotype_chr3_test, then you can use: genotype_chr#_test."
-			"Please note that the substitute is based on your base file. So if your base file code chromosome "
-			"with chr, e.g. chr1 chr2 etc, then in our example case, you should code your plink file as "
-			"genotype_#_test"));
-	m_help_messages.push_back(help("Required", '\0', "binary-target", "Indicate whether the target sample has "
-			"binary phenotype or not. For each phenotype, user need to provide either T or F where T"
-			" means the phenotype is binary"));
-	m_help_messages.push_back(help("Required", '\0', "beta", "Indicate whether the test statistic is beta "
-			"instead of OR. Must be of the same length as base"));
-	m_help_messages.push_back(help("Options", 'f', "pheno-file", "Phenotype file containing the target "
-			"phenotype(s). If provided, the fam file of the target is ignored. First column must be "
-			"IID of the samples. Must contain a header if pheno_col is specified"));
-	m_help_messages.push_back(help("Options", '\0',"pheno-col", "Headers of pheenotypes from phenotype file"));
-	m_help_messages.push_back(help("Options", 'L',"ld", "Plink binary file prefix for the reference file "
-			"used for LD calculation. If not provided, will use the target genotype for the LD calculation. "
-			"Can also use multiple chromosome plink file. Please see --target for more information."));
-	m_help_messages.push_back(help("Options", 'c', "cov-header", "Header of covariates. If not provided, "
-			"will use all variable in the covariate file as the covarite."));
-	m_help_messages.push_back(help("Options", 'C', "cov-file", "Covarite file. Formate should be: ID Cov1 Cov2"));
-	m_help_messages.push_back(help("Options", '\0', "full", "Also include the full model in the PRSice output"));
-	m_help_messages.push_back(help("Options", '\0', "all", "Output PRS for ALL threshold. Can only be used together "
-			"with fastscore to avoid huge output files."));
-	m_help_messages.push_back(help("Options",'\0', "no-regress", "Do not perform the regression analysis and "
-			"simply output all PRS. Can only be used together with fastscore to avoid huge output files. If "
-			"you must, you can modify bar_levels to obtain the fine scale PRS outputs"));
-	m_help_messages.push_back(help("Options",'o', "out", "Prefix of all output. Default: "+m_out));
-	m_help_messages.push_back(help("Scoring options",'l', "lower", "The starting p-value threshold. "
-			"Default: "+std::to_string(m_lower)));
-	m_help_messages.push_back(help("Scoring options",'u', "upper", "The final p-value threshold. "
-			"Default: "+std::to_string(m_upper)));
-	m_help_messages.push_back(help("Scoring options",'i', "interval", "The step size of the threshold. "
-			"Default: "+std::to_string(m_inter)));
-	m_help_messages.push_back(help("Scoring options",'\0', "fastscore", "Calculate the minimum amount of threshold as "
-			"required by the bar_level option"));
-	m_help_messages.push_back(help("Scoring options",'\0', "score", "Method to handle missing genotypes. By default, "
-			"final scores are averages of valid per-allele scores with missing genotypes contribute an amount "
-			"proportional to imputed allele frequency. To throw out missing observations instead (decreasing "
-			"the denominator in the final average when this happens), use the 'no_mean_imputation' modifier."
-			" Alternatively, you can use the 'center' modifier to shift all scores to mean zero. "));
-	m_help_messages.push_back(help("File Headers", '\0', "chr", "Column header of Chromosome <Required>"));
-	m_help_messages.push_back(help("File Headers", '\0', "A1", "Column header of Reference Allele <Required>"));
-	m_help_messages.push_back(help("File Headers", '\0', "A2", "Column header of Alternaative Allele"));
-	m_help_messages.push_back(help("File Headers", '\0', "stat", "Column header of test statistic <Required>"));
-	m_help_messages.push_back(help("File Headers", '\0', "snp", "Column header of SNP id"));
-	m_help_messages.push_back(help("File Headers", '\0', "bp", "Column header of SNP location"));
-	m_help_messages.push_back(help("File Headers", '\0', "se", "Column header of Standard Error"));
-	m_help_messages.push_back(help("File Headers", 'p', "pvalue", "Column header of p-value <Required> "));
-	m_help_messages.push_back(help("File Headers", '\0', "index", "Indicate all the above options are providing "
-			"the INDEX of the corresponding column. (Index should be 0-based). Useful when your base file "
-			"each have a different header but the column index remains the same"));
-	m_help_messages.push_back(help("Clumping", '\0', "clump-p", "The p-value threshold use for clumping."
-			"Default: "+std::to_string(m_clump)));
-	m_help_messages.push_back(help("Clumping", '\0', "clump-r2", "The R2 threshold for clumping. Please note that "
-			"as we did not implement the maximum likelihood R2 calculation, the clumping result can differ "
-			"slightly from plink. Default: "+std::to_string(m_clump_r2)));
-	m_help_messages.push_back(help("Clumping", '\0', "clump-kb", "The distance for clumping in kb."
-			"Default: "+std::to_string(m_clump_kb/1000)));
-	m_help_messages.push_back(help("PRSet", 'B', "bed", "Bed file containing the selected regions. "
-			"Name of bed file will be used as the region identifier."));
-	m_help_messages.push_back(help("PRSet", 'g', "gtf", "GTF file containing gene boundaries. Required "
-			"when --msigdb is set."));
-	m_help_messages.push_back(help("PRSet", 'm', "msigdb", "MSIGDB file containing the pathway information "
-			"require the gtf file."));
-	m_help_messages.push_back(help("PRSet", '\0', "print-all", "Print the detail report for all sets"));
-	m_help_messages.push_back(help("PRSet", '\0', "proxy", "Proxy threshold for index SNP to be considered "
-			"as part of the region represented by the clumped SNPs. e.g. --proxy 0.8 means the index SNP will "
-			"represent the region of any clumped SNPs that has a R2 >= 0.8 with it even if it is not physically "
-			"within these regions"));
-	m_help_messages.push_back(help("PRSet", '\0', "feature", "Features to be included from the gtf file. Default "
-			"is exon, CDS, gene and protein_coding. If this parameter is provided, all default will be ignored."));
-	m_help_messages.push_back(help("PRSlice", '\0', "prslice", "Perform PRSlice where the whole genome is first "
-			"cut into bin size specified by this option. PRSice will then be performed on each bin. Bins are "
-			"then sorted according to the their R2. PRSice is then performed again to find the best bin combination."
-			" This cannot be performed together with PRSet"));
-	m_help_messages.push_back(help("Plotting", '\0', "bar-levels", "Level of barchart to be plotted. When fastscore "
-			"is set, PRSice will only calculate the PRS for threshold within the bar level"));
-	m_help_messages.push_back(help("Misc", '\0', "ignore-fid", "Ignore the FID field for covariate and phenotype "
-			"matching. When set, assume first column of phenotype file as IID, otherwise, assume first column "
-			"of phenotype file as FID and the second column as IID."));
-	m_help_messages.push_back(help("Misc", '\0', "print-snp", "Print out the SNP(s) used for constructing "
-			"the best PRS score"));
-	m_help_messages.push_back(help("Misc", '\0', "perm", "Number of permutation to perform. When this parameter is provided,"
-			" permutation will be performed to obtain an empirical P-value. This will significantly increases the run time "
-			"of PRSice."));
-	m_help_messages.push_back(help("Misc", 'T', "thread", "Number of thread use"));
-	m_help_messages.push_back(help("Misc", 'h', "help", "Display this help message"));
+    std::string help_message =
+            "usage: PRSice [options] <-b base_file> <-t target_file>\n"
+            "\nBase File:\n"
+            "    --base          | -b    Base association file\n"
+            "    --beta                  Whether the test statistic is in the form of \n"
+            "                            BETA or OR. If set, test statistic is assume\n"
+            "                            to be in the form of BETA.\n"
+            "    --A1                    Column header containing the reference allele\n"
+            "                            Default: A1\n"
+            "    --A2                    Column header containing the alternative allele\n"
+            "                            Default: A2\n"
+            "    --bp                    Column header containing the SNP coordinate\n"
+            "                            Default: BP\n"
+            "    --chr                   Column header containing the chromosome\n"
+            "                            Default: CHR\n"
+            "    --index                 If set, assume the INDEX instead of NAME of\n"
+            "                            the corresponding columns are provided. Index\n"
+            "                            should be 0-based (start counting from 0)\n"
+            "    --pvalue        | -p    Column header containing the p-value\n"
+            "                            Default: P\n"
+            "    --se                    Column header containing the standard error\n"
+            "                            Default: SE\n"
+            "    --snp                   Column header containing the SNP ID\n"
+            "                            Default: SNP\n"
+            "    --stat                  Column header containing the summary statistic\n"
+            "                            If --beta is set, default as BETA. Otherwise,\n"
+            "                            try and search for OR or BETA from the header\n"
+            "                            of the base file\n"
+            "\nClumping:\n"
+            "    --clump-kb              The distance for clumping in kb\n"
+            "                            Default: "+std::to_string(clumping.distance/1000)+"\n"
+            "    --clump-r2              The R2 threshold for clumping\n"
+            "                            Default: "+std::to_string(clump.r2)+"\n"
+            "    --clump-p               The p-value threshold use for clumping.\n"
+            "                            Default: "+std::to_string(clumping.p_value)+"\n"
+            "    --ld            | -L    LD reference file. Use for LD calculation. If not\n"
+            "                            provided, will use the post-filtered target genotype\n"
+            "                            for LD calculation. Support multiple chromosome input\n"
+            "                            Please see --target for more information\n"
+            "    --ld-keep               File containing the sample(s) to be extracted from\n"
+            "                            the LD reference file. First column should be FID and\n"
+            "                            the second column should be IID. If --ignore-fid is\n"
+            "                            set, first column should be IID\n"
+            "                            Mutually exclusive from --ld-remove\n"
+            "    --ld-remove             File containing the sample(s) to be removed from\n"
+            "                            the LD reference file. First column should be FID and\n"
+            "                            the second column should be IID. If --ignore-fid is\n"
+            "                            set, first column should be IID\n"
+            "                            Mutually exclusive from --ld-keep\n"
+            "    --ld-type               File type of the LD file. Support bed (binary plink)\n"
+            "                            and bgen format. Default: bed\n"
+            "    --no-clump              Avoid performing clumping\n"
+            "    --proxy                 Proxy threshold for index SNP to be considered\n"
+            "                            as part of the region represented by the clumped\n"
+            "                            SNP(s). e.g. --proxy 0.8 means the index SNP will\n"
+            "                            represent region of any clumped SNP(s) that has a\n"
+            "                            R2>=0.8 even if the index SNP does not physically\n"
+            "                            locate within the region\n"
+            "\nCovariate:\n"
+            "    --cov-file      | -C    Covariate file. First column should be FID and \n"
+            "                            the second column should be IID. If --ignore-fid\n"
+            "                            is set, first column should be IID\n"
+            "    --cov-header    | -c    Header of covariates. If not provided, will use\n"
+            "                            all variables in the covariate file\n"
+            "\nPRSet:\n"
+            "    --bed           | -B    Bed file containing the selected regions.\n"
+            "                            Name of bed file will be used as the region\n"
+            "                            identifier. WARNING: Bed file is 0-based\n"
+            "    --feature               Feature(s) to be included from the gtf file.\n"
+            "                            Default: exon,CDS,gene,protein_coding.\n"
+            "    --gtf           | -g    GTF file containing gene boundaries. Required\n"
+            "                            when --msigdb is used\n"
+            "    --msigdb        | -m    MSIGDB file containing the pathway information.\n"
+            "                            Require the gtf file\n"
+            "\nPRSice:\n"
+            "    --bar-levels            Level of barchart to be plotted. When --fastscore\n"
+            "                            is set, PRSice will only calculate the PRS for \n"
+            "                            threshold within the bar level. Levels should be\n"
+            "                            comma separated without space\n"
+            "    --fastscore             Only calculate threshold stated in --bar-levels\n"
+            "    --full                  Include the full model in the analysis\n"
+            "    --interval      | -i    The step size of the threshold. Default: "+std::to_string(prsice.inter)+"\n"
+            "    --lower         | -l    The starting p-value threshold. Default: "+std::to_string(prsice.lower)+"\n"
+            "    --no-regress            Do not perform the regression analysis and simply\n"
+            "                            output all PRS.\n"
+            "    --score                 Method to handle missing genotypes. By default, \n"
+            "                            final scores are averages of valid per-allele \n"
+            "                            scores with missing genotypes contribute an amount\n"
+            "                            proportional to imputed allele frequency. To throw\n"
+            "                            out missing observations instead (decreasing the\n"
+            "                            denominator in the final average when this happens),\n"
+            "                            use the 'no_mean_imputation' modifier. Alternatively,\n"
+            "                            you can use the 'center' modifier to shift all scores\n"
+            "                            to mean zero. \n"
+            "    --upper         | -u    The final p-value threshold. Default: "+std::to_string(prsice.upper)+"\n"
+            "\nPRSlice:\n"
+            "    --prslice               Perform PRSlice where the whole genome is first cut\n"
+            "                            into bin size specified by this option. PRSice will\n"
+            "                            then be performed on each bin. Bins are then sorted\n"
+            "                            according to the their R2. PRSice is then performed\n"
+            "                            again to find the best bin combination.\n"
+            "                            This cannot be performed together with PRSet"
+            "\nTarget File:\n"
+            "    --binary-target         Indicate whether the target phenotype\n"
+            "                            is binary or not. Either T or F should be\n"
+            "                            provided where T represent a binary phenotype.\n"
+            "                            For multiple phenotypes, the input should be\n"
+            "                            separated by comma without space. Default: T\n"
+            "    --keep                  File containing the sample(s) to be extracted from\n"
+            "                            the target file. First column should be FID and\n"
+            "                            the second column should be IID. If --ignore-fid is\n"
+            "                            set, first column should be IID\n"
+            "                            Mutually exclusive from --remove\n"
+            "    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n"
+            "                            First column must be FID of the samples and\n"
+            "                            the second column must be IID of the samples.\n"
+            "                            When --ignore-fid is set, first column must\n"
+            "                            be the IID of the samples.\n"
+            "                            Must contain a header if --pheno-col is\n"
+            "                            specified\n"
+            "    --pheno-col             Headers of phenotypes to be included from the\n"
+            "                            phenotype file\n"
+            "    --remove                File containing the sample(s) to be removed from\n"
+            "                            the target file. First column should be FID and\n"
+            "                            the second column should be IID. If --ignore-fid is\n"
+            "                            set, first column should be IID\n"
+            "                            Mutually exclusive from --keep\n"
+            "    --target        | -t    Target genotype file. Currently support\n"
+            "                            both BGEN and binary PLINK format. For \n"
+            "                            multiple chromosome input, simply substitute\n"
+            "                            the chromosome number with #. PRSice will\n"
+            "                            automatically replace # with 1-22\n"
+            "    --type                  File type of the target file. Support bed \n"
+            "                            (binary plink) and bgen format. Default: bed\n"
+            "\nMisc:\n"
+            "    --all                   Output PRS for ALL threshold. WARNING: This\n"
+            "                            will generate a huge file\n"
+            "    --ignore-fid            Ignore FID for all input. When this is set,\n"
+            "                            first column of most file will be assume to\n"
+            "                            be IID instead of FID\n"
+            "    --out           | -o    Prefix for all file output\n"
+            "    --perm                  Number of permutation to perform. This will\n"
+            "                            generate the empirical p-value for the BEST\n"
+            "                            threshold\n"
+            "    --print-snp             Print all the SNPs used to construct the best\n"
+            "                            score\n"
+            "    --thread        | -n    Number of thread use\n"
+            "    --help          | -h    Display this help message\n";
 
-	*/
 }
+
 void Commander::usage()
 {
 	/*
@@ -679,11 +737,10 @@ void Commander::base_check(bool &error, std::string &error_message)
 			int max_size = token.size();
 			if(!base.index)
 			{
-			    if(!base.provided_beta && base.provided_stat){
+			    if(base.provided_stat){
 	                if(base.statistic.length() ==2 && toupper(base.statistic[0])=='O'
 	                        && toupper(base.statistic[1])=='R')
 	                {
-                        base.provided_beta = true;
                         base.beta = false;
                         fprintf(stderr, "Base assumed be OR\n");
 	                }
@@ -691,18 +748,17 @@ void Commander::base_check(bool &error, std::string &error_message)
 	                        && toupper(base.statistic[1])=='E' && toupper(base.statistic[2])=='T'
 	                                && toupper(base.statistic[3])=='A')
 	                {
-                        base.provided_beta = true;
                         base.beta = true;
                         fprintf(stderr, "Base assumed be BETA\n");
 	                }
 	            }
-	            else if(!base.provided_stat && base.provided_beta)
+	            else if(!base.provided_stat && base.beta)
 	            {
 	                base.provided_stat = true;
-	                base.statistic = (base.beta)? "BETA" : "OR";
+	                base.statistic = "BETA";
 	                fprintf(stderr, "Base statistic not provided, assumed to be %s\n", base.statistic.c_str());
 	            }
-	            else if(!base.provided_stat && !base.provided_beta)
+	            else if(!base.provided_stat)
 	            {
 	                for(size_t i = 0; i < token.size(); ++i)
 	                {
@@ -710,7 +766,6 @@ void Commander::base_check(bool &error, std::string &error_message)
 	                        && toupper(token[i][1]=='R'))
 	                    {
 	                        base.provided_stat = true;
-	                        base.provided_beta = true;
 	                        base.beta = false;
 	                        base.statistic = token[i];
 	                        fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
@@ -722,7 +777,6 @@ void Commander::base_check(bool &error, std::string &error_message)
                                     && toupper(token[i][3])=='A')
 	                    {
                             base.provided_stat = true;
-                            base.provided_beta = true;
                             base.beta = true;
                             base.statistic = token[i];
                             fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
