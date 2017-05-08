@@ -272,7 +272,8 @@ bool Commander::initialize(int argc, char *argv[])
             break;
         case 'k':
             try{
-                target.prevalence = misc::convert<double>(optarg);
+                std::vector<std::string> token = misc::split(optarg, ",");
+                for(auto &&prev : token) target.prevalence.push_back(misc::convert<double>(prev));
             }
             catch(const std::runtime_error &er)
             {
