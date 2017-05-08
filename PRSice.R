@@ -36,8 +36,7 @@ if(!exists('startsWith', mode='function')){
   }
 }
 
-libraries <-
-  c("ggplot2", "data.table", "optparse", "methods", "tools")
+libraries <- c("ggplot2", "data.table", "optparse", "methods", "tools")
 found = FALSE
 argv = commandArgs(trailingOnly = TRUE)
 dir_loc = grep("--dir", argv)
@@ -45,19 +44,20 @@ if (length(dir_loc) != 0) {
   dir_loc = dir_loc + 1
   found = TRUE
 }
+
 # INSTALL_PACKAGE: Functions for automatically install all required packages
 InstalledPackage <- function(package)
 {
-  available <-
-    suppressMessages(suppressWarnings(
-      sapply(
-        package,
-        require,
-        quietly = TRUE,
-        character.only = TRUE,
-        warn.conflicts = FALSE
-      )
-    ))
+  available <- suppressMessages(
+                  suppressWarnings( 
+                    sapply(
+                      package,
+                      require,
+                      quietly = TRUE,
+                      character.only = TRUE,
+                      warn.conflicts = FALSE
+                    )
+                ))
   missing <- package[!available]
   if (length(missing) > 0)
     return(FALSE)
@@ -81,12 +81,7 @@ UsePackage <- function(package, dir)
         return(FALSE)
         
       } else{
-        writeLines(paste("Trying to install ",
-                         package,
-                         " in ",
-                         dir,
-                         "/lib",
-                         sep = ""))
+        writeLines(paste("Trying to install ", package, " in ", dir, "/lib", sep = ""))
       }
       suppressMessages(suppressWarnings(
         install.packages(
