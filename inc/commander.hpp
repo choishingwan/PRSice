@@ -152,18 +152,21 @@ private:
         bool provided_bp;
         bool provided_se;
         bool provided_p;
-        bool provided_beta;
     } base;
 
     struct{
         std::string ld;
         std::string type;
+        std::string keep_file;
+        std::string remove_file;
         int no_clump;
         double proxy;
         double p_value;
         double r2;
         int distance;
         bool provide_proxy;
+        bool keep_sample;
+        bool remove_sample;
     } clumping;
 
     struct{
@@ -235,9 +238,11 @@ private:
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
-    	    std::vector<bool> is_binary;
-    	    bool keep_sample;
-    	    bool remove_sample;
+    	bool provided_prevalence;
+    	bool keep_sample;
+    	bool remove_sample;
+    	double prevalence;
+    	std::vector<bool> is_binary;
     } target;
 
 
@@ -333,11 +338,25 @@ private:
     	target.remove_file = file;
     	target.remove_sample = true;
     };
-
+    inline void set_remove_ld(std::string file)
+    {
+        clumping.remove_file = file;
+        clumping.remove_sample = true;
+    };
     inline void set_keep(std::string file)
     {
     	target.keep_file = file;
     	target.keep_sample = true;
+    };
+    inline void set_keep_ld(std::string file)
+    {
+        clumping.keep_file = file;
+        clumping.keep_sample = true;
+    };
+    inline void set_prevalence(double prev)
+    {
+        target.prevalence = prev;
+        target.provided_prevalence = true;
     };
     inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {
