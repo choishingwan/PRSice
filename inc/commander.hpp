@@ -1,4 +1,3 @@
-#ifndef COMMANDER_H
 #define COMMANDER_H
 
 #include "storage.hpp"
@@ -101,6 +100,7 @@ public:
     std::string remove_sample_file() const { return target.remove_sample? target.remove_file : ""; };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
+    std::vector<double> prevalence() const { return target.prevalence; };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
     bool keep_sample() const { return target.keep_sample; };
     bool remove_sample() const { return target.remove_sample; };
@@ -211,7 +211,6 @@ private:
         double lower;
         double upper;
         double inter;
-        double prevalence; // for adjusting R2
         int fastscore;
         int no_regress;
         int full;
@@ -238,11 +237,10 @@ private:
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
-    	bool provided_prevalence;
-    	bool keep_sample;
-    	bool remove_sample;
-    	double prevalence;
-    	std::vector<bool> is_binary;
+        std::vector<double> prevalence; // should equal to number of binary target
+        bool keep_sample;
+        bool remove_sample;
+        std::vector<bool> is_binary;
     } target;
 
 
@@ -352,11 +350,6 @@ private:
     {
         clumping.keep_file = file;
         clumping.keep_sample = true;
-    };
-    inline void set_prevalence(double prev)
-    {
-        target.prevalence = prev;
-        target.provided_prevalence = true;
     };
     inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {

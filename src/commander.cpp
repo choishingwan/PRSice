@@ -12,15 +12,16 @@ bool Commander::initialize(int argc, char *argv[])
     static const char *optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
     static const struct option longOpts[]=
     {
-    	// parameters with short flags
-    	{"ancestry",required_argument,NULL,'a'},
-		{"base",required_argument,NULL,'b'},
-		{"bed",required_argument,NULL,'B'},
+        // parameters with short flags
+        {"ancestry",required_argument,NULL,'a'},
+        {"base",required_argument,NULL,'b'},
+        {"bed",required_argument,NULL,'B'},
         {"cov-header",required_argument,NULL,'c'},
         {"cov-file",required_argument,NULL,'C'},
         {"pheno-file",required_argument,NULL,'f'},
         {"gtf",required_argument,NULL,'g'},
         {"interval",required_argument,NULL,'i'},
+        {"prevalence",required_argument,NULL,'k'},
         {"lower",required_argument,NULL,'l'},
         {"ld",required_argument,NULL,'L'},
         {"msigdb",required_argument,NULL,'m'},
@@ -30,7 +31,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"target",required_argument,NULL,'t'},
         {"upper",required_argument,NULL,'u'},
 		// flags, only need to set them to true
-    	{"all",no_argument,&misc.all,1},
+        {"all",no_argument,&misc.all,1},
         {"beta",required_argument,&base.beta,1},
         {"full",no_argument,&prsice.full,1},
         {"ignore-fid",no_argument,&misc.ignore_fid,1},
@@ -119,58 +120,58 @@ bool Commander::initialize(int argc, char *argv[])
             		error, error_message, species_error);
             else if(command.compare("num-auto")==0)
             {
-            	try{
-            		species.num_auto = misc::convert<int>(optarg);
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: Number of autosomal chromosome provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    species.num_auto = misc::convert<int>(optarg);
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Number of autosomal chromosome provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("clump-p")==0)
             {
-            	try{
-            		clumping.p_value = misc::convert<double>(optarg);
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: Clump P-value threshold provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    clumping.p_value = misc::convert<double>(optarg);
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Clump P-value threshold provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("clump-r2")==0)
             {
-            	try{
-            		clumping.r2 = misc::convert<double>(optarg);
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: Clump R2 threshold provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    clumping.r2 = misc::convert<double>(optarg);
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Clump R2 threshold provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("clump-kb")==0)
             {
-            	try{
-            		clumping.distance = misc::convert<int>(optarg)*1000; //kb
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: Clump Distance provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    clumping.distance = misc::convert<int>(optarg)*1000; //kb
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Clump Distance provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("prslice")==0)
             {
-            	try{
-            		set_prslice(misc::convert<int>(optarg));
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: PRSlice size provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    set_prslice(misc::convert<int>(optarg));
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: PRSlice size provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("binary-target")==0)
             {
@@ -189,7 +190,8 @@ bool Commander::initialize(int argc, char *argv[])
                     error_message.append("ERROR: None numeric barchart level\n");
                     error=true;
                 }
-            }else if(command.compare("proxy")==0)
+            }
+            else if(command.compare("proxy")==0)
             {
                 try
                 {
@@ -209,38 +211,38 @@ bool Commander::initialize(int argc, char *argv[])
             }
             else if(command.compare("perm")==0)
             {
-            	try{
-            		misc.permutation = misc::convert<int>(optarg);
-            	}
-            	catch(const std::runtime_error &er)
-            	{
-            		error_message.append("ERROR: Number of Permutation provided isn't numeric\n");
-            		error=true;
-            	}
+                try{
+                    misc.permutation = misc::convert<int>(optarg);
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Number of Permutation provided isn't numeric\n");
+                    error=true;
+                }
             }
             else if(command.compare("feature")==0)
             {
-            	std::vector<std::string> token = misc::split(optarg, ",");
-            	prset.feature.insert(prset.feature.end(), token.begin(), token.end());
+                std::vector<std::string> token = misc::split(optarg, ",");
+                prset.feature.insert(prset.feature.end(), token.begin(), token.end());
             }
             else
             {
                 std::string er = "Undefined operator: "+command+", please use --help for more information!";
                 throw std::runtime_error(er);
             }
-            break;
+        break;
 
         case 'a':
-        	covariate.ancestry_dim = optarg;
-        	fprintf(stderr, "Currently we have not implement this function\n");
-        	break;
+            covariate.ancestry_dim = optarg;
+            fprintf(stderr, "Currently we have not implement this function\n");
+        break;
         case 'b':
-        	base.name = optarg;
-        	break;
+            base.name = optarg;
+        break;
         case 'B':
         {
-        	std::vector<std::string> token = misc::split(optarg, ",");
-        	prset.bed.insert(prset.bed.end(), token.begin(), token.end());
+            std::vector<std::string> token = misc::split(optarg, ",");
+            prset.bed.insert(prset.bed.end(), token.begin(), token.end());
         }
         break;
         case 'c':
@@ -250,68 +252,78 @@ bool Commander::initialize(int argc, char *argv[])
         }
         break;
         case 'C':
-        	covariate.name = optarg;
-        	break;
+        	    covariate.name = optarg;
+        	    break;
         case 'f':
-        	target.pheno_file = optarg;
+            target.pheno_file = optarg;
         	break;
         case 'g':
-        	prset.gtf = optarg;
+            prset.gtf = optarg;
         	break;
         case 'i':
-        	try{
-        		prsice.inter = misc::convert<double>(optarg);
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		error_message.append("ERROR: Interval provided isn't numeric\n");
-        		error=true;
-        	}
-        	break;
+            try{
+                prsice.inter = misc::convert<double>(optarg);
+            }
+            catch(const std::runtime_error &er)
+            {
+                error_message.append("ERROR: Interval provided isn't numeric\n");
+                error=true;
+            }
+            break;
+        case 'k':
+            try{
+                target.prevalence = misc::convert<double>(optarg);
+            }
+            catch(const std::runtime_error &er)
+            {
+                error_message.append("ERROR: Prevalence provided isn't numeric\n");
+                error=true;
+            }
+            break;
         case 'l':
-        	try{
-        		prsice.lower = misc::convert<double>(optarg);
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		error_message.append("ERROR: Lower bound provided isn't numeric\n");
-        		error=true;
-        	}
+            try{
+                prsice.lower = misc::convert<double>(optarg);
+            }
+            catch(const std::runtime_error &er)
+            {
+                error_message.append("ERROR: Lower bound provided isn't numeric\n");
+                error=true;
+            }
         	break;
         case 'L':
-        	clumping.ld = optarg;
+            clumping.ld = optarg;
         	break;
         case 'm':
-        	prset.msigdb = optarg;
+            prset.msigdb = optarg;
         	break;
         case 'n':
-        	try{
-        		misc.thread = misc::convert<int>(optarg);
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		error_message.append("ERROR: Number of thread provided isn't numeric\n");
-        		error=true;
-        	}
+            try{
+                misc.thread = misc::convert<int>(optarg);
+            }
+            catch(const std::runtime_error &er)
+            {
+                error_message.append("ERROR: Number of thread provided isn't numeric\n");
+                error=true;
+            }
         	break;
         case 'o':
-        	misc.out = optarg;
+            misc.out = optarg;
         	break;
         case 'p':
-        	set_p(optarg);
+            set_p(optarg);
         	break;
         case 't':
-        	target.name = optarg;
+            target.name = optarg;
         	break;
         case 'u':
-        	try{
-        		prsice.upper = misc::convert<double>(optarg);
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		error_message.append("ERROR: Upper bound provided isn't numeric\n");
-        		error=true;
-        	}
+            try{
+                prsice.upper = misc::convert<double>(optarg);
+            }
+            catch(const std::runtime_error &er)
+            {
+                error_message.append("ERROR: Upper bound provided isn't numeric\n");
+                error=true;
+            }
         	break;
         case 'h':
         case '?':
@@ -333,8 +345,8 @@ bool Commander::initialize(int argc, char *argv[])
     target_check(error, error_message);
     if((prset.bed.size() != 0 || !prset.gtf.empty()) && prslice.provided)
     {
-    	error = true;
-    	error_message.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
+        error = true;
+        error_message.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     if(error) throw std::runtime_error(error_message);
     fprintf(stderr, "\n");
@@ -422,7 +434,6 @@ Commander::Commander()
 	target.name = "";
 	target.pheno_file = "";
 	target.type = "bed";
-	target.provided_prevalence = false;
 }
 
 Commander::~Commander()
@@ -464,7 +475,7 @@ void Commander::info()
             "    --clump-kb              The distance for clumping in kb\n"
             "                            Default: "+std::to_string(clumping.distance/1000)+"\n"
             "    --clump-r2              The R2 threshold for clumping\n"
-            "                            Default: "+std::to_string(clump.r2)+"\n"
+            "                            Default: "+std::to_string(clumping.r2)+"\n"
             "    --clump-p               The p-value threshold use for clumping.\n"
             "                            Default: "+std::to_string(clumping.p_value)+"\n"
             "    --ld            | -L    LD reference file. Use for LD calculation. If not\n"
@@ -554,11 +565,11 @@ void Commander::info()
             "                            specified\n"
             "    --pheno-col             Headers of phenotypes to be included from the\n"
             "                            phenotype file\n"
-            "    --remove                File containing the sample(s) to be removed from\n"
-            "                            the target file. First column should be FID and\n"
-            "                            the second column should be IID. If --ignore-fid is\n"
-            "                            set, first column should be IID\n"
-            "                            Mutually exclusive from --keep\n"
+            "    --prevalence    | -k    Prevalence of all binary trait. If provided\n"
+            "    --remove                will adjust the ascertainment bias of the R2.\n"
+            "                            Note that when multiple binary trait is found,\n"
+            "                            you must provide prevalence information for\n"
+            "                            all of them.\n"
             "    --target        | -t    Target genotype file. Currently support\n"
             "                            both BGEN and binary PLINK format. For \n"
             "                            multiple chromosome input, simply substitute\n"
@@ -1006,7 +1017,6 @@ void Commander::target_check(bool &error, std::string &error_message)
 	}
 	else
 	{
-
 		if(target.pheno_col.empty() && target.is_binary.size()==1)
 		{
 			// this is ok
@@ -1028,6 +1038,19 @@ void Commander::target_check(bool &error, std::string &error_message)
 	        error_message.append("       target! You must indicate whether the phenotype is binary using\n");
 	        error_message.append("       --binary-target\n");
 		}
+	}
+
+	size_t num_bin=0;
+	for(auto &&binary : target.is_binary)
+	{
+	    if(binary) num_bin++;
+	}
+	if(!target.prevalence.empty() && num_bin > target.prevalence.size()) // need to be all or nothing
+	{
+	    error = true;
+	    error_message.append("ERROR: Number of target prevalence doesn't match number of binary traits\n");
+	    error_message.append("       You must provide a prevalence for all binary trait(s) or not \n");
+	    error_message.append("       provide any prevalence (all or nothing)\n");
 	}
 
 }
