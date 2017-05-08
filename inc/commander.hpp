@@ -1,3 +1,4 @@
+#ifndef COMMANDER_H
 #define COMMANDER_H
 
 #include "storage.hpp"
@@ -258,41 +259,40 @@ private:
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt, bool &error,
     		std::string &error_message, bool &species_error)
     {
-    	if(species.double_set && !species_error){
-    		species_error = true;
-    		error = true;
-    		error_message.append("ERROR: Can only specify one species\n");
-    	}
-    	species.num_auto = num_auto;
-    	species.no_x = no_x;
-    	species.no_y = no_y;
-    	species.no_xy = no_xy;
-    	species.no_mt = no_mt;
-    	species.double_set = true;
+        if(species.double_set && !species_error){
+      		species_error = true;
+      		error = true;
+      		error_message.append("ERROR: Can only specify one species\n");
+        }
+     	species.num_auto = num_auto;
+     	species.no_x = no_x;
+     	species.no_y = no_y;
+     	species.no_xy = no_xy;
+     	species.no_mt = no_mt;
+     	species.double_set = true;
     };
 
     inline void set_stat(std::string stat)
     {
-    	base.statistic = stat;
-    	base.provided_stat = true;
+        base.statistic = stat;
+        base.provided_stat = true;
     };
 
     inline void set_beta(bool beta)
     {
-    	base.beta = beta;
-    	base.provided_beta = true;
+    	    base.beta = beta;
     };
 
     inline void set_chr(std::string chr)
     {
-    	base.chr = chr;
-    	base.provided_chr = true;
+        base.chr = chr;
+        base.provided_chr = true;
     };
 
     inline void set_ref(std::string ref)
     {
-    	base.ref_allele = ref;
-    	base.provided_ref = true;
+        base.ref_allele = ref;
+        base.provided_ref = true;
     };
 
     inline void set_alt(std::string alt)
@@ -303,38 +303,38 @@ private:
 
     inline void set_snp(std::string snp)
     {
-    	base.snp = snp;
-    	base.provided_snp = true;
+        base.snp = snp;
+        base.provided_snp = true;
     };
 
     inline void set_bp(std::string bp)
     {
-    	base.bp = bp;
-    	base.provided_bp = true;
+        base.bp = bp;
+        base.provided_bp = true;
     };
 
     inline void set_se(std::string se)
     {
-    	base.standard_error = se;
-    	base.provided_se = true;
+        base.standard_error = se;
+        base.provided_se = true;
     };
 
     inline void set_p(std::string p)
     {
-    	base.p_value = p;
-    	base.provided_p = true;
+        base.p_value = p;
+        base.provided_p = true;
     };
 
     inline void set_prslice(int size)
     {
-    	prslice.size = size;
-    	prslice.provided = true;
+        prslice.size = size;
+        prslice.provided = true;
     };
 
     inline void set_remove(std::string file)
     {
-    	target.remove_file = file;
-    	target.remove_sample = true;
+        target.remove_file = file;
+        target.remove_sample = true;
     };
     inline void set_remove_ld(std::string file)
     {
@@ -343,8 +343,8 @@ private:
     };
     inline void set_keep(std::string file)
     {
-    	target.keep_file = file;
-    	target.keep_sample = true;
+        target.keep_file = file;
+        target.keep_sample = true;
     };
     inline void set_keep_ld(std::string file)
     {
@@ -353,39 +353,39 @@ private:
     };
     inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {
-    	for(size_t i = 0; i < ref.size(); ++i)
-    	{
-    		if(target.compare(ref[i])==0)
-    		{
-    			return i;
-    		}
-    	}
-    	return -1;
+        for(size_t i = 0; i < ref.size(); ++i)
+        {
+            if(target.compare(ref[i])==0)
+            {
+                return i;
+            }
+        }
+        return -1;
     };
 
     inline int index_check(const std::string &target, const int max, bool &error,
     		std::string &error_message, std::string name)
     {
-    	try{
-    		int index = misc::convert<int>(optarg);
-    		if(index >= max){
-    			error =true;
-    			error_message.append("ERROR: "+name+" index out of bound!\n");
-    			return -1;
-    		}
-    		if(index < 0){
-    			error =true;
-    			error_message.append("ERROR: Negative "+name+" index!\n");
-    			return -1;
-    		}
-    		return index;
-    	}
-    	catch(const std::runtime_error &er)
-    	{
-			error =true;
-			error_message.append("ERROR: "+name+" index is not numeric!\n");
-			return -1;
-    	}
+        try{
+            int index = misc::convert<int>(optarg);
+            if(index >= max){
+                error =true;
+                error_message.append("ERROR: "+name+" index out of bound!\n");
+                return -1;
+            }
+            if(index < 0){
+                error =true;
+                error_message.append("ERROR: Negative "+name+" index!\n");
+                return -1;
+            }
+            return index;
+     	}
+        catch(const std::runtime_error &er)
+        {
+            error =true;
+            error_message.append("ERROR: "+name+" index is not numeric!\n");
+            return -1;
+        }
     }
 };
 
