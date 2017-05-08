@@ -1077,5 +1077,14 @@ void Commander::target_check(bool &error, std::string &error_message)
 	    error_message.append("       You must provide a prevalence for all binary trait(s) or not \n");
 	    error_message.append("       provide any prevalence (all or nothing)\n");
 	}
+	for(auto &&prev : target.prevalence)
+	{
+	    if(prev > 1.0 || prev < 0.0)
+	    {
+	        error = true;
+	        error_message.append("ERROR: Prevalence cannot be bigger than 1.0 or smaller than 0.0\n");
+	        break;
+	    }
+	}
 
 }
