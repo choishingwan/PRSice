@@ -8732,8 +8732,6 @@ uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct, uint32_t sample_c
   if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
     return RET_READ_FAIL;
   }
-  std::cerr << "Check " << std::hex << rawbuf[0] << std::dec << std::endl;
-  exit(0);
   if (unfiltered_sample_ct != sample_ct) {
     copy_quaterarr_nonempty_subset(rawbuf, sample_include, unfiltered_sample_ct, sample_ct, mainbuf);
   } else {

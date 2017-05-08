@@ -80,9 +80,9 @@ void Region::process_bed(const std::vector<std::string> &bed)
                     int temp = 0;
                     size_t start=0, end=0;
                     try{
-                    		temp = misc::convert<int>(token[+BOUNDARY::START]);
-                    		if(temp >= 0) start = temp+1;//That's because bed is 0 based
-                    		else
+                        temp = misc::convert<int>(token[1]);
+                        if(temp >= 0) start = temp+1;//That's because bed is 0 based
+                        else
                     		{
                     			fprintf(stderr, "ERROR: Negative Start Coordinate at line %zu!\n", num_line);
                     			fprintf(stderr, "       This file will be ignored\n");
@@ -92,35 +92,35 @@ void Region::process_bed(const std::vector<std::string> &bed)
 
                     }
                     catch(const std::runtime_error &er){
-                    	fprintf(stderr, "ERROR: Cannot convert start coordinate! (line: %zu)\n", num_line);
-                    	fprintf(stderr, "       This file will be ignored\n");
-                    	error=true;
-                    	break;
+                        fprintf(stderr, "ERROR: Cannot convert start coordinate! (line: %zu)\n", num_line);
+                        fprintf(stderr, "       This file will be ignored\n");
+                        error=true;
+                        break;
                     }
                     try{
-                    	temp = misc::convert<int>(token[+BOUNDARY::END]);
-                    	if(temp >= 0) end = temp+1;//That's because bed is 0 based
-                    	else
-                    	{
-                    		fprintf(stderr, "ERROR: Negative End Coordinate at line %zu!\n", num_line);
-                    		fprintf(stderr, "       This file will be ignored\n");
-                    		error=true;
-                    		break;
-                    	}
+                        temp = misc::convert<int>(token[2]);
+                        if(temp >= 0) end = temp+1;//That's because bed is 0 based
+                        else
+                        {
+                            fprintf(stderr, "ERROR: Negative End Coordinate at line %zu!\n", num_line);
+                            fprintf(stderr, "       This file will be ignored\n");
+                            error=true;
+                            break;
+                        }
                     }
                     catch(const std::runtime_error &er){
-                    	fprintf(stderr, "ERROR: Cannot convert end coordinate! (line: %zu)\n", num_line);
-                    	fprintf(stderr, "       This file will be ignored\n");
-                    	error=true;
-                    	break;
+                        fprintf(stderr, "ERROR: Cannot convert end coordinate! (line: %zu)\n", num_line);
+                        fprintf(stderr, "       This file will be ignored\n");
+                        error=true;
+                        break;
                     }
                     if(m_chr_order.find(token[0])!= m_chr_order.end())
                     {
-                    	region_bound cur_bound;
-                    	cur_bound.chr = m_chr_order[token[0]];
-                    	cur_bound.start = start;
-                    	cur_bound.end = end;
-                    	current_region.push_back(cur_bound);
+                        region_bound cur_bound;
+                        cur_bound.chr = m_chr_order[token[0]];
+                        cur_bound.start = start;
+                        cur_bound.end = end;
+                        current_region.push_back(cur_bound);
                     }
 				}
 			}
@@ -414,10 +414,8 @@ std::vector<long_type> Region::check(int chr, size_t loc)
 }
 
 void Region::info() const{
-	fprintf(stderr, "\nRegion Information\n");
-	fprintf(stderr, "==============================\n");
 	if (m_region_name.size() == 1)
-		fprintf(stderr, "1 region is included\n");
+		fprintf(stderr, "1 region included\n");
 	else if (m_region_name.size() > 1)
 		fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
 }

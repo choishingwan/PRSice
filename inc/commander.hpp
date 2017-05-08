@@ -51,11 +51,15 @@ public:
 
     //misc
     bool all() const { return misc.all; };
-    bool print_snp() const { return misc.print_snp; };
     bool ignore_fid() const { return misc.ignore_fid; };
+    bool permute() const { return misc.provided_permutation; };
+    bool print_snp() const { return misc.print_snp; };
+    bool seeded() const { return misc.provided_seed; };
     void set_ignore_fid() { misc.ignore_fid = true; };
     std::string out() const { return misc.out; };
-    int permutation() const { return misc.permutation; };
+    int num_permutation() const { return misc.permutation; };
+    int seed() const { return misc.seed; };
+
     int thread() const { return misc.thread; };
 
     // prset
@@ -122,8 +126,8 @@ public:
     };
     double get_threshold(int i) const
     {
-    	return(i < 0)? prsice.barlevel.at(0) :
-    			((i>=prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
+      	return(i < 0)? prsice.barlevel.at(0) :
+      	        ((i>=prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
     };
 
     void user_input() const;
@@ -194,6 +198,9 @@ private:
         int ignore_fid;
         int permutation;
         int thread;
+        int seed;
+        bool provided_seed;
+        bool provided_permutation;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
@@ -244,7 +251,7 @@ private:
         std::vector<bool> is_binary;
     } target;
 
-
+    std::string help_message;
     void usage();
     void info();
     void program_info();
@@ -351,6 +358,16 @@ private:
         clumping.keep_file = file;
         clumping.keep_sample = true;
     };
+    inline void set_permutation(std::string perm)
+    {
+        misc.permutation = misc::convert<int>(perm);
+        misc.provided_permutation = true;
+    }
+    inline void set_seed(std::string s)
+    {
+        misc.seed = misc::convert<int>(s);
+        misc.provided_seed = true;
+    }
     inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {
         for(size_t i = 0; i < ref.size(); ++i)

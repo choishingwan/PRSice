@@ -1,14 +1,14 @@
 #ifndef SNP_H
 #define SNP_H
 
-#include <string>
-#include <stdexcept>
 #include <algorithm>
-#include <numeric>
 #include <limits.h>
-#include "storage.hpp"
+#include <numeric>
+#include <stdexcept>
+#include <string>
 #include "commander.hpp"
 #include "misc.hpp"
+#include "storage.hpp"
 
 class SNP
 {

@@ -151,9 +151,11 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
 {
     std::vector<double> pheno_store;
     bool binary = pheno_info.binary[pheno_index];
+    int pheno_col_index = pheno_info.col[pheno_index];
     int max_num = 0;
     int num_case =0;
     int num_control =0;
+    size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     std::string line;
 
@@ -180,7 +182,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                 throw std::runtime_error(error_message);
             }
             std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
-            phenotype_info[id] = token[pheno_index];
+            phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
         // now go through the sample information
@@ -203,6 +205,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                         }
                         else
                         {
+                            invalid_pheno++;
                             sample.included = false;
                         }
                     }
@@ -212,6 +215,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                         pheno_store.push_back(misc::convert<double>(phenotype_info[id]));
                     }
                 }catch(const std::runtime_error &error){
+                    invalid_pheno++;
                     sample.included=false;
                 }
             }
@@ -246,6 +250,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                     }
                     else
                     {
+                        invalid_pheno++;
                         sample.included = false;
                     }
                 }
@@ -255,6 +260,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                     pheno_store.push_back(misc::convert<double>(sample.pheno));
                 }
             }catch(const std::runtime_error &error){
+                invalid_pheno++;
                 sample.included = false;
             }
         }
@@ -262,6 +268,10 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
     if (num_not_found != 0)
     {
         fprintf(stderr, "Number of missing samples: %zu\n", num_not_found);
+    }
+    if(invalid_pheno!=0)
+    {
+        fprintf(stderr, "Number of invalid phenotyps: %zu\n", invalid_pheno);
     }
     bool error = false;
     if(max_num > 1 && binary)
@@ -556,6 +566,51 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     }
     if (all_out.is_open()) all_out.close();
     if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
+
+    if(c_commander.permute())
+    {
+        unsigned int seed = std::random_device()();
+        if(c_commander.seeded()) seed = c_commander.seed();
+        std::mt19937 rand_gen{seed};
+        fprintf(stderr, "\nStart performing permutation with seed %u\n\n", seed);
+        // need to perform permutation for the best score
+        if (n_thread == 1 || m_region_size == 1)
+        {
+            thread_perm(c_commander.num_permutation(), 0, m_region_size, n_thread, c_pheno_index, rand_gen);
+        }
+        else
+        {
+            if (m_region_size < n_thread)
+            {
+                for (size_t i_region = 0; i_region < m_region_size; ++i_region)
+                {
+                    thread_store.push_back( std::thread(&PRSice::thread_perm, this,
+                            c_commander.num_permutation(), i_region, i_region + 1, 1,
+                            c_pheno_index, rand_gen));
+                }
+            }
+            else
+            {
+                int job_size = m_region_size / n_thread;
+                int remain = m_region_size % n_thread;
+                size_t start = 0;
+                for (size_t i_thread = 0; i_thread < n_thread; ++i_thread)
+                {
+                    size_t ending = start + job_size + (remain > 0);
+                    ending = (ending > m_region_size) ? m_region_size : ending;
+                    thread_store.push_back( std::thread(&PRSice::thread_perm, this,
+                            c_commander.num_permutation(), start, ending, 1,
+                            c_pheno_index, rand_gen));
+                    start = ending;
+                    remain--;
+                }
+            }
+            // joining the threads
+            for (auto &&thread : thread_store) thread.join();
+            thread_store.clear();
+        }
+    }
+    fprintf(stderr, "Completed!\n");
 }
 
 
@@ -652,9 +707,79 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         cur_result.r2_adj = r2_adjust;
         cur_result.coefficient = coefficient;
         cur_result.p = p_value;
-        cur_result.emp_p = 0;
+        cur_result.emp_p = -1.0;
         cur_result.num_snp = m_num_snp_included[iter];
         m_prs_results[iter].push_back(cur_result);
+    }
+}
+
+
+
+
+
+void PRSice::thread_perm(const size_t num_perm,  size_t region_start, size_t region_end,
+        size_t thread, const size_t c_pheno_index, std::mt19937 rand_gen)
+{
+    Eigen::MatrixXd X;
+    bool thread_safe = false;
+    if (region_start == 0 && region_end == m_current_score.size())
+        thread_safe = true;
+    else
+        X = m_independent_variables;
+    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
+    Eigen::MatrixXd A_perm;
+    for (size_t iter = region_start; iter < region_end; ++iter)
+    {
+        // first build the independent variable matrix
+        for (size_t sample_id = 0; sample_id < m_current_score[iter].size(); ++sample_id)
+        {
+            std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
+                    m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
+            // The reason why we need to update the m_sample_with_phenotypes matrix
+            if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
+            {
+                if(thread_safe)
+                {
+                    m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                            (m_best_score[iter][sample_id].num_snp==0)? 0.0 :
+                                    m_best_score[iter][sample_id].prs / (double) m_best_score[iter][sample_id].num_snp ;
+                }
+                else
+                {
+                    X(m_sample_with_phenotypes.at(sample), 1) =
+                            (m_best_score[iter][sample_id].num_snp==0)? 0.0 :
+                                    m_best_score[iter][sample_id].prs / (double) m_best_score[iter][sample_id].num_snp ;
+                }
+            }
+        }
+        size_t best = m_best_index[iter];
+        double p_value = m_prs_results[iter][best].p;
+        size_t num_better = 0;
+        double perm_p, perm_r2,perm_r2_adj, perm_coefficient;
+        for (size_t i_perm = 0; i_perm < num_perm; ++i_perm)
+        {
+            perm.setIdentity();
+            std::shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size(),
+                    rand_gen);
+            A_perm = perm * m_phenotype; // permute columns
+            if (m_target_binary[c_pheno_index])
+            {
+                if (thread_safe)
+                    Regression::glm(A_perm, m_independent_variables, perm_p, perm_r2, perm_coefficient, 25, thread, true);
+                else
+                    Regression::glm(A_perm, X, perm_p, perm_r2, perm_coefficient, 25, thread, true);
+            }
+            else{
+                if (thread_safe)
+                    Regression::linear_regression(A_perm, m_independent_variables, perm_p, perm_r2,
+                            perm_r2_adj, perm_coefficient, thread, true);
+                else
+                    Regression::linear_regression(A_perm, X, perm_p, perm_r2, perm_r2_adj, perm_coefficient, thread, true);
+           }
+            if (perm_p < p_value) num_better++;
+        }
+        m_prs_results[iter][best].emp_p = (double)(num_better+1.0) /(double)(num_perm+1.0);
     }
 }
 
@@ -665,8 +790,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     std::string pheno_name = (pheno_info.name.size()>1)?pheno_info.name[pheno_index]:"";
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
-    size_t total_perm = c_commander.permutation();
-    bool perm = total_perm > 0;
+    bool perm = c_commander.permute();
     std::string output_name = output_prefix;
     for(size_t i_region = 0; i_region < m_region_size; ++i_region)
     {
@@ -691,7 +815,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                     << prs.p << "\t"
                     << prs.coefficient << "\t"
                     << prs.num_snp;
-            if (perm) prsice_out << "\t" << (double) (prs.emp_p + 1.0) / (double) (total_perm + 1.0);
+            if (perm) prsice_out << "\t" << ((prs.emp_p>=0.0)? std::to_string(prs.emp_p) : "_");
             prsice_out << std::endl;
         }
         prsice_out.close();
@@ -723,7 +847,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 
         if(c_commander.print_snp())
         {
-        	target.print_snp(out_snp, m_prs_results[i_region][m_best_index[i_region]].threshold);
+            target.print_snp(out_snp, m_prs_results[i_region][m_best_index[i_region]].threshold);
         }
 
         //if(!c_commander.print_all()) break;
@@ -747,7 +871,8 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                     << m_prs_results[i_region][bi].coefficient<< "\t"
                     << m_prs_results[i_region][bi].p << "\t"
                     << m_prs_results[i_region][bi].num_snp;
-            if(perm) region_out << "\t" << (double) (m_prs_results[i_region][bi].emp_p + 1.0) / (double) (total_perm + 1.0);
+            if(perm) region_out << "\t" << ((m_prs_results[i_region][bi].emp_p>=0.0)?
+                    std::to_string((double) (m_prs_results[i_region][bi].emp_p)) : "-");
             region_out << std::endl;
             i_region++;
         }
@@ -760,35 +885,3 @@ PRSice::~PRSice() {
 }
 
 
-/*
- if(m_target_binary[c_pheno_index]){
-                Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-                for (size_t i_perm = 0; i_perm < m_perm; ++i_perm)
-                {
-                    perm.setIdentity();
-                    std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
-                    Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
-                    double perm_p, perm_r2, perm_coefficient;
-                    if (thread_safe)
-                        Regression::glm(A_perm, m_independent_variables, perm_p, perm_r2, perm_coefficient, 25, thread, true);
-                    else
-                        Regression::glm(A_perm, X, perm_p, perm_r2, perm_coefficient, 25, thread, true);
-                    if (perm_p < p_value)num_better++;
-                }
-            }
-            else{
-                Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-                for (size_t i_perm = 0; i_perm < m_perm; ++i_perm) {
-                    perm.setIdentity();
-                    std::random_shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size());
-                    Eigen::MatrixXd A_perm = perm * m_phenotype; // permute columns
-                    double perm_p, perm_r2, perm_coefficient, perm_r2_adj;
-                    if (thread_safe)
-                        Regression::linear_regression(A_perm, m_independent_variables, perm_p, perm_r2,
-                                perm_r2_adj, perm_coefficient, thread, true);
-                    else
-                        Regression::linear_regression(A_perm, X, perm_p, perm_r2, perm_r2_adj, perm_coefficient, thread, true);
-                    if (perm_p < p_value) num_better++;
-                }
-            }
- */

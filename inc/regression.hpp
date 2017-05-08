@@ -8,14 +8,14 @@
 #ifndef PRSICE_REGRESSION_H_
 #define PRSICE_REGRESSION_H_
 
-#include <Eigen/Dense>
-#include <math.h>
 #include <boost/math/distributions/students_t.hpp>
 #include <boost/math/distributions/normal.hpp>
 #include <cstdio>
-#include <iostream>
+#include <Eigen/Dense>
 #include <fstream>
+#include <iostream>
 #include <limits>
+#include <math.h>
 #include <stdexcept>
 
 namespace Regression{

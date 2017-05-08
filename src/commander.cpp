@@ -28,6 +28,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"thread",required_argument,NULL,'n'},
         {"out",required_argument,NULL,'o'},
         {"pvalue",required_argument,NULL,'p'},
+        {"seed",required_argument,NULL,'s'},
         {"target",required_argument,NULL,'t'},
         {"upper",required_argument,NULL,'u'},
 		// flags, only need to set them to true
@@ -212,7 +213,7 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("perm")==0)
             {
                 try{
-                    misc.permutation = misc::convert<int>(optarg);
+                    set_permutation(optarg);
                 }
                 catch(const std::runtime_error &er)
                 {
@@ -312,7 +313,10 @@ bool Commander::initialize(int argc, char *argv[])
         	break;
         case 'p':
             set_p(optarg);
-        	break;
+            break;
+        case 's':
+            set_seed(optarg);
+            break;
         case 't':
             target.name = optarg;
         	break;
@@ -407,6 +411,9 @@ Commander::Commander()
 	misc.print_snp = false;
 	misc.ignore_fid = false;
 	misc.permutation = 0;
+	misc.provided_permutation = false;
+	misc.provided_seed =false;
+	misc.seed = 0;
 	misc.thread = 1;
 
 	prset.gtf = "";
@@ -444,7 +451,7 @@ Commander::~Commander()
 
 void Commander::info()
 {
-    std::string help_message =
+    help_message =
             "usage: PRSice [options] <-b base_file> <-t target_file>\n"
             "\nBase File:\n"
             "    --base          | -b    Base association file\n"
@@ -588,8 +595,10 @@ void Commander::info()
             "    --perm                  Number of permutation to perform. This will\n"
             "                            generate the empirical p-value for the BEST\n"
             "                            threshold\n"
-            "    --print-snp             Print all the SNPs used to construct the best\n"
-            "                            score\n"
+            "    --seed          | -s    Seed used for permutation. If not provided,\n"
+            "    --print-snp             system time will be used as seed. When same\n"
+            "                            seed and same input is provided, same result\n"
+            "                            should be generated\n"
             "    --thread        | -n    Number of thread use\n"
             "    --help          | -h    Display this help message\n";
 
@@ -597,6 +606,7 @@ void Commander::info()
 
 void Commander::usage()
 {
+    fprintf(stderr, "%s\n", help_message.c_str());
 	/*
     fprintf(stderr, "Usage: PRSice [Options] \n\n");
     std::string category = "";
@@ -658,12 +668,10 @@ void Commander::program_info()
 	std::cerr << std::endl;
 	std::cerr << "PRSice "<< version << " (" << date << ") https://github.com/choishingwan/PRSice"<< std::endl;
 	std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
-	std::cerr << "GNU General Public License v3" << std::endl;
+	std::cerr << "GNU General Public License v3" << std::endl << std::endl;
 }
 
 void Commander::user_input() const{
-	fprintf(stderr, "\nUser Input\n");
-	fprintf(stderr, "==============================\n");
 	fprintf(stderr, "Base file: ");
 	if (!base.beta) {
 		fprintf(stderr, "%s(OR) ", base.name.c_str());
@@ -912,7 +920,7 @@ void Commander::clump_check(bool &error, std::string &error_message)
 
 void Commander::misc_check(bool &error, std::string &error_message)
 {
-	if(misc.permutation < 0)
+	if(misc.provided_permutation && misc.permutation < 0)
 	{
 		error =true;
 		error_message.append("ERROR: Negative number of permutation!\n");

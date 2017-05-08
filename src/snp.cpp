@@ -76,20 +76,12 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
 
 void SNP::clump(std::vector<SNP> &snp_list)
 {
-	if(basic.rs.compare("rs12125525")==0)
-	{
-		std::cerr << "clumping this" << std::endl;
-	}
 	for(auto &&target : clump_info.target){
 		if(!snp_list[target].clumped())
 		{
 			int sum_total = 0;
 			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
 			{
-				//TODO: ERROR IS HERE
-				if(snp_list[target].rs().compare("rs12125525")==0){
-					std::cerr << "Clumped by: " << basic.rs << std::endl;
-				}
 				// if there is any overlap this should set the snp_list to the new flag
 				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
 						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);

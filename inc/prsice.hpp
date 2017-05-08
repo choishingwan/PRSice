@@ -1,26 +1,27 @@
 #ifndef PRSICE_H
 #define PRSICE_H
 
-#include <string>
-#include <fstream>
-#include <stdexcept>
-#include <Eigen/Dense>
-#include <mutex>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include <vector>
 #include <algorithm>
+#include <chrono>
+#include <Eigen/Dense>
+#include <fstream>
 #include <map>
+#include <mutex>
+#include <random>
+#include <stdexcept>
 #include <stdio.h>
+#include <string>
 #include <thread>
+#include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include "genotype.hpp"
 #include "commander.hpp"
+#include "genotype.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "snp.hpp"
 #include "region.hpp"
 #include "regression.hpp"
+#include "snp.hpp"
 #include "storage.hpp"
 //This should be the class to handle all the procedures
 class PRSice
@@ -28,10 +29,9 @@ class PRSice
 public:
 
     PRSice(std::string base_name, std::string target, std::vector<bool> target_binary,
-    		size_t permutation, SCORING score, size_t num_region, bool ignore_fid):
+    		SCORING score, size_t num_region, bool ignore_fid):
     			m_base_name(base_name), m_target(target), m_target_binary(target_binary),
-				m_perm(permutation), m_score(score), m_region_size(num_region),
-				m_ignore_fid(ignore_fid){ };
+				m_score(score), m_region_size(num_region), m_ignore_fid(ignore_fid){ };
     virtual ~PRSice();
     void pheno_check(const Commander &c_commander);
     void init_matrix(const Commander &c_commander, const size_t pheno_index, Genotype &target,
@@ -63,7 +63,6 @@ private:
     std::string m_base_name;
     std::string m_target;
     std::vector<bool> m_target_binary;
-	size_t m_perm = 0;
 	SCORING m_score = SCORING::MEAN_IMPUTE;
     size_t m_region_size=1;
     bool m_ignore_fid = false;
@@ -95,7 +94,7 @@ private:
 
 	// matrix for regression
 	// important guide for all operation
-	std::vector<p_partition> m_partition;
+	//std::vector<p_partition> m_partition;
 	// snp information
 
 	// Null information
@@ -106,9 +105,9 @@ private:
 
     // Region info
     // PRSlice related storages
-    enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
-    typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;
-    std::vector<windows> m_best_snps;
+    //enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
+    //typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;
+    //std::vector<windows> m_best_snps;
 
 
 
@@ -124,7 +123,8 @@ private:
 
     //void update_line(std::unordered_map<std::string, size_t> &partition_index);
     void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);
-
+    void thread_perm(const size_t num_perm, size_t region_start, size_t region_end, size_t thread,
+            const size_t c_pheno_index, std::mt19937 rand_gen);
 };
 
 #endif // PRSICE_H

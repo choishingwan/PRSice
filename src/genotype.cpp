@@ -205,8 +205,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	std::unordered_set<std::string> dup_index;
 	std::vector<int> exist_index; // try to use this as quick search
 	// Actual reading the file, will do a bunch of QC
+	snp_file.seekg (0, snp_file.end);
+	int file_length = snp_file.tellg();
+	snp_file.seekg (0, snp_file.beg);
 	while (std::getline(snp_file, line))
 	{
+	    fprintf(stderr, "\rReading %03.2f%%", (double) snp_file.tellg() / (double) (file_length) * 100.0);
 		misc::trim(line);
 		if (line.empty()) continue;
 		exclude = false;
@@ -348,6 +352,8 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		}
 	}
 	snp_file.close();
+
+    fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
 	if(exist_index.size() != m_existed_snps.size())
 	{ // only do this if we need to remove some SNPs
 		// we assume exist_index doesn't have any duplicated index
