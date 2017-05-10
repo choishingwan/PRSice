@@ -38,12 +38,13 @@ git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
 g++ --std=c++11 -I inc/ -isystem lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -O2 -pthread -Wno-c++11-narrowing src/*.cpp src/*.c -o PRSice
 ```
+
 ### Rosalind users
 You can compile a static version using the following command
 ```bash
 git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-/opt/apps/compilers/gcc/4.8.2/bin/g++ --std=c++11 -I inc/ -isystem lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -O2 -static-libgcc -static src/*.cpp src/*.c -o PRSice
+make
 ```
 
 ### Citation 
