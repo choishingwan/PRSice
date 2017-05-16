@@ -66,6 +66,11 @@ public:
     //void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
+    inline double lee_adjust(double r2, double top, double bottom) const
+    {
+        return top*r2/(bottom*r2);
+    }
+    void set_lee(double prevalence, double case_ratio, double &top, double &bottom) const;
     struct{
     	std::vector<int> col;
     	std::vector<std::string> name;

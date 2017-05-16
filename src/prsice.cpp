@@ -18,6 +18,23 @@
 
 std::mutex PRSice::score_mutex;
 
+void PRSice::set_lee(double prevalence, double case_ratio, double &top, double &bottom) const
+{
+    double x = misc::qnorm(1-prevalence);
+    double z = misc::dnorm(misc::qnorm(1-prevalence));
+    double i = z / prevalence;
+    double cc = prevalence*(1-prevalence)*prevalence*(1-prevalence)/(z*z*case_ratio*(1-case_ratio));
+    double theta =i*((case_ratio - prevalence)/(1 - prevalence))*(i*((case_ratio-prevalence)/
+            (1-prevalence))-x);
+    double e=1-pow(case_ratio,(2*case_ratio))*pow((1 -case_ratio),(2 * (1 -case_ratio)));
+    top = cc*e;
+    bottom = cc*e*theta;
+
+    // in theory, this can be better because
+    // most variables can be reuse
+}
+
+
 
 void PRSice::pheno_check(const Commander &c_commander) 
 {
@@ -476,6 +493,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 
         fprintf(stderr, "\nFinal number of samples: %zu\n\n", valid_sample_index.size());
     }
+
 }
 
 
@@ -803,6 +821,28 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         size_t pheno_index, Genotype &target) const
 {
     // this is ugly, need to make it better
+    // check if it needs to be adjusted
+    std::vector<double> prev = c_commander.prevalence();
+    bool has_prevalence = (prev.size()!=0);
+    int num_binary = 0;
+    for(size_t i = 0; i < pheno_index; ++i)
+    {
+        if(c_commander.is_binary(i)) num_binary++;
+    }
+    double top=0.0, bottom = 0.0;
+    if(has_prevalence && c_commander.is_binary(pheno_index))
+    {
+        int num_case = 0, num_control=0;
+        for(size_t i = 0; i < m_phenotype.rows(); ++i)
+        {
+            if(m_phenotype(i)==0) num_control++;
+            else if(m_phenotype(i)==1) num_case++;
+        }
+        set_lee(prev[num_binary], (double)(num_case)/(double)(num_case+num_control),
+                top, bottom);
+        // try to get the number of case and control
+    }
+    has_prevalence = has_prevalence&&c_commander.is_binary(pheno_index);
     std::string pheno_name = (pheno_info.name.size()>1)?pheno_info.name[pheno_index]:"";
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
@@ -826,8 +866,10 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         prsice_out << std::endl;
         for (auto &&prs : m_prs_results[i_region]) 
         {
+            double r2 = prs.r2 - m_null_r2;
+            r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
             prsice_out <<prs.threshold << "\t"
-                    << prs.r2 - m_null_r2 << "\t"
+                    << r2 << "\t"
                     << prs.p << "\t"
                     << prs.coefficient << "\t"
                     << prs.num_snp;
@@ -881,9 +923,11 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         size_t i_region = 0;
         for (auto bi : m_best_index)
         {
+            double r2 =m_prs_results[i_region][bi].r2 - m_null_r2;
+            r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
             region_out << c_region.get_name(i_region) << "\t" <<
                     m_prs_results[i_region][bi].threshold << "\t"
-                    << m_prs_results[i_region][bi].r2 - m_null_r2 << "\t"
+                    << r2 << "\t"
                     << m_prs_results[i_region][bi].coefficient<< "\t"
                     << m_prs_results[i_region][bi].p << "\t"
                     << m_prs_results[i_region][bi].num_snp;
