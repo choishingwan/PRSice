@@ -201,6 +201,8 @@ private:
     		double mind;
     		double geno;
     		double info_score;
+    		double prob_filter;
+    		int use_prob;
     		int use_maf;
     		int use_mind;
     		int use_geno;

@@ -430,6 +430,8 @@ Commander::Commander()
 	filter.mind = 0.0;
 	filter.info_score = 0.8;
 	filter.maf = 0.01;
+	filter.prob_filter =0.8;
+	filter.use_prob = false;
 	filter.use_maf = false;
 	filter.use_mind = false;
 	filter.use_info = false;
