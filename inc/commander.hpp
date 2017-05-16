@@ -364,6 +364,11 @@ private:
         clumping.remove_file = file;
         clumping.remove_sample = true;
     };
+    inline void set_info(std::string info)
+    {
+        filter.use_info  =true;
+        filter.info_score = misc::convert<double>(info);
+    }
     inline void set_keep(std::string file)
     {
         target.keep_file = file;

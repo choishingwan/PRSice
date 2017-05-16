@@ -72,6 +72,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump-p",required_argument,NULL,0},
         {"clump-r2",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
+        {"info",required_argument,NULL,0},
         {"keep",required_argument,NULL,0},
 		{"ld-type", required_argument, NULL, 0},
 		{"num-auto", required_argument, NULL, 0},
@@ -144,6 +145,18 @@ bool Commander::initialize(int argc, char *argv[])
                 {
                     error_message.append("ERROR: Number of autosomal chromosome provided isn't numeric\n");
                     error=true;
+                }
+            }
+            else if(command.compare("info")==0)
+            {
+                try{
+                    filter.info_score = misc::convert<double>(optarg);
+                    filter.use_info = true;
+                }
+                catch(const std::runtime_error &er)
+                {
+                    error_message.append("ERROR: Info score isn't numeric!\n");
+                    error = true;
                 }
             }
             else if(command.compare("clump-p")==0)
@@ -531,6 +544,9 @@ void Commander::info()
             "                            is set, first column should be IID\n"
             "    --cov-header    | -c    Header of covariates. If not provided, will use\n"
             "                            all variables in the covariate file\n"
+            "\nDosage:\n"
+            "    --info                  Info threshold for dosage data. Any call less than\n"
+            "                            this will be treated as missing. Default: "+std::to_string(filter.info_score)+
             "\nPRSet:\n"
             "    --bed           | -B    Bed file containing the selected regions.\n"
             "                            Name of bed file will be used as the region\n"
@@ -945,6 +961,11 @@ void Commander::misc_check(bool &error, std::string &error_message)
 	{
 		error = true;
 		error_message.append("ERROR: Number of thread must be larger than 1\n");
+	}
+	if(filter.use_info && (filter.info_score < 0 || filter.info_score > 1))
+	{
+	    error = true;
+	    error_message.append("ERROR: Info score should be between 0 and 1\n");
 	}
 }
 
