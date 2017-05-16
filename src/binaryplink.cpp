@@ -41,10 +41,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 	//Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 	check_bed();
 	m_cur_file="";
-
-	m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	m_founder_ctsplit = 3 * m_founder_ctv3;
+	initialize();
 }
 
 BinaryPlink::~BinaryPlink()
@@ -155,8 +152,6 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 		}
 	}
 	famfile.close();
-	m_final_mask = get_final_mask(m_founder_ct);
-	m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 	return sample_name;
 }
 
@@ -247,17 +242,12 @@ std::vector<SNP> BinaryPlink::load_snps()
 		}
 		bimfile.close();
 	}
-
-	m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-	m_marker_exclude = new uintptr_t[m_unfiltered_marker_ctl];
-	std::memset(m_marker_exclude, 0x0, m_unfiltered_marker_ctl*sizeof(uintptr_t));
 	if(m_unfiltered_marker_ct > 2147483645)
 	{
 		throw std::runtime_error("Error: PLINK does not suport more than 2^31 -3 variants. "
 			"As we are using PLINK for some of our functions, we might encounter problem too. "
 			"Sorry.");
 	}
-	m_marker_ct = snp_info.size();
 	return snp_info;
 }
 

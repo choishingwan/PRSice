@@ -86,6 +86,9 @@ class Genotype
         void print_snp(std::string &output, double threshold);
 
     protected:
+        void initialize();
+        uintptr_t m_final_mask;
+        uintptr_t *m_tmp_genotype;
         static std::mutex clump_mtx;
         size_t m_max_category = 0;
         size_t m_region_size = 1;

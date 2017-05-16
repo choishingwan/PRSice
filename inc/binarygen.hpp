@@ -150,8 +150,6 @@ class BinaryGen: public Genotype
         std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
         std::unordered_map<std::string, uint32_t> m_offset_map;
         std::ifstream m_bgen_file;
-        uintptr_t m_final_mask;
-        uintptr_t *m_tmp_genotype;
         /** DON'T TOUCH      */
         struct ProbSetter {
             ProbSetter( Data* result ): m_result( result ), m_sample_i(0) {}

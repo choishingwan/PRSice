@@ -44,13 +44,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
     }
-    m_final_mask = get_final_mask(m_founder_ct);
-    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
-    m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-    m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    m_founder_ctsplit = 3 * m_founder_ctv3;
-
-
+    initialize();
 }
 
 BinaryGen::~BinaryGen()
@@ -203,7 +197,6 @@ std::vector<SNP> BinaryGen::load_snps()
     fprintf(stderr, "\n");
     snp_res.resize(m_unfiltered_marker_ct);// so that it will be more suitable
     if(m_bgen_file.is_open()) m_bgen_file.close();
-    m_marker_ct = snp_res.size();
     return snp_res;
 }
 
