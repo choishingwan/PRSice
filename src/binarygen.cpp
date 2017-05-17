@@ -491,8 +491,14 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
     // assume all are founder
     m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
     m_founder_ct = m_unfiltered_sample_ct;
-    std::memset(m_founder_info, ~0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
-
+    std::memset(m_founder_info, 0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+    for(size_t i = 0; i < sample_res; ++i)
+    {
+        if(sample_res[i].included)
+        {
+            SET_BIT(i, m_founder_info);
+        }
+    }
     m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];
     std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
@@ -515,6 +521,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
     pheno_file.close();
     return sample_res;
 }
+
 std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
 {
     std::unordered_set<std::string> dup_check;

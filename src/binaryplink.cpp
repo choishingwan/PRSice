@@ -129,7 +129,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 			cur_sample.prs = 0;
 			cur_sample.num_snp = 0;
 			sample_name.push_back(cur_sample);
-			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0)
+			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0 && cur_sample.included)
 			{
 				m_founder_ct++;
 				SET_BIT(sample_uidx, m_founder_info); // if individual is founder e.g. 0 0, then set bit
