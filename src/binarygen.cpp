@@ -205,8 +205,115 @@ void BinaryGen::cleanup()
     return;
 }
 
-void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
-               size_t start_index, size_t end_bound)
+void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+                        size_t start_index, size_t end_bound)
+{
+    m_cur_file = "";
+    std::vector<bool> in_region(m_region_size);
+    std::vector< genfile::byte_t > buffer1, buffer2 ;
+    for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
+    {
+        for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+        {
+            in_region[i_region]=m_existed_snps[i_snp].in(i_region);
+        }
+        auto &&snp =  m_existed_snps[i_snp];
+        if(m_cur_file.empty() || snp.file_name().compare(m_cur_file)!=0)
+        {
+            if(m_bgen_file.is_open()) m_bgen_file.close();
+            std::string bgen_name = snp.file_name()+".bgen";
+            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+            if(!m_bgen_file.is_open())
+            {
+                std::string error_message = "ERROR: Cannot open bgen file: "+snp.file_name();
+                throw std::runtime_error(error_message);
+            }
+            m_cur_file = snp.file_name();
+        }
+        m_bgen_file.seekg(snp.snp_id(), std::ios_base::beg);
+
+        Data probability ;
+        ProbSetter setter( &probability ) ;
+        genfile::bgen::read_and_parse_genotype_data_block< ProbSetter >(
+                m_bgen_file,
+                m_bgen_info[snp.file_name()],
+                setter,
+                &buffer1,
+                &buffer2
+        ) ;
+        std::vector<size_t> missing_samples;
+        double total = 0.0;
+        std::vector<double> score(current_prs_score.front().size());
+        for(size_t i_sample=0; i_sample < probability.size(); ++i_sample)
+        {
+            auto &&prob = probability[i_sample];
+            if(prob.size() != 3)
+            {
+                // this is likely phased
+                fprintf(stderr, "ERROR: Currently don't support phased data\n");
+                fprintf(stderr, "       (It is because the lack of development time)\n");
+                throw std::runtime_error("");
+            }
+            double expected = 0.0;
+            uintptr_t cur_geno = 1;
+            for(int g = 0; g < prob.size(); ++g)
+            {
+                if(*max_element(prob.begin(), prob.end()) < filter.hard_threshold)
+                {
+                    missing_samples.push_back(i_sample);
+                    break;
+                }
+                else expected+=prob[g]*((snp.is_flipped())?abs(g-2) :g);
+            }
+            score[i_sample]=expected;
+            total+=expected;
+        }
+        // now process the missing and clean stuff
+        // we divide the mean by 2 so that in situation where there is no dosage,
+        // it will behave the same as the genotype data.
+
+        size_t num_miss = missing_samples.size();
+        double mean = total/(((double)probability.size()-(double)num_miss)*2);
+        size_t i_missing = 0;
+        double stat = snp.stat();
+        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        {
+            if(i_missing < num_miss && i_sample == missing_samples[i_missing])
+            {
+                for(size_t i_region=0; i_region < m_region_size; ++i_region)
+                {
+                    if(in_region[i_region])
+                    {
+                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += stat*mean;
+                        if(m_scoring != SCORING::SET_ZERO) current_prs_score[i_region][i_sample].num_snp++;
+                    }
+                }
+                i_missing++;
+            }
+            else
+            { // not missing sample
+                for(size_t i_region=0; i_region < m_region_size; ++i_region)
+                {
+                    if(in_region[i_region])
+                    {
+                        if(m_scoring == SCORING::CENTER)
+                        {
+                            // if centering, we want to keep missing at 0
+                            current_prs_score[i_region][i_sample].prs -= stat*mean;
+                        }
+                        // again, so that it will generate the same result as genotype file format
+                        // when we are 100% certain of the genotypes
+                        current_prs_score[i_region][i_sample].prs += score[i_sample]*stat*0.5;
+                        current_prs_score[i_region][i_sample].num_snp++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+                        size_t start_index, size_t end_bound)
 {
     m_cur_file = "";
     size_t prev =0;
@@ -214,26 +321,12 @@ void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_
     uint32_t ujj;
     uint32_t ukk;
     uintptr_t ulii = 0;
-    int32_t delta1 = 1;
-    int32_t delta2 = 2;
-    int32_t deltam = 0;
     //m_final_mask
 
     // a lot of code in PLINK is to handle the sex chromosome
     // which suggest that PRS can be done on sex chromosome
     // that should be something later
     uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-    if(current_prs_score.size() != m_region_size)
-    {
-            throw std::runtime_error("Size of Matrix doesn't match number of region!!");
-    }
-    for(size_t i = 0; i < m_region_size; ++i)
-    {
-         if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
-         {
-             throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
-         }
-    }
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
     uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
@@ -330,6 +423,29 @@ void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_
         }
     }
     delete [] genotype;
+}
+
+void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+               size_t start_index, size_t end_bound)
+{
+    if(current_prs_score.size() != m_region_size)
+    {
+        throw std::runtime_error("Size of Matrix doesn't match number of region!!");
+    }
+    for(size_t i = 0; i < m_region_size; ++i)
+    {
+        if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
+        {
+            throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
+        }
+    }
+
+    if(filter.use_hard)
+    {
+        hard_code_score(current_prs_score, start_index, end_bound);
+        return;
+    }
+    else dosage_score(current_prs_score, start_index, end_bound);
 }
 
 
@@ -492,7 +608,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
     m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
     m_founder_ct = m_unfiltered_sample_ct;
     std::memset(m_founder_info, 0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
-    for(size_t i = 0; i < sample_res; ++i)
+    for(size_t i = 0; i < sample_res.size(); ++i)
     {
         if(sample_res[i].included)
         {

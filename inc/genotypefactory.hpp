@@ -47,7 +47,7 @@ class GenomeFactory
                     }
                     if(!commander.filter_hard_threshold())
                     {
-                        fprintf(stderr, "WARNING: Hard threshold was not given ")
+                        fprintf(stderr, "WARNING: Hard threshold was not given, will use default %f\n", commander.hard_threshold());
                     }
                     return new BinaryGen(prefix,
                             commander.pheno_file(),

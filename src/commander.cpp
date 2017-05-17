@@ -555,7 +555,7 @@ void Commander::info()
             "                            this will be treated as missing. Note that if dosage\n"
             "                            data, is used as a LD reference, it will always be\n"
             "                            hard coded\n"
-            "                            Default: "+std::to_string(filter.info_score)+
+            "                            Default: "+std::to_string(filter.info_score)+"\n"
             "    --hard                  Use hard coding instead of dosage for PRS construction\n"
             "                            Default is to use dosage instead of hard coding\n"
             "\nPRSet:\n"
