@@ -103,9 +103,9 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
     --hard-thres            Hard threshold for dosage data. Any call less than\n
                             this will be treated as missing. Note that if dosage\n
                             data, is used as a LD reference, it will always be\n
-                            hard coded\n
+                            hard coded to calculate the LD\n
                             Default: 0.9\n
-    --hard                  Use hard coding instead of dosage for PRS construction\n
+    --hard                  Use hard coding instead of dosage for PRS construction.\n
                             Default is to use dosage instead of hard coding\n
 \nPlotting:\n
     --bar-col-high          Colour of the most predicting threshold\n
