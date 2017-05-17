@@ -51,6 +51,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"all",no_argument,&misc.all,1},
         {"beta",required_argument,&base.beta,1},
         {"full",no_argument,&prsice.full,1},
+        {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid",no_argument,&misc.ignore_fid,1},
         {"index",no_argument,&base.index,1},
 		{"no-clump",no_argument,&clumping.no_clump,1},
@@ -72,7 +73,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump-p",required_argument,NULL,0},
         {"clump-r2",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
-        {"info",required_argument,NULL,0},
+        {"hard-thres",required_argument,NULL,0},
         {"keep",required_argument,NULL,0},
 		{"ld-type", required_argument, NULL, 0},
 		{"num-auto", required_argument, NULL, 0},
@@ -147,11 +148,11 @@ bool Commander::initialize(int argc, char *argv[])
                     error=true;
                 }
             }
-            else if(command.compare("info")==0)
+            else if(command.compare("hard-thres")==0)
             {
                 try{
-                    filter.info_score = misc::convert<double>(optarg);
-                    filter.use_info = true;
+                    filter.hard_threshold = misc::convert<double>(optarg);
+                    filter.use_hard_thres = true;
                 }
                 catch(const std::runtime_error &er)
                 {
@@ -428,12 +429,15 @@ Commander::Commander()
 
 	filter.geno = 0.0;
 	filter.mind = 0.0;
-	filter.info_score = 0.8;
+	filter.hard_threshold = 0.8;
 	filter.maf = 0.01;
-	filter.prob_filter =0.8;
+	filter.hard_coding = false;
+	filter.hard_threshold = 0.9;
+	filter.info_score =0.9;
 	filter.use_prob = false;
 	filter.use_maf = false;
 	filter.use_mind = false;
+	filter.use_hard_thres = false;
 	filter.use_info = false;
 	filter.use_geno = false;
 
@@ -547,8 +551,13 @@ void Commander::info()
             "    --cov-header    | -c    Header of covariates. If not provided, will use\n"
             "                            all variables in the covariate file\n"
             "\nDosage:\n"
-            "    --info                  Info threshold for dosage data. Any call less than\n"
-            "                            this will be treated as missing. Default: "+std::to_string(filter.info_score)+
+            "    --hard-thres            Hard threshold for dosage data. Any call less than\n"
+            "                            this will be treated as missing. Note that if dosage\n"
+            "                            data, is used as a LD reference, it will always be\n"
+            "                            hard coded\n"
+            "                            Default: "+std::to_string(filter.info_score)+
+            "    --hard                  Use hard coding instead of dosage for PRS construction\n"
+            "                            Default is to use dosage instead of hard coding\n"
             "\nPRSet:\n"
             "    --bed           | -B    Bed file containing the selected regions.\n"
             "                            Name of bed file will be used as the region\n"
@@ -969,6 +978,11 @@ void Commander::misc_check(bool &error, std::string &error_message)
 	    error = true;
 	    error_message.append("ERROR: Info score should be between 0 and 1\n");
 	}
+    if(filter.use_hard_thres && (filter.hard_threshold < 0 || filter.hard_threshold > 1))
+    {
+        error = true;
+        error_message.append("ERROR: Hard threshold should be between 0 and 1\n");
+    }
 }
 
 void Commander::prset_check(bool &error, std::string &error_message)

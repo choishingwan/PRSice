@@ -60,10 +60,13 @@ public:
     bool filter_geno() const { return filter.use_geno; };
     bool filter_mind() const { return filter.use_mind; };
     bool filter_info() const { return filter.use_info; };
+    bool filter_hard_threshold() const { return filter.hard_threshold; };
+    bool hard_coding() const { return filter.hard_coding; };
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
     double info_score() const { return filter.info_score; };
+    double hard_threshold() const { return filter.hard_threshold; };
 
     //misc
     bool all() const { return misc.all; };
@@ -200,13 +203,15 @@ private:
     		double maf;
     		double mind;
     		double geno;
+    		double hard_threshold;
     		double info_score;
-    		double prob_filter;
     		int use_prob;
     		int use_maf;
     		int use_mind;
     		int use_geno;
     		int use_info;
+    		int use_hard_thres;
+    		int hard_coding;
     } filter;
 
     struct{

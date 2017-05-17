@@ -91,7 +91,7 @@ class BinaryGen: public Genotype
                 uintptr_t cur_geno = 1;
                 for(size_t g = 0; g < prob.size(); ++g)
                 {
-                    if(prob[g] >= filter.info_score)
+                    if(prob[g] >= filter.hard_threshold)
                     {
                         cur_geno = (g==2)? 0: 3-g; // binary code for plink
                         break;

@@ -110,6 +110,9 @@ class Genotype
                 double maf;
                 double geno;
                 double info_score;
+                double hard_threshold;
+                bool filter_hard_threshold;
+                bool use_hard;
                 bool filter_maf;
                 bool filter_geno;
                 bool filter_info;

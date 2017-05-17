@@ -426,9 +426,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	filter.filter_geno = c_commander.filter_geno();
 	filter.filter_maf = c_commander.filter_maf();
 	filter.filter_info = c_commander.filter_info();
+	filter.filter_hard_threshold = c_commander.filter_hard_threshold();
 	filter.geno = c_commander.geno();
 	filter.info_score = c_commander.info_score();
 	filter.maf = c_commander.maf();
+	filter.hard_threshold = c_commander.hard_threshold();
+	filter.use_hard = c_commander.hard_coding();
 }
 
 

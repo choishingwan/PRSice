@@ -45,7 +45,10 @@ class GenomeFactory
                     {
                         throw std::runtime_error("ERROR: You must provide a phenotype file for bgen format!\n");
                     }
-
+                    if(!commander.filter_hard_threshold())
+                    {
+                        fprintf(stderr, "WARNING: Hard threshold was not given ")
+                    }
                     return new BinaryGen(prefix,
                             commander.pheno_file(),
                             commander.has_pheno_col(),
