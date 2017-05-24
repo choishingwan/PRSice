@@ -38,13 +38,13 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
     load_samples(ignore_fid);
 
     m_existed_snps = load_snps();
+    initialize();
     if(verbose)
     {
         fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
         if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
     }
-    initialize();
 }
 
 BinaryGen::~BinaryGen()

@@ -32,6 +32,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 	set_genotype_files(prefix);
 	m_sample_names = load_samples(ignore_fid);
 	m_existed_snps = load_snps();
+    initialize();
 	if(verbose)
 	{
 		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
@@ -41,7 +42,6 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 	//Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 	check_bed();
 	m_cur_file="";
-	initialize();
 }
 
 BinaryPlink::~BinaryPlink()
