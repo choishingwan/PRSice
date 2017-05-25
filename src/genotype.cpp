@@ -255,6 +255,11 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 						if (chr_code != -1) {
 							if (chr_code >= MAX_POSSIBLE_CHROM) {
 								chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+								// this is the sex chromosomes
+								if(!hap_error) fprintf(stderr, "\nWARNING: Currently not support haploid chromosome and sex chromosomes\n");
+								exclude =true;
+								hap_error=true;
+								num_excluded++;
 							}
 							else
 							{
@@ -267,7 +272,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
 							chr_code==m_xymt_codes[Y_OFFSET])
 					{
-						if(!hap_error) fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
+						if(!hap_error) fprintf(stderr, "\nWARNING: Currently not support haploid chromosome and sex chromosomes\n");
 						hap_error =true;
 						exclude = true;
 						num_excluded++;
