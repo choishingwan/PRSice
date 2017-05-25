@@ -45,6 +45,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
     }
+    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 }
 
 BinaryGen::~BinaryGen()

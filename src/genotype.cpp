@@ -21,11 +21,11 @@ std::mutex Genotype::clump_mtx;
 
 void Genotype::initialize()
 {
+
     m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
     m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
     m_founder_ctsplit = 3 * m_founder_ctv3;
     m_final_mask = get_final_mask(m_founder_ct);
-    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
     m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
     m_marker_exclude = new uintptr_t[m_unfiltered_marker_ctl];
     std::memset(m_marker_exclude, 0x0, m_unfiltered_marker_ctl*sizeof(uintptr_t));

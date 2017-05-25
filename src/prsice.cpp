@@ -191,7 +191,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     std::string line;
-
+    std::cerr <<"gen vec" << std::endl;
     if(pheno_info.use_pheno) // use phenotype file
     {
         std::ifstream pheno_file;
@@ -205,9 +205,11 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
         std::unordered_map<std::string, std::string> phenotype_info;
         while (std::getline(pheno_file, line))
         {
+
             misc::trim(line);
             if (line.empty()) continue;
             std::vector < std::string > token = misc::split(line);
+            std::cerr << "Check: " << token.size() << "\t" << pheno_col_index << std::endl;
             if (token.size() < pheno_index + 1)
             {
                 std::string error_message = "Malformed pheno file, should contain at least "
@@ -261,6 +263,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
     }
     else
     {
+        std::cerr << "No phenotype" << std::endl;
         // directly extract it from the sample_name stuff
         size_t cur_index =0;
         for(auto &&sample: m_sample_names)

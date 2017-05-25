@@ -42,6 +42,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 	//Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
 	check_bed();
 	m_cur_file="";
+    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
 }
 
 BinaryPlink::~BinaryPlink()

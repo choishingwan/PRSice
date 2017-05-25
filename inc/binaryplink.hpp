@@ -58,6 +58,7 @@ class BinaryPlink: public Genotype
             {
                 throw std::runtime_error("ERROR: Cannot read the bed file!");
             }
+
             std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 * sizeof(uintptr_t));
             if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                     m_founder_info, m_final_mask, false, m_bedfile,
