@@ -184,16 +184,15 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
 {
     std::vector<double> pheno_store;
     bool binary = pheno_info.binary[pheno_index];
-    int pheno_col_index = pheno_info.col[pheno_index];
     int max_num = 0;
     int num_case =0;
     int num_control =0;
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     std::string line;
-    std::cerr <<"gen vec" << std::endl;
     if(pheno_info.use_pheno) // use phenotype file
     {
+        int pheno_col_index = pheno_info.col[pheno_index];
         std::ifstream pheno_file;
         pheno_file.open(pheno_file_name.c_str());
         if(!pheno_file.is_open())
