@@ -59,7 +59,6 @@ Dosage_template::Dosage_template(std::string prefix, std::string pheno_file, boo
     // num_line is the SNP id from the file, e.g. 0 for the first SNP
     //          this will be use for jumping to the specific SNP
     m_existed_snps = load_snps();
-
     if(verbose)
     {
         fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
@@ -68,10 +67,15 @@ Dosage_template::Dosage_template(std::string prefix, std::string pheno_file, boo
     }
     // You should always include this to initialize the variables correctly
     initialize();
+    // You should also initialize this here
+    // this is a temporary object required for Plink processing. By pre-initializing
+    // it here, this should help to speed things up
+    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+
 }
 
 Dosage_template::~Dosage_template()
 {
-    // TODO Auto-generated destructor stub
+    // Don't need to delete m_tmp_genotype here as the base class should do it
 }
 

@@ -47,7 +47,6 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 
 BinaryPlink::~BinaryPlink()
 {
-	if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
 std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 {

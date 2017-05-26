@@ -50,7 +50,6 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
 
 BinaryGen::~BinaryGen()
 {
-    if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
 
 std::vector<SNP> BinaryGen::load_snps()

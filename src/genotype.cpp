@@ -182,6 +182,7 @@ Genotype::~Genotype() {
 	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
 	if(m_haploid_mask != nullptr) delete [] m_haploid_mask;
 	if(m_chrom_mask != nullptr) delete [] m_chrom_mask;
+    if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
 
 void Genotype::read_base(const Commander &c_commander, Region &region)
