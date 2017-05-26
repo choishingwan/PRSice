@@ -35,14 +35,6 @@ public:
 			const std::string file_name, const int num_line);
     virtual ~SNP();
 
-    static bool ambiguous(std::string ref_allele, std::string alt_allele)
-    {
-    	return (ref_allele == "A" && alt_allele == "T")
-    			|| (ref_allele == "a" && alt_allele == "t")
-				|| (ref_allele == "G" && alt_allele == "C")
-				|| (ref_allele == "g" && alt_allele == "c");
-    };
-
     void set_statistic(const double stat, const double se, const double p_value, const int category,
     		const double p_threshold)
     {

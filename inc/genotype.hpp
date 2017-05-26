@@ -188,7 +188,11 @@ class Genotype
             return (ref_allele == "A" && alt_allele == "T")
                     || (ref_allele == "a" && alt_allele == "t")
                     || (ref_allele == "G" && alt_allele == "C")
-                    || (ref_allele == "g" && alt_allele == "c");
+                    || (ref_allele == "g" && alt_allele == "c")
+                    || (alt_allele == "A" && ref_allele == "T")
+                    || (alt_allele == "a" && ref_allele == "t")
+                    || (alt_allele == "G" && ref_allele == "C")
+                    || (alt_allele == "g" && ref_allele == "c");
         };
 
         void perform_clump(int &core_genotype_index, int &begin_index,
