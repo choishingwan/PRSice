@@ -547,6 +547,34 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     size_t max_category = target.max_category()+1; // so that it won't be 100% until the very end
     int cur_category=0, cur_index =0;
     double cur_threshold =0.0;
+    unsigned int seed = std::random_device()();
+    if(c_commander.seeded()) seed = c_commander.seed();
+    // seed need to be outside the loop so each iteration will return the same sequence
+    // therefore the same permutation
+    // we also want to know how many samples we can hold within 1gb ram
+    int perm_per_slice = 0;
+    int remain_slice = 0;
+    if(c_commander.permute())
+    {
+        // first check for ridiculously large sample size
+        if(CHAR_BIT*total_sample_size >1000000000)
+        {
+            perm_per_slice = 1;
+        }
+        else{
+            // in theory, most of the time, perm_per_slice should be
+            // equal to c_commander.num_permutation();
+            int sample_memory = CHAR_BIT*total_sample_size;
+            perm_per_slice = 1000000000/sample_memory;
+            perm_per_slice = (perm_per_slice > c_commander.num_permutation())?
+                    c_commander.num_permutation() :
+                    perm_per_slice;
+            // Additional slice to keep
+            remain_slice = c_commander.num_permutation()%perm_per_slice;
+
+        }
+    }
+
     while(target.get_score(m_current_score, cur_index, cur_category, cur_threshold, m_num_snp_included))
     {
         if (!prslice)
@@ -598,6 +626,10 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
             // joining the threads
             for (auto &&thread : thread_store) thread.join();
             thread_store.clear();
+            if(c_commander.permute())
+            {
+
+            }
         }
     }
     if (all_out.is_open()) all_out.close();
@@ -650,6 +682,58 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
 }
 
 
+void PRSice::permutation(unsigned int seed, int perm_per_slice, int remain_slice,
+        int total_permutation)
+{
+
+
+    int num_iter = total_permutation/perm_per_slice;
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
+    for(size_t i_region=0; i_region < m_region_size; ++i_region)
+    {
+        Eigen::setNbThreads(m_thread);
+        // get the decomposition
+        for (size_t sample_id = 0; sample_id < m_current_score[i_region].size(); ++sample_id)
+        {
+            std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
+                    m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
+            // The reason why we need to update the m_sample_with_phenotypes matrix
+            if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
+            {
+                m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                        (m_current_score[i_region][sample_id].num_snp==0)? 0.0 :
+                                m_current_score[i_region][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
+            }
+        }
+        Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed(m_independent_variables);
+        Eigen::setNbThread(1);
+
+
+        int cur_remain = remain_slice;
+        // we reseed the random number generator in each iteration so that
+        // we will always get the same pheontype permutation
+        std::mt19937 rand_gen{seed}; //problem...
+        // need to do the permutation of phenotype without threading
+        // so that we can reserve the sequence
+        for(int iter = 0; iter < num_iter; ++iter)
+        {
+            int cur_perm = perm_per_slice + (cur_remain>0)? 1:0;
+            cur_remain--;
+            std::vector<Eigen::MatrixXd> perm_pheno(cur_perm);
+            for(size_t p = 0; p < cur_perm; ++p)
+            {
+                perm.setIdentity();
+                std::shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size(),
+                        rand_gen);
+                perm_pheno[p] = perm * m_phenotype; // permute columns
+            }
+            // now multithread it and get the corresponding p-values
+        }
+
+    }
+
+
+}
 
 void PRSice::thread_score(size_t region_start, size_t region_end,
         double threshold, size_t thread, const size_t c_pheno_index)
@@ -728,7 +812,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         }
 
 
-        // It this is the best r2, then we will add it
+        // If this is the best r2, then we will add it
         size_t best_index = m_best_index[iter];
         if (m_prs_results[iter].empty() || m_prs_results[iter][best_index].r2 < r2)
         {
