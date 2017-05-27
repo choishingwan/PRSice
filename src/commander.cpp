@@ -445,7 +445,7 @@ Commander::Commander()
 	misc.out = "PRSice";
 	misc.print_snp = false;
 	misc.ignore_fid = false;
-	misc.permutation = 0;
+	misc.permutation = 10000;
 	misc.provided_permutation = false;
 	misc.provided_seed =false;
 	misc.seed = 0;
@@ -636,8 +636,8 @@ void Commander::info()
             "                            be IID instead of FID\n"
             "    --out           | -o    Prefix for all file output\n"
             "    --perm                  Number of permutation to perform. This will\n"
-            "                            generate the empirical p-value for the BEST\n"
-            "                            threshold\n"
+            "                            generate the empirical p-value. Recommend to\n"
+            "                            use value larger than 10,000\n"
             "    --seed          | -s    Seed used for permutation. If not provided,\n"
             "    --print-snp             system time will be used as seed. When same\n"
             "                            seed and same input is provided, same result\n"

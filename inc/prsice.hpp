@@ -21,6 +21,7 @@
 #include <chrono>
 #include <Eigen/Dense>
 #include <fstream>
+#include <math.h>
 #include <map>
 #include <mutex>
 #include <random>
