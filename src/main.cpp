@@ -83,7 +83,10 @@ int main(int argc, char *argv[])
         target_file->read_base(commander, region);
         std::string region_out_name = commander.out() + ".region";
         region.print_file(region_out_name);
-        target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
+        if(!commander.no_clump())
+        {
+            target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
+        }
         PRSice prsice = PRSice(base_name, commander.target_name(),
                 commander.is_binary(), commander.get_scoring(), region.size(),
                 commander.ignore_fid());
