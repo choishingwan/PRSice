@@ -777,14 +777,14 @@ void PRSice::process_permutations()
         // sort indexes based on comparing values in v
         auto &&v = m_prs_results[i_region];
         std::sort(idx.begin(), idx.end(),
-                [&v](size_t i1, size_t i2) {return v[i1].r2 < v[i2].r2;});
+                [&v](size_t i1, size_t i2) {return v[i1].r2 > v[i2].r2;});
         // now idx contain the rank of the thresholds
         // in fact, this following part can be multithreaded
+
         for(auto &&rank : idx)
         {
             double ori_p =v[idx[rank]].p;
             int more_sig = 0;
-
             for(auto &&perm : thres_res)
             {
                 more_sig += (ori_p >= perm[rank]);
