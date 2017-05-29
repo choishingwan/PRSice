@@ -208,7 +208,6 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
             misc::trim(line);
             if (line.empty()) continue;
             std::vector < std::string > token = misc::split(line);
-            std::cerr << "Check: " << token.size() << "\t" << pheno_col_index << std::endl;
             if (token.size() < pheno_index + 1)
             {
                 std::string error_message = "Malformed pheno file, should contain at least "
@@ -262,7 +261,6 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
     }
     else
     {
-        std::cerr << "No phenotype" << std::endl;
         // directly extract it from the sample_name stuff
         size_t cur_index =0;
         for(auto &&sample: m_sample_names)
@@ -542,7 +540,8 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
         m_best_score[i_region].resize(total_sample_size);
         m_current_score[i_region].resize(total_sample_size);
     }
-
+    m_region_perm_result.clear();
+    m_region_perm_result.resize(m_region_size);
     // now let Genotype class do the work
     size_t max_category = target.max_category()+1; // so that it won't be 100% until the very end
     int cur_category=0, cur_index =0;
@@ -572,6 +571,21 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
             // Additional slice to keep
             remain_slice = c_commander.num_permutation()%perm_per_slice;
 
+        }
+        for(size_t i = 0; i < m_region_perm_result.size(); ++i)
+        {
+            m_region_perm_result[i].resize(c_commander.num_permutation());
+        }
+        if(m_target_binary[c_pheno_index])
+        {
+            fprintf(stderr, "WARNING: To speed up the permutation, we perform\n");
+            fprintf(stderr, "         linear regression instead of logistic\n");
+            fprintf(stderr, "         regression within the permutation and uses\n");
+            fprintf(stderr, "         the p-value to rank the thresholds. Our assumptions\n");
+            fprintf(stderr, "         are as follow:\n");
+            fprintf(stderr, "         1. Linear Regression & Logistic Regression produce\n");
+            fprintf(stderr, "            similar p-values\n");
+            fprintf(stderr, "         2. P-value is correlated with R2\n");
         }
     }
 
@@ -626,113 +640,16 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
             // joining the threads
             for (auto &&thread : thread_store) thread.join();
             thread_store.clear();
-            if(c_commander.permute())
-            {
-
-            }
+        }
+        if(c_commander.permute())
+        {
+            permutation(seed, perm_per_slice, remain_slice,
+                    c_commander.num_permutation(), n_thread);
         }
     }
     if (all_out.is_open()) all_out.close();
     if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
-
-    if(c_commander.permute())
-    {
-        unsigned int seed = std::random_device()();
-        if(c_commander.seeded()) seed = c_commander.seed();
-        std::mt19937 rand_gen{seed};
-        fprintf(stderr, "\nStart performing permutation with seed %u\n\n", seed);
-        // need to perform permutation for the best score
-        if (n_thread == 1 || m_region_size == 1)
-        {
-            thread_perm(c_commander.num_permutation(), 0, m_region_size, n_thread, c_pheno_index, rand_gen);
-        }
-        else
-        {
-            if (m_region_size < n_thread)
-            {
-                for (size_t i_region = 0; i_region < m_region_size; ++i_region)
-                {
-                    thread_store.push_back( std::thread(&PRSice::thread_perm, this,
-                            c_commander.num_permutation(), i_region, i_region + 1, 1,
-                            c_pheno_index, rand_gen));
-                }
-            }
-            else
-            {
-                int job_size = m_region_size / n_thread;
-                int remain = m_region_size % n_thread;
-                size_t start = 0;
-                for (size_t i_thread = 0; i_thread < n_thread; ++i_thread)
-                {
-                    size_t ending = start + job_size + (remain > 0);
-                    ending = (ending > m_region_size) ? m_region_size : ending;
-                    thread_store.push_back( std::thread(&PRSice::thread_perm, this,
-                            c_commander.num_permutation(), start, ending, 1,
-                            c_pheno_index, rand_gen));
-                    start = ending;
-                    remain--;
-                }
-            }
-            // joining the threads
-            for (auto &&thread : thread_store) thread.join();
-            thread_store.clear();
-        }
-    }
-    fprintf(stderr, "Completed!\n");
-}
-
-
-void PRSice::permutation(unsigned int seed, int perm_per_slice, int remain_slice,
-        int total_permutation)
-{
-
-
-    int num_iter = total_permutation/perm_per_slice;
-    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-    for(size_t i_region=0; i_region < m_region_size; ++i_region)
-    {
-        Eigen::setNbThreads(m_thread);
-        // get the decomposition
-        for (size_t sample_id = 0; sample_id < m_current_score[i_region].size(); ++sample_id)
-        {
-            std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
-                    m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
-            // The reason why we need to update the m_sample_with_phenotypes matrix
-            if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
-            {
-                m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
-                        (m_current_score[i_region][sample_id].num_snp==0)? 0.0 :
-                                m_current_score[i_region][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
-            }
-        }
-        Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed(m_independent_variables);
-        Eigen::setNbThread(1);
-
-
-        int cur_remain = remain_slice;
-        // we reseed the random number generator in each iteration so that
-        // we will always get the same pheontype permutation
-        std::mt19937 rand_gen{seed}; //problem...
-        // need to do the permutation of phenotype without threading
-        // so that we can reserve the sequence
-        for(int iter = 0; iter < num_iter; ++iter)
-        {
-            int cur_perm = perm_per_slice + (cur_remain>0)? 1:0;
-            cur_remain--;
-            std::vector<Eigen::MatrixXd> perm_pheno(cur_perm);
-            for(size_t p = 0; p < cur_perm; ++p)
-            {
-                perm.setIdentity();
-                std::shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size(),
-                        rand_gen);
-                perm_pheno[p] = perm * m_phenotype; // permute columns
-            }
-            // now multithread it and get the corresponding p-values
-        }
-
-    }
-
-
+    process_permutations();
 }
 
 void PRSice::thread_score(size_t region_start, size_t region_end,
@@ -837,69 +754,160 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 
 
 
-void PRSice::thread_perm(const size_t num_perm,  size_t region_start, size_t region_end,
-        size_t thread, const size_t c_pheno_index, std::mt19937 rand_gen)
+
+void PRSice::process_permutations()
 {
-    Eigen::MatrixXd X;
-    bool thread_safe = false;
-    if (region_start == 0 && region_end == m_current_score.size())
-        thread_safe = true;
-    else
-        X = m_independent_variables;
-    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
-    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
-    Eigen::MatrixXd A_perm;
-    for (size_t iter = region_start; iter < region_end; ++iter)
+    // We process in the following way
+    // 1. For each region
+    // 2. for each permutation
+    for(size_t i_region=0; i_region < m_region_size; ++i_region)
     {
-        // first build the independent variable matrix
-        for (size_t sample_id = 0; sample_id < m_current_score[iter].size(); ++sample_id)
+        size_t num_threshold = m_prs_results[i_region].size();
+        size_t num_perm =m_region_perm_result[i_region].size();
+        auto &&thres_res = m_region_perm_result[i_region];
+        for(size_t p=0; p< num_perm; ++p)
+        {
+            assert(num_threshold==thres_res[p]);
+            std::sort(thres_res[p].begin(),thres_res[p].end());
+        }
+        // then get sort the current scores based on their R2
+        std::vector<size_t> idx(num_threshold);
+        std::iota(idx.begin(), idx.end(), 0);
+
+        // sort indexes based on comparing values in v
+        auto &&v = m_prs_results[i_region];
+        std::sort(idx.begin(), idx.end(),
+                [&v](size_t i1, size_t i2) {return v[i1].r2 < v[i2].r2;});
+        // now idx contain the rank of the thresholds
+        // in fact, this following part can be multithreaded
+        for(auto &&rank : idx)
+        {
+            double ori_p =v[idx[rank]].p;
+            int more_sig = 0;
+
+            for(auto &&perm : thres_res)
+            {
+                more_sig += (ori_p >= perm[rank]);
+            }
+            v[idx[rank]].emp_p = (double)(more_sig+1)/(double)(num_perm+1); //+1 so not 0
+        }
+    }
+}
+
+void PRSice::permutation(unsigned int seed, int perm_per_slice, int remain_slice,
+        int total_permutation, int n_thread)
+{
+
+
+    int num_iter = total_permutation/perm_per_slice;
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm( m_phenotype.rows());
+    // the sequence should be as follow
+    // 1. For each region, perform decomposition (this ensures we have different permutation for all N perm,
+    //    otherwise, the sequence will be the same for each "slice"
+    // 2. For each slice, build all permutations
+    // 3. For each slice, perform multi-thread calculation
+    //
+    for(size_t i_region=0; i_region < m_region_size; ++i_region)
+    {
+        Eigen::setNbThreads(n_thread);
+        // get the decomposition
+        for (size_t sample_id = 0; sample_id < m_current_score[i_region].size(); ++sample_id)
         {
             std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
                     m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
             // The reason why we need to update the m_sample_with_phenotypes matrix
             if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
             {
-                if(thread_safe)
-                {
-                    m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
-                            (m_best_score[iter][sample_id].num_snp==0)? 0.0 :
-                                    m_best_score[iter][sample_id].prs / (double) m_best_score[iter][sample_id].num_snp ;
-                }
-                else
-                {
-                    X(m_sample_with_phenotypes.at(sample), 1) =
-                            (m_best_score[iter][sample_id].num_snp==0)? 0.0 :
-                                    m_best_score[iter][sample_id].prs / (double) m_best_score[iter][sample_id].num_snp ;
-                }
+                m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                        (m_current_score[i_region][sample_id].num_snp==0)? 0.0 :
+                                m_current_score[i_region][sample_id].prs / (double) m_current_score[i_region][sample_id].num_snp ;
             }
         }
-        size_t best = m_best_index[iter];
-        double p_value = m_prs_results[iter][best].p;
-        size_t num_better = 0;
-        double perm_p, perm_r2,perm_r2_adj, perm_coefficient;
-        for (size_t i_perm = 0; i_perm < num_perm; ++i_perm)
+        Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed(m_independent_variables);
+        int rank = decomposed.rank();
+        Eigen::MatrixXd R = decomposed.matrixR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
+        Eigen::VectorXd pre_se = (R.transpose()*R).inverse().diagonal();
+        Eigen::setNbThreads(1);
+        int cur_remain = remain_slice;
+        // we reseed the random number generator in each iteration so that
+        // we will always get the same pheontype permutation
+        std::mt19937 rand_gen{seed};
+        // need to do the permutation of phenotype without threading
+        // so that we can reserve the sequence
+        size_t processed = 0;
+        for(int iter = 0; iter < num_iter+1; ++iter)
         {
-            perm.setIdentity();
-            std::shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size(),
-                    rand_gen);
-            A_perm = perm * m_phenotype; // permute columns
-            if (m_target_binary[c_pheno_index])
+            int cur_perm = perm_per_slice;
+            cur_perm += (cur_remain>0)? 1:0;
+            if(cur_perm+processed > total_permutation)
             {
-                if (thread_safe)
-                    Regression::glm(A_perm, m_independent_variables, perm_p, perm_r2, perm_coefficient, 25, thread, true);
-                else
-                    Regression::glm(A_perm, X, perm_p, perm_r2, perm_coefficient, 25, thread, true);
+                cur_perm =total_permutation - processed;
             }
-            else{
-                if (thread_safe)
-                    Regression::linear_regression(A_perm, m_independent_variables, perm_p, perm_r2,
-                            perm_r2_adj, perm_coefficient, thread, true);
-                else
-                    Regression::linear_regression(A_perm, X, perm_p, perm_r2, perm_r2_adj, perm_coefficient, thread, true);
-           }
-            if (perm_p < p_value) num_better++;
+            cur_remain--;
+            std::vector<Eigen::MatrixXd> perm_pheno(cur_perm);
+            for(size_t p = 0; p < cur_perm; ++p)
+            {
+                perm.setIdentity();
+                std::shuffle(perm.indices().data(), perm.indices().data() + perm.indices().size(),
+                        rand_gen);
+                perm_pheno[p] = perm * m_phenotype; // permute columns
+            }
+            // now multithread it and get the corresponding p-values
+            std::vector<std::thread> thread_store;
+            int job_size = cur_perm / n_thread;
+            int remain = cur_perm % n_thread;
+            size_t start = 0;
+            for (size_t i_thread = 0; i_thread < n_thread; ++i_thread)
+            {
+                size_t ending = start + job_size + (remain > 0);
+                ending = (ending > cur_perm) ? cur_perm : ending;
+                thread_store.push_back( std::thread(&PRSice::thread_perm, this,
+                        std::ref(decomposed), std::ref(perm_pheno), start,
+                        ending, i_region, rank, std::ref(pre_se), processed));
+                start = ending;
+                remain--;
+            }
+            for(auto &&thread : thread_store) thread.join();
+            processed+=cur_perm;
         }
-        m_prs_results[iter][best].emp_p = (double)(num_better+1.0) /(double)(num_perm+1.0);
+
+    }
+
+
+}
+
+
+void PRSice::thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd> &decomposed,
+        std::vector<Eigen::MatrixXd> &pheno_perm, size_t start, size_t end,
+        size_t i_region, int rank, Eigen::VectorXd &pre_se, size_t processed)
+{
+
+    bool intercept =true;
+    int n = m_independent_variables.rows();
+    for(size_t i = start; i < end; ++i)
+    {
+        Eigen::VectorXd beta = decomposed.solve(pheno_perm[i]);
+        Eigen::MatrixXd fitted = m_independent_variables*beta;
+        Eigen::VectorXd residual = pheno_perm[i]-fitted;
+        int rdf = n-rank;
+        double rss = 0.0;
+        for(size_t r = 0; r < n; ++r){
+            rss+=residual(r)*residual(r);
+        }
+        size_t se_index = intercept;
+        for(size_t ind=0;ind < beta.rows(); ++ind)
+        {
+            if(decomposed.colsPermutation().indices()(ind) == intercept)
+            {
+                se_index = ind;
+                break;
+            }
+        }
+        double resvar = rss/(double)rdf;
+        Eigen::VectorXd se = (pre_se*resvar).array().sqrt();
+        double tval = beta(intercept)/se(se_index);
+        boost::math::students_t dist(rdf);
+        m_region_perm_result[i_region][processed+i].push_back(2*boost::math::cdf(boost::math::complement(dist, fabs(tval))));
     }
 }
 
