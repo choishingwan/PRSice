@@ -230,8 +230,9 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	std::vector<int> exist_index; // try to use this as quick search
 	// Actual reading the file, will do a bunch of QC
 	snp_file.seekg (0, snp_file.end);
-	int file_length = snp_file.tellg();
+	size_t file_length = snp_file.tellg();
 	snp_file.seekg (0, snp_file.beg);
+	std::unordered_set<int> unique_thresholds;
 	while (std::getline(snp_file, line))
 	{
 	    fprintf(stderr, "\rReading %03.2f%%", (double) snp_file.tellg() / (double) (file_length) * 100.0);
@@ -367,6 +368,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					// ignore the SE as it currently serves no purpose
 					exist_index.push_back(m_existed_snps_index[rs_id]);
 					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
+					if(unique_thresholds.find(category)==unique_thresholds.end()) unique_thresholds.insert(category);
 					m_max_category = (m_max_category< category)? category:m_max_category;
 				}
 			}
@@ -438,6 +440,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	filter.maf = c_commander.maf();
 	filter.hard_threshold = c_commander.hard_threshold();
 	filter.use_hard = c_commander.hard_coding();
+	m_num_threshold = unique_thresholds.size();
 }
 
 
@@ -521,6 +524,7 @@ void Genotype::clump(Genotype &reference)
 	m_existed_snps_index.clear();
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(m_existed_snps);
 	bool proxy = clump_info.use_proxy;
+	std::unordered_set<int> unique_threshold;
 	for(auto &&i_snp : p_sort_order){
 		if(overlapped_snps.find(i_snp)!=overlapped_snps.end() &&
 				m_existed_snps[i_snp].p_value() <= clump_info.p_value)
@@ -529,17 +533,25 @@ void Genotype::clump(Genotype &reference)
 			{
 				m_existed_snps[i_snp].proxy_clump(m_existed_snps, clump_info.proxy);
 				remain_snps.push_back(i_snp);
+				if(unique_threshold.find(m_existed_snps[i_snp].category())==unique_threshold.end())
+				{
+				    unique_threshold.insert(m_existed_snps[i_snp].category());
+				}
 			}
 			else if(!m_existed_snps[i_snp].clumped())
 			{
 				m_existed_snps[i_snp].clump(m_existed_snps);
 				remain_snps.push_back(i_snp);
+				if(unique_threshold.find(m_existed_snps[i_snp].category())==unique_threshold.end())
+                {
+                    unique_threshold.insert(m_existed_snps[i_snp].category());
+                }
 			}
 		}
 		else if(m_existed_snps[i_snp].p_value() >= clump_info.p_value) break;
 
 	}
-
+	m_num_threshold = unique_threshold.size();
 	if(remain_snps.size() != m_existed_snps.size())
 	{ // only do this if we need to remove some SNPs
 		// we assume exist_index doesn't have any duplicated index

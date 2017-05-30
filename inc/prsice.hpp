@@ -67,19 +67,18 @@ public:
     //void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
 protected:
 private:
-    void permutation(unsigned int seed, int perm_per_slice, int remain_slice,
-            int total_permutation, int n_thread);
+
     inline double lee_adjust(double r2, double top, double bottom) const
     {
         return top*r2/(bottom*r2);
     }
     void set_lee(double prevalence, double case_ratio, double &top, double &bottom) const;
     struct{
-    	std::vector<int> col;
-    	std::vector<std::string> name;
-    	std::vector<int> order;
-    	std::vector<bool> binary;
-    	bool use_pheno;
+            std::vector<int> col;
+            std::vector<std::string> name;
+            std::vector<int> order;
+            std::vector<bool> binary;
+            bool use_pheno;
     }pheno_info;
 
     //slowly update the class
@@ -91,9 +90,7 @@ private:
     size_t m_region_size=1;
     bool m_ignore_fid = false;
 
-    typedef std::vector<double> threshold_p_value;
-    typedef std::vector<threshold_p_value> perm_results;
-    std::vector<perm_results> m_region_perm_result;
+    misc::vec2d<double> m_region_perm_result;
     std::vector<Sample> m_sample_names;
 	std::unordered_map<std::string,size_t> m_sample_with_phenotypes;
 
@@ -102,10 +99,13 @@ private:
 
 	// Use struct for more elegant coding
 	// struct stored in storage so that Genotype class can also use it
-	std::vector< std::vector<prsice_result> > m_prs_results; // 1d = region, 2d=results
+	misc::vec2d<prsice_result> m_prs_results;
+	//std::vector< std::vector<prsice_result> > m_prs_results; // 1d = region, 2d=results
 	std::vector<size_t> m_best_index; // only need to store the index for the best region
 	// we are safe to assume that the order of samples follow the read in from fam
 	// due to the way we initialize the m_pheno and m_independent_variable
+	//misc::vec2d<Sample_lite> m_best_score;
+	//misc::vec2d<Sample_lite> m_current_score;
 	std::vector< std::vector<Sample_lite> > m_best_score; // PRS for the best threshold
 	std::vector< std::vector<Sample_lite> > m_current_score; // PRS for the current threshold
 	std::vector<size_t> m_num_snp_included;
@@ -150,10 +150,14 @@ private:
      */
 
     //void update_line(std::unordered_map<std::string, size_t> &partition_index);
-    void thread_score(size_t region_start, size_t region_end, double threshold, size_t thread, const size_t c_pheno_index);
+    void thread_score(size_t region_start, size_t region_end, double threshold,
+            size_t thread, const size_t c_pheno_index, const size_t iter_threshold);
     void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd> &decomposed,
             std::vector<Eigen::MatrixXd> &pheno_perm, size_t start, size_t end,
-            size_t i_region, int rank, Eigen::VectorXd &pre_se, size_t processed);
+            size_t i_region, int rank, const Eigen::VectorXd &pre_se, size_t processed,
+            bool logit_perm);
+    void permutation(unsigned int seed, int perm_per_slice, int remain_slice,
+                int total_permutation, int n_thread, bool logit_perm);
 };
 
 #endif // PRSICE_H

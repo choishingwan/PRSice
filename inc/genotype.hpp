@@ -84,7 +84,7 @@ class Genotype
                 std::vector<size_t> &num_snp_included);
         bool prepare_prsice();
         void print_snp(std::string &output, double threshold);
-
+        size_t num_threshold() const { return m_num_threshold; };
     protected:
         void initialize();
         uintptr_t m_final_mask;
@@ -92,6 +92,7 @@ class Genotype
         static std::mutex clump_mtx;
         size_t m_max_category = 0;
         size_t m_region_size = 1;
+        size_t m_num_threshold=0;
         SCORING m_scoring;
         virtual void cleanup(){};
 
