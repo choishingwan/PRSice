@@ -1002,24 +1002,39 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
             fprintf(stderr, "\n");
             if(m_region_size>1)
                 fprintf(stderr, "For %s\n", c_region.get_name(i_region).c_str());
-            if(best_p > 0.01)
+            if(best_p > 0.1)
             {
-                fprintf(stderr, "P-Value of best threshold is > 0.01 which is \033[1;31mnot significant\033[0m.\n");
-                fprintf(stderr, "It is also inflated due to overfitting. You\n");
-                fprintf(stderr, "can use --perm to calculate the empirical p-value.\n");
-                fprintf(stderr, "Please refer to manual for more information\n");
+                fprintf(stderr, "Your best-fit PRS has a P-Value > 0.1 which is \033[1;31mnot significant\033[0m.\n\n");
+                fprintf(stderr, "This result is inflated due to the overfitting \n");
+                fprintf(stderr, "inherent in finding the best-fit PRS (but it’s still\n");
+                fprintf(stderr, "best to find the best-fit PRS!).\n\n");
+                fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
+                fprintf(stderr, "an empirical P-value.\n");
             }
             else if(best_p > 1e-5)
             {
-                fprintf(stderr, "P-Value of best threshold is > 1e-5 which is\n");
-                fprintf(stderr, "not clear whether it is significant or not due\n");
-                fprintf(stderr, "to overfitting. You should use the --perm option\n");
-                fprintf(stderr, "to calculate the empirical p-value.\n");
-                fprintf(stderr, "Please refer to manual for more information\n");
+                fprintf(stderr, "Your best-fit PRS has a P-value between 0.1 and 1e-5\n");
+                fprintf(stderr, "which \033[1;31mmay not be significant\033[0m - after accounting for\n");
+                fprintf(stderr, "inflation due to the overfitting inherent in finding\n");
+                fprintf(stderr, "the best-fit PRS (but it’s still best to find the\n");
+                fprintf(stderr, "best-fit PRS!).\n\n");
+                fprintf(stderr, "While we suggest a P-value significance threshold of\n");
+                fprintf(stderr, "P < 1e-4 for high resolution scoring (Euesden et al. 15),\n");
+                fprintf(stderr, "we highly recommend repeating the analysis using the\n");
+                fprintf(stderr, "--perm option (see manual) to calculate an empirical\n");
+                fprintf(stderr, "P-value here.\n");
             }
             else
             {
-                fprintf(stderr, "P-Value of best threshold is <= 1e-5 which is \033[1;31msignificant\033[0m.\n");
+                fprintf(stderr, "Your best-fit PRS has a P-value <= 1e-5 which is \033[1;31msignificant\033[0m\n");
+                fprintf(stderr, "- according to our suggested P-value significance\n");
+                fprintf(stderr, "threshold of P < 1e-4 for high resolution scoring\n");
+                fprintf(stderr, "(Euesden et al. 15).\n\n");
+                fprintf(stderr, "However, this result is inflated due to the\n");
+                fprintf(stderr, "overfitting inherent in finding the best-fit\n");
+                fprintf(stderr, "PRS (but it’s still best to find the best-fit PRS!).\n\n");
+                fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
+                fprintf(stderr, "an empirical P-value.\n");
             }
         }
         //if(!c_commander.print_all()) break;
