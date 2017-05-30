@@ -71,6 +71,7 @@ public:
     //misc
     bool all() const { return misc.all; };
     bool ignore_fid() const { return misc.ignore_fid; };
+    bool logit_perm() const { return misc.logit_perm; };
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
     bool seeded() const { return misc.provided_seed; };
@@ -78,7 +79,6 @@ public:
     std::string out() const { return misc.out; };
     int num_permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
-
     int thread() const { return misc.thread; };
 
     // prset
@@ -215,11 +215,12 @@ private:
     } filter;
 
     struct{
-        int all;
         std::string out;
-        int print_snp;
+        int all;
         int ignore_fid;
+        int logit_perm;
         int permutation;
+        int print_snp;
         int thread;
         int seed;
         bool provided_seed;

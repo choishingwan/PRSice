@@ -54,6 +54,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid",no_argument,&misc.ignore_fid,1},
         {"index",no_argument,&base.index,1},
+        {"logit-perm", no_argument, &misc.logit_perm, 1},
 		{"no-clump",no_argument,&clumping.no_clump,1},
 		{"no-regression",no_argument,&prsice.no_regress,1},
 		{"no-x",no_argument,&species.no_x,1},
@@ -442,10 +443,11 @@ Commander::Commander()
 	filter.use_geno = false;
 
 	misc.all = false;
-	misc.out = "PRSice";
-	misc.print_snp = false;
 	misc.ignore_fid = false;
+	misc.logit_perm = false;
+	misc.out = "PRSice";
 	misc.permutation = 10000;
+	misc.print_snp = false;
 	misc.provided_permutation = false;
 	misc.provided_seed =false;
 	misc.seed = 0;
@@ -983,6 +985,10 @@ void Commander::misc_check(bool &error, std::string &error_message)
         error = true;
         error_message.append("ERROR: Hard threshold should be between 0 and 1\n");
     }
+    if(!misc.provided_permutation && misc.logit_perm)
+    {
+        fprintf(stderr, "WARNING: Permutation not required, --logit-perm has no effect\n");
+    }
 }
 
 void Commander::prset_check(bool &error, std::string &error_message)
@@ -1006,8 +1012,7 @@ void Commander::prsice_check(bool &error, std::string &error_message)
 {
 	if(prsice.fastscore && prsice.barlevel.size()==0)
 	{
-		fprintf(stderr, "barlevel not provided.\n");
-		fprintf(stderr, "Will set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
+		fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
 		prsice.barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
 	}
 	std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
