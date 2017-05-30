@@ -989,6 +989,7 @@ void Commander::misc_check(bool &error, std::string &error_message)
     {
         fprintf(stderr, "WARNING: Permutation not required, --logit-perm has no effect\n");
     }
+    if(prsice.no_regress) misc.all = true;
 }
 
 void Commander::prset_check(bool &error, std::string &error_message)
