@@ -507,7 +507,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     std::ofstream all_out;
     if(all)
     {
-        std::string all_out_name = c_commander.out() +".";
+        std::string all_out_name = c_commander.out();
         if(multi)
         {
             all_out_name.append("."+pheno_info.name[c_pheno_index]);
