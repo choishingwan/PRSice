@@ -1,5 +1,5 @@
 // This file is part of PRSice2.0, copyright (C) 2016-2017
-// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. Oâ€™Reilly
+// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. OÃ¢â‚¬â„¢Reilly
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -1006,7 +1006,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
             {
                 fprintf(stderr, "Your best-fit PRS has a P-Value > 0.1 which is \033[1;31mnot significant\033[0m.\n\n");
                 fprintf(stderr, "This result is inflated due to the overfitting \n");
-                fprintf(stderr, "inherent in finding the best-fit PRS (but it’s still\n");
+                fprintf(stderr, "inherent in finding the best-fit PRS (but it's still\n");
                 fprintf(stderr, "best to find the best-fit PRS!).\n\n");
                 fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
                 fprintf(stderr, "an empirical P-value.\n");
@@ -1016,7 +1016,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 fprintf(stderr, "Your best-fit PRS has a P-value between 0.1 and 1e-5\n");
                 fprintf(stderr, "which \033[1;31mmay not be significant\033[0m - after accounting for\n");
                 fprintf(stderr, "inflation due to the overfitting inherent in finding\n");
-                fprintf(stderr, "the best-fit PRS (but it’s still best to find the\n");
+                fprintf(stderr, "the best-fit PRS (but it's still best to find the\n");
                 fprintf(stderr, "best-fit PRS!).\n\n");
                 fprintf(stderr, "While we suggest a P-value significance threshold of\n");
                 fprintf(stderr, "P < 1e-4 for high resolution scoring (Euesden et al. 15),\n");
@@ -1032,7 +1032,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 fprintf(stderr, "(Euesden et al. 15).\n\n");
                 fprintf(stderr, "However, this result is inflated due to the\n");
                 fprintf(stderr, "overfitting inherent in finding the best-fit\n");
-                fprintf(stderr, "PRS (but it’s still best to find the best-fit PRS!).\n\n");
+                fprintf(stderr, "PRS (but it's still best to find the best-fit PRS!).\n\n");
                 fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
                 fprintf(stderr, "an empirical P-value.\n");
             }
