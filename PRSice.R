@@ -856,6 +856,9 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
 
 
 # Process file names for plotting------------------------------------------------------
+if(provided("no_regress", argv)){
+    quit("yes");
+}
 ignore_fid <- provided("ignore_fid", argv)
 extract_matrix <- function(x,y){
   z=which(x==y); 
