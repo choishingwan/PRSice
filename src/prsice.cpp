@@ -153,7 +153,8 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
     {
         all_out << "Threshold\tRegion";
         for (auto &&sample : m_sample_names)
-            all_out << "\t" << sample.FID<< ":" << sample.IID;
+            if(m_ignore_fid) all_out << "\t" << sample.IID;
+            else all_out << "\t" << sample.FID << "\t" << sample.IID;
         all_out << std::endl;
         all_out.close();
     }
