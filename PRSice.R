@@ -930,6 +930,58 @@ if (provided("pheno_col", argv)) {
 }
 
 
+
+update_cov_header <- function(c){
+  res <- NULL;
+  for(i in c){
+    if(substr(i,0,1)=="@"){
+      i <- substr(i,2,nchar(i))
+      temp <- strsplit(i, "\\[")[[1]];
+      info <- NULL
+      is_list <- NULL
+      for(j in temp){
+        if(grepl("\\]",j)){
+          tem <- strsplit(j, "\\]")[[1]];
+          for(k in 1:length(tem)){
+            info <- rbind(info, tem[k]);
+            is_list <- rbind(is_list, k==1);
+          }
+        }else{
+          info <- rbind(info, j);
+          is_list <- rbind(is_list, FALSE);
+        }
+      }
+      final <- NULL;
+      for(j in 1:nrow(info)){
+        if(is_list[j]){
+          num <- NULL
+          ind <- strsplit(info[j], split="\\.")[[1]];
+          for(k in ind){
+            if(grepl("-", k)){
+              range <- strsplit(k , split="-")[[1]];
+              r <- range[1]:range[2];
+              num <- c(num, r);
+            }else{
+              num <- c(num, k);
+            }
+          }
+          cur <- final
+          final <- NULL
+          for(n in num){
+            final <- c(final, paste(cur, n, sep=""));
+          }
+        }else{
+          final <- paste(final, info[j],sep="");
+        }
+      }
+      res <- c(res, final)
+    }else{
+      res<-c(res, i);
+    }   
+  }
+  return(res)
+}
+
 # Now we have the correct header of phenos, bases and binary_target information
 # Need to get the covariates
 covariance = NULL
@@ -937,6 +989,7 @@ if (provided("cov_file", argv)) {
   covariance = fread(argv$cov_file, data.table = F, header = T)
   if (provided("cov_header", argv)) {
     c = strsplit(argv$cov_header, split = ",")[[1]]
+	c <- update_cov_header(c)
     selected = colnames(covariance)%in%c
     if(!ignore_fid){
       selected[2] <- TRUE #When ignore_fid isn't provided, then we need to also include the FID information
