@@ -372,11 +372,121 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
     else
     {
         std::unordered_set<std::string> included;
-        for (auto &&cov: c_cov_header)
+        for (auto cov: c_cov_header)
         {
+            if(cov.empty()) continue;
             if(included.find(cov) == included.end())// to avoid duplicated covariance headers
             {
-                included.insert(cov);
+                // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic thingy to substitute them
+                if(cov.at(0)=='@')
+                {
+                    std::vector<std::string> open = misc::split(cov, "[");
+                    std::vector<std::string> info;
+                    std::vector<bool> list;
+                    for(auto o : open)
+                    {
+                        if(o.find("]")!=std::string::npos)
+                        {
+                            std::vector<std::string> close =misc::split(o, "]");
+                            // the first one will always be the list
+                            info.push_back(close[0]);
+                            list.push_back(true);
+                            for(size_t cl = 1; cl< close.size(); ++cl)
+                            {
+                                info.push_back(close[cl]);
+                                list.push_back(false);
+                            }
+                        }
+                        else
+                        {
+                            info.push_back(o);
+                            list.push_back(false);
+                        }
+                    }
+                    std::vector<std::string> final_covariates;
+                    for(size_t c=0; c < info.size(); ++c)
+                    {
+                        if(list[c])
+                        {
+                            std::vector<std::string> individual =misc::split(info[c], ".");
+                            std::vector<int> numeric;
+                            for(auto &&ind : individual)
+                            {
+                                if(ind.find("-")!=std::string::npos)
+                                {
+                                    std::vector<std::string> range = misc::split(ind, "-");
+                                    if(range.size() != 2)
+                                    {
+                                        throw std::runtime_error("ERROR: Invalid range format, range must be in the form of start-end");
+                                    }
+                                    try{
+                                        int start = misc::convert<int>(range[0]);
+                                        int end = misc::convert<int>(range[1]);
+                                        if(start > end){
+                                            int temp = end;
+                                            end = start;
+                                            start = temp;
+                                        }
+                                        for(size_t s = start; s<=end; ++s)
+                                        {
+                                            numeric.push_back(s);
+                                        }
+                                    } catch (const std::runtime_error &error){
+                                        std::string error_message = "ERROR: Invalid parameter: "+range[0]+" or "+range[1]+", only allow integer!";
+                                        throw std::runtime_error(error_message);
+                                    }
+                                }
+                                else
+                                {
+                                    try {
+                                        int temp = misc::convert<int>( ind);
+                                        numeric.push_back(temp);
+                                    } catch (const std::runtime_error &error){
+                                        std::string error_message = "ERROR: Invalid parameter: "+ind+", only allow integer!";
+                                        throw std::runtime_error(error_message);
+                                    }
+                                }
+                            }
+
+                            // Now we have all the numeric parameters
+                            if(final_covariates.empty())
+                            {
+                                for(auto n: numeric)
+                                {
+                                    final_covariates.push_back(std::to_string(n));
+                                }
+                            }
+                            else
+                            {
+                                size_t cur_size = final_covariates.size();
+                                for(size_t final=0; final < cur_size; ++final){
+                                    std::string cur = final_covariates[final];
+                                    final_covariates[final].append(std::to_string(numeric.front()));
+                                    for(size_t s = 1; s < numeric.size(); ++s)
+                                    {
+                                        final_covariates.push_back(cur+std::to_string(numeric[s]));
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for(size_t final=0; final < final_covariates.size(); ++final)
+                            {
+                                final_covariates[final].append(info[c]);
+                            }
+                            if(final_covariates.empty()) final_covariates.push_back(info[c]);
+                        }
+                    }
+                    for(auto res : final_covariates)
+                    {
+                        if(included.find(res)!=included.end())
+                        {
+                            included.insert(res);
+                        }
+                    }
+                }
+                else included.insert(cov);
             }
         }
         // same, +1 when fid is include
@@ -508,6 +618,10 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
 
         fprintf(stderr, "\nFinal number of samples: %zu\n\n", valid_sample_index.size());
     }
+    else
+    {
+        fprintf(stderr, "\nFinal number of samples: %zu\n\n", valid_sample_index.size());
+    }
 
 }
 
@@ -606,6 +720,8 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
 
     size_t iter_threshold =0;
     size_t cur_process = 0;
+    fprintf(stderr, "\nPRSice\n");
+    fprintf(stderr, "==============================\n");
     while(target.get_score(m_current_score, cur_index, cur_category, cur_threshold, m_num_snp_included))
     {
         if (!prslice)

@@ -112,6 +112,7 @@ namespace misc
 
 // codes from stackoverflow
     std::vector<std::string> split(const std::string seq, const std::string separators="\t ");
+
     template <typename T> inline
     T convert(const std::string& str)
     {
