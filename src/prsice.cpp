@@ -480,7 +480,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
                     }
                     for(auto res : final_covariates)
                     {
-                        if(included.find(res)!=included.end())
+                        if(included.find(res)==included.end())
                         {
                             included.insert(res);
                         }
@@ -499,6 +499,10 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
         }
     }
     std::sort(cov_index.begin(), cov_index.end());
+    if(cov_index.size()==0)
+    {
+        throw std::runtime_error("ERROR: No valid covariates!");
+    }
     return cov_index;
 }
 
