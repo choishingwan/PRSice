@@ -380,6 +380,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
                 // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic thingy to substitute them
                 if(cov.at(0)=='@')
                 {
+                    cov.erase(0,1);
                     std::vector<std::string> open = misc::split(cov, "[");
                     std::vector<std::string> info;
                     std::vector<bool> list;
