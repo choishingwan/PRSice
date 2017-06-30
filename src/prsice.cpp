@@ -725,7 +725,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
 
     size_t iter_threshold =0;
     size_t cur_process = 0;
-    fprintf(stderr, "\nPRSice\n");
+    fprintf(stderr, "\nPerform Regression\n");
     fprintf(stderr, "==============================\n");
     while(target.get_score(m_current_score, cur_index, cur_category, cur_threshold, m_num_snp_included))
     {
