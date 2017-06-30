@@ -75,11 +75,13 @@ public:
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
     bool seeded() const { return misc.provided_seed; };
+    bool transpose() const { return misc.transpose; };
     void set_ignore_fid() { misc.ignore_fid = true; };
     std::string out() const { return misc.out; };
     int num_permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
+
 
     // prset
     std::vector<std::string> bed() const { return prset.bed; };
@@ -222,6 +224,7 @@ private:
         int permutation;
         int print_snp;
         int thread;
+        int transpose;
         int seed;
         bool provided_seed;
         bool provided_permutation;

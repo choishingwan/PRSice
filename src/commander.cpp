@@ -63,6 +63,7 @@ bool Commander::initialize(int argc, char *argv[])
 		{"no-mt",no_argument,&species.no_mt,1},
 		{"fastscore",no_argument,&prsice.fastscore,1},
         {"print-snp",no_argument,&misc.print_snp,1},
+        {"transpose",no_argument,&misc.transpose,1},
 		// long flags, need to work on them
         {"A1",required_argument,NULL,0},
         {"A2",required_argument,NULL,0},
@@ -452,6 +453,7 @@ Commander::Commander()
 	misc.provided_seed =false;
 	misc.seed = 0;
 	misc.thread = 1;
+	misc.transpose = false;
 
 	prset.gtf = "";
 	prset.msigdb = "";

@@ -122,6 +122,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
     m_independent_variables.resize(0,0);
     bool no_regress = c_commander.no_regress();
     bool all = c_commander.all();
+    bool transpose = c_commmander.transpose();
     std::string pheno_file = c_commander.pheno_file();
     std::string output_name = c_commander.out();
 
@@ -151,11 +152,15 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
 
     if (all && !prslice) 
     {
-        all_out << "Threshold\tRegion";
-        for (auto &&sample : m_sample_names)
-            if(m_ignore_fid) all_out << "\t" << sample.IID;
-            else all_out << "\t" << sample.FID << "\t" << sample.IID;
-        all_out << std::endl;
+        // Only do the output of the header when we don't need to do the tranpose
+        if(!transpose)
+        {
+            all_out << "Threshold\tRegion";
+            for (auto &&sample : m_sample_names)
+                if(m_ignore_fid) all_out << "\t" << sample.IID;
+                else all_out << "\t" << sample.FID << "\t" << sample.IID;
+            all_out << std::endl;
+        }
         all_out.close();
     }
     double null_r2_adjust = 0.0, null_p = 0.0, null_coeff = 0.0;
@@ -504,6 +509,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     // Let the Genotype class lead the way
     bool no_regress = c_commander.no_regress() && !prslice;
     bool all = c_commander.all() && !prslice;
+    bool transpose = c_commander.tranpose();
     bool multi = pheno_info.name.size()>0;
     std::ofstream all_out;
     if(all)
@@ -599,7 +605,10 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
         if (all && all_out.is_open()) {
             for (size_t i_region = 0; i_region < m_region_size; ++i_region)
             {
-                all_out << cur_threshold << "\t" << region_name.at(i_region);
+                if(transpose)
+                    all_out << cur_threshold << "\t" << i_region;
+                else
+                    all_out << cur_threshold << "\t" << region_name.at(i_region);
                 for (size_t sample = 0; sample < total_sample_size; ++sample)
                 {
                     all_out << "\t" << m_current_score[i_region][sample].prs / (double) m_current_score[i_region][sample].num_snp;
