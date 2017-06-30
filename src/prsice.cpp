@@ -438,7 +438,6 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
             int index = m_sample_with_phenotypes[id];
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
             {
-                total_sample++;
                 try {
                     double temp = misc::convert<double>( token[cov_index[i_cov]]);
                     m_independent_variables(index, i_cov + 2) = temp; // + 2 because first line = intercept, second line = PRS
@@ -466,8 +465,10 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
             // check which column is the main problem
             for(size_t miss = 0; miss < missing_count.size(); ++miss)
             {
-                if(missing_count[miss] == total_sample)
+                if(missing_count[miss] == num_sample)
                 {
+                    // we sorted the column index so we can't tell what the column name is
+                    // useless we also store the head of the file (too troublesome)
                     fprintf(stderr, "Column %d is invalid, please check it is of the correct format\n", miss);
                 }
             }
