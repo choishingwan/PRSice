@@ -209,7 +209,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
             misc::trim(line);
             if (line.empty()) continue;
             std::vector < std::string > token = misc::split(line);
-            if (token.size() < pheno_index + 1+!m_ignore_fid) // need to check the range
+            if (token.size() <= pheno_index + 1+!m_ignore_fid) // need to check the range
             {
                 std::string error_message = "Malformed pheno file, should contain at least "
                         + std::to_string(pheno_index + 1+!m_ignore_fid) + " columns\n"
