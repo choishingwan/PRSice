@@ -209,10 +209,11 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
             misc::trim(line);
             if (line.empty()) continue;
             std::vector < std::string > token = misc::split(line);
-            if (token.size() < pheno_index + 1)
+            if (token.size() < pheno_index + 1+!m_ignore_fid) // need to check the range
             {
                 std::string error_message = "Malformed pheno file, should contain at least "
-                        + std::to_string(pheno_index + 1) + " columns";
+                        + std::to_string(pheno_index + 1+!m_ignore_fid) + " columns\n"
+                                "Have you use the --ignore fid option?";
                 throw std::runtime_error(error_message);
             }
             std::string id =(m_ignore_fid)? token[0]:token[0]+"_"+token[1];
@@ -417,6 +418,8 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
     std::string line;
     std::getline(cov, line); // remove header
     int max_index = cov_index.back()+1;
+    std::vector<int> missing_count(cov_index.size(),0);
+    int total_sample =0;
     while(std::getline(cov, line))
     {
         misc::trim(line);
@@ -435,12 +438,14 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
             int index = m_sample_with_phenotypes[id];
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov)
             {
+                total_sample++;
                 try {
                     double temp = misc::convert<double>( token[cov_index[i_cov]]);
                     m_independent_variables(index, i_cov + 2) = temp; // + 2 because first line = intercept, second line = PRS
                 } catch (const std::runtime_error &error) {
                     valid = false;
                     m_independent_variables(index, i_cov + 2) = 0;
+                    missing_count[i_cov]++;
                 }
             }
             if (valid)
@@ -458,6 +463,14 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
         double portion = (double) removed / (double) num_sample;
         if(valid_sample_index.size() == 0)
         {
+            // check which column is the main problem
+            for(size_t miss = 0; miss < missing_count.size(); ++miss)
+            {
+                if(missing_count[miss] == total_sample)
+                {
+                    fprintf(stderr, "Column %d is invalid, please check it is of the correct format\n", miss);
+                }
+            }
             throw std::runtime_error("All samples removed due to missingness in covariate file!");
         }
         if (portion > 0.05)
