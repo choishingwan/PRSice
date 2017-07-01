@@ -23,6 +23,8 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy,
         bool no_mt, const size_t thread, bool verbose)
 {
+	m_remove_sample = true;
+	m_keep_sample = true;
     if(remove_sample.empty()) m_remove_sample = false;
     else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
     if(keep_sample.empty()) m_keep_sample = false;
@@ -340,7 +342,7 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_existed_snps[i_snp].snp_id(), m_existed_snps[i_snp].file_name(),
-                m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, m_final_mask,
+                m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
                 false, m_tmp_genotype, genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -608,15 +610,19 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
     m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
     m_founder_ct = m_unfiltered_sample_ct;
     std::memset(m_founder_info, 0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
-    for(size_t i = 0; i < sample_res.size(); ++i)
+    m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];
+    std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+	for(size_t i = 0; i < sample_res.size(); ++i)
     {
         if(sample_res[i].included)
         {
             SET_BIT(i, m_founder_info);
         }
+		else
+		{
+			SET_BIT(i, m_sample_exclude);
+		}
     }
-    m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];
-    std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex=(has_sex)? 0 : m_unfiltered_sample_ct;
     for(size_t i = 0; i < sex_info.size() && has_sex; ++i)

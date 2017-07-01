@@ -32,6 +32,7 @@
 	struct Sample_lite{
 		double prs;
 		int num_snp;
+		bool included;
 	};
 
     struct prsice_result{

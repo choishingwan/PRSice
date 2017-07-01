@@ -584,7 +584,7 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
                 {
                     // we sorted the column index so we can't tell what the column name is
                     // useless we also store the head of the file (too troublesome)
-                    fprintf(stderr, "Column %d is invalid, please check it is of the correct format\n", miss);
+                    fprintf(stderr, "Column %zu is invalid, please check it is of the correct format\n", miss);
                 }
             }
             throw std::runtime_error("All samples removed due to missingness in covariate file!");
@@ -662,6 +662,14 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     m_num_snp_included.resize(m_region_size, 0);
 
     m_prs_results =  misc::vec2d<prsice_result>(m_region_size, target.num_threshold());
+    for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+    {
+        for(size_t i = 0; i < m_prs_results.cols(); ++i)
+        {
+            m_prs_results(i_region, i).threshold = -1;
+        }
+    }
+
     /** REMEMBER, WE WANT ALL PRS FOR ALL SAMPLES **/
     size_t total_sample_size = m_sample_names.size();
     // These are lite version. We can ignore the FID and IID because we
@@ -673,6 +681,15 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     {
         m_best_score[i_region].resize(total_sample_size);
         m_current_score[i_region].resize(total_sample_size);
+    }
+    for(size_t i = 0; i < total_sample_size; ++i)
+    {
+        bool included = m_sample_names[i].included;
+        for(size_t i_region=0; i_region < m_region_size; ++i_region)
+        {
+            m_current_score[i_region][i].included = included;
+        }
+
     }
     // now let Genotype class do the work
     size_t max_category = target.max_category()+1; // so that it won't be 100% until the very end
@@ -807,10 +824,13 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
     {
         // The m_prs size check is just so that the back will be valid
         // m_prs will only be empty for the first run
-        if (m_num_snp_included[iter] == 0 ||
+		if (m_num_snp_included[iter] == 0 ||
             (m_num_snp_included[iter] == m_prs_results(iter, iter_threshold).num_snp)
         )  continue; // don't bother when there is no additional SNPs added
+		// Problem is, if we do sample selection, it is possible for that SNP to
+		// have MAF of 0 because of the small resulting sample size
 
+        double total = 0.0;
         for (size_t sample_id = 0; sample_id < m_current_score[iter].size(); ++sample_id)
         {
             std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
@@ -818,19 +838,23 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
             // The reason why we need to update the m_sample_with_phenotypes matrix
             if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
             {
+                double score = (m_current_score[iter][sample_id].num_snp==0)? 0.0 :
+                        m_current_score[iter][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
                 if(thread_safe)
                 {
-                    m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
-                        (m_current_score[iter][sample_id].num_snp==0)? 0.0 :
-                        m_current_score[iter][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
+                    m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = score;
+
                 }
                 else
                 {
-                    X(m_sample_with_phenotypes.at(sample), 1) =
-                        (m_current_score[iter][sample_id].num_snp==0)? 0.0 :
-                        m_current_score[iter][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
+                    X(m_sample_with_phenotypes.at(sample), 1) =score;
                 }
             }
+
+        }
+        if(total==0.0)
+        {
+            continue;
         }
         if (m_target_binary[c_pheno_index])
         {
@@ -1075,6 +1099,21 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     std::string output_name = output_prefix;
     for(size_t i_region = 0; i_region < m_region_size; ++i_region)
     {
+        // check number of valid results
+        bool valid = false;
+        for(size_t i = 0; i < m_prs_results.cols(); ++i)
+        {
+            if(m_prs_results(i_region, i).threshold>=0)
+            {
+                valid = true;
+                break;
+            }
+        }
+        if(!valid)
+        {
+            fprintf(stderr, "ERROR: No valid PRS!\n");
+            continue;
+        }
         if(m_region_size > 1) output_name = output_prefix+"."+c_region.get_name(i_region);
         std::string out_best = output_name + ".best";
         std::string out_prsice = output_name + ".prsice";

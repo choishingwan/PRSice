@@ -21,6 +21,8 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
 		const size_t thread, bool verbose)
 {
+	m_remove_sample = true;
+	m_keep_sample = true;
 	if(remove_sample.empty()) m_remove_sample = false;
 	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
 	if(keep_sample.empty()) m_keep_sample = false;
@@ -147,6 +149,10 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 			{
 				 m_num_ambig_sex++; //currently ignore as we don't do sex chromosome
 				 //SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
+			}
+			if(!cur_sample.included)
+			{
+				SET_BIT(sample_uidx, m_sample_exclude);
 			}
 			sample_uidx++;
 		}
@@ -400,7 +406,7 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
 
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_exclude, m_final_mask,
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -482,6 +488,8 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         	}
         }
     }
+
+if(start_index != end_bound) exit(-1);
     delete [] genotype;
 }
 
