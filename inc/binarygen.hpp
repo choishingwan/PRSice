@@ -102,7 +102,6 @@ class BinaryGen: public Genotype
                 int shift = (i_sample%BITCT*2);
                 int index = (i_sample*2)/BITCT;
                 genotype[index] |= cur_geno << shift;
-
             }
         };
 
@@ -145,11 +144,11 @@ class BinaryGen: public Genotype
             return 0;
         }
 
-        void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+        void read_score( misc::vec2d<Sample_lite> &current_prs_score,
                 size_t start_index, size_t end_bound);
-        void hard_code_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+        void hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
                                 size_t start_index, size_t end_bound);
-        void dosage_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+        void dosage_score( misc::vec2d<Sample_lite> &current_prs_score,
                                 size_t start_index, size_t end_bound);
         std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
         std::unordered_map<std::string, uint32_t> m_offset_map;

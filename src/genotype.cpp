@@ -116,7 +116,17 @@ void Genotype::set_genotype_files(std::string prefix)
 	}
 }
 
-
+void Genotype::update_include(const std::vector<Sample> &inclusion)
+{
+    std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+    for(size_t i_sample=0; i_sample < inclusion.size(); ++i_sample)
+    {
+        if(IS_SET(m_founder_info, i_sample) && inclusion[i_sample].included)
+        {
+            SET_BIT(i_sample, m_sample_include);
+        }
+    }
+}
 std::unordered_set<std::string> Genotype::load_ref(std::string input, bool ignore_fid)
 {
 	std::ifstream in;
@@ -178,7 +188,7 @@ Genotype::~Genotype() {
 	// TODO Auto-generated destructor stub
 	if(m_founder_info!=nullptr) delete [] m_founder_info;
 	if(m_sex_male != nullptr) delete [] m_sex_male;
-	if(m_sample_exclude != nullptr) delete [] m_sample_exclude;
+	if(m_sample_include != nullptr) delete [] m_sample_include;
 	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
 	if(m_haploid_mask != nullptr) delete [] m_haploid_mask;
 	if(m_chrom_mask != nullptr) delete [] m_chrom_mask;
@@ -853,7 +863,7 @@ bool Genotype::prepare_prsice()
 	return true;
 }
 
-bool Genotype::get_score(std::vector< std::vector<Sample_lite> > &prs_score, int &cur_index, int &cur_category,
+bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, int &cur_category,
 		double &cur_threshold, std::vector<size_t> &num_snp_included)
 {
 	if(m_existed_snps.size() ==0 || cur_index==m_existed_snps.size()) return false;
@@ -880,8 +890,9 @@ bool Genotype::get_score(std::vector< std::vector<Sample_lite> > &prs_score, int
 		cur_category = m_existed_snps.back().category();
 	}
 	else cur_category = m_existed_snps[end_index].category();
-	//get_score(m_partition, m_snp_list, m_current_prs, cur_index, end_index, m_region_size, m_scoring);
+
 	read_score(prs_score, cur_index, end_index);
+
 	cur_index = end_index;
 	return true;
 }

@@ -83,8 +83,11 @@ int main(int argc, char *argv[])
         target_file->read_base(commander, region);
         std::string region_out_name = commander.out() + ".region";
         region.print_file(region_out_name);
+
         if(!commander.no_clump())
         {
+            // we will perform clumping on all samples that are included
+            // ignoring if they have valid phenotype/covariates or not
             target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
         }
         PRSice prsice = PRSice(base_name, commander.target_name(),
@@ -150,5 +153,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     fprintf(stderr, "\n");
+    if(target_file != nullptr) delete target_file;
+    if(ld_file != nullptr) delete ld_file;
     return 0;
 }

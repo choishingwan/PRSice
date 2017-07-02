@@ -52,6 +52,8 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
 
 BinaryGen::~BinaryGen()
 {
+    if(m_tmp_genotype!=nullptr) delete [] m_tmp_genotype;
+    if(m_bgen_file.is_open()) m_bgen_file.close();
 }
 
 std::vector<SNP> BinaryGen::load_snps()
@@ -207,12 +209,13 @@ void BinaryGen::cleanup()
     return;
 }
 
-void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+void BinaryGen::dosage_score( misc::vec2d<Sample_lite> &current_prs_score,
                         size_t start_index, size_t end_bound)
 {
     m_cur_file = "";
     std::vector<bool> in_region(m_region_size);
     std::vector< genfile::byte_t > buffer1, buffer2 ;
+    size_t num_included_samples = current_prs_score.cols();
     for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     {
         for(size_t i_region = 0; i_region < m_region_size; ++i_region)
@@ -245,7 +248,8 @@ void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_pr
         ) ;
         std::vector<size_t> missing_samples;
         double total = 0.0;
-        std::vector<double> score(current_prs_score.front().size());
+        std::vector<double> score(num_included_samples);
+        size_t cur_sample=0;
         for(size_t i_sample=0; i_sample < probability.size(); ++i_sample)
         {
             auto &&prob = probability[i_sample];
@@ -258,27 +262,30 @@ void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_pr
             }
             double expected = 0.0;
             uintptr_t cur_geno = 1;
-            for(int g = 0; g < prob.size(); ++g)
+            if(IS_SET(m_sample_include,i_sample)) // to ignore non-selected SNPs
             {
-                if(*max_element(prob.begin(), prob.end()) < filter.hard_threshold)
+                for(int g = 0; g < prob.size(); ++g)
                 {
-                    missing_samples.push_back(i_sample);
-                    break;
+                    if(*max_element(prob.begin(), prob.end()) < filter.hard_threshold)
+                    {
+                        missing_samples.push_back(i_sample);
+                        break;
+                    }
+                    else expected+=prob[g]*((snp.is_flipped())?abs(g-2) :g);
                 }
-                else expected+=prob[g]*((snp.is_flipped())?abs(g-2) :g);
+                score[cur_sample++]=expected;
+                total+=expected;
             }
-            score[i_sample]=expected;
-            total+=expected;
         }
         // now process the missing and clean stuff
         // we divide the mean by 2 so that in situation where there is no dosage,
         // it will behave the same as the genotype data.
 
         size_t num_miss = missing_samples.size();
-        double mean = total/(((double)probability.size()-(double)num_miss)*2);
+        double mean = total/(((double)num_included_samples-(double)num_miss)*2);
         size_t i_missing = 0;
         double stat = snp.stat();
-        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        for(size_t i_sample=0; i_sample < num_included_samples; ++i_sample)
         {
             if(i_missing < num_miss && i_sample == missing_samples[i_missing])
             {
@@ -286,8 +293,8 @@ void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_pr
                 {
                     if(in_region[i_region])
                     {
-                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += stat*mean;
-                        if(m_scoring != SCORING::SET_ZERO) current_prs_score[i_region][i_sample].num_snp++;
+                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score(i_region,i_sample).prs += stat*mean;
+                        if(m_scoring != SCORING::SET_ZERO) current_prs_score(i_region,i_sample).num_snp++;
                     }
                 }
                 i_missing++;
@@ -301,12 +308,12 @@ void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_pr
                         if(m_scoring == SCORING::CENTER)
                         {
                             // if centering, we want to keep missing at 0
-                            current_prs_score[i_region][i_sample].prs -= stat*mean;
+                            current_prs_score(i_region,i_sample).prs -= stat*mean;
                         }
                         // again, so that it will generate the same result as genotype file format
                         // when we are 100% certain of the genotypes
-                        current_prs_score[i_region][i_sample].prs += score[i_sample]*stat*0.5;
-                        current_prs_score[i_region][i_sample].num_snp++;
+                        current_prs_score(i_region,i_sample).prs += score[i_sample]*stat*0.5;
+                        current_prs_score(i_region,i_sample).num_snp++;
                     }
                 }
             }
@@ -314,7 +321,7 @@ void BinaryGen::dosage_score( std::vector<std::vector<Sample_lite> > &current_pr
     }
 }
 
-void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
                         size_t start_index, size_t end_bound)
 {
     m_cur_file = "";
@@ -325,6 +332,7 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
     uintptr_t ulii = 0;
     //m_final_mask
 
+    size_t num_included_samples = current_prs_score.cols();
     // a lot of code in PLINK is to handle the sex chromosome
     // which suggest that PRS can be done on sex chromosome
     // that should be something later
@@ -342,7 +350,7 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_existed_snps[i_snp].snp_id(), m_existed_snps[i_snp].file_name(),
-                m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
+                m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
                 false, m_tmp_genotype, genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -352,7 +360,7 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
         std::vector<size_t> missing_samples;
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
-        std::vector<double> genotypes(m_unfiltered_sample_ct);
+        std::vector<double> genotypes(num_included_samples);
         int total_num = 0;
         uint32_t sample_idx=0;
         int nmiss = 0;
@@ -373,8 +381,10 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
                 {
                     // 3 is homo alternative
                     //int flipped_geno = snp_list[snp_index].geno(ukk);
-                    total_num+=(ukk==3)? 2: ukk;
-                    genotypes[sample_idx] = (ukk==3)? 2: ukk;
+                    if(sample_idx < num_included_samples){
+                        total_num+=(ukk==3)? 2: ukk;
+                        genotypes[sample_idx] = (ukk==3)? 2: ukk;
+                    }
                 }
                 else // this should be 2
                 {
@@ -384,15 +394,15 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
                 ulii &= ~((3 * ONELU) << ujj);
             }
             uii += BITCT2;
-        } while (uii < m_unfiltered_sample_ct);
+        } while (uii < num_included_samples);
 
 
         size_t i_missing = 0;
-        double maf = ((double)total_num/((double)((int)m_unfiltered_sample_ct-nmiss)*2.0)); // MAF does not count missing
+        double maf = ((double)total_num/((double)((int)num_included_samples-nmiss)*2.0)); // MAF does not count missing
         if(flipped) maf = 1.0-maf;
         double center_score = stat*maf;
         size_t num_miss = missing_samples.size();
-        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        for(size_t i_sample=0; i_sample < num_included_samples; ++i_sample)
         {
             if(i_missing < num_miss && i_sample == missing_samples[i_missing])
             {
@@ -400,8 +410,8 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
                 {
                     if(in_region[i_region])
                     {
-                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += center_score;
-                        if(m_scoring != SCORING::SET_ZERO) current_prs_score[i_region][i_sample].num_snp++;
+                        if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score(i_region,i_sample).prs += center_score;
+                        if(m_scoring != SCORING::SET_ZERO) current_prs_score(i_region,i_sample).num_snp++;
                     }
                 }
                 i_missing++;
@@ -415,10 +425,10 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
                         if(m_scoring == SCORING::CENTER)
                         {
                             // if centering, we want to keep missing at 0
-                            current_prs_score[i_region][i_sample].prs -= center_score;
+                            current_prs_score(i_region,i_sample).prs -= center_score;
                         }
-                        current_prs_score[i_region][i_sample].prs += ((flipped)?fabs(genotypes[i_sample]-2):genotypes[i_sample])*stat*0.5;
-                        current_prs_score[i_region][i_sample].num_snp++;
+                        current_prs_score(i_region,i_sample).prs += ((flipped)?fabs(genotypes[i_sample]-2):genotypes[i_sample])*stat*0.5;
+                        current_prs_score(i_region,i_sample).num_snp++;
                     }
                 }
             }
@@ -427,19 +437,12 @@ void BinaryGen::hard_code_score( std::vector<std::vector<Sample_lite> > &current
     delete [] genotype;
 }
 
-void BinaryGen::read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+void BinaryGen::read_score( misc::vec2d<Sample_lite> &current_prs_score,
                size_t start_index, size_t end_bound)
 {
-    if(current_prs_score.size() != m_region_size)
+    if(current_prs_score.rows() != m_region_size)
     {
         throw std::runtime_error("Size of Matrix doesn't match number of region!!");
-    }
-    for(size_t i = 0; i < m_region_size; ++i)
-    {
-        if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
-        {
-            throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
-        }
     }
 
     if(filter.use_hard)
@@ -610,18 +613,14 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno, bool has_heade
     m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
     m_founder_ct = m_unfiltered_sample_ct;
     std::memset(m_founder_info, 0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
-    m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];
-    std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+    m_sample_include = new uintptr_t[m_unfiltered_sample_ctl];
+    std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 	for(size_t i = 0; i < sample_res.size(); ++i)
     {
         if(sample_res[i].included)
         {
             SET_BIT(i, m_founder_info);
         }
-		else
-		{
-			SET_BIT(i, m_sample_exclude);
-		}
     }
 
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex=(has_sex)? 0 : m_unfiltered_sample_ct;

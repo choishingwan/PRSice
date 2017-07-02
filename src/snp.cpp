@@ -59,7 +59,13 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
 
 
 
-SNP::~SNP(){}
+SNP::~SNP(){
+    if(clump_info.genotype!=nullptr)
+    {
+        delete [] clump_info.genotype;
+        clump_info.genotype = nullptr;
+    }
+}
 
 std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
 {

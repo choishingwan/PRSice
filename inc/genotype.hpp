@@ -79,12 +79,13 @@ class Genotype
             return m_max_category;
         };
         bool get_score(
-                std::vector<std::vector<Sample_lite> > &current_prs_score,
+                misc::vec2d<Sample_lite> &current_prs_score,
                 int &cur_index, int &cur_category, double &cur_threshold,
                 std::vector<size_t> &num_snp_included);
         bool prepare_prsice();
         void print_snp(std::string &output, double threshold);
         size_t num_threshold() const { return m_num_threshold; };
+        void update_include(const std::vector<Sample> &inclusion);
     protected:
         void initialize();
         uintptr_t m_final_mask;
@@ -145,9 +146,12 @@ class Genotype
         std::unordered_set<std::string> m_remove_sample_list;
         std::unordered_set<std::string> m_keep_sample_list;
 
+        // founder_info stores the samples that are included from
+        // the genotype file. All non-founder and removed samples
+        // will have bit set to 0
         uintptr_t* m_founder_info = nullptr;
         uintptr_t* m_sex_male = nullptr;
-        uintptr_t* m_sample_exclude =nullptr;
+        uintptr_t* m_sample_include =nullptr;
         size_t m_num_male = 0;
         size_t m_num_female = 0;
         size_t m_num_ambig_sex = 0;
@@ -180,7 +184,7 @@ class Genotype
             genotype = nullptr;
         };
         virtual void read_score(
-                std::vector<std::vector<Sample_lite> > &current_prs_score,
+                misc::vec2d<Sample_lite> &current_prs_score,
                 size_t start_index, size_t end_bound) {};
 
         //hh_exists

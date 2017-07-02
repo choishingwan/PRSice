@@ -105,9 +105,12 @@ private:
 	// we are safe to assume that the order of samples follow the read in from fam
 	// due to the way we initialize the m_pheno and m_independent_variable
 	//misc::vec2d<Sample_lite> m_best_score;
-	//misc::vec2d<Sample_lite> m_current_score;
-	std::vector< std::vector<Sample_lite> > m_best_score; // PRS for the best threshold
-	std::vector< std::vector<Sample_lite> > m_current_score; // PRS for the current threshold
+	misc::vec2d<Sample_lite> m_current_sample_score;
+	misc::vec2d<Sample_lite> m_best_sample_score;
+	std::vector<std::string> m_sample_included;
+	std::vector<int> m_sample_index;
+	//std::vector< std::vector<Sample_lite> > m_best_score; // PRS for the best threshold
+	//std::vector< std::vector<Sample_lite> > m_current_score; // PRS for the current threshold
 	std::vector<size_t> m_num_snp_included;
 	/**
 	 * function area

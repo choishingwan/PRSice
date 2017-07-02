@@ -49,6 +49,11 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 
 BinaryPlink::~BinaryPlink()
 {
+    if(m_tmp_genotype!=nullptr) delete [] m_tmp_genotype;
+    if(m_bedfile!=nullptr){
+        fclose(m_bedfile);
+        m_bedfile= nullptr;
+    }
 }
 std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 {
@@ -92,8 +97,9 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 	m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
 	std::memset(m_founder_info, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
-	m_sample_exclude = new uintptr_t[m_unfiltered_sample_ctl];
-	std::memset(m_sample_exclude, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+	// Initialize this, but will copy founder into this later on
+	m_sample_include = new uintptr_t[m_unfiltered_sample_ctl];
+	std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
 	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0;
 	std::vector<Sample> sample_name;
@@ -149,10 +155,6 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 			{
 				 m_num_ambig_sex++; //currently ignore as we don't do sex chromosome
 				 //SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
-			}
-			if(!cur_sample.included)
-			{
-				SET_BIT(sample_uidx, m_sample_exclude);
 			}
 			sample_uidx++;
 		}
@@ -342,17 +344,14 @@ void BinaryPlink::check_bed()
 }
 
 
-void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_prs_score, size_t start_index,
+void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t start_index,
 		size_t end_bound)
 {
-    size_t prev =0;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
     uintptr_t ulii = 0;
-    int32_t delta1 = 1;
-	int32_t delta2 = 2;
-	int32_t deltam = 0;
+	int num_included_samples = current_prs_score.cols();
 	//m_final_mask
 
 	// a lot of code in PLINK is to handle the sex chromosome
@@ -365,16 +364,9 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
 		m_bedfile = nullptr;
 	}
     uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-    if(current_prs_score.size() != m_region_size)
+    if(current_prs_score.rows() != m_region_size)
     {
     		throw std::runtime_error("Size of Matrix doesn't match number of region!!");
-    }
-    for(size_t i = 0; i < m_region_size; ++i)
-    {
-    	 if(current_prs_score[i].size()!=m_unfiltered_sample_ct)
-    	 {
-    		 throw std::runtime_error("Size of Matrix doesn't match number of samples!!");
-    	 }
     }
 	std::vector<bool> in_region(m_region_size);
 	// index is w.r.t. partition, which contain all the information
@@ -390,7 +382,6 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         	m_cur_file= m_existed_snps[i_snp].file_name();
             std::string bedname = m_cur_file+".bed";
             m_bedfile = fopen(bedname.c_str(), FOPEN_RB); //again, we are assuming that the file is correct
-            prev=0;
         }
        for(size_t i_region = 0; i_region < m_region_size; ++i_region)
         {
@@ -406,7 +397,7 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
 
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_founder_info, m_final_mask,
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -416,11 +407,10 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         std::vector<size_t> missing_samples;
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
-        std::vector<double> genotypes(m_unfiltered_sample_ct);
+        std::vector<double> sample_genotype(num_included_samples);
         int total_num = 0;
         uint32_t sample_idx=0;
         int nmiss = 0;
-        // This whole thing was wrong...
         do
         {
         	ulii = ~(*lbptr++);
@@ -437,8 +427,11 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         		{
         			// 3 is homo alternative
         			//int flipped_geno = snp_list[snp_index].geno(ukk);
-        			total_num+=(ukk==3)? 2: ukk;
-        			genotypes[sample_idx] = (ukk==3)? 2: ukk;
+        		    if(sample_idx < num_included_samples)
+        		    {
+        		        total_num+=(ukk==3)? 2: ukk;
+        		        sample_genotype[sample_idx] = (ukk==3)? 2: ukk;
+        		    }
         		}
         		else // this should be 2
         		{
@@ -448,15 +441,16 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         		ulii &= ~((3 * ONELU) << ujj);
         	}
         	uii += BITCT2;
-        } while (uii < m_unfiltered_sample_ct);
-
+        } while (uii < num_included_samples);
 
         size_t i_missing = 0;
-        double maf = ((double)total_num/((double)((int)m_unfiltered_sample_ct-nmiss)*2.0)); // MAF does not count missing
+        double maf = ((double)total_num/((double)(num_included_samples-nmiss)*2.0)); // MAF does not count missing
         if(flipped) maf = 1.0-maf;
         double center_score = stat*maf;
         size_t num_miss = missing_samples.size();
-        for(size_t i_sample=0; i_sample < m_unfiltered_sample_ct; ++i_sample)
+        double check = 0.0;
+        double check2 = 0.0;
+        for(size_t i_sample=0; i_sample < num_included_samples; ++i_sample)
         {
         	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
         	{
@@ -464,8 +458,8 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         		{
         			if(in_region[i_region])
         			{
-        				if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score[i_region][i_sample].prs += center_score;
-        				if(m_scoring != SCORING::SET_ZERO) current_prs_score[i_region][i_sample].num_snp++;
+        				if(m_scoring == SCORING::MEAN_IMPUTE) current_prs_score(i_region,i_sample).prs += center_score;
+        				if(m_scoring != SCORING::SET_ZERO) current_prs_score(i_region,i_sample).num_snp++;
         			}
         		}
         		i_missing++;
@@ -479,17 +473,19 @@ void BinaryPlink::read_score(std::vector< std::vector<Sample_lite> > &current_pr
         				if(m_scoring == SCORING::CENTER)
         				{
         					// if centering, we want to keep missing at 0
-        					current_prs_score[i_region][i_sample].prs -= center_score;
+        					current_prs_score(i_region,i_sample).prs -= center_score;
         				}
-        				current_prs_score[i_region][i_sample].prs += ((flipped)?fabs(genotypes[i_sample]-2):genotypes[i_sample])*stat*0.5;
-        				current_prs_score[i_region][i_sample].num_snp++;
+        				current_prs_score(i_region,i_sample).prs += ((flipped)?fabs(sample_genotype[i_sample]-2):sample_genotype[i_sample])*stat*0.5;
+        				current_prs_score(i_region,i_sample).num_snp++;
+
         			}
         		}
         	}
+        	check += current_prs_score(0,i_sample).prs;
+        	check2 += current_prs_score(0,i_sample).num_snp;
         }
-    }
 
-if(start_index != end_bound) exit(-1);
+    }
     delete [] genotype;
 }
 

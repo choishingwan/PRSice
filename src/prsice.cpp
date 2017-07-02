@@ -152,9 +152,13 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
     if (all && !prslice) 
     {
         all_out << "Threshold\tRegion";
-        for (auto &&sample : m_sample_names)
-            if(m_ignore_fid) all_out << "\t" << sample.IID;
-            else all_out << "\t" << sample.FID << "\t" << sample.IID;
+        for (auto &&sample : m_sample_names){
+            if(sample.included)
+            {
+                if(m_ignore_fid) all_out << "\t" << sample.IID;
+                else all_out << "\t" << sample.FID << "\t" << sample.IID;
+            }
+        }
         all_out << std::endl;
         all_out.close();
     }
@@ -179,12 +183,14 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
                 m_null_r2, null_r2_adjust, null_coeff, n_thread, true);
         }
     }
+    target.update_include(m_sample_names);
 }
 
 void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_index, bool regress)
 {
     std::vector<double> pheno_store;
     bool binary = pheno_info.binary[pheno_index];
+
     int max_num = 0;
     int num_case =0;
     int num_control =0;
@@ -241,7 +247,8 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                         else
                         {
                             invalid_pheno++;
-                            sample.included = false;
+                            if(regress) sample.included=false;
+                            // we don't care about invalid phenotype when we are not performing regression
                         }
                     }
                     else
@@ -251,12 +258,13 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                     }
                 }catch(const std::runtime_error &error){
                     invalid_pheno++;
-                    sample.included=false;
+                    if(regress) sample.included=false;
+
                 }
             }
             else
             {
-                sample.included =false;
+                if(regress) sample.included=false;
                 num_not_found++;
             }
         }
@@ -268,7 +276,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
         for(auto &&sample: m_sample_names)
         {
             if(sample.pheno.compare("NA")==0 || !sample.included){
-                sample.included=false;
+                if(regress) sample.included=false;
                 continue;
             }
             try{
@@ -286,7 +294,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                     else
                     {
                         invalid_pheno++;
-                        sample.included = false;
+                        if(regress) sample.included=false;
                     }
                 }
                 else
@@ -296,7 +304,7 @@ void PRSice::gen_pheno_vec(const std::string &pheno_file_name, const int pheno_i
                 }
             }catch(const std::runtime_error &error){
                 invalid_pheno++;
-                sample.included = false;
+                if(regress) sample.included=false;
             }
         }
     }
@@ -660,8 +668,9 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     m_best_index.clear();
     m_best_index.resize(m_region_size);
     m_num_snp_included.resize(m_region_size, 0);
-
-    m_prs_results =  misc::vec2d<prsice_result>(m_region_size, target.num_threshold());
+    // cerr Don't know why we need the +1 but this solve the memory problem
+    // maybe that's because of the 1 extra threshold of 1?
+    m_prs_results =  misc::vec2d<prsice_result>(m_region_size, target.num_threshold()+1);
     for(size_t i_region = 0; i_region < m_region_size; ++i_region)
     {
         for(size_t i = 0; i < m_prs_results.cols(); ++i)
@@ -671,31 +680,34 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     }
 
     /** REMEMBER, WE WANT ALL PRS FOR ALL SAMPLES **/
-    size_t total_sample_size = m_sample_names.size();
+    /** 1/7 CHANGE BEHAVIOUR, WE ONLY RETAIN THE SELECTED SAMPLES
+     *  (THIS IS FOR SCORE READING, i.e MAF calculation)
+     **/
+
+    for(size_t i_sample=0; i_sample < m_sample_names.size(); ++i_sample)
+    {
+        auto &&sample = m_sample_names[i_sample];
+        if(sample.included)
+        {
+            std::string id = (m_ignore_fid)? sample.IID: sample.FID+"_"+sample.IID;
+            m_sample_included.push_back(id);
+            m_sample_index.push_back(i_sample);
+        }
+    }
+    size_t num_included_samples = m_sample_included.size();
     // These are lite version. We can ignore the FID and IID because we
     // know they will always follow the sequence in m_sample_names
     // this will help us saving some memory spaces
-    m_best_score.resize(m_region_size);
-    m_current_score.resize(m_region_size);
-    for(size_t i_region = 0; i_region < m_region_size; ++i_region)
-    {
-        m_best_score[i_region].resize(total_sample_size);
-        m_current_score[i_region].resize(total_sample_size);
-    }
-    for(size_t i = 0; i < total_sample_size; ++i)
-    {
-        bool included = m_sample_names[i].included;
-        for(size_t i_region=0; i_region < m_region_size; ++i_region)
-        {
-            m_current_score[i_region][i].included = included;
-        }
-
-    }
+    // by default, m_current_sample_score only contains samples that are included
+    // so doesn't need the included field
+    m_current_sample_score = misc::vec2d<Sample_lite>(m_region_size, num_included_samples);
+    m_best_sample_score = misc::vec2d<Sample_lite>(m_region_size, num_included_samples);
     // now let Genotype class do the work
     size_t max_category = target.max_category()+1; // so that it won't be 100% until the very end
     int cur_category=0, cur_index =0;
     double cur_threshold =0.0;
-    unsigned int seed = std::random_device()();
+    unsigned int seed = 0;
+//cerr// std::random_device()();
     if(c_commander.seeded()) seed = c_commander.seed();
     // seed need to be outside the loop so each iteration will return the same sequence
     // therefore the same permutation
@@ -706,14 +718,14 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     {
         m_region_perm_result = misc::vec2d<double>(m_region_size, c_commander.num_permutation(), 2.0);
         // first check for ridiculously large sample size
-        if(CHAR_BIT*total_sample_size >1000000000)
+        if(CHAR_BIT*num_included_samples >1000000000)
         {
             perm_per_slice = 1;
         }
         else{
             // in theory, most of the time, perm_per_slice should be
             // equal to c_commander.num_permutation();
-            int sample_memory = CHAR_BIT*total_sample_size;
+            int sample_memory = CHAR_BIT*num_included_samples;
             perm_per_slice = 1000000000/sample_memory;
             perm_per_slice = (perm_per_slice > c_commander.num_permutation())?
                     c_commander.num_permutation() :
@@ -742,19 +754,18 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
 
     size_t iter_threshold =0;
     size_t cur_process = 0;
-    fprintf(stderr, "\nPerform Regression\n");
-    fprintf(stderr, "==============================\n");
-    while(target.get_score(m_current_score, cur_index, cur_category, cur_threshold, m_num_snp_included))
+    while(target.get_score(m_current_sample_score, cur_index, cur_category, cur_threshold, m_num_snp_included))
     {
+
         if (!prslice)
             fprintf(stderr, "\rProcessing %03.2f%%", (double) cur_category / (double) (max_category) * 100.0);
         if (all && all_out.is_open()) {
             for (size_t i_region = 0; i_region < m_region_size; ++i_region)
             {
                 all_out << cur_threshold << "\t" << region_name.at(i_region);
-                for (size_t sample = 0; sample < total_sample_size; ++sample)
+                for (size_t sample = 0; sample < num_included_samples; ++sample)
                 {
-                    all_out << "\t" << m_current_score[i_region][sample].prs / (double) m_current_score[i_region][sample].num_snp;
+                    all_out << "\t" << m_current_sample_score(i_region,sample).prs / (double) m_current_sample_score(i_region,sample).num_snp;
                 }
                 all_out << std::endl;
             }
@@ -820,6 +831,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
     else
         X = m_independent_variables;
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
+    size_t num_include_samples = m_current_sample_score.cols();
     for (size_t iter = region_start; iter < region_end; ++iter)
     {
         // The m_prs size check is just so that the back will be valid
@@ -831,15 +843,15 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 		// have MAF of 0 because of the small resulting sample size
 
         double total = 0.0;
-        for (size_t sample_id = 0; sample_id < m_current_score[iter].size(); ++sample_id)
+        for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id)
         {
-            std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
-                m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
+            std::string sample =m_sample_included[sample_id];
             // The reason why we need to update the m_sample_with_phenotypes matrix
             if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
             {
-                double score = (m_current_score[iter][sample_id].num_snp==0)? 0.0 :
-                        m_current_score[iter][sample_id].prs / (double) m_current_score[iter][sample_id].num_snp ;
+                double score = (m_current_sample_score(iter,sample_id).num_snp==0)? 0.0 :
+                        m_current_sample_score(iter,sample_id).prs / (double) m_current_sample_score(iter,sample_id).num_snp ;
+                total+= score;
                 if(thread_safe)
                 {
                     m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = score;
@@ -897,7 +909,10 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         if (iter_threshold==0 || m_prs_results(iter, best_index).r2 < r2)
         {
             m_best_index[iter] = iter_threshold;
-            m_best_score[iter] = m_current_score[iter];
+            for(size_t s =0; s<m_current_sample_score.cols(); ++s)
+            {
+                m_best_sample_score(iter, s) = m_current_sample_score(iter, s);
+            }
         }
         // This should be thread safe as each thread will only mind their own region
         // now add the PRS result to the vectors (hopefully won't be out off scope
@@ -946,20 +961,20 @@ void PRSice::permutation(unsigned int seed, int perm_per_slice, int remain_slice
     // 2. For each slice, build all permutations
     // 3. For each slice, perform multi-thread calculation
     //
+    size_t num_include_samples = m_current_sample_score.cols();
     for(size_t i_region=0; i_region < m_region_size; ++i_region)
     {
         Eigen::setNbThreads(n_thread);
         // get the decomposition
-        for (size_t sample_id = 0; sample_id < m_current_score[i_region].size(); ++sample_id)
+        for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id)
         {
-            std::string sample = (m_ignore_fid)? m_sample_names[sample_id].IID:
-                    m_sample_names[sample_id].FID+"_"+m_sample_names[sample_id].IID;
+            std::string sample = m_sample_included[sample_id];
             // The reason why we need to update the m_sample_with_phenotypes matrix
             if (m_sample_with_phenotypes.find(sample) != m_sample_with_phenotypes.end())
             {
                 m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
-                        (m_current_score[i_region][sample_id].num_snp==0)? 0.0 :
-                                m_current_score[i_region][sample_id].prs / (double) m_current_score[i_region][sample_id].num_snp ;
+                        (m_current_sample_score(i_region,sample_id).num_snp==0)? 0.0 :
+                                m_current_sample_score(i_region,sample_id).prs / (double) m_current_sample_score(i_region,sample_id).num_snp ;
             }
         }
         Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed;
@@ -1130,6 +1145,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         prsice_out << std::endl;
         for(size_t i = 0; i < m_prs_results.cols(); ++i)
         {
+            if(m_prs_results(i_region,i).threshold < 0)  continue;
             double r2 = m_prs_results(i_region, i).r2 - m_null_r2;
             r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
             prsice_out <<m_prs_results(i_region, i).threshold << "\t"
@@ -1156,12 +1172,11 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
             fprintf(stderr, "       Cannot output the best PRS score\n");
         } else 
         {
-            for(size_t sample=0; sample<m_sample_names.size(); ++sample)
+            for(size_t sample=0; sample<m_sample_included.size(); ++sample)
             {
-                best_out << m_sample_names[sample].FID << "\t"
-                        << m_sample_names[sample].IID << "\t"
-                        << ((m_sample_names[sample].included)? "Y":"N") <<"\t"
-                        << m_best_score[i_region][sample].prs/(double) best_snp_size
+                best_out << m_sample_names[m_sample_index[sample]].FID << "\t"
+                        << m_sample_names[m_sample_index[sample]].IID << "\t"
+                        << m_best_sample_score(i_region,sample).prs/(double) best_snp_size
                         << std::endl;
             }
         }

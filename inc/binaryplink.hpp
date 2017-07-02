@@ -68,7 +68,7 @@ class BinaryPlink: public Genotype
             }
         };
 
-        void read_score( std::vector<std::vector<Sample_lite> > &current_prs_score,
+        void read_score( misc::vec2d<Sample_lite> &current_prs_score,
                 size_t start_index, size_t end_bound);
         FILE* m_bedfile = nullptr;
         std::string m_cur_file;
