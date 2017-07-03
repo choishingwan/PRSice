@@ -87,6 +87,7 @@ class Genotype
         size_t num_threshold() const { return m_num_threshold; };
         void update_include(const std::vector<Sample> &inclusion);
     protected:
+
         void initialize();
         uintptr_t m_final_mask;
         uintptr_t *m_tmp_genotype;
@@ -122,6 +123,7 @@ class Genotype
 
         void finalize_snps(Region &region, const int distance);
         std::unordered_set<std::string> load_ref(std::string input, bool ignore_fid);
+        std::unordered_set<std::string> load_snp_list(std::string input);
         void set_genotype_files(std::string prefix);
         std::vector<std::string> m_genotype_files;
 
@@ -141,10 +143,14 @@ class Genotype
         uintptr_t m_unfiltered_sample_ctl = 0;
         uintptr_t m_unfiltered_sample_ct4 = 0;
         std::vector<Sample> m_sample_names;
-        bool m_remove_sample = false;
-        bool m_keep_sample = false;
+        bool m_remove_sample = true;
+        bool m_keep_sample = true;
+        bool m_extract_snp = true;
+        bool m_exclude_snp = true;
         std::unordered_set<std::string> m_remove_sample_list;
         std::unordered_set<std::string> m_keep_sample_list;
+        std::unordered_set<std::string> m_extract_snp_list;
+        std::unordered_set<std::string> m_exclude_snp_list;
 
         // founder_info stores the samples that are included from
         // the genotype file. All non-founder and removed samples

@@ -127,6 +127,46 @@ void Genotype::update_include(const std::vector<Sample> &inclusion)
         }
     }
 }
+
+std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
+{
+    std::ifstream in;
+    in.open(input.c_str());
+    if(!in.is_open())
+    {
+        std::string error_message = "ERROR: Cannot open file: "+input;
+        throw std::runtime_error(error_message);
+    }
+    std::string line;
+    std::unordered_set<std::string> result;
+    bool error = false;
+    while(std::getline(in, line))
+    {
+        misc::trim(line);
+        if(line.empty()) continue;
+        std::vector<std::string> token = misc::split(line);
+        if(token[0].compare(".")==0)
+        {
+            if(!error)
+            {
+                error = true;
+                fprintf(stderr, "WARNING: Some SNPs from the extraction/exclusion list has rs-id of .\n");
+                fprintf(stderr, "         They will be excluded unless the file contains at least 3 columns\n");
+                fprintf(stderr, "         When 3 columns is provided, we will assume the second and third columns\n");
+                fprintf(stderr, "         are chromosome and coordinates respectively and will generate an rsid\n");
+                fprintf(stderr, "         as chr:loc\n");
+            }
+            if(token.size() >= 3){
+                token[0] = token[1]+":"+token[2];
+            }
+        }
+        if(result.find(token[0])==result.end())
+        {
+            result.insert(token[0]);
+        }
+    }
+    return result;
+}
 std::unordered_set<std::string> Genotype::load_ref(std::string input, bool ignore_fid)
 {
 	std::ifstream in;

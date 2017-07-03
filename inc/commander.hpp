@@ -62,6 +62,8 @@ public:
     bool filter_info() const { return filter.use_info; };
     bool filter_hard_threshold() const { return filter.hard_threshold; };
     bool hard_coding() const { return filter.hard_coding; };
+    std::string extract_snp_file() const { return filter.extract? filter.extract_file : ""; };
+    std::string exclude_snp_file() const { return filter.exclude? filter.exclude_file : ""; };
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
@@ -200,18 +202,22 @@ private:
     } covariate;
 
     struct{
-    		double maf;
-    		double mind;
+            std::string exclude_file;
+            std::string extract_file;
     		double geno;
     		double hard_threshold;
     		double info_score;
-    		int use_prob;
-    		int use_maf;
-    		int use_mind;
+            double maf;
+            double mind;
+            int hard_coding;
     		int use_geno;
+            int use_hard_thres;
     		int use_info;
-    		int use_hard_thres;
-    		int hard_coding;
+            int use_maf;
+            int use_mind;
+            int use_prob;
+            bool extract;
+            bool exclude;
     } filter;
 
     struct{
@@ -381,6 +387,16 @@ private:
     {
         target.keep_file = file;
         target.keep_sample = true;
+    };
+    inline void set_exclude(std::string file)
+    {
+        filter.exclude = true;
+        filter.exclude_file = file;
+    };
+    inline void set_extract(std::string file)
+    {
+        filter.extract = true;
+        filter.extract_file = file;
     };
     inline void set_keep_ld(std::string file)
     {

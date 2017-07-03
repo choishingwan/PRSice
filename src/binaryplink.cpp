@@ -17,7 +17,8 @@
 #include "binaryplink.hpp"
 
 
-BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::string keep_sample,
+BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
+        std::string keep_sample, std::string extract_snp, std::string exclude_snp,
 		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
 		const size_t thread, bool verbose)
 {
@@ -27,6 +28,12 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::str
 	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
 	if(keep_sample.empty()) m_keep_sample = false;
 	else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+
+	if(extract_snp.empty()) m_extract_snp = false;
+	else m_extract_snp_list = load_snp_list(extract_snp);
+    if(exclude_snp.empty()) m_exclude_snp = false;
+    else m_exclude_snp_list = load_snp_list(exclude_snp);
+
 
 	m_xymt_codes.resize(XYMT_OFFSET_CT);
 	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
@@ -197,6 +204,8 @@ std::vector<SNP> BinaryPlink::load_snps()
 				throw std::runtime_error("");
 			}
 			std::string chr = token[+BIM::CHR];
+			if(m_extract_snp && m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()) continue;
+			if(m_exclude_snp && m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()) continue;
 			if(chr.compare(prev_chr)!=0)
 			{
 				prev_chr = chr;
