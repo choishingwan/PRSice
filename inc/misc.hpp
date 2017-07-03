@@ -112,7 +112,7 @@ namespace misc
 
 // codes from stackoverflow
     std::vector<std::string> split(const std::string seq, const std::string separators="\t ");
-
+    std::string get_column(const std::string seq, const size_t column, const std::string separators="\t ");
     template <typename T> inline
     T convert(const std::string& str)
     {

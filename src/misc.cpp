@@ -137,5 +137,27 @@ std::vector<std::string> split(const std::string seq, const std::string separato
     if (prev < seq.length()) result.push_back(seq.substr(prev, std::string::npos));
     return result;
 }
+std::string get_column(const std::string seq, const size_t column, const std::string separators)
+{
+    std::size_t prev = 0, pos, count=0;
+    std::string result;
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
+    {
+        if (pos > prev)
+        {
+            result=seq.substr(prev, pos-prev);
+            count++;
+            if(count >= column) return result;
+        }
 
+        prev = pos+1;
+    }
+    if (prev < seq.length())
+    {
+        result=seq.substr(prev, std::string::npos);
+        count++;
+        if(count >= column) return result;
+    }
+    return "";
+}
 }

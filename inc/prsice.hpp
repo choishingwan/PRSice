@@ -65,6 +65,7 @@ public:
     // PRSlice related stuff
     //void prslice_windows(const Commander &c_commander, const Region &c_region);
     //void prslice(const Commander &c_commander, const Region &c_region, const size_t c_pheno_index);
+    void transpose_all(const Commander &c_commander, const Region &c_region, size_t pheno_index) const;
 protected:
 private:
 
@@ -73,6 +74,7 @@ private:
         return top*r2/(bottom*r2);
     }
     void set_lee(double prevalence, double case_ratio, double &top, double &bottom) const;
+
     struct{
             std::vector<int> col;
             std::vector<std::string> name;
@@ -88,6 +90,7 @@ private:
     std::vector<bool> m_target_binary;
 	SCORING m_score = SCORING::MEAN_IMPUTE;
     size_t m_region_size=1;
+    size_t m_all_thresholds = 0;
     bool m_ignore_fid = false;
 
     misc::vec2d<double> m_region_perm_result;
