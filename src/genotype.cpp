@@ -909,6 +909,11 @@ bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, in
 	if(m_existed_snps.size() ==0 || cur_index==m_existed_snps.size()) return false;
 	int end_index = 0;
 	bool ended = false;
+	if(cur_index ==-1)// first run
+	{
+	    cur_index = 0;
+	    cur_category = m_existed_snps[cur_index].category();
+	}
 	cur_threshold = m_existed_snps[cur_index].get_threshold();
 	for (size_t i = cur_index; i < m_existed_snps.size(); ++i)
 	{
