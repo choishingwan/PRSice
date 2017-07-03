@@ -30,6 +30,10 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
     else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
     if(keep_sample.empty()) m_keep_sample = false;
     else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+    if(extract_snp.empty()) m_extract_snp = false;
+    else m_extract_snp_list = load_snp_list(extract_snp);
+    if(exclude_snp.empty()) m_exclude_snp = false;
+    else m_exclude_snp_list = load_snp_list(exclude_snp);
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     init_chr(num_auto, no_x, no_y, no_xy, no_mt);
     m_thread = thread;
@@ -190,6 +194,9 @@ std::vector<SNP> BinaryGen::load_snps()
                 {
                     RSID = std::to_string(chr_code)+":"+std::to_string(SNP_position);
                 }
+                if(m_extract_snp && m_extract_snp_list.find(RSID) == m_extract_snp_list.end()) continue;
+                if(m_exclude_snp && m_exclude_snp_list.find(RSID) != m_exclude_snp_list.end()) continue;
+
                 m_existed_snps_index[RSID] = m_unfiltered_marker_ct;
                 snp_res[m_unfiltered_marker_ct] = SNP(RSID, chr_code, SNP_position, final_alleles.front(),
                         final_alleles.back(), prefix, snp_id);

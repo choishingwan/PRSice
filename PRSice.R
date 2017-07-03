@@ -198,6 +198,10 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
 \nMisc:\n
     --all                   Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
+    --exclude               File contains SNPs to be excluded from \n
+                            analysis\n
+    --extract               File contains SNPs to be included in the \n
+                            analysis\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of most file will be assume to\n
                             be IID instead of FID\n
@@ -340,6 +344,8 @@ option_list <- list(
   make_option(c("--clump-kb"), type = "character",dest="clump_kb"),
   make_option(c("--clump-p"), type = "numeric",dest="clump_p"),
   make_option(c("--clump-r2"), type = "numeric",dest="clump_r2"),
+  make_option(c("--exclude"), type = "character"),
+  make_option(c("--extract"), type = "character"),
   make_option(c("--feature"), type = "character"),
   make_option(c("--keep"), type = "character"),
   make_option(c("--ld-type"), type = "character",dest="ld_type"),
