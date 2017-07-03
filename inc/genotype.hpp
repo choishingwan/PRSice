@@ -90,7 +90,7 @@ class Genotype
 
         void initialize();
         uintptr_t m_final_mask;
-        uintptr_t *m_tmp_genotype;
+        uintptr_t *m_tmp_genotype=nullptr;
         static std::mutex clump_mtx;
         size_t m_max_category = 0;
         size_t m_region_size = 1;
@@ -132,8 +132,8 @@ class Genotype
         std::vector<int32_t> m_xymt_codes;
         std::vector<int32_t> m_chrom_start;
         uint32_t m_max_code;
-        uintptr_t* m_haploid_mask;
-        uintptr_t* m_chrom_mask;
+        uintptr_t* m_haploid_mask=nullptr;
+        uintptr_t* m_chrom_mask=nullptr;
 
         virtual std::vector<Sample> load_samples(bool ignore_fid)
         {
