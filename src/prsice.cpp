@@ -1169,7 +1169,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
             std::string error_message = "ERROR: Cannot open file: " + out_best + " to write";
             throw std::runtime_error(error_message);
         }
-        best_out << "FID\tIID\tIncluded\tprs_" << m_prs_results(i_region, m_best_index[i_region]).threshold<< std::endl;
+        best_out << "FID\tIID\tprs_" << m_prs_results(i_region, m_best_index[i_region]).threshold<< std::endl;
         int best_snp_size = m_prs_results(i_region, m_best_index[i_region]).num_snp;
         if (best_snp_size == 0) 
         {
