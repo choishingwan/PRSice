@@ -32,6 +32,7 @@ class BinaryGen: public Genotype
     public:
         BinaryGen(std::string prefix, std::string pheno_file, bool header,
                 std::string remove_sample, std::string keep_sample,
+                std::string extract_snp, std::string exclude_snp,
                 bool ignore_fid, int num_auto = 22, bool no_x = false,
                 bool no_y = false, bool no_xy = false, bool no_mt = false,
                 const size_t thread = 1, bool verbose = false);

@@ -73,6 +73,8 @@ bool Commander::initialize(int argc, char *argv[])
         {"clump-kb",required_argument,NULL,0},
         {"clump-p",required_argument,NULL,0},
         {"clump-r2",required_argument,NULL,0},
+        {"exclude",required_argument,NULL,0},
+        {"extract",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
         {"hard-thres",required_argument,NULL,0},
         {"keep",required_argument,NULL,0},
@@ -122,6 +124,8 @@ bool Commander::initialize(int argc, char *argv[])
             else if(command.compare("bp")==0) set_bp(optarg);
             else if(command.compare("se")==0) set_se(optarg);
             else if(command.compare("keep")==0) set_keep(optarg);
+            else if(command.compare("exclude")==0) set_exclude(optarg);
+            else if(command.compare("extract")==0) set_extract(optarg);
             else if(command.compare("remove")==0) set_remove(optarg);
             else if(command.compare("ld-type")==0) clumping.type = optarg;
             else if(command.compare("type")==0) target.type = optarg;
@@ -428,6 +432,8 @@ Commander::Commander()
 	covariate.name = "";
 	covariate.ancestry_dim="MDS";
 
+	filter.exclude = false;
+	filter.extract = false;
 	filter.geno = 0.0;
 	filter.mind = 0.0;
 	filter.hard_threshold = 0.8;
@@ -631,6 +637,12 @@ void Commander::info()
             "    --type                  File type of the target file. Support bed \n"
             "                            (binary plink) and bgen format. Default: bed\n"
             "\nMisc:\n"
+            "    --all                   Output PRS for ALL threshold. WARNING: This\n"
+            "                            will generate a huge file\n"
+            "    --exclude               File contains SNPs to be excluded from \n"
+            "                            analysis\n"
+            "    --extract               File contains SNPs to be included in the \n"
+            "                            analysis\n"
             "    --all                   Output PRS for ALL threshold. WARNING: This\n"
             "                            will generate a huge file\n"
             "    --ignore-fid            Ignore FID for all input. When this is set,\n"
@@ -990,6 +1002,17 @@ void Commander::misc_check(bool &error, std::string &error_message)
         fprintf(stderr, "WARNING: Permutation not required, --logit-perm has no effect\n");
     }
     if(prsice.no_regress) misc.all = true;
+    if(filter.extract && filter.exclude)
+    {
+        error = true;
+        error_message.append("ERROR: Can only use either --extract or --exclude but not both\n");
+    }
+    if((target.keep_sample && target.remove_sample) ||
+            (clumping.keep_sample && clumping.remove_sample) )
+    {
+        error = true;
+        error_message.append("ERROR: Can only use either --keep or --remove but not both\n");
+    }
 }
 
 void Commander::prset_check(bool &error, std::string &error_message)

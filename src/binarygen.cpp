@@ -20,6 +20,7 @@ namespace bgenlib=genfile::bgen;
 
 BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
         bool header, std::string remove_sample, std::string keep_sample,
+        std::string extract_snp, std::string exclude_snp,
         bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy,
         bool no_mt, const size_t thread, bool verbose)
 {
@@ -29,7 +30,6 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
     else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
     if(keep_sample.empty()) m_keep_sample = false;
     else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
-
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     init_chr(num_auto, no_x, no_y, no_xy, no_mt);
     m_thread = thread;

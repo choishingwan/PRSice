@@ -17,7 +17,8 @@
 #include "binaryplink.hpp"
 
 
-BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample, std::string keep_sample,
+BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
+        std::string keep_sample, std::string extract_snp, std::string exclude_snp,
 		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
 		const size_t thread, bool verbose)
 {
