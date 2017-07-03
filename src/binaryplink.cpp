@@ -56,7 +56,11 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
 
 BinaryPlink::~BinaryPlink()
 {
-    if(m_tmp_genotype!=nullptr) delete [] m_tmp_genotype;
+    if(m_tmp_genotype!=nullptr)
+    {
+        delete [] m_tmp_genotype;
+        m_tmp_genotype=nullptr;
+    }
     if(m_bedfile!=nullptr){
         fclose(m_bedfile);
         m_bedfile= nullptr;

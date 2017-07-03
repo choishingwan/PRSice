@@ -56,7 +56,11 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
 
 BinaryGen::~BinaryGen()
 {
-    if(m_tmp_genotype!=nullptr) delete [] m_tmp_genotype;
+    if(m_tmp_genotype!=nullptr)
+    {
+        delete [] m_tmp_genotype;
+        m_tmp_genotype=nullptr;
+    }
     if(m_bgen_file.is_open()) m_bgen_file.close();
 }
 
