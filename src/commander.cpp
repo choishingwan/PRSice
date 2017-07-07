@@ -54,6 +54,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid",no_argument,&misc.ignore_fid,1},
         {"index",no_argument,&base.index,1},
+        {"keep-ambig", no_argument, &misc.keep_ambig, 0},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
 		{"no-clump",no_argument,&clumping.no_clump,1},
 		{"no-regression",no_argument,&prsice.no_regress,1},
@@ -451,6 +452,7 @@ Commander::Commander()
 
 	misc.all = false;
 	misc.ignore_fid = false;
+	misc.keep_ambig = true;
 	misc.logit_perm = false;
 	misc.out = "PRSice";
 	misc.permutation = 10000;
@@ -648,6 +650,12 @@ void Commander::info()
             "    --ignore-fid            Ignore FID for all input. When this is set,\n"
             "                            first column of most file will be assume to\n"
             "                            be IID instead of FID\n"
+            "    --logit_perm            When performing permutation, still use logistic\n"
+            "                            regression instead of linear regression. This\n"
+            "                            will substantially slow down PRSice\n"
+            "    --keep-ambig            Keep ambiguous SNPs. Only use this option\n"
+            "                            if you are certain that the base and target\n"
+            "                            has the same A1 and A2 alleles\n"
             "    --out           | -o    Prefix for all file output\n"
             "    --perm                  Number of permutation to perform. This will\n"
             "                            generate the empirical p-value. Recommend to\n"

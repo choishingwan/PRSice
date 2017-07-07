@@ -73,6 +73,7 @@ public:
     //misc
     bool all() const { return misc.all; };
     bool ignore_fid() const { return misc.ignore_fid; };
+    bool keep_ambig() const { return misc.keep_ambig; };
     bool logit_perm() const { return misc.logit_perm; };
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
@@ -226,6 +227,7 @@ private:
         std::string out;
         int all;
         int ignore_fid;
+        int keep_ambig;
         int logit_perm;
         int permutation;
         int print_snp;

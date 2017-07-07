@@ -204,7 +204,13 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
                             analysis\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of most file will be assume to\n
-                            be IID instead of FID\n
+                            be IID instead of FID\n            
+    --logit_perm            When performing permutation, still use logistic\n
+                            regression instead of linear regression. This\n
+                            will substantially slow down PRSice\n
+    --keep-ambig            Keep ambiguous SNPs. Only use this option\n
+                            if you are certain that the base and target\n
+                            has the same A1 and A2 alleles\n
     --out           | -o    Prefix for all file output\n
     --perm                  Number of permutation to perform. This will\n
                             generate the empirical p-value for the BEST\n
@@ -329,6 +335,7 @@ option_list <- list(
   make_option(c("--full"), action = "store_true"),
   make_option(c("--ignore-fid"), action = "store_true", dest="ignore_fid"),
   make_option(c("--index"), action = "store_true"),
+  make_option(c("--keep-ambig"), action="store_true", dest="keep_ambig"),
   make_option(c("--logit-perm"), action="store_true", dest="logit_perm"),
   make_option(c("--no-clump"), action = "store_true", dest="no_clump"),
   make_option(c("--no-regress"), action = "store_true", dest="no_regress"),
