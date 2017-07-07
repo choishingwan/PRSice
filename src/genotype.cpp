@@ -271,6 +271,9 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	// Some QC countss
 	size_t num_duplicated = 0;
 	size_t num_excluded = 0;
+	size_t num_ambiguous = 0;
+	size_t num_haploid = 0;
+
 	size_t num_not_found = 0;
 	size_t num_mismatched = 0;
 	size_t num_not_converted = 0; // this is for NA
@@ -311,7 +314,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 								if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
 								exclude =true;
 								hap_error=true;
-								num_excluded++;
+								num_haploid++;
 							}
 							else
 							{
@@ -327,7 +330,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 						if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
 						hap_error =true;
 						exclude = true;
-						num_excluded++;
+						num_haploid++;
 					}
 				}
 				std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
@@ -387,7 +390,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 
 
 				if(!alt_allele.empty() && ambiguous(ref_allele, alt_allele)){
-					num_excluded++;
+					num_ambiguous++;
 					exclude= true;
 				}
 				if(!exclude)
@@ -470,7 +473,9 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	m_region_size = region.size();
 
 	if(num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
-	if(num_excluded) fprintf(stderr, "%zu variant(s) excluded\n", num_excluded);
+	if(num_excluded) fprintf(stderr, "%zu variant(s) excluded due to p-value threshold\n", num_excluded);
+    if(num_ambiguous) fprintf(stderr, "%zu ambiguous variant(s)\n", num_excluded);
+    if(num_haploid) fprintf(stderr, "%zu variant(s) located on haploid chromosome\n", num_excluded);
 	if(num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
 	if(num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);
 	if(num_not_converted) fprintf(stderr, "%zu NA stat/p-value observed\n", num_not_converted);
