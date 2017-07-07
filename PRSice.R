@@ -849,10 +849,8 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
   # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
   # Good thing is, only quantile plot really needs the cov and phenotype information
   if (provided("quantile", argv) && argv$quantile > 0) {
-    # Main purpose, match up with PRS.best as that is the input
-    PRS.best.reduce <- subset(PRS.best, PRS.best$Included=="Y")
     # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
-    quantile_plot(PRS, PRS.best.reduce, pheno_matrix, prefix, argv, binary)
+    quantile_plot(PRS, PRS.best, pheno_matrix, prefix, argv, binary)
   }
   # Now perform the barplotting
   if (!provided("fastscore", argv) || !argv$fastscore) {
