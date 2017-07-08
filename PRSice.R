@@ -227,24 +227,23 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
 # Library handling --------------------------------------------------------
 
 if(!exists('startsWith', mode='function')){
-  startsWith <- function(x, prefix){
-    return(substring(x, 1, nchar(prefix)) == prefix)
-  }
+    startsWith <- function(x, prefix){
+        return(substring(x, 1, nchar(prefix)) == prefix)
+    }
 }
 
 libraries <- c("ggplot2", "data.table", "optparse", "methods", "tools")
-found = FALSE
-argv = commandArgs(trailingOnly = TRUE)
-dir_loc = grep("--dir", argv)
+found <- FALSE
+argv <- commandArgs(trailingOnly = TRUE)
+dir_loc <- grep("--dir", argv)
 if (length(dir_loc) != 0) {
-  dir_loc = dir_loc + 1
-  found = TRUE
+    dir_loc <- dir_loc + 1
+    found <- TRUE
 }
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
-InstalledPackage <- function(package)
-{
-  available <- suppressMessages(
+InstalledPackage <- function(package){
+    available <- suppressMessages(
                   suppressWarnings( 
                     sapply(
                       package,
@@ -254,56 +253,55 @@ InstalledPackage <- function(package)
                       warn.conflicts = FALSE
                     )
                 ))
-  missing <- package[!available]
-  if (length(missing) > 0)
-    return(FALSE)
-  return(TRUE)
+    missing <- package[!available]
+    if (length(missing) > 0)
+        return(FALSE)
+    return(TRUE)
 }
 
 CRANChoosen <- function()
 {
-  return(getOption("repos")["CRAN"] != "@CRAN@")
+    return(getOption("repos")["CRAN"] != "@CRAN@")
 }
 
 UsePackage <- function(package, dir)
 {
-  if (!InstalledPackage(package))
-  {
-    dir.create(file.path(dir, "lib"), showWarnings = FALSE)
-    .libPaths(c(.libPaths(), paste(dir, "/lib", sep = "")))
-    if (!InstalledPackage(package)) {
-      if (is.na(dir)) {
-        writeLines("WARNING: dir not provided, cannot install the required packages")
-        return(FALSE)
-        
-      } else{
-        writeLines(paste("Trying to install ", package, " in ", dir, "/lib", sep = ""))
-      }
-      suppressMessages(suppressWarnings( 
-        install.packages( package, lib = paste(dir, "/lib", sep = ""), repos = "http://cran.rstudio.com/")
-      ))
-    }
     if (!InstalledPackage(package))
-      return(FALSE)
-  }
-  return(TRUE)
+    {
+        dir.create(file.path(dir, "lib"), showWarnings = FALSE)
+        .libPaths(c(.libPaths(), paste(dir, "/lib", sep = "")))
+        if (!InstalledPackage(package)) {
+            if (is.na(dir)) {
+                writeLines("WARNING: dir not provided, cannot install the required packages")
+                return(FALSE)
+        
+            } else{
+                writeLines(paste("Trying to install ", package, " in ", dir, "/lib", sep = ""))
+            }
+            suppressMessages(suppressWarnings( 
+                install.packages( package, lib = paste(dir, "/lib", sep = ""), repos = "http://cran.rstudio.com/")
+            ))
+        }
+        if (!InstalledPackage(package))
+            return(FALSE)
+    }
+    return(TRUE)
 }
 
 for (library in libraries)
 {
-  if (found)
-  {
-    if (!UsePackage(library, argv[dir_loc]))
+    if (found)
     {
-      stop("Error: ", library, " cannot be load nor install!")
+        if (!UsePackage(library, argv[dir_loc]))
+        {
+            stop("Error: ", library, " cannot be load nor install!")
+        }
+    } else{
+        if (!UsePackage(library, "."))
+        {
+            stop("Error: ", library, " cannot be load nor install!")
+        }
     }
-  } else{
-    if (!UsePackage(library, "."))
-    {
-      stop("Error: ", library, " cannot be load nor install!")
-    }
-    
-  }
 }
 
 
@@ -312,89 +310,88 @@ for (library in libraries)
 # We don't type the help message here. Will just directly use the usage information from c++
 # See the Help Messages section for more information
 option_list <- list(
-  make_option(c("-b", "--base"), type = "character"),
-  make_option(c("-B", "--bed"), type = "character"),
-  make_option(c("-c", "--cov-header"), type = "character", dest="cov_header"),
-  make_option(c("-C", "--cov-file"), type = "character", dest="cov_file"),
-  make_option(c("-f", "--pheno-file"), type = "character", dest="pheno_file"),
-  make_option(c("-g", "--gtf"), type = "character"),
-  make_option(c("-i", "--interval"), type = "numeric"),
-  make_option(c("-k", "--prevalence"), type = "numeric"),
-  make_option(c("-l", "--lower"), type = "numeric"),
-  make_option(c("-L", "--ld"), type = "character"),
-  make_option(c("-m", "--msigdb"), type = "character"),
-  make_option(c("-n", "--thread"), type = "numeric"),
-  make_option(c("-o", "--out"), type = "character", default="PRSice"),
-  make_option(c("-p", "--pvalue"), type = "character"),
-  make_option(c("-s", "--seed"), type = "numeric"),
-  make_option(c("-t", "--target"), type = "character"),
-  make_option(c("-u", "--upper"), type = "numeric"),
-  make_option(c("--all"), action = "store_true"),
-  make_option(c("--beta"), action = "store_true"),
-  make_option(c("--fastscore"), action = "store_true"),
-  make_option(c("--full"), action = "store_true"),
-  make_option(c("--ignore-fid"), action = "store_true", dest="ignore_fid"),
-  make_option(c("--index"), action = "store_true"),
-  make_option(c("--keep-ambig"), action="store_true", dest="keep_ambig"),
-  make_option(c("--logit-perm"), action="store_true", dest="logit_perm"),
-  make_option(c("--no-clump"), action = "store_true", dest="no_clump"),
-  make_option(c("--no-regress"), action = "store_true", dest="no_regress"),
-  make_option(c("--no-x"), action = "store_true", dest="no_x"),
-  make_option(c("--no-y"), action = "store_true", dest="no_y"),
-  make_option(c("--no-xy"), action = "store_true", dest="no_xy"),
-  make_option(c("--no-mt"), action = "store_true", dest="no_mt"),
-  make_option(c("--print-snp"), action = "store_true", dest="print_snp"),
-  make_option(c("--transpose"), action = "store_true"),
-  make_option(c("--A1"), type = "character"),
-  make_option(c("--A2"), type = "character"),
-  make_option(c("--bar-levels"), type = "character", dest="bar_levels", default="0.001,0.05,0.1,0.2,0.3,0.4,0.5"),
-  make_option(c("--binary-target"), type = "character",dest="binary_target"),
-  make_option(c("--bp"), type = "character"),
-  make_option(c("--chr"), type = "character"),
-  make_option(c("--clump-kb"), type = "character",dest="clump_kb"),
-  make_option(c("--clump-p"), type = "numeric",dest="clump_p"),
-  make_option(c("--clump-r2"), type = "numeric",dest="clump_r2"),
-  make_option(c("--exclude"), type = "character"),
-  make_option(c("--extract"), type = "character"),
-  make_option(c("--feature"), type = "character"),
-  make_option(c("--keep"), type = "character"),
-  make_option(c("--ld-type"), type = "character",dest="ld_type"),
-  make_option(c("--num-auto"), type = "numeric", dest="num_auto"),
-  make_option(c("--perm"), type = "numeric"),
-  make_option(c("--pheno-col"), type = "character", dest="pheno_col"),
-  make_option(c("--proxy"), type = "numeric"),
-  make_option(c("--prslice"), type = "numeric"),
-  make_option(c("--remove"), type = "character"),
-  make_option(c("--score"), type = "character"),
-  make_option(c("--se"), type = "character"),
-  make_option(c("--snp"), type = "character"),
-  make_option(c("--stat"), type = "character"),
-  make_option(c("--type"), type = "character"),
-  #R Specified options
-  make_option(c("--plot"), action = "store_true"),
-  make_option(c("--quantile", "-q"), type = "numeric"),
-  make_option(c("--quant-extract", "-e"), type = "character", dest="quant_extract"),
-  make_option("--quant-ref", type = "numeric", dest="quant_ref"),
-  make_option("--scatter-r2", action = "store_true", default = F, dest="scatter_r2" ),
-  make_option( "--bar-col-p", action = "store_true", default = F, dest="bar_col_p" ),
-  make_option( "--bar-col-low", type = "character", default = "dodgerblue", dest="bar_col_low" ),
-  make_option( "--bar-col-high", type = "character", default = "firebrick", dest="bar_col_high" ),
-  make_option( "--bar-palatte", type="character", default = "YlOrRd", dest="bar_palatte" ),
-  make_option("--prsice", type = "character"),
-  make_option("--dir", type = "character")
+    make_option(c("-b", "--base"), type = "character"),
+    make_option(c("-B", "--bed"), type = "character"),
+    make_option(c("-c", "--cov-header"), type = "character", dest="cov_header"),
+    make_option(c("-C", "--cov-file"), type = "character", dest="cov_file"),
+    make_option(c("-f", "--pheno-file"), type = "character", dest="pheno_file"),
+    make_option(c("-g", "--gtf"), type = "character"),
+    make_option(c("-i", "--interval"), type = "numeric"),
+    make_option(c("-k", "--prevalence"), type = "numeric"),
+    make_option(c("-l", "--lower"), type = "numeric"),
+    make_option(c("-L", "--ld"), type = "character"),
+    make_option(c("-m", "--msigdb"), type = "character"),
+    make_option(c("-n", "--thread"), type = "numeric"),
+    make_option(c("-o", "--out"), type = "character", default="PRSice"),
+    make_option(c("-p", "--pvalue"), type = "character"),
+    make_option(c("-s", "--seed"), type = "numeric"),
+    make_option(c("-t", "--target"), type = "character"),
+    make_option(c("-u", "--upper"), type = "numeric"),
+    make_option(c("--all"), action = "store_true"),
+    make_option(c("--beta"), action = "store_true"),
+    make_option(c("--fastscore"), action = "store_true"),
+    make_option(c("--full"), action = "store_true"),
+    make_option(c("--ignore-fid"), action = "store_true", dest="ignore_fid"),
+    make_option(c("--index"), action = "store_true"),
+    make_option(c("--keep-ambig"), action="store_true", dest="keep_ambig"),
+    make_option(c("--logit-perm"), action="store_true", dest="logit_perm"),
+    make_option(c("--no-clump"), action = "store_true", dest="no_clump"),
+    make_option(c("--no-regress"), action = "store_true", dest="no_regress"),
+    make_option(c("--no-x"), action = "store_true", dest="no_x"),
+    make_option(c("--no-y"), action = "store_true", dest="no_y"),
+    make_option(c("--no-xy"), action = "store_true", dest="no_xy"),
+    make_option(c("--no-mt"), action = "store_true", dest="no_mt"),
+    make_option(c("--print-snp"), action = "store_true", dest="print_snp"),
+    make_option(c("--transpose"), action = "store_true"),
+    make_option(c("--A1"), type = "character"),
+    make_option(c("--A2"), type = "character"),
+    make_option(c("--bar-levels"), type = "character", dest="bar_levels", default="0.001,0.05,0.1,0.2,0.3,0.4,0.5"),
+    make_option(c("--binary-target"), type = "character",dest="binary_target"),
+    make_option(c("--bp"), type = "character"),
+    make_option(c("--chr"), type = "character"),
+    make_option(c("--clump-kb"), type = "character",dest="clump_kb"),
+    make_option(c("--clump-p"), type = "numeric",dest="clump_p"),
+    make_option(c("--clump-r2"), type = "numeric",dest="clump_r2"),
+    make_option(c("--exclude"), type = "character"),
+    make_option(c("--extract"), type = "character"),
+    make_option(c("--feature"), type = "character"),
+    make_option(c("--keep"), type = "character"),
+    make_option(c("--ld-type"), type = "character",dest="ld_type"),
+    make_option(c("--num-auto"), type = "numeric", dest="num_auto"),
+    make_option(c("--perm"), type = "numeric"),
+    make_option(c("--pheno-col"), type = "character", dest="pheno_col"),
+    make_option(c("--proxy"), type = "numeric"),
+    make_option(c("--prslice"), type = "numeric"),
+    make_option(c("--remove"), type = "character"),
+    make_option(c("--score"), type = "character"),
+    make_option(c("--se"), type = "character"),
+    make_option(c("--snp"), type = "character"),
+    make_option(c("--stat"), type = "character"),
+    make_option(c("--type"), type = "character"),
+    #R Specified options
+    make_option(c("--plot"), action = "store_true"),
+    make_option(c("--quantile", "-q"), type = "numeric"),
+    make_option(c("--quant-extract", "-e"), type = "character", dest="quant_extract"),
+    make_option("--quant-ref", type = "numeric", dest="quant_ref"),
+    make_option("--scatter-r2", action = "store_true", default = F, dest="scatter_r2" ),
+    make_option( "--bar-col-p", action = "store_true", default = F, dest="bar_col_p" ),
+    make_option( "--bar-col-low", type = "character", default = "dodgerblue", dest="bar_col_low" ),
+    make_option( "--bar-col-high", type = "character", default = "firebrick", dest="bar_col_high" ),
+    make_option( "--bar-palatte", type="character", default = "YlOrRd", dest="bar_palatte" ),
+    make_option("--prsice", type = "character"),
+    make_option("--dir", type = "character")
   )
 
 
 capture <- commandArgs(trailingOnly=TRUE)
 help <- (sum(c("--help", "-h") %in%capture)>=1)
 if(help){
-  cat(help_message);
-  quit();
+    cat(help_message);
+    quit();
 }
 argv <- parse_args(OptionParser(option_list = option_list))
 
-not_cpp <-
-  c(
+not_cpp <-c(
     "help",
     "plot",
     "quantile",
@@ -414,7 +411,7 @@ not_cpp <-
 # Check help messages --------------------------------------------------
 
 provided <- function(name, argv) {
-  return(name %in% names(argv))
+    return(name %in% names(argv))
 }
 
 
@@ -424,105 +421,60 @@ provided <- function(name, argv) {
 # This is also one of the reason why window doesn't work. I don't know if we can handle the \
 # WINDOW PEOPLE
 if (provided("prsice", argv)) {
-  if (!startsWith(argv$prsice, "/") &&
-      !startsWith(argv$prsice, ".")) {
-    argv$prsice = paste("./", argv$prsice, sep = "")
-  }
+    if (!startsWith(argv$prsice, "/") &&
+        !startsWith(argv$prsice, ".")) {
+        argv$prsice = paste("./", argv$prsice, sep = "")
+    }
 }
 
 # Running PRSice ----------------------------------------------------------
 
 # We don't bother to check if the input is correct, the parameter should be checked by the c++ program
 add_command <- function(input) {
-  if (length(input) == 1) {
-    if (is.na(input)) {
-      return(NA)
+    if (length(input) == 1) {
+        if (is.na(input)) {
+            return(NA)
+        } else{
+            return(input)
+        }
     } else{
-      return(input)
+        return(paste(input, collapse = ","))
     }
-  } else{
-    return(paste(input, collapse = ","))
-  }
 }
-command = ""
-argv_c = argv
-names(argv_c) = gsub("_", "-", names(argv))
-flags <- c("all", "beta", "ignore-fid", "index", "no-clump", "no-regress", "no-x", "no-y", "no-xy", "no-mt",
-           "fastscore", "print-snp")
+command <- ""
+argv_c <- argv
+
+names(argv_c) <- gsub("_", "-", names(argv))
+flags <- c("all", "beta", "full", "ignore-fid", "index", "keep-ambig", "logit-perm","no-clump", "no-regress", "no-x", "no-y", "no-xy", "no-mt", "fastscore", "print-snp", "transpose")
 if (!provided("plot", argv)) {
-  for (i in names(argv_c)) {
-    # only need special processing for flags and specific inputs
-    if (i %in% flags) {
-      if (argv_c[[i]])
-        command = paste(command, " --", i, sep = "")
-    } else if (i %in% not_cpp) {
-      # ignore
-    } else{
-      temp = add_command(argv_c[[i]])
-      if (!is.na(temp)) {
-        command = paste(command, " --", i, " ", temp, sep = "")
-      }
+    for (i in names(argv_c)) {
+        # only need special processing for flags and specific inputs
+        if (i %in% flags) {
+            if (argv_c[[i]])
+                command = paste(command, " --", i, sep = "")
+            } else if (i %in% not_cpp) {
+            # ignore
+            } else{
+                temp = add_command(argv_c[[i]])
+                if (!is.na(temp)) {
+                    command = paste(command, " --", i, " ", temp, sep = "")
+                }
+            }
     }
-  }
-  if (nchar(command) == 0) {
-    cat(help_message)
-    quit()
-  }
-  if (provided("prsice", argv_c)) {
-    ret <- system2(argv_c$prsice, command)
-  } else{
-    stop("Cannot run PRSice without the PRSice binary file")
-  }
+    if (nchar(command) == 0) {
+        cat(help_message)
+        quit()
+    }
+    if (provided("prsice", argv_c)) {
+        ret <- system2(argv_c$prsice, command)
+    } else{
+        stop("Cannot run PRSice without the PRSice binary file")
+    }
 }
 
 
 # Plottings ---------------------------------------------------------------
 
-
-multiplot <-
-  function(...,
-           plotlist = NULL,
-           file,
-           cols = 1,
-           layout = NULL) {
-    library(grid)
-    
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
-    
-    numPlots = length(plots)
-    
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-      # Make the panel
-      # ncol: Number of columns of plots
-      # nrow: Number of rows needed, calculated from # of cols
-      layout <- matrix(seq(1, cols * ceiling(numPlots / cols)),
-                       ncol = cols,
-                       nrow = ceiling(numPlots / cols))
-    }
-    
-    if (numPlots == 1) {
-      print(plots[[1]])
-      
-    } else {
-      # Set up the page
-      grid.newpage()
-      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-      
-      # Make each plot, in the correct location
-      for (i in 1:numPlots) {
-        # Get the i,j matrix positions of the regions that contain this subplot
-        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-        
-        print(plots[[i]],
-              vp = viewport(
-                layout.pos.row = matchidx$row,
-                layout.pos.col = matchidx$col
-              ))
-      }
-    }
-  }
 
 # PLOTTING: Here contains all the function for plotting
 # quantile_plot: plotting the quantile plots
@@ -874,13 +826,14 @@ if(provided("no_regress", argv)){
     quit("yes");
 }
 ignore_fid <- provided("ignore_fid", argv)
+
 extract_matrix <- function(x,y){
-  z=which(x==y); 
-  if(length(z)==0){
-    return(NA)
-  }else{
-    return(z)
-  }
+    z=which(x==y); 
+    if(length(z)==0){
+        return(NA)
+    }else{
+        return(z)
+    }
 }
 # CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
 # we need to deduce the file names
@@ -890,57 +843,52 @@ extract_matrix <- function(x,y){
 # information of base here
     
 if (!provided("target", argv)) {
-  stop("Target file name not found. You'll need to provide the target name for plotting!")
+    stop("Target file name not found. You'll need to provide the target name for plotting!")
 }
 
 if(!provided("pheno_file", argv) && !provided("binary_target", argv)){
-  argv$binary_target="T";
-}else{
-  if(!provided("pheno_col",argv) && provided("binary_target", argv) 
-     && length(argv$binary_target)==1){
-    #This is ok
-    test <- "ok"
-  }else if(!provided("pheno_col", argv) && !provided("binary_target",argv)){
     argv$binary_target="T";
-  }else if(provided("pheno_col", argv) && !provided("binary_target", argv)
-           && length(argv$pheno_col)<=1){
-    argv$binary_target = "T"
-  }
-  else if(provided("pheno_col", argv) && provided("binary_target", argv)
-          && length(argv$pheno_col)!=length(argv$binary_target)){
-    stop("ERROR: Number of target phenotypes doesn't match information of binary target! 
-    You must indicate whether the phenotype is binary using --binary-target")
-  }
+}else{
+    if(!provided("pheno_col",argv) && provided("binary_target", argv) 
+        && length(argv$binary_target)==1){
+        #This is ok
+        test <- "ok"
+    }else if(!provided("pheno_col", argv) && !provided("binary_target",argv)){
+        argv$binary_target="T";
+    }else if(provided("pheno_col", argv) && !provided("binary_target", argv)
+        && length(argv$pheno_col)<=1){
+        argv$binary_target = "T"
+    }
+    else if(provided("pheno_col", argv) && provided("binary_target", argv)
+        && length(argv$pheno_col)!=length(argv$binary_target)){
+        stop("ERROR: Number of target phenotypes doesn't match information of binary target! 
+        You must indicate whether the phenotype is binary using --binary-target")
+    }
 }
 
 phenos = NULL
 binary_target = strsplit(argv$binary_target, split = ",")[[1]]
 if (provided("pheno_col", argv)) {
-  phenos = strsplit(argv$pheno_col, split = ",")[[1]]
-  if (!provided("pheno_file", argv)) {
-    writeLines(
-      strwrap(
-        "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.",
-        width = 80
-      )
-    )
-  }else{
-    header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
-    # This will automatically filter out un-used phenos
-    if (length(binary_target) != length(phenos)) {
-      message <-"Number of binray target should match number of phenotype provided!"
-      message = paste( message,
-            "There are ", length(binary_target), " binary target information and ",
-            length(phenos), "phenotypes", sep = "")
-      stop(message)
+    phenos = strsplit(argv$pheno_col, split = ",")[[1]]
+    if (!provided("pheno_file", argv)) {
+        writeLines( strwrap( "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.", width = 80 ) )
+    }else{
+        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
+        # This will automatically filter out un-used phenos
+        if (length(binary_target) != length(phenos)) {
+            message <-"Number of binray target should match number of phenotype provided!"
+            message = paste( message,
+                "There are ", length(binary_target), " binary target information and ",
+                length(phenos), "phenotypes", sep = "")
+            stop(message)
+        }
+        binary_target = binary_target[phenos %in% colnames(header)]
+        phenos = phenos[phenos %in% colnames(header)]
     }
-    binary_target = binary_target[phenos %in% colnames(header)]
-    phenos = phenos[phenos %in% colnames(header)]
-  }
 } else{
-  if (length(binary_target) != 1) {
-    stop("Too many binary target information. We only have one phenotype")
-  }
+    if (length(binary_target) != 1) {
+        stop("Too many binary target information. We only have one phenotype")
+    }
 }
 
 
@@ -1000,22 +948,22 @@ update_cov_header <- function(c){
 # Need to get the covariates
 covariance = NULL
 if (provided("cov_file", argv)) {
-  covariance = fread(argv$cov_file, data.table = F, header = T)
-  if (provided("cov_header", argv)) {
-    c = strsplit(argv$cov_header, split = ",")[[1]]
-	c <- update_cov_header(c)
-    selected = colnames(covariance)%in%c
-    if(!ignore_fid){
-      selected[2] <- TRUE #When ignore_fid isn't provided, then we need to also include the FID information
+    covariance <- fread(argv$cov_file, data.table = F, header = T)
+    if (provided("cov_header", argv)) {
+        c = strsplit(argv$cov_header, split = ",")[[1]]
+        c <- update_cov_header(c)
+        selected <- colnames(covariance)%in%c
+        if(!ignore_fid){
+            selected[2] <- TRUE #When ignore_fid isn't provided, then we need to also include the FID information
+        }
+        selected[1] <- TRUE # we always want the IID information, which should be the first column
+        covariance <- covariance[, selected]
     }
-    selected[1] <- TRUE # we always want the IID information, which should be the first column
-    covariance <- covariance[, selected]
-  }
-  if(ignore_fid){
-    colnames(covariance)<-c("IID", paste("Cov",1:(ncol(covariance)-1)))
-  }else{
-    colnames(covariance)<-c("FID","IID", paste("Cov",1:(ncol(covariance)-2)))
-  }
+    if(ignore_fid){
+        colnames(covariance)<-c("IID", paste("Cov",1:(ncol(covariance)-1)))
+    }else{
+        colnames(covariance)<-c("FID","IID", paste("Cov",1:(ncol(covariance)-2)))
+    }
 }
 
 # we no longer have those complication
@@ -1024,135 +972,150 @@ prefix <- argv$out
 num_region = nrow(read.table(paste(prefix, "region", sep="."), header=T));
 
 region = NULL
-# we need the fam file under all situation
-fam = fread(
-paste(argv$target, ".fam", sep = ""), data.table = F, header = F )
-colnames(fam)[1:2] = c("FID", "IID")
-fam_id <- paste(fam$FID, fam$IID, sep="_")
-match_cov = NULL
-if (!is.null(covariance)) {
-  if(ignore_fid){
-    match_cov <- covariance[covariance$IID %in% fam$IID,]
-    match_cov <- match_cov[match(fam$IID, match_cov$IID),] # match the ordering
-    match_cov <- match_cov[ !is.na(apply(match_cov[,-1],1,sum)),]
-  }else{
-    cov_ID <- paste(covariance$FID, covariance$IID, sep="_")
-    match_cov = covariance[cov_ID %in% fam_id,]
-    cov_ID <- paste(match_cov$FID, match_cov$IID, sep="_") #updated cov_ID
-    match_cov = match_cov[match(fam_id, cov_ID),] # match the ordering
-    match_cov <- match_cov[ !is.na(apply(match_cov[,-c(1:2)],1,sum)),] #remove all NA
-  }
-}
+# Do this for each phenotype
+
+#fam = fread(paste(argv$target, ".fam", sep = ""), data.table = F, header = F )
+#colnames(fam)[1:2] = c("FID", "IID")
+#fam_id <- paste(fam$FID, fam$IID, sep="_")
+#match_cov = NULL
+#if (!is.null(covariance)) {
+#  if(ignore_fid){
+#    match_cov <- covariance[covariance$IID %in% fam$IID,]
+#    match_cov <- match_cov[match(fam$IID, match_cov$IID),] # match the ordering
+#    match_cov <- match_cov[ !is.na(apply(match_cov[,-1],1,sum)),]
+#  }else{
+#    cov_ID <- paste(covariance$FID, covariance$IID, sep="_")
+#    match_cov = covariance[cov_ID %in% fam_id,]
+#    cov_ID <- paste(match_cov$FID, match_cov$IID, sep="_") #updated cov_ID
+#    match_cov = match_cov[match(fam_id, cov_ID),] # match the ordering
+#    match_cov <- match_cov[ !is.na(apply(match_cov[,-c(1:2)],1,sum)),] #remove all NA
+#  }
+#}
 #Now match_cov contain all samples with valid covariates
 if (!is.null(phenos)) {
-  pheno_file = fread(argv$pheno_file, header = T, data.table = F)
-  if(ignore_fid){
-    colnames(pheno_file)[1] <- "IID"
-  }else{
-    colnames(pheno_file)[1:2] <- c("FID", "IID")
-  }
-  if(ignore_fid){
-    #Only care about the IID
-    pheno_file <- pheno_file[pheno_file$IID %in% fam$IID, ] # This will select only samples found within the fam file
-    pheno_file <- pheno_file[match(match_id, pheno_file$IID),] # match the ordering
-  }else{
-    pheno_id <- paste(pheno_file$FID, pheno_file$IID, sep="_")
-    pheno_file <- pheno_file[pheno_id %in% fam_id,]
-    pheno_id <- paste(pheno_file$FID, pheno_file$IID, sep="_") #Updated pheno_id
-    pheno_file <- pheno_file[match(fam_id, pheno_id),]
-  }
- 
-  id = 1
-  phenos.index <- unlist(apply(as.matrix(phenos), 1, extract_matrix ,colnames(pheno_file)))
+    pheno_file = fread(argv$pheno_file, header = T, data.table = F)
+    if(ignore_fid){
+        colnames(pheno_file)[1] <- "IID"
+    }else{
+        colnames(pheno_file)[1:2] <- c("FID", "IID")
+    }
+    id = 1
+    phenos.index <- unlist(apply(as.matrix(phenos), 1, extract_matrix ,colnames(pheno_file)))
         
-  for (p in 1:length(phenos.index)) {
-    if(!is.na(phenos.index[p])){
-      cur_prefix = paste(prefix, phenos[p], region, sep = ".")
-      if(num_region==1){
-        cur_prefix = paste(prefix, phenos[p], sep = ".")
-      }
-      # Give run_plot a ready to use matrix
-      cur_pheno = NULL
-      if(ignore_fid){
-        cur_pheno = data.frame(IID=pheno_file[,1], Pheno=pheno_file[phenos.index[p]])
-      }else{
-        cur_pheno = data.frame(FID=pheno_file[,1], IID=pheno_file[,2], Pheno=pheno_file[phenos.index[p]])
-      }
-      if(binary_target[id]){
-        # Update the cur_pheno
-        cur_pheno$Pheno = suppressWarnings(as.numeric(as.character(cur_pheno$Pheno)))
-        cur_pheno$Pheno[cur_pheno$Pheno > 2] = NA
-        cur_pheno$Pheno[cur_pheno$Pheno < 0] = NA
-        if(max(cur_pheno$Pheno, na.rm=T)==2 && min(cur_pheno$Pheno, na.rm=T)==0){
-          stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
-        }else if(max(cur_pheno$Pheno, na.rm=T)==2){
-          cur_pheno$Pheno = cur_pheno$Pheno-1
-        }
-      }
-      cur_pheno.clean = cur_pheno[!is.na(cur_pheno$Pheno),]
-      fam.final = cur_pheno.clean
-      if(!is.null(match_cov)){
-        if(ignore_fid){
-          fam.final = merge(cur_pheno.clean, match_cov, by="IID");
+    for (p in 1:length(phenos.index)) {
+        if(!is.na(phenos.index[p])){
+            cur_prefix <- prefix
+            if(length(phenos.index)!=1){
+                cur_prefix <- paste(cur_prefix, phenos[p], sep = ".")
+            }
+            if(num_region!=1){
+                cur_prefix = paste(cur_prefix, region, sep = ".")
+            }
+            # Get the best score
+            best <- fread(paste(cur_prefix,"best",sep="."), data.table=F, header=T)
+            # Give run_plot a ready to use matrix
+            cur_pheno <- NULL
+            if(ignore_fid){
+                cur_pheno <- data.frame(IID=pheno_file[,1], Pheno=pheno_file[phenos.index[p]])
+                colnames(cur_pheno)[2] <- "Pheno"
+            }else{
+                cur_pheno <- data.frame(FID=pheno_file[,1], IID=pheno_file[,2], Pheno=pheno_file[phenos.index[p]])
+                colnames(cur_pheno)[3] <- "Pheno"
+            }
+            if(binary_target[id]){
+                # Update the cur_pheno
+                cur_pheno$Pheno <- suppressWarnings(as.numeric(as.character(cur_pheno$Pheno)))
+                cur_pheno$Pheno[cur_pheno$Pheno > 2] <- NA
+                cur_pheno$Pheno[cur_pheno$Pheno < 0] <- NA
+                if(max(cur_pheno$Pheno, na.rm=T)==2 && min(cur_pheno$Pheno, na.rm=T)==0){
+                    stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
+                }else if(max(cur_pheno$Pheno, na.rm=T)==2){
+                    cur_pheno$Pheno = cur_pheno$Pheno-1
+                }
+            }
+            if(ignore_fid){
+                cur_pheno <- cur_pheno[cur_pheno$IID%in%best$IID,]
+            }else{
+                cur_id <- paste(cur_pheno$FID,cur_pheno$IID, sep="_")
+                best_id <- paste(best$FID, best$IID, sep="_")
+                cur_pheno <- cur_pheno[cur_id%in%best_id,]
+            }
+            cur_pheno.cov <- cur_pheno
+            if(!is.null(covariance)){
+                if(ignore_fid){
+                    cur_pheno.cov = merge(cur_pheno, covariance, by="IID");
+                }else{
+                    cur_pheno.cov = merge(cur_pheno, covariance, by=c("FID", "IID"));
+                }
+            }
+            # This is a potential bug: What if there is duplicated IID?
+            cur_pheno.cov = cur_pheno.cov[match(cur_pheno$IID, cur_pheno.cov$IID),]
+            run_plot(cur_prefix,argv,cur_pheno.cov,binary_target[id])
         }else{
-          fam.final = merge(cur_pheno.clean, match_cov, by=c("FID", "IID"));
+            writeLines(paste(phenos[p],"not found in the phenotype file. It will be ignored"))
         }
-      }
-      fam.ok = fam[fam$IID%in%fam.final$IID,]
-      fam.final = fam.final[match(fam.ok$IID, fam.final$IID),]
-      run_plot(cur_prefix,argv,fam.final,binary_target[id])
-    }else{
-      writeLines(paste(phenos[p],"not found in the phenotype file. It will be ignored"))
+        id = id + 1
     }
-    id = id + 1
-  }
 } else{
-  # No phenotype headers
-  cur_prefix = paste(prefix, region, sep = ".")
-  if(num_region==1){
-    cur_prefix = paste(prefix, sep = ".")
-  }
-  pheno=NULL
-  if (provided("pheno_file", argv)) {
-    pheno = fread(paste(argv$pheno_file), data.table = F, header = F) 
-    if(ignore_fid){
-      colnames(pheno)[1] <- "IID"
+    # No phenotype headers
+    cur_prefix = paste(prefix, region, sep = ".")
+    if(num_region==1){
+        cur_prefix = paste(prefix, sep = ".")
+    }
+    pheno=NULL
+    if (provided("pheno_file", argv)) {
+        pheno = fread(paste(argv$pheno_file), data.table = F, header = F) 
+        if(ignore_fid){
+            colnames(pheno)[1] <- "IID"
+        }else{
+            colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
+        }
+        #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
+    }
+    # Give run_plot a ready to use matrix
+    best <- fread(paste(cur_prefix, "best", sep="."), data.table=F, header=T)
+    fam.clean = NULL
+    if(!is.null(pheno))
+    {
+        if(ignore_fid){
+            fam.clean <- data.frame(IID=pheno$IID, Pheno=pheno$V2)
+        }else{  
+            fam.clean <- data.frame(FID=pheno$FID, IID=pheno$IID, Pheno=pheno$V2)
+        }
     }else{
-      colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
+        fam_name <- argv$target
+        fam_name <- gsub("#", "1", fam_name)
+        fam <- fread(paste(fam_name, "fam", sep="."),data.table=F, header=F)
+        fam.clean <- data.frame(FID=fam$FID, IID=fam$IID, Pheno=fam$V6)
     }
-    #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
-  }
-  # Give run_plot a ready to use matrix
-  fam.clean = data.frame(FID=fam$FID, IID=fam$IID, Pheno=fam$V6);
-  if(!is.null(pheno))
-  {
+    if(binary_target[1]){
+        # Update the cur_pheno
+        fam.clean$Pheno <- suppressWarnings(as.numeric(as.character(fam.clean$Pheno)))
+        fam.clean$Pheno[fam.clean$Pheno > 2] <- NA
+        fam.clean$Pheno[fam.clean$Pheno < 0] <- NA
+        if(max(fam.clean$Pheno, na.rm=T)==2 && min(fam.clean$Pheno, na.rm=T)==0){
+            stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
+        }else if(max(fam.clean$Pheno, na.rm=T)==2){
+            fam.clean$Pheno = fam.clean$Pheno-1
+        }
+    }
     if(ignore_fid){
-      fam.clean = data.frame(IID=pheno$IID, Pheno=pheno$V2)
+        fam.clean <- fam.clean[fam.clean$IID%in%best$IID,]
     }else{
-      fam.clean = data.frame(FID=pheno$FID, IID=pheno$IID, Pheno=pheno$V2)
+        fam_id <- paste(fam.clean$FID, fam.clean$IID, "_")
+        best_id <- paste(best$FID, best$IID, "_")
+        fam.clean <- fam.clean[fam_id%in%best_id, ]
     }
-  }
-  if(binary_target[1]){
-    # Update the cur_pheno
-    fam.clean$Pheno = suppressWarnings(as.numeric(as.character(fam.clean$Pheno)))
-    fam.clean$Pheno[fam.clean$Pheno > 2] = NA
-    fam.clean$Pheno[fam.clean$Pheno < 0] = NA
-    if(max(fam.clean$Pheno, na.rm=T)==2 && min(fam.clean$Pheno, na.rm=T)==0){
-      stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
-    }else if(max(fam.clean$Pheno, na.rm=T)==2){
-      fam.clean$Pheno = fam.clean$Pheno-1
+    cur_pheno.clean <- fam.clean
+    fam.final <- cur_pheno.clean
+    if(!is.null(covariance)){
+        if(ignore_fid){
+            fam.final <- merge(cur_pheno.clean, covariance, by="IID")
+        }else{
+            fam.final <- merge(cur_pheno.clean, covariance, by=c("FID", "IID"))
+        }
     }
-  }
-  cur_pheno.clean = fam.clean[!is.na(fam.clean$Pheno),]
-  fam.final = cur_pheno.clean
-  if(!is.null(match_cov)){
-    if(ignore_fid){
-      fam.final <- merge(cur_pheno.clean, match_cov, by="IID")
-    }else{
-      fam.final <- merge(cur_pheno.clean, match_cov, by=c("FID", "IID"))
-    }
-  }
-  fam.ok = fam[fam$IID%in%fam.final$IID,]
-  fam.final = fam.final[match(fam.ok$IID, fam.final$IID),]
-  run_plot(cur_prefix, argv, fam.final, binary_target[1])
+    #Again, this can be error prone
+    fam.final <- fam.final[match(cur_pheno.clean$IID, fam.final$IID),]
+    run_plot(cur_prefix, argv, fam.final, binary_target[1])
 }
