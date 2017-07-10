@@ -410,8 +410,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         }
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
-        std::cerr << "Check: " << m_final_mask << "\t" << get_final_mask(m_founder_ct) << std::endl;
-		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))

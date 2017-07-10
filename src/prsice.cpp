@@ -695,7 +695,6 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
             else all_out << "\t" << m_sample_names[sample].FID << "_" << m_sample_names[sample].IID;
         }
         all_out << std::endl;
-        all_out.close();
     }
     size_t num_included_samples = m_sample_included.size();
     // These are lite version. We can ignore the FID and IID because we
@@ -761,6 +760,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
 
         if (!prslice)
             fprintf(stderr, "\rProcessing %03.2f%%", (double) cur_category / (double) (max_category) * 100.0);
+
         if (all && all_out.is_open()) {
             for (size_t i_region = 0; i_region < m_region_size; ++i_region)
             {
