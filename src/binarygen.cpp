@@ -44,7 +44,14 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
     load_samples(ignore_fid);
 
     m_existed_snps = load_snps();
-    initialize();
+
+    m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+    m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    m_founder_ctsplit = 3 * m_founder_ctv3;
+    m_final_mask = get_final_mask(m_founder_ct);
+    m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+    m_marker_ct = m_existed_snps.size();
+
     if(verbose)
     {
         fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);

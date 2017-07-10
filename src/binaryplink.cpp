@@ -41,7 +41,14 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
 	set_genotype_files(prefix);
 	m_sample_names = load_samples(ignore_fid);
 	m_existed_snps = load_snps();
-    initialize();
+
+	m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
+	m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+	m_founder_ctsplit = 3 * m_founder_ctv3;
+	m_final_mask = get_final_mask(m_founder_ct);
+	m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+	m_marker_ct = m_existed_snps.size();
+
 	if(verbose)
 	{
 		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
@@ -403,7 +410,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         }
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
-
+        std::cerr << "Check: " << m_final_mask << "\t" << get_final_mask(m_founder_ct) << std::endl;
 		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
@@ -490,9 +497,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         			}
         		}
         	}
-        	check += current_prs_score(0,i_sample).prs;
-        	check2 += current_prs_score(0,i_sample).num_snp;
-        }
+        }\
 
     }
     delete [] genotype;

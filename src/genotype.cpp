@@ -21,7 +21,7 @@ std::mutex Genotype::clump_mtx;
 
 void Genotype::initialize()
 {
-
+// Don't use this. For some reason, this does not work
     m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
     m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
     m_founder_ctsplit = 3 * m_founder_ctv3;
@@ -940,7 +940,6 @@ bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, in
 		cur_category = m_existed_snps.back().category();
 	}
 	else cur_category = m_existed_snps[end_index].category();
-
 	read_score(prs_score, cur_index, end_index);
 
 	cur_index = end_index;
