@@ -150,17 +150,7 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
         gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_header());
     }
 
-    if (all && !prslice && !transpose)
-    {
-        //we skip it when it is transposed so that the lines are always regularish?
-        all_out << "Threshold\tRegion";
-        for (auto &&sample : m_sample_index){
-            if(m_ignore_fid) all_out << "\t" << m_sample_names[sample].IID;
-            else all_out << "\t" << m_sample_names[sample].FID << "\t" << m_sample_names[sample].IID;
-        }
-        all_out << std::endl;
-        all_out.close();
-    }
+
     double null_r2_adjust = 0.0, null_p = 0.0, null_coeff = 0.0;
     // calculate the null r2
     int n_thread = c_commander.thread();
@@ -694,6 +684,18 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
             m_sample_included.push_back(id);
             m_sample_index.push_back(i_sample);
         }
+    }
+    if (all && !prslice && !transpose)
+    {
+        //we skip it when it is transposed so that the lines are always regularish?
+        all_out << "Threshold\tRegion";
+        for (auto &&sample : m_sample_index)
+        {
+            if(m_ignore_fid) all_out << "\t" << m_sample_names[sample].IID;
+            else all_out << "\t" << m_sample_names[sample].FID << "_" << m_sample_names[sample].IID;
+        }
+        all_out << std::endl;
+        all_out.close();
     }
     size_t num_included_samples = m_sample_included.size();
     // These are lite version. We can ignore the FID and IID because we
