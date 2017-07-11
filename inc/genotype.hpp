@@ -140,6 +140,7 @@ class Genotype
             return std::vector < Sample > (0);
         };
         uintptr_t m_unfiltered_sample_ct = 0;
+        uintptr_t m_sample_ct = 0;
         uintptr_t m_unfiltered_sample_ctl = 0;
         uintptr_t m_unfiltered_sample_ct4 = 0;
         std::vector<Sample> m_sample_names;

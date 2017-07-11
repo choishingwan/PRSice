@@ -635,7 +635,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     bool no_regress = c_commander.no_regress() && !prslice;
     bool all = c_commander.all() && !prslice;
     bool transpose = c_commander.transpose();
-    bool multi = pheno_info.name.size()>0;
+    bool multi = pheno_info.name.size()>1;
     std::ofstream all_out;
     if(all)
     {
@@ -1276,7 +1276,7 @@ void PRSice::transpose_all(const Commander &c_commander, const Region &c_region,
     // the output is regular:
     // for each thresold, go through each regions
     fprintf(stderr, "\nTransposing all score file. Might take ages.\n");
-    bool multi = pheno_info.name.size()>0;
+    bool multi = pheno_info.name.size()>1;
     size_t num_samples = m_sample_included.size();
     // for any line, there will be
     std::string header = "FID\tIID";

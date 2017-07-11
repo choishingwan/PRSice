@@ -201,8 +201,14 @@ std::vector<SNP> BinaryGen::load_snps()
                 {
                     RSID = std::to_string(chr_code)+":"+std::to_string(SNP_position);
                 }
-                if(m_extract_snp && m_extract_snp_list.find(RSID) == m_extract_snp_list.end()) continue;
-                if(m_exclude_snp && m_exclude_snp_list.find(RSID) != m_exclude_snp_list.end()) continue;
+                if(m_extract_snp && m_extract_snp_list.find(RSID) == m_extract_snp_list.end()){
+                    m_unfiltered_marker_ct++;
+                    continue;
+                }
+                if(m_exclude_snp && m_exclude_snp_list.find(RSID) != m_exclude_snp_list.end()){
+                    m_unfiltered_marker_ct++;
+                    continue;
+                }
 
                 m_existed_snps_index[RSID] = m_unfiltered_marker_ct;
                 snp_res[m_unfiltered_marker_ct] = SNP(RSID, chr_code, SNP_position, final_alleles.front(),
@@ -364,7 +370,7 @@ void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if(load_and_collapse_incl(m_existed_snps[i_snp].snp_id(), m_existed_snps[i_snp].file_name(),
-                m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
+                m_unfiltered_sample_ct, m_sample_ct, m_sample_include, m_final_mask,
                 false, m_tmp_genotype, genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -454,6 +460,7 @@ void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
 void BinaryGen::read_score( misc::vec2d<Sample_lite> &current_prs_score,
                size_t start_index, size_t end_bound)
 {
+    m_final_mask = get_final_mask(m_sample_ct);
     if(current_prs_score.rows() != m_region_size)
     {
         throw std::runtime_error("Size of Matrix doesn't match number of region!!");

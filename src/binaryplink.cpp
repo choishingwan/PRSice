@@ -22,6 +22,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
 		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
 		const size_t thread, bool verbose)
 {
+
 	m_remove_sample = true;
 	m_keep_sample = true;
 	if(remove_sample.empty()) m_remove_sample = false;
@@ -211,8 +212,16 @@ std::vector<SNP> BinaryPlink::load_snps()
 				throw std::runtime_error("");
 			}
 			std::string chr = token[+BIM::CHR];
-			if(m_extract_snp && m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()) continue;
-			if(m_exclude_snp && m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()) continue;
+			if(m_extract_snp && m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()){
+			    m_unfiltered_marker_ct++; //add in the checking later on
+			    num_line++;
+			    continue;
+			}
+			if(m_exclude_snp && m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()){
+			    m_unfiltered_marker_ct++; //add in the checking later on
+			    num_line++;
+			    continue;
+			}
 			if(chr.compare(prev_chr)!=0)
 			{
 				prev_chr = chr;
@@ -363,6 +372,8 @@ void BinaryPlink::check_bed()
 void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t start_index,
 		size_t end_bound)
 {
+
+    m_final_mask = get_final_mask(m_sample_ct);
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
@@ -412,7 +423,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         //loadbuff is where the genotype will be located
         std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct, m_sample_include, m_final_mask,
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct, m_sample_include, m_final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -492,11 +503,15 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         				}
         				current_prs_score(i_region,i_sample).prs += ((flipped)?fabs(sample_genotype[i_sample]-2):sample_genotype[i_sample])*stat*0.5;
         				current_prs_score(i_region,i_sample).num_snp++;
-
+        				/*
+        				if(i_sample==2945)
+        				{
+        				    std::cerr << sample_genotype[i_sample] << std::endl;
+        				}*/
         			}
         		}
         	}
-        }\
+        }
 
     }
     delete [] genotype;
