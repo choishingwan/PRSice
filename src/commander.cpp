@@ -64,7 +64,6 @@ bool Commander::initialize(int argc, char *argv[])
 		{"no-mt",no_argument,&species.no_mt,1},
 		{"fastscore",no_argument,&prsice.fastscore,1},
         {"print-snp",no_argument,&misc.print_snp,1},
-        {"transpose",no_argument,&misc.transpose,1},
 		// long flags, need to work on them
         {"A1",required_argument,NULL,0},
         {"A2",required_argument,NULL,0},
@@ -461,7 +460,6 @@ Commander::Commander()
 	misc.provided_seed =false;
 	misc.seed = 0;
 	misc.thread = 1;
-	misc.transpose = false;
 
 	prset.gtf = "";
 	prset.msigdb = "";
@@ -661,10 +659,6 @@ void Commander::info()
             "                            generate the empirical p-value. Recommend to\n"
             "                            use value larger than 10,000\n"
             "    --seed          | -s    Seed used for permutation. If not provided,\n"
-            "    --transpose             Transpose all score file into sample major\n"
-            "                            Note: depending on the number of threshold\n"
-            "                                  and sample size, this might take\n"
-            "                                  forever to complete.\n"
             "    --print-snp             system time will be used as seed. When same\n"
             "                            seed and same input is provided, same result\n"
             "                            should be generated\n"
