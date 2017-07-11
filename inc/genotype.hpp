@@ -70,6 +70,10 @@ class Genotype
             }
             return false;
         };
+        std::vector<double> get_thresholds() const
+        {
+            return m_thresholds;
+        };
         std::vector<Sample> sample_names() const
         {
             return m_sample_names;
@@ -126,7 +130,7 @@ class Genotype
         std::unordered_set<std::string> load_snp_list(std::string input);
         void set_genotype_files(std::string prefix);
         std::vector<std::string> m_genotype_files;
-
+        std::vector<double> m_thresholds;
         void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
         uint32_t m_autosome_ct;
         std::vector<int32_t> m_xymt_codes;

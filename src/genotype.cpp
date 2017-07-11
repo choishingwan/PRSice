@@ -423,7 +423,11 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					// ignore the SE as it currently serves no purpose
 					exist_index.push_back(m_existed_snps_index[rs_id]);
 					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
-					if(unique_thresholds.find(category)==unique_thresholds.end()) unique_thresholds.insert(category);
+					if(unique_thresholds.find(category)==unique_thresholds.end())
+					{
+					    unique_thresholds.insert(category);
+					    m_thresholds.push_back(pthres);
+					}
 					m_max_category = (m_max_category< category)? category:m_max_category;
 				}
 			}
@@ -578,10 +582,12 @@ void Genotype::clump(Genotype &reference)
 
 
 	std::vector<int> remain_snps;
+	std::unordered_set<double> used_thresholds;
 	m_existed_snps_index.clear();
 	std::vector<size_t> p_sort_order = SNP::sort_by_p(m_existed_snps);
 	bool proxy = clump_info.use_proxy;
 	std::unordered_set<int> unique_threshold;
+	m_thresholds.clear();
 	for(auto &&i_snp : p_sort_order){
 		if(overlapped_snps.find(i_snp)!=overlapped_snps.end() &&
 				m_existed_snps[i_snp].p_value() <= clump_info.p_value)
@@ -589,6 +595,12 @@ void Genotype::clump(Genotype &reference)
 			if(proxy && !m_existed_snps[i_snp].clumped() )
 			{
 				m_existed_snps[i_snp].proxy_clump(m_existed_snps, clump_info.proxy);
+				double thres = m_existed_snps[i_snp].get_threshold();
+				if(used_thresholds.find(thres)==used_thresholds.end())
+				{
+				    used_thresholds.insert(thres);
+				    m_thresholds.push_back(thres);
+				}
 				remain_snps.push_back(i_snp);
 				if(unique_threshold.find(m_existed_snps[i_snp].category())==unique_threshold.end())
 				{
@@ -598,6 +610,12 @@ void Genotype::clump(Genotype &reference)
 			else if(!m_existed_snps[i_snp].clumped())
 			{
 				m_existed_snps[i_snp].clump(m_existed_snps);
+				double thres = m_existed_snps[i_snp].get_threshold();
+				if(used_thresholds.find(thres)==used_thresholds.end())
+				{
+				    used_thresholds.insert(thres);
+				    m_thresholds.push_back(thres);
+				}
 				remain_snps.push_back(i_snp);
 				if(unique_threshold.find(m_existed_snps[i_snp].category())==unique_threshold.end())
                 {

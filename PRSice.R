@@ -216,8 +216,6 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
                             generate the empirical p-value for the BEST\n
                             threshold\n
     --seed          | -s    Seed used for permutation. If not provided,\n
-    --transpose             Transpose all score file into sample major\n
-                            Note: This can take forever\n
     --print-snp             system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
                             should be generated\n
@@ -342,7 +340,6 @@ option_list <- list(
     make_option(c("--no-xy"), action = "store_true", dest="no_xy"),
     make_option(c("--no-mt"), action = "store_true", dest="no_mt"),
     make_option(c("--print-snp"), action = "store_true", dest="print_snp"),
-    make_option(c("--transpose"), action = "store_true"),
     make_option(c("--A1"), type = "character"),
     make_option(c("--A2"), type = "character"),
     make_option(c("--bar-levels"), type = "character", dest="bar_levels", default="0.001,0.05,0.1,0.2,0.3,0.4,0.5"),
@@ -445,7 +442,7 @@ command <- ""
 argv_c <- argv
 
 names(argv_c) <- gsub("_", "-", names(argv))
-flags <- c("all", "beta", "full", "ignore-fid", "index", "keep-ambig", "logit-perm","no-clump", "no-regress", "no-x", "no-y", "no-xy", "no-mt", "fastscore", "print-snp", "transpose")
+flags <- c("all", "beta", "full", "ignore-fid", "index", "keep-ambig", "logit-perm","no-clump", "no-regress", "no-x", "no-y", "no-xy", "no-mt", "fastscore", "print-snp")
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs

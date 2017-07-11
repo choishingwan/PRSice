@@ -122,7 +122,6 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
     m_independent_variables.resize(0,0);
     bool no_regress = c_commander.no_regress();
     bool all = c_commander.all();
-    bool transpose = c_commander.transpose();
     std::string pheno_file = c_commander.pheno_file();
     std::string output_name = c_commander.out();
 
@@ -617,24 +616,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     // Let the Genotype class lead the way
     bool no_regress = c_commander.no_regress() && !prslice;
     bool all = c_commander.all() && !prslice;
-    bool transpose = c_commander.transpose();
-    bool multi = pheno_info.name.size()>1;
-    std::ofstream all_out;
-    if(all)
-    {
-        std::string all_out_name = c_commander.out();
-        if(multi)
-        {
-            all_out_name.append("."+pheno_info.name[c_pheno_index]);
-        }
-        all_out_name.append(".all.score");
-        all_out.open(all_out_name.c_str(), std::ofstream::app);
-        if (!all_out.is_open())
-        {
-            std::string error_message = "Cannot open file " + all_out_name + " for write";
-            throw std::runtime_error(error_message);
-        }
-    }
+
     Eigen::initParallel();
     std::vector < std::thread > thread_store;
     size_t n_thread = c_commander.thread();
@@ -657,28 +639,87 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     /** 1/7 CHANGE BEHAVIOUR, WE ONLY RETAIN THE SELECTED SAMPLES
      *  (THIS IS FOR SCORE READING, i.e MAF calculation)
      **/
-
+    size_t max_fid_length=3, max_iid_length=3;
     for(size_t i_sample=0; i_sample < m_sample_names.size(); ++i_sample)
     {
         auto &&sample = m_sample_names[i_sample];
         if(sample.included)
         {
+            max_fid_length = (max_fid_length> sample.FID.length())? max_fid_length
+                    : sample.FID.length();
+            max_iid_length = (max_iid_length> sample.IID.length())? max_iid_length
+                                : sample.IID.length();
             std::string id = (m_ignore_fid)? sample.IID: sample.FID+"_"+sample.IID;
             m_sample_included.push_back(id);
             m_sample_index.push_back(i_sample);
         }
     }
-    if (all && !prslice && !transpose)
+    bool multi = pheno_info.name.size()>1;
+    std::vector<std::fstream> all_out;
+    size_t width_of_line = 0;
+    size_t num_thresholds = 0;
+    size_t header_length = 0;
+    if(all)
     {
-        //we skip it when it is transposed so that the lines are always regularish?
-        all_out << "Threshold\tRegion";
-        for (auto &&sample : m_sample_index)
+        std::vector<double> avail_thresholds = target.get_thresholds();
+        std::sort(avail_thresholds.begin(), avail_thresholds.end());
+        num_thresholds = avail_thresholds.size();
+        width_of_line = num_thresholds+
+                num_thresholds*12+
+                1+max_fid_length+max_iid_length;
+        std::string header = "FID IID";
+        for(auto &thres : avail_thresholds)
         {
-            if(m_ignore_fid) all_out << "\t" << m_sample_names[sample].IID;
-            else all_out << "\t" << m_sample_names[sample].FID << "_" << m_sample_names[sample].IID;
+            header.append(" "+std::to_string(thres));
         }
-        all_out << std::endl;
+        header_length = header.length()+1; // +1 for newline
+        std::string all_out_name = c_commander.out();
+        if(multi)
+        {
+            all_out_name.append("."+pheno_info.name[c_pheno_index]);
+        }
+        if(m_region_size > 1)
+        {
+            for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+            {
+                std::string out_name = all_out_name+"."+region_name[i_region]+".all.score";
+                std::fstream cur_stream;
+                cur_stream.open(out_name.c_str(),std::fstream::out | std::fstream::in | std::fstream::trunc);
+                if (!cur_stream.is_open())
+                {
+                    std::string error_message = "Cannot open file " + out_name + " for write";
+                    throw std::runtime_error(error_message);
+                }
+                cur_stream << header << std::endl;
+                for(auto &&index : m_sample_index)
+                {
+                    std::string name  =m_sample_names[index].FID +" " +m_sample_names[index].IID;
+                    cur_stream << std::setfill(' ') << std::setw(width_of_line) << std::left <<  name << std::endl;
+                }
+                all_out.push_back(std::move(cur_stream));
+            }
+        }
+        else
+        {
+            all_out_name.append(".all.score");
+            std::fstream cur_stream;
+            cur_stream.open(all_out_name.c_str(), std::fstream::in | std::fstream::out | std::fstream::trunc);
+            if (!cur_stream.is_open())
+            {
+                std::string error_message = "Cannot open file " + all_out_name + " for write";
+                throw std::runtime_error(error_message);
+            }
+            cur_stream << header << std::endl;
+            for(auto &&index : m_sample_index)
+            {
+                std::string name  =m_sample_names[index].FID +" " +m_sample_names[index].IID;
+                cur_stream << std::setfill(' ') <<std::setw(width_of_line) << std::left<< name << std::endl;
+            }
+            all_out.push_back(std::move(cur_stream));
+        }
+        width_of_line++; // to account for the new line
     }
+
     size_t num_included_samples = m_sample_included.size();
     // These are lite version. We can ignore the FID and IID because we
     // know they will always follow the sequence in m_sample_names
@@ -744,6 +785,27 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
         if (!prslice)
             fprintf(stderr, "\rProcessing %03.2f%%", (double) cur_category / (double) (max_category) * 100.0);
 
+        if(all)
+        {
+            size_t i_region = 0;
+            for(auto &&a_out : all_out)
+            {
+                for (size_t sample = 0; sample < num_included_samples; ++sample)
+                {
+                    double score = (m_current_sample_score(i_region,sample).num_snp==0)? 0 :m_current_sample_score(i_region,sample).prs / (double) m_current_sample_score(i_region,sample).num_snp;
+                    //this need to be smart
+                    size_t loc = header_length+
+                            sample*width_of_line+
+                            max_fid_length+1+
+                            max_iid_length+1+iter_threshold+iter_threshold*12;
+                    a_out.seekp(loc);
+                    a_out << score;
+                    //a_out.write(score_string.substr(0,length).c_str(),length);
+                }
+                i_region++;
+            }
+        }
+        /*
         if (all && all_out.is_open()) {
             for (size_t i_region = 0; i_region < m_region_size; ++i_region)
             {
@@ -759,7 +821,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
                 }
                 all_out << std::endl;
             }
-        }
+        }*/
         if(no_regress) continue;
 
         if (n_thread == 1 || m_region_size == 1)
@@ -804,7 +866,11 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
         }
         iter_threshold++;
     }
-    if (all_out.is_open()) all_out.close();
+    //if (all_out.is_open()) all_out.close();
+    for(auto &&a_out : all_out)
+    {
+        if(a_out.is_open()) a_out.close();
+    }
     if (!prslice) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
 }
@@ -1249,127 +1315,6 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     }
 }
 
-void PRSice::transpose_all(const Commander &c_commander, const Region &c_region, size_t pheno_index) const
-{
-    // man... this will be so slow...
-    // the whole reason why we don't like the transposed feature is that it will
-    // be extremely slow and we thought it won't be helpful especially in the case
-    // where no fastscore is used.
-    // We will work on each region one at a time
-    // and try to store in as many threshold as possible before we write them to the file
-
-
-    /**
-     * I'll write this idea here
-     * If we know that each PRS is 12 character long (1 for sign)
-     * Than maybe we can make a file with predetermined spacing
-     * and only need to replace the line appropriately?
-     */
-    fprintf(stderr, "\nTransposing all score file. \n");
-    bool multi = pheno_info.name.size()>1;
-    size_t num_samples = m_sample_included.size();
-    // for any line, there will be
-    std::string header = "FID\tIID";
-    std::string output_name = c_commander.out();
-    std::string all_out_name = output_name;
-    if(multi)
-    {
-        all_out_name.append("."+pheno_info.name[pheno_index]);
-    }
-    all_out_name.append(".all.score");
-    std::ifstream all_out;
-    all_out.open(all_out_name.c_str());
-    if(!all_out.is_open())
-    {
-        std::string error_message = "Cannot open file: "+all_out_name+" for write";
-        throw std::runtime_error(error_message);
-    }
-
-    std::string line;
-    std::string prev = "";
-    while(std::getline(all_out, line)) // we have removed the header for this output
-    {
-        misc::trim(line);
-        if(line.empty()) continue;
-        std::string thres  = misc::get_column(line, 1);
-        if(thres.empty() || thres.compare(prev)==0) continue;
-        header.append("\t"+thres);
-    }
-    all_out.clear();
-    all_out.seekg(0, std::ios::beg);
-    // now generate the files
-    std::vector<std::string> file_names;
-    if(m_region_size==1)
-    {
-        std::string file_name = all_out_name;
-        file_name.append(".transposed");
-        std::ofstream out;
-        out.open(file_name.c_str());
-        if(!out.is_open())
-        {
-            std::string error_message = "Cannot open file: "+file_name+" for write";
-            throw std::runtime_error(error_message);
-        }
-        out << header << std::endl;
-        out.close();
-        file_names.push_back(file_name);
-    }
-    else
-    {
-        std::string temp_name = output_name;
-        if(multi)
-        {
-            temp_name.append("."+pheno_info.name[pheno_index]);
-        }
-        for(size_t i_region=0; i_region < m_region_size; ++i_region)
-        {
-            std::string file_name = temp_name+"."+c_region.get_name(i_region)+".all.score.transposed";
-            std::ofstream out;
-            out.open(file_name.c_str());
-            if(!out.is_open())
-            {
-                std::string error_message = "Cannot open file: "+file_name+" for write";
-                throw std::runtime_error(error_message);
-            }
-            out << header << std::endl;
-            out.close();
-            file_names.push_back(file_name);
-        }
-    }
-    for(size_t i_sample=0; i_sample < m_sample_included.size(); ++i_sample)
-    {
-        std::vector<std::string> region_lines(m_region_size); // we append to the lines first then output at once
-        while(std::getline(all_out, line)) // we have removed the header for this output
-        {
-            misc::trim(line);
-            if(line.empty()) continue;
-            std::string prs  = misc::get_column(line, 3+i_sample);
-            int region  = misc::convert<int>(misc::get_column(line, 2));
-            if(!prs.empty())
-            {
-                region_lines[region].append("\t"+prs);
-            }
-        }
-        all_out.clear();
-        all_out.seekg(0, std::ios::beg);
-        // now output the lines to the file
-        for(size_t f =0; f < file_names.size(); ++f)
-        {
-            std::ofstream fo;
-            fo.open(file_names[f].c_str(), std::ofstream::app);
-            if(!fo.is_open())
-            {
-                std::string error_message = "Cannot open file: "+file_names[f]+" for write";
-                throw std::runtime_error(error_message);
-            }
-            fo << m_sample_names[m_sample_index[i_sample]].FID << "\t" <<
-                    m_sample_names[m_sample_index[i_sample]].IID << region_lines[f] << std::endl;
-            fo.close();
-        }
-    }
-    all_out.close();
-    std::remove( all_out_name.c_str());
-}
 
 PRSice::~PRSice() {
     //dtor
