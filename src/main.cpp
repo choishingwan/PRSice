@@ -108,7 +108,6 @@ int main(int argc, char *argv[])
                 prsice.init_matrix(commander, i_pheno, *target_file, false);
                 prsice.prsice(commander, region.names(), i_pheno, *target_file);
                 if(!commander.no_regress()) prsice.output(commander, region, i_pheno, *target_file);
-                if(commander.transpose()) prsice.transpose_all(commander, region, i_pheno);
             }
         }
         /*
