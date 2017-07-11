@@ -126,23 +126,6 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
     std::string pheno_file = c_commander.pheno_file();
     std::string output_name = c_commander.out();
 
-    std::ofstream all_out;
-    bool multi = pheno_info.col.size()>1;
-    if(all && !prslice)
-    {
-        std::string all_out_name = output_name;
-        if(multi)
-        {
-            all_out_name.append("."+pheno_info.name[pheno_index]);
-        }
-        all_out_name.append(".all.score");
-        all_out.open(all_out_name.c_str());
-        if(!all_out.is_open())
-        {
-            std::string error_message = "Cannot open file: "+all_out_name+" for write";
-            throw std::runtime_error(error_message);
-        }
-    }
     m_sample_names = target.sample_names();
     gen_pheno_vec(pheno_file, pheno_index, !no_regress);
     if (!no_regress)
@@ -1272,10 +1255,17 @@ void PRSice::transpose_all(const Commander &c_commander, const Region &c_region,
     // the whole reason why we don't like the transposed feature is that it will
     // be extremely slow and we thought it won't be helpful especially in the case
     // where no fastscore is used.
-    // but nontheless we will let this function fly
-    // the output is regular:
-    // for each thresold, go through each regions
-    fprintf(stderr, "\nTransposing all score file. Might take ages.\n");
+    // We will work on each region one at a time
+    // and try to store in as many threshold as possible before we write them to the file
+
+
+    /**
+     * I'll write this idea here
+     * If we know that each PRS is 12 character long (1 for sign)
+     * Than maybe we can make a file with predetermined spacing
+     * and only need to replace the line appropriately?
+     */
+    fprintf(stderr, "\nTransposing all score file. \n");
     bool multi = pheno_info.name.size()>1;
     size_t num_samples = m_sample_included.size();
     // for any line, there will be

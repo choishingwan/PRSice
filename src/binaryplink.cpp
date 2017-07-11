@@ -503,11 +503,6 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         				}
         				current_prs_score(i_region,i_sample).prs += ((flipped)?fabs(sample_genotype[i_sample]-2):sample_genotype[i_sample])*stat*0.5;
         				current_prs_score(i_region,i_sample).num_snp++;
-        				/*
-        				if(i_sample==2945)
-        				{
-        				    std::cerr << sample_genotype[i_sample] << std::endl;
-        				}*/
         			}
         		}
         	}
