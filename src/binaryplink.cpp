@@ -190,6 +190,8 @@ std::vector<SNP> BinaryPlink::load_snps()
 	bool chr_error = false, chr_sex_error = false;
 	m_num_ambig = 0;
 	std::vector<SNP> snp_info;
+	m_num_snp_per_file.resize(m_genotype_files.size());
+	size_t cur_file = 0;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bimname = prefix+".bim";
@@ -214,11 +216,13 @@ std::vector<SNP> BinaryPlink::load_snps()
 			std::string chr = token[+BIM::CHR];
 			if(m_extract_snp && m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()){
 			    m_unfiltered_marker_ct++; //add in the checking later on
+			    m_num_snp_per_file[cur_file]++;
 			    num_line++;
 			    continue;
 			}
 			if(m_exclude_snp && m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()){
 			    m_unfiltered_marker_ct++; //add in the checking later on
+			    m_num_snp_per_file[cur_file]++;
 			    num_line++;
 			    continue;
 			}
@@ -271,10 +275,14 @@ std::vector<SNP> BinaryPlink::load_snps()
 				// directly ignore all others?
 			}
 			m_unfiltered_marker_ct++; //add in the checking later on
+			m_num_snp_per_file[cur_file]++;
 			num_line++;
+
 		}
 		bimfile.close();
+		cur_file++;
 	}
+
 	if(m_unfiltered_marker_ct > 2147483645)
 	{
 		throw std::runtime_error("Error: PLINK does not suport more than 2^31 -3 variants. "
@@ -291,6 +299,7 @@ void BinaryPlink::check_bed()
 	int64_t llxx = 0;
 	int64_t llyy = 0;
 	int64_t llzz = 0;
+	size_t cur_file = 0;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bedname = prefix+".bed";
@@ -307,8 +316,9 @@ void BinaryPlink::check_bed()
 		// will let the g_textbuf stay for now
 		char version_check[3];
 		uii = fread(version_check, 1, 3, m_bedfile);
-		llyy = ((uint64_t)m_unfiltered_sample_ct4) * m_unfiltered_marker_ct;
-		llzz = ((uint64_t)m_unfiltered_sample_ct) * ((m_unfiltered_marker_ct + 3) / 4);
+		size_t marker_ct = m_num_snp_per_file[cur_file];
+		llyy = ((uint64_t)m_unfiltered_sample_ct4) * marker_ct;
+		llzz = ((uint64_t)m_unfiltered_sample_ct) * ((marker_ct + 3) / 4);
 		bool sample_major = false;
 		// compare only the first 3 bytes
 		if ((uii == 3) && (!memcmp(version_check, "l\x1b\x01", 3)))
@@ -365,6 +375,7 @@ void BinaryPlink::check_bed()
 		}
 		fclose(m_bedfile);
 		m_bedfile = nullptr;
+		cur_file++;
 	}
 }
 

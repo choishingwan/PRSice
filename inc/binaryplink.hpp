@@ -33,6 +33,7 @@ class BinaryPlink: public Genotype
         uintptr_t m_bed_offset = 3;
         std::vector<Sample> load_samples(bool ignore_fid);
         std::vector<SNP> load_snps();
+        std::vector<size_t> m_num_snp_per_file;
         void check_bed();
 
         void cleanup()
