@@ -1083,7 +1083,7 @@ if (!is.null(phenos)) {
         fam_name <- argv$target
         fam_name <- gsub("#", "1", fam_name)
         fam <- fread(paste(fam_name, "fam", sep="."),data.table=F, header=F)
-        fam.clean <- data.frame(FID=fam$FID, IID=fam$IID, Pheno=fam$V6)
+        fam.clean <- data.frame(FID=fam$V1, IID=fam$V2, Pheno=fam$V6)
     }
     if(binary_target[1]){
         # Update the cur_pheno
