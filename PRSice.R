@@ -520,7 +520,7 @@ quantile_plot <-
         include.lowest = T
       ))
     
-    if (anyDuplicated(quantile(pheno.merge[, 4], probs = seq(0, 1, 1 / num_quant)))) {
+    if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
       writeLines(paste(
         "Duplicate quantiles formed. Will use less quantiles: ",
         length(unique(quants)),
@@ -557,8 +557,7 @@ quantile_plot <-
     pheno.merge$quantile <- quants
     
     if (num_cov > 0) {
-      pheno.merge <-
-        pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
+      pheno.merge <- pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
     } else{
       pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
     }
