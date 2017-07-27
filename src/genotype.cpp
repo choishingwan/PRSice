@@ -320,7 +320,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	while (std::getline(snp_file, line))
 	{
 		double progress = (double) snp_file.tellg() / (double) (file_length)*100;
-		if(progress-prev_progress > 0.5)
+		if(progress-prev_progress > 0.01)
 		{
 			fprintf(stderr, "\rReading %03.2f%%", progress);
 			prev_progress = progress;
@@ -560,6 +560,7 @@ void Genotype::clump(Genotype &reference)
 	int begin_index = 0;
 	bool mismatch_error = false;
 	bool require_clump = false;
+	double prev_progress = 0.0;
 	std::unordered_set<int> overlapped_snps;
 	uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl*2];
 	for(size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
@@ -611,7 +612,12 @@ void Genotype::clump(Genotype &reference)
 			core_genotype_index=i_snp; // Should store the index on genotype
 			require_clump= true;
 		}
-		fprintf(stderr, "\rClumping Progress: %03.2f%%", (double) progress++ / (double) (num_snp) * 100.0);
+		double cur_progress =(double) progress++ / (double) (num_snp) * 100.0;
+		if(cur_progress-prev_progress>0.01)
+		{
+			prev_progress = cur_progress;
+			fprintf(stderr, "\rClumping Progress: %03.2f%%", cur_progress);
+		}
 	}
 	delete [] genotype;
 	if(core_genotype_index!=m_existed_snps.size())

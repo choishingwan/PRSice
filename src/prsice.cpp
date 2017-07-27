@@ -797,7 +797,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
         if (!prslice)
         {
         	double progress =(double) cur_category / (double) (max_category) * 100.0;
-        	if(progress-prev_progress > 0.5)
+        	if(progress-prev_progress > 0.01)
         	{
         		fprintf(stderr, "\rProcessing %03.2f%%", progress);
         		prev_progress = progress;
