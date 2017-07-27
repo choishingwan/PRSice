@@ -40,12 +40,13 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    bool verbose = true;
     GenomeFactory factory;
     // change the factory according to the file type
     // to get the file type, we might want to revemp the commander class
     // such that we can have a more elegant handling of the files.
     Genotype *target_file = factory.createGenotype(commander,
-            commander.target_name(), commander.target_type(), true);
+            commander.target_name(), commander.target_type(), verbose);
     // calculate the maf and genotype missingness here? This will give us the hh_exist information required
     // for processing sex chromosomes
     Genotype *ld_file = nullptr;
@@ -53,7 +54,7 @@ int main(int argc, char *argv[])
             && commander.ld_prefix().compare(commander.target_name()) != 0)
     {
         ld_file = factory.createGenotype(commander, commander.ld_prefix(),
-                commander.ld_type(), true);
+                commander.ld_type(), verbose);
     }
 
     Region region = Region(commander.feature(), target_file->get_chr_order());
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 
     bool perform_prslice = commander.perform_prslice();
 
-    //        	Need to handle paths in the name
+    // Need to handle paths in the name
     std::string base_name = misc::remove_extension<std::string>(
             misc::base_name<std::string>(commander.base_name()));
     fprintf(stderr, "\nStart processing: %s\n", base_name.c_str());
@@ -101,6 +102,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "==============================\n");
             if (!target_file->prepare_prsice())
             {
+            	// check if we can successfully sort the SNP vector by the category as required by PRSice
                 return -1;
             }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)

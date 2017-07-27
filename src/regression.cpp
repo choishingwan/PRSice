@@ -26,15 +26,6 @@ namespace Regression{
 		// in more general cases, the following is needed (adding the intercept)
 		// but here in PRSice, we always include the intercept, so we will skip
 		// this to speed things up
-		/*
-		Eigen::MatrixXd A;
-		if(intercept){
-			A=Eigen::MatrixXd::Zero(x.rows(), x.cols()+1);
-			A.col(0) = Eigen::VectorXd::Constant(x.rows(),1.0);
-			A.block(0,1,x.rows(), x.cols()) = x;
-		}
-		else A = x;
-		*/
 		Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
 		Eigen::VectorXd beta = z.solve(y);
 		Eigen::MatrixXd fitted = A*beta;

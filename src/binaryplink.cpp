@@ -20,46 +20,74 @@
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
         std::string keep_sample, std::string extract_snp, std::string exclude_snp,
 		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
-		const size_t thread, bool verbose)
+		bool keep_ambig, const size_t thread, bool verbose)
 {
-
-	m_remove_sample = true;
-	m_keep_sample = true;
-	if(remove_sample.empty()) m_remove_sample = false;
-	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
-	if(keep_sample.empty()) m_keep_sample = false;
-	else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
-
-	if(extract_snp.empty()) m_extract_snp = false;
-	else m_extract_snp_list = load_snp_list(extract_snp);
-    if(exclude_snp.empty()) m_exclude_snp = false;
-    else m_exclude_snp_list = load_snp_list(exclude_snp);
-
-
-	m_xymt_codes.resize(XYMT_OFFSET_CT);
-	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+	/** simple assignments **/
+	filter.keep_ambig = keep_ambig;
 	m_thread = thread;
-	set_genotype_files(prefix);
-	m_sample_names = load_samples(ignore_fid);
-	m_existed_snps = load_snps();
+	// get the exclusion and extraction list
+	if(!remove_sample.empty())
+	{
+		m_remove_sample = true;
+		m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+	}
+	if(!keep_sample.empty())
+	{
+		m_keep_sample = true;
+		m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+	}
+	if(!extract_snp.empty())
+	{
+		m_extract_snp = true;
+		m_extract_snp_list = load_snp_list(extract_snp);
+	}
+	if(!exclude_snp.empty())
+	{
+		m_exclude_snp = true;
+		m_exclude_snp_list = load_snp_list(exclude_snp);
+	}
 
-	m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	m_founder_ctsplit = 3 * m_founder_ctv3;
-	m_final_mask = get_final_mask(m_founder_ct);
-	m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+
+	/** setting the chromosome information **/
+	m_xymt_codes.resize(XYMT_OFFSET_CT);
+	// we are not using the following script for now as we only support human
+	m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
+	m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+	// now initialize the chromosome
+	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+
+
+	/** now get the chromosome information we've got by replacing the # in the name **/
+	// if there are multiple #, they will all be replaced by the same number
+	set_genotype_files(prefix);
+
+
+	/** now read the sample information **/
+	m_sample_names = load_samples(ignore_fid);
+
+	/** now read the SNP information **/
+	m_existed_snps = load_snps();
 	m_marker_ct = m_existed_snps.size();
 
 	if(verbose)
 	{
 		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
-		if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+		if(m_num_ambig!=0 && !keep_ambig) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+		else if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
 		fprintf(stderr, "%zu variants included\n", m_marker_ct);
 	}
-	//Genotype(prefix,num_auto, no_x, no_y, no_xy, no_mt, thread, verbose)
+
 	check_bed();
 	m_cur_file="";
-    m_tmp_genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+
+	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    m_tmp_genotype = new uintptr_t[unfiltered_sample_ctl*2];
+    m_remove_sample_list.clear();
+    m_keep_sample_list.clear();
+    m_extract_snp_list.clear();
+    m_exclude_snp_list.clear();
 }
 
 BinaryPlink::~BinaryPlink()
@@ -70,10 +98,14 @@ BinaryPlink::~BinaryPlink()
         m_bedfile= nullptr;
     }
 }
+
+
 std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 {
 	assert(m_genotype_files.size()>0);
+	// get the name of the first fam file (we only need the first as they should all contain the same information)
 	std::string famName = m_genotype_files.front()+".fam";
+	// open the fam file
 	std::ifstream famfile;
 	famfile.open(famName.c_str());
 	if(!famfile.is_open())
@@ -81,9 +113,9 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 		std::string error_message = "ERROR: Cannot open fam file: "+famName;
 		throw std::runtime_error(error_message);
 	}
-	std::string line;
+	// number of unfiltered samples
 	m_unfiltered_sample_ct = 0;
-	uintptr_t sample_uidx=0;
+	std::string line;
 	//first pass to get the number of samples
 	while(std::getline(famfile, line))
 	{
@@ -93,86 +125,93 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 			std::vector<std::string> token = misc::split(line);
 			if(token.size() < 6)
 			{
-				fprintf(stderr, "Error: Malformed fam file. Less than 6 column on line: %zu\n",sample_uidx+1);
+				fprintf(stderr, "Error: Malformed fam file. Less than 6 column on line: %zu\n",m_unfiltered_sample_ct+1);
 				throw std::runtime_error("");
 			}
 			m_unfiltered_sample_ct++;
-			sample_uidx++;
 		}
 	}
+	// now reset the fam file to the start
 	famfile.clear();
 	famfile.seekg(0);
-	sample_uidx=0;
-	m_unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-	m_unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 
-	m_sex_male = new uintptr_t[m_unfiltered_sample_ctl];
-	std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+	uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 
-	m_founder_info = new uintptr_t[m_unfiltered_sample_ctl];
-	std::memset(m_founder_info, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+	// we don't work with the sex for now, so better ignore them first
+	// m_sex_male = new uintptr_t[unfiltered_sample_ctl];
+	// std::fill(m_sex_male, m_sex_male+unfiltered_sample_ctl, 0);
+	// std::memset(m_sex_male, 0x0, unfiltered_sample_ctl*sizeof(uintptr_t));
+
+	// try to use fill instead of memset for better readability (will be tiny bit slower according to stackoverflow)
+	m_founder_info = new uintptr_t[unfiltered_sample_ctl];
+	std::fill(m_founder_info, m_founder_info+unfiltered_sample_ctl, 0);
+	//std::memset(m_founder_info, 0x0, unfiltered_sample_ctl*sizeof(uintptr_t));
 
 	// Initialize this, but will copy founder into this later on
-	m_sample_include = new uintptr_t[m_unfiltered_sample_ctl];
-	std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+	m_sample_include = new uintptr_t[unfiltered_sample_ctl];
+	std::fill(m_sample_include, m_sample_include+unfiltered_sample_ctl, 0);
+	//std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
 	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0;
+	size_t removed=0;
+
 	std::vector<Sample> sample_name;
+	uintptr_t sample_uidx=0; // this is just for error message
 	while(std::getline(famfile, line))
 	{
 		misc::trim(line);
-		if(!line.empty())
+		if(line.empty()) continue;
+		std::vector<std::string> token = misc::split(line);
+		if(token.size() < 6)
 		{
-			std::vector<std::string> token = misc::split(line);
-			if(token.size() < 6)
-			{
-				fprintf(stderr, "Error: Malformed fam file. Less than 6 column on line: %zu\n",sample_uidx+1);
-				throw std::runtime_error("");
-			}
-			Sample cur_sample;
-			cur_sample.FID = token[+FAM::FID];
-			cur_sample.IID = token[+FAM::IID];
-			std::string id = (ignore_fid)? token[+FAM::IID] : token[+FAM::FID]+"_"+token[+FAM::IID];
-			cur_sample.pheno = token[+FAM::PHENOTYPE];
-			cur_sample.included = false;
-			if(m_keep_sample)
-			{
-				cur_sample.included=(m_keep_sample_list.find(id)!=m_keep_sample_list.end());
-			}
-			else if(m_remove_sample)
-			{
-				if(m_keep_sample && cur_sample.included)
-				{
-					std::string error_message = "ERROR: Sample ID: "+id+" existed in both remove and keep option!";
-					throw std::runtime_error(error_message);
-				}
-				cur_sample.included = !(m_remove_sample_list.find(id)!=m_remove_sample_list.end());
-			}
-			else cur_sample.included = true;
-			cur_sample.prs = 0;
-			cur_sample.num_snp = 0;
-			sample_name.push_back(cur_sample);
-			if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0 && cur_sample.included)
-			{
-				m_founder_ct++;
-				SET_BIT(sample_uidx, m_founder_info); // if individual is founder e.g. 0 0, then set bit
-			}
-			if(token[+FAM::SEX].compare("1")==0)
-			{
-				m_num_male++;
-				SET_BIT(sample_uidx, m_sex_male); // if that individual is male, need to set bit
-			}
-			else if(token[+FAM::SEX].compare("2")==0)
-			{
-				 m_num_female++;
-			}
-			else
-			{
-				 m_num_ambig_sex++; //currently ignore as we don't do sex chromosome
-				 //SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
-			}
-			sample_uidx++;
+			std::string error_message = "Error: Malformed fam file. Less than 6 column on line: "+std::to_string(sample_uidx+1);
+			throw std::runtime_error(error_message);
 		}
+		Sample cur_sample;
+		cur_sample.FID = token[+FAM::FID];
+		cur_sample.IID = token[+FAM::IID];
+		std::string id = (ignore_fid)? token[+FAM::IID] : token[+FAM::FID]+"_"+token[+FAM::IID];
+		cur_sample.pheno = token[+FAM::PHENOTYPE];
+		if(m_keep_sample)
+		{
+			cur_sample.included = (m_keep_sample_list.find(id)!=m_keep_sample_list.end());
+		}
+		else if(m_remove_sample)
+		{
+			cur_sample.included = !(m_remove_sample_list.find(id)!=m_remove_sample_list.end());
+		}
+		else cur_sample.included = true;
+
+		cur_sample.prs = 0;
+		cur_sample.num_snp = 0;
+
+		if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0 && cur_sample.included)
+		{
+			m_founder_ct++;
+			SET_BIT(sample_uidx, m_founder_info); // if individual is founder e.g. 0 0, then set bit
+		}
+		else
+		{
+			// this is not a founder, we will ignore it
+			cur_sample.included = false;
+		}
+		if(token[+FAM::SEX].compare("1")==0)
+		{
+			m_num_male++;
+			//SET_BIT(sample_uidx, m_sex_male); // if that individual is male, need to set bit
+		}
+		else if(token[+FAM::SEX].compare("2")==0)
+		{
+			m_num_female++;
+		}
+		else
+		{
+			m_num_ambig_sex++; //currently ignore as we don't do sex chromosome
+			//SET_BIT(sample_uidx, m_sample_exclude); // exclude any samples without sex information
+		}
+		sample_uidx++;
+		sample_name.push_back(cur_sample);
 	}
 	famfile.close();
 	return sample_name;
@@ -182,11 +221,10 @@ std::vector<SNP> BinaryPlink::load_snps()
 {
 	assert(m_genotype_files.size()>0);
 	m_unfiltered_marker_ct = 0;
-	m_unfiltered_marker_ctl=0;
 	std::ifstream bimfile;
 	std::string prev_chr = "";
 	int chr_code=0;
-	int order = 0;
+	int chr_index = 0;
 	bool chr_error = false, chr_sex_error = false;
 	m_num_ambig = 0;
 	std::vector<SNP> snp_info;
@@ -213,31 +251,42 @@ std::vector<SNP> BinaryPlink::load_snps()
 				fprintf(stderr, "Error: Malformed bim file. Less than 6 column on line: %i\n",num_line);
 				throw std::runtime_error("");
 			}
+			// change them to upper case
+			std::transform(token[+BIM::A1].begin(), token[+BIM::A1].end(),token[+BIM::A1].begin(), ::toupper);
+			std::transform(token[+BIM::A2].begin(), token[+BIM::A2].end(),token[+BIM::A2].begin(), ::toupper);
 			std::string chr = token[+BIM::CHR];
-			if(m_extract_snp && m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()){
+			// check inclusion / exclusion
+			if(m_extract_snp &&
+					m_extract_snp_list.find(token[+BIM::RS]) == m_extract_snp_list.end()){
 			    m_unfiltered_marker_ct++; //add in the checking later on
 			    m_num_snp_per_file[cur_file]++;
 			    num_line++;
 			    continue;
 			}
-			if(m_exclude_snp && m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()){
+			else if(m_exclude_snp &&
+					m_exclude_snp_list.find(token[+BIM::RS]) != m_exclude_snp_list.end()){
 			    m_unfiltered_marker_ct++; //add in the checking later on
 			    m_num_snp_per_file[cur_file]++;
 			    num_line++;
 			    continue;
 			}
-			if(chr.compare(prev_chr)!=0)
+
+			/** check if this is from a new chromosome **/
+			if(chr.compare(prev_chr) != 0)
 			{
+				// only work on this if this is a new chromosome
 				prev_chr = chr;
 				if(m_chr_order.find(chr)!= m_chr_order.end())
 				{
 					throw std::runtime_error("ERROR: SNPs on the same chromosome must be clustered together!");
 				}
-				m_chr_order[chr] = order++;
+				m_chr_order[chr] = chr_index++;
+				// get the chromosome codes
 				chr_code = get_chrom_code_raw(chr.c_str());
 				if (((const uint32_t)chr_code) > m_max_code) { // bigger than the maximum code, ignore it
 					if(!chr_error)
 					{
+						// only print this if an error isn't previously given
 						fprintf(stderr, "WARNING: SNPs with chromosome number larger than %du\n", m_max_code);
 						fprintf(stderr, "         They will be ignored!\n");
 						chr_error=true;
@@ -247,18 +296,22 @@ std::vector<SNP> BinaryPlink::load_snps()
 							chr_code==m_xymt_codes[X_OFFSET] ||
 							chr_code==m_xymt_codes[Y_OFFSET]))
 					{
+						// we ignore Sex chromosomes and haploid chromosome
 						fprintf(stderr, "WARNING: Currently not support haploid chromosome and sex chromosomes\n");
 						chr_sex_error=true;
 						continue;
 					}
 				}
 			}
+			// now get other information of the SNP
 			int loc = misc::convert<int>(token[+BIM::BP]);
 			if(loc < 0)
 			{
 				fprintf(stderr, "ERROR: SNP with negative corrdinate: %s:%s\n", token[+BIM::RS].c_str(), token[+BIM::BP].c_str());
 				throw std::runtime_error("Please check you have the correct input");
 			}
+			// we really don't like duplicated SNPs right?
+			// or a more gentle way will be to exclude the subsequent SNP
 			if(m_existed_snps_index.find(token[+BIM::RS])!= m_existed_snps_index.end())
 			{
 				throw std::runtime_error("ERROR: Duplicated SNP ID detected!\n");
@@ -266,13 +319,19 @@ std::vector<SNP> BinaryPlink::load_snps()
 			else if(ambiguous(token[+BIM::A1], token[+BIM::A2]))
 			{
 				m_num_ambig++;
+				if(filter.keep_ambig)
+				{
+					// keep it if user want to
+					m_existed_snps_index[token[+BIM::RS]] = snp_info.size();
+					snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
+							token[+BIM::A2], prefix, num_line));
+				}
 			}
 			else
 			{
 				m_existed_snps_index[token[+BIM::RS]] = snp_info.size();
 				snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc, token[+BIM::A1],
 					token[+BIM::A2], prefix, num_line));
-				// directly ignore all others?
 			}
 			m_unfiltered_marker_ct++; //add in the checking later on
 			m_num_snp_per_file[cur_file]++;
@@ -292,7 +351,6 @@ std::vector<SNP> BinaryPlink::load_snps()
 	return snp_info;
 }
 
-
 void BinaryPlink::check_bed()
 {
 	uint32_t uii = 0;
@@ -300,6 +358,8 @@ void BinaryPlink::check_bed()
 	int64_t llyy = 0;
 	int64_t llzz = 0;
 	size_t cur_file = 0;
+
+	uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 	for(auto &&prefix : m_genotype_files)
 	{
 		std::string bedname = prefix+".bed";
@@ -317,7 +377,7 @@ void BinaryPlink::check_bed()
 		char version_check[3];
 		uii = fread(version_check, 1, 3, m_bedfile);
 		size_t marker_ct = m_num_snp_per_file[cur_file];
-		llyy = ((uint64_t)m_unfiltered_sample_ct4) * marker_ct;
+		llyy = ((uint64_t)unfiltered_sample_ct4) * marker_ct;
 		llzz = ((uint64_t)m_unfiltered_sample_ct) * ((marker_ct + 3) / 4);
 		bool sample_major = false;
 		// compare only the first 3 bytes
@@ -383,8 +443,9 @@ void BinaryPlink::check_bed()
 void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t start_index,
 		size_t end_bound)
 {
-
-    m_final_mask = get_final_mask(m_sample_ct);
+	uintptr_t final_mask = get_final_mask(m_sample_ct);
+	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+	uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
@@ -401,17 +462,20 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
 		fclose(m_bedfile);
 		m_bedfile = nullptr;
 	}
+
+	// haven't figured out what this max_reverse does
     uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+    // a simple size check
     if(current_prs_score.rows() != m_region_size)
     {
     		throw std::runtime_error("Size of Matrix doesn't match number of region!!");
     }
 	std::vector<bool> in_region(m_region_size);
 	// index is w.r.t. partition, which contain all the information
-	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl*2];
 	for(size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
-        if(m_cur_file.empty() || m_cur_file.compare(m_existed_snps[i_snp].file_name())!=0)
+		if(m_cur_file.empty() || m_cur_file.compare(m_existed_snps[i_snp].file_name())!=0)
         {
         	if(m_bedfile!=nullptr){
         		fclose(m_bedfile);
@@ -421,20 +485,21 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
             std::string bedname = m_cur_file+".bed";
             m_bedfile = fopen(bedname.c_str(), FOPEN_RB); //again, we are assuming that the file is correct
         }
-       for(size_t i_region = 0; i_region < m_region_size; ++i_region)
+		for(size_t i_region = 0; i_region < m_region_size; ++i_region)
         {
-        	in_region[i_region]=m_existed_snps[i_snp].in(i_region);
+			in_region[i_region]=m_existed_snps[i_snp].in(i_region);
         }
         size_t cur_line = m_existed_snps[i_snp].snp_id();
-        if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)m_unfiltered_sample_ct4))
-        		, SEEK_SET)) {
+        if (fseeko(m_bedfile, m_bed_offset + (cur_line* ((uint64_t)unfiltered_sample_ct4)) , SEEK_SET)) {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
         //loadbuf_raw is the temporary
         //loadbuff is where the genotype will be located
-        std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-		std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct, m_sample_include, m_final_mask,
+        std::fill(genotype, genotype+unfiltered_sample_ctl*2, 0);
+        std::fill(m_tmp_genotype, m_tmp_genotype+unfiltered_sample_ctl*2, 0);
+        //std::memset(genotype, 0x0, unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		//std::memset(m_tmp_genotype, 0x0, unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        if(load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct, m_sample_include, final_mask,
         		false, m_bedfile, m_tmp_genotype, genotype))
         {
         	throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -442,12 +507,12 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         uintptr_t* lbptr = genotype;
         uii = 0;
         std::vector<size_t> missing_samples;
+        std::vector<double> sample_genotype(num_included_samples);
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
-        std::vector<double> sample_genotype(num_included_samples);
-        int total_num = 0;
         uint32_t sample_idx=0;
-        int nmiss = 0;
+        size_t total_num = 0;
+        size_t nmiss = 0;
         do
         {
         	ulii = ~(*lbptr++);
@@ -480,13 +545,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         	uii += BITCT2;
         } while (uii < num_included_samples);
 
-        size_t i_missing = 0;
         double maf = ((double)total_num/((double)(num_included_samples-nmiss)*2.0)); // MAF does not count missing
         if(flipped) maf = 1.0-maf;
         double center_score = stat*maf;
         size_t num_miss = missing_samples.size();
-        double check = 0.0;
-        double check2 = 0.0;
+        size_t i_missing = 0;
         for(size_t i_sample=0; i_sample < num_included_samples; ++i_sample)
         {
         	if(i_missing < num_miss && i_sample == missing_samples[i_missing])
@@ -512,13 +575,13 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
         					// if centering, we want to keep missing at 0
         					current_prs_score(i_region,i_sample).prs -= center_score;
         				}
-        				current_prs_score(i_region,i_sample).prs += ((flipped)?fabs(sample_genotype[i_sample]-2):sample_genotype[i_sample])*stat*0.5;
+        				int g = (flipped)?fabs(sample_genotype[i_sample]-2):sample_genotype[i_sample];
+        				current_prs_score(i_region,i_sample).prs += g*stat*0.5;
         				current_prs_score(i_region,i_sample).num_snp++;
         			}
         		}
         	}
         }
-
     }
     delete [] genotype;
 }

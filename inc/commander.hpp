@@ -62,6 +62,7 @@ public:
     bool filter_info() const { return filter.use_info; };
     bool filter_hard_threshold() const { return filter.hard_threshold; };
     bool hard_coding() const { return filter.hard_coding; };
+    bool keep_ambig() const { return filter.keep_ambig; };
     std::string extract_snp_file() const { return filter.extract? filter.extract_file : ""; };
     std::string exclude_snp_file() const { return filter.exclude? filter.exclude_file : ""; };
     double maf() const { return filter.maf; };
@@ -73,7 +74,6 @@ public:
     //misc
     bool all() const { return misc.all; };
     bool ignore_fid() const { return misc.ignore_fid; };
-    bool keep_ambig() const { return misc.keep_ambig; };
     bool logit_perm() const { return misc.logit_perm; };
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
@@ -156,8 +156,8 @@ public:
     void user_input() const;
 protected:
 private:
-    std::string version ="2.0beta";
-    std::string date = "29 March 2017";
+    std::string version ="2.0.7.beta";
+    std::string date = "27 July 2017";
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     struct{
     	std::string name;
@@ -218,6 +218,7 @@ private:
             int use_maf;
             int use_mind;
             int use_prob;
+            int keep_ambig;
             bool extract;
             bool exclude;
     } filter;
@@ -226,7 +227,6 @@ private:
         std::string out;
         int all;
         int ignore_fid;
-        int keep_ambig;
         int logit_perm;
         int permutation;
         int print_snp;

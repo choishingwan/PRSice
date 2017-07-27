@@ -59,6 +59,7 @@ class GenomeFactory
                             commander.ignore_fid(), commander.num_auto(),
                             commander.no_x(), commander.no_y(),
                             commander.no_xy(), commander.no_mt(),
+							commander.keep_ambig(),
                             commander.thread(), verbose);
                 default:
                 case 0:
@@ -71,6 +72,7 @@ class GenomeFactory
                             commander.ignore_fid(), commander.num_auto(),
                             commander.no_x(), commander.no_y(),
                             commander.no_xy(), commander.no_mt(),
+							commander.keep_ambig(),
                             commander.thread(), verbose);
 
             }

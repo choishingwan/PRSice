@@ -19,6 +19,7 @@
 
 std::mutex Genotype::clump_mtx;
 
+/* we don't want to do this as this seems to be root of some problems
 void Genotype::initialize()
 {
 // Don't use this. For some reason, this does not work
@@ -31,12 +32,11 @@ void Genotype::initialize()
     std::memset(m_marker_exclude, 0x0, m_unfiltered_marker_ctl*sizeof(uintptr_t));
     m_marker_ct = m_existed_snps.size();
 }
-
+*/
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt)
 {
 	// this initialize haploid mask as the maximum possible number
-	m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
-	fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
+
 
 	if(num_auto < 0)
 	{
@@ -87,8 +87,6 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_
 			m_max_code = num_auto;
 		}
 	}
-	m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
-	fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
 	fill_all_bits(m_autosome_ct + 1, m_chrom_mask);
 	for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
 		int32_t cur_code = m_xymt_codes[xymt_idx];
@@ -119,7 +117,9 @@ void Genotype::set_genotype_files(std::string prefix)
 void Genotype::update_include(const std::vector<Sample> &inclusion)
 {
     m_sample_ct = 0;
-    std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    std::fill(m_sample_include, m_sample_include+unfiltered_sample_ctl,0);
+    //std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
     for(size_t i_sample=0; i_sample < inclusion.size(); ++i_sample)
     {
         if(IS_SET(m_founder_info, i_sample) && inclusion[i_sample].included)
@@ -169,6 +169,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
     }
     return result;
 }
+
 std::unordered_set<std::string> Genotype::load_ref(std::string input, bool ignore_fid)
 {
 	std::ifstream in;
@@ -201,40 +202,66 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input, bool ignor
 }
 
 Genotype::Genotype(std::string prefix, std::string remove_sample, std::string keep_sample,
-		bool ignore_fid, int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt,
+		std::string extract_snp, std::string exclude_snp, bool ignore_fid, int num_auto,
+		bool no_x, bool no_y, bool no_xy, bool no_mt, bool keep_ambig,
 		const size_t thread, bool verbose)
 {
-
-	if(remove_sample.empty()) m_remove_sample = false;
-	else m_remove_sample_list = load_ref(remove_sample, ignore_fid);
-	if(keep_sample.empty()) m_keep_sample = false;
-	else m_keep_sample_list = load_ref(keep_sample, ignore_fid);
-	m_xymt_codes.resize(XYMT_OFFSET_CT);
-	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 	m_thread = thread;
+	if(!remove_sample.empty())
+	{
+		m_remove_sample = true;
+		m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+	}
+	if(!keep_sample.empty())
+	{
+		m_keep_sample = false;
+		m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+	}
+	if(!extract_snp.empty())
+	{
+		m_extract_snp = true;
+		m_extract_snp_list = load_snp_list(extract_snp);
+	}
+	if(!exclude_snp.empty())
+	{
+		m_exclude_snp = true;
+		m_exclude_snp_list = load_snp_list(exclude_snp);
+	}
+
+
+	/** setting the chromosome information **/
+	m_xymt_codes.resize(XYMT_OFFSET_CT);
+	// we are not using the following script for now as we only support human
+	m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
+	m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
+	fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+	// now initialize the chromosome
+	init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+
+
+
 	set_genotype_files(prefix);
 	m_sample_names = load_samples(ignore_fid);
 	m_existed_snps = load_snps();
 	if(verbose)
 	{
 		fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
-		if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+		if(m_num_ambig!=0 && !keep_ambig) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+		else if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
 		fprintf(stderr, "%zu variants included\n", m_marker_ct);
 	}
-	m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-	m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-	m_founder_ctsplit = 3 * m_founder_ctv3;
 }
 
 Genotype::~Genotype() {
 	// TODO Auto-generated destructor stub
 	if(m_founder_info!=nullptr) delete [] m_founder_info;
-	if(m_sex_male != nullptr) delete [] m_sex_male;
+	//if(m_sex_male != nullptr) delete [] m_sex_male;
 	if(m_sample_include != nullptr) delete [] m_sample_include;
-	if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
+	//if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
 	if(m_haploid_mask != nullptr) delete [] m_haploid_mask;
 	if(m_chrom_mask != nullptr) delete [] m_chrom_mask;
-    if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
+    //if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
 
 void Genotype::read_base(const Commander &c_commander, Region &region)
@@ -265,6 +292,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	double bound_end = c_commander.upper();
 	double bound_inter = c_commander.inter();
 
+	std::locale localeInfo;
 	threshold = (full)? 1.0 : threshold;
 	std::vector < std::string > token;
 
@@ -288,158 +316,167 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	size_t file_length = snp_file.tellg();
 	snp_file.seekg (0, snp_file.beg);
 	std::unordered_set<int> unique_thresholds;
+	double prev_progress = 0.0;
 	while (std::getline(snp_file, line))
 	{
-	    fprintf(stderr, "\rReading %03.2f%%", (double) snp_file.tellg() / (double) (file_length) * 100.0);
+		double progress = (double) snp_file.tellg() / (double) (file_length)*100;
+		if(progress-prev_progress > 0.5)
+		{
+			fprintf(stderr, "\rReading %03.2f%%", progress);
+			prev_progress = progress;
+		}
 		misc::trim(line);
 		if (line.empty()) continue;
 		exclude = false;
 		token = misc::split(line);
 		if (token.size() <= max_index) throw std::runtime_error("More index than column in data");
-		else
+
+		std::string rs_id = token[index[+BASE_INDEX::RS]];
+		if(m_existed_snps_index.find(rs_id)!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
 		{
-			std::string rs_id = token[index[+BASE_INDEX::RS]];
-
-			if(m_existed_snps_index.find(rs_id)!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())
+			dup_index.insert(rs_id);
+			auto &&cur_snp = m_existed_snps[m_existed_snps_index[rs_id]];
+			int32_t chr_code = -1;
+			if (index[+BASE_INDEX::CHR] >= 0)
 			{
-				dup_index.insert(rs_id);
-				auto &&cur_snp = m_existed_snps[m_existed_snps_index[rs_id]];
-				int32_t chr_code = -1;
-				if (index[+BASE_INDEX::CHR] >= 0)
-				{
-					chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
-					if (((const uint32_t)chr_code) > m_max_code) {
-						if (chr_code != -1) {
-							if (chr_code >= MAX_POSSIBLE_CHROM) {
-								chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
-								// this is the sex chromosomes
-								if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
-								exclude =true;
-								hap_error=true;
-								num_haploid++;
-							}
-							else
-							{
-								std::string error_message ="ERROR: Cannot parse chromosome code: "
-										+ token[index[+BASE_INDEX::CHR]];
-								throw std::runtime_error(error_message);
-							}
-						}
-					}
-					else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
-							chr_code==m_xymt_codes[Y_OFFSET])
-					{
-						if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
-						hap_error =true;
-						exclude = true;
-						num_haploid++;
-					}
-				}
-				std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
-				std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ? token[index[+BASE_INDEX::ALT]] : "";
-				int loc = -1;
-				if (index[+BASE_INDEX::BP] >= 0)
-				{
-					// obtain the SNP coordinate
-					try {
-						loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
-						if (loc < 0)
-						{
-							std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
-							throw std::runtime_error(error_message);
-						}
-					} catch (const std::runtime_error &error) {
-						std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
-						throw std::runtime_error(error_message);
-					}
-				}
-				bool flipped = false;
-				if(!cur_snp.matching(chr_code, loc, ref_allele, alt_allele, flipped))
-				{
-					num_mismatched++;
-					exclude = true; // hard check, as we can't tell if that is correct or not anyway
-				}
-				double pvalue = 2.0;
-				try{
-					pvalue = misc::convert<double>( token[index[+BASE_INDEX::P]]);
-					if (pvalue < 0.0 || pvalue > 1.0)
-					{
-						std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
-						throw std::runtime_error(error_message);
-					}
-					else if (pvalue > threshold)
-					{
-						exclude = true;
-						num_excluded++;
-					}
-				}catch (const std::runtime_error& error) {
-					exclude = true;
-					num_not_converted++;
-				}
-				double stat = 0.0;
-				try {
-					stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
-					if(stat <0 && !beta)
-					{
-						num_negative_stat++;
-						exclude = true;
-					}
-					else if (!beta) stat = log(stat);
-				} catch (const std::runtime_error& error) {
-					num_not_converted++;
-					exclude = true;
-				}
-
-
-				if(!alt_allele.empty() && ambiguous(ref_allele, alt_allele)){
-					num_ambiguous++;
-					exclude= true;
-				}
-				if(!exclude)
-				{
-					int category = -1;
-					double pthres = 0.0;
-					if (fastscore)
-					{
-						category = c_commander.get_category(pvalue);
-						pthres = c_commander.get_threshold(category);
-					}
-					else
-					{
-						// calculate the threshold instead
-						if (pvalue > bound_end && full)
-						{
-							category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
-							pthres = 1.0;
+				chr_code = get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
+				if (((const uint32_t)chr_code) > m_max_code) {
+					if (chr_code != -1) {
+						if (chr_code >= MAX_POSSIBLE_CHROM) {
+							chr_code= m_xymt_codes[chr_code - MAX_POSSIBLE_CHROM];
+							// this is the sex chromosomes
+							// we don't need to output the error as they will be filtered out before by the
+							// genotype read anyway
+							exclude =true;
+							hap_error=true;
+							num_haploid++;
 						}
 						else
 						{
-							category = std::ceil((pvalue - bound_start) / bound_inter);
-							category = (category < 0) ? 0 : category;
-							pthres = category * bound_inter + bound_start;
+							std::string error_message ="ERROR: Cannot parse chromosome code: "
+									+ token[index[+BASE_INDEX::CHR]];
+							throw std::runtime_error(error_message);
 						}
 					}
-					if(flipped) cur_snp.set_flipped();
-					// ignore the SE as it currently serves no purpose
-					exist_index.push_back(m_existed_snps_index[rs_id]);
-					cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
-					if(unique_thresholds.find(category)==unique_thresholds.end())
-					{
-					    unique_thresholds.insert(category);
-					    m_thresholds.push_back(pthres);
-					}
-					m_max_category = (m_max_category< category)? category:m_max_category;
+				}
+				else if(is_set(m_haploid_mask, chr_code) || chr_code==m_xymt_codes[X_OFFSET] ||
+						chr_code==m_xymt_codes[Y_OFFSET])
+				{
+					// again, doesn't need to provide this message
+					// the only time this will happen is when the target & base has different chromosome information
+					//if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
+					hap_error =true;
+					exclude = true;
+					num_haploid++;
 				}
 			}
-			else if(dup_index.find(rs_id)!=dup_index.end())
+			std::string ref_allele = (index[+BASE_INDEX::REF] >= 0) ? token[index[+BASE_INDEX::REF]] : "";
+			std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0) ? token[index[+BASE_INDEX::ALT]] : "";
+			std::transform(ref_allele.begin(), ref_allele.end(),ref_allele.begin(), ::toupper);
+			std::transform(alt_allele.begin(), alt_allele.end(),alt_allele.begin(), ::toupper);
+			int loc = -1;
+			if (index[+BASE_INDEX::BP] >= 0)
 			{
-				num_duplicated++;
+				// obtain the SNP coordinate
+				try {
+					loc = misc::convert<int>( token[index[+BASE_INDEX::BP]].c_str());
+					if (loc < 0)
+					{
+						std::string error_message = "ERROR: "+rs_id+" has negative loci!\n";
+						throw std::runtime_error(error_message);
+					}
+				} catch (const std::runtime_error &error) {
+					std::string error_message = "ERROR: Non-numeric loci for "+rs_id+"!\n";
+					throw std::runtime_error(error_message);
+				}
 			}
-			else
+			bool flipped = false;
+			if(!cur_snp.matching(chr_code, loc, ref_allele, alt_allele, flipped))
 			{
-				num_not_found++;
+				num_mismatched++;
+				exclude = true; // hard check, as we can't tell if that is correct or not anyway
+			}
+			double pvalue = 2.0;
+			try{
+				pvalue = misc::convert<double>( token[index[+BASE_INDEX::P]]);
+				if (pvalue < 0.0 || pvalue > 1.0)
+				{
+					std::string error_message = "ERROR: Invalid p-value for "+rs_id+"!\n";
+					throw std::runtime_error(error_message);
+				}
+				else if (pvalue > threshold)
+				{
+					exclude = true;
+					num_excluded++;
+				}
+			}catch (const std::runtime_error& error) {
+				exclude = true;
+				num_not_converted++;
+			}
+			double stat = 0.0;
+			try {
+				stat = misc::convert<double>( token[index[+BASE_INDEX::STAT]]);
+				if(stat <0 && !beta)
+				{
+					num_negative_stat++;
+					exclude = true;
+				}
+				else if (!beta) stat = log(stat);
+			} catch (const std::runtime_error& error) {
+				num_not_converted++;
+				exclude = true;
+			}
+
+
+			if(!alt_allele.empty() && ambiguous(ref_allele, alt_allele)){
+				num_ambiguous++;
+				exclude= !filter.keep_ambig;
+			}
+			if(!exclude)
+			{
+				int category = -1;
+				double pthres = 0.0;
+				if (fastscore)
+				{
+					category = c_commander.get_category(pvalue);
+					pthres = c_commander.get_threshold(category);
+				}
+				else
+				{
+					// calculate the threshold instead
+					if (pvalue > bound_end && full)
+					{
+						category = std::ceil((bound_end + 0.1 - bound_start) / bound_inter);
+						pthres = 1.0;
+					}
+					else
+					{
+						category = std::ceil((pvalue - bound_start) / bound_inter);
+						category = (category < 0) ? 0 : category;
+						pthres = category * bound_inter + bound_start;
+					}
+				}
+				if(flipped) cur_snp.set_flipped();
+				// ignore the SE as it currently serves no purpose
+				exist_index.push_back(m_existed_snps_index[rs_id]);
+				cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
+				if(unique_thresholds.find(category)==unique_thresholds.end())
+				{
+					unique_thresholds.insert(category);
+					m_thresholds.push_back(pthres);
+				}
+				m_max_category = (m_max_category< category)? category:m_max_category;
 			}
 		}
+		else if(dup_index.find(rs_id)!=dup_index.end())
+		{
+			num_duplicated++;
+		}
+		else
+		{
+			num_not_found++;
+		}
+
 	}
 	snp_file.close();
 
@@ -508,6 +545,9 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 void Genotype::clump(Genotype &reference)
 {
 	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    uint32_t founder_ctsplit = 3 * founder_ctv3;
 	auto &&cur_snp = m_existed_snps.front();
 	size_t bp_of_core =cur_snp.loc();
 	int prev_chr= cur_snp.chr();
@@ -521,7 +561,7 @@ void Genotype::clump(Genotype &reference)
 	bool mismatch_error = false;
 	bool require_clump = false;
 	std::unordered_set<int> overlapped_snps;
-	uintptr_t* genotype = new uintptr_t[m_unfiltered_sample_ctl*2];
+	uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl*2];
 	for(size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
 	{
 		auto &&snp = m_existed_snps[i_snp];
@@ -553,13 +593,15 @@ void Genotype::clump(Genotype &reference)
 		// Now read in the current SNP
 
 		overlapped_snps.insert(i_snp);
-		std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
+		std::fill(genotype, genotype+unfiltered_sample_ctl*2, 0);
+		//std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
 		reference.read_genotype(genotype, snp.snp_id(), snp.file_name());
 
-		uintptr_t ulii = m_founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + (m_marker_ct - 1) * 2 * sizeof(double);
-		uintptr_t* geno1 = new uintptr_t[3*m_founder_ctsplit +m_founder_ctv3];
-		std::memset(geno1, 0x0, (3*m_founder_ctsplit +m_founder_ctv3)*sizeof(uintptr_t));
-		load_and_split3(genotype, m_founder_ct, geno1, m_founder_ctv3, 0, 0, 1, &ulii);
+		uintptr_t ulii = founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t) + (m_marker_ct - 1) * 2 * sizeof(double);
+		uintptr_t* geno1 = new uintptr_t[3*founder_ctsplit +founder_ctv3];
+		std::fill(geno1, geno1+(3*founder_ctsplit +founder_ctv3), 0);
+		//std::memset(geno1, 0x0, (3*m_founder_ctsplit +m_founder_ctv3)*sizeof(uintptr_t));
+		load_and_split3(genotype, m_founder_ct, geno1, founder_ctv3, 0, 0, 1, &ulii);
 
 		snp.set_clump_geno(geno1, ulii);
 
@@ -654,7 +696,6 @@ void Genotype::clump(Genotype &reference)
 	m_existed_snps_index.clear();
 	// we don't need the index any more because we don't need to match SNPs anymore
 	fprintf(stderr, "Number of SNPs after clumping : %zu\n\n", m_existed_snps.size());
-	cleanup();
 }
 
 
@@ -742,13 +783,15 @@ void Genotype::perform_clump(int &core_genotype_index, int &begin_index, int cur
 void Genotype::clump_thread(const size_t c_core_genotype_index, const size_t c_begin_index,
 		const size_t c_current_index)
 {
+
+    uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	size_t wind_size = c_current_index-c_begin_index;
 	if(wind_size <=1 ) return; // nothing to do
 	uint32_t tot1[6];
 	bool nm_fixed = false;
-	tot1[0] = popcount_longs(m_existed_snps[c_core_genotype_index].clump_geno(), m_founder_ctv3);
-	tot1[1] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[m_founder_ctv3]), m_founder_ctv3);
-	tot1[2] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[2 * m_founder_ctv3]), m_founder_ctv3);
+	tot1[0] = popcount_longs(m_existed_snps[c_core_genotype_index].clump_geno(), founder_ctv3);
+	tot1[1] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[founder_ctv3]), founder_ctv3);
+	tot1[2] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[2 * founder_ctv3]), founder_ctv3);
 	// in theory, std::fill, std::copy should be safer than these mem thing
 	// but as a safety guard from my stupidity, let's just follow plink
 	/*
@@ -796,7 +839,6 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, const size_t c_b
 	}
 	for(auto &&thread_runner : thread_store) thread_runner.join();
 	thread_store.clear();
-
 	//delete [] geno_male;
 }
 
@@ -805,6 +847,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 	uintptr_t* loadbuf;
 	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
 	uint32_t counts[18];
+    uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	double freq11;
 	double freq11_expected;
 	double freq1x;
@@ -835,9 +878,9 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 
 			auto &&target_geno =m_existed_snps[i_snp].clump_geno();
 			uintptr_t uiptr[3];
-			uiptr[0] = popcount_longs(target_geno, m_founder_ctv3);
-			uiptr[1] = popcount_longs(&(target_geno[m_founder_ctv3]), m_founder_ctv3);
-			uiptr[2] = popcount_longs(&(target_geno[2 * m_founder_ctv3]), m_founder_ctv3);
+			uiptr[0] = popcount_longs(target_geno, founder_ctv3);
+			uiptr[1] = popcount_longs(&(target_geno[founder_ctv3]), founder_ctv3);
+			uiptr[2] = popcount_longs(&(target_geno[2 * founder_ctv3]), founder_ctv3);
 			if (m_existed_snps[i_snp].clump_missing()) {
 				zmiss2 = true;
 			}
@@ -845,7 +888,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
 
 			if (nm_fixed) {
 				two_locus_count_table_zmiss1(ref_geno, target_geno,
-						counts, m_founder_ctv3, zmiss2);
+						counts, founder_ctv3, zmiss2);
 				if (zmiss2) {
 					counts[2] = tot1[0] - counts[0] - counts[1];
 					counts[5] = tot1[1] - counts[3] - counts[4];
@@ -855,7 +898,7 @@ void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t
             		counts[8] = uiptr[2] - counts[2] - counts[5];
 			} else {
 				two_locus_count_table(ref_geno, target_geno,
-						counts, m_founder_ctv3, zmiss2);
+						counts, founder_ctv3, zmiss2);
 				if (zmiss2) {
 					counts[2] = tot1[0] - counts[0] - counts[1];
 					counts[5] = tot1[1] - counts[3] - counts[4];

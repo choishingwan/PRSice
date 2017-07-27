@@ -35,7 +35,7 @@ class BinaryGen: public Genotype
                 std::string extract_snp, std::string exclude_snp,
                 bool ignore_fid, int num_auto = 22, bool no_x = false,
                 bool no_y = false, bool no_xy = false, bool no_mt = false,
-                const size_t thread = 1, bool verbose = false);
+                bool keep_ambig = false, const size_t thread = 1, bool verbose = false);
         ~BinaryGen();
     private:
 
@@ -49,7 +49,7 @@ class BinaryGen: public Genotype
 
 
         std::vector<SNP> load_snps();
-        void cleanup();
+
         std::string m_cur_file;
         inline void load_raw(uintptr_t* genotype, const uint32_t snp_index,
                 const std::string &file_name)
@@ -111,9 +111,13 @@ class BinaryGen: public Genotype
         {
             // the bgen library seems over complicated
             // try to use PLINK one. The difficulty is ifstream vs FILE
-            std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 * sizeof(uintptr_t));
+        	// this is for the LD calculation
+        	uintptr_t final_mask = get_final_mask(m_founder_ct);
+        	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        	std::fill(m_tmp_genotype, m_tmp_genotype+unfiltered_sample_ctl*2,0);
+            //std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 * sizeof(uintptr_t));
             if (load_and_collapse_incl(snp_index, file_name, m_unfiltered_sample_ct, m_founder_ct,
-                    m_founder_info, m_final_mask, false,
+                    m_founder_info, final_mask, false,
                     m_tmp_genotype, genotype))
             {
                 throw std::runtime_error("ERROR: Cannot read the bed file!");

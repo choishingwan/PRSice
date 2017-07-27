@@ -74,6 +74,7 @@ private:
     {
         return top*r2/(bottom*r2);
     }
+
     void set_lee(double prevalence, double case_ratio, double &top, double &bottom) const;
 
     struct{
@@ -113,8 +114,6 @@ private:
 	misc::vec2d<Sample_lite> m_best_sample_score;
 	std::vector<std::string> m_sample_included;
 	std::vector<int> m_sample_index;
-	//std::vector< std::vector<Sample_lite> > m_best_score; // PRS for the best threshold
-	//std::vector< std::vector<Sample_lite> > m_current_score; // PRS for the current threshold
 	std::vector<size_t> m_num_snp_included;
 	/**
 	 * function area
@@ -125,12 +124,7 @@ private:
 	void gen_cov_matrix(const std::string &c_cov_file, const std::vector<std::string> &c_cov_header);
 	//This should help us to update the m_prs_results
 	void process_permutations();
-    // valid sample information
 
-	// matrix for regression
-	// important guide for all operation
-	//std::vector<p_partition> m_partition;
-	// snp information
 
 	// Null information
 	double m_null_r2 = 0.0;
@@ -138,7 +132,6 @@ private:
 	// For thread safety
     static std::mutex score_mutex;
 
-    // Region info
     // PRSlice related storages
     //enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
     //typedef std::tuple<std::string, std::vector<p_partition>, double, double, double, double > windows;

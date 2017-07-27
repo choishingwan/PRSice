@@ -17,22 +17,22 @@
 #ifndef REGION_H
 #define REGION_H
 
-#include <string>
-#include <vector>
 #include <fstream>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <tuple>
+#include <iostream>
 #include <limits.h>
+#include <map>
+#include <set>
+#include <stdio.h>
+#include <string>
 #include <string.h>
+#include <sys/stat.h>
+#include <tuple>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include "misc.hpp"
 #include "storage.hpp"
-#include <iostream>
 
 class Region
 {
@@ -81,16 +81,24 @@ private:
     		int start;
     		int end;
     };
-
+    // for checking duplicated region
+    // use member variable because both bed and msigdb needs this
+    // and don't want to pass this around
     std::unordered_set<std::string> m_duplicated_names;
+    // the order of chromosome, use for sorting the regions
     std::unordered_map<std::string, int> m_chr_order;
+    // the name of the regions
     std::vector<std::string> m_region_name;
+    // features that we'd like to capture
     std::vector<std::string> m_gtf_feature;
+    // the actual region boundary
+    // can't use vec2d because we don't know the size in advance
     std::vector< std::vector<region_bound> > m_region_list;
     // This is to indicate the current location of each region
     // This work because we assume all SNPs are sorted by their coordinates
     // in the same way as the region files.
     std::vector<size_t> m_snp_check_index;
+    // the number of SNPs from the base+target that falls into the region
     std::vector<int> m_region_snp_count;
 
     bool in_feature(std::string in) const

@@ -43,18 +43,17 @@ class Genotype
     public:
         Genotype(){};
         Genotype(std::string prefix, std::string remove_sample,
-                std::string keep_sample, bool ignore_fid, int num_auto = 22,
+                std::string keep_sample,  std::string extract_snp,
+                std::string exclude_snp, bool ignore_fid, int num_auto = 22,
                 bool no_x = false, bool no_y = false, bool no_xy = false,
-                bool no_mt = false, const size_t thread = 1, bool verbose =
-                        false);
+                bool no_mt = false, bool keep_ambig=false, const size_t thread = 1,
+				bool verbose = false);
 
         virtual ~Genotype();
         std::unordered_map<std::string, int> get_chr_order() const
         {
             return m_chr_order;
         };
-        void read_base(const Commander &c_commander, Region &region);
-        void clump(Genotype &reference);
 
         inline bool existed(const std::string &rs) const
         {
@@ -65,8 +64,7 @@ class Genotype
         {
             if (existed(target.get_rs()))
             {
-                return m_existed_snps.at(
-                        m_existed_snps_index.at(target.get_rs())) == target;
+                return m_existed_snps.at( m_existed_snps_index.at(target.get_rs())) == target;
             }
             return false;
         };
@@ -82,27 +80,74 @@ class Genotype
         {
             return m_max_category;
         };
-        bool get_score(
-                misc::vec2d<Sample_lite> &current_prs_score,
+        bool get_score(misc::vec2d<Sample_lite> &current_prs_score,
                 int &cur_index, int &cur_category, double &cur_threshold,
                 std::vector<size_t> &num_snp_included);
         bool prepare_prsice();
         void print_snp(std::string &output, double threshold);
         size_t num_threshold() const { return m_num_threshold; };
         void update_include(const std::vector<Sample> &inclusion);
+        void read_base(const Commander &c_commander, Region &region);
+        void clump(Genotype &reference);
     protected:
+        // need to better organize the stuffs
+        //void initialize();
 
-        void initialize();
-        uintptr_t m_final_mask;
-        uintptr_t *m_tmp_genotype=nullptr;
+        // for loading the sample inclusion / exclusion set
+        std::unordered_set<std::string> load_ref(std::string input, bool ignore_fid);
+        // for loading the SNP inclusion / exclusion set
+        std::unordered_set<std::string> load_snp_list(std::string input);
+        // for processing the genotype file (mainly for multiple chromosome input)
+        void set_genotype_files(std::string prefix);
+        // storage of genotype file names
+        std::vector<std::string> m_genotype_files;
+
+
+        /** chromosome information **/
+
+        void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
+        uint32_t m_autosome_ct;
+        std::vector<int32_t> m_xymt_codes;
+        std::vector<int32_t> m_chrom_start;
+        uint32_t m_max_code;
+        uintptr_t* m_haploid_mask=nullptr;
+        uintptr_t* m_chrom_mask=nullptr;
+
+        // for easy calculatable items, remove them from the class to keep things more organized and
+        // easier to debug
+
+        /** sample information **/
+        virtual std::vector<Sample> load_samples(bool ignore_fid)
+    	{
+        	return std::vector < Sample > (0);
+    	};
+        uintptr_t m_unfiltered_sample_ct = 0;
+        uintptr_t m_sample_ct = 0;
+        // storage of sample information
+        std::vector<Sample> m_sample_names;
+        /** Selection of samples **/
+        bool m_keep_sample = false;
+        bool m_remove_sample=false;
+        std::unordered_set<std::string> m_keep_sample_list;
+        std::unordered_set<std::string> m_remove_sample_list;
+
+        /** Selection of SNPs **/
+        bool m_extract_snp = false;
+        bool m_exclude_snp = false;
+        std::unordered_set<std::string> m_extract_snp_list;
+        std::unordered_set<std::string> m_exclude_snp_list;
+
+        /** Storage of the genotype information **/
+        uintptr_t *m_tmp_genotype=nullptr; // initialize this once to speed things up
+
         static std::mutex clump_mtx;
+
+        /** Misc information **/
         size_t m_max_category = 0;
         size_t m_region_size = 1;
         size_t m_num_threshold=0;
         SCORING m_scoring;
-        virtual void cleanup(){};
 
-        std::deque<uintptr_t*> m_genotype;
         struct
         {
                 double r2;
@@ -119,57 +164,32 @@ class Genotype
                 double info_score;
                 double hard_threshold;
                 bool filter_hard_threshold;
-                bool use_hard;
                 bool filter_maf;
                 bool filter_geno;
                 bool filter_info;
+                bool keep_ambig;
+                bool use_hard;
         } filter;
 
-        void finalize_snps(Region &region, const int distance);
-        std::unordered_set<std::string> load_ref(std::string input, bool ignore_fid);
-        std::unordered_set<std::string> load_snp_list(std::string input);
-        void set_genotype_files(std::string prefix);
-        std::vector<std::string> m_genotype_files;
-        std::vector<double> m_thresholds;
-        void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
-        uint32_t m_autosome_ct;
-        std::vector<int32_t> m_xymt_codes;
-        std::vector<int32_t> m_chrom_start;
-        uint32_t m_max_code;
-        uintptr_t* m_haploid_mask=nullptr;
-        uintptr_t* m_chrom_mask=nullptr;
 
-        virtual std::vector<Sample> load_samples(bool ignore_fid)
-        {
-            return std::vector < Sample > (0);
-        };
-        uintptr_t m_unfiltered_sample_ct = 0;
-        uintptr_t m_sample_ct = 0;
-        uintptr_t m_unfiltered_sample_ctl = 0;
-        uintptr_t m_unfiltered_sample_ct4 = 0;
-        std::vector<Sample> m_sample_names;
-        bool m_remove_sample = true;
-        bool m_keep_sample = true;
-        bool m_extract_snp = true;
-        bool m_exclude_snp = true;
-        std::unordered_set<std::string> m_remove_sample_list;
-        std::unordered_set<std::string> m_keep_sample_list;
-        std::unordered_set<std::string> m_extract_snp_list;
-        std::unordered_set<std::string> m_exclude_snp_list;
+        std::vector<double> m_thresholds;
+
+
+
 
         // founder_info stores the samples that are included from
         // the genotype file. All non-founder and removed samples
         // will have bit set to 0
         uintptr_t* m_founder_info = nullptr;
-        uintptr_t* m_sex_male = nullptr;
+        //uintptr_t* m_sex_male = nullptr;
         uintptr_t* m_sample_include =nullptr;
         size_t m_num_male = 0;
         size_t m_num_female = 0;
         size_t m_num_ambig_sex = 0;
         uintptr_t m_founder_ct = 0;
-        uintptr_t m_founder_ctl;
-        uint32_t m_founder_ctv3;
-        uint32_t m_founder_ctsplit;
+        //uintptr_t m_founder_ctl;
+        //uint32_t m_founder_ctv3;
+        //uint32_t m_founder_ctsplit;
 
         virtual std::vector<SNP> load_snps()
         {
@@ -178,15 +198,16 @@ class Genotype
         // due to the type of operation we did, most of the following uintptr_t were not in
         // use
         uintptr_t m_unfiltered_marker_ct = 0;
-        uintptr_t m_unfiltered_marker_ctl = 0;
+        //uintptr_t m_unfiltered_marker_ctl = 0;
         uintptr_t m_marker_ct = 0;
-        uintptr_t m_marker_exclude_ct = 0;
-        uintptr_t* m_marker_exclude = nullptr;
+        uint32_t m_num_ambig;
+        //uintptr_t m_marker_exclude_ct = 0;
+        //uintptr_t* m_marker_exclude = nullptr;
         std::unordered_map<std::string, size_t> m_existed_snps_index;
         std::vector<SNP> m_existed_snps;
         std::unordered_map<std::string, int> m_chr_order;
-        uint32_t m_hh_exists; // might be a bit harsh, but should also read in maf when loading SNPs
-        uint32_t m_num_ambig;
+        //uint32_t m_hh_exists; // might be a bit harsh, but should also read in maf when loading SNPs
+
 
         uint32_t m_thread;
         virtual inline void read_genotype(uintptr_t* genotype,
@@ -218,6 +239,11 @@ class Genotype
         void compute_clump(size_t core_genotype_index, size_t i_start,
                 size_t i_end, bool nm_fixed, uint32_t* tot1);
 
+
+
+
+
+        // no touchy area (PLINK Code)
         uint32_t em_phase_hethet(double known11, double known12, double known21,
                 double known22, uint32_t center_ct, double* freq1x_ptr,
                 double* freq2x_ptr, double* freqx1_ptr, double* freqx2_ptr,

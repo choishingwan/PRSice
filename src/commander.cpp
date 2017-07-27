@@ -16,6 +16,100 @@
 
 #include "commander.hpp"
 
+Commander::Commander()
+{
+	base.beta = false;
+	base.name = "";
+	base.chr = "CHR";
+	base.ref_allele = "A1";
+	base.alt_allele = "A2";
+	base.statistic = "OR";
+	base.snp = "SNP";
+	base.bp = "BP";
+	base.standard_error = "SE";
+	base.p_value = "P";
+	base.index = false;
+    base.provided_chr = false;
+    base.provided_ref = false;
+    base.provided_alt = false;
+    base.provided_stat = false;
+    base.provided_snp = false;
+    base.provided_bp = false;
+    base.provided_se = false;
+    base.provided_p = false;
+    base.col_index.resize(+BASE_INDEX::MAX+1, -1);
+
+
+    clumping.distance = 250000;
+    clumping.keep_sample = false;
+	clumping.ld = "";
+	clumping.no_clump = false;
+	clumping.provide_proxy = false;
+	clumping.proxy =-1.0;
+	clumping.p_value =1.0;
+	clumping.r2 = 0.1;
+    clumping.remove_sample = false;
+    clumping.type = "bed";
+
+	covariate.name = "";
+	covariate.ancestry_dim="MDS";
+
+	filter.exclude = false;
+	filter.extract = false;
+	filter.geno = 0.0;
+	filter.mind = 0.0;
+	filter.hard_threshold = 0.8;
+	filter.maf = 0.01;
+	filter.hard_coding = false;
+	filter.hard_threshold = 0.9;
+	filter.info_score =0.9;
+	filter.keep_ambig = true;
+	filter.use_prob = false;
+	filter.use_maf = false;
+	filter.use_mind = false;
+	filter.use_hard_thres = false;
+	filter.use_info = false;
+	filter.use_geno = false;
+
+	misc.all = false;
+	misc.ignore_fid = false;
+	misc.logit_perm = false;
+	misc.out = "PRSice";
+	misc.permutation = 10000;
+	misc.print_snp = false;
+	misc.provided_permutation = false;
+	misc.provided_seed =false;
+	misc.seed = 0;
+	misc.thread = 1;
+
+	prset.gtf = "";
+	prset.msigdb = "";
+
+	prsice.missing_score = "";
+	prsice.lower = 0.0001;
+	prsice.upper = 0.5;
+	prsice.inter = 0.00005;
+	prsice.fastscore = false;
+	prsice.no_regress = false;
+	prsice.full = false;
+
+	prslice.size = -1;
+	prslice.provided = false;
+
+	species.num_auto = 22;
+	species.no_x = false;
+	species.no_y = false;
+	species.no_xy = false;
+	species.no_mt = false;
+	species.double_set = false;
+
+	target.remove_sample = false;
+	target.keep_sample = false;
+	target.name = "";
+	target.pheno_file = "";
+	target.type = "bed";
+}
+
 bool Commander::initialize(int argc, char *argv[])
 {
 	program_info();
@@ -54,7 +148,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid",no_argument,&misc.ignore_fid,1},
         {"index",no_argument,&base.index,1},
-        {"keep-ambig", no_argument, &misc.keep_ambig, 0},
+        {"keep-ambig", no_argument, &filter.keep_ambig, 0},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
 		{"no-clump",no_argument,&clumping.no_clump,1},
 		{"no-regression",no_argument,&prsice.no_regress,1},
@@ -394,100 +488,6 @@ bool Commander::initialize(int argc, char *argv[])
     return true;
 }
 
-
-Commander::Commander()
-{
-	base.beta = false;
-	base.name = "";
-	base.chr = "CHR";
-	base.ref_allele = "A1";
-	base.alt_allele = "A2";
-	base.statistic = "OR";
-	base.snp = "SNP";
-	base.bp = "BP";
-	base.standard_error = "SE";
-	base.p_value = "P";
-	base.index = false;
-    base.provided_chr = false;
-    base.provided_ref = false;
-    base.provided_alt = false;
-    base.provided_stat = false;
-    base.provided_snp = false;
-    base.provided_bp = false;
-    base.provided_se = false;
-    base.provided_p = false;
-    base.col_index.resize(+BASE_INDEX::MAX+1, -1);
-
-
-    clumping.distance = 250000;
-    clumping.keep_sample = false;
-	clumping.ld = "";
-	clumping.no_clump = false;
-	clumping.provide_proxy = false;
-	clumping.proxy =-1.0;
-	clumping.p_value =1.0;
-	clumping.r2 = 0.1;
-    clumping.remove_sample = false;
-    clumping.type = "bed";
-
-	covariate.name = "";
-	covariate.ancestry_dim="MDS";
-
-	filter.exclude = false;
-	filter.extract = false;
-	filter.geno = 0.0;
-	filter.mind = 0.0;
-	filter.hard_threshold = 0.8;
-	filter.maf = 0.01;
-	filter.hard_coding = false;
-	filter.hard_threshold = 0.9;
-	filter.info_score =0.9;
-	filter.use_prob = false;
-	filter.use_maf = false;
-	filter.use_mind = false;
-	filter.use_hard_thres = false;
-	filter.use_info = false;
-	filter.use_geno = false;
-
-	misc.all = false;
-	misc.ignore_fid = false;
-	misc.keep_ambig = true;
-	misc.logit_perm = false;
-	misc.out = "PRSice";
-	misc.permutation = 10000;
-	misc.print_snp = false;
-	misc.provided_permutation = false;
-	misc.provided_seed =false;
-	misc.seed = 0;
-	misc.thread = 1;
-
-	prset.gtf = "";
-	prset.msigdb = "";
-
-	prsice.missing_score = "";
-	prsice.lower = 0.0001;
-	prsice.upper = 0.5;
-	prsice.inter = 0.00005;
-	prsice.fastscore = false;
-	prsice.no_regress = false;
-	prsice.full = true;
-
-	prslice.size = -1;
-	prslice.provided = false;
-
-	species.num_auto = 22;
-	species.no_x = false;
-	species.no_y = false;
-	species.no_xy = false;
-	species.no_mt = false;
-	species.double_set = false;
-
-	target.remove_sample = false;
-	target.keep_sample = false;
-	target.name = "";
-	target.pheno_file = "";
-	target.type = "bed";
-}
 
 Commander::~Commander()
 {

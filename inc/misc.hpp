@@ -41,7 +41,7 @@ namespace misc
             {
 
             }
-            vec2d(int row, int col, T def)
+            vec2d(size_t row, size_t col, T def)
             {
                 if(row==0 || col==0)
                 {
@@ -51,7 +51,7 @@ namespace misc
                 m_row = row;
                 m_col = col;
             };
-            vec2d(int row, int col)
+            vec2d(size_t row, size_t col)
             {
                 if(row==0 || col==0)
                 {
@@ -61,7 +61,7 @@ namespace misc
                 m_row = row;
                 m_col = col;
             };
-            T operator()(int row, int col) const
+            T operator()(size_t row, size_t col) const
             {
                 if(row > m_row || col>m_col)
                 {
@@ -69,7 +69,7 @@ namespace misc
                 }
                 return m_storage[row*m_col+col];
             }
-            T &operator()(int row, int col)
+            T &operator()(size_t row, size_t col)
             {
                 if(row > m_row || col>m_col)
                 {
