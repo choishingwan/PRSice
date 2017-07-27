@@ -1,5 +1,5 @@
 CXXFLAGS=-Wall -O2 -std=c++11 -DNDEBUG 
-ZLIB=/mnt/lustre/groups/ukbiobank/PRSice-cpp_development/PRSice.code/lib/zlib-1.2.11/build/libz.a 
+ZLIB=/mnt/lustre/groups/ukbiobank/Edinburgh_Data/Software/PRSice-cpp_development/PRSice.code/lib/zlib-1.2.11/build/libz.a 
 CXX=/opt/apps/compilers/gcc/6.2.0/bin/g++
 INCLUDES := -I inc/ -isystem lib/ -isystem lib/zlib-1.2.11/
 THREAD := -Wl,--whole-archive -lpthread
@@ -16,4 +16,4 @@ OBJ := bgen_lib.o binaryplink.o genotype.o misc.o plink_set.o prslice.o regressi
 		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 PRSice: $(OBJ)
-		$(CXX) $(INCLUDES) $(SERVER)  $^ $(ZLIB) $(THREAD) $(GCC) -o $@
+		$(CXX) $(CXXFLAGS) $(INCLUDES) $(SERVER)  $^ $(ZLIB) $(THREAD) $(GCC) -o $@
