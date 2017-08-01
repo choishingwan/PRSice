@@ -825,7 +825,11 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
                 i_region++;
             }
         }
-        if(no_regress) continue;
+        if(no_regress)
+        {
+        	iter_threshold++;
+        	continue;
+        }
 
         if (n_thread == 1 || m_region_size == 1)
         {
