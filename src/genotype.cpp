@@ -517,7 +517,15 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 
 	if(num_duplicated) fprintf(stderr, "%zu duplicated variant(s) in base file\n", num_duplicated);
 	if(num_excluded) fprintf(stderr, "%zu variant(s) excluded due to p-value threshold\n", num_excluded);
-    if(num_ambiguous) fprintf(stderr, "%zu ambiguous variant(s)\n", num_ambiguous);
+    if(num_ambiguous)
+    {
+        fprintf(stderr, "%zu ambiguous variant(s)", num_ambiguous);
+        if(!filter.keep_ambig)
+        {
+            fprintf(stderr, " excluded");
+        }
+        fprintf(stderr, "\n");
+    }
     if(num_haploid) fprintf(stderr, "%zu variant(s) located on haploid chromosome\n", num_haploid);
 	if(num_not_found) fprintf(stderr, "%zu variant(s) not found in target file\n", num_not_found);
 	if(num_mismatched) fprintf(stderr ,"%zu mismatched variant(s) excluded\n", num_mismatched);

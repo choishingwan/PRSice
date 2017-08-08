@@ -63,7 +63,7 @@ Commander::Commander()
 	filter.hard_coding = false;
 	filter.hard_threshold = 0.9;
 	filter.info_score =0.9;
-	filter.keep_ambig = true;
+	filter.keep_ambig = false;
 	filter.use_prob = false;
 	filter.use_maf = false;
 	filter.use_mind = false;
