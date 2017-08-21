@@ -116,7 +116,8 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 	// number of unfiltered samples
 	m_unfiltered_sample_ct = 0;
 	std::string line;
-	//first pass to get the number of samples
+	std::unordered_set<std::string> founder_info;
+	//first pass to get the number of samples and also get the founder ID
 	while(std::getline(famfile, line))
 	{
 		misc::trim(line);
@@ -128,6 +129,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 				fprintf(stderr, "Error: Malformed fam file. Less than 6 column on line: %zu\n",m_unfiltered_sample_ct+1);
 				throw std::runtime_error("");
 			}
+			founder_info.insert(token[+FAM::FID]+"_"+token[+FAM::IID]);
 			m_unfiltered_sample_ct++;
 		}
 	}
@@ -153,9 +155,8 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 	std::fill(m_sample_include, m_sample_include+unfiltered_sample_ctl, 0);
 	//std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
-	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0;
+	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0, m_num_non_founder=0;
 	size_t removed=0;
-
 	std::vector<Sample> sample_name;
 	uintptr_t sample_uidx=0; // this is just for error message
 	while(std::getline(famfile, line))
@@ -186,15 +187,21 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 		cur_sample.prs = 0;
 		cur_sample.num_snp = 0;
 
-		if(token[+FAM::FATHER].compare("0")==0 && token[+FAM::MOTHER].compare("0")==0 && cur_sample.included)
+		if(founder_info.find(token[+FAM::FATHER])==founder_info.end()
+				&& founder_info.find(token[+FAM::MOTHER])==founder_info.end()
+				&& cur_sample.included)
 		{
 			m_founder_ct++;
 			SET_BIT(sample_uidx, m_founder_info); // if individual is founder e.g. 0 0, then set bit
 		}
-		else
+		else if(!cur_sample.included)
 		{
-			// this is not a founder, we will ignore it
+			// ignore this sample
 			cur_sample.included = false;
+		}
+		else{
+			// this is not a founder, we will ignore it
+			m_num_non_founder++;
 		}
 		if(token[+FAM::SEX].compare("1")==0)
 		{

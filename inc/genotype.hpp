@@ -186,6 +186,7 @@ class Genotype
         size_t m_num_male = 0;
         size_t m_num_female = 0;
         size_t m_num_ambig_sex = 0;
+        size_t m_num_non_founder =0;
         uintptr_t m_founder_ct = 0;
         //uintptr_t m_founder_ctl;
         //uint32_t m_founder_ctv3;

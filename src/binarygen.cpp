@@ -74,6 +74,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file,
 
     if(verbose)
     {
+    	if(m_num_non_founder!=0) fprintf(stderr, "%zu non-founder sample(s) removed\n", m_num_non_founder);
         fprintf(stderr, "%zu people (%zu males, %zu females) included\n", m_unfiltered_sample_ct, m_num_male, m_num_female);
         if(m_num_ambig!=0 && !keep_ambig) fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
         else if(m_num_ambig!=0) fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
