@@ -292,7 +292,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	double bound_end = c_commander.upper();
 	double bound_inter = c_commander.inter();
 
-	std::locale localeInfo;
 	threshold = (full)? 1.0 : threshold;
 	std::vector < std::string > token;
 

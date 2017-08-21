@@ -97,7 +97,6 @@ BinaryGen::~BinaryGen()
 std::vector<SNP> BinaryGen::load_snps()
 {
     std::vector<SNP> snp_res;
-    std::locale localeInfo;
     bool chr_sex_error = false;
     bool chr_error = false;
     size_t chr_index=0;
@@ -174,7 +173,8 @@ std::vector<SNP> BinaryGen::load_snps()
             std::vector<std::string> final_alleles(numberOfAlleles);
             for( uint16_t i = 0; i < numberOfAlleles; ++i ) {
                 bgenlib::read_length_followed_by_data( m_bgen_file, &allele_size, &allele ) ;
-                final_alleles[i] = std::toupper(allele,localeInfo);
+                std::transform(allele.begin(), allele.end(),allele.begin(), ::toupper);
+                final_alleles[i] = allele;
             }
 
             if( !m_bgen_file ) {
