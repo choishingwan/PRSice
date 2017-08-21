@@ -1036,7 +1036,7 @@ void Genotype::print_snp(std::string &output, double threshold)
     {
     	if(snp.get_threshold() <= threshold)
     	{
-    		snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc() << "\t" << snp.p_value() << std::endl;
+    		snp_out << snp.rs() << "\t" << snp.chr()  << "\t" << snp.loc() << "\t" << snp.p_value() << std::endl;
     	}
     }
     snp_out.close();
