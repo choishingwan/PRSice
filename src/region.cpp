@@ -306,58 +306,58 @@ void Region::process_msigdb(const std::string &msigdb,
         std::string line;
         while(std::getline(input, line))
         {
-        	misc::trim(line);
-        	if(line.empty()) continue;
-        	std::vector<std::string> token = misc::split(line);
-        	if(token.size() < 2)  // Will treat the url as gene just in case
-        	{
-        		fprintf(stderr, "Each line require at least 2 information\n");
-        		fprintf(stderr, "%s\n", line.c_str());
-        	}
-        	else if(m_duplicated_names.find(token[0])==m_duplicated_names.end())
-        	{
-        		std::string name = token[0];
-        		std::vector<region_bound> current_region;
-        		for(auto &gene: token)
-        		{
-        			if(gtf_info.find(gene)==gtf_info.end())
-        			{
-        				if(id_to_name.find(gene)!= id_to_name.end())
-        				{
-        					auto &name = id_to_name.at(gene);
-        					for(auto &&translate: name)
-        					{
-        						if(gtf_info.find(translate) != gtf_info.end())
-        						{
-        							current_region.push_back(gtf_info.at(translate));
-        						}
-        					}
-        				}
-        			}
-        			else
-        			{
-        				current_region.push_back(gtf_info.at(gene));
-        			}
-        		}
-        		std::sort(begin(current_region), end(current_region),
-        				[](region_bound const &t1, region_bound const &t2)
-						{
-        			if(t1.chr == t2.chr)
-        			{
-        				if(t1.start==t2.start) return t1.end < t2.end;
-        				return t1.start < t2.end;
-        			}
-        			else return t1.chr < t2.chr;
-						}
-        		);
-        		m_region_list.push_back(current_region);
-        		m_region_name.push_back(name);
-        		m_duplicated_names.insert(name);
-        	}
-        	else if(m_duplicated_names.find(token[0])!=m_duplicated_names.end())
-        	{
-        		fprintf(stderr, "Duplicated Set: %s. It will be ignored\n", token[0].c_str());
-        	}
+            misc::trim(line);
+        	    if(line.empty()) continue;
+        	    std::vector<std::string> token = misc::split(line);
+        	    if(token.size() < 2)  // Will treat the url as gene just in case
+        	    {
+        	        fprintf(stderr, "Each line require at least 2 information\n");
+        	        fprintf(stderr, "%s\n", line.c_str());
+        	    }
+        	    else if(m_duplicated_names.find(token[0])==m_duplicated_names.end())
+        	    {
+        	        std::string name = token[0];
+        	        std::vector<region_bound> current_region;
+        	        for(auto &gene: token)
+        	        {
+        	            if(gtf_info.find(gene)==gtf_info.end())
+        	            {
+        	                if(id_to_name.find(gene)!= id_to_name.end())
+        	                {
+        	                    auto &name = id_to_name.at(gene);
+        	                    for(auto &&translate: name)
+        	                    {
+        	                        if(gtf_info.find(translate) != gtf_info.end())
+        	                        {
+        	                            current_region.push_back(gtf_info.at(translate));
+        	                        }
+        	                    }
+        	                }
+        	            }
+        	            else
+        	            {
+        	                current_region.push_back(gtf_info.at(gene));
+        	            }
+        	        }
+        	        std::sort(begin(current_region), end(current_region),
+        	                [](region_bound const &t1, region_bound const &t2)
+        	                {
+        	                    if(t1.chr == t2.chr)
+        	                    {
+        	                        if(t1.start==t2.start) return t1.end < t2.end;
+        	                        return t1.start < t2.end;
+        	                    }
+        	                    else return t1.chr < t2.chr;
+        	                }
+        	        );
+        	        m_region_list.push_back(current_region);
+        	        m_region_name.push_back(name);
+        	        m_duplicated_names.insert(name);
+        	    }
+        	    else if(m_duplicated_names.find(token[0])!=m_duplicated_names.end())
+        	    {
+        	        fprintf(stderr, "Duplicated Set: %s. It will be ignored\n", token[0].c_str());
+        	    }
         }
         input.close();
     }
@@ -376,6 +376,7 @@ void Region::print_file(std::string output) const
 	{
 		region_out << m_region_name[i_region] << "\t" << m_region_snp_count[i_region] << std::endl;
 	}
+	exit(-1);
 	region_out.close();
 }
 
