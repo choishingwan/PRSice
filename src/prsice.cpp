@@ -1187,9 +1187,14 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 break;
             }
         }
-        if(!valid)
+        if(!valid) // we know regions with 0 SNP will not have valid PRS
         {
-            fprintf(stderr, "ERROR: No valid PRS!\n");
+            if(c_region.get_count(i_region)!=0){
+                fprintf(stderr, "ERROR: No valid PRS ");
+                if(m_region_size>1)
+                    fprintf(stderr, "for %s", c_region.get_name(i_region).c_str());
+                fprintf(stderr, "!\n");
+            }
             continue;
         }
         if(m_region_size > 1) output_name = output_prefix+"."+c_region.get_name(i_region);
