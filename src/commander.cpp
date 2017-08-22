@@ -193,6 +193,7 @@ bool Commander::initialize(int argc, char *argv[])
         {"rice",no_argument,NULL,0},
         {"sheep",no_argument,NULL,0},
         {"help",no_argument,NULL,'h'},
+        {"version",no_argument,NULL,'v'},
         {NULL, 0, 0, 0}
     };
     bool error = false;
@@ -465,6 +466,10 @@ bool Commander::initialize(int argc, char *argv[])
             usage();
             return false;
             break;
+        case 'v':
+        	program_info();
+        	return false;
+        	break;
         default:
             throw "Undefined operator, please use --help for more information!";
         }

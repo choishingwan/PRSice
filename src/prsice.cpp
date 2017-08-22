@@ -1152,6 +1152,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     std::vector<double> prev = c_commander.prevalence();
     bool has_prevalence = (prev.size()!=0);
     int num_binary = 0;
+    size_t marginal = 0, significant = 0, not_significant = 0;
     for(size_t i = 0; i < pheno_index; ++i)
     {
         if(c_commander.is_binary(i)) num_binary++;
@@ -1187,13 +1188,14 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 break;
             }
         }
-        if(!valid) // we know regions with 0 SNP will not have valid PRS
+        if(!valid || c_region.get_count(i_region)==0) // we know regions with 0 SNP will not have valid PRS
         {
             if(c_region.get_count(i_region)!=0){
                 fprintf(stderr, "ERROR: No valid PRS ");
-                if(m_region_size>1)
+                if(m_region_size>1) //cerr can forsee that if region got no PRS, we will get an error in Rscript
                     fprintf(stderr, "for %s", c_region.get_name(i_region).c_str());
                 fprintf(stderr, "!\n");
+                std::cerr << m_prs_results(i_region, m_best_index[i_region]).threshold << std::endl;
             }
             continue;
         }
@@ -1255,11 +1257,10 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
             target.print_snp(out_snp, m_prs_results(i_region, m_best_index[i_region]).threshold);
         }
         double best_p = m_prs_results(i_region, m_best_index[i_region]).p;
-        if(!c_commander.permute())
+        if(!c_commander.permute() && m_region_size==1)
         {
             fprintf(stderr, "\n");
-            if(m_region_size>1)
-                fprintf(stderr, "For %s\n", c_region.get_name(i_region).c_str());
+            // only output this when there is only one set
             if(best_p > 0.1)
             {
                 fprintf(stderr, "Your best-fit PRS has a P-Value > 0.1 which is \033[1;31mnot significant\033[0m.\n\n");
@@ -1295,11 +1296,39 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 fprintf(stderr, "an empirical P-value.\n");
             }
         }
+        else
+        {
+        	if(best_p > 0.1) not_significant++;
+        	else if(best_p > 1e-5) marginal++;
+        	else significant++;
+        }
         //if(!c_commander.print_all()) break;
     }
 
     if(m_region_size > 1)
     {
+    	bool prev_out = false;
+    	fprintf(stderr, "There are ");
+    	if(not_significant!=0)
+    	{
+    		fprintf(stderr, "%zu region(s) with p-value > 0.1;\n", not_significant);
+    		prev_out = true;
+    	}
+    	if(marginal!=0)
+    	{
+    		fprintf(stderr, " %zu region(s) with p-value between 0.1 and 1e-5;\n ", marginal);
+    		prev_out = true;
+    	}
+    	if(significant!=0)
+    	{
+    		if(prev_out) fprintf(stderr, " and ");
+    		fprintf(stderr, " %zu region(s) with p-value less than 1e-5\n", significant);
+    	}
+    	fprintf(stderr, "Please note that these results are inflated due to the\n");
+		fprintf(stderr, "overfitting inherent in finding the best-fit\n");
+    	fprintf(stderr, "PRS (but it's still best to find the best-fit PRS!).\n\n");
+    	fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
+    	fprintf(stderr, "an empirical P-value.\n");
         // now print the group information
         std::string out_region = output_prefix + ".prset";
         std::ofstream region_out;
@@ -1310,6 +1339,11 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         size_t i_region = 0;
         for (auto bi : m_best_index)
         {
+        	if(c_region.get_count(i_region)==0 || m_prs_results(i_region, bi).threshold < 0)
+        	{
+        		i_region++;
+        		continue;
+        	}
             double r2 =m_prs_results(i_region, bi).r2 - m_null_r2;
             r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
             region_out << c_region.get_name(i_region) << "\t" <<

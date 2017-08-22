@@ -376,7 +376,6 @@ void Region::print_file(std::string output) const
 	{
 		region_out << m_region_name[i_region] << "\t" << m_region_snp_count[i_region] << std::endl;
 	}
-	exit(-1);
 	region_out.close();
 }
 

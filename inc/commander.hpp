@@ -157,7 +157,7 @@ public:
 protected:
 private:
     std::string version ="2.0.7.beta";
-    std::string date = "27 July 2017";
+    std::string date = "21 August 2017";
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     struct{
     	std::string name;
