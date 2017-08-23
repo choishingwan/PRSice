@@ -65,6 +65,8 @@ SNP::~SNP(){
         delete [] clump_info.genotype;
         clump_info.genotype = nullptr;
     }
+
+
 }
 
 std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
@@ -98,18 +100,49 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP> &input)
 
 void SNP::clump(std::vector<SNP> &snp_list)
 {
+	// for some reason, some pathway might contain 0 SNPs after clumping
+	/* check:
+2	rs113447001	0	178051659	A	G
+2	rs12988177	0	178051987	A	G
+2	rs2588875	0	178066334	G	A
+2	rs2251139	0	178068159	A	G
+2	rs13029183	0	178087851	G	A
+2	rs139080704	0	178098088	-	A
+
+	 */
+	uintptr_t check=0;
+	bool print = false;
 	for(auto &&target : clump_info.target){
 		if(!snp_list[target].clumped())
 		{
 			int sum_total = 0;
-			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
+			for(size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
 			{
-				// if there is any overlap this should set the snp_list to the new flag
+				if(snp_list[target].rs().compare("rs35926996")==0 ||
+						snp_list[target].rs().compare("rs35059065")==0 )
+
+				{
+					print=true;
+					check=snp_list[target].m_flags[i_flag];
+				}
 				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
 						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
-				sum_total+=snp_list[target].m_flags[i_flag];
+				sum_total+=snp_list[target].m_flags[i_flag]; //unless all unset, this will always be non-zero
+				if(snp_list[target].m_flags[i_flag] != check &&print ){
+					std::cerr << "Clump change: " << basic.rs << "\t" <<snp_list[target].rs() << std::endl;
+					print=false;
+				}
 			}
-			if(sum_total==0)  snp_list[target].set_clumped();
+			if(sum_total==0)
+			{
+				if(snp_list[target].rs().compare("rs35926996")==0 ||
+						snp_list[target].rs().compare("rs35059065")==0 )
+
+				{
+					std::cerr << "Gone!" << std::endl;
+				}
+				snp_list[target].set_clumped();
+			}
 		}
 	}
 	clump_info.clumped=true; // protect from other SNPs tempering its flags
@@ -119,12 +152,29 @@ void SNP::proxy_clump(std::vector<SNP> &snp_list, double r2_threshold)
 {
     for(size_t i_target = 0; i_target < clump_info.target.size(); ++i_target)
     {
-        if(!snp_list[clump_info.target[i_target]].clumped())
+    	auto &&target = clump_info.target[i_target];
+        if(!snp_list[target].clumped())
         {
-            snp_list[clump_info.target[i_target]].set_clumped();
             if(clump_info.r2[i_target] >= r2_threshold)
             {
-                for(size_t j = 0; j < m_flags.size(); ++j)  m_flags[j] |= snp_list[clump_info.target[i_target]].m_flags[j];
+            	// Both SNP now considered to be in the same set
+                for(size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+                {
+                	m_flags[i_flag] |= snp_list[target].m_flags[i_flag];
+                }
+                // we will set clumped as we now fully represent the target SNP
+                snp_list[target].set_clumped();
+            }
+            else
+            {
+            	int sum_total = 0;
+            	for(size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            	{
+            		snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
+            				(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
+            		sum_total+=snp_list[target].m_flags[i_flag]; //unless all unset, this will always be non-zero
+            	}
+            	if(sum_total==0)  snp_list[target].set_clumped();
             }
         }
     }

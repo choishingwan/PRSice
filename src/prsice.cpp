@@ -901,7 +901,11 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         // m_prs will only be empty for the first run
 		if (m_num_snp_included[iter] == 0 ||
             (m_num_snp_included[iter] == m_prs_results(iter, iter_threshold).num_snp)
-        )  continue; // don't bother when there is no additional SNPs added
+        )
+		{
+			std::cerr << iter << " skip" << std::endl;
+			continue; // don't bother when there is no additional SNPs added
+		}
 		// Problem is, if we do sample selection, it is possible for that SNP to
 		// have MAF of 0 because of the small resulting sample size
 
@@ -1316,13 +1320,17 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     	}
     	if(marginal!=0)
     	{
-    		fprintf(stderr, " %zu region(s) with p-value between 0.1 and 1e-5;\n ", marginal);
+    		if(significant==0 && prev_out)
+    		{
+    			fprintf(stderr, "and ");
+    		}
+    		fprintf(stderr, "%zu region(s) with p-value between 0.1 and 1e-5;\n ", marginal);
     		prev_out = true;
     	}
     	if(significant!=0)
     	{
     		if(prev_out) fprintf(stderr, " and ");
-    		fprintf(stderr, " %zu region(s) with p-value less than 1e-5\n", significant);
+    		fprintf(stderr, "%zu region(s) with p-value less than 1e-5\n", significant);
     	}
     	fprintf(stderr, "Please note that these results are inflated due to the\n");
 		fprintf(stderr, "overfitting inherent in finding the best-fit\n");

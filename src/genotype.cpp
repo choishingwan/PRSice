@@ -507,10 +507,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	m_existed_snps_index.clear();
 	// now m_existed_snps is ok and can be used directly
 	size_t vector_index = 0;
+	// we do it here such that the m_existed_snps is sorted correctly
 	for(auto &&cur_snp : m_existed_snps) // should be in the correct order
 	{
 		m_existed_snps_index[cur_snp.rs()] = vector_index++;
-		cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
+		//cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
+		cur_snp.set_flag( region);
 	}
 	m_region_size = region.size();
 
@@ -996,6 +998,8 @@ bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, in
 	    cur_category = m_existed_snps[cur_index].category();
 	}
 	cur_threshold = m_existed_snps[cur_index].get_threshold();
+	// existed snp should be sorted such that the SNPs should be
+	// access sequentially
 	for (size_t i = cur_index; i < m_existed_snps.size(); ++i)
 	{
 		if (m_existed_snps[i].category() != cur_category)
@@ -1010,6 +1014,14 @@ bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, in
 			if (m_existed_snps[i].in( i_region)) num_snp_included[i_region]++;
 		}
 	}
+	std::cerr << "Check inclusion: " <<std::endl;
+	std::ofstream debug;
+	debug.open("DEBUG");
+	for(size_t i = 0; i < num_snp_included.size(); ++i){
+		debug << i << "\t" << num_snp_included[i] << std::endl; // need to match with region info
+	}
+	debug.close();
+	//exit(0);
 	if (!ended)
 	{
 		end_index = m_existed_snps.size();

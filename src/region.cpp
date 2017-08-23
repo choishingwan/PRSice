@@ -381,6 +381,37 @@ void Region::print_file(std::string output) const
 
 Region::~Region() {}
 
+void Region::check(int chr, size_t loc, std::vector<uintptr_t> &flag)
+{
+	size_t array_length = BITCT_TO_WORDCT(m_region_name.size());
+	flag[0] |= ONELU;
+	m_region_snp_count[0]++;
+	for(size_t i_region=1; i_region < m_region_name.size(); ++i_region)
+	{
+		size_t current_region_size = m_region_list[i_region].size();
+		while(m_snp_check_index[i_region] < current_region_size)
+		{
+			auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
+			int region_chr = current_bound.chr;
+			size_t region_start = current_bound.start;
+			size_t region_end = current_bound.end;
+			if(chr != region_chr) m_snp_check_index[i_region]++;
+			else  // same chromosome
+			{
+				if(region_start <= loc && region_end >=loc)
+				{
+					// This is the region
+					flag[i_region/BITCT] |= ONELU << ((i_region) % BITCT);
+					m_region_snp_count[i_region]++;
+					break;
+				}
+				else if(region_start> loc) break;
+				else if(region_end < loc) m_snp_check_index[i_region]++;
+			}
+		}
+	}
+}
+
 std::vector<long_type> Region::check(int chr, size_t loc)
 {
     std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);

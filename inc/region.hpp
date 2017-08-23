@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include "plink_common.hpp"
 #include "misc.hpp"
 #include "storage.hpp"
 
@@ -46,6 +47,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
+    void check(int chr, size_t loc, std::vector<uintptr_t> &flag);
     std::vector<long_type> check(int chr, size_t loc);
     size_t flag_size() const
     {
