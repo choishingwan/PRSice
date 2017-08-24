@@ -282,7 +282,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		std::string error_message = "ERROR: Cannot open base file: " +input;
 		throw std::runtime_error(error_message);
 	}
-	int max_index = index[+BASE_INDEX::MAX];
+	size_t max_index = index[+BASE_INDEX::MAX];
 	std::string line;
 	if (!c_commander.has_index()) std::getline(snp_file, line);
 
@@ -296,7 +296,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 	std::vector < std::string > token;
 
 	bool exclude = false;
-	bool hap_error = false;
 	// Some QC countss
 	size_t num_duplicated = 0;
 	size_t num_excluded = 0;
@@ -347,7 +346,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 							// we don't need to output the error as they will be filtered out before by the
 							// genotype read anyway
 							exclude =true;
-							hap_error=true;
 							num_haploid++;
 						}
 						else
@@ -364,7 +362,6 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 					// again, doesn't need to provide this message
 					// the only time this will happen is when the target & base has different chromosome information
 					//if(!hap_error) fprintf(stderr, "\nWARNING: Currently not supporting haploid chromosome and sex chromosomes\n");
-					hap_error =true;
 					exclude = true;
 					num_haploid++;
 				}
@@ -553,8 +550,7 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 
 void Genotype::clump(Genotype &reference)
 {
-	uintptr_t unfiltered_sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_unfiltered_sample_ct);
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
     uint32_t founder_ctsplit = 3 * founder_ctv3;
 	auto &&cur_snp = m_existed_snps.front();
@@ -562,10 +558,9 @@ void Genotype::clump(Genotype &reference)
 	int prev_chr= cur_snp.chr();
 	int mismatch =0;
 	int total = 0;
-	int core_genotype_index = 0;
+	size_t core_genotype_index = 0;
 	int progress = 0;
 	int num_snp = m_existed_snps.size();
-	int snp_index =0;
 	int begin_index = 0;
 	bool mismatch_error = false;
 	bool require_clump = false;
@@ -591,6 +586,7 @@ void Genotype::clump(Genotype &reference)
 				mismatch_error = true;
 			}
 		}
+		assert(snp.loc()>=0);
 		if(prev_chr!=snp.chr())
 		{
 			perform_clump(core_genotype_index, begin_index, i_snp, require_clump);
@@ -714,9 +710,9 @@ void Genotype::clump(Genotype &reference)
 }
 
 
-void Genotype::perform_clump(int &core_genotype_index, int &begin_index, int current_index, bool require_clump)
+void Genotype::perform_clump(size_t &core_genotype_index, int &begin_index, int current_index, bool require_clump)
 {
-	if(core_genotype_index < 0 || core_genotype_index >= m_existed_snps.size()) return;
+	if(core_genotype_index >= m_existed_snps.size()) return;
 	/**
 	 * Previous use of SNP + genotype vector are way too complicated
 	 * Now do everything with m_existed_snps
@@ -803,7 +799,6 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, const size_t c_b
 	size_t wind_size = c_current_index-c_begin_index;
 	if(wind_size <=1 ) return; // nothing to do
 	uint32_t tot1[6];
-	bool nm_fixed = false;
 	tot1[0] = popcount_longs(m_existed_snps[c_core_genotype_index].clump_geno(), founder_ctv3);
 	tot1[1] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[founder_ctv3]), founder_ctv3);
 	tot1[2] = popcount_longs(&(m_existed_snps[c_core_genotype_index].clump_geno()[2 * founder_ctv3]), founder_ctv3);
@@ -859,8 +854,6 @@ void Genotype::clump_thread(const size_t c_core_genotype_index, const size_t c_b
 
 void Genotype::compute_clump( size_t core_genotype_index, size_t i_start, size_t i_end, bool nm_fixed, uint32_t* tot1)
 {
-	uintptr_t* loadbuf;
-	uint32_t marker_idx2_maxw =  m_marker_ct - 1;
 	uint32_t counts[18];
     uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
 	double freq11;
@@ -1286,7 +1279,6 @@ uint32_t Genotype::load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample
 	uintptr_t* ctrlbuf = &(casebuf[3 * case_ctv]);
 	uintptr_t case_words[4];
 	uintptr_t ctrl_words[4];
-	uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
 	uint32_t case_rem = 0;
 	uint32_t ctrl_rem = 0;
 	uint32_t read_shift_max = BITCT2;

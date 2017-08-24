@@ -20,7 +20,7 @@
 Region::Region(std::vector<std::string> feature, const std::unordered_map<std::string, int> &chr_order)
 : m_chr_order(chr_order)
 {
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
+
     // Make the base region which includes everything
     m_duplicated_names.insert("Base");
     m_region_name.push_back("Base");
@@ -389,7 +389,6 @@ Region::~Region() {}
 
 void Region::check(std::string chr, size_t loc, std::vector<uintptr_t> &flag)
 {
-	size_t array_length = BITCT_TO_WORDCT(m_region_name.size());
 	flag[0] |= ONELU;
 	m_region_snp_count[0]++;
 	if(m_chr_order.find(chr) == m_chr_order.end()) return; // chromosome not found
@@ -430,46 +429,6 @@ void Region::check(std::string chr, size_t loc, std::vector<uintptr_t> &flag)
 			}
 		}
 	}
-}
-
-std::vector<long_type> Region::check(int chr, size_t loc)
-{
-    std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
-    res[0]=1; // base region which contains everything
-    for(size_t i_region = 0; i_region < m_region_list.size(); ++i_region)
-    {
-        if(i_region==0)
-        {
-            res[0] |= ONE;
-            m_region_snp_count[0]++;
-        }
-        else
-        {
-            size_t current_region_size = m_region_list[i_region].size();
-            while(m_snp_check_index[i_region]< current_region_size)
-            {
-                // do the checking
-                auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
-                int region_chr = current_bound.chr;
-                size_t region_start = current_bound.start;
-                size_t region_end = current_bound.end;
-                if(chr != region_chr) m_snp_check_index[i_region]++;
-                else  // same chromosome
-                {
-                    if(region_start <= loc && region_end >=loc)
-                    {
-                        // This is the region
-                        res[i_region/m_bit_size] |= ONE << i_region%m_bit_size;
-                        m_region_snp_count[i_region]++;
-                        break;
-                    }
-                    else if(region_start> loc) break;
-                    else if(region_end < loc) m_snp_check_index[i_region]++;
-                }
-            }
-        }
-    }
-    return res;
 }
 
 void Region::info() const{

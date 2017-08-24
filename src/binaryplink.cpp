@@ -138,7 +138,6 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 	famfile.seekg(0);
 
 	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-	uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
 
 	// we don't work with the sex for now, so better ignore them first
 	// m_sex_male = new uintptr_t[unfiltered_sample_ctl];
@@ -156,7 +155,6 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 	//std::memset(m_sample_include, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
 	m_num_male = 0, m_num_female = 0, m_num_ambig_sex=0, m_num_non_founder=0;
-	size_t removed=0;
 	std::vector<Sample> sample_name;
 	uintptr_t sample_uidx=0; // this is just for error message
 	while(std::getline(famfile, line))
@@ -457,7 +455,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
     uint32_t ujj;
     uint32_t ukk;
     uintptr_t ulii = 0;
-	int num_included_samples = current_prs_score.cols();
+	size_t num_included_samples = current_prs_score.cols();
 	//m_final_mask
 
 	// a lot of code in PLINK is to handle the sex chromosome
@@ -471,7 +469,6 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite> &current_prs_score, size_t
 	}
 
 	// haven't figured out what this max_reverse does
-    uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
     // a simple size check
     if(current_prs_score.rows() != m_region_size)
     {

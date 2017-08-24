@@ -233,7 +233,7 @@ class Genotype
                     || (alt_allele == "g" && ref_allele == "c");
         };
 
-        void perform_clump(int &core_genotype_index, int &begin_index,
+        void perform_clump(size_t &core_genotype_index, int &begin_index,
                 int current_index, bool require_clump);
         void clump_thread(const size_t c_core_genotype_index,
                 const size_t c_begin_index, const size_t c_current_index);

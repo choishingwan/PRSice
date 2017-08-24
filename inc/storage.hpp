@@ -76,12 +76,4 @@
 	template<> struct enumeration_traits< GTF > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
 	template<> struct enumeration_traits< BIM > : enumeration_trait_indexing {};
-#if defined(__LP64__) || defined(_WIN64)
-    typedef std::uint64_t long_type;
-	#define ONE  0x1LLU
-
-#else
-    typedef std::uint32_t long_type;
-	#define ONE  0x1LU
-#endif
 #endif /* PRSICE_INC_STORAGE_HPP_ */
