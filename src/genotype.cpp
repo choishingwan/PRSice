@@ -1014,7 +1014,6 @@ bool Genotype::get_score(misc::vec2d<Sample_lite> &prs_score, int &cur_index, in
 			if (m_existed_snps[i].in( i_region)) num_snp_included[i_region]++;
 		}
 	}
-	std::cerr << "Check inclusion: " <<std::endl;
 	std::ofstream debug;
 	debug.open("DEBUG");
 	for(size_t i = 0; i < num_snp_included.size(); ++i){

@@ -153,22 +153,18 @@ public:
      */
     inline bool in(size_t i) const
     {
-    	if(i / BITCT >= m_max_flag_index) throw std::out_of_range("Out of range for flag");
-    	return ((m_flags[i / BITCT] >> (i % BITCT)) & 1);
+        if(i / BITCT >= m_max_flag_index) throw std::out_of_range("Out of range for flag");
+        return ((m_flags[i / BITCT] >> (i % BITCT)) & 1);
     }
 
     //void set_flag(std::vector<long_type> flag) { m_flags = flag; };
 
     void set_flag(Region &region)
     {
-    	m_max_flag_index = BITCT_TO_WORDCT(region.size());
-    	m_flags.resize(m_max_flag_index);
-    	//m_flag = new uintptr_t[m_max_flag_index];
-    	region.check(basic.chr, basic.loc, m_flags);
-    	if((m_flags[179 / BITCT] >> (179 % BITCT)) & 1)
-    	{
-    		std::cerr << basic.rs << std::endl;
-    	}
+        m_max_flag_index = BITCT_TO_WORDCT(region.size());
+        m_flags.resize(m_max_flag_index);
+        //m_flag = new uintptr_t[m_max_flag_index];
+     	region.check(std::to_string(basic.chr), basic.loc, m_flags);
     };
 
     void add_clump( std::vector<size_t> &i) { clump_info.target.insert( clump_info.target.end(), i.begin(), i.end() ); };
