@@ -136,7 +136,7 @@ public:
 
     int get_category(double p) const
     {
-        for(int i = 0; i < prsice.barlevel.size(); ++i)
+        for(size_t i = 0; i < prsice.barlevel.size(); ++i)
         {
             if(p <= prsice.barlevel[i])
             {
@@ -150,7 +150,7 @@ public:
     double get_threshold(int i) const
     {
       	return(i < 0)? prsice.barlevel.at(0) :
-      	        ((i>=prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
+      	        ((i>=(int)prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
     };
 
     void user_input() const;

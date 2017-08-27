@@ -18,23 +18,6 @@
 
 std::mutex PRSice::score_mutex;
 
-void PRSice::set_lee(double prevalence, double case_ratio, double &top, double &bottom) const
-{
-    double x = misc::qnorm(1-prevalence);
-    double z = misc::dnorm(misc::qnorm(1-prevalence));
-    double i = z / prevalence;
-    double cc = prevalence*(1-prevalence)*prevalence*(1-prevalence)/(z*z*case_ratio*(1-case_ratio));
-    double theta =i*((case_ratio - prevalence)/(1 - prevalence))*(i*((case_ratio-prevalence)/
-            (1-prevalence))-x);
-    double e=1-pow(case_ratio,(2*case_ratio))*pow((1 -case_ratio),(2 * (1 -case_ratio)));
-    top = cc*e;
-    bottom = cc*e*theta;
-
-    // in theory, this can be better because
-    // most variables can be reuse
-}
-
-
 
 void PRSice::pheno_check(const Commander &c_commander) 
 {
@@ -135,7 +118,6 @@ void PRSice::init_matrix(const Commander &c_commander, const size_t pheno_index,
 
 
     bool no_regress = c_commander.no_regress();
-    bool all = c_commander.all();
     std::string pheno_file = c_commander.pheno_file();
     std::string output_name = c_commander.out();
 
@@ -349,7 +331,6 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
         throw std::runtime_error(error_message);
     }
     std::string line;
-    size_t num_valid = 0;
     std::getline(cov, line);
     // obtain the header information of the covariate file
     if(line.empty()) throw std::runtime_error("First line of covariate file is empty!");
@@ -494,6 +475,11 @@ std::vector<size_t> PRSice::get_cov_index(const std::string &c_cov_file,
     {
         throw std::runtime_error("ERROR: No valid covariates!");
     }
+    else
+    {
+        if(cov_index.size()==1)fprintf(stderr, "1 valid covariate included\n");
+        else fprintf(stderr, "%zu valid covariates included\n", cov_index.size());
+    }
     return cov_index;
 }
 
@@ -524,7 +510,6 @@ void PRSice::gen_cov_matrix(const std::string &c_cov_file,
     std::getline(cov, line); // remove header
     int max_index = cov_index.back()+1;
     std::vector<int> missing_count(cov_index.size(),0);
-    int total_sample =0;
     while(std::getline(cov, line))
     {
         misc::trim(line);
@@ -632,7 +617,7 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     std::vector < std::thread > thread_store;
     size_t n_thread = c_commander.thread();
     m_best_index.clear();
-    m_best_index.resize(m_region_size);
+    m_best_index.resize(m_region_size,-1);
     m_num_snp_included.resize(m_region_size, 0);
 
     // previous +1 is because of the cur_category not initiailized correctly
@@ -787,7 +772,6 @@ void PRSice::prsice(const Commander &c_commander, const std::vector<std::string>
     }
 
     size_t iter_threshold = 0;
-    size_t cur_process = 0;
     size_t max_category = target.max_category()+1; // so that it won't be 100% until the very end
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
@@ -901,7 +885,10 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         // m_prs will only be empty for the first run
 		if (m_num_snp_included[iter] == 0 ||
             (m_num_snp_included[iter] == m_prs_results(iter, iter_threshold).num_snp)
-        )  continue; // don't bother when there is no additional SNPs added
+        )
+		{
+			continue; // don't bother when there is no additional SNPs added
+		}
 		// Problem is, if we do sample selection, it is possible for that SNP to
 		// have MAF of 0 because of the small resulting sample size
 
@@ -1151,43 +1138,45 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
     // check if it needs to be adjusted
     std::vector<double> prev = c_commander.prevalence();
     bool has_prevalence = (prev.size()!=0);
-    int num_binary = 0;
-    size_t marginal = 0, significant = 0, not_significant = 0;
-    for(size_t i = 0; i < pheno_index; ++i)
+    has_prevalence = has_prevalence&&c_commander.is_binary(pheno_index);
+    double top=1.0, bottom = 1.0;
+    if(has_prevalence)
     {
-        if(c_commander.is_binary(i)) num_binary++;
-    }
-    double top=0.0, bottom = 0.0;
-    if(has_prevalence && c_commander.is_binary(pheno_index))
-    {
+    	size_t num_binary = 0;
+    	for(size_t i = 0; i < pheno_index; ++i)
+    	{
+    		if(c_commander.is_binary(i)) num_binary++; // this is the number of previous binary traits
+    	}
         int num_case = 0, num_control=0;
         for(size_t i = 0; i < m_phenotype.rows(); ++i)
         {
             if(m_phenotype(i)==0) num_control++;
             else if(m_phenotype(i)==1) num_case++;
         }
-        set_lee(prev[num_binary], (double)(num_case)/(double)(num_case+num_control),
-                top, bottom);
-        // try to get the number of case and control
+        double case_ratio = (double)(num_case)/(double)(num_case+num_control);
+        double prevalence = prev[num_binary];
+        double x = misc::qnorm(1-prevalence);
+        double z = misc::dnorm(x);
+        double i2 = z / prevalence;
+        double cc = prevalence*(1-prevalence)*prevalence*(1-prevalence)/(z*z*case_ratio*(1-case_ratio));
+        double theta =i2*((case_ratio - prevalence)/(1 - prevalence))*(i2*((case_ratio-prevalence)/
+        		(1-prevalence))-x);
+        double e=1-pow(case_ratio,(2*case_ratio))*pow((1 -case_ratio),(2 * (1 -case_ratio)));
+        top = cc*e;
+        bottom = cc*e*theta;
     }
-    has_prevalence = has_prevalence&&c_commander.is_binary(pheno_index);
-    std::string pheno_name = (pheno_info.name.size()>1)?pheno_info.name[pheno_index]:"";
+    std::string pheno_name = (pheno_info.name.size()>1)? pheno_info.name[pheno_index]:"";
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     bool perm = c_commander.permute();
     std::string output_name = output_prefix;
+
+    size_t marginal = 0, significant = 0, not_significant = 0;
+
     for(size_t i_region = 0; i_region < m_region_size; ++i_region)
     {
         // check number of valid results
-        bool valid = false;
-        for(size_t i = 0; i < m_prs_results.cols(); ++i)
-        {
-            if(m_prs_results(i_region, i).threshold>=0)
-            {
-                valid = true;
-                break;
-            }
-        }
+        bool valid = m_best_index[i_region]!=-1;
         if(!valid || c_region.get_count(i_region)==0) // we know regions with 0 SNP will not have valid PRS
         {
             if(c_region.get_count(i_region)!=0){
@@ -1195,7 +1184,6 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
                 if(m_region_size>1) //cerr can forsee that if region got no PRS, we will get an error in Rscript
                     fprintf(stderr, "for %s", c_region.get_name(i_region).c_str());
                 fprintf(stderr, "!\n");
-                std::cerr << m_prs_results(i_region, m_best_index[i_region]).threshold << std::endl;
             }
             continue;
         }
@@ -1217,7 +1205,7 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         {
             if(m_prs_results(i_region,i).threshold < 0)  continue;
             double r2 = m_prs_results(i_region, i).r2 - m_null_r2;
-            r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
+        	r2 = top*r2/(bottom*r2);
             prsice_out <<m_prs_results(i_region, i).threshold << "\t"
                     << r2 << "\t"
                     << m_prs_results(i_region, i).p << "\t"
@@ -1240,7 +1228,8 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         {
             fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
             fprintf(stderr, "       Cannot output the best PRS score\n");
-        } else 
+        }
+        else
         {
             for(size_t sample=0; sample<m_sample_included.size(); ++sample)
             {
@@ -1307,28 +1296,32 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
 
     if(m_region_size > 1)
     {
-    	bool prev_out = false;
-    	fprintf(stderr, "There are ");
-    	if(not_significant!=0)
-    	{
-    		fprintf(stderr, "%zu region(s) with p-value > 0.1;\n", not_significant);
-    		prev_out = true;
-    	}
-    	if(marginal!=0)
-    	{
-    		fprintf(stderr, " %zu region(s) with p-value between 0.1 and 1e-5;\n ", marginal);
-    		prev_out = true;
-    	}
-    	if(significant!=0)
-    	{
-    		if(prev_out) fprintf(stderr, " and ");
-    		fprintf(stderr, " %zu region(s) with p-value less than 1e-5\n", significant);
-    	}
-    	fprintf(stderr, "Please note that these results are inflated due to the\n");
-		fprintf(stderr, "overfitting inherent in finding the best-fit\n");
-    	fprintf(stderr, "PRS (but it's still best to find the best-fit PRS!).\n\n");
-    	fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
-    	fprintf(stderr, "an empirical P-value.\n");
+        bool prev_out = false;
+        fprintf(stderr, "There are ");
+        if(not_significant!=0)
+        {
+            fprintf(stderr, "%zu region(s) with p-value > 0.1;\n", not_significant);
+            prev_out = true;
+        }
+        if(marginal!=0)
+        {
+            if(significant==0 && prev_out)
+            {
+                fprintf(stderr, "and ");
+            }
+            fprintf(stderr, "%zu region(s) with p-value between 0.1 and 1e-5;\n ", marginal);
+            prev_out = true;
+        }
+        if(significant!=0)
+        {
+            if(prev_out) fprintf(stderr, " and ");
+            fprintf(stderr, "%zu region(s) with p-value less than 1e-5\n", significant);
+        }
+        fprintf(stderr, "Please note that these results are inflated due to the\n");
+        fprintf(stderr, "overfitting inherent in finding the best-fit\n");
+        fprintf(stderr, "PRS (but it's still best to find the best-fit PRS!).\n\n");
+        fprintf(stderr, "You can use the --perm option (see manual) to calculate\n");
+        fprintf(stderr, "an empirical P-value.\n");
         // now print the group information
         std::string out_region = output_prefix + ".prset";
         std::ofstream region_out;
@@ -1339,23 +1332,23 @@ void PRSice::output(const Commander &c_commander, const Region &c_region,
         size_t i_region = 0;
         for (auto bi : m_best_index)
         {
-        	if(c_region.get_count(i_region)==0 || m_prs_results(i_region, bi).threshold < 0)
+        	if(bi==-1 || c_region.get_count(i_region)==0 || m_prs_results(i_region, bi).threshold < 0)
         	{
         		i_region++;
         		continue;
         	}
-            double r2 =m_prs_results(i_region, bi).r2 - m_null_r2;
-            r2 = ((has_prevalence)? lee_adjust(r2, top, bottom):r2 );
-            region_out << c_region.get_name(i_region) << "\t" <<
-                    m_prs_results(i_region, bi).threshold << "\t"
-                    << r2 << "\t"
-                    << m_prs_results(i_region, bi).coefficient<< "\t"
-                    << m_prs_results(i_region, bi).p << "\t"
-                    << m_prs_results(i_region, bi).num_snp;
-            if(perm) region_out << "\t" << ((m_prs_results(i_region, bi).emp_p>=0.0)?
-                    std::to_string((double) (m_prs_results(i_region, bi).emp_p)) : "-");
-            region_out << std::endl;
-            i_region++;
+        	double r2 =m_prs_results(i_region, bi).r2 - m_null_r2;
+        	r2 = top*r2/(bottom*r2);
+        	region_out << c_region.get_name(i_region) << "\t" <<
+        	        m_prs_results(i_region, bi).threshold << "\t"
+        	        << r2 << "\t"
+        	        << m_prs_results(i_region, bi).coefficient<< "\t"
+        	        << m_prs_results(i_region, bi).p << "\t"
+        	        << m_prs_results(i_region, bi).num_snp;
+        	if(perm) region_out << "\t" << ((m_prs_results(i_region, bi).emp_p>=0.0)?
+        	        std::to_string((double) (m_prs_results(i_region, bi).emp_p)) : "-");
+        	region_out << std::endl;
+        	i_region++;
         }
         region_out.close();
     }

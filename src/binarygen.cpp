@@ -310,7 +310,6 @@ void BinaryGen::dosage_score( misc::vec2d<Sample_lite> &current_prs_score,
                 throw std::runtime_error("");
             }
             double expected = 0.0;
-            uintptr_t cur_geno = 1;
             if(IS_SET(m_sample_include,i_sample)) // to ignore non-selected SNPs
             {
                 for(int g = 0; g < prob.size(); ++g)
@@ -374,7 +373,6 @@ void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
                         size_t start_index, size_t end_bound)
 {
     m_cur_file = "";
-    size_t prev =0;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
@@ -386,7 +384,7 @@ void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
     // a lot of code in PLINK is to handle the sex chromosome
     // which suggest that PRS can be done on sex chromosome
     // that should be something later
-    uint32_t max_reverse = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
+
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
     uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl*2];
@@ -396,7 +394,6 @@ void BinaryGen::hard_code_score( misc::vec2d<Sample_lite> &current_prs_score,
         {
             in_region[i_region]=m_existed_snps[i_snp].in(i_region);
         }
-        size_t cur_line = m_existed_snps[i_snp].snp_id();
         std::fill(genotype, genotype+unfiltered_sample_ctl*2, 0);
         //std::memset(genotype, 0x0, m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::fill(m_tmp_genotype, m_tmp_genotype+unfiltered_sample_ctl*2,0);

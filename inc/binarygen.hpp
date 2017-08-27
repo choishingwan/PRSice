@@ -130,7 +130,6 @@ class BinaryGen: public Genotype
                 const uintptr_t* __restrict sample_include, uintptr_t final_mask,
                 uint32_t do_reverse, uintptr_t* __restrict rawbuf, uintptr_t* __restrict mainbuf) {
             assert(unfiltered_sample_ct);
-            uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
             if (unfiltered_sample_ct == sample_ct) {
                 rawbuf = mainbuf;
             }

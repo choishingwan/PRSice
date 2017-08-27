@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include "plink_common.hpp"
 #include "misc.hpp"
 #include "storage.hpp"
 
@@ -46,11 +47,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    std::vector<long_type> check(int chr, size_t loc);
-    size_t flag_size() const
-    {
-        return (m_region_name.size()+1)/(m_bit_size)+1;
-    };
+    void check(std::string chr, size_t loc, std::vector<uintptr_t> &flag);
     size_t size() const
     {
         return m_region_name.size();
@@ -60,12 +57,6 @@ public:
         return m_region_name.at(i);
     };
     std::vector<std::string> names() const { return m_region_name; };
-    std::vector<long_type> empty_flag()
-    {
-        std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
-        res[0]=1; // base region which contains everything
-        return res;
-    }
     int get_count(size_t i) const { return m_region_snp_count.at(i); };
     void info() const;
     void print_file(std::string output) const;
@@ -122,7 +113,6 @@ private:
                         const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
 
 
-    size_t m_bit_size;
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */

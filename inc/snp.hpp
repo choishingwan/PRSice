@@ -24,6 +24,8 @@
 #include <string>
 #include "commander.hpp"
 #include "misc.hpp"
+#include "plink_common.hpp"
+#include "region.hpp"
 #include "storage.hpp"
 
 class SNP
@@ -46,8 +48,6 @@ public:
     };
     void set_flipped() { statistic.flipped = true; };
     std::string get_rs() const { return basic.rs; };
-    int range_start() const { return m_range_start; };
-    int range_end() const { return m_range_end; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP> &input);
 
     bool operator == (const SNP &Ref) const
@@ -144,15 +144,29 @@ public:
     std::string ref() const { return basic.ref; };
     std::string alt() const { return basic.alt; };
     bool is_flipped(){ return statistic.flipped; };
+    /*
     inline bool in(size_t i) const
     {
     		if(i/m_bit_size >= m_flags.size()) throw std::out_of_range("Out of range for flag");
     		return (m_flags[i/m_bit_size] >> i%m_bit_size) & ONE; // 1 = true, 0 = false
     }
+     */
+    inline bool in(size_t i) const
+    {
+        if(i / BITCT >= m_max_flag_index) throw std::out_of_range("Out of range for flag");
+        return ((m_flags[i / BITCT] >> (i % BITCT)) & 1);
+    }
 
-    void set_upper(int upper){ m_range_end = upper; };
-    void set_lower(int lower){ m_range_start = lower;};
-    void set_flag(std::vector<long_type> flag) { m_flags = flag; };
+    //void set_flag(std::vector<long_type> flag) { m_flags = flag; };
+
+    void set_flag(Region &region)
+    {
+        m_max_flag_index = BITCT_TO_WORDCT(region.size());
+        m_flags.resize(m_max_flag_index);
+        //m_flag = new uintptr_t[m_max_flag_index];
+     	region.check(std::to_string(basic.chr), basic.loc, m_flags);
+    };
+
     void add_clump( std::vector<size_t> &i) { clump_info.target.insert( clump_info.target.end(), i.begin(), i.end() ); };
     void add_clump_r2( std::vector<double> &i) { clump_info.r2.insert( clump_info.r2.end(), i.begin(), i.end() ); };
     void set_clumped() { clump_info.clumped = true; };
@@ -161,22 +175,21 @@ public:
     bool clumped() const { return clump_info.clumped; };
     void set_clump_geno(uintptr_t *geno, int contain_miss)
     {
-    	clump_info.genotype = geno;
-    	clump_info.contain_missing = (contain_miss==3);
+        clump_info.genotype = geno;
+        clump_info.contain_missing = (contain_miss==3);
     }
     uintptr_t *clump_geno() const { return clump_info.genotype; };
     bool clump_missing() const { return clump_info.contain_missing; };
     void clean_clump()
     {
-    	if(clump_info.genotype!=nullptr)
-    	{
-    		delete [] clump_info.genotype;
-    		clump_info.genotype = nullptr;
-    	}
+        if(clump_info.genotype!=nullptr)
+        {
+            delete [] clump_info.genotype;
+            clump_info.genotype = nullptr;
+        }
     }
  private:
     //basic info
-    size_t m_bit_size;
     struct{
     	bool clumped;
     	std::vector<size_t> target;
@@ -216,10 +229,9 @@ public:
     // PRSet or PRSlice, we can still use the coordinates from
     // the target / reference file
     // the bound is [ )
-    int m_range_start;
-    int m_range_end;
-    //prset related
-    std::vector<long_type> m_flags;
+    // prset related
+    size_t m_max_flag_index=0;
+    std::vector<uintptr_t> m_flags;
 
     inline std::string complement(const std::string &allele) const
     {

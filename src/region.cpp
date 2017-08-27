@@ -20,7 +20,7 @@
 Region::Region(std::vector<std::string> feature, const std::unordered_map<std::string, int> &chr_order)
 : m_chr_order(chr_order)
 {
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
+
     // Make the base region which includes everything
     m_duplicated_names.insert("Base");
     m_region_name.push_back("Base");
@@ -55,7 +55,7 @@ void Region::run(const std::string &gtf, const std::string &msigdb, const std::v
             process_msigdb(msigdb, gtf_boundary, id_to_name);
         }
     }
-    m_snp_check_index = std::vector<size_t>(m_region_name.size());
+    m_snp_check_index = std::vector<size_t>(m_region_name.size(),0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
 
     m_duplicated_names.clear();
@@ -169,7 +169,6 @@ std::unordered_map<std::string, Region::region_bound > Region::process_gtf(const
 {
     std::unordered_map<std::string, Region::region_bound > result_boundary;
     if(gtf.empty()) return result_boundary; // basically return an empty map
-
     std::ifstream gtf_file;
     gtf_file.open(gtf.c_str());
     if(!gtf_file.is_open())
@@ -178,117 +177,124 @@ std::unordered_map<std::string, Region::region_bound > Region::process_gtf(const
         throw std::runtime_error(error_message);
     }
     std::string line;
-    size_t num_line = 0;
+    size_t num_line = 0, exclude_feature=0;
     while(std::getline(gtf_file, line))
     {
-    	num_line++;
+        num_line++;
         misc::trim(line);
         if(line.empty() || line[0]=='#') continue ;
         std::vector<std::string> token = misc::split(line, "\t");
         std::string chr = token[+GTF::CHR];
         if(in_feature(token[+GTF::FEATURE]) && m_chr_order.find(chr)!=m_chr_order.end())
         {
-        	int temp=0;
-        	size_t start=0, end=0;
-        	try
-        	{
-        		temp = misc::convert<int>(token[+GTF::START]);
-        		if(temp < 0)
-        		{
-        			fprintf(stderr, "ERROR: Negative Start Coordinate! (line: %zu)\n", num_line);
-        			fprintf(stderr, "       Will ignore the gtf file\n");
-        			result_boundary.clear();
-        			id_to_name.clear();
-        			return result_boundary;
-        			break;
-        		}
-        		start=temp;
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		fprintf(stderr, "ERROR: Cannot convert the start coordinate! (line: %zu)\n", num_line);
-        		fprintf(stderr, "       Will ignore the gtf file\n");
-        		result_boundary.clear();
-        		id_to_name.clear();
-        		return result_boundary;
-        	}
-        	try
-        	{
-        		temp = misc::convert<int>(token[+GTF::END]);
-        		if(temp < 0)
-        		{
-        			fprintf(stderr, "ERROR: Negative End Coordinate! (line: %zu)\n", num_line);
-        			fprintf(stderr, "       Will ignore the gtf file\n");
-        			result_boundary.clear();
-        			id_to_name.clear();
-        			return result_boundary;
-        			break;
-        		}
-        		end=temp;
-        	}
-        	catch(const std::runtime_error &er)
-        	{
-        		fprintf(stderr, "ERROR: Cannot convert the end coordinate! (line: %zu)\n", num_line);
-        		fprintf(stderr, "       Will ignore the gtf file\n");
-        		result_boundary.clear();
-        		id_to_name.clear();
-        		return result_boundary;
-        	}
-                //Now extract the name
-        	std::vector<std::string> attribute = misc::split(token[+GTF::ATTRIBUTE], ";");
-        	std::string name="", id="";
-        	for(auto &info : attribute)
-        	{
-        		if(info.find("gene_id")!=std::string::npos)
-        		{
-        			std::vector<std::string> extract = misc::split(info);
-        			if(extract.size() > 1)
-        			{
+            int temp=0;
+            size_t start=0, end=0;
+            try
+            {
+                temp = misc::convert<int>(token[+GTF::START]);
+                if(temp < 0)
+                {
+                    fprintf(stderr, "ERROR: Negative Start Coordinate! (line: %zu)\n", num_line);
+                    fprintf(stderr, "       Will ignore the gtf file\n");
+                    result_boundary.clear();
+                    id_to_name.clear();
+                    return result_boundary;
+                    break;
+                }
+                start=temp;
+            }
+            catch(const std::runtime_error &er)
+            {
+                fprintf(stderr, "ERROR: Cannot convert the start coordinate! (line: %zu)\n", num_line);
+                fprintf(stderr, "       Will ignore the gtf file\n");
+                result_boundary.clear();
+                id_to_name.clear();
+                return result_boundary;
+            }
+            try
+            {
+                temp = misc::convert<int>(token[+GTF::END]);
+                if(temp < 0)
+                {
+                    fprintf(stderr, "ERROR: Negative End Coordinate! (line: %zu)\n", num_line);
+                    fprintf(stderr, "       Will ignore the gtf file\n");
+                    result_boundary.clear();
+                    id_to_name.clear();
+                    return result_boundary;
+                    break;
+                }
+                end=temp;
+            }
+            catch(const std::runtime_error &er)
+            {
+                fprintf(stderr, "ERROR: Cannot convert the end coordinate! (line: %zu)\n", num_line);
+                fprintf(stderr, "       Will ignore the gtf file\n");
+                result_boundary.clear();
+                id_to_name.clear();
+                return result_boundary;
+            }
+            //Now extract the name
+            std::vector<std::string> attribute = misc::split(token[+GTF::ATTRIBUTE], ";");
+            std::string name="", id="";
+            for(auto &info : attribute)
+            {
+                if(info.find("gene_id")!=std::string::npos)
+                {
+                    std::vector<std::string> extract = misc::split(info);
+                    if(extract.size() > 1)
+                    {
 // WARNING: HARD CODING HERE cerr
-        				extract[1].erase(std::remove(extract[1].begin(), extract[1].end(), '\"'), extract[1].end());
-        				id = extract[1];
-        			}
-        		}
-        		else if(info.find("gene_name")!=std::string::npos)
-        		{
-        			std::vector<std::string> extract = misc::split(info);
-        			if(extract.size() > 1)
-        			{
-        				extract[1].erase(std::remove(extract[1].begin(), extract[1].end(), '\"'), extract[1].end());
-        				name = extract[1];
-        			}
-        		}
-        	}
-        	if(!id.empty())
-        	{
-        		id_to_name[name].insert(id);
-        	}
-        	//Now add the information to the map using the id
-        	if(result_boundary.find(id)!=result_boundary.end())
-        	{
-        		if(result_boundary[id].chr!=m_chr_order[chr])
-        		{
-        			fprintf(stderr, "ERROR: Same gene occur on two separate chromosome!\n");
-        			fprintf(stderr, "       Will ignore the gtf file\n");
-        			result_boundary.clear();
-        			id_to_name.clear();
-        			return result_boundary;
-        		}
-        		if(result_boundary[id].start > start)
-        			result_boundary[id].start = start;
-        		if(result_boundary[id].end < end)
-        			result_boundary[id].end = end;
-        	}
-        	else
-        	{
-        		region_bound cur_bound;
-        		cur_bound.chr = m_chr_order[chr];
-        		cur_bound.start = start;
-        		cur_bound.end = end;
-        		result_boundary[id]=cur_bound;
-        	}
+                        extract[1].erase(std::remove(extract[1].begin(), extract[1].end(), '\"'), extract[1].end());
+                        id = extract[1];
+                    }
+                }
+                else if(info.find("gene_name")!=std::string::npos)
+                {
+                    std::vector<std::string> extract = misc::split(info);
+                    if(extract.size() > 1)
+                    {
+                        extract[1].erase(std::remove(extract[1].begin(), extract[1].end(), '\"'), extract[1].end());
+                        name = extract[1];
+                    }
+                }
+            }
+            if(!id.empty())
+            {
+                id_to_name[name].insert(id);
+            }
+            //Now add the information to the map using the id
+            if(result_boundary.find(id)!=result_boundary.end())
+            {
+                if(result_boundary[id].chr!=m_chr_order[chr])
+                {
+                    fprintf(stderr, "ERROR: Same gene occur on two separate chromosome!\n");
+                    fprintf(stderr, "       Will ignore the gtf file\n");
+                    result_boundary.clear();
+                    id_to_name.clear();
+                    return result_boundary;
+                }
+                if(result_boundary[id].start > start)
+                    result_boundary[id].start = start;
+                if(result_boundary[id].end < end)
+                    result_boundary[id].end = end;
+           	}
+            else
+            {
+                region_bound cur_bound;
+                cur_bound.chr = m_chr_order[chr];
+                cur_bound.start = start;
+                cur_bound.end = end;
+                result_boundary[id]=cur_bound;
+            }
+        }
+        else
+        {
+            exclude_feature++;
         }
     }
+    if(exclude_feature==1) fprintf(stderr, "A total of %zu entry removed due to feature selection\n", exclude_feature);
+    if(exclude_feature>1) fprintf(stderr, "A total of %zu entries removed due to feature selection\n", exclude_feature);
+
     return result_boundary;
 }
 
@@ -381,44 +387,48 @@ void Region::print_file(std::string output) const
 
 Region::~Region() {}
 
-std::vector<long_type> Region::check(int chr, size_t loc)
+void Region::check(std::string chr, size_t loc, std::vector<uintptr_t> &flag)
 {
-    std::vector<long_type> res = std::vector<long_type>(((m_region_name.size()+1)/m_bit_size)+1);
-    res[0]=1; // base region which contains everything
-    for(size_t i_region = 0; i_region < m_region_list.size(); ++i_region)
-    {
-        if(i_region==0)
-        {
-            res[0] |= ONE;
-            m_region_snp_count[0]++;
-        }
-        else
-        {
-            size_t current_region_size = m_region_list[i_region].size();
-            while(m_snp_check_index[i_region]< current_region_size)
-            {
-                // do the checking
-                auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
-                int region_chr = current_bound.chr;
-                size_t region_start = current_bound.start;
-                size_t region_end = current_bound.end;
-                if(chr != region_chr) m_snp_check_index[i_region]++;
-                else  // same chromosome
-                {
-                    if(region_start <= loc && region_end >=loc)
-                    {
-                        // This is the region
-                        res[i_region/m_bit_size] |= ONE << i_region%m_bit_size;
-                        m_region_snp_count[i_region]++;
-                        break;
-                    }
-                    else if(region_start> loc) break;
-                    else if(region_end < loc) m_snp_check_index[i_region]++;
-                }
-            }
-        }
-    }
-    return res;
+	flag[0] |= ONELU;
+	m_region_snp_count[0]++;
+	if(m_chr_order.find(chr) == m_chr_order.end()) return; // chromosome not found
+	int chr_index = m_chr_order[chr];
+	// note: the chr is actually the order on the m_chr_order instead of the sactual chromosome
+	for(size_t i_region=1; i_region < m_region_name.size(); ++i_region)
+	{
+		size_t current_region_size = m_region_list[i_region].size();
+		while(m_snp_check_index[i_region] < current_region_size)
+		{
+			auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
+			int region_chr = current_bound.chr;
+			size_t region_start = current_bound.start;
+			size_t region_end = current_bound.end;
+			if(chr_index > region_chr) // only increment if we have passed the chromosome
+			{
+			    m_snp_check_index[i_region]++;
+			}
+			else if(chr_index==region_chr) // same chromosome
+			{
+				if(region_start <= loc && region_end >=loc)
+				{
+					// This is the region
+					flag[i_region/BITCT] |= ONELU << ((i_region) % BITCT);
+					m_region_snp_count[i_region]++;
+					break;
+				}
+				else if(region_start> loc) break;
+				else if(region_end < loc)
+				{
+				    m_snp_check_index[i_region]++;
+				}
+			}
+			else
+			{
+			    // not the same chromosome
+			    break;
+			}
+		}
+	}
 }
 
 void Region::info() const{
