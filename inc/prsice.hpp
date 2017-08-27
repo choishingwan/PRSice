@@ -70,13 +70,6 @@ public:
 protected:
 private:
 
-    inline double lee_adjust(double r2, double top, double bottom) const
-    {
-        return top*r2/(bottom*r2);
-    }
-
-    void set_lee(double prevalence, double case_ratio, double &top, double &bottom) const;
-
     struct{
             std::vector<int> col;
             std::vector<std::string> name;
@@ -106,7 +99,7 @@ private:
 	// struct stored in storage so that Genotype class can also use it
 	misc::vec2d<prsice_result> m_prs_results;
 	//std::vector< std::vector<prsice_result> > m_prs_results; // 1d = region, 2d=results
-	std::vector<size_t> m_best_index; // only need to store the index for the best region
+	std::vector<int> m_best_index; // only need to store the index for the best region // -1 = no
 	// we are safe to assume that the order of samples follow the read in from fam
 	// due to the way we initialize the m_pheno and m_independent_variable
 	//misc::vec2d<Sample_lite> m_best_score;
