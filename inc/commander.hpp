@@ -105,8 +105,8 @@ public:
     bool no_regress() const { return prsice.no_regress; };
     bool full() const { return prsice.full; };
     bool fastscore() const { return prsice.fastscore; };
-    double bar_upper() const { return prsice.barlevel.front(); };// we have sorted it
-    double bar_lower() const { return prsice.barlevel.back(); };
+    double bar_upper() const { return prsice.barlevel.back(); };// we have sorted it
+    double bar_lower() const { return prsice.barlevel.front(); };
 
     //prslice
     bool perform_prslice() const { return prslice.provided; };
