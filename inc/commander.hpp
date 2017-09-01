@@ -27,6 +27,8 @@
 #include <fstream>
 #include "misc.hpp"
 
+const std::string version ="2.0.8.beta";
+const std::string date = "27 August 2017";
 class Commander
 {
 public:
@@ -34,6 +36,7 @@ public:
     Commander();
     virtual ~Commander();
     bool initialize(int argc, char *argv[]);
+    bool init(int argc, char *argv[]);
 
     //base
     std::vector<int> index() const { return base.col_index; };
@@ -156,8 +159,7 @@ public:
     void user_input() const;
 protected:
 private:
-    std::string version ="2.0.8.beta";
-    std::string date = "27 August 2017";
+    bool process(int argc, char *argv[], const char *optString, const struct option longOpts[]);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     struct{
     	std::string name;
@@ -170,7 +172,7 @@ private:
         std::string standard_error;
         std::string p_value;
         std::vector<int> col_index;
-    	int beta;
+        int beta;
         int index;
         bool provided_chr;
         bool provided_ref;
@@ -195,6 +197,7 @@ private:
         bool provide_proxy;
         bool keep_sample;
         bool remove_sample;
+        bool use_type;
     } clumping;
 
     struct{
@@ -204,23 +207,23 @@ private:
     } covariate;
 
     struct{
-            std::string exclude_file;
-            std::string extract_file;
+    		std::string exclude_file;
+    		std::string extract_file;
     		double geno;
     		double hard_threshold;
     		double info_score;
-            double maf;
-            double mind;
-            int hard_coding;
+    		double maf;
+    		double mind;
+    		int hard_coding;
     		int use_geno;
-            int use_hard_thres;
+    		int use_hard_thres;
     		int use_info;
-            int use_maf;
-            int use_mind;
-            int use_prob;
-            int keep_ambig;
-            bool extract;
-            bool exclude;
+    		int use_maf;
+    		int use_mind;
+    		int use_prob;
+    		int keep_ambig;
+    		bool extract;
+    		bool exclude;
     } filter;
 
     struct{
@@ -281,6 +284,7 @@ private:
         std::vector<double> prevalence; // should equal to number of binary target
         bool keep_sample;
         bool remove_sample;
+        bool use_type;
         std::vector<bool> is_binary;
     } target;
 
@@ -312,16 +316,19 @@ private:
      	species.double_set = true;
     };
 
+    inline void set_string(std::string input, std::string &message, std::string &target, bool &target_boolean, std::string c)
+    {
+    		message.append("\\n"+c+" "+input);
+    		target=input;
+    		target_boolean=true;
+
+    }
     inline void set_stat(std::string stat)
     {
         base.statistic = stat;
         base.provided_stat = true;
     };
 
-    inline void set_beta(bool beta)
-    {
-    	    base.beta = beta;
-    };
 
     inline void set_chr(std::string chr)
     {
@@ -337,8 +344,8 @@ private:
 
     inline void set_alt(std::string alt)
     {
-    	base.alt_allele = alt;
-    	base.provided_alt = true;
+    		base.alt_allele = alt;
+    		base.provided_alt = true;
     };
 
     inline void set_snp(std::string snp)

@@ -16,6 +16,55 @@
 
 #include "commander.hpp"
 
+bool Commander::process(int argc, char *argv[], const char *optString, const struct option longOpts[])
+{
+    int longIndex=0;
+    int opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    std::string command;
+    // way we parse the commands:
+    // if we can check immediately, we will, otherwise, later
+    std::string message=argv[0];
+    std::string error_messages="";
+    while(opt!=-1)
+    {
+    		switch(opt)
+    		{
+    			case 0:
+    				command = longOpts[longIndex].name;
+    				if (longOpts[longIndex].flag != 0) break;
+    				else if(command.compare("chr")==0)  set_string(optarg, message, base.chr, base.provided_chr, command);
+    				else if(command.compare("A1")==0) set_string(optarg, message, base.ref_allele, base.provided_ref, command);
+    				else if(command.compare("A2")==0) set_string(optarg, message, base.alt_allele, base.provided_alt, command);
+    				else if(command.compare("stat")==0) set_string(optarg, message, base.statistic, base.provided_stat, command);
+    				else if(command.compare("snp")==0) set_string(optarg, message, base.snp, base.provided_snp, command);
+    				else if(command.compare("bp")==0) set_string(optarg, message, base.bp, base.provided_bp, command);
+    				else if(command.compare("se")==0) set_string(optarg, message, base.standard_error, base.provided_se, command);
+    				else if(command.compare("keep")==0) set_string(optarg, message, target.keep_file, target.keep_sample, command);
+    				else if(command.compare("exclude")==0) set_string(optarg, message, filter.exclude_file, filter.exclude, command);
+    				else if(command.compare("extract")==0) set_string(optarg, message, filter.extract_file, filter.extract, command);
+    				else if(command.compare("ld-keep")==0) set_string(optarg, message, clumping.keep_file, clumping.keep_sample, command);
+    				else if(command.compare("ld-remove")==0) set_string(optarg, message, clumping.remove_file, clumping.remove_sample, command);
+    				else if(command.compare("remove")==0) set_string(optarg, message, target.remove_file, target.remove_sample, command);
+    				else if(command.compare("ld-type")==0) set_string(optarg, message, clumping.type, clumping.use_type, command);
+    				else if(command.compare("type")==0) set_string(optarg, message, target.type, target.use_type, command);
+    				else if(command.compare("score")==0) prsice.missing_score = optarg;
+    				break;
+    			case 'h':
+    			case '?':
+    				usage();
+    				return false;
+    				break;
+    			case 'v':
+    				program_info();
+    				return false;
+    				break;
+    			default:
+    				throw "Undefined operator, please use --help for more information!";
+    		}
+    		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    }
+    return false;
+}
 Commander::Commander()
 {
 	base.beta = false;
@@ -108,7 +157,100 @@ Commander::Commander()
 	target.name = "";
 	target.pheno_file = "";
 	target.type = "bed";
+	info();
 }
+
+bool Commander::init(int argc, char *argv[])
+{
+	if(argc<=1)
+	{
+		usage();
+		throw std::runtime_error("Please provide the required parameters");
+	}
+	const char *optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
+	const struct option longOpts[]=
+	    {
+	        // parameters with short flags
+	        {"ancestry",required_argument,NULL,'a'},
+	        {"base",required_argument,NULL,'b'},
+	        {"bed",required_argument,NULL,'B'},
+	        {"cov-header",required_argument,NULL,'c'},
+	        {"cov-file",required_argument,NULL,'C'},
+	        {"pheno-file",required_argument,NULL,'f'},
+	        {"gtf",required_argument,NULL,'g'},
+	        {"interval",required_argument,NULL,'i'},
+	        {"prevalence",required_argument,NULL,'k'},
+	        {"lower",required_argument,NULL,'l'},
+	        {"ld",required_argument,NULL,'L'},
+	        {"msigdb",required_argument,NULL,'m'},
+	        {"thread",required_argument,NULL,'n'},
+	        {"out",required_argument,NULL,'o'},
+	        {"pvalue",required_argument,NULL,'p'},
+	        {"seed",required_argument,NULL,'s'},
+	        {"target",required_argument,NULL,'t'},
+	        {"upper",required_argument,NULL,'u'},
+			// flags, only need to set them to true
+	        {"all",no_argument,&misc.all,1},
+	        {"beta",required_argument,&base.beta,1},
+	        {"full",no_argument,&prsice.full,1},
+	        {"hard", no_argument, &filter.hard_coding, 1},
+	        {"ignore-fid",no_argument,&misc.ignore_fid,1},
+	        {"index",no_argument,&base.index,1},
+	        {"keep-ambig", no_argument, &filter.keep_ambig, 0},
+	        {"logit-perm", no_argument, &misc.logit_perm, 1},
+			{"no-clump",no_argument,&clumping.no_clump,1},
+			{"no-regression",no_argument,&prsice.no_regress,1},
+			{"no-x",no_argument,&species.no_x,1},
+			{"no-y",no_argument,&species.no_y,1},
+			{"no-xy",no_argument,&species.no_xy,1},
+			{"no-mt",no_argument,&species.no_mt,1},
+			{"fastscore",no_argument,&prsice.fastscore,1},
+	        {"print-snp",no_argument,&misc.print_snp,1},
+			// long flags, need to work on them
+	        {"A1",required_argument,NULL,0},
+	        {"A2",required_argument,NULL,0},
+	        {"bar-levels",required_argument,NULL,0},
+	        {"binary-target",required_argument,NULL,0},
+	        {"bp",required_argument,NULL,0},
+	        {"chr",required_argument,NULL,0},
+	        {"clump-kb",required_argument,NULL,0},
+	        {"clump-p",required_argument,NULL,0},
+	        {"clump-r2",required_argument,NULL,0},
+	        {"exclude",required_argument,NULL,0},
+	        {"extract",required_argument,NULL,0},
+	        {"feature",required_argument,NULL,0},
+	        {"hard-thres",required_argument,NULL,0},
+	        {"info",required_argument,NULL,0},
+	        {"info-col",required_argument,NULL,0},
+			{"keep",required_argument,NULL,0},
+			{"ld-keep",required_argument,NULL,0},
+			{"ld-type", required_argument, NULL, 0},
+			{"ld-remove",required_argument,NULL,0},
+			{"num-auto", required_argument, NULL, 0},
+	        {"perm",required_argument,NULL,0},
+	        {"pheno-col",required_argument,NULL,0},
+	        {"proxy",required_argument,NULL,0},
+	        {"prslice",required_argument,NULL,0},
+	        {"remove",required_argument,NULL,0},
+			{"score", required_argument, NULL, 0},
+	        {"se",required_argument,NULL,0},
+	        {"snp",required_argument,NULL,0},
+	        {"stat",required_argument,NULL,0},
+			{"type", required_argument, NULL, 0},
+			//species flag
+	        {"cow",no_argument,NULL,0},
+	        {"dog",no_argument,NULL,0},
+	        {"horse",no_argument,NULL,0},
+	        {"mouse",no_argument,NULL,0},
+	        {"rice",no_argument,NULL,0},
+	        {"sheep",no_argument,NULL,0},
+	        {"help",no_argument,NULL,'h'},
+	        {"version",no_argument,NULL,'v'},
+	        {NULL, 0, 0, 0}
+	    };
+	return process(argc, argv, optString, longOpts);
+}
+
 
 bool Commander::initialize(int argc, char *argv[])
 {
@@ -172,8 +314,12 @@ bool Commander::initialize(int argc, char *argv[])
         {"extract",required_argument,NULL,0},
         {"feature",required_argument,NULL,0},
         {"hard-thres",required_argument,NULL,0},
-        {"keep",required_argument,NULL,0},
+        {"info",required_argument,NULL,0},
+        {"info-col",required_argument,NULL,0},
+		{"keep",required_argument,NULL,0},
+		{"ld-keep",required_argument,NULL,0},
 		{"ld-type", required_argument, NULL, 0},
+		{"ld-remove",required_argument,NULL,0},
 		{"num-auto", required_argument, NULL, 0},
         {"perm",required_argument,NULL,0},
         {"pheno-col",required_argument,NULL,0},
