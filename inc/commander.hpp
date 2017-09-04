@@ -18,6 +18,8 @@
 #define COMMANDER_H
 
 #include "storage.hpp"
+#include <chrono>
+#include <ctime>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -155,8 +157,6 @@ public:
       	return(i < 0)? prsice.barlevel.at(0) :
       	        ((i>=(int)prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
     };
-
-    void user_input() const;
 protected:
 private:
     bool process(int argc, char *argv[], const char *optString, const struct option longOpts[]);

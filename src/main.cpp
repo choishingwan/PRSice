@@ -70,7 +70,6 @@ int main(int argc, char *argv[])
 
     // Might want to generate a log file?
     region.info();
-    commander.user_input();
 
     bool perform_prslice = commander.perform_prslice();
 

@@ -201,9 +201,29 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     if(misc.print_all_samples) message.append(" \\\n    --print_all_samples");
 
 
-
+    std::chrono::time_point<std::chrono::system_clock> start;
+    start = std::chrono::system_clock::now();
+    std::time_t start_time = std::chrono::system_clock::to_time_t(start);
+    std::cerr << std::ctime(&start_time) << std::endl;
     std::cerr << message << std::endl;
     //fprintf(stderr, "%s\n", message.c_str());
+    if(!error_messages.empty()) std::cerr << error_messages << std::endl;
+    std::ofstream logFile;
+    std::string logName = misc.out+".log";
+    logFile.open(logName.c_str());
+    if(!logFile.is_open())
+    {
+    		std::string file_error = "ERROR: Cannot open log file: "+logName;
+    		throw std::runtime_error(file_error);
+    }
+    logFile << "PRSice "<< version << " (" << date << ") " << std::endl;
+    logFile<< "https://github.com/choishingwan/PRSice"<< std::endl;
+    logFile << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
+    logFile << "GNU General Public License v3" << std::endl << std::endl;
+    logFile << std::ctime(&start_time) << std::endl << std::endl;
+    logFile << message << std::endl;
+    if(!error_messages.empty()) logFile << error_messages << std::endl;
+    logFile.close();
     if(error) throw std::runtime_error(error_messages);
     fprintf(stderr, "\n");
     return true;
@@ -650,10 +670,6 @@ void Commander::usage()
     		}
     }
     */
-}
-
-void Commander::user_input() const{
-
 }
 
 

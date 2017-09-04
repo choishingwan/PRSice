@@ -72,6 +72,7 @@ private:
     		int start;
     		int end;
     };
+    std::string m_out_prefix; // for log file
     // for checking duplicated region
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
