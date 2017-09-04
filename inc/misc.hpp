@@ -89,13 +89,13 @@ namespace misc
             std::vector<T> m_storage;
     };
 
-    inline bool to_bool(const std::string &str)
+    inline bool to_bool(const std::string &input)
     {
-        if(str.compare("true")==0 || str.compare("T")==0 || str.compare("True")==0 ||
-                str.compare("1")==0)
+    		std::string str = input;
+    		std::transform(str.begin(), str.end(),str.begin(), ::toupper);
+        if(str.compare("TRUE")==0 || str.compare("T")==0 || str.compare("1")==0)
             return true;
-        else if(str.compare("false")==0 || str.compare("F")==0 || str.compare("False")==0 ||
-                str.compare("0")==0)
+        else if(str.compare("F")==0 || str.compare("FALSE")==0 || str.compare("0")==0)
             return false;
         else
         {

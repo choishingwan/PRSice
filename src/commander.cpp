@@ -25,6 +25,9 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     // if we can check immediately, we will, otherwise, later
     std::string message=argv[0];
     std::string error_messages="";
+	std::string temp_string="";
+    bool dummy = false;
+    bool error=false;
     while(opt!=-1)
     {
     		switch(opt)
@@ -32,22 +35,126 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     			case 0:
     				command = longOpts[longIndex].name;
     				if (longOpts[longIndex].flag != 0) break;
-    				else if(command.compare("chr")==0)  set_string(optarg, message, base.chr, base.provided_chr, command);
-    				else if(command.compare("A1")==0) set_string(optarg, message, base.ref_allele, base.provided_ref, command);
-    				else if(command.compare("A2")==0) set_string(optarg, message, base.alt_allele, base.provided_alt, command);
-    				else if(command.compare("stat")==0) set_string(optarg, message, base.statistic, base.provided_stat, command);
+    				else if(command.compare("chr")==0)  set_string(optarg, message, base.chr, base.provided_chr,
+    						command);
+    				else if(command.compare("A1")==0) set_string(optarg, message, base.ref_allele, base.provided_ref,
+    						command);
+    				else if(command.compare("A2")==0) set_string(optarg, message, base.alt_allele, base.provided_alt,
+    						command);
+    				else if(command.compare("stat")==0) set_string(optarg, message, base.statistic, base.provided_stat,
+    						command);
     				else if(command.compare("snp")==0) set_string(optarg, message, base.snp, base.provided_snp, command);
     				else if(command.compare("bp")==0) set_string(optarg, message, base.bp, base.provided_bp, command);
-    				else if(command.compare("se")==0) set_string(optarg, message, base.standard_error, base.provided_se, command);
-    				else if(command.compare("keep")==0) set_string(optarg, message, target.keep_file, target.keep_sample, command);
-    				else if(command.compare("exclude")==0) set_string(optarg, message, filter.exclude_file, filter.exclude, command);
-    				else if(command.compare("extract")==0) set_string(optarg, message, filter.extract_file, filter.extract, command);
-    				else if(command.compare("ld-keep")==0) set_string(optarg, message, clumping.keep_file, clumping.keep_sample, command);
-    				else if(command.compare("ld-remove")==0) set_string(optarg, message, clumping.remove_file, clumping.remove_sample, command);
-    				else if(command.compare("remove")==0) set_string(optarg, message, target.remove_file, target.remove_sample, command);
-    				else if(command.compare("ld-type")==0) set_string(optarg, message, clumping.type, clumping.use_type, command);
-    				else if(command.compare("type")==0) set_string(optarg, message, target.type, target.use_type, command);
-    				else if(command.compare("score")==0) prsice.missing_score = optarg;
+    				else if(command.compare("se")==0) set_string(optarg, message, base.standard_error,
+    						base.provided_se, command);
+    				else if(command.compare("keep")==0) set_string(optarg, message, target.keep_file,
+    						target.keep_sample, command);
+    				else if(command.compare("exclude")==0) set_string(optarg, message, filter.exclude_file,
+    						filter.exclude, command);
+    				else if(command.compare("extract")==0) set_string(optarg, message, filter.extract_file,
+    						filter.extract, command);
+    				else if(command.compare("ld-keep")==0) set_string(optarg, message, clumping.keep_file,
+    						clumping.keep_sample,
+    						command);
+    				else if(command.compare("ld-remove")==0) set_string(optarg, message, clumping.remove_file,
+    						clumping.remove_sample,
+    						command);
+    				else if(command.compare("remove")==0) set_string(optarg, message, target.remove_file,
+    						target.remove_sample, command);
+    				else if(command.compare("ld-type")==0) set_string(optarg, message, clumping.type,
+    						clumping.use_type, command);
+    				else if(command.compare("type")==0) set_string(optarg, message, target.type, target.use_type,
+    						command);
+    				else if(command.compare("score")==0) set_string(optarg, message, prsice.missing_score, dummy,
+    						command);
+    				else if(command.compare("hard-thres")==0) set_numeric<double>(optarg, message, error_messages,
+    						filter.hard_threshold, filter.use_hard_thres, error, command);
+    				else if(command.compare("clump-p")==0) set_numeric<double>(optarg, message, error_messages,
+    						clumping.p_value, clumping.provide_p, error, command);
+    				else if(command.compare("clump-r2")==0) set_numeric<double>(optarg, message, error_messages,
+    						clumping.r2, clumping.provide_r2, error, command);
+    				else if(command.compare("clump-kb")==0) set_numeric<int>(optarg, message, error_messages,
+    						clumping.distance, clumping.provide_distance, error, command);
+    				else if(command.compare("prslice")==0) set_numeric<int>(optarg, message, error_messages,
+    						prslice.size, prslice.provided, error, command );
+    				else if(command.compare("proxy")==0) set_numeric<double>(optarg, message, error_messages,
+    						clumping.proxy, clumping.provide_proxy, error, command);
+    				else if(command.compare("perm")==0) set_numeric<int>(optarg, message, error_messages,
+    						misc.permutation, misc.provided_permutation, error, command);
+    				else if(command.compare("binary-target")==0) load_binary_vector(optarg, message, error_messages,
+    						target.is_binary, error, command);
+    				else if(command.compare("pheno-col")==0) load_string_vector(optarg, message, target.pheno_col,
+    						command);
+    				else if(command.compare("feature")==0) load_string_vector(optarg, message, prset.feature, command);
+    				else if(command.compare("bar-levels")==0) load_numeric_vector<double>(optarg, message,
+    						error_messages, prsice.barlevel, error, command);
+    				else
+    				{
+    					std::string er = "Undefined operator: "+command+", please use --help for more information!";
+    					throw std::runtime_error(er);
+    				}
+    				break;
+    			case 'b':
+    				set_string(optarg, message, base.name, dummy, "base");
+    				break;
+    			case 'B':
+    				load_string_vector(optarg, message, prset.bed, "bed");
+    				prset.perform_prset = true;
+    				break;
+    			case 'c':
+    				load_string_vector(optarg, message, covariate.covariates, "cov-header");
+    				break;
+    			case 'C':
+    				set_string(optarg, message, covariate.name, dummy, "cov-file");
+    				break;
+    			case 'f':
+    				set_string(optarg, message, target.pheno_file, dummy, "pheno-file");
+    				break;
+    			case 'g':
+    				set_string(optarg, message, prset.gtf, prset.perform_prset, "gtf");
+    				break;
+    			case 'i':
+    				set_numeric<double>(optarg, message, error_messages, prsice.inter, prsice.provide_inter, error,
+    						"interval");
+    				break;
+    			case 'k':
+    				load_numeric_vector<double>(optarg, message, error_messages, target.prevalence, error, "prevalence");
+    				break;
+    			case 'l':
+    				set_numeric<double>(optarg, message, error_messages, prsice.lower, prsice.provide_lower, error,
+    						"lower");
+    				break;
+    			case 'L':
+    				set_string(optarg, message, clumping.ld, dummy, "ld");
+    				break;
+    			case 'm':
+    				set_string(optarg, message, prset.msigdb, prset.perform_prset, "msigdb");
+    				break;
+    			case 'n':
+    				temp_string=optarg;
+    				if(temp_string.compare("max")==0)
+    				{
+    					misc.thread = std::thread::hardware_concurrency();
+    					misc.provide_thread = true;
+    					message.append("\\\n    --thread "+std::to_string(misc.thread));
+    				}
+    				else set_numeric<int>(optarg, message, error_messages, misc.thread, misc.provide_thread, error, "thread");
+    				break;
+    			case 'o':
+    				set_string(optarg, message, misc.out, dummy, "out");
+    				break;
+    			case 'p':
+    				set_string(optarg, message, base.p_value, dummy, "pvalue");
+    				break;
+    			case 's':
+    				set_numeric<int>(optarg, message, error_messages, misc.seed, misc.provided_seed, error, "seed");
+    				break;
+    			case 't':
+    				set_string(optarg, message, target.name, dummy, "target");
+    				break;
+    			case 'u':
+    				set_numeric<double>(optarg, message, error_messages, prsice.upper, prsice.provide_upper, error,
+    						"upper");
     				break;
     			case 'h':
     			case '?':
@@ -55,7 +162,7 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     				return false;
     				break;
     			case 'v':
-    				program_info();
+    				std::cerr <<  version << " (" << date << ") " << std::endl;
     				return false;
     				break;
     			default:
@@ -63,10 +170,54 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     		}
     		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    return false;
+
+    base_check(message, error, error_messages);
+    clump_check(message, error, error_messages);
+    covariate_check(error, error_messages);
+    filter_check(error, error_messages);
+    misc_check(message, error, error_messages);
+    prset_check(message, error, error_messages);
+    prsice_check(message, error, error_messages);
+    prslice_check(error, error_messages);
+    target_check(message, error, error_messages);
+    if(prset.perform_prset && prslice.provided)
+    {
+    		error = true;
+    		error_messages.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
+    }
+    // check all flags
+    if(misc.all) message.append(" \\\n    --all");
+    if(base.beta) message.append(" \\\n    --beta");
+    if(prsice.full) message.append(" \\\n    --full");
+    if(filter.hard_coding) message.append(" \\\n    --hard");
+    if(misc.ignore_fid) message.append(" \\\n    --ignore-fid");
+    if(base.index) message.append(" \\\n    --index");
+    if(filter.keep_ambig) message.append(" \\\n    --keep-ambig");
+    if(misc.logit_perm) message.append(" \\\n    --logit-perm");
+    if(clumping.no_clump) message.append("no-clump");
+    if(prsice.no_regress) message.append(" \\\n    --no-regression");
+    if(prsice.fastscore) message.append(" \\\n    --fastscore");
+    if(misc.print_snp) message.append(" \\\n    --print-snp");
+    if(misc.print_all_samples) message.append(" \\\n    --print_all_samples");
+
+
+
+    std::cerr << message << std::endl;
+    //fprintf(stderr, "%s\n", message.c_str());
+    if(error) throw std::runtime_error(error_messages);
+    fprintf(stderr, "\n");
+    return true;
 }
+
+
 Commander::Commander()
 {
+	std::cerr << std::endl;
+	std::cerr << "PRSice "<< version << " (" << date << ") " << std::endl;
+	std::cerr << "https://github.com/choishingwan/PRSice"<< std::endl;
+	std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
+	std::cerr << "GNU General Public License v3" << std::endl << std::endl;
+
 	base.beta = false;
 	base.name = "";
 	base.chr = "CHR";
@@ -89,7 +240,7 @@ Commander::Commander()
     base.col_index.resize(+BASE_INDEX::MAX+1, -1);
 
 
-    clumping.distance = 250000;
+    clumping.distance = 250;
     clumping.keep_sample = false;
 	clumping.ld = "";
 	clumping.no_clump = false;
@@ -99,6 +250,9 @@ Commander::Commander()
 	clumping.r2 = 0.1;
     clumping.remove_sample = false;
     clumping.type = "bed";
+    clumping.provide_p = false;
+    clumping.provide_r2 = false;
+    clumping.provide_distance=false;
 
 	covariate.name = "";
 	covariate.ancestry_dim="MDS";
@@ -123,16 +277,20 @@ Commander::Commander()
 	misc.all = false;
 	misc.ignore_fid = false;
 	misc.logit_perm = false;
+	misc.memory=10000;
 	misc.out = "PRSice";
 	misc.permutation = 10000;
 	misc.print_snp = false;
+	misc.print_all_samples = false;
 	misc.provided_permutation = false;
 	misc.provided_seed =false;
 	misc.seed = 0;
 	misc.thread = 1;
+	misc.provide_thread = false;
 
 	prset.gtf = "";
 	prset.msigdb = "";
+	prset.perform_prset=false;
 
 	prsice.missing_score = "";
 	prsice.lower = 0.0001;
@@ -141,6 +299,9 @@ Commander::Commander()
 	prsice.fastscore = false;
 	prsice.no_regress = false;
 	prsice.full = false;
+	prsice.provide_lower = false;
+	prsice.provide_upper = false;
+	prsice.provide_inter = false;
 
 	prslice.size = -1;
 	prslice.provided = false;
@@ -206,6 +367,7 @@ bool Commander::init(int argc, char *argv[])
 			{"no-mt",no_argument,&species.no_mt,1},
 			{"fastscore",no_argument,&prsice.fastscore,1},
 	        {"print-snp",no_argument,&misc.print_snp,1},
+			{"print_all_samples", no_argument, &misc.print_all_samples, 1},
 			// long flags, need to work on them
 	        {"A1",required_argument,NULL,0},
 	        {"A2",required_argument,NULL,0},
@@ -226,6 +388,7 @@ bool Commander::init(int argc, char *argv[])
 			{"ld-keep",required_argument,NULL,0},
 			{"ld-type", required_argument, NULL, 0},
 			{"ld-remove",required_argument,NULL,0},
+			{"memory", required_argument, NULL, 0},
 			{"num-auto", required_argument, NULL, 0},
 	        {"perm",required_argument,NULL,0},
 	        {"pheno-col",required_argument,NULL,0},
@@ -249,394 +412,6 @@ bool Commander::init(int argc, char *argv[])
 	        {NULL, 0, 0, 0}
 	    };
 	return process(argc, argv, optString, longOpts);
-}
-
-
-bool Commander::initialize(int argc, char *argv[])
-{
-	program_info();
-	info();
-    if(argc<=1)
-    {
-        usage();
-        throw std::runtime_error("Please provide the required parameters");
-    }
-    static const char *optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
-    static const struct option longOpts[]=
-    {
-        // parameters with short flags
-        {"ancestry",required_argument,NULL,'a'},
-        {"base",required_argument,NULL,'b'},
-        {"bed",required_argument,NULL,'B'},
-        {"cov-header",required_argument,NULL,'c'},
-        {"cov-file",required_argument,NULL,'C'},
-        {"pheno-file",required_argument,NULL,'f'},
-        {"gtf",required_argument,NULL,'g'},
-        {"interval",required_argument,NULL,'i'},
-        {"prevalence",required_argument,NULL,'k'},
-        {"lower",required_argument,NULL,'l'},
-        {"ld",required_argument,NULL,'L'},
-        {"msigdb",required_argument,NULL,'m'},
-        {"thread",required_argument,NULL,'n'},
-        {"out",required_argument,NULL,'o'},
-        {"pvalue",required_argument,NULL,'p'},
-        {"seed",required_argument,NULL,'s'},
-        {"target",required_argument,NULL,'t'},
-        {"upper",required_argument,NULL,'u'},
-		// flags, only need to set them to true
-        {"all",no_argument,&misc.all,1},
-        {"beta",required_argument,&base.beta,1},
-        {"full",no_argument,&prsice.full,1},
-        {"hard", no_argument, &filter.hard_coding, 1},
-        {"ignore-fid",no_argument,&misc.ignore_fid,1},
-        {"index",no_argument,&base.index,1},
-        {"keep-ambig", no_argument, &filter.keep_ambig, 0},
-        {"logit-perm", no_argument, &misc.logit_perm, 1},
-		{"no-clump",no_argument,&clumping.no_clump,1},
-		{"no-regression",no_argument,&prsice.no_regress,1},
-		{"no-x",no_argument,&species.no_x,1},
-		{"no-y",no_argument,&species.no_y,1},
-		{"no-xy",no_argument,&species.no_xy,1},
-		{"no-mt",no_argument,&species.no_mt,1},
-		{"fastscore",no_argument,&prsice.fastscore,1},
-        {"print-snp",no_argument,&misc.print_snp,1},
-		// long flags, need to work on them
-        {"A1",required_argument,NULL,0},
-        {"A2",required_argument,NULL,0},
-        {"bar-levels",required_argument,NULL,0},
-        {"binary-target",required_argument,NULL,0},
-        {"bp",required_argument,NULL,0},
-        {"chr",required_argument,NULL,0},
-        {"clump-kb",required_argument,NULL,0},
-        {"clump-p",required_argument,NULL,0},
-        {"clump-r2",required_argument,NULL,0},
-        {"exclude",required_argument,NULL,0},
-        {"extract",required_argument,NULL,0},
-        {"feature",required_argument,NULL,0},
-        {"hard-thres",required_argument,NULL,0},
-        {"info",required_argument,NULL,0},
-        {"info-col",required_argument,NULL,0},
-		{"keep",required_argument,NULL,0},
-		{"ld-keep",required_argument,NULL,0},
-		{"ld-type", required_argument, NULL, 0},
-		{"ld-remove",required_argument,NULL,0},
-		{"num-auto", required_argument, NULL, 0},
-        {"perm",required_argument,NULL,0},
-        {"pheno-col",required_argument,NULL,0},
-        {"proxy",required_argument,NULL,0},
-        {"prslice",required_argument,NULL,0},
-        {"remove",required_argument,NULL,0},
-		{"score", required_argument, NULL, 0},
-        {"se",required_argument,NULL,0},
-        {"snp",required_argument,NULL,0},
-        {"stat",required_argument,NULL,0},
-		{"type", required_argument, NULL, 0},
-		//species flag
-        {"cow",no_argument,NULL,0},
-        {"dog",no_argument,NULL,0},
-        {"horse",no_argument,NULL,0},
-        {"mouse",no_argument,NULL,0},
-        {"rice",no_argument,NULL,0},
-        {"sheep",no_argument,NULL,0},
-        {"help",no_argument,NULL,'h'},
-        {"version",no_argument,NULL,'v'},
-        {NULL, 0, 0, 0}
-    };
-    bool error = false;
-    bool species_error = false;
-    int longIndex=0;
-    int opt = 0;
-
-    std::string command ="";
-    opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    std::string error_message = "";
-    //Start reading all the parameters and perform the qc at the same time
-    while(opt!=-1)
-    {
-        switch(opt)
-        {
-        case 0:
-            command = longOpts[longIndex].name;
-            if (longOpts[longIndex].flag != 0) break;
-            else if(command.compare("chr")==0)  set_chr(optarg);
-            else if(command.compare("A1")==0) set_ref(optarg);
-            else if(command.compare("A2")==0) set_alt(optarg);
-            else if(command.compare("stat")==0) set_stat(optarg);
-            else if(command.compare("snp")==0) set_snp(optarg);
-            else if(command.compare("bp")==0) set_bp(optarg);
-            else if(command.compare("se")==0) set_se(optarg);
-            else if(command.compare("keep")==0) set_keep(optarg);
-            else if(command.compare("exclude")==0) set_exclude(optarg);
-            else if(command.compare("extract")==0) set_extract(optarg);
-            else if(command.compare("remove")==0) set_remove(optarg);
-            else if(command.compare("ld-type")==0) clumping.type = optarg;
-            else if(command.compare("type")==0) target.type = optarg;
-            else if(command.compare("score")==0) prsice.missing_score = optarg;
-            else if(command.compare("cow")==0) set_species(29, false, false, true, false,
-            		error, error_message, species_error);
-            else if(command.compare("dog")==0) set_species(38, false, false, false, false,
-            		error, error_message, species_error);
-            else if(command.compare("horse")==0) set_species(31, false, false, true, true,
-            		error, error_message, species_error);
-            else if(command.compare("mouse")==0) set_species(19, false, false, true, true,
-            		error, error_message, species_error);
-            else if(command.compare("rice")==0) set_species(-12, false, false, false, false,
-            		error, error_message, species_error);
-            else if(command.compare("sheep")==0) set_species(26, false, false, true, true,
-            		error, error_message, species_error);
-            else if(command.compare("num-auto")==0)
-            {
-                try{
-                    species.num_auto = misc::convert<int>(optarg);
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Number of autosomal chromosome provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("hard-thres")==0)
-            {
-                try{
-                    filter.hard_threshold = misc::convert<double>(optarg);
-                    filter.use_hard_thres = true;
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Info score isn't numeric!\n");
-                    error = true;
-                }
-            }
-            else if(command.compare("clump-p")==0)
-            {
-                try{
-                    clumping.p_value = misc::convert<double>(optarg);
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Clump P-value threshold provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("clump-r2")==0)
-            {
-                try{
-                    clumping.r2 = misc::convert<double>(optarg);
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Clump R2 threshold provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("clump-kb")==0)
-            {
-                try{
-                    clumping.distance = misc::convert<int>(optarg)*1000; //kb
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Clump Distance provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("prslice")==0)
-            {
-                try{
-                    set_prslice(misc::convert<int>(optarg));
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: PRSlice size provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("binary-target")==0)
-            {
-            		std::vector<std::string> token = misc::split(optarg, ",");
-            	    for(auto &&bin : token) target.is_binary.push_back(misc::to_bool(bin));
-            }
-            else if(command.compare("bar-levels")==0)
-            {
-                std::vector<std::string> token = misc::split(optarg, ",");
-                try
-                {
-                    for(auto &&bar : token) prsice.barlevel.push_back(misc::convert<double>(bar));
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: None numeric barchart level\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("proxy")==0)
-            {
-                try
-                {
-                    clumping.proxy = misc::convert<double>(optarg);
-                    clumping.provide_proxy = true;
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Proxy provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("pheno-col")==0)
-            {
-                std::vector<std::string> token = misc::split(optarg, ",");
-                target.pheno_col.insert(target.pheno_col.end(), token.begin(), token.end());
-            }
-            else if(command.compare("perm")==0)
-            {
-                try{
-                    set_permutation(optarg);
-                }
-                catch(const std::runtime_error &er)
-                {
-                    error_message.append("ERROR: Number of Permutation provided isn't numeric\n");
-                    error=true;
-                }
-            }
-            else if(command.compare("feature")==0)
-            {
-                std::vector<std::string> token = misc::split(optarg, ",");
-                prset.feature.insert(prset.feature.end(), token.begin(), token.end());
-            }
-            else
-            {
-                std::string er = "Undefined operator: "+command+", please use --help for more information!";
-                throw std::runtime_error(er);
-            }
-        break;
-
-        case 'a':
-            covariate.ancestry_dim = optarg;
-            fprintf(stderr, "Currently we have not implement this function\n");
-        break;
-        case 'b':
-            base.name = optarg;
-        break;
-        case 'B':
-        {
-            std::vector<std::string> token = misc::split(optarg, ",");
-            prset.bed.insert(prset.bed.end(), token.begin(), token.end());
-        }
-        break;
-        case 'c':
-        {
-            std::vector<std::string> token= misc::split(optarg, ",");
-            covariate.covariates.insert(covariate.covariates.end(), token.begin(), token.end());
-        }
-        break;
-        case 'C':
-        	    covariate.name = optarg;
-        	    break;
-        case 'f':
-            target.pheno_file = optarg;
-        	break;
-        case 'g':
-            prset.gtf = optarg;
-        	break;
-        case 'i':
-            try{
-                prsice.inter = misc::convert<double>(optarg);
-            }
-            catch(const std::runtime_error &er)
-            {
-                error_message.append("ERROR: Interval provided isn't numeric\n");
-                error=true;
-            }
-            break;
-        case 'k':
-            try{
-                std::vector<std::string> token = misc::split(optarg, ",");
-                for(auto &&prev : token) target.prevalence.push_back(misc::convert<double>(prev));
-            }
-            catch(const std::runtime_error &er)
-            {
-                error_message.append("ERROR: Prevalence provided isn't numeric\n");
-                error=true;
-            }
-            break;
-        case 'l':
-            try{
-                prsice.lower = misc::convert<double>(optarg);
-            }
-            catch(const std::runtime_error &er)
-            {
-                error_message.append("ERROR: Lower bound provided isn't numeric\n");
-                error=true;
-            }
-        	break;
-        case 'L':
-            clumping.ld = optarg;
-        	break;
-        case 'm':
-            prset.msigdb = optarg;
-        	break;
-        case 'n':
-            try{
-                misc.thread = misc::convert<int>(optarg);
-            }
-            catch(const std::runtime_error &er)
-            {
-                error_message.append("ERROR: Number of thread provided isn't numeric\n");
-                error=true;
-            }
-        	break;
-        case 'o':
-            misc.out = optarg;
-        	break;
-        case 'p':
-            set_p(optarg);
-            break;
-        case 's':
-            set_seed(optarg);
-            break;
-        case 't':
-            target.name = optarg;
-        	break;
-        case 'u':
-            try{
-                prsice.upper = misc::convert<double>(optarg);
-            }
-            catch(const std::runtime_error &er)
-            {
-                error_message.append("ERROR: Upper bound provided isn't numeric\n");
-                error=true;
-            }
-        	break;
-        case 'h':
-        case '?':
-            usage();
-            return false;
-            break;
-        case 'v':
-        	program_info();
-        	return false;
-        	break;
-        default:
-            throw "Undefined operator, please use --help for more information!";
-        }
-        opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    }
-
-    base_check(error, error_message);
-    clump_check(error, error_message);
-    misc_check(error, error_message);
-    prset_check(error, error_message);
-    prsice_check(error, error_message);
-    prslice_check(error, error_message);
-    target_check(error, error_message);
-    if((prset.bed.size() != 0 || !prset.gtf.empty()) && prslice.provided)
-    {
-        error = true;
-        error_message.append("ERROR: PRSet and PRSlice cannot be performed together!\n");
-    }
-    if(error) throw std::runtime_error(error_message);
-    fprintf(stderr, "\n");
-    return true;
 }
 
 
@@ -877,75 +652,14 @@ void Commander::usage()
     */
 }
 
-void Commander::program_info()
-{
-	std::cerr << std::endl;
-	std::cerr << "PRSice "<< version << " (" << date << ") https://github.com/choishingwan/PRSice"<< std::endl;
-	std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. O'Reilly, Sam Choi" << std::endl;
-	std::cerr << "GNU General Public License v3" << std::endl << std::endl;
-}
-
 void Commander::user_input() const{
-	fprintf(stderr, "Base file: ");
-	if (!base.beta) {
-		fprintf(stderr, "%s(OR) ", base.name.c_str());
-	} else {
-		fprintf(stderr, "%s(Beta) ", base.name.c_str());
-	}
-	fprintf(stderr, "\n");
-	fprintf(stderr, "\nUser Defined Column Headers\n");
-	fprintf(stderr, "==============================\n");
-	if (base.col_index[+BASE_INDEX::CHR]!=-1)
-		fprintf(stderr, "Chr            : %s\n", base.chr.c_str());
-	fprintf(stderr, "SNP            : %s\n",base.snp.c_str());
-	if (base.col_index[+BASE_INDEX::BP]!=-1)
-		fprintf(stderr, "BP             : %s\n", base.bp.c_str());
-	fprintf(stderr, "Ref Allele     : %s\n", base.ref_allele.c_str());
-	if (base.col_index[+BASE_INDEX::ALT]!=-1)
-		fprintf(stderr, "Alt Allele     : %s\n", base.alt_allele.c_str());
-	fprintf(stderr, "Statistic      : %s\n", base.statistic.c_str());
-	if (base.col_index[+BASE_INDEX::SE]!=-1)
-		fprintf(stderr, "Standard Error : %s\n", base.standard_error.c_str());
-	fprintf(stderr, "P-value        : %s\n", base.p_value.c_str());
-	fprintf(stderr, "\nClumping Parameters: \n");
-	fprintf(stderr, "==============================\n");
-	fprintf(stderr, "P-Threshold  : %f\n", clumping.p_value);
-	fprintf(stderr, "R2-Threshold : %f\n", clumping.r2);
-	fprintf(stderr, "Window Size  : %d\n", clumping.distance);
-	if(!prsice.no_regress)
-	{
-		fprintf(stderr, "\nThreshold Selected: \n");
-		fprintf(stderr, "==============================\n");
-		if(prsice.fastscore)
-		{
-			fprintf(stderr, "Fastscore    : TRUE\n");
-			fprintf(stderr, "Barlevels    : ");
-			if(prsice.barlevel.empty())
-			{
-				throw std::runtime_error("Cannot perform fastscore without bar level information!");
-			}
-			fprintf(stderr, "%f", prsice.barlevel.front());
-			for(size_t i_bar = 1; i_bar < prsice.barlevel.size(); ++i_bar)
-			{
-				fprintf(stderr, ", %f", prsice.barlevel[i_bar]);
-			}
-			fprintf(stderr, "\n");
-		}
-		else
-		{
-			fprintf(stderr, "Fastscore    : FALSE\n");
-			fprintf(stderr, "Lower Bound  : %f\n", prsice.lower);
-			fprintf(stderr, "Upper Bound  : %f\n", prsice.upper);
-			fprintf(stderr, "Intervals    : %f\n", prsice.inter);
-		}
-	}
+
 }
 
 
 
-void Commander::base_check(bool &error, std::string &error_message)
+void Commander::base_check(std::string &message, bool &error, std::string &error_message)
 {
-
 	if(base.name.empty())
 	{
 		error = true;
@@ -953,7 +667,6 @@ void Commander::base_check(bool &error, std::string &error_message)
 	}
 	else
 	{
-
 		// check the base file and get the corresponding index
 		std::ifstream base_test;
 		base_test.open(base.name.c_str());
@@ -976,21 +689,20 @@ void Commander::base_check(bool &error, std::string &error_message)
 	                        && toupper(base.statistic[1])=='R')
 	                {
                         base.beta = false;
-                        fprintf(stderr, "Base assumed be OR\n");
 	                }
 	                else if(base.statistic.length()==4 && toupper(base.statistic[0])=='B'
 	                        && toupper(base.statistic[1])=='E' && toupper(base.statistic[2])=='T'
 	                                && toupper(base.statistic[3])=='A')
 	                {
                         base.beta = true;
-                        fprintf(stderr, "Base assumed be BETA\n");
 	                }
 	            }
 	            else if(!base.provided_stat && base.beta)
 	            {
 	                base.provided_stat = true;
 	                base.statistic = "BETA";
-	                fprintf(stderr, "Base statistic not provided, assumed to be %s\n", base.statistic.c_str());
+	                message.append(" \\\n    --stat BETA");
+	                //fprintf(stderr, "Base statistic not provided, assumed to be %s\n", base.statistic.c_str());
 	            }
 	            else if(!base.provided_stat)
 	            {
@@ -1002,8 +714,11 @@ void Commander::base_check(bool &error, std::string &error_message)
 	                        base.provided_stat = true;
 	                        base.beta = false;
 	                        base.statistic = token[i];
+	                        /*
 	                        fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
 	                                token[i].c_str(),"OR");
+	                                */
+	                        message.append(" \\\n    --stat OR");
 	                        break;
 	                    }
 	                    else if(token[i].length()==4 && toupper(token[i][0])=='B'
@@ -1013,21 +728,31 @@ void Commander::base_check(bool &error, std::string &error_message)
                             base.provided_stat = true;
                             base.beta = true;
                             base.statistic = token[i];
+                            /*
                             fprintf(stderr, "Base statistic guessed to be %s (%s)\n",
                                     token[i].c_str(),"BETA");
+                             */
+                            message.append(" \\\n    --stat BETA");
                             break;
 	                    }
 	                }
 	            }
-
 			    base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
+			    if(!base.provided_chr && base.col_index[+BASE_INDEX::CHR]!=-1) message.append(" \\\n    --chr "+base.chr);
 				base.col_index[+BASE_INDEX::REF] = index_check(base.ref_allele, token);
+			    if(!base.provided_ref && base.col_index[+BASE_INDEX::REF]!=-1) message.append(" \\\n    --A1 "+base.ref_allele);
 				base.col_index[+BASE_INDEX::ALT] = index_check(base.alt_allele, token);
+			    if(!base.provided_alt && base.col_index[+BASE_INDEX::ALT]!=-1) message.append(" \\\n    --A2 "+base.alt_allele);
 				base.col_index[+BASE_INDEX::STAT] = index_check(base.statistic, token);
+			    if(!base.provided_stat && base.col_index[+BASE_INDEX::STAT]!=-1) message.append(" \\\n    --stat "+base.statistic);
 				base.col_index[+BASE_INDEX::RS] = index_check(base.snp, token);
+			    if(!base.provided_snp && base.col_index[+BASE_INDEX::RS]!=-1) message.append(" \\\n    --snp "+base.snp);
 				base.col_index[+BASE_INDEX::BP] = index_check(base.bp, token);
+			    if(!base.provided_bp && base.col_index[+BASE_INDEX::BP]!=-1) message.append(" \\\n    --bp "+base.bp);
 				base.col_index[+BASE_INDEX::SE] = index_check(base.standard_error, token);
+			    if(!base.provided_se && base.col_index[+BASE_INDEX::SE]!=-1) message.append(" \\\n    --se "+base.standard_error);
 				base.col_index[+BASE_INDEX::P] = index_check(base.p_value, token);
+			    if(!base.provided_p && base.col_index[+BASE_INDEX::P]!=-1) message.append(" \\\n    --pvalue "+base.p_value);
 			}
 			else
 			{ // only required for index, as the defaults are in string
@@ -1087,10 +812,15 @@ void Commander::base_check(bool &error, std::string &error_message)
 	}
 }
 
-void Commander::clump_check(bool &error, std::string &error_message)
+void Commander::clump_check(std::string &message, bool &error, std::string &error_message)
 {
 	if(!clumping.no_clump)
 	{
+		if(clumping.keep_sample && clumping.remove_sample)
+		{
+	        error = true;
+	        error_message.append("ERROR: Can only use either --keep or --remove but not both\n");
+		}
 		// require clumping
 		if(clumping.provide_proxy && clumping.proxy <= 0)
 		{
@@ -1112,6 +842,7 @@ void Commander::clump_check(bool &error, std::string &error_message)
 			error = true;
 			error_message.append("ERROR: Clumping distance must be positive!\n");
 		}
+		else clumping.distance *= 1000;
 		if(!clumping.type.empty())
 		{
 			bool alright = false;
@@ -1129,51 +860,230 @@ void Commander::clump_check(bool &error, std::string &error_message)
 				error_message.append("ERROR: Unsupported LD format: "+clumping.type+"\n");
 			}
 		}
+		if(!clumping.provide_r2) message.append(" \\\n    --clump-r2 "+std::to_string(clumping.r2));
+		if(!clumping.provide_p) message.append(" \\\n    --clump-p "+std::to_string(clumping.p_value));
+		if(!clumping.provide_distance) message.append(" \\\n    --clump-kb "+std::to_string(clumping.distance));
 	}
 }
 
-void Commander::misc_check(bool &error, std::string &error_message)
+
+void Commander::covariate_check(bool &error, std::string &error_message)
 {
-	if(misc.provided_permutation && misc.permutation < 0)
-	{
-		error =true;
-		error_message.append("ERROR: Negative number of permutation!\n");
-	}
-	if(misc.thread <= 0)
+	if(covariate.name.empty() || covariate.covariates.size()==0) return;
+	std::ifstream cov_file;
+	cov_file.open(covariate.name.c_str());
+	if (!cov_file.is_open())
 	{
 		error = true;
-		error_message.append("ERROR: Number of thread must be larger than 1\n");
+		error_message.append("ERROR: Cannot open covariate file: " + covariate.name+"\n");
+		return;
 	}
+	std::string line;
+	std::getline(cov_file, line);
+    if(line.empty())
+    	{
+		error = true;
+		error_message.append("ERROR: First line of covariate file is empty!\n");
+		return;
+    	}
+    cov_file.close();
+	    // obtain the header informa
+	std::unordered_set<std::string> included;
+	for (auto cov: covariate.covariates)
+	{
+		if(cov.empty()) continue;
+		if(included.find(cov) == included.end())// to avoid duplicated covariance headers
+		{
+			// got annoyed with the input of PC.1 PC.2 PC.3, do this automatic thingy to substitute them
+			if(cov.at(0)=='@')
+			{
+				cov.erase(0,1);
+				std::vector<std::string> open = misc::split(cov, "[");
+				std::vector<std::string> info;
+				std::vector<bool> list;
+				for(auto o : open)
+				{
+					if(o.find("]")!=std::string::npos)
+					{
+						std::vector<std::string> close =misc::split(o, "]");
+						// the first one will always be the list
+						info.push_back(close[0]);
+						list.push_back(true);
+						for(size_t cl = 1; cl< close.size(); ++cl)
+						{
+							info.push_back(close[cl]);
+							list.push_back(false);
+						}
+					}
+					else
+					{
+						info.push_back(o);
+						list.push_back(false);
+					}
+				}
+				std::vector<std::string> final_covariates;
+				for(size_t c=0; c < info.size(); ++c)
+				{
+					if(list[c])
+					{
+						std::vector<std::string> individual =misc::split(info[c], ".");
+						std::vector<int> numeric;
+						for(auto &&ind : individual)
+						{
+							if(ind.find("-")!=std::string::npos)
+							{
+								std::vector<std::string> range = misc::split(ind, "-");
+								if(range.size() != 2)
+								{
+									throw std::runtime_error("ERROR: Invalid range format, range must be in the form of start-end");
+								}
+								try{
+									int start = misc::convert<int>(range[0]);
+									int end = misc::convert<int>(range[1]);
+									if(start > end){
+										int temp = end;
+										end = start;
+										start = temp;
+									}
+									for(size_t s = start; s<=end; ++s)
+									{
+										numeric.push_back(s);
+									}
+								} catch (const std::runtime_error &error){
+									std::string error_message = "ERROR: Invalid parameter: "+range[0]+" or "+range[1]+", only allow integer!";
+									throw std::runtime_error(error_message);
+								}
+							}
+							else
+							{
+								try {
+									int temp = misc::convert<int>( ind);
+									numeric.push_back(temp);
+								} catch (const std::runtime_error &error){
+									std::string error_message = "ERROR: Invalid parameter: "+ind+", only allow integer!";
+									throw std::runtime_error(error_message);
+								}
+							}
+						}
+
+						// Now we have all the numeric parameters
+						if(final_covariates.empty())
+						{
+							for(auto n: numeric)
+							{
+								final_covariates.push_back(std::to_string(n));
+							}
+						}
+						else
+						{
+							size_t cur_size = final_covariates.size();
+							for(size_t final=0; final < cur_size; ++final){
+								std::string cur = final_covariates[final];
+								final_covariates[final].append(std::to_string(numeric.front()));
+								for(size_t s = 1; s < numeric.size(); ++s)
+								{
+									final_covariates.push_back(cur+std::to_string(numeric[s]));
+								}
+							}
+						}
+					}
+					else
+					{
+						for(size_t final=0; final < final_covariates.size(); ++final)
+						{
+							final_covariates[final].append(info[c]);
+						}
+						if(final_covariates.empty()) final_covariates.push_back(info[c]);
+					}
+				}
+				for(auto res : final_covariates)
+				{
+					if(included.find(res)==included.end())
+					{
+						included.insert(res);
+					}
+				}
+			}
+			else included.insert(cov);
+		}
+	}
+
+    std::vector < std::string > token = misc::split(line);
+    std::string missing = "";
+    std::unordered_set<std::string> ref;
+    for(auto &&head : token)
+    {
+    		ref.insert(head);
+    }
+    	size_t valid_cov = 0;
+    	std::vector<std::string> final_cov;
+    for(auto && cov : included)
+    {
+    		if(ref.find(cov)!=ref.end())
+    		{
+    			final_cov.push_back(cov);
+    			valid_cov++;
+    		}
+    		else if(missing.empty()) missing=cov;
+    		else missing.append(","+cov);
+    }
+    if(!missing.empty()) error_message.append("WARNING: Covariate(s) missing from file: "+missing+"\n");
+    if(valid_cov==0)
+    {
+    		error =true;
+    		error_message.append("ERROR: No valid Covariate!\n");
+    }
+    covariate.covariates = final_cov;
+}
+
+
+void Commander::filter_check(bool &error, std::string &error_message)
+{
 	if(filter.use_info && (filter.info_score < 0 || filter.info_score > 1))
 	{
-	    error = true;
-	    error_message.append("ERROR: Info score should be between 0 and 1\n");
+		error = true;
+		error_message.append("ERROR: Info score should be between 0 and 1\n");
 	}
     if(filter.use_hard_thres && (filter.hard_threshold < 0 || filter.hard_threshold > 1))
     {
         error = true;
         error_message.append("ERROR: Hard threshold should be between 0 and 1\n");
     }
-    if(!misc.provided_permutation && misc.logit_perm)
-    {
-        fprintf(stderr, "WARNING: Permutation not required, --logit-perm has no effect\n");
-    }
-    if(prsice.no_regress) misc.all = true;
     if(filter.extract && filter.exclude)
     {
         error = true;
         error_message.append("ERROR: Can only use either --extract or --exclude but not both\n");
     }
-    if((target.keep_sample && target.remove_sample) ||
-            (clumping.keep_sample && clumping.remove_sample) )
-    {
-        error = true;
-        error_message.append("ERROR: Can only use either --keep or --remove but not both\n");
-    }
 }
 
-void Commander::prset_check(bool &error, std::string &error_message)
+void Commander::misc_check(std::string &message, bool &error, std::string &error_message)
 {
+	if(misc.provided_permutation && misc.permutation < 0)
+	{
+		error =true;
+		error_message.append("ERROR: Negative number of permutation!\n");
+	}
+	if(misc.provided_seed && misc.seed < 0)
+	{
+		error =true;
+		error_message.append("ERROR: Negative seed!\n");
+	}
+	if(misc.thread <= 0)
+	{
+		error = true;
+		error_message.append("ERROR: Number of thread must be larger than 1\n");
+	}
+    if(!misc.provided_permutation && misc.logit_perm)
+    {
+        error_message.append("WARNING: Permutation not required, --logit-perm has no effect\n");
+    }
+    if(prsice.no_regress) misc.all = true;
+    if(!misc.provide_thread) message.append(" \\\n    --thread "+std::to_string(misc.thread));
+}
+
+void Commander::prset_check(std::string &message, bool &error, std::string &error_message)
+{
+	if(!prset.perform_prset) return;
 	if(!prset.gtf.empty() && prset.msigdb.empty())
 	{
 		error = true;
@@ -1185,15 +1095,17 @@ void Commander::prset_check(bool &error, std::string &error_message)
 		prset.feature.push_back("gene");
 		prset.feature.push_back("protein_coding");
 		prset.feature.push_back("CDS");
+		message.append(" \\\n    --feature exon,gene,protein_coding,CDS");
 	}
 }
 
 
-void Commander::prsice_check(bool &error, std::string &error_message)
+void Commander::prsice_check(std::string &message, bool &error, std::string &error_message)
 {
 	if(prsice.fastscore && prsice.barlevel.size()==0)
 	{
-		fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
+		//fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5\n");
+		message.append(" \\\n    --bar-levels 0.001,0.05,0.1,0.2,0.3,0.4,0.5");
 		prsice.barlevel = {0.001,0.05,0.1,0.2,0.3,0.4,0.5};
 	}
 	std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
@@ -1216,6 +1128,14 @@ void Commander::prsice_check(bool &error, std::string &error_message)
 			error = true;
 			error_message.append("ERROR: Upper bound must be larger than lower bound!\n");
 		}
+		if(prsice.upper < 0.0 || prsice.lower < 0.0)
+		{
+			error = true;
+			error_message.append("ERROR: CAnnot have negative bounds!\n");
+		}
+		if(!prsice.provide_inter) message.append(" \\\n    --interval "+std::to_string(prsice.inter));
+		if(!prsice.provide_lower) message.append(" \\\n    --lower "+std::to_string(prsice.lower));
+		if(!prsice.provide_upper) message.append(" \\\n    --upper "+std::to_string(prsice.upper));
 	}
 }
 
@@ -1236,14 +1156,18 @@ void Commander::prslice_check(bool &error, std::string &error_message)
 	}
 }
 
-void Commander::target_check(bool &error, std::string &error_message)
+void Commander::target_check(std::string &message, bool &error, std::string &error_message)
 {
 	if(target.name.empty())
 	{
 		error = true;
 		error_message.append("ERROR: You must provide a target file!\n");
 	}
-
+    if(target.keep_sample && target.remove_sample)
+    {
+        error = true;
+        error_message.append("ERROR: Can only use either --keep or --remove but not both\n");
+    }
 	bool alright = false;
 	for(auto &&type: supported_types)
 	{
@@ -1260,7 +1184,9 @@ void Commander::target_check(bool &error, std::string &error_message)
 	}
 	if(target.pheno_file.empty() && target.is_binary.empty())
 	{
-		fprintf(stderr, "Target assumed to be binary\n");
+		message.append(" \\\n    --binary-target T");
+
+		//fprintf(stderr, "Target assumed to be binary\n");
 		target.is_binary.push_back(true);
 	}
 	else
@@ -1271,13 +1197,15 @@ void Commander::target_check(bool &error, std::string &error_message)
 		}
 		else if(target.pheno_col.empty() && target.is_binary.empty())
 		{
-		    fprintf(stderr, "Phenotype assumed to be binary\n");
+			message.append(" \\\n    --binary-target T");
+		    //fprintf(stderr, "Phenotype assumed to be binary\n");
 		    target.is_binary.push_back(true);
 		}
 		else if(target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
-            fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
-            target.is_binary.push_back(true);
+            //fprintf(stderr, "%s assumed to be binary\n", target.pheno_col.front().c_str());
+			message.append(" \\\n    --binary-target T");
+			target.is_binary.push_back(true);
         }
 		else if(target.pheno_col.size() != target.is_binary.size())
 		{
