@@ -327,7 +327,12 @@ void Genotype::read_base(const Commander &c_commander, Region &region)
 		if (line.empty()) continue;
 		exclude = false;
 		token = misc::split(line);
-		if (token.size() <= max_index) throw std::runtime_error("More index than column in data");
+
+		if (token.size() <= max_index)
+		{
+			std::cerr << line << std::endl;
+			throw std::runtime_error("More index than column in data");
+		}
 
 		std::string rs_id = token[index[+BASE_INDEX::RS]];
 		if(m_existed_snps_index.find(rs_id)!=m_existed_snps_index.end() && dup_index.find(rs_id)==dup_index.end())

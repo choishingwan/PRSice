@@ -243,6 +243,7 @@ private:
         bool provided_seed;
         bool provided_permutation;
         bool provide_thread;
+        bool provided_memory;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
