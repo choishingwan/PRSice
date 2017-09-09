@@ -196,7 +196,7 @@ bool Commander::process(int argc, char *argv[], const char *optString, const str
     if(base.index) message.append(" \\\n    --index");
     if(filter.keep_ambig) message.append(" \\\n    --keep-ambig");
     if(misc.logit_perm) message.append(" \\\n    --logit-perm");
-    if(clumping.no_clump) message.append("no-clump");
+    if(clumping.no_clump) message.append(" \\\n    --no-clump");
     if(prsice.no_regress) message.append(" \\\n    --no-regression");
     if(prsice.fastscore) message.append(" \\\n    --fastscore");
     if(misc.print_snp) message.append(" \\\n    --print-snp");
