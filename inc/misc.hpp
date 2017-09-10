@@ -20,8 +20,8 @@
 
 #include <stdio.h>
 #include <stdexcept>
-#include <cmath>
 #define _USE_MATH_DEFINES
+#include <cmath>
 #include <math.h>
 #include <limits>
 #include <string>
@@ -63,24 +63,15 @@ namespace misc
             };
             T operator()(size_t row, size_t col) const
             {
-                if(row > m_row || col>m_col)
-                {
-                    throw std::out_of_range("2d vector out of range!");
-                }
+                if(row > m_row || col>m_col) throw std::out_of_range("2d vector out of range!");
                 return m_storage[row*m_col+col];
             }
             T &operator()(size_t row, size_t col)
             {
-                if(row > m_row || col>m_col)
-                {
-                    throw std::out_of_range("2d vector out of range!");
-                }
+                if(row > m_row || col>m_col) throw std::out_of_range("2d vector out of range!");
                 return m_storage[row*m_col+col];
             }
-            void clear()
-            {
-                m_storage.clear();
-            }
+            void clear() { m_storage.clear(); }
             size_t rows() const { return m_row; };
             size_t cols() const { return m_col; };
         private:
@@ -89,13 +80,13 @@ namespace misc
             std::vector<T> m_storage;
     };
 
-    inline bool to_bool(const std::string &str)
+    inline bool to_bool(const std::string &input)
     {
-        if(str.compare("true")==0 || str.compare("T")==0 || str.compare("True")==0 ||
-                str.compare("1")==0)
+    	std::string str = input;
+    	std::transform(str.begin(), str.end(),str.begin(), ::toupper);
+        if(str.compare("T")==0 || str.compare("TRUE")==0 || str.compare("1")==0)
             return true;
-        else if(str.compare("false")==0 || str.compare("F")==0 || str.compare("False")==0 ||
-                str.compare("0")==0)
+        else if(str.compare("F")==0 || str.compare("FALSE")==0 || str.compare("0")==0)
             return false;
         else
         {
@@ -112,20 +103,7 @@ namespace misc
 
 // codes from stackoverflow
     std::vector<std::string> split(const std::string seq, const std::string separators="\t ");
-    std::string get_column(const std::string seq, const size_t column, const std::string separators="\t ");
-    template <typename T> inline
-    T convert(const std::string& str)
-    {
-        std::istringstream iss(str);
-        T obj;
 
-        iss >> std::ws >> obj >> std::ws;
-
-        if(!iss.eof())
-            throw std::runtime_error("Unable to convert the input");
-
-        return obj;
-    }
 // trim from start (in place)
     inline void ltrim(std::string &s)
     {
@@ -166,6 +144,7 @@ namespace misc
     {
         return path.substr(path.find_last_of(delims) + 1);
     }
+
     template<class T>
     inline T remove_extension(T const & filename)
     {
