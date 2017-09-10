@@ -104,6 +104,16 @@ namespace misc
 // codes from stackoverflow
     std::vector<std::string> split(const std::string seq, const std::string separators="\t ");
 
+    template <typename T> inline
+	T convert(const std::string& str)
+    {
+    	std::istringstream iss(str);
+    	T obj;
+    	iss >> std::ws >> obj >> std::ws;
+    	if(!iss.eof()) throw std::runtime_error("Unable to convert the input");
+
+    	return obj;
+    }
 // trim from start (in place)
     inline void ltrim(std::string &s)
     {
