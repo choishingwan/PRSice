@@ -63,36 +63,36 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
-  #include <inttypes.h>
+#include <inttypes.h>
 #elif defined(_MSC_VER) || defined(__BORLANDC__)
-  typedef unsigned int uint32_t;
-  typedef unsigned __int64 uint64_t;
-  #define inline __inline
+typedef unsigned int uint32_t;
+typedef unsigned __int64 uint64_t;
+#define inline __inline
 #else
-  #include <inttypes.h>
-  #if defined(__GNUC__)
-    #define inline __inline__
-  #endif
+#include <inttypes.h>
+#if defined(__GNUC__)
+#define inline __inline__
+#endif
 #endif
 
 #ifndef PRIu64
-  #if defined(_MSC_VER) || defined(__BORLANDC__)
-    #define PRIu64 "I64u"
-    #define PRIx64 "I64x"
-  #else
-    #define PRIu64 "llu"
-    #define PRIx64 "llx"
-  #endif
+#if defined(_MSC_VER) || defined(__BORLANDC__)
+#define PRIu64 "I64u"
+#define PRIx64 "I64x"
+#else
+#define PRIu64 "llu"
+#define PRIx64 "llx"
+#endif
 #endif
 
 
-  // fold in SFMT-params.h, etc. to reduce compilation time a bit
+// fold in SFMT-params.h, etc. to reduce compilation time a bit
 #if !defined(SFMT_MEXP)
-  #define SFMT_MEXP 19937
+#define SFMT_MEXP 19937
 #endif
 /*-----------------
   BASIC DEFINITIONS
@@ -109,27 +109,28 @@ extern "C" {
 /** N64 is the size of internal state array when regarded as an array
  * of 64-bit integers.*/
 #define SFMT_N64 (SFMT_N * 2)
-#define SFMT_POS1	122
-#define SFMT_SL1	18
-#define SFMT_SL2	1
-#define SFMT_SR1	11
-#define SFMT_SR2	1
-#define SFMT_MSK1	0xdfffffefU
-#define SFMT_MSK2	0xddfecb7fU
-#define SFMT_MSK3	0xbffaffffU
-#define SFMT_MSK4	0xbffffff6U
-#define SFMT_PARITY1	0x00000001U
-#define SFMT_PARITY2	0x00000000U
-#define SFMT_PARITY3	0x00000000U
-#define SFMT_PARITY4	0x13c9e684U
-#define SFMT_IDSTR	"SFMT-19937:122-18-1-11-1:dfffffef-ddfecb7f-bffaffff-bffffff6"
+#define SFMT_POS1 122
+#define SFMT_SL1 18
+#define SFMT_SL2 1
+#define SFMT_SR1 11
+#define SFMT_SR2 1
+#define SFMT_MSK1 0xdfffffefU
+#define SFMT_MSK2 0xddfecb7fU
+#define SFMT_MSK3 0xbffaffffU
+#define SFMT_MSK4 0xbffffff6U
+#define SFMT_PARITY1 0x00000001U
+#define SFMT_PARITY2 0x00000000U
+#define SFMT_PARITY3 0x00000000U
+#define SFMT_PARITY4 0x13c9e684U
+#define SFMT_IDSTR \
+    "SFMT-19937:122-18-1-11-1:dfffffef-ddfecb7f-bffaffff-bffffff6"
 
 
 /*------------------------------------------
   128-bit SIMD like data type for standard C
   ------------------------------------------*/
 #ifdef __LP64__
-  #include <emmintrin.h>
+#include <emmintrin.h>
 
 /** 128-bit data structure */
 union W128_T {
@@ -151,7 +152,8 @@ typedef union W128_T w128_t;
 /**
  * SFMT internal state
  */
-struct SFMT_T {
+struct SFMT_T
+{
     /** the 128-bit internal state array */
     w128_t state[SFMT_N];
     /** index counter to the 32-bit internal state array */
@@ -160,14 +162,14 @@ struct SFMT_T {
 
 typedef struct SFMT_T sfmt_t;
 
-void sfmt_fill_array32(sfmt_t * sfmt, uint32_t * array, int size);
-void sfmt_fill_array64(sfmt_t * sfmt, uint64_t * array, int size);
-void sfmt_init_gen_rand(sfmt_t * sfmt, uint32_t seed);
-void sfmt_init_by_array(sfmt_t * sfmt, uint32_t * init_key, int key_length);
-const char * sfmt_get_idstring(sfmt_t * sfmt);
-int sfmt_get_min_array_size32(sfmt_t * sfmt);
-int sfmt_get_min_array_size64(sfmt_t * sfmt);
-void sfmt_gen_rand_all(sfmt_t * sfmt);
+void sfmt_fill_array32(sfmt_t* sfmt, uint32_t* array, int size);
+void sfmt_fill_array64(sfmt_t* sfmt, uint64_t* array, int size);
+void sfmt_init_gen_rand(sfmt_t* sfmt, uint32_t seed);
+void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length);
+const char* sfmt_get_idstring(sfmt_t* sfmt);
+int sfmt_get_min_array_size32(sfmt_t* sfmt);
+int sfmt_get_min_array_size64(sfmt_t* sfmt);
+void sfmt_gen_rand_all(sfmt_t* sfmt);
 
 /**
  * This function generates and returns 32-bit pseudorandom number.
@@ -175,13 +177,14 @@ void sfmt_gen_rand_all(sfmt_t * sfmt);
  * @param sfmt SFMT internal state
  * @return 32-bit pseudorandom number
  */
-inline static uint32_t sfmt_genrand_uint32(sfmt_t * sfmt) {
+inline static uint32_t sfmt_genrand_uint32(sfmt_t* sfmt)
+{
     uint32_t r;
-    uint32_t * psfmt32 = &sfmt->state[0].u[0];
+    uint32_t* psfmt32 = &sfmt->state[0].u[0];
 
     if (sfmt->idx >= SFMT_N32) {
-	sfmt_gen_rand_all(sfmt);
-	sfmt->idx = 0;
+        sfmt_gen_rand_all(sfmt);
+        sfmt->idx = 0;
     }
     r = psfmt32[sfmt->idx++];
     return r;
@@ -194,14 +197,15 @@ inline static uint32_t sfmt_genrand_uint32(sfmt_t * sfmt) {
  * @param sfmt SFMT internal state
  * @return 64-bit pseudorandom number
  */
-inline static uint64_t sfmt_genrand_uint64(sfmt_t * sfmt) {
+inline static uint64_t sfmt_genrand_uint64(sfmt_t* sfmt)
+{
     uint64_t r;
-    uint64_t * psfmt64 = &sfmt->state[0].u64[0];
+    uint64_t* psfmt64 = &sfmt->state[0].u64[0];
     assert(sfmt->idx % 2 == 0);
 
     if (sfmt->idx >= SFMT_N32) {
-	sfmt_gen_rand_all(sfmt);
-	sfmt->idx = 0;
+        sfmt_gen_rand_all(sfmt);
+        sfmt->idx = 0;
     }
     r = psfmt64[sfmt->idx / 2];
     sfmt->idx += 2;
@@ -218,7 +222,7 @@ inline static uint64_t sfmt_genrand_uint64(sfmt_t * sfmt) {
  */
 inline static double sfmt_to_real1(uint32_t v)
 {
-    return v * (1.0/4294967295.0);
+    return v * (1.0 / 4294967295.0);
     /* divided by 2^32-1 */
 }
 
@@ -227,7 +231,7 @@ inline static double sfmt_to_real1(uint32_t v)
  * @param sfmt SFMT internal state
  * @return double on [0,1]-real-interval
  */
-inline static double sfmt_genrand_real1(sfmt_t * sfmt)
+inline static double sfmt_genrand_real1(sfmt_t* sfmt)
 {
     return sfmt_to_real1(sfmt_genrand_uint32(sfmt));
 }
@@ -239,7 +243,7 @@ inline static double sfmt_genrand_real1(sfmt_t * sfmt)
  */
 inline static double sfmt_to_real2(uint32_t v)
 {
-    return v * (1.0/4294967296.0);
+    return v * (1.0 / 4294967296.0);
     /* divided by 2^32 */
 }
 
@@ -248,7 +252,7 @@ inline static double sfmt_to_real2(uint32_t v)
  * @param sfmt SFMT internal state
  * @return double on [0,1)-real-interval
  */
-inline static double sfmt_genrand_real2(sfmt_t * sfmt)
+inline static double sfmt_genrand_real2(sfmt_t* sfmt)
 {
     return sfmt_to_real2(sfmt_genrand_uint32(sfmt));
 }
@@ -260,7 +264,7 @@ inline static double sfmt_genrand_real2(sfmt_t * sfmt)
  */
 inline static double sfmt_to_real3(uint32_t v)
 {
-    return (((double)v) + 0.5)*(1.0/4294967296.0);
+    return (((double) v) + 0.5) * (1.0 / 4294967296.0);
     /* divided by 2^32 */
 }
 
@@ -269,7 +273,7 @@ inline static double sfmt_to_real3(uint32_t v)
  * @param sfmt SFMT internal state
  * @return double on (0,1)-real-interval
  */
-inline static double sfmt_genrand_real3(sfmt_t * sfmt)
+inline static double sfmt_genrand_real3(sfmt_t* sfmt)
 {
     return sfmt_to_real3(sfmt_genrand_uint32(sfmt));
 }
@@ -282,7 +286,7 @@ inline static double sfmt_genrand_real3(sfmt_t * sfmt)
  */
 inline static double sfmt_to_res53(uint64_t v)
 {
-    return v * (1.0/18446744073709551616.0L);
+    return v * (1.0 / 18446744073709551616.0L);
 }
 
 /**
@@ -290,7 +294,7 @@ inline static double sfmt_to_res53(uint64_t v)
  * @param sfmt SFMT internal state
  * @return double on [0,1) with 53-bit resolution
  */
-inline static double sfmt_genrand_res53(sfmt_t * sfmt)
+inline static double sfmt_genrand_res53(sfmt_t* sfmt)
 {
     return sfmt_to_res53(sfmt_genrand_uint64(sfmt));
 }
@@ -305,7 +309,7 @@ inline static double sfmt_genrand_res53(sfmt_t * sfmt)
  */
 inline static double sfmt_to_res53_mix(uint32_t x, uint32_t y)
 {
-    return sfmt_to_res53(x | ((uint64_t)y << 32));
+    return sfmt_to_res53(x | ((uint64_t) y << 32));
 }
 
 /**
@@ -314,7 +318,7 @@ inline static double sfmt_to_res53_mix(uint32_t x, uint32_t y)
  * @param sfmt SFMT internal state
  * @return double on [0,1) with 53-bit resolution
  */
-inline static double sfmt_genrand_res53_mix(sfmt_t * sfmt)
+inline static double sfmt_genrand_res53_mix(sfmt_t* sfmt)
 {
     uint32_t x, y;
 

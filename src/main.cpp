@@ -14,55 +14,64 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
 #include <cstdlib>
-#include <string>
+#include <iostream>
 #include <stdexcept>
-#include <utility>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "commander.hpp"
-#include "prsice.hpp"
-#include "region.hpp"
 #include "genotype.hpp"
 #include "genotypefactory.hpp"
+#include "prsice.hpp"
+#include "region.hpp"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Commander commander = Commander();
     try
     {
-        if (!commander.initialize(argc, argv))
-            return 0; //only require the usage information
-    } catch (const std::runtime_error& error)
+        if (!commander.init(argc, argv))
+            return 0; // only require the usage information
+    }
+    catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
 
     bool verbose = true;
+    // this allow us to generate the appropriate object (i.e. binaryplink /
+    // binarygen)
     GenomeFactory factory;
-    // change the factory according to the file type
-    // to get the file type, we might want to revemp the commander class
-    // such that we can have a more elegant handling of the files.
-    Genotype *target_file = factory.createGenotype(commander,
-            commander.target_name(), commander.target_type(), verbose);
-    // calculate the maf and genotype missingness here? This will give us the hh_exist information required
-    // for processing sex chromosomes
-    Genotype *ld_file = nullptr;
-    if (!commander.ld_prefix().empty()
-            && commander.ld_prefix().compare(commander.target_name()) != 0)
+    Genotype* target_file;
+    try
     {
+        target_file = factory.createGenotype(commander, commander.target_name(),
+                                             commander.target_type(), verbose);
+    }
+    catch (const std::invalid_argument& ia)
+    {
+        std::cerr << ia.what() << std::endl;
+    }
+    bool used_ld = false;
+    Genotype* ld_file = nullptr;
+    if (!commander.ld_prefix().empty()
+        && commander.ld_prefix().compare(commander.target_name()) != 0)
+    {
+        used_ld = true;
         ld_file = factory.createGenotype(commander, commander.ld_prefix(),
-                commander.ld_type(), verbose);
+                                         commander.ld_type(), verbose);
     }
 
     Region region = Region(commander.feature(), target_file->get_chr_order());
     try
     {
         region.run(commander.gtf(), commander.msigdb(), commander.bed(),
-                commander.out());
-    } catch (const std::runtime_error &error)
+                   commander.out());
+    }
+    catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << std::endl;
         exit(-1);
@@ -70,46 +79,44 @@ int main(int argc, char *argv[])
 
     // Might want to generate a log file?
     region.info();
-    commander.user_input();
 
     bool perform_prslice = commander.perform_prslice();
 
     // Need to handle paths in the name
     std::string base_name = misc::remove_extension<std::string>(
-            misc::base_name<std::string>(commander.base_name()));
+        misc::base_name<std::string>(commander.base_name()));
     fprintf(stderr, "\nStart processing: %s\n", base_name.c_str());
     fprintf(stderr, "==============================\n");
     try
     {
         target_file->read_base(commander, region);
+        target_file->set_clump_info(commander);
         std::string region_out_name = commander.out() + ".region";
         region.print_file(region_out_name);
 
-        if(!commander.no_clump())
-        {
+        if (!commander.no_clump()) {
             // we will perform clumping on all samples that are included
             // ignoring if they have valid phenotype/covariates or not
             target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
         }
         PRSice prsice = PRSice(base_name, commander.target_name(),
-                commander.is_binary(), commander.get_scoring(), region.size(),
-                commander.ignore_fid());
+                               commander.is_binary(), commander.get_scoring(),
+                               region.size(), commander.ignore_fid());
         prsice.pheno_check(commander);
         size_t num_pheno = prsice.num_phenotype();
-        if (!perform_prslice)
-        {
+        if (!perform_prslice) {
             fprintf(stderr, "\nPRSice Analysis\n");
             fprintf(stderr, "==============================\n");
-            if (!target_file->prepare_prsice())
-            {
-            	// check if we can successfully sort the SNP vector by the category as required by PRSice
+            if (!target_file->prepare_prsice()) {
+                // check if we can successfully sort the SNP vector by the
+                // category as required by PRSice
                 return -1;
             }
-            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
-            {
+            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 prsice.init_matrix(commander, i_pheno, *target_file, false);
                 prsice.prsice(commander, region.names(), i_pheno, *target_file);
-                if(!commander.no_regress()) prsice.output(commander, region, i_pheno, *target_file);
+                if (!commander.no_regress())
+                    prsice.output(commander, region, i_pheno, *target_file);
             }
         }
         /*
@@ -145,17 +152,19 @@ int main(int argc, char *argv[])
          }
          }
          */
-    } catch (const std::out_of_range &error)
+    }
+    catch (const std::out_of_range& error)
     {
         std::cerr << error.what() << std::endl;
         exit(-1);
-    } catch (const std::runtime_error &error)
+    }
+    catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << std::endl;
         exit(-1);
     }
     fprintf(stderr, "\n");
-    if(target_file != nullptr) delete target_file;
-    if(ld_file != nullptr) delete ld_file;
+    delete target_file;
+    if (used_ld) delete ld_file;
     return 0;
 }

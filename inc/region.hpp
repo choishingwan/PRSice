@@ -17,61 +17,59 @@
 #ifndef REGION_H
 #define REGION_H
 
+#include "misc.hpp"
+#include "plink_common.hpp"
+#include "storage.hpp"
 #include <fstream>
 #include <iostream>
 #include <limits.h>
 #include <map>
 #include <set>
 #include <stdio.h>
-#include <string>
 #include <string.h>
+#include <string>
 #include <sys/stat.h>
 #include <tuple>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "plink_common.hpp"
-#include "misc.hpp"
-#include "storage.hpp"
+#include <vector>
 
 class Region
 {
 public:
-    Region(std::vector<std::string> feature, const std::unordered_map<std::string, int> &chr_order);
+    Region(std::vector<std::string> feature,
+           const std::unordered_map<std::string, int>& chr_order);
     virtual ~Region();
-    void run(const std::string &gtf, const std::string &msigdb, const std::vector<std::string> &bed, const std::string &out);
+    void run(const std::string& gtf, const std::string& msigdb,
+             const std::vector<std::string>& bed, const std::string& out);
     void reset()
     {
         m_snp_check_index = std::vector<size_t>(m_region_name.size());
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    void check(std::string chr, size_t loc, std::vector<uintptr_t> &flag);
-    size_t size() const
-    {
-        return m_region_name.size();
-    };
-    std::string get_name(size_t i) const
-    {
-        return m_region_name.at(i);
-    };
+    void check(std::string chr, size_t loc, std::vector<uintptr_t>& flag);
+    size_t size() const { return m_region_name.size(); };
+    std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
     int get_count(size_t i) const { return m_region_snp_count.at(i); };
     void info() const;
     void print_file(std::string output) const;
     void prslice()
     {
-    		m_region_name.clear();
-    		m_region_name.push_back("Base");
+        m_region_name.clear();
+        m_region_name.push_back("Base");
     }
-private:
 
-    struct region_bound{
-    		int chr;
-    		int start;
-    		int end;
+private:
+    struct region_bound
+    {
+        int chr;
+        int start;
+        int end;
     };
+    std::string m_out_prefix; // for log file
     // for checking duplicated region
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
@@ -84,7 +82,7 @@ private:
     std::vector<std::string> m_gtf_feature;
     // the actual region boundary
     // can't use vec2d because we don't know the size in advance
-    std::vector< std::vector<region_bound> > m_region_list;
+    std::vector<std::vector<region_bound>> m_region_list;
     // This is to indicate the current location of each region
     // This work because we assume all SNPs are sorted by their coordinates
     // in the same way as the region files.
@@ -94,25 +92,25 @@ private:
 
     bool in_feature(std::string in) const
     {
-    		for(auto &feature: m_gtf_feature)
-    		{
-    			if(in.compare(feature)==0) return true;
-    		}
-    		return false;
+        for (auto& feature : m_gtf_feature) {
+            if (in.compare(feature) == 0) return true;
+        }
+        return false;
     }
 
 
+    void process_bed(const std::vector<std::string>& bed);
 
-    void process_bed(const std::vector<std::string> &bed);
+    std::unordered_map<std::string, region_bound> process_gtf(
+        const std::string& gtf,
+        std::unordered_map<std::string, std::set<std::string>>& id_to_name,
+        const std::string& out_prefix);
 
-    std::unordered_map<std::string, region_bound > process_gtf(const std::string &gtf,
-    		std::unordered_map<std::string, std::set<std::string> > &id_to_name, const std::string &out_prefix);
-
-    void process_msigdb(const std::string &msigdb,
-                        const std::unordered_map<std::string, region_bound > &gtf_info,
-                        const std::unordered_map<std::string, std::set<std::string> > &id_to_name);
-
-
+    void process_msigdb(
+        const std::string& msigdb,
+        const std::unordered_map<std::string, region_bound>& gtf_info,
+        const std::unordered_map<std::string, std::set<std::string>>&
+            id_to_name);
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */
