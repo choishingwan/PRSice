@@ -1547,7 +1547,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                         // bugfix: forgot to apply --gene here
                         //	if (gene_all || (bsearch_str_nl(&(set_names[set_idx
                         //* max_set_id_len]), sorted_genekeep_ids,
-                        //max_genekeep_len, genekeep_ct) != -1)) {
+                        // max_genekeep_len, genekeep_ct) != -1)) {
 
                         if ((subset_ct
                              && (bsearch_str(bufptr,

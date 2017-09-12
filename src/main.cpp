@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     Commander commander = Commander();
     try
     {
-        if (!commander.initialize(argc, argv))
+        if (!commander.init(argc, argv))
             return 0; // only require the usage information
     }
     catch (const std::runtime_error& error)

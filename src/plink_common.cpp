@@ -23,8 +23,7 @@ const char g_errstr_fopen[] = "Error: Failed to open %s.\n";
 
 const char g_cmdline_format_str[] =
     "\n  " PROG_NAME_STR " [input flag(s)...] {command flag(s)...} {other "
-                         "flag(s)...}\n  " PROG_NAME_STR
-    " --help {flag name(s)...}\n\n";
+    "flag(s)...}\n  " PROG_NAME_STR " --help {flag name(s)...}\n\n";
 
 char g_textbuf[TEXTBUF_SIZE];
 
@@ -5613,8 +5612,8 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
         logprint("\n");
         if (line_idx) {
             LOGERRPRINTFWW("Error: Line %" PRIuPTR " of %s has an excessively "
-                                                   "long chromosome/contig "
-                                                   "name. (The " PROG_NAME_CAPS
+                           "long chromosome/contig "
+                           "name. (The " PROG_NAME_CAPS
                            " limit is " MAX_ID_SLEN_STR " characters.)\n",
                            line_idx, file_descrip);
         }

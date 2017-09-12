@@ -248,7 +248,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         // varmu = (weights.array()>0).select(mu.array()*(1-mu.array()),0);
         mu_eta_val = logit_mu_eta(eta);
         //			good = (weights.array()>0 && mu_eta_val.array() !=
-        //0).select(weights.array(), 0);
+        // 0).select(weights.array(), 0);
         good          = (mu_eta_val.array() != 0).select(mu_eta_val.array(), 0);
         z             = weights;
         w             = weights;
