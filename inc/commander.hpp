@@ -32,7 +32,7 @@
 #include <vector>
 
 const std::string version = "2.0.8.beta";
-const std::string date    = "27 August 2017";
+const std::string date = "27 August 2017";
 class Commander
 {
 public:
@@ -43,35 +43,35 @@ public:
 
     // base
     std::vector<int> index() const { return base.col_index; };
-    bool             has_index() const { return base.index; };
-    bool             beta() const { return base.beta; };
-    std::string      base_name() const { return base.name; };
+    bool has_index() const { return base.index; };
+    bool beta() const { return base.beta; };
+    std::string base_name() const { return base.name; };
 
     // clump
     std::string ld_prefix() const { return clumping.ld; };
     std::string ld_type() const { return clumping.type; };
-    bool        no_clump() const { return clumping.no_clump; };
-    bool        use_proxy() const { return clumping.provide_proxy; };
-    double      proxy() const { return clumping.proxy; };
-    double      clump_p() const { return clumping.p_value; };
-    double      clump_r2() const { return clumping.r2; };
-    double      clump_dist() const { return clumping.distance; };
+    bool no_clump() const { return clumping.no_clump; };
+    bool use_proxy() const { return clumping.provide_proxy; };
+    double proxy() const { return clumping.proxy; };
+    double clump_p() const { return clumping.p_value; };
+    double clump_r2() const { return clumping.r2; };
+    double clump_dist() const { return clumping.distance; };
 
     // covariate
-    std::string              get_cov_file() const { return covariate.name; };
+    std::string get_cov_file() const { return covariate.name; };
     std::vector<std::string> get_cov_header() const
     {
         return covariate.covariates;
     };
 
     // filtering
-    bool        filter_maf() const { return filter.use_maf; };
-    bool        filter_geno() const { return filter.use_geno; };
-    bool        filter_mind() const { return filter.use_mind; };
-    bool        filter_info() const { return filter.use_info; };
-    bool        filter_hard_threshold() const { return filter.hard_threshold; };
-    bool        hard_coding() const { return filter.hard_coding; };
-    bool        keep_ambig() const { return filter.keep_ambig; };
+    bool filter_maf() const { return filter.use_maf; };
+    bool filter_geno() const { return filter.use_geno; };
+    bool filter_mind() const { return filter.use_mind; };
+    bool filter_info() const { return filter.use_info; };
+    bool filter_hard_threshold() const { return filter.hard_threshold; };
+    bool hard_coding() const { return filter.hard_coding; };
+    bool keep_ambig() const { return filter.keep_ambig; };
     std::string extract_snp_file() const
     {
         return filter.extract ? filter.extract_file : "";
@@ -87,27 +87,27 @@ public:
     double hard_threshold() const { return filter.hard_threshold; };
 
     // misc
-    bool        all() const { return misc.all; };
-    bool        ignore_fid() const { return misc.ignore_fid; };
-    bool        logit_perm() const { return misc.logit_perm; };
-    bool        permute() const { return misc.provided_permutation; };
-    bool        print_snp() const { return misc.print_snp; };
-    bool        seeded() const { return misc.provided_seed; };
+    bool all() const { return misc.all; };
+    bool ignore_fid() const { return misc.ignore_fid; };
+    bool logit_perm() const { return misc.logit_perm; };
+    bool permute() const { return misc.provided_permutation; };
+    bool print_snp() const { return misc.print_snp; };
+    bool seeded() const { return misc.provided_seed; };
     std::string out() const { return misc.out; };
-    int         num_permutation() const { return misc.permutation; };
-    int         seed() const { return misc.seed; };
-    int         thread() const { return misc.thread; };
+    int num_permutation() const { return misc.permutation; };
+    int seed() const { return misc.seed; };
+    int thread() const { return misc.thread; };
 
 
     // prset
     std::vector<std::string> bed() const { return prset.bed; };
     std::vector<std::string> feature() const { return prset.feature; };
-    std::string              gtf() const { return prset.gtf; };
-    std::string              msigdb() const { return prset.msigdb; };
+    std::string gtf() const { return prset.gtf; };
+    std::string msigdb() const { return prset.msigdb; };
 
     // prsice
     std::string missing_score() const { return prsice.missing_score; };
-    SCORING     get_scoring() const
+    SCORING get_scoring() const
     {
         if (prsice.missing_score == "no_mean_imputation")
             return SCORING::SET_ZERO;
@@ -120,9 +120,9 @@ public:
     double lower() const { return prsice.lower; };
     double upper() const { return prsice.upper; };
     double inter() const { return prsice.inter; };
-    bool   no_regress() const { return prsice.no_regress; };
-    bool   full() const { return prsice.full; };
-    bool   fastscore() const { return prsice.fastscore; };
+    bool no_regress() const { return prsice.no_regress; };
+    bool full() const { return prsice.full; };
+    bool fastscore() const { return prsice.fastscore; };
     double bar_upper() const
     {
         return prsice.barlevel.back();
@@ -131,10 +131,10 @@ public:
 
     // prslice
     bool perform_prslice() const { return prslice.provided; };
-    int  prslice_size() const { return prslice.size; };
+    int prslice_size() const { return prslice.size; };
 
     // species
-    int  num_auto() const { return species.num_auto; };
+    int num_auto() const { return species.num_auto; };
     bool no_x() const { return species.no_x; };
     bool no_y() const { return species.no_y; };
     bool no_xy() const { return species.no_xy; };
@@ -157,8 +157,8 @@ public:
         return target.remove_sample ? target.remove_file : "";
     };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
-    std::vector<bool>        is_binary() const { return target.is_binary; };
-    std::vector<double>      prevalence() const { return target.prevalence; };
+    std::vector<bool> is_binary() const { return target.is_binary; };
+    std::vector<double> prevalence() const { return target.prevalence; };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
     bool keep_sample() const { return target.keep_sample; };
     bool remove_sample() const { return target.remove_sample; };
@@ -190,26 +190,26 @@ private:
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     struct
     {
-        std::string      name;
-        std::string      chr;
-        std::string      ref_allele;
-        std::string      alt_allele;
-        std::string      statistic;
-        std::string      snp;
-        std::string      bp;
-        std::string      standard_error;
-        std::string      p_value;
+        std::string name;
+        std::string chr;
+        std::string ref_allele;
+        std::string alt_allele;
+        std::string statistic;
+        std::string snp;
+        std::string bp;
+        std::string standard_error;
+        std::string p_value;
         std::vector<int> col_index;
-        int              beta;
-        int              index;
-        bool             provided_chr;
-        bool             provided_ref;
-        bool             provided_alt;
-        bool             provided_stat;
-        bool             provided_snp;
-        bool             provided_bp;
-        bool             provided_se;
-        bool             provided_p;
+        int beta;
+        int index;
+        bool provided_chr;
+        bool provided_ref;
+        bool provided_alt;
+        bool provided_stat;
+        bool provided_snp;
+        bool provided_bp;
+        bool provided_se;
+        bool provided_p;
     } base;
 
     struct
@@ -218,24 +218,24 @@ private:
         std::string type;
         std::string keep_file;
         std::string remove_file;
-        int         no_clump;
-        double      proxy;
-        double      p_value;
-        double      r2;
-        int         distance;
-        bool        provide_r2;
-        bool        provide_p;
-        bool        provide_distance;
-        bool        provide_proxy;
-        bool        keep_sample;
-        bool        remove_sample;
-        bool        use_type;
+        int no_clump;
+        double proxy;
+        double p_value;
+        double r2;
+        int distance;
+        bool provide_r2;
+        bool provide_p;
+        bool provide_distance;
+        bool provide_proxy;
+        bool keep_sample;
+        bool remove_sample;
+        bool use_type;
     } clumping;
 
     struct
     {
-        std::string              name;
-        std::string              ancestry_dim;
+        std::string name;
+        std::string ancestry_dim;
         std::vector<std::string> covariates;
     } covariate;
 
@@ -243,39 +243,39 @@ private:
     {
         std::string exclude_file;
         std::string extract_file;
-        double      geno;
-        double      hard_threshold;
-        double      info_score;
-        double      maf;
-        double      mind;
-        int         hard_coding;
-        int         use_geno;
-        int         use_info;
-        int         use_maf;
-        int         use_mind;
-        int         use_prob;
-        int         keep_ambig;
-        bool        extract;
-        bool        exclude;
-        bool        use_hard_thres;
+        double geno;
+        double hard_threshold;
+        double info_score;
+        double maf;
+        double mind;
+        int hard_coding;
+        int use_geno;
+        int use_info;
+        int use_maf;
+        int use_mind;
+        int use_prob;
+        int keep_ambig;
+        bool extract;
+        bool exclude;
+        bool use_hard_thres;
     } filter;
 
     struct
     {
         std::string out;
-        int         all;
-        int         ignore_fid;
-        int         logit_perm;
-        int         memory;
-        int         permutation;
-        int         print_snp;
-        int         print_all_samples;
-        int         thread;
-        int         seed;
-        bool        provided_seed;
-        bool        provided_permutation;
-        bool        provide_thread;
-        bool        provided_memory;
+        int all;
+        int ignore_fid;
+        int logit_perm;
+        int memory;
+        int permutation;
+        int print_snp;
+        int print_all_samples;
+        int thread;
+        int seed;
+        bool provided_seed;
+        bool provided_permutation;
+        bool provide_thread;
+        bool provided_memory;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
@@ -285,76 +285,76 @@ private:
     {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
-        std::string              gtf;
-        std::string              msigdb;
-        bool                     perform_prset;
+        std::string gtf;
+        std::string msigdb;
+        bool perform_prset;
     } prset;
 
     struct
     {
-        std::string         missing_score;
+        std::string missing_score;
         std::vector<double> barlevel;
-        double              lower;
-        double              upper;
-        double              inter;
-        bool                provide_lower;
-        bool                provide_upper;
-        bool                provide_inter;
-        int                 fastscore;
-        int                 no_regress;
-        int                 full;
+        double lower;
+        double upper;
+        double inter;
+        bool provide_lower;
+        bool provide_upper;
+        bool provide_inter;
+        int fastscore;
+        int no_regress;
+        int full;
     } prsice;
 
     struct
     {
-        int  size;
+        int size;
         bool provided;
     } prslice;
 
     struct
     {
-        int  num_auto;
-        int  no_x;
-        int  no_y;
-        int  no_xy;
-        int  no_mt;
+        int num_auto;
+        int no_x;
+        int no_y;
+        int no_xy;
+        int no_mt;
         bool double_set;
     } species;
 
     struct
     {
-        std::string              name;
-        std::string              keep_file;
-        std::string              remove_file;
-        std::string              pheno_file;
-        std::string              type;
+        std::string name;
+        std::string keep_file;
+        std::string remove_file;
+        std::string pheno_file;
+        std::string type;
         std::vector<std::string> pheno_col;
         std::vector<double>
-                          prevalence; // should equal to number of binary target
-        bool              keep_sample;
-        bool              remove_sample;
-        bool              use_type;
+            prevalence; // should equal to number of binary target
+        bool keep_sample;
+        bool remove_sample;
+        bool use_type;
         std::vector<bool> is_binary;
     } target;
 
     std::string help_message;
-    void        usage();
-    void        info();
-    void        base_check(std::string& message, bool& error,
-                           std::string& error_message);
-    void        clump_check(std::string& message, bool& error,
-                            std::string& error_message);
-    void        covariate_check(bool& error, std::string& error_message);
-    void        filter_check(bool& error, std::string& error_message);
-    void        misc_check(std::string& message, bool& error,
-                           std::string& error_message);
-    void        prset_check(std::string& message, bool& error,
-                            std::string& error_message);
-    void        prslice_check(bool& error, std::string& error_message);
-    void        prsice_check(std::string& message, bool& error,
-                             std::string& error_message);
-    void        target_check(std::string& message, bool& error,
-                             std::string& error_message);
+    void usage();
+    void info();
+    void base_check(std::string& message, bool& error,
+                    std::string& error_message);
+    void clump_check(std::string& message, bool& error,
+                     std::string& error_message);
+    void covariate_check(bool& error, std::string& error_message);
+    void filter_check(bool& error, std::string& error_message);
+    void misc_check(std::string& message, bool& error,
+                    std::string& error_message);
+    void prset_check(std::string& message, bool& error,
+                     std::string& error_message);
+    void prslice_check(bool& error, std::string& error_message);
+    void prsice_check(std::string& message, bool& error,
+                      std::string& error_message);
+    void target_check(std::string& message, bool& error,
+                      std::string& error_message);
 
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
                             bool no_mt, bool& error, std::string& error_message,
@@ -362,19 +362,19 @@ private:
     {
         if (species.double_set && !species_error) {
             species_error = true;
-            error         = true;
+            error = true;
             error_message.append("ERROR: Can only specify one species\n");
         }
-        species.num_auto   = num_auto;
-        species.no_x       = no_x;
-        species.no_y       = no_y;
-        species.no_xy      = no_xy;
-        species.no_mt      = no_mt;
+        species.num_auto = num_auto;
+        species.no_x = no_x;
+        species.no_y = no_y;
+        species.no_xy = no_xy;
+        species.no_mt = no_mt;
         species.double_set = true;
     };
 
     inline void load_binary_vector(std::string input, std::string& message,
-                                   std::string&       error_message,
+                                   std::string& error_message,
                                    std::vector<bool>& target, bool& error,
                                    std::string c)
     {
@@ -395,7 +395,7 @@ private:
 
     inline void load_string_vector(std::string input, std::string& message,
                                    std::vector<std::string>& target,
-                                   std::string               c)
+                                   std::string c)
     {
         message.append(" \\\n    --" + c + " " + input);
         std::vector<std::string> token = misc::split(input, ",");
@@ -404,7 +404,7 @@ private:
 
     template <typename T>
     inline void load_numeric_vector(std::string input, std::string& message,
-                                    std::string&    error_message,
+                                    std::string& error_message,
                                     std::vector<T>& target, bool& error,
                                     std::string c)
     {
@@ -431,7 +431,7 @@ private:
         message.append(" \\\n    --" + c + " " + input);
         try
         {
-            target         = misc::convert<Type>(input);
+            target = misc::convert<Type>(input);
             target_boolean = true;
         }
         catch (const std::runtime_error& er)
@@ -446,11 +446,11 @@ private:
                            std::string c)
     {
         message.append(" \\\n    --" + c + " " + input);
-        target         = input;
+        target = input;
         target_boolean = true;
     }
 
-    inline int index_check(const std::string&             target,
+    inline int index_check(const std::string& target,
                            const std::vector<std::string> ref) const
     {
         for (size_t i = 0; i < ref.size(); ++i) {

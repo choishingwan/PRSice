@@ -21,26 +21,26 @@
 
 void set_init(Set_info* sip, Annot_info* aip)
 {
-    sip->fname              = nullptr;
+    sip->fname = nullptr;
     sip->setnames_flattened = nullptr;
-    sip->subset_fname       = nullptr;
-    sip->merged_set_name    = nullptr;
+    sip->subset_fname = nullptr;
+    sip->merged_set_name = nullptr;
     sip->genekeep_flattened = nullptr;
-    sip->ct                 = 0;
-    sip->modifier           = 0;
-    sip->set_r2             = 0.5;
-    sip->set_p              = 0.05;
-    sip->set_test_lambda    = 0.0;
-    sip->set_max            = 5;
-    aip->fname              = nullptr;
-    aip->attrib_fname       = nullptr;
-    aip->ranges_fname       = nullptr;
-    aip->filter_fname       = nullptr;
-    aip->snps_fname         = nullptr;
-    aip->subset_fname       = nullptr;
-    aip->snpfield           = nullptr;
-    aip->modifier           = 0;
-    aip->border             = 0;
+    sip->ct = 0;
+    sip->modifier = 0;
+    sip->set_r2 = 0.5;
+    sip->set_p = 0.05;
+    sip->set_test_lambda = 0.0;
+    sip->set_max = 5;
+    aip->fname = nullptr;
+    aip->attrib_fname = nullptr;
+    aip->ranges_fname = nullptr;
+    aip->filter_fname = nullptr;
+    aip->snps_fname = nullptr;
+    aip->subset_fname = nullptr;
+    aip->snpfield = nullptr;
+    aip->modifier = 0;
+    aip->border = 0;
 }
 
 void set_cleanup(Set_info* sip, Annot_info* aip)
@@ -86,7 +86,7 @@ uint32_t in_setdef_dist(uint32_t* setdef, uint32_t pos, uint32_t border,
 {
     uint32_t range_ct = setdef[0];
     uint32_t uii;
-    int32_t  ii;
+    int32_t ii;
     uii = uint32arr_greater_than(&(setdef[1]), range_ct * 2, pos + 1);
     if (uii & 1) {
         *dist_ptr = 0;
@@ -190,7 +190,7 @@ uint32_t interval_in_setdef(uint32_t* setdef, uint32_t marker_idx_start,
 
 uint32_t setdef_size(uint32_t* setdef, uint32_t marker_ct)
 {
-    uint32_t range_ct   = setdef[0];
+    uint32_t range_ct = setdef[0];
     uint32_t total_size = 0;
     uint32_t uii;
     if (range_ct != 0xffffffffU) {
@@ -217,23 +217,23 @@ void setdef_iter_init(uint32_t* setdef, uint32_t marker_ct, uint32_t start_idx,
     if (range_ct != 0xffffffffU) {
         if (!range_ct) {
             *cur_idx_ptr = 0;
-            *aux_ptr     = 0;
+            *aux_ptr = 0;
             return;
         }
         uii = uint32arr_greater_than(&(setdef[1]), range_ct * 2, start_idx + 1);
         if (uii % 2) {
             *cur_idx_ptr = start_idx;
-            *aux_ptr     = uii + 1;
+            *aux_ptr = uii + 1;
         }
         else if (uii < range_ct * 2)
         {
             *cur_idx_ptr = setdef[uii + 1];
-            *aux_ptr     = uii + 2;
+            *aux_ptr = uii + 2;
         }
         else
         {
             *cur_idx_ptr = setdef[uii];
-            *aux_ptr     = uii;
+            *aux_ptr = uii;
         }
     }
     else
@@ -242,7 +242,7 @@ void setdef_iter_init(uint32_t* setdef, uint32_t marker_ct, uint32_t start_idx,
         // setdef_iter()
         if (setdef[3]) {
             *cur_idx_ptr = start_idx;
-            *aux_ptr     = marker_ct - setdef[1];
+            *aux_ptr = marker_ct - setdef[1];
         }
         else
         {
@@ -265,8 +265,8 @@ uint32_t setdef_iter(uint32_t* setdef, uint32_t* cur_idx_ptr, uint32_t* aux_ptr)
     // (after the first call) cur_idx is incremented right before this is
     // called.
     uint32_t range_ct = setdef[0];
-    uint32_t cur_idx  = *cur_idx_ptr;
-    uint32_t aux      = *aux_ptr;
+    uint32_t cur_idx = *cur_idx_ptr;
+    uint32_t aux = *aux_ptr;
     if (range_ct != 0xffffffffU) {
         if (cur_idx < setdef[aux]) {
             return 1;
@@ -274,7 +274,7 @@ uint32_t setdef_iter(uint32_t* setdef, uint32_t* cur_idx_ptr, uint32_t* aux_ptr)
         else if (aux < range_ct * 2)
         {
             *cur_idx_ptr = setdef[aux + 1];
-            *aux_ptr     = aux + 2;
+            *aux_ptr = aux + 2;
             return 1;
         }
         else
@@ -303,15 +303,15 @@ uint32_t setdef_iter(uint32_t* setdef, uint32_t* cur_idx_ptr, uint32_t* aux_ptr)
     }
 }
 
-uint32_t alloc_and_populate_nonempty_set_incl(Set_info*   sip,
-                                              uint32_t*   nonempty_set_ct_ptr,
+uint32_t alloc_and_populate_nonempty_set_incl(Set_info* sip,
+                                              uint32_t* nonempty_set_ct_ptr,
                                               uintptr_t** nonempty_set_incl_ptr)
 {
-    uint32_t   raw_set_ct      = sip->ct;
-    uint32_t   raw_set_ctl     = BITCT_TO_WORDCT(raw_set_ct);
-    uint32_t   nonempty_set_ct = 0;
+    uint32_t raw_set_ct = sip->ct;
+    uint32_t raw_set_ctl = BITCT_TO_WORDCT(raw_set_ct);
+    uint32_t nonempty_set_ct = 0;
     uintptr_t* nonempty_set_incl;
-    uint32_t   set_uidx;
+    uint32_t set_uidx;
     if (bigstack_calloc_ul(raw_set_ctl, nonempty_set_incl_ptr)) {
         return 1;
     }
@@ -333,34 +333,34 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                         char* sorted_subset_ids, uintptr_t max_subset_id_len,
                         uint32_t* marker_pos, Chrom_info* chrom_info_ptr,
                         uintptr_t* set_ct_ptr, char** set_names_ptr,
-                        uintptr_t*        max_set_id_len_ptr,
+                        uintptr_t* max_set_id_len_ptr,
                         Make_set_range*** make_set_range_arr_ptr,
                         uint64_t** range_sort_buf_ptr, const char* file_descrip)
 {
     // Called directly by extract_exclude_range(), define_sets(), and indirectly
     // by annotate(), gene_report(), and clump_reports().
     // Assumes caller will reset g_bigstack_end later.
-    Ll_str*          make_set_ll    = nullptr;
-    char*            set_names      = nullptr;
-    uintptr_t        set_ct         = 0;
-    uintptr_t        max_set_id_len = 0;
-    uintptr_t        line_idx       = 0;
-    uint32_t         chrom_start    = 0;
-    uint32_t         chrom_end      = 0;
-    int32_t          retval         = 0;
+    Ll_str* make_set_ll = nullptr;
+    char* set_names = nullptr;
+    uintptr_t set_ct = 0;
+    uintptr_t max_set_id_len = 0;
+    uintptr_t line_idx = 0;
+    uint32_t chrom_start = 0;
+    uint32_t chrom_end = 0;
+    int32_t retval = 0;
     Make_set_range** make_set_range_arr;
-    Make_set_range*  msr_tmp;
-    Ll_str*          ll_tmp;
-    char*            bufptr;
-    char*            bufptr2;
-    char*            bufptr3;
-    uintptr_t        set_idx;
-    uintptr_t        ulii;
-    uint32_t         chrom_idx;
-    uint32_t         range_first;
-    uint32_t         range_last;
-    uint32_t         uii;
-    uint32_t         ujj;
+    Make_set_range* msr_tmp;
+    Ll_str* ll_tmp;
+    char* bufptr;
+    char* bufptr2;
+    char* bufptr3;
+    uintptr_t set_idx;
+    uintptr_t ulii;
+    uint32_t chrom_idx;
+    uint32_t range_first;
+    uint32_t range_last;
+    uint32_t uii;
+    uint32_t ujj;
     {
         g_textbuf[MAXLINELEN - 1] = ' ';
         // if we need to track set names, put together a sorted list
@@ -379,7 +379,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                     continue;
                 }
                 char* first_token_end = token_endnn(textbuf_first_token);
-                bufptr2               = next_token_mult(first_token_end, 3);
+                bufptr2 = next_token_mult(first_token_end, 3);
                 if (!collapse_group) {
                     bufptr3 = bufptr2;
                 }
@@ -396,7 +396,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                 }
                 const uint32_t chrom_name_slen =
                     (uintptr_t)(first_token_end - textbuf_first_token);
-                *first_token_end       = '\0';
+                *first_token_end = '\0';
                 int32_t cur_chrom_code = get_chrom_code(
                     textbuf_first_token, chrom_info_ptr, chrom_name_slen);
                 if (cur_chrom_code < 0) {
@@ -407,7 +407,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                     goto load_range_list_ret_INVALID_FORMAT_2;
                 }
                 // chrom_mask check removed, we want to track empty sets
-                uii          = strlen_se(bufptr2);
+                uii = strlen_se(bufptr2);
                 bufptr2[uii] = '\0';
                 if (subset_ct) {
                     if (bsearch_str(bufptr2, uii, sorted_subset_ids,
@@ -418,7 +418,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                     }
                 }
                 if (collapse_group) {
-                    uii          = strlen_se(bufptr3);
+                    uii = strlen_se(bufptr3);
                     bufptr3[uii] = '\0';
                 }
                 // when there are repeats, they are likely to be next to each
@@ -545,7 +545,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                 continue;
             }
             char* first_token_end = token_endnn(textbuf_first_token);
-            bufptr2               = next_token_mult(first_token_end, 3);
+            bufptr2 = next_token_mult(first_token_end, 3);
             if (!collapse_group) {
                 bufptr3 = bufptr2;
             }
@@ -562,7 +562,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
             }
             const uint32_t chrom_name_slen =
                 (uintptr_t)(first_token_end - textbuf_first_token);
-            *first_token_end       = '\0';
+            *first_token_end = '\0';
             int32_t cur_chrom_code = get_chrom_code(
                 textbuf_first_token, chrom_info_ptr, chrom_name_slen);
             if (cur_chrom_code < 0) {
@@ -578,7 +578,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
             chrom_idx = cur_chrom_code;
             if (marker_pos) {
                 chrom_start = get_chrom_start_vidx(chrom_info_ptr, chrom_idx);
-                chrom_end   = get_chrom_end_vidx(chrom_info_ptr, chrom_idx);
+                chrom_end = get_chrom_end_vidx(chrom_info_ptr, chrom_idx);
                 if (chrom_end == chrom_start) {
                     continue;
                 }
@@ -626,7 +626,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
             range_last += border_extend;
             if (set_ct > 1) {
                 // bugfix: bsearch_str_natural requires null-terminated string
-                uii          = strlen_se(bufptr3);
+                uii = strlen_se(bufptr3);
                 bufptr3[uii] = '\0';
                 if (c_prefix) {
                     bufptr3 = &(bufptr3[-2]);
@@ -651,7 +651,7 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                 range_first = uint32arr_greater_than(&(marker_pos[chrom_start]),
                                                      chrom_end - chrom_start,
                                                      range_first);
-                range_last  = uint32arr_greater_than(&(marker_pos[chrom_start]),
+                range_last = uint32arr_greater_than(&(marker_pos[chrom_start]),
                                                     chrom_end - chrom_start,
                                                     range_last + 1);
                 if (range_last > range_first) {
@@ -661,8 +661,8 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
                     // normally, I'd keep chrom_idx here since that enables
                     // by-chromosome sorting, but that's probably not worth
                     // bloating Make_set_range from 16 to 32 bytes
-                    msr_tmp->uidx_start         = chrom_start + range_first;
-                    msr_tmp->uidx_end           = chrom_start + range_last;
+                    msr_tmp->uidx_start = chrom_start + range_first;
+                    msr_tmp->uidx_end = chrom_start + range_last;
                     make_set_range_arr[set_idx] = msr_tmp;
                 }
             }
@@ -670,16 +670,16 @@ int32_t load_range_list(FILE* infile, uint32_t track_set_names,
             {
                 msr_tmp = (Make_set_range*) bigstack_end_alloc(
                     sizeof(Make_set_range));
-                msr_tmp->next               = make_set_range_arr[set_idx];
-                msr_tmp->uidx_start         = range_first;
-                msr_tmp->uidx_end           = range_last + 1;
+                msr_tmp->next = make_set_range_arr[set_idx];
+                msr_tmp->uidx_start = range_first;
+                msr_tmp->uidx_end = range_last + 1;
                 make_set_range_arr[set_idx] = msr_tmp;
             }
         }
         // allocate buffer for sorting ranges later
         uii = 0;
         for (set_idx = 0; set_idx < set_ct; set_idx++) {
-            ujj     = 0;
+            ujj = 0;
             msr_tmp = make_set_range_arr[set_idx];
             while (msr_tmp) {
                 ujj++;
@@ -715,7 +715,7 @@ load_range_list_ret_1:
 }
 
 int32_t extract_exclude_range(char* fname, uint32_t* marker_pos,
-                              uintptr_t  unfiltered_marker_ct,
+                              uintptr_t unfiltered_marker_ct,
                               uintptr_t* marker_exclude,
                               uintptr_t* marker_exclude_ct_ptr,
                               uint32_t is_exclude, uint32_t allow_no_variants,
@@ -724,15 +724,15 @@ int32_t extract_exclude_range(char* fname, uint32_t* marker_pos,
     if (unfiltered_marker_ct == *marker_exclude_ct_ptr) {
         return 0;
     }
-    unsigned char* bigstack_mark     = g_bigstack_base;
+    unsigned char* bigstack_mark = g_bigstack_base;
     unsigned char* bigstack_end_mark = g_bigstack_end;
-    uintptr_t unfiltered_marker_ctl  = BITCT_TO_WORDCT(unfiltered_marker_ct);
-    FILE*     infile                 = nullptr;
+    uintptr_t unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
+    FILE* infile = nullptr;
     uintptr_t orig_marker_exclude_ct = *marker_exclude_ct_ptr;
-    Make_set_range** range_arr       = nullptr;
-    int32_t          retval          = 0;
-    Make_set_range*  msr_tmp;
-    uintptr_t*       marker_exclude_new;
+    Make_set_range** range_arr = nullptr;
+    int32_t retval = 0;
+    Make_set_range* msr_tmp;
+    uintptr_t* marker_exclude_new;
     if (fopen_checked(fname, "r", &infile)) {
         goto extract_exclude_range_ret_OPEN_FAIL;
     }
@@ -812,18 +812,18 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
                            uint32_t range_start, uint32_t range_end,
                            uint32_t complement_sets, uint32_t** set_range_pp)
 {
-    uintptr_t mem_req           = ((marker_ct + 255) / 128) * 16;
-    uint32_t  bound_bottom_d128 = range_start / 128;
-    uint32_t  bound_top_d128    = (range_end - 1) / 128;
-    uint32_t  set_bits_outer    = complement_sets;
-    uint32_t  do_flip           = 0;
-    uint32_t  range_idx         = 0;
+    uintptr_t mem_req = ((marker_ct + 255) / 128) * 16;
+    uint32_t bound_bottom_d128 = range_start / 128;
+    uint32_t bound_top_d128 = (range_end - 1) / 128;
+    uint32_t set_bits_outer = complement_sets;
+    uint32_t do_flip = 0;
+    uint32_t range_idx = 0;
     uint32_t* uiptr;
-    uint32_t  range_ct_ceil;
-    uint32_t  bit_idx;
-    uint32_t  uii;
-    uint32_t  ujj;
-    uint32_t  ukk;
+    uint32_t range_ct_ceil;
+    uint32_t bit_idx;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
     if (bigstack_left() < mem_req) {
         return 1;
     }
@@ -851,9 +851,9 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
             if (uii != marker_ct) {
                 ujj = prev_unset_unsafe(marker_bitfield_tmp, range_end - 1);
                 if ((ujj / 128) - (uii / 128) < ukk) {
-                    do_flip     = 1;
+                    do_flip = 1;
                     range_start = uii;
-                    range_end   = ujj + 1;
+                    range_end = ujj + 1;
                 }
             }
             else
@@ -865,9 +865,9 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
         else
         {
             if (((marker_ct - 1) / 128) - (uii / 128) < ukk) {
-                do_flip     = 1;
+                do_flip = 1;
                 range_start = uii;
-                range_end   = marker_ct;
+                range_end = marker_ct;
             }
         }
     }
@@ -876,23 +876,23 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
         if (range_end == marker_ct) {
             uii = prev_unset_unsafe(marker_bitfield_tmp, range_end - 1);
             if ((uii / 128) < ukk) {
-                do_flip     = 1;
+                do_flip = 1;
                 range_start = 0;
-                range_end   = uii + 1;
+                range_end = uii + 1;
             }
         }
     }
     if (do_flip) {
-        set_bits_outer    = 1 - set_bits_outer;
+        set_bits_outer = 1 - set_bits_outer;
         bound_bottom_d128 = range_start / 128;
-        bound_top_d128    = (range_end - 1) / 128;
+        bound_top_d128 = (range_end - 1) / 128;
     }
     bound_top_d128++;
     // equal or greater than this -> use bitfield
     range_ct_ceil = 2 * (1 + bound_top_d128 - bound_bottom_d128);
-    mem_req       = range_ct_ceil * 8;
+    mem_req = range_ct_ceil * 8;
     // try to compress as sequence of ranges
-    uiptr   = &((*set_range_pp)[1]);
+    uiptr = &((*set_range_pp)[1]);
     bit_idx = bound_bottom_d128 * 128;
     if (set_bits_outer && bit_idx) {
         if (!complement_sets) {
@@ -913,7 +913,7 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
             if (++range_idx == range_ct_ceil) {
                 goto save_set_bitfield_standard;
             }
-            uii     = next_set_unsafe(marker_bitfield_tmp, bit_idx);
+            uii = next_set_unsafe(marker_bitfield_tmp, bit_idx);
             bit_idx = uii + 1;
             next_unset_unsafe_ck(marker_bitfield_tmp, &bit_idx);
             *uiptr++ = uii;
@@ -937,7 +937,7 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
             if (++range_idx == range_ct_ceil) {
                 goto save_set_bitfield_standard;
             }
-            bit_idx  = next_set_unsafe(marker_bitfield_tmp, uii);
+            bit_idx = next_set_unsafe(marker_bitfield_tmp, uii);
             *uiptr++ = uii;
             *uiptr++ = bit_idx;
         }
@@ -959,7 +959,7 @@ uint32_t save_set_bitfield(uintptr_t* marker_bitfield_tmp, uint32_t marker_ct,
         }
     }
     (*set_range_pp)[0] = range_idx;
-    mem_req            = (1 + (range_idx / 2)) * 16;
+    mem_req = (1 + (range_idx / 2)) * 16;
     while (0) {
     save_set_bitfield_standard:
         bound_bottom_d128 *= 128;
@@ -987,21 +987,21 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
                         uint32_t rsb_last_idx, uint32_t complement_sets,
                         uint32_t** set_range_pp)
 {
-    uint32_t*  uiptr             = (uint32_t*) g_bigstack_base;
-    uint32_t   range_start       = (uint32_t)(range_sort_buf[0] >> 32);
-    uint32_t   range_end         = (uint32_t)(range_sort_buf[rsb_last_idx]);
-    uint32_t   bound_bottom_d128 = range_start / 128;
-    uint32_t   bound_top_d128    = (range_end - 1) / 128;
-    uint32_t   range_ct          = bound_top_d128 - bound_bottom_d128;
-    uint32_t   set_bits_outer    = complement_sets;
-    uint32_t   do_flip = 0; // flip set_bits_outer since that's more compact?
-    uint32_t   rsb_idx = 0;
+    uint32_t* uiptr = (uint32_t*) g_bigstack_base;
+    uint32_t range_start = (uint32_t)(range_sort_buf[0] >> 32);
+    uint32_t range_end = (uint32_t)(range_sort_buf[rsb_last_idx]);
+    uint32_t bound_bottom_d128 = range_start / 128;
+    uint32_t bound_top_d128 = (range_end - 1) / 128;
+    uint32_t range_ct = bound_top_d128 - bound_bottom_d128;
+    uint32_t set_bits_outer = complement_sets;
+    uint32_t do_flip = 0; // flip set_bits_outer since that's more compact?
+    uint32_t rsb_idx = 0;
     uintptr_t* bitfield_ptr = (uintptr_t*) (&(uiptr[4]));
-    uint64_t   ullii;
-    uintptr_t  mem_req;
-    uintptr_t  ulii;
-    uint32_t   uii;
-    uint32_t   ujj;
+    uint64_t ullii;
+    uintptr_t mem_req;
+    uintptr_t ulii;
+    uint32_t uii;
+    uint32_t ujj;
     if (bigstack_left() < (rsb_last_idx / 2) * 16 + 32) {
         return 1;
     }
@@ -1010,9 +1010,9 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
         uii = (uint32_t) range_sort_buf[0];
         if (range_end == marker_ct) {
             if (uii != marker_ct) {
-                do_flip     = 1;
+                do_flip = 1;
                 range_start = uii;
-                range_end   = (uint32_t)(range_sort_buf[rsb_last_idx] >> 32);
+                range_end = (uint32_t)(range_sort_buf[rsb_last_idx] >> 32);
             }
             else
             {
@@ -1032,9 +1032,9 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
         else
         {
             if (((marker_ct - 1) / 128) - (uii / 128) < range_ct) {
-                do_flip     = 1;
+                do_flip = 1;
                 range_start = uii;
-                range_end   = marker_ct;
+                range_end = marker_ct;
             }
         }
     }
@@ -1044,16 +1044,16 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             if ((((uint32_t)(range_sort_buf[rsb_last_idx] - 1)) / 128)
                 < range_ct)
             {
-                do_flip     = 1;
+                do_flip = 1;
                 range_start = 0;
-                range_end   = range_sort_buf[rsb_last_idx];
+                range_end = range_sort_buf[rsb_last_idx];
             }
         }
     }
     if (do_flip) {
-        set_bits_outer    = 1 - set_bits_outer;
+        set_bits_outer = 1 - set_bits_outer;
         bound_bottom_d128 = range_start / 128;
-        bound_top_d128    = (range_end - 1) / 128;
+        bound_top_d128 = (range_end - 1) / 128;
     }
     bound_top_d128++;
     range_end = bound_top_d128 * 128;
@@ -1080,16 +1080,16 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             }
             for (; rsb_idx <= rsb_last_idx; rsb_idx++) {
                 ullii = range_sort_buf[rsb_idx];
-                uii   = (uint32_t)(ullii >> 32);
-                ujj   = (uint32_t) ullii;
+                uii = (uint32_t)(ullii >> 32);
+                ujj = (uint32_t) ullii;
             save_set_range_late_start_1:
                 fill_bits(uii - range_start, ujj - uii, bitfield_ptr);
             }
             if (do_flip) {
                 // last range may go past bitfield end
                 ullii = range_sort_buf[rsb_idx];
-                uii   = (uint32_t)(ullii >> 32);
-                ujj   = (uint32_t) ullii;
+                uii = (uint32_t)(ullii >> 32);
+                ujj = (uint32_t) ullii;
                 if (ujj > range_end) {
                     ujj = range_end;
                 }
@@ -1098,9 +1098,9 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             goto save_set_range_bitfield_finish_encode;
         }
         g_bigstack_base = &(g_bigstack_base[ulii]);
-        *uiptr++        = rsb_last_idx + 1;
+        *uiptr++ = rsb_last_idx + 1;
         for (; rsb_idx <= rsb_last_idx; rsb_idx++) {
-            ullii    = range_sort_buf[rsb_idx];
+            ullii = range_sort_buf[rsb_idx];
             *uiptr++ = (uint32_t)(ullii >> 32);
             *uiptr++ = (uint32_t) ullii;
         }
@@ -1111,7 +1111,7 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
         if (((uint32_t) range_sort_buf[rsb_last_idx]) == marker_ct) {
             range_ct--;
         }
-        ullii       = range_sort_buf[0];
+        ullii = range_sort_buf[0];
         range_start = (uint32_t)(ullii >> 32);
         if (range_start) {
             ulii = (range_ct / 2) + 1;
@@ -1136,15 +1136,15 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             }
             for (; rsb_idx <= rsb_last_idx; rsb_idx++) {
                 ullii = range_sort_buf[rsb_idx];
-                uii   = (uint32_t)(ullii >> 32);
-                ujj   = (uint32_t) ullii;
+                uii = (uint32_t)(ullii >> 32);
+                ujj = (uint32_t) ullii;
             save_set_range_late_start_2:
                 clear_bits(uii - range_start, ujj - uii, bitfield_ptr);
             }
             if (do_flip) {
                 ullii = range_sort_buf[rsb_idx];
-                uii   = (uint32_t)(ullii >> 32);
-                ujj   = (uint32_t) ullii;
+                uii = (uint32_t)(ullii >> 32);
+                ujj = (uint32_t) ullii;
                 if (ujj > range_end) {
                     ujj = range_end;
                 }
@@ -1152,10 +1152,10 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             }
         save_set_range_bitfield_finish_encode:
             g_bigstack_base = &(g_bigstack_base[mem_req]);
-            uiptr[0]        = 0xffffffffU;
-            uiptr[1]        = range_start;
-            uiptr[2]        = range_end - range_start;
-            uiptr[3]        = set_bits_outer;
+            uiptr[0] = 0xffffffffU;
+            uiptr[1] = range_start;
+            uiptr[2] = range_end - range_start;
+            uiptr[3] = set_bits_outer;
         }
         else
         {
@@ -1171,7 +1171,7 @@ uint32_t save_set_range(uint64_t* range_sort_buf, uint32_t marker_ct,
             }
             for (rsb_idx = 1; rsb_idx <= rsb_last_idx; rsb_idx++) {
                 *uiptr++ = (uint32_t) ullii;
-                ullii    = range_sort_buf[rsb_idx];
+                ullii = range_sort_buf[rsb_idx];
                 *uiptr++ = (uint32_t)(ullii >> 32);
             }
             if (range_ct == rsb_last_idx + 2) {
@@ -1189,55 +1189,55 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                     uintptr_t max_marker_id_len, Chrom_info* chrom_info_ptr,
                     uint32_t allow_no_variants)
 {
-    unsigned char* bigstack_end_mark   = g_bigstack_end;
-    FILE*          infile              = nullptr;
-    char*          sorted_marker_ids   = nullptr;
-    char*          sorted_genekeep_ids = nullptr;
-    uintptr_t unfiltered_marker_ctl    = BITCT_TO_WORDCT(unfiltered_marker_ct);
-    uintptr_t marker_exclude_ct        = *marker_exclude_ct_ptr;
-    uintptr_t marker_ct         = unfiltered_marker_ct - marker_exclude_ct;
-    uintptr_t set_ct            = 0;
-    uint32_t  make_set          = sip->modifier & SET_MAKE_FROM_RANGES;
-    uint32_t  complement_sets   = (sip->modifier / SET_COMPLEMENTS) & 1;
-    uint32_t  c_prefix          = 2 * ((sip->modifier / SET_C_PREFIX) & 1);
-    uint32_t  gene_all          = sip->modifier & SET_GENE_ALL;
-    uint32_t  curtoklen         = 0;
-    uint32_t  in_set            = 0;
-    int32_t   retval            = 0;
-    uintptr_t subset_ct         = 0;
+    unsigned char* bigstack_end_mark = g_bigstack_end;
+    FILE* infile = nullptr;
+    char* sorted_marker_ids = nullptr;
+    char* sorted_genekeep_ids = nullptr;
+    uintptr_t unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
+    uintptr_t marker_exclude_ct = *marker_exclude_ct_ptr;
+    uintptr_t marker_ct = unfiltered_marker_ct - marker_exclude_ct;
+    uintptr_t set_ct = 0;
+    uint32_t make_set = sip->modifier & SET_MAKE_FROM_RANGES;
+    uint32_t complement_sets = (sip->modifier / SET_COMPLEMENTS) & 1;
+    uint32_t c_prefix = 2 * ((sip->modifier / SET_C_PREFIX) & 1);
+    uint32_t gene_all = sip->modifier & SET_GENE_ALL;
+    uint32_t curtoklen = 0;
+    uint32_t in_set = 0;
+    int32_t retval = 0;
+    uintptr_t subset_ct = 0;
     uintptr_t max_subset_id_len = 0;
-    uintptr_t genekeep_ct       = 0;
-    uintptr_t max_genekeep_len  = 0;
-    uintptr_t max_set_id_len    = 0;
+    uintptr_t genekeep_ct = 0;
+    uintptr_t max_genekeep_len = 0;
+    uintptr_t max_set_id_len = 0;
     Make_set_range** make_set_range_arr = nullptr;
-    char*            midbuf             = &(g_textbuf[MAXLINELEN]);
-    char*            sorted_subset_ids  = nullptr;
-    char*            set_names          = nullptr;
-    char*            bufptr             = nullptr;
-    uint64_t*        range_sort_buf     = nullptr;
-    char*            bufptr2;
-    char*            bufptr3;
-    char*            buf_end;
-    Make_set_range*  msr_tmp;
-    unsigned char*   bigstack_end_mark2;
-    uint32_t*        marker_id_map;
-    uint32_t*        marker_uidx_to_idx;
-    uint32_t**       all_setdefs;
-    uintptr_t*       marker_exclude_new;
-    uintptr_t*       marker_bitfield_tmp;
-    uintptr_t        set_idx;
-    uintptr_t        bufsize;
-    uintptr_t        marker_ctp2l;
-    uintptr_t        ulii;
-    uint64_t         ullii;
-    uint32_t         range_first;
-    uint32_t         range_last;
-    uint32_t         slen;
-    uint32_t         uii;
-    uint32_t         ujj;
-    uint32_t         ukk;
-    uint32_t         umm;
-    int32_t          ii;
+    char* midbuf = &(g_textbuf[MAXLINELEN]);
+    char* sorted_subset_ids = nullptr;
+    char* set_names = nullptr;
+    char* bufptr = nullptr;
+    uint64_t* range_sort_buf = nullptr;
+    char* bufptr2;
+    char* bufptr3;
+    char* buf_end;
+    Make_set_range* msr_tmp;
+    unsigned char* bigstack_end_mark2;
+    uint32_t* marker_id_map;
+    uint32_t* marker_uidx_to_idx;
+    uint32_t** all_setdefs;
+    uintptr_t* marker_exclude_new;
+    uintptr_t* marker_bitfield_tmp;
+    uintptr_t set_idx;
+    uintptr_t bufsize;
+    uintptr_t marker_ctp2l;
+    uintptr_t ulii;
+    uint64_t ullii;
+    uint32_t range_first;
+    uint32_t range_last;
+    uint32_t slen;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uint32_t umm;
+    int32_t ii;
     // 1. validate and sort --gene parameter(s)
     if (sip->genekeep_flattened) {
         bufptr = sip->genekeep_flattened;
@@ -1265,7 +1265,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
             }
             free(sip->genekeep_flattened);
             sip->genekeep_flattened = nullptr;
-            gene_all                = 1;
+            gene_all = 1;
         }
         else
         {
@@ -1296,7 +1296,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                 goto define_sets_ret_NOMEM;
             }
             bufptr = sip->genekeep_flattened;
-            ulii   = 0;
+            ulii = 0;
             do
             {
                 slen = strlen(bufptr) + 1;
@@ -1496,11 +1496,11 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                     }
                     break;
                 }
-                buf_end    = &(midbuf[bufsize]);
-                *buf_end   = ' ';
+                buf_end = &(midbuf[bufsize]);
+                *buf_end = ' ';
                 buf_end[1] = '0';
-                bufptr     = &(g_textbuf[MAXLINELEN - curtoklen]);
-                bufptr2    = midbuf;
+                bufptr = &(g_textbuf[MAXLINELEN - curtoklen]);
+                bufptr2 = midbuf;
                 if (curtoklen) {
                     goto define_sets_tok_start_1;
                 }
@@ -1654,11 +1654,11 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                 }
                 break;
             }
-            buf_end    = &(midbuf[bufsize]);
-            *buf_end   = ' ';
+            buf_end = &(midbuf[bufsize]);
+            *buf_end = ' ';
             buf_end[1] = '0';
-            bufptr     = &(g_textbuf[MAXLINELEN - curtoklen]);
-            bufptr2    = midbuf;
+            bufptr = &(g_textbuf[MAXLINELEN - curtoklen]);
+            bufptr2 = midbuf;
             if (curtoklen) {
                 goto define_sets_tok_start_2;
             }
@@ -1724,7 +1724,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                      marker_uidx_to_idx);
     if (!set_names) {
         if (sip->merged_set_name) {
-            set_ct         = 1;
+            set_ct = 1;
             max_set_id_len = strlen(sip->merged_set_name) + 1;
             if (max_set_id_len > MAX_ID_BLEN) {
                 logerrprint("Error: Set IDs are limited to " MAX_ID_SLEN_STR
@@ -1760,8 +1760,8 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
             uii = 0;
             while (msr_tmp) {
                 range_first = msr_tmp->uidx_start;
-                range_last  = msr_tmp->uidx_end;
-                msr_tmp     = msr_tmp->next;
+                range_last = msr_tmp->uidx_end;
+                msr_tmp = msr_tmp->next;
                 if (IS_SET(marker_exclude, range_first)) {
                     range_first = next_unset(marker_exclude, range_first,
                                              unfiltered_marker_ct);
@@ -1793,7 +1793,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                     goto define_sets_ret_NOMEM;
                 }
                 all_setdefs[set_idx] = (uint32_t*) g_bigstack_base;
-                g_bigstack_base      = &(g_bigstack_base[16]);
+                g_bigstack_base = &(g_bigstack_base[16]);
                 if (!complement_sets) {
                     all_setdefs[set_idx][0] = 0;
                 }
@@ -1811,10 +1811,10 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
 #else
             qsort((int64_t*) range_sort_buf, uii, sizeof(int64_t), llcmp);
 #endif
-            ukk        = 0; // current end of sorted interval list
+            ukk = 0; // current end of sorted interval list
             range_last = (uint32_t) range_sort_buf[0];
             for (ujj = 1; ujj < uii; ujj++) {
-                ullii       = range_sort_buf[ujj];
+                ullii = range_sort_buf[ujj];
                 range_first = (uint32_t)(ullii >> 32);
                 if (range_first <= range_last) {
                     umm = (uint32_t) ullii;
@@ -1843,11 +1843,11 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
     else
     {
         // 8. If --set, load sets and allocate on stack
-        set_idx     = 0;
-        in_set      = 0;
-        curtoklen   = 0;
+        set_idx = 0;
+        in_set = 0;
+        curtoklen = 0;
         range_first = marker_ct;
-        range_last  = 0;
+        range_last = 0;
         // guarantee two free bits at end to simplify loop termination checks
         // (may want to default to doing this...)
         marker_ctp2l = (marker_ct + (BITCT + 1)) / BITCT;
@@ -1890,11 +1890,11 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                 }
                 break;
             }
-            buf_end    = &(midbuf[bufsize]);
-            *buf_end   = ' ';
+            buf_end = &(midbuf[bufsize]);
+            *buf_end = ' ';
             buf_end[1] = '0';
-            bufptr     = &(g_textbuf[MAXLINELEN - curtoklen]);
-            bufptr2    = midbuf;
+            bufptr = &(g_textbuf[MAXLINELEN - curtoklen]);
+            bufptr2 = midbuf;
             if (curtoklen) {
                 goto define_sets_tok_start_3;
             }
@@ -1935,7 +1935,7 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
                         set_idx++;
                         fill_ulong_zero(marker_ctp2l, marker_bitfield_tmp);
                         range_first = marker_ct;
-                        range_last  = 0;
+                        range_last = 0;
                     }
                     in_set = 0;
                 }
@@ -1987,16 +1987,16 @@ int32_t define_sets(Set_info* sip, uintptr_t unfiltered_marker_ct,
     if (fclose_null(&infile)) {
         goto define_sets_ret_READ_FAIL;
     }
-    sip->ct           = set_ct;
-    sip->names        = set_names;
+    sip->ct = set_ct;
+    sip->names = set_names;
     sip->max_name_len = max_set_id_len;
-    sip->setdefs      = all_setdefs;
+    sip->setdefs = all_setdefs;
     LOGPRINTF("--%sset: %" PRIuPTR " set%s defined.\n", make_set ? "make-" : "",
               set_ct, (set_ct == 1) ? "" : "s");
     while (0) {
     define_sets_merge_nothing:
         sip->ct = 1;
-        uii     = strlen(sip->merged_set_name) + 1;
+        uii = strlen(sip->merged_set_name) + 1;
         bigstack_end_reset(bigstack_end_mark);
         sip->setdefs = (uint32_t**) bigstack_alloc(sizeof(intptr_t));
         if (!sip->setdefs) {
@@ -2060,30 +2060,30 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
                   uintptr_t max_marker_id_len, uint32_t* marker_pos,
                   Chrom_info* chrom_info_ptr)
 {
-    unsigned char* bigstack_mark    = g_bigstack_base;
-    FILE*          outfile          = nullptr;
-    uintptr_t      set_ct           = sip->ct;
-    uintptr_t      max_set_name_len = sip->max_name_len;
-    uintptr_t      set_idx          = 0;
-    uint32_t       chrom_idx        = 0;
-    int32_t        retval           = 0;
-    uintptr_t*     ulptr;
-    uint32_t*      marker_idx_to_uidx;
-    uint32_t*      last_idx;
-    uint32_t*      next_adj;
-    uint32_t*      cur_set_ptr;
-    char*          cur_setting;
-    char*          writebuf;
-    char*          bufptr;
-    char*          cptr;
-    uintptr_t      marker_uidx;
-    uint32_t       marker_idx;
-    uint32_t       chrom_end;
-    uint32_t       range_ct;
-    uint32_t       range_start;
-    uint32_t       uii;
-    uint32_t       ujj;
-    uint32_t       ukk;
+    unsigned char* bigstack_mark = g_bigstack_base;
+    FILE* outfile = nullptr;
+    uintptr_t set_ct = sip->ct;
+    uintptr_t max_set_name_len = sip->max_name_len;
+    uintptr_t set_idx = 0;
+    uint32_t chrom_idx = 0;
+    int32_t retval = 0;
+    uintptr_t* ulptr;
+    uint32_t* marker_idx_to_uidx;
+    uint32_t* last_idx;
+    uint32_t* next_adj;
+    uint32_t* cur_set_ptr;
+    char* cur_setting;
+    char* writebuf;
+    char* bufptr;
+    char* cptr;
+    uintptr_t marker_uidx;
+    uint32_t marker_idx;
+    uint32_t chrom_end;
+    uint32_t range_ct;
+    uint32_t range_start;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
     if (sip->modifier & SET_WRITE_TABLE) {
         memcpy(outname_end, ".set.table", 11);
         if (fopen_checked(outname, "w", &outfile)) {
@@ -2104,9 +2104,9 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
         {
             goto write_set_ret_NOMEM;
         }
-        marker_uidx  = 0;
+        marker_uidx = 0;
         g_textbuf[0] = '\t';
-        chrom_end    = 0;
+        chrom_end = 0;
         for (set_idx = 1; set_idx < set_ct; set_idx++) {
             writebuf[2 * set_idx - 1] = '\t';
         }
@@ -2124,22 +2124,22 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
             bufptr =
                 chrom_name_write(chrom_info_ptr, chrom_idx, &(g_textbuf[1]));
             *bufptr++ = '\t';
-            bufptr    = uint32toa_x(marker_pos[marker_uidx], '\t', bufptr);
+            bufptr = uint32toa_x(marker_pos[marker_uidx], '\t', bufptr);
             // do not keep double-tab (if it was intentional, it should have
             // been in the header line too...)
             fwrite(g_textbuf, 1, bufptr - g_textbuf, outfile);
             bufptr = writebuf;
-            cptr   = cur_setting;
+            cptr = cur_setting;
             for (set_idx = 0; set_idx < set_ct; set_idx++) {
                 if (next_adj[set_idx] <= marker_idx) {
                     cur_set_ptr = sip->setdefs[set_idx];
-                    range_ct    = cur_set_ptr[0];
+                    range_ct = cur_set_ptr[0];
                     if (range_ct != 0xffffffffU) {
                         uii = last_idx[set_idx];
                         if (uii < range_ct) {
                             range_start = sip->setdefs[set_idx][2 * uii + 1];
                             if (range_start > marker_idx) {
-                                *cptr             = '0';
+                                *cptr = '0';
                                 next_adj[set_idx] = range_start;
                             }
                             else
@@ -2152,19 +2152,19 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
                         }
                         else
                         {
-                            *cptr             = '0';
+                            *cptr = '0';
                             next_adj[set_idx] = marker_ct;
                         }
                     }
                     else
                     {
                         range_start = cur_set_ptr[1];
-                        uii         = cur_set_ptr[3];
+                        uii = cur_set_ptr[3];
                         if (marker_idx >= range_start) {
                             ujj = cur_set_ptr[2];
                             if (marker_idx < ujj + range_start) {
                                 ulptr = (uintptr_t*) (&(cur_set_ptr[4]));
-                                ukk   = marker_idx - range_start;
+                                ukk = marker_idx - range_start;
                                 if (IS_SET(ulptr, ukk)) {
                                     *cptr = '1';
                                     ukk++;
@@ -2173,25 +2173,25 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
                                 else
                                 {
                                     *cptr = '0';
-                                    ukk   = next_set(ulptr, ukk, ujj);
+                                    ukk = next_set(ulptr, ukk, ujj);
                                 }
                                 next_adj[set_idx] = range_start + ukk;
                             }
                             else
                             {
-                                *cptr             = '0' + uii;
+                                *cptr = '0' + uii;
                                 next_adj[set_idx] = marker_ct;
                             }
                         }
                         else
                         {
-                            *cptr             = '0' + uii;
+                            *cptr = '0' + uii;
                             next_adj[set_idx] = range_start;
                         }
                     }
                 }
                 *bufptr = *cptr++;
-                bufptr  = &(bufptr[2]);
+                bufptr = &(bufptr[2]);
             }
             if (fwrite_checked(writebuf, 2 * set_ct, outfile)) {
                 goto write_set_ret_WRITE_FAIL;
@@ -2216,7 +2216,7 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
             fputs(&(sip->names[set_idx * max_set_name_len]), outfile);
             putc_unlocked('\n', outfile);
             cur_set_ptr = sip->setdefs[set_idx];
-            range_ct    = cur_set_ptr[0];
+            range_ct = cur_set_ptr[0];
             if (range_ct != 0xffffffffU) {
                 for (uii = 0; uii < range_ct; uii++) {
                     ujj = cur_set_ptr[uii * 2 + 2];
@@ -2233,8 +2233,8 @@ int32_t write_set(Set_info* sip, char* outname, char* outname_end,
             else
             {
                 range_start = cur_set_ptr[1];
-                uii         = cur_set_ptr[2];
-                ulptr       = (uintptr_t*) (&(cur_set_ptr[4]));
+                uii = cur_set_ptr[2];
+                ulptr = (uintptr_t*) (&(cur_set_ptr[4]));
                 if (cur_set_ptr[3]) {
                     for (marker_idx = 0; marker_idx < range_start; marker_idx++)
                     {
@@ -2296,14 +2296,14 @@ void unpack_set(uintptr_t marker_ct, uint32_t* setdef,
                 uintptr_t* include_bitfield)
 {
     uintptr_t marker_ctl = BITCT_TO_WORDCT(marker_ct);
-    uint32_t  range_ct   = setdef[0];
-    uint32_t  keep_outer;
-    uint32_t  range_start;
-    uint32_t  uii;
+    uint32_t range_ct = setdef[0];
+    uint32_t keep_outer;
+    uint32_t range_start;
+    uint32_t uii;
     if (range_ct == 0xffffffffU) {
         range_start = setdef[1];
-        range_ct    = setdef[2];
-        keep_outer  = setdef[3];
+        range_ct = setdef[2];
+        keep_outer = setdef[3];
         if (range_start) {
             if (keep_outer) {
                 fill_ulong_one(range_start / BITCT, include_bitfield);
@@ -2342,22 +2342,22 @@ void unpack_set_unfiltered(uintptr_t marker_ct, uintptr_t unfiltered_marker_ct,
                            uintptr_t* marker_exclude, uint32_t* setdef,
                            uintptr_t* new_exclude)
 {
-    uintptr_t  unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
-    uintptr_t  last_uidx             = next_unset_unsafe(marker_exclude, 0);
-    uintptr_t  marker_uidx           = last_uidx;
-    uint32_t   range_ct              = setdef[0];
-    uint32_t   range_end             = 0;
+    uintptr_t unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
+    uintptr_t last_uidx = next_unset_unsafe(marker_exclude, 0);
+    uintptr_t marker_uidx = last_uidx;
+    uint32_t range_ct = setdef[0];
+    uint32_t range_end = 0;
     uintptr_t* bitfield_ptr;
-    uint32_t*  uiptr;
-    uint32_t   keep_outer;
-    uint32_t   range_start;
-    uint32_t   range_idx;
+    uint32_t* uiptr;
+    uint32_t keep_outer;
+    uint32_t range_start;
+    uint32_t range_idx;
     memcpy(new_exclude, marker_exclude,
            unfiltered_marker_ctl * sizeof(intptr_t));
     if (range_ct == 0xffffffffU) {
-        range_start  = setdef[1];
-        range_ct     = setdef[2];
-        keep_outer   = setdef[3];
+        range_start = setdef[1];
+        range_ct = setdef[2];
+        keep_outer = setdef[3];
         bitfield_ptr = (uintptr_t*) (&(setdef[4]));
         if (range_start) {
             // if nonzero, range_start also must be greater than 1
@@ -2383,7 +2383,7 @@ void unpack_set_unfiltered(uintptr_t marker_ct, uintptr_t unfiltered_marker_ct,
     }
     else
     {
-        uiptr     = &(setdef[1]);
+        uiptr = &(setdef[1]);
         range_idx = 0;
         if ((!setdef[1]) && range_ct) {
             range_start = *uiptr++;
@@ -2419,27 +2419,27 @@ uint32_t extract_set_union(uint32_t** setdefs, uintptr_t set_ct,
     // these track known filled words at the beginning and end.  (just intended
     // to detect early exit opportunities; doesn't need to be perfect.)
     uint32_t unset_startw = 0;
-    uint32_t unset_endw   = marker_ctl;
+    uint32_t unset_endw = marker_ctl;
 
     uint32_t* cur_setdef;
     uintptr_t set_idx;
-    uint32_t  range_ct;
-    uint32_t  range_idx;
-    uint32_t  range_start;
-    uint32_t  range_end;
-    uint32_t  keep_outer;
-    uint32_t  read_offset;
+    uint32_t range_ct;
+    uint32_t range_idx;
+    uint32_t range_start;
+    uint32_t range_end;
+    uint32_t keep_outer;
+    uint32_t read_offset;
     fill_ulong_zero(marker_ctl, filtered_union);
     for (set_idx = 0; set_idx < set_ct; set_idx++) {
         if (set_incl && (!IS_SET(set_incl, set_idx))) {
             continue;
         }
         cur_setdef = setdefs[set_idx];
-        range_ct   = cur_setdef[0];
+        range_ct = cur_setdef[0];
         if (range_ct == 0xffffffffU) {
             range_start = cur_setdef[1] / BITCT;
-            range_end   = range_start + (cur_setdef[2] / BITCT);
-            keep_outer  = cur_setdef[3];
+            range_end = range_start + (cur_setdef[2] / BITCT);
+            keep_outer = cur_setdef[3];
             if (range_end > unset_startw) {
                 read_offset = 0;
                 if (range_start > unset_startw) {
@@ -2495,7 +2495,7 @@ uint32_t extract_set_union(uint32_t** setdefs, uintptr_t set_ct,
             }
             if (range_ct) {
                 range_start = *(cur_setdef++);
-                range_end   = *(cur_setdef++);
+                range_end = *(cur_setdef++);
                 if (range_start < unset_startw * BITCT) {
                     range_start = unset_startw * BITCT;
                 }
@@ -2504,12 +2504,12 @@ uint32_t extract_set_union(uint32_t** setdefs, uintptr_t set_ct,
                               filtered_union);
                     for (range_idx = 2; range_idx < range_ct; range_idx++) {
                         range_start = *(cur_setdef++);
-                        range_end   = *(cur_setdef++);
+                        range_end = *(cur_setdef++);
                         fill_bits(range_start, range_end - range_start,
                                   filtered_union);
                     }
                     range_start = *(cur_setdef++);
-                    range_end   = *(cur_setdef++);
+                    range_end = *(cur_setdef++);
                 }
                 if (range_end > unset_endw * BITCT) {
                     range_end = unset_endw * BITCT;
@@ -2537,17 +2537,17 @@ extract_set_union_exit_early:
 }
 
 uint32_t extract_set_union_unfiltered(Set_info* sip, uintptr_t* set_incl,
-                                      uintptr_t   unfiltered_marker_ct,
-                                      uintptr_t*  marker_exclude,
+                                      uintptr_t unfiltered_marker_ct,
+                                      uintptr_t* marker_exclude,
                                       uintptr_t** union_marker_exclude_ptr,
-                                      uintptr_t*  union_marker_ct_ptr)
+                                      uintptr_t* union_marker_ct_ptr)
 {
     // If union = all remaining markers, simply makes union_marker_exclude_ptr
     // point to marker_exclude.  Otherwise, allocates union_marker_exclude on
     // the "stack". Assumes marker_ct is initial value of *union_marker_ct_ptr.
-    uintptr_t  unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
-    uintptr_t  orig_marker_ct        = *union_marker_ct_ptr;
-    uintptr_t  orig_marker_ctl       = BITCT_TO_WORDCT(orig_marker_ct);
+    uintptr_t unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
+    uintptr_t orig_marker_ct = *union_marker_ct_ptr;
+    uintptr_t orig_marker_ctl = BITCT_TO_WORDCT(orig_marker_ct);
     uintptr_t* union_marker_exclude;
     uintptr_t* filtered_union;
     if (bigstack_alloc_ul(unfiltered_marker_ctl, &union_marker_exclude)
@@ -2572,7 +2572,7 @@ uint32_t extract_set_union_unfiltered(Set_info* sip, uintptr_t* set_incl,
 }
 
 uint32_t setdefs_compress(Set_info* sip, uintptr_t* set_incl, uintptr_t set_ct,
-                          uintptr_t  unfiltered_marker_ct,
+                          uintptr_t unfiltered_marker_ct,
                           uintptr_t* marker_exclude_orig,
                           uintptr_t marker_ct_orig, uintptr_t* marker_exclude,
                           uintptr_t marker_ct, uint32_t*** new_setdefs_ptr)
@@ -2580,22 +2580,22 @@ uint32_t setdefs_compress(Set_info* sip, uintptr_t* set_incl, uintptr_t set_ct,
     // currently assumes marker_exclude does not exclude anything in the union
     // of the remaining sets
     unsigned char* bigstack_end_mark = g_bigstack_end;
-    uintptr_t      marker_ctlv = ((marker_ct + 127) / 128) * (128 / BITCT);
-    uint32_t       set_uidx    = 0;
-    uintptr_t*     cur_bitfield;
-    uintptr_t*     read_bitfield;
-    uint32_t**     new_setdefs;
-    uint32_t*      marker_midx_to_idx;
-    uint32_t*      cur_setdef;
-    uintptr_t      set_idx;
-    uint32_t       range_ct;
-    uint32_t       range_idx;
-    uint32_t       range_offset;
-    uint32_t       range_stop;
-    uint32_t       range_start;
-    uint32_t       range_end;
-    uint32_t       include_out_of_bounds;
-    uint32_t       marker_midx;
+    uintptr_t marker_ctlv = ((marker_ct + 127) / 128) * (128 / BITCT);
+    uint32_t set_uidx = 0;
+    uintptr_t* cur_bitfield;
+    uintptr_t* read_bitfield;
+    uint32_t** new_setdefs;
+    uint32_t* marker_midx_to_idx;
+    uint32_t* cur_setdef;
+    uintptr_t set_idx;
+    uint32_t range_ct;
+    uint32_t range_idx;
+    uint32_t range_offset;
+    uint32_t range_stop;
+    uint32_t range_start;
+    uint32_t range_end;
+    uint32_t include_out_of_bounds;
+    uint32_t marker_midx;
     new_setdefs = (uint32_t**) bigstack_alloc(set_ct * sizeof(intptr_t));
     if (!new_setdefs) {
         return 1;
@@ -2614,15 +2614,15 @@ uint32_t setdefs_compress(Set_info* sip, uintptr_t* set_incl, uintptr_t set_ct,
         }
         cur_setdef = sip->setdefs[set_uidx];
         fill_ulong_zero(marker_ctlv, cur_bitfield);
-        range_ct    = cur_setdef[0];
+        range_ct = cur_setdef[0];
         range_start = marker_ct;
-        range_end   = 0;
+        range_end = 0;
         if (range_ct != 0xffffffffU) {
             if (range_ct) {
                 range_start = marker_midx_to_idx[cur_setdef[1]];
                 for (range_idx = 0; range_idx < range_ct; range_idx++) {
                     range_offset = *(++cur_setdef);
-                    range_stop   = *(++cur_setdef);
+                    range_stop = *(++cur_setdef);
                     fill_bits(marker_midx_to_idx[range_offset],
                               range_stop - range_offset, cur_bitfield);
                 }
@@ -2632,10 +2632,10 @@ uint32_t setdefs_compress(Set_info* sip, uintptr_t* set_incl, uintptr_t set_ct,
         }
         else
         {
-            range_offset          = cur_setdef[1];
-            range_stop            = cur_setdef[2];
+            range_offset = cur_setdef[1];
+            range_stop = cur_setdef[2];
             include_out_of_bounds = cur_setdef[3];
-            read_bitfield         = (uintptr_t*) (&(cur_setdef[4]));
+            read_bitfield = (uintptr_t*) (&(cur_setdef[4]));
             if (include_out_of_bounds && range_offset) {
                 fill_ulong_one(range_offset / BITCT, cur_bitfield);
                 range_start = 0;
@@ -2687,31 +2687,31 @@ int32_t load_range_list_sortpos(
 {
     // --annotate, --clump-range, --gene-report
     unsigned char* bigstack_end_mark = g_bigstack_end;
-    FILE*          infile            = nullptr;
-    uintptr_t      gene_ct           = 0;
-    uintptr_t      max_gene_id_len   = 0;
-    uintptr_t      chrom_max_gene_ct = 0;
-    uint32_t       chrom_code_end =
+    FILE* infile = nullptr;
+    uintptr_t gene_ct = 0;
+    uintptr_t max_gene_id_len = 0;
+    uintptr_t chrom_max_gene_ct = 0;
+    uint32_t chrom_code_end =
         chrom_info_ptr->max_code + 1 + chrom_info_ptr->name_ct;
-    uint32_t         chrom_idx = 0;
+    uint32_t chrom_idx = 0;
     Make_set_range** gene_arr;
-    Make_set_range*  msr_tmp;
-    uint64_t*        range_sort_buf;
-    uintptr_t*       chrom_bounds;
-    uint32_t**       genedefs;
-    char*            gene_names;
-    char*            bufptr;
-    uint32_t*        uiptr;
-    uint64_t         ullii;
-    uintptr_t        gene_idx;
-    uintptr_t        ulii;
-    uint32_t         range_first;
-    uint32_t         range_last;
-    uint32_t         uii;
-    uint32_t         ujj;
-    uint32_t         ukk;
-    uint32_t         umm;
-    int32_t          retval;
+    Make_set_range* msr_tmp;
+    uint64_t* range_sort_buf;
+    uintptr_t* chrom_bounds;
+    uint32_t** genedefs;
+    char* gene_names;
+    char* bufptr;
+    uint32_t* uiptr;
+    uint64_t ullii;
+    uintptr_t gene_idx;
+    uintptr_t ulii;
+    uint32_t range_first;
+    uint32_t range_last;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uint32_t umm;
+    int32_t retval;
     if (fopen_checked(fname, "r", &infile)) {
         goto load_range_list_sortpos_ret_OPEN_FAIL;
     }
@@ -2726,9 +2726,9 @@ int32_t load_range_list_sortpos(
     if (bigstack_alloc_ul(chrom_code_end + 1, chrom_bounds_ptr)) {
         goto load_range_list_sortpos_ret_NOMEM;
     }
-    chrom_bounds    = *chrom_bounds_ptr;
+    chrom_bounds = *chrom_bounds_ptr;
     chrom_bounds[0] = 0;
-    genedefs        = (uint32_t**) bigstack_alloc(gene_ct * sizeof(intptr_t));
+    genedefs = (uint32_t**) bigstack_alloc(gene_ct * sizeof(intptr_t));
     if (!genedefs) {
         goto load_range_list_sortpos_ret_NOMEM;
     }
@@ -2754,7 +2754,7 @@ int32_t load_range_list_sortpos(
             } while (chrom_idx < uii);
         }
         msr_tmp = gene_arr[gene_idx];
-        uii     = 0;
+        uii = 0;
         while (msr_tmp) {
             range_sort_buf[uii++] = (((uint64_t)(msr_tmp->uidx_start)) << 32)
                                     | ((uint64_t)(msr_tmp->uidx_end));
@@ -2764,8 +2764,8 @@ int32_t load_range_list_sortpos(
             if (bigstack_left() < 16) {
                 goto load_range_list_sortpos_ret_NOMEM;
             }
-            genedefs[gene_idx]    = (uint32_t*) g_bigstack_base;
-            g_bigstack_base       = &(g_bigstack_base[16]);
+            genedefs[gene_idx] = (uint32_t*) g_bigstack_base;
+            g_bigstack_base = &(g_bigstack_base[16]);
             genedefs[gene_idx][0] = 0;
             continue;
         }
@@ -2775,10 +2775,10 @@ int32_t load_range_list_sortpos(
 #else
         qsort(range_sort_buf, uii, sizeof(int64_t), llcmp);
 #endif
-        ukk        = 0; // current end of sorted interval list
+        ukk = 0; // current end of sorted interval list
         range_last = (uint32_t) range_sort_buf[0];
         for (ujj = 1; ujj < uii; ujj++) {
-            ullii       = range_sort_buf[ujj];
+            ullii = range_sort_buf[ujj];
             range_first = (uint32_t)(ullii >> 32);
             if (range_first <= range_last) {
                 umm = (uint32_t) ullii;
@@ -2805,11 +2805,11 @@ int32_t load_range_list_sortpos(
             goto load_range_list_sortpos_ret_NOMEM;
         }
         genedefs[gene_idx] = (uint32_t*) g_bigstack_base;
-        g_bigstack_base    = &(g_bigstack_base[ulii]);
-        uiptr              = genedefs[gene_idx];
-        *uiptr++           = ukk;
+        g_bigstack_base = &(g_bigstack_base[ulii]);
+        uiptr = genedefs[gene_idx];
+        *uiptr++ = ukk;
         for (uii = 0; uii < ukk; uii++) {
-            ullii    = range_sort_buf[uii];
+            ullii = range_sort_buf[uii];
             *uiptr++ = (uint32_t)(ullii >> 32);
             *uiptr++ = (uint32_t) ullii;
         }
@@ -2824,10 +2824,10 @@ int32_t load_range_list_sortpos(
     if (fclose_null(&infile)) {
         goto load_range_list_sortpos_ret_READ_FAIL;
     }
-    *gene_ct_ptr           = gene_ct;
-    *max_gene_id_len_ptr   = max_gene_id_len;
+    *gene_ct_ptr = gene_ct;
+    *max_gene_id_len_ptr = max_gene_id_len;
     *chrom_max_gene_ct_ptr = chrom_max_gene_ct;
-    *genedefs_ptr          = genedefs;
+    *genedefs_ptr = genedefs;
     while (0) {
     load_range_list_sortpos_ret_NOMEM:
         retval = RET_NOMEM;
@@ -2852,47 +2852,47 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
                     Chrom_info* chrom_info_ptr)
 {
     // similar to define_sets() and --clump
-    unsigned char* bigstack_mark      = g_bigstack_base;
-    unsigned char* bigstack_end_mark  = g_bigstack_end;
-    FILE*          infile             = nullptr;
-    FILE*          outfile            = nullptr;
-    uintptr_t      subset_ct          = 0;
-    uintptr_t      max_subset_id_len  = 0;
-    uintptr_t      extract_ct         = 0;
-    uintptr_t      max_extract_id_len = 0;
-    const char     constsnpstr[]      = "SNP";
-    char*          sorted_subset_ids  = nullptr;
-    char*          sorted_extract_ids = nullptr;
-    uintptr_t*     chrom_bounds       = nullptr;
-    uint32_t**     genedefs           = nullptr;
-    uint64_t       saved_line_ct      = 0;
-    uint32_t       do_pfilter         = (pfilter != 2.0);
-    uint32_t       token_ct      = 2 + (extractname != nullptr) + do_pfilter;
-    uint32_t       snp_field_len = 0;
-    uint32_t       col_idx       = 0;
-    uint32_t       seq_idx       = 0;
-    uint32_t       cur_bp        = 0;
-    uint32_t       found_header_bitfield = 0;
-    int32_t        retval                = 0;
+    unsigned char* bigstack_mark = g_bigstack_base;
+    unsigned char* bigstack_end_mark = g_bigstack_end;
+    FILE* infile = nullptr;
+    FILE* outfile = nullptr;
+    uintptr_t subset_ct = 0;
+    uintptr_t max_subset_id_len = 0;
+    uintptr_t extract_ct = 0;
+    uintptr_t max_extract_id_len = 0;
+    const char constsnpstr[] = "SNP";
+    char* sorted_subset_ids = nullptr;
+    char* sorted_extract_ids = nullptr;
+    uintptr_t* chrom_bounds = nullptr;
+    uint32_t** genedefs = nullptr;
+    uint64_t saved_line_ct = 0;
+    uint32_t do_pfilter = (pfilter != 2.0);
+    uint32_t token_ct = 2 + (extractname != nullptr) + do_pfilter;
+    uint32_t snp_field_len = 0;
+    uint32_t col_idx = 0;
+    uint32_t seq_idx = 0;
+    uint32_t cur_bp = 0;
+    uint32_t found_header_bitfield = 0;
+    int32_t retval = 0;
 
     // see --annotate comment on col_skips.
-    char*     token_ptrs[4];
-    uint32_t  col_skips[4];
-    uint32_t  col_sequence[4];
+    char* token_ptrs[4];
+    uint32_t col_skips[4];
+    uint32_t col_sequence[4];
     uint64_t* gene_match_list_end;
     uint64_t* gene_match_list;
     uint64_t* gene_match_list_ptr;
     uint32_t* gene_chridx_to_nameidx;
     uint32_t* gene_nameidx_to_chridx;
     uint32_t* uiptr;
-    char**    line_lookup;
-    char*     gene_names;
-    char*     loadbuf;
-    char*     header_ptr;
-    char*     first_line_ptr;
-    char*     linebuf_top;
-    char*     bufptr;
-    char*     bufptr2;
+    char** line_lookup;
+    char* gene_names;
+    char* loadbuf;
+    char* header_ptr;
+    char* first_line_ptr;
+    char* linebuf_top;
+    char* bufptr;
+    char* bufptr2;
     uintptr_t gene_ct;
     uintptr_t max_gene_name_len;
     uintptr_t chrom_max_gene_ct;
@@ -2901,15 +2901,15 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     uintptr_t linebuf_left;
     uintptr_t line_idx;
     uintptr_t ulii;
-    uint64_t  ullii;
-    double    pval;
-    uint32_t  slen;
-    uint32_t  header_len;
-    uint32_t  range_idx;
-    uint32_t  range_ct;
-    uint32_t  uii;
-    uint32_t  ujj;
-    int32_t   chrom_idx;
+    uint64_t ullii;
+    double pval;
+    uint32_t slen;
+    uint32_t header_len;
+    uint32_t range_idx;
+    uint32_t range_ct;
+    uint32_t uii;
+    uint32_t ujj;
+    int32_t chrom_idx;
     if (subset_fname) {
         if (fopen_checked(subset_fname, FOPEN_RB, &infile)) {
             goto gene_report_ret_OPEN_FAIL;
@@ -3025,8 +3025,8 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
         gene_nameidx_to_chridx[gene_idx] = gene_idx;
     }
     for (gene_idx = 0; gene_idx < gene_ct; gene_idx++) {
-        bufptr  = &(gene_names[gene_idx * max_gene_name_len]);
-        slen    = strlen(&(bufptr[4]));
+        bufptr = &(gene_names[gene_idx * max_gene_name_len]);
+        slen = strlen(&(bufptr[4]));
         bufptr2 = memcpyax(&(loadbuf[gene_idx * max_gene_name_len]),
                            &(bufptr[4]), slen, ' ');
         memcpyx(bufptr2, &(bufptr[2]), 2, '\0');
@@ -3048,12 +3048,12 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     }
     // mirror g_bigstack_base/g_bigstack_base since we'll be doing
     // nonstandard-size allocations
-    linebuf_top         = (char*) g_bigstack_base;
+    linebuf_top = (char*) g_bigstack_base;
     gene_match_list_end = (uint64_t*) g_bigstack_end;
-    gene_match_list     = gene_match_list_end;
+    gene_match_list = gene_match_list_end;
 
     header_ptr = linebuf_top;
-    loadbuf    = memcpya(header_ptr, "kb ) ", 5);
+    loadbuf = memcpya(header_ptr, "kb ) ", 5);
     if (border) {
         loadbuf = memcpya(loadbuf, " plus ", 6);
         loadbuf = dtoa_g(((double) ((int32_t) border)) * 0.001, loadbuf);
@@ -3065,7 +3065,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     if (loadbuf_size > MAXLINEBUFLEN) {
         loadbuf_size = MAXLINEBUFLEN;
     }
-    uii     = 3; // maximum relevant header length
+    uii = 3; // maximum relevant header length
     col_idx = 0;
     if (extractname) {
         if (snp_field) {
@@ -3076,7 +3076,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
         }
         else
         {
-            snp_field     = constsnpstr;
+            snp_field = constsnpstr;
             snp_field_len = 3;
         }
     }
@@ -3089,7 +3089,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     do
     {
         bufptr2 = token_endnn(bufptr);
-        slen    = (uintptr_t)(bufptr2 - bufptr);
+        slen = (uintptr_t)(bufptr2 - bufptr);
         if (slen <= uii) {
             if ((slen == 3) && (!memcmp(bufptr, "CHR", 3))) {
                 ujj = 0;
@@ -3120,7 +3120,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
                     goto gene_report_ret_INVALID_FORMAT_WW;
                 }
                 found_header_bitfield |= 1 << ujj;
-                col_skips[seq_idx]      = col_idx;
+                col_skips[seq_idx] = col_idx;
                 col_sequence[seq_idx++] = ujj;
             }
         }
@@ -3140,7 +3140,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     // output anyway)
     header_len = 1 + (uintptr_t)(bufptr - header_ptr);
     linebuf_left -= header_len;
-    linebuf_top    = &(linebuf_top[header_len]);
+    linebuf_top = &(linebuf_top[header_len]);
     first_line_ptr = linebuf_top;
     while (1) {
         // store raw line contents at bottom of stack (growing upwards), and
@@ -3162,7 +3162,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             loadbuf_size = MAXLINEBUFLEN;
         }
         // leave 8 bytes to save line length and parsed position
-        loadbuf                   = &(linebuf_top[8]);
+        loadbuf = &(linebuf_top[8]);
         loadbuf[loadbuf_size - 1] = ' ';
     gene_report_load_loop:
         if (!fgets(loadbuf, loadbuf_size, infile)) {
@@ -3176,7 +3176,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
         if (is_eoln_kns(*bufptr)) {
             goto gene_report_load_loop;
         }
-        bufptr                      = next_token_multz(bufptr, col_skips[0]);
+        bufptr = next_token_multz(bufptr, col_skips[0]);
         token_ptrs[col_sequence[0]] = bufptr;
         for (seq_idx = 1; seq_idx < token_ct; seq_idx++) {
             bufptr = next_token_mult(bufptr, col_skips[seq_idx]);
@@ -3217,7 +3217,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             }
         }
 
-        ulii                = chrom_bounds[((uint32_t) chrom_idx) + 1];
+        ulii = chrom_bounds[((uint32_t) chrom_idx) + 1];
         gene_match_list_ptr = gene_match_list;
         if (cur_bp > border) {
             uii = cur_bp - border;
@@ -3246,7 +3246,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             bufptr[slen++] = '\n';
         }
         slen += (uintptr_t)(bufptr - loadbuf);
-        *((uint32_t*) linebuf_top)   = slen;
+        *((uint32_t*) linebuf_top) = slen;
         ((uint32_t*) linebuf_top)[1] = cur_bp;
         linebuf_left -= slen + 8;
         linebuf_top = &(linebuf_top[slen + 8]);
@@ -3275,10 +3275,10 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
     line_lookup = (char**) (&(
         ((uintptr_t*)
              gene_match_list)[-((intptr_t)((uintptr_t) saved_line_ct))]));
-    bufptr      = first_line_ptr;
+    bufptr = first_line_ptr;
     for (uii = 0; uii < saved_line_ct; uii++) {
         line_lookup[uii] = bufptr;
-        bufptr           = &(bufptr[(*((uint32_t*) bufptr)) + 8]);
+        bufptr = &(bufptr[(*((uint32_t*) bufptr)) + 8]);
     }
 #ifdef __cplusplus
     std::sort((int64_t*) gene_match_list, (int64_t*) gene_match_list_end);
@@ -3300,9 +3300,9 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             if (ulii != ~ZEROLU) {
                 fputs("\n\n", outfile);
             }
-            ulii     = (uintptr_t)(ullii >> 32);
+            ulii = (uintptr_t)(ullii >> 32);
             gene_idx = gene_nameidx_to_chridx[ulii];
-            bufptr   = &(gene_names[gene_idx * max_gene_name_len]);
+            bufptr = &(gene_names[gene_idx * max_gene_name_len]);
             fputs(&(bufptr[4]), outfile);
             fputs(" -- chr", outfile);
             if (bufptr[2] != '0') {
@@ -3310,9 +3310,9 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             }
             putc_unlocked(bufptr[3] + 15, outfile);
             putc_unlocked(':', outfile);
-            uiptr    = genedefs[gene_idx];
+            uiptr = genedefs[gene_idx];
             range_ct = *uiptr++;
-            ujj      = 0; // gene length
+            ujj = 0; // gene length
             for (range_idx = 0; range_idx < range_ct; range_idx++) {
                 if (range_idx) {
                     fputs(", ", outfile);
@@ -3320,7 +3320,7 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
                 cur_bp = *uiptr++;
                 bufptr = uint32toa(cur_bp, g_textbuf);
                 bufptr = memcpya(bufptr, "..", 2);
-                uii    = *uiptr++;
+                uii = *uiptr++;
                 bufptr = uint32toa(uii - 1, bufptr);
                 fwrite(g_textbuf, 1, bufptr - g_textbuf, outfile);
                 ujj += uii - cur_bp;
@@ -3333,9 +3333,9 @@ int32_t gene_report(char* fname, char* glist, char* subset_fname,
             }
             cur_bp = genedefs[gene_idx][1];
         }
-        bufptr  = line_lookup[(uint32_t) ullii];
-        uii     = *((uint32_t*) bufptr);   // line length
-        ujj     = ((uint32_t*) bufptr)[1]; // bp
+        bufptr = line_lookup[(uint32_t) ullii];
+        uii = *((uint32_t*) bufptr);   // line length
+        ujj = ((uint32_t*) bufptr)[1]; // bp
         bufptr2 = dtoa_g_wxp4(((double) ((int32_t)(ujj - cur_bp))) * 0.001, 10,
                               g_textbuf);
         bufptr2 = memcpyl3a(bufptr2, "kb ");

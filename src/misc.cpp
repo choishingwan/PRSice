@@ -63,10 +63,10 @@ double qnorm(double p, double mu, double sigma, bool lower_tail, bool log_p)
     if (sigma == 0) return mu;
     double p_ = (log_p ? (lower_tail ? std::exp(p) : -expm1(p))
                        : (lower_tail ? (p) : (0.5 - (p) + 0.5)));
-    double q  = p_ - 0.5;
+    double q = p_ - 0.5;
     if (fabs(q) <= .425) /* 0.075 <= p <= 0.925 */
     {
-        r   = .180625 - q * q;
+        r = .180625 - q * q;
         val = q
               * (((((((r * 2509.0809287301226727 + 33430.575583588128105) * r
                       + 67265.770927008700853)
@@ -179,7 +179,7 @@ double qnorm(double p, double mu, double sigma, bool lower_tail, bool log_p)
 std::vector<std::string> split(const std::string seq,
                                const std::string separators)
 {
-    std::size_t              prev = 0, pos;
+    std::size_t prev = 0, pos;
     std::vector<std::string> result;
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
         if (pos > prev) result.push_back(seq.substr(prev, pos - prev));

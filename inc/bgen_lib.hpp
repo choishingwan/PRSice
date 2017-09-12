@@ -37,11 +37,11 @@ namespace genfile
 enum OrderType
 {
     eUnknownOrderType = 0,
-    eUnorderedList    = 1, // a list, treated as unordered
-    eOrderedList      = 2, // a list, treated as ordered
+    eUnorderedList = 1, // a list, treated as unordered
+    eOrderedList = 2,   // a list, treated as ordered
     ePerUnorderedGenotype =
         3, // E.g. genotype probabilities; GEN, BGEN v1.1, etc.
-    ePerOrderedHaplotype   = 4, // E.g. Phased GT, SHAPEIT or IMPUTE haplotypes
+    ePerOrderedHaplotype = 4,   // E.g. Phased GT, SHAPEIT or IMPUTE haplotypes
     ePerUnorderedHaplotype = 5, // E.g. Unphased GT, binary PED file.
     ePerPhasedHaplotypePerAllele =
         6,          // E.g. BGEN v1.2-style haplotype probabilities.
@@ -51,9 +51,9 @@ enum OrderType
 enum ValueType
 {
     eUnknownValueType = 0,
-    eProbability      = 1,
-    eAlleleIndex      = 2,
-    eDosage           = 3
+    eProbability = 1,
+    eAlleleIndex = 2,
+    eDosage = 3
 };
 
 typedef uint8_t byte_t;
@@ -87,7 +87,7 @@ template <typename T>
 void zlib_compress(std::vector<T> const& source, std::vector<byte_t>* dest,
                    int const compressionLevel = Z_BEST_COMPRESSION)
 {
-    byte_t const*       begin = reinterpret_cast<byte_t const*>(&source[0]);
+    byte_t const* begin = reinterpret_cast<byte_t const*>(&source[0]);
     byte_t const* const end =
         reinterpret_cast<byte_t const*>(&source[0] + source.size());
     return zlib_compress(begin, end, dest, 0, compressionLevel);
@@ -98,8 +98,8 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
                      std::vector<T>* dest)
 {
     uLongf const source_size = (end - begin);
-    uLongf       dest_size   = dest->size() * sizeof(T);
-    int          result =
+    uLongf dest_size = dest->size() * sizeof(T);
+    int result =
         uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
     assert(result == Z_OK);
@@ -113,8 +113,8 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
 template <typename T>
 void zlib_uncompress(std::vector<byte_t> const& source, std::vector<T>* dest)
 {
-    byte_t const*       begin = &source[0];
-    byte_t const* const end   = &source[0] + source.size();
+    byte_t const* begin = &source[0];
+    byte_t const* const end = &source[0] + source.size();
     zlib_uncompress(begin, end, dest);
 }
 
@@ -174,9 +174,9 @@ namespace bgen
     // Header flag definitions
     enum FlagMask
     {
-        e_NoFlags             = 0,
+        e_NoFlags = 0,
         e_CompressedSNPBlocks = 0x3,
-        e_Layout              = 0x3C
+        e_Layout = 0x3C
     };
     enum Layout
     {
@@ -190,7 +190,7 @@ namespace bgen
     };
     enum Compression
     {
-        e_NoCompression   = 0,
+        e_NoCompression = 0,
         e_ZlibCompression = 1,
         e_ZstdCompression = 2
     };
@@ -204,11 +204,11 @@ namespace bgen
         uint32_t header_size() const;
 
     public:
-        uint32_t    number_of_samples;
-        uint32_t    number_of_variants;
+        uint32_t number_of_samples;
+        uint32_t number_of_variants;
         std::string magic;
         std::string free_data;
-        uint32_t    flags;
+        uint32_t flags;
     };
 
     // Read the offset from the start of the stream.
@@ -232,9 +232,9 @@ namespace bgen
     // where value is of type std::string.  It will be called once for
     // each sample identifier in the block, in the order they occur.
     template <typename SampleSetter>
-    std::size_t read_sample_identifier_block(std::istream&  aStream,
+    std::size_t read_sample_identifier_block(std::istream& aStream,
                                              Context const& context,
-                                             SampleSetter   setter);
+                                             SampleSetter setter);
 
     // Write the sample identifiers contained in the
     // given vector to the stream.
@@ -251,21 +251,21 @@ namespace bgen
     // integer in the range 0..n-1, and a is of type std::string representing
     // the ith allele.
     template <typename NumberOfAllelesSetter, typename AlleleSetter>
-    bool read_snp_identifying_data(std::istream&  aStream,
+    bool read_snp_identifying_data(std::istream& aStream,
                                    Context const& context, std::string* SNPID,
                                    std::string* RSID, std::string* chromosome,
-                                   uint32_t*             SNP_position,
+                                   uint32_t* SNP_position,
                                    NumberOfAllelesSetter set_number_of_alleles,
-                                   AlleleSetter          set_allele);
+                                   AlleleSetter set_allele);
 
     // Read identifying data fields for the next variant in the file, assuming 2
     // alleles. This function forwards to the generic multi-allele version,
     // above, and will throw a BGenError if the number of alleles is different
     // than 2.
-    bool read_snp_identifying_data(std::istream&  aStream,
+    bool read_snp_identifying_data(std::istream& aStream,
                                    Context const& context, std::string* SNPID,
                                    std::string* RSID, std::string* chromosome,
-                                   uint32_t*    SNP_position,
+                                   uint32_t* SNP_position,
                                    std::string* first_allele,
                                    std::string* second_allele);
 
@@ -282,7 +282,7 @@ namespace bgen
     // given stream. (The main purpose of this function is to encapsulate the
     // slightly complicated rules for reading or computing the compressed data
     // size needed to skip the right number of bytes).
-    void ignore_genotype_data_block(std::istream&  aStream,
+    void ignore_genotype_data_block(std::istream& aStream,
                                     Context const& context);
 
     // Low-level function which reads raw probability data from a genotype data
@@ -307,9 +307,9 @@ namespace bgen
     // uncompressing the rest.) Usually bgen files are stored compressed.  If
     // the data is not compressed, this function simply copies the source buffer
     // to the target buffer.
-    void uncompress_probability_data(Context const&             context,
+    void uncompress_probability_data(Context const& context,
                                      std::vector<byte_t> const& buffer1,
-                                     std::vector<byte_t>*       buffer2);
+                                     std::vector<byte_t>* buffer2);
 
     // template< typename Setter >
     // parse uncompressed genotype probability data stored in the given buffer.
@@ -379,9 +379,9 @@ namespace bgen
     // values using the setter object provided. The buffers are used as
     // intermediate storage and will be resized to fit data as needed.
     template <typename Setter>
-    void read_and_parse_genotype_data_block(std::istream&        aStream,
-                                            Context const&       context,
-                                            Setter&              setter,
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context const& context,
+                                            Setter& setter,
                                             std::vector<byte_t>* buffer1,
                                             std::vector<byte_t>* buffer2);
 }
@@ -398,9 +398,9 @@ namespace bgen
     // Read an integer stored in little-endian format into an integer stored in
     // memory.
     template <typename IntegerType>
-    byte_t const* read_little_endian_integer(byte_t const*       buffer,
+    byte_t const* read_little_endian_integer(byte_t const* buffer,
                                              byte_t const* const end,
-                                             IntegerType*        integer_ptr)
+                                             IntegerType* integer_ptr)
     {
         assert(end >= buffer + sizeof(IntegerType));
         *integer_ptr = 0;
@@ -417,7 +417,7 @@ namespace bgen
     // bytes.
     template <typename IntegerType>
     void read_little_endian_integer(std::istream& in_stream,
-                                    IntegerType*  integer_ptr)
+                                    IntegerType* integer_ptr)
     {
         byte_t buffer[sizeof(IntegerType)];
         in_stream.read(reinterpret_cast<char*>(buffer), sizeof(IntegerType));
@@ -430,8 +430,8 @@ namespace bgen
 
     template <typename IntegerType>
     void read_length_followed_by_data(std::istream& in_stream,
-                                      IntegerType*  length_ptr,
-                                      std::string*  string_ptr)
+                                      IntegerType* length_ptr,
+                                      std::string* string_ptr)
     {
         IntegerType& length = *length_ptr;
         read_little_endian_integer(in_stream, length_ptr);
@@ -460,7 +460,7 @@ namespace bgen
     // Return past-the-end of what was written.
     template <typename IntegerType>
     byte_t* write_length_followed_by_data(byte_t* buffer, byte_t* const end,
-                                          IntegerType       length,
+                                          IntegerType length,
                                           std::string const data_string)
     {
         assert(end >= buffer + length + sizeof(IntegerType));
@@ -474,7 +474,7 @@ namespace bgen
     // Write an integer to the stream in little-endian format.
     // The stream is assumed to have sizeof( Integertype ) bytes writeable.
     template <typename IntegerType>
-    void write_little_endian_integer(std::ostream&     out_stream,
+    void write_little_endian_integer(std::ostream& out_stream,
                                      IntegerType const integer)
     {
         byte_t buffer[sizeof(IntegerType)];
@@ -487,8 +487,8 @@ namespace bgen
     // Write data containd in a std::string to the stream,
     // Preceded by a length of the given integral type in little-endian format.
     template <typename IntegerType>
-    void write_length_followed_by_data(std::ostream&     out_stream,
-                                       IntegerType       length,
+    void write_length_followed_by_data(std::ostream& out_stream,
+                                       IntegerType length,
                                        std::string const data_string)
     {
         assert(length <= data_string.size());
@@ -497,13 +497,13 @@ namespace bgen
     }
 
     template <typename SampleSetter>
-    std::size_t read_sample_identifier_block(std::istream&  aStream,
+    std::size_t read_sample_identifier_block(std::istream& aStream,
                                              Context const& context,
-                                             SampleSetter   setter)
+                                             SampleSetter setter)
     {
-        uint32_t    block_size        = 0;
-        uint32_t    number_of_samples = 0;
-        uint16_t    identifier_size;
+        uint32_t block_size = 0;
+        uint32_t number_of_samples = 0;
+        uint16_t identifier_size;
         std::string identifier;
         std::size_t bytes_read = 0;
 
@@ -529,19 +529,19 @@ namespace bgen
     }
 
     template <typename NumberOfAllelesSetter, typename AlleleSetter>
-    bool read_snp_identifying_data(std::istream&  aStream,
+    bool read_snp_identifying_data(std::istream& aStream,
                                    Context const& context, std::string* SNPID,
                                    std::string* RSID, std::string* chromosome,
-                                   uint32_t*             SNP_position,
+                                   uint32_t* SNP_position,
                                    NumberOfAllelesSetter set_number_of_alleles,
-                                   AlleleSetter          set_allele)
+                                   AlleleSetter set_allele)
     {
-        uint16_t       SNPID_size      = 0;
-        uint16_t       RSID_size       = 0;
-        uint16_t       numberOfAlleles = 0;
-        uint16_t       chromosome_size = 0;
-        uint32_t       allele_size     = 0;
-        std::string    allele;
+        uint16_t SNPID_size = 0;
+        uint16_t RSID_size = 0;
+        uint16_t numberOfAlleles = 0;
+        uint16_t chromosome_size = 0;
+        uint32_t allele_size = 0;
+        std::string allele;
         uint32_t const layout = context.flags & e_Layout;
 
         // If we can't read a valid first field we return false; this will
@@ -621,9 +621,9 @@ namespace bgen
             template <typename U>
             static uint8_t Test(SFINAE<U, &U::set_min_max_ploidy>*);
             template <typename U>
-            static uint32_t   Test(...);
+            static uint32_t Test(...);
             static const bool Yes = sizeof(Test<Setter>(0)) == sizeof(uint8_t);
-            static const bool No  = sizeof(Test<Setter>(0)) == sizeof(uint16_t);
+            static const bool No = sizeof(Test<Setter>(0)) == sizeof(uint16_t);
         };
 
         template <bool C>
@@ -678,9 +678,9 @@ namespace bgen
             template <typename U>
             static uint8_t Test(SFINAE<U, &U::finalise>*);
             template <typename U>
-            static uint32_t   Test(...);
+            static uint32_t Test(...);
             static const bool Yes = sizeof(Test<Setter>(0)) == sizeof(uint8_t);
-            static const bool No  = sizeof(Test<Setter>(0)) == sizeof(uint16_t);
+            static const bool No = sizeof(Test<Setter>(0)) == sizeof(uint16_t);
         };
 
         template <typename Setter>
@@ -709,16 +709,16 @@ namespace bgen
             virtual ~ProbabilityDataWriterBase(){};
 
             virtual void initialise(uint32_t nSamples, uint16_t nAlleles,
-                                    byte_t* buffer, byte_t* const end)     = 0;
-            virtual bool set_sample(std::size_t i)                         = 0;
+                                    byte_t* buffer, byte_t* const end) = 0;
+            virtual bool set_sample(std::size_t i) = 0;
             virtual void set_number_of_entries(uint32_t ploidy,
                                                uint32_t number_of_entries,
                                                OrderType const order_type,
                                                ValueType const value_type) = 0;
-            virtual void set_value(uint32_t                    entry_i,
-                                   genfile::MissingValue const value)      = 0;
-            virtual void set_value(uint32_t entry_i, double const value)   = 0;
-            virtual void finalise()                                        = 0;
+            virtual void set_value(uint32_t entry_i,
+                                   genfile::MissingValue const value) = 0;
+            virtual void set_value(uint32_t entry_i, double const value) = 0;
+            virtual void finalise() = 0;
 
             virtual std::pair<byte_t const*, byte_t const*> repr() const = 0;
         };
@@ -729,7 +729,7 @@ namespace bgen
         namespace impl
         {
             template <typename FloatType>
-            FloatType convert_from_integer_representation(uint16_t  number,
+            FloatType convert_from_integer_representation(uint16_t number,
                                                           FloatType factor)
             {
                 FloatType result = number;
@@ -754,19 +754,19 @@ namespace bgen
         {
             enum Missing
             {
-                eNotSet     = 0,
-                eMissing    = 1,
+                eNotSet = 0,
+                eMissing = 1,
                 eNotMissing = 2
             };
             enum State
             {
-                eUninitialised      = 0,
-                eInitialised        = 1,
-                eSampleSet          = 2,
+                eUninitialised = 0,
+                eInitialised = 1,
+                eSampleSet = 2,
                 eNumberOfEntriesSet = 3,
-                eValueSet           = 4,
-                eBaked              = 5,
-                eFinalised          = 6
+                eValueSet = 4,
+                eBaked = 5,
+                eFinalised = 6
             };
 
             ~ProbabilityDataWriter() {}
@@ -780,10 +780,10 @@ namespace bgen
                             byte_t* buffer, byte_t* const end)
             {
                 assert(nAlleles == 2);
-                m_p = m_buffer      = buffer;
-                m_end               = end;
+                m_p = m_buffer = buffer;
+                m_end = end;
                 m_number_of_samples = nSamples;
-                m_state             = eInitialised;
+                m_state = eInitialised;
             }
 
             bool set_sample(std::size_t i)
@@ -791,12 +791,12 @@ namespace bgen
                 assert(m_state == eInitialised || m_state == eBaked);
                 assert((m_sample_i == 0 && i == 0) || (i == m_sample_i + 1));
                 m_sample_i = i;
-                m_state    = eSampleSet;
+                m_state = eSampleSet;
                 return true;
             }
 
-            void set_number_of_entries(uint32_t        ploidy,
-                                       uint32_t        number_of_entries,
+            void set_number_of_entries(uint32_t ploidy,
+                                       uint32_t number_of_entries,
                                        OrderType const order_type,
                                        ValueType const value_type)
             {
@@ -808,7 +808,7 @@ namespace bgen
                 assert(order_type == ePerUnorderedGenotype);
                 m_entry_i = 0;
                 m_missing = eNotSet;
-                m_state   = eNumberOfEntriesSet;
+                m_state = eNumberOfEntriesSet;
             }
 
             void set_value(uint32_t entry_i, genfile::MissingValue const value)
@@ -817,7 +817,7 @@ namespace bgen
                 assert(m_entry_i < 3);
                 assert(m_entry_i == 0 || m_missing == eMissing);
                 m_values[m_entry_i++] = 0.0;
-                m_missing             = eMissing;
+                m_missing = eMissing;
                 if (m_entry_i == 3) {
                     bake(&m_values[0]);
                     m_state = eBaked;
@@ -860,15 +860,15 @@ namespace bgen
             }
 
         private:
-            byte_t*     m_buffer;
-            byte_t*     m_p;
-            byte_t*     m_end;
-            State       m_state;
-            uint32_t    m_number_of_samples;
+            byte_t* m_buffer;
+            byte_t* m_p;
+            byte_t* m_end;
+            State m_state;
+            uint32_t m_number_of_samples;
             std::size_t m_sample_i;
             std::size_t m_entry_i;
-            Missing     m_missing;
-            double      m_values[3];
+            Missing m_missing;
+            double m_values[3];
 
         private:
             void bake(double* values)
@@ -890,7 +890,7 @@ namespace bgen
         };
 
         template <typename Setter>
-        void parse_probability_data(byte_t const*       buffer,
+        void parse_probability_data(byte_t const* buffer,
                                     byte_t const* const end,
                                     Context const& context, Setter& setter)
         {
@@ -931,7 +931,7 @@ namespace bgen
             // data - the place to read bits into
             // size - the current number of bits stored in data
             // bits - the number of bits required.
-            byte_t const* read_bits_from_buffer(byte_t const*       buffer,
+            byte_t const* read_bits_from_buffer(byte_t const* buffer,
                                                 byte_t const* const end,
                                                 uint64_t* data, int* size,
                                                 uint8_t const bits);
@@ -945,8 +945,8 @@ namespace bgen
             // sum to 1 (up to floating-point precision). postcondition: the
             // values p points to are n integer values that sum to
             // 2^(number_of_bits)-1.
-            void compute_approximate_probabilities(double*           p,
-                                                   std::size_t*      index,
+            void compute_approximate_probabilities(double* p,
+                                                   std::size_t* index,
                                                    std::size_t const n,
                                                    int const number_of_bits);
 
@@ -970,12 +970,12 @@ namespace bgen
                             byte_t const* const end);
 
         public:
-            uint32_t      numberOfSamples;
-            uint16_t      numberOfAlleles;
-            byte_t        ploidyExtent[2];
+            uint32_t numberOfSamples;
+            uint16_t numberOfAlleles;
+            byte_t ploidyExtent[2];
             byte_t const* ploidy; // Must contain at least N bytes.
-            bool          phased;
-            byte_t        bits;
+            bool phased;
+            byte_t bits;
             byte_t const* buffer;
             byte_t const* end;
 
@@ -996,22 +996,22 @@ namespace bgen
         {
         }
 
-        inline GenotypeDataBlock::GenotypeDataBlock(Context const&      context,
-                                                    byte_t const*       buffer,
+        inline GenotypeDataBlock::GenotypeDataBlock(Context const& context,
+                                                    byte_t const* buffer,
                                                     byte_t const* const end)
         {
             initialise(context, buffer, end);
         }
 
-        inline void GenotypeDataBlock::initialise(Context const&      context,
-                                                  byte_t const*       buffer,
+        inline void GenotypeDataBlock::initialise(Context const& context,
+                                                  byte_t const* buffer,
                                                   byte_t const* const end)
         {
             if (end < buffer + 8) {
                 throw BGenError();
             }
             uint32_t N = 0;
-            buffer     = read_little_endian_integer(buffer, end, &N);
+            buffer = read_little_endian_integer(buffer, end, &N);
             if (N != context.number_of_samples) {
                 throw BGenError();
             }
@@ -1029,22 +1029,22 @@ namespace bgen
             ploidy = buffer;
             buffer += N;
             // Get the phased flag and number of bits
-            phased       = ((*buffer++) & 0x1);
-            bits         = *reinterpret_cast<byte_t const*>(buffer++);
+            phased = ((*buffer++) & 0x1);
+            bits = *reinterpret_cast<byte_t const*>(buffer++);
             this->buffer = buffer;
-            this->end    = end;
+            this->end = end;
         }
 
         template <typename Setter>
-        void parse_probability_data(byte_t const*       buffer,
+        void parse_probability_data(byte_t const* buffer,
                                     byte_t const* const end,
                                     Context const& context, Setter& setter)
         {
             GenotypeDataBlock pack(context, buffer, end);
 
-            int const     bits     = int(pack.bits);
+            int const bits = int(pack.bits);
             byte_t const* ploidy_p = pack.ploidy;
-            buffer                 = pack.buffer;
+            buffer = pack.buffer;
             assert(end == pack.end);
 
 #if DEBUG_BGEN_FORMAT
@@ -1062,11 +1062,11 @@ namespace bgen
 
             {
                 uint64_t data = 0;
-                int      size = 0;
+                int size = 0;
                 for (uint32_t i = 0; i < pack.numberOfSamples; ++i, ++ploidy_p)
                 {
-                    uint32_t const ploidy  = uint32_t(*ploidy_p & 0x3F);
-                    bool const     missing = (*ploidy_p & 0x80);
+                    uint32_t const ploidy = uint32_t(*ploidy_p & 0x3F);
+                    bool const missing = (*ploidy_p & 0x80);
                     uint32_t const valueCount =
                         pack.phased
                             ? (ploidy * pack.numberOfAlleles)
@@ -1107,7 +1107,7 @@ namespace bgen
                         else
                         {
                             // Consume values and interpret them.
-                            double   sum                = 0.0;
+                            double sum = 0.0;
                             uint32_t reportedValueCount = 0;
                             for (uint32_t h = 0; h < storedValueCount; ++h) {
                                 buffer = impl::read_bits_from_buffer(
@@ -1161,29 +1161,29 @@ namespace bgen
             {
                 eMinPloidyByte = 6,
                 eMaxPloidyByte = 7,
-                ePloidyBytes   = 8
+                ePloidyBytes = 8
             };
             enum Missing
             {
-                eNotSet     = 0,
-                eMissing    = 1,
+                eNotSet = 0,
+                eMissing = 1,
                 eNotMissing = 2
             };
             enum State
             {
-                eUninitialised      = 0,
-                eInitialised        = 1,
-                eSampleSet          = 2,
+                eUninitialised = 0,
+                eInitialised = 1,
+                eSampleSet = 2,
                 eNumberOfEntriesSet = 3,
-                eValueSet           = 4,
-                eBaked              = 5,
-                eFinalised          = 6
+                eValueSet = 4,
+                eBaked = 5,
+                eFinalised = 6
             };
 
             ~ProbabilityDataWriter() {}
 
             ProbabilityDataWriter(uint8_t const number_of_bits,
-                                  double const  tolerance = 1.01)
+                                  double const tolerance = 1.01)
                 : m_number_of_bits(number_of_bits)
                 , m_tolerance(tolerance)
                 , m_state(eUninitialised)
@@ -1208,7 +1208,7 @@ namespace bgen
             {
                 assert(m_state == eUninitialised);
                 m_p = m_buffer = buffer;
-                m_end          = end;
+                m_end = end;
 
                 // Write whatever fieds we can now.
                 m_p = write_little_endian_integer(m_p, m_end, nSamples);
@@ -1218,11 +1218,11 @@ namespace bgen
                 m_number_of_samples = nSamples;
                 m_number_of_alleles = nAlleles;
                 m_p += nSamples + 4;
-                m_data   = 0;
+                m_data = 0;
                 m_offset = 0;
                 if (m_number_of_samples == 0) {
                     m_ploidyExtent[0] = 0;
-                    m_order_type      = ePerPhasedHaplotypePerAllele;
+                    m_order_type = ePerPhasedHaplotypePerAllele;
                 }
                 // We set data as phased until we learn otherwise
                 // In the case of samples with ploidy < 2, this means we
@@ -1230,7 +1230,7 @@ namespace bgen
                 // informative sample.
                 m_buffer[8 + m_number_of_samples] = 1;
                 m_buffer[9 + m_number_of_samples] = m_number_of_bits;
-                m_state                           = eInitialised;
+                m_state = eInitialised;
             }
 
             bool set_sample(std::size_t i)
@@ -1239,12 +1239,12 @@ namespace bgen
                 // ensure samples are visited in order.
                 assert((m_sample_i == 0 && i == 0) || (i == m_sample_i + 1));
                 m_sample_i = i;
-                m_state    = eSampleSet;
+                m_state = eSampleSet;
                 return true;
             }
 
-            void set_number_of_entries(uint32_t        ploidy,
-                                       uint32_t        number_of_entries,
+            void set_number_of_entries(uint32_t ploidy,
+                                       uint32_t number_of_entries,
                                        OrderType const order_type,
                                        ValueType const value_type)
             {
@@ -1280,8 +1280,8 @@ namespace bgen
                         : m_number_of_alleles;
                 m_entry_i = 0;
                 m_missing = eNotSet;
-                m_state   = eNumberOfEntriesSet;
-                m_sum     = 0.0;
+                m_state = eNumberOfEntriesSet;
+                m_sum = 0.0;
             }
 
             void set_value(uint32_t entry_i, genfile::MissingValue const value)
@@ -1292,12 +1292,12 @@ namespace bgen
                 assert(m_entry_i == 0 || m_missing == eMissing);
                 assert(m_entry_i == (entry_i % m_entries_per_bake));
                 m_values[m_entry_i++] = 0.0;
-                m_missing             = eMissing;
+                m_missing = eMissing;
                 if (m_entry_i == m_entries_per_bake) {
                     bake(&m_values[0], m_entry_i, m_sum);
                     m_entry_i = 0;
-                    m_sum     = 0.0;
-                    m_state   = eBaked;
+                    m_sum = 0.0;
+                    m_state = eBaked;
                 }
                 else
                 {
@@ -1335,8 +1335,8 @@ namespace bgen
                 if (m_entry_i == m_entries_per_bake) {
                     bake(&m_values[0], m_entry_i, m_sum);
                     m_entry_i = 0;
-                    m_sum     = 0.0;
-                    m_state   = eBaked;
+                    m_sum = 0.0;
+                    m_state = eBaked;
                 }
                 else
                 {
@@ -1390,7 +1390,7 @@ namespace bgen
                 }
                 m_buffer[eMinPloidyByte] = m_ploidyExtent[0];
                 m_buffer[eMaxPloidyByte] = m_ploidyExtent[1];
-                m_state                  = eFinalised;
+                m_state = eFinalised;
             }
 
             std::pair<byte_t const*, byte_t const*> repr() const
@@ -1399,27 +1399,27 @@ namespace bgen
             }
 
         private:
-            byte_t*       m_buffer;
-            byte_t*       m_p;
-            byte_t*       m_end;
+            byte_t* m_buffer;
+            byte_t* m_p;
+            byte_t* m_end;
             uint8_t const m_number_of_bits;
-            double const  m_tolerance;
-            State         m_state;
-            uint8_t       m_ploidyExtent[2];
-            OrderType     m_order_type;
-            uint32_t      m_number_of_samples;
-            uint32_t      m_number_of_alleles;
-            uint32_t      m_ploidy;
-            std::size_t   m_sample_i;
-            std::size_t   m_number_of_entries;
-            std::size_t   m_entries_per_bake;
-            std::size_t   m_entry_i;
-            Missing       m_missing;
-            double        m_values[100];
-            double        m_sum;
-            std::size_t   index[100];
-            uint64_t      m_data;
-            std::size_t   m_offset;
+            double const m_tolerance;
+            State m_state;
+            uint8_t m_ploidyExtent[2];
+            OrderType m_order_type;
+            uint32_t m_number_of_samples;
+            uint32_t m_number_of_alleles;
+            uint32_t m_ploidy;
+            std::size_t m_sample_i;
+            std::size_t m_number_of_entries;
+            std::size_t m_entries_per_bake;
+            std::size_t m_entry_i;
+            Missing m_missing;
+            double m_values[100];
+            double m_sum;
+            std::size_t index[100];
+            uint64_t m_data;
+            std::size_t m_offset;
 
         private:
             void bake(double* values, std::size_t count, double const sum)
@@ -1479,9 +1479,9 @@ namespace bgen
     }
 
     template <typename Setter>
-    void read_and_parse_genotype_data_block(std::istream&        aStream,
-                                            Context const&       context,
-                                            Setter&              setter,
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context const& context,
+                                            Setter& setter,
                                             std::vector<byte_t>* buffer1,
                                             std::vector<byte_t>* buffer2)
     {
@@ -1510,7 +1510,7 @@ namespace bgen
         buffer->resize(size);
 
         // Write the data to the buffer
-        byte_t*       p   = &(buffer->operator[](0));
+        byte_t* p = &(buffer->operator[](0));
         byte_t* const end = p + size;
 
         if (layout == e_Layout1) {
@@ -1557,8 +1557,8 @@ namespace bgen
     {
         GenotypeDataBlockWriter(std::vector<byte_t>* buffer1,
                                 std::vector<byte_t>* buffer2,
-                                Context const&       context,
-                                int const            number_of_bits)
+                                Context const& context,
+                                int const number_of_bits)
             : m_buffer1(buffer1)
             , m_buffer2(buffer2)
             , m_context(context)
@@ -1722,14 +1722,14 @@ namespace bgen
         }
 
     private:
-        std::vector<byte_t>*                    m_buffer1;
-        std::vector<byte_t>*                    m_buffer2;
-        Context const&                          m_context;
-        uint32_t const                          m_layout;
-        std::size_t                             m_number_of_bits;
-        v11::ProbabilityDataWriter              m_layout1_writer;
-        v12::ProbabilityDataWriter              m_layout2_writer;
-        impl::ProbabilityDataWriterBase*        m_writer;
+        std::vector<byte_t>* m_buffer1;
+        std::vector<byte_t>* m_buffer2;
+        Context const& m_context;
+        uint32_t const m_layout;
+        std::size_t m_number_of_bits;
+        v11::ProbabilityDataWriter m_layout1_writer;
+        v12::ProbabilityDataWriter m_layout2_writer;
+        impl::ProbabilityDataWriterBase* m_writer;
         std::pair<byte_t const*, byte_t const*> m_result;
     };
 }

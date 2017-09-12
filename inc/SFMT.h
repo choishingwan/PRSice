@@ -69,7 +69,7 @@ extern "C" {
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
 #include <inttypes.h>
 #elif defined(_MSC_VER) || defined(__BORLANDC__)
-typedef unsigned int     uint32_t;
+typedef unsigned int uint32_t;
 typedef unsigned __int64 uint64_t;
 #define inline __inline
 #else
@@ -136,7 +136,7 @@ typedef unsigned __int64 uint64_t;
 union W128_T {
     uint32_t u[4];
     uint64_t u64[2];
-    __m128i  si;
+    __m128i si;
 };
 #else
 /** 128-bit data structure */
@@ -167,9 +167,9 @@ void sfmt_fill_array64(sfmt_t* sfmt, uint64_t* array, int size);
 void sfmt_init_gen_rand(sfmt_t* sfmt, uint32_t seed);
 void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length);
 const char* sfmt_get_idstring(sfmt_t* sfmt);
-int         sfmt_get_min_array_size32(sfmt_t* sfmt);
-int         sfmt_get_min_array_size64(sfmt_t* sfmt);
-void        sfmt_gen_rand_all(sfmt_t* sfmt);
+int sfmt_get_min_array_size32(sfmt_t* sfmt);
+int sfmt_get_min_array_size64(sfmt_t* sfmt);
+void sfmt_gen_rand_all(sfmt_t* sfmt);
 
 /**
  * This function generates and returns 32-bit pseudorandom number.
@@ -179,7 +179,7 @@ void        sfmt_gen_rand_all(sfmt_t* sfmt);
  */
 inline static uint32_t sfmt_genrand_uint32(sfmt_t* sfmt)
 {
-    uint32_t  r;
+    uint32_t r;
     uint32_t* psfmt32 = &sfmt->state[0].u[0];
 
     if (sfmt->idx >= SFMT_N32) {
@@ -199,7 +199,7 @@ inline static uint32_t sfmt_genrand_uint32(sfmt_t* sfmt)
  */
 inline static uint64_t sfmt_genrand_uint64(sfmt_t* sfmt)
 {
-    uint64_t  r;
+    uint64_t r;
     uint64_t* psfmt64 = &sfmt->state[0].u64[0];
     assert(sfmt->idx % 2 == 0);
 

@@ -17,7 +17,7 @@
 
 #include "region.hpp"
 
-Region::Region(std::vector<std::string>                    feature,
+Region::Region(std::vector<std::string> feature,
                const std::unordered_map<std::string, int>& chr_order)
     : m_chr_order(chr_order)
 {
@@ -59,7 +59,7 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
             process_msigdb(msigdb, gtf_boundary, id_to_name);
         }
     }
-    m_snp_check_index  = std::vector<size_t>(m_region_name.size(), 0);
+    m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
 
     m_duplicated_names.clear();
@@ -70,7 +70,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
     for (auto& b : bed) {
         fprintf(stderr, "Reading: %s\n", b.c_str());
         std::ifstream bed_file;
-        bool          error = false;
+        bool error = false;
         bed_file.open(b.c_str());
         if (!bed_file.is_open()) {
             fprintf(stderr, "WARNING: %s cannot be open. It will be ignored\n",
@@ -83,8 +83,8 @@ void Region::process_bed(const std::vector<std::string>& bed)
             continue;
         }
         std::vector<region_bound> current_region;
-        std::string               line;
-        size_t                    num_line = 0;
+        std::string line;
+        size_t num_line = 0;
         while (std::getline(bed_file, line)) {
             num_line++;
             misc::trim(line);
@@ -97,7 +97,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
                 error = true;
                 break;
             }
-            int    temp  = 0;
+            int temp = 0;
             size_t start = 0, end = 0;
             try
             {
@@ -149,9 +149,9 @@ void Region::process_bed(const std::vector<std::string>& bed)
             }
             if (m_chr_order.find(token[0]) != m_chr_order.end()) {
                 region_bound cur_bound;
-                cur_bound.chr   = m_chr_order[token[0]];
+                cur_bound.chr = m_chr_order[token[0]];
                 cur_bound.start = start;
-                cur_bound.end   = end;
+                cur_bound.end = end;
                 current_region.push_back(cur_bound);
             }
         }
@@ -176,9 +176,9 @@ void Region::process_bed(const std::vector<std::string>& bed)
 
 
 std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
-    const std::string&                                      gtf,
+    const std::string& gtf,
     std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-    const std::string&                                      out_prefix)
+    const std::string& out_prefix)
 {
     std::unordered_map<std::string, Region::region_bound> result_boundary;
     if (gtf.empty()) return result_boundary; // basically return an empty map
@@ -189,17 +189,17 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
         throw std::runtime_error(error_message);
     }
     std::string line;
-    size_t      num_line = 0, exclude_feature = 0;
+    size_t num_line = 0, exclude_feature = 0;
     while (std::getline(gtf_file, line)) {
         num_line++;
         misc::trim(line);
         if (line.empty() || line[0] == '#') continue;
         std::vector<std::string> token = misc::split(line, "\t");
-        std::string              chr   = token[+GTF::CHR];
+        std::string chr = token[+GTF::CHR];
         if (in_feature(token[+GTF::FEATURE])
             && m_chr_order.find(chr) != m_chr_order.end())
         {
-            int    temp  = 0;
+            int temp = 0;
             size_t start = 0, end = 0;
             try
             {
@@ -301,9 +301,9 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
             else
             {
                 region_bound cur_bound;
-                cur_bound.chr       = m_chr_order[chr];
-                cur_bound.start     = start;
-                cur_bound.end       = end;
+                cur_bound.chr = m_chr_order[chr];
+                cur_bound.start = start;
+                cur_bound.end = end;
                 result_boundary[id] = cur_bound;
             }
         }
@@ -325,8 +325,8 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
 }
 
 void Region::process_msigdb(
-    const std::string&                                            msigdb,
-    const std::unordered_map<std::string, Region::region_bound>&  gtf_info,
+    const std::string& msigdb,
+    const std::unordered_map<std::string, Region::region_bound>& gtf_info,
     const std::unordered_map<std::string, std::set<std::string>>& id_to_name)
 {
     if (msigdb.empty() || gtf_info.size() == 0) return; // Got nothing to do
@@ -351,7 +351,7 @@ void Region::process_msigdb(
             else if (m_duplicated_names.find(token[0])
                      == m_duplicated_names.end())
             {
-                std::string               name = token[0];
+                std::string name = token[0];
                 std::vector<region_bound> current_region;
                 for (auto& gene : token) {
                     if (gtf_info.find(gene) == gtf_info.end()) {
@@ -429,9 +429,9 @@ void Region::check(std::string chr, size_t loc, std::vector<uintptr_t>& flag)
         while (m_snp_check_index[i_region] < current_region_size) {
             auto&& current_bound =
                 m_region_list[i_region][m_snp_check_index[i_region]];
-            int    region_chr   = current_bound.chr;
+            int region_chr = current_bound.chr;
             size_t region_start = current_bound.start;
-            size_t region_end   = current_bound.end;
+            size_t region_end = current_bound.end;
             if (chr_index
                 > region_chr) // only increment if we have passed the chromosome
             {
@@ -464,7 +464,7 @@ void Region::check(std::string chr, size_t loc, std::vector<uintptr_t>& flag)
 void Region::info() const
 {
     std::ofstream logFile;
-    std::string   logName = m_out_prefix + ".log";
+    std::string logName = m_out_prefix + ".log";
     logFile.open(logName.c_str(), std::ofstream::app);
     if (!logFile.is_open()) {
         std::string error_message = "ERROR: Cannot open log file: " + logName;

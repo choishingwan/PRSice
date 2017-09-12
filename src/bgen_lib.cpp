@@ -52,11 +52,11 @@ namespace bgen
 
     Context& Context::operator=(Context const& other)
     {
-        number_of_samples  = other.number_of_samples;
+        number_of_samples = other.number_of_samples;
         number_of_variants = other.number_of_variants;
-        magic              = other.magic;
-        free_data          = other.free_data;
-        flags              = other.flags;
+        magic = other.magic;
+        free_data = other.free_data;
+        flags = other.flags;
         return *this;
     }
 
@@ -78,8 +78,8 @@ namespace bgen
         uint32_t header_size = 0, number_of_snp_blocks = 0,
                  number_of_samples = 0, flags = 0;
 
-        char              magic[4];
-        std::size_t       fixed_data_size = 20;
+        char magic[4];
+        std::size_t fixed_data_size = 20;
         std::vector<char> free_data;
 
         read_little_endian_integer(aStream, &header_size);
@@ -100,7 +100,7 @@ namespace bgen
         }
 
         if (aStream) {
-            context->number_of_samples  = number_of_samples;
+            context->number_of_samples = number_of_samples;
             context->number_of_variants = number_of_snp_blocks;
             context->magic.assign(&magic[0], &magic[0] + 4);
             context->free_data.assign(free_data.begin(), free_data.end());
@@ -203,10 +203,10 @@ namespace bgen
             std::string* first_allele, std::string* second_allele)
         {
             // v1.0-style layout, deprecated
-            uint32_t      number_of_samples = 0;
-            unsigned char max_id_size       = 0;
-            unsigned char SNPID_size        = 0;
-            unsigned char RSID_size         = 0;
+            uint32_t number_of_samples = 0;
+            unsigned char max_id_size = 0;
+            unsigned char SNPID_size = 0;
+            unsigned char RSID_size = 0;
             if (aStream) {
                 read_little_endian_integer(aStream, &number_of_samples);
                 if (!aStream) {
@@ -274,10 +274,10 @@ namespace bgen
         }
     }
 
-    bool read_snp_identifying_data(std::istream&  aStream,
+    bool read_snp_identifying_data(std::istream& aStream,
                                    Context const& context, std::string* SNPID,
                                    std::string* RSID, std::string* chromosome,
-                                   uint32_t*    SNP_position,
+                                   uint32_t* SNP_position,
                                    std::string* first_allele,
                                    std::string* second_allele)
     {
@@ -334,7 +334,7 @@ namespace bgen
         }
     }
 
-    void ignore_genotype_data_block(std::istream&  aStream,
+    void ignore_genotype_data_block(std::istream& aStream,
                                     Context const& context)
     {
         if ((context.flags & bgen::e_CompressedSNPBlocks) != e_NoCompression) {
@@ -374,16 +374,16 @@ namespace bgen
         aStream.read(reinterpret_cast<char*>(&(*buffer)[0]), payload_size);
     }
 
-    void uncompress_probability_data(Context const&             context,
+    void uncompress_probability_data(Context const& context,
                                      std::vector<byte_t> const& compressed_data,
-                                     std::vector<byte_t>*       buffer)
+                                     std::vector<byte_t>* buffer)
     {
         // compressed_data contains the (compressed or uncompressed) probability
         // data.
         uint32_t const compressionType =
             (context.flags & bgen::e_CompressedSNPBlocks);
         if (compressionType != e_NoCompression) {
-            byte_t const*       begin = &compressed_data[0];
+            byte_t const* begin = &compressed_data[0];
             byte_t const* const end =
                 &compressed_data[0] + compressed_data.size();
             uint32_t uncompressed_data_size = 0;
@@ -422,7 +422,7 @@ namespace bgen
             // from a buffer, until the data contains at least the given number
             // of bits. (For this to work we require in general that bits <= 56
             // (on an 8-bit byte machine).
-            byte_t const* read_bits_from_buffer(byte_t const*       buffer,
+            byte_t const* read_bits_from_buffer(byte_t const* buffer,
                                                 byte_t const* const end,
                                                 uint64_t* data, int* size,
                                                 uint8_t const bits)
@@ -447,8 +447,8 @@ namespace bgen
                                             int const bits)
             {
                 assert(bits <= 32);
-                uint64_t     bitMask = (0xFFFFFFFFFFFFFFFF >> (64 - bits));
-                double const result  = (*data & bitMask) / double(bitMask);
+                uint64_t bitMask = (0xFFFFFFFFFFFFFFFF >> (64 - bits));
+                double const result = (*data & bitMask) / double(bitMask);
                 (*size) -= bits;
                 (*data) >>= bits;
                 return result;
@@ -481,20 +481,20 @@ namespace bgen
                     }
 
                 private:
-                    double*     m_v;
+                    double* m_v;
                     std::size_t m_n;
                 };
             }
 
-            void compute_approximate_probabilities(double*           p,
-                                                   std::size_t*      index,
+            void compute_approximate_probabilities(double* p,
+                                                   std::size_t* index,
                                                    std::size_t const n,
                                                    int const number_of_bits)
             {
                 double const scale =
                     (0xFFFFFFFFFFFFFFFF >> (64 - number_of_bits));
                 double total_fractional_part = 0.0;
-                double sum                   = 0.0;
+                double sum = 0.0;
                 for (std::size_t i = 0; i < n; ++i) {
                     p[i] *= scale;
                     sum += p[i];

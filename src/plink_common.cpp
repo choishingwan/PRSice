@@ -52,7 +52,7 @@ const char g_one_char_strs[] =
     "\345\0\346\0\347\0\350\0\351\0\352\0\353\0\354\0\355\0\356\0\357\0\360\0"
     "\361\0\362\0\363\0\364\0\365\0\366\0\367\0\370\0\371\0\372\0\373\0\374\0"
     "\375\0\376\0\377";
-const char* g_missing_geno_ptr        = &(g_one_char_strs[96]);
+const char* g_missing_geno_ptr = &(g_one_char_strs[96]);
 const char* g_output_missing_geno_ptr = &(g_one_char_strs[96]);
 
 uintptr_t g_failed_alloc_attempt_size = 0;
@@ -63,7 +63,7 @@ FILE* g_logfile = nullptr;
 
 char g_logbuf[MAXLINELEN * 2];
 
-uint32_t g_debug_on   = 0;
+uint32_t g_debug_on = 0;
 uint32_t g_log_failed = 0;
 uint32_t g_thread_ct;
 
@@ -78,7 +78,7 @@ uint32_t aligned_malloc(uintptr_t size, uintptr_t** aligned_pp)
         g_failed_alloc_attempt_size = size + VEC_BYTES;
         return 1;
     }
-    *aligned_pp       = (uintptr_t*) ((((uintptr_t) malloc_ptr) + VEC_BYTES)
+    *aligned_pp = (uintptr_t*) ((((uintptr_t) malloc_ptr) + VEC_BYTES)
                                 & (~(VEC_BYTES_M1 * ONELU)));
     (*aligned_pp)[-1] = (uintptr_t) malloc_ptr;
 #else
@@ -103,8 +103,8 @@ void aligned_free(uintptr_t* aligned_pp)
 
 uint32_t push_ll_str(const char* ss, Ll_str** ll_stack_ptr)
 {
-    uintptr_t str_bytes  = strlen(ss) + 1;
-    Ll_str*   new_ll_str = (Ll_str*) malloc(sizeof(Ll_str) + str_bytes);
+    uintptr_t str_bytes = strlen(ss) + 1;
+    Ll_str* new_ll_str = (Ll_str*) malloc(sizeof(Ll_str) + str_bytes);
     if (!new_ll_str) {
         g_failed_alloc_attempt_size = sizeof(Ll_str) + str_bytes;
         return 1;
@@ -190,7 +190,7 @@ void wordwrap(uint32_t suffix_len, char* ss)
     //         80 column terminal windows.  (Multi-space blocks are never
     //         collapsed.)
     char* token_start = ss;
-    char* line_end    = &(ss[79]);
+    char* line_end = &(ss[79]);
     char* token_end;
     while (1) {
         while (*token_start == ' ') {
@@ -200,7 +200,7 @@ void wordwrap(uint32_t suffix_len, char* ss)
             do
             {
                 *line_end = '\n';
-                line_end  = &(line_end[80]);
+                line_end = &(line_end[80]);
             } while (token_start > line_end);
         }
         token_end = strchr(token_start, ' ');
@@ -233,12 +233,12 @@ void wordwrap(uint32_t suffix_len, char* ss)
         if (token_end > line_end) {
             if (&(token_start[79]) != line_end) {
                 token_start[-1] = '\n';
-                line_end        = &(token_start[79]);
+                line_end = &(token_start[79]);
                 if (token_end > line_end) {
                     // single really long token, can't do anything beyond
                     // putting it on its own line
                     *token_end = '\n';
-                    line_end   = &(token_end[80]);
+                    line_end = &(token_end[80]);
                 }
             }
             else
@@ -246,7 +246,7 @@ void wordwrap(uint32_t suffix_len, char* ss)
                 // single really long token, *and* previous token was either
                 // nonexistent or long
                 *token_end = '\n';
-                line_end   = &(token_end[80]);
+                line_end = &(token_end[80]);
             }
         }
         token_start = &(token_end[1]);
@@ -427,7 +427,7 @@ uint32_t scan_int_abs_bounded(const char* ss, uint64_t bound, int32_t* valp)
 {
     // Reads an integer in [-bound, bound].  Assumes first character is
     // nonspace.
-    *valp        = (uint32_t)((unsigned char) (*ss++)) - 48;
+    *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
     int32_t sign = 1;
     if (((uint32_t) *valp) >= 10) {
         if (*valp == -3) {
@@ -660,7 +660,7 @@ uint32_t scan_two_doubles(char* ss, double* __restrict val1p,
     if (ss == ss2) {
         return 1;
     }
-    ss     = skip_initial_spaces(ss2);
+    ss = skip_initial_spaces(ss2);
     *val2p = strtod(ss, &ss2);
     return (ss == ss2) ? 1 : 0;
 }
@@ -671,14 +671,14 @@ int32_t scan_token_ct_len(uintptr_t half_bufsize, FILE* infile, char* buf,
 {
     // buf must be of size >= (2 * half_bufsize + 2)
     // max_token_len includes trailing null
-    uintptr_t full_bufsize  = half_bufsize * 2;
-    uintptr_t curtoklen     = 0;
-    uintptr_t token_ct      = *token_ct_ptr;
+    uintptr_t full_bufsize = half_bufsize * 2;
+    uintptr_t curtoklen = 0;
+    uintptr_t token_ct = *token_ct_ptr;
     uintptr_t max_token_len = *max_token_len_ptr;
-    char*     midbuf        = &(buf[half_bufsize]);
-    char*     bufptr;
-    char*     bufptr2;
-    char*     buf_end;
+    char* midbuf = &(buf[half_bufsize]);
+    char* bufptr;
+    char* bufptr2;
+    char* buf_end;
     uintptr_t bufsize;
     while (1) {
         if (fread_checked(midbuf, half_bufsize, infile, &bufsize)) {
@@ -694,11 +694,11 @@ int32_t scan_token_ct_len(uintptr_t half_bufsize, FILE* infile, char* buf,
             }
             break;
         }
-        buf_end    = &(midbuf[bufsize]);
-        *buf_end   = ' ';
+        buf_end = &(midbuf[bufsize]);
+        *buf_end = ' ';
         buf_end[1] = '0';
-        bufptr     = &(buf[half_bufsize - curtoklen]);
-        bufptr2    = midbuf;
+        bufptr = &(buf[half_bufsize - curtoklen]);
+        bufptr2 = midbuf;
         if (curtoklen) {
             goto scan_token_ct_len_tok_start;
         }
@@ -736,7 +736,7 @@ int32_t scan_token_ct_len(uintptr_t half_bufsize, FILE* infile, char* buf,
         return RET_READ_FAIL;
     }
     *max_token_len_ptr = max_token_len;
-    *token_ct_ptr      = token_ct;
+    *token_ct_ptr = token_ct;
     return 0;
 }
 
@@ -747,13 +747,13 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
     // buf must be of size >= (2 * half_bufsize + 2).
     // max_token_len includes trailing null
     uintptr_t full_bufsize = half_bufsize * 2;
-    uintptr_t curtoklen    = 0;
-    uintptr_t token_idx    = 0;
-    char*     midbuf       = &(buf[half_bufsize]);
-    char*     bufptr       = midbuf;
-    char*     bufptr2;
-    char*     bufptr3;
-    char*     buf_end;
+    uintptr_t curtoklen = 0;
+    uintptr_t token_idx = 0;
+    char* midbuf = &(buf[half_bufsize]);
+    char* bufptr = midbuf;
+    char* bufptr2;
+    char* bufptr3;
+    char* buf_end;
     uintptr_t bufsize;
     while (1) {
         if (fread_checked(midbuf, half_bufsize, infile, &bufsize)) {
@@ -770,10 +770,10 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
             // something very strange has to happen to get here
             return RET_READ_FAIL;
         }
-        buf_end    = &(midbuf[bufsize]);
-        *buf_end   = ' ';
+        buf_end = &(midbuf[bufsize]);
+        *buf_end = ' ';
         buf_end[1] = '0';
-        bufptr2    = midbuf;
+        bufptr2 = midbuf;
         if (curtoklen) {
             goto read_tokens_tok_start;
         }
@@ -783,7 +783,7 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
             }
             if (bufptr >= buf_end) {
                 curtoklen = 0;
-                bufptr    = midbuf;
+                bufptr = midbuf;
                 break;
             }
             bufptr2 = &(bufptr[1]);
@@ -843,10 +843,10 @@ void get_top_two_ui(const uint32_t* __restrict uint_arr, uintptr_t uia_size,
                     uintptr_t* __restrict second_idx_ptr)
 {
     assert(uia_size > 1);
-    uintptr_t top_idx    = (uint_arr[1] > uint_arr[0]) ? 1 : 0;
+    uintptr_t top_idx = (uint_arr[1] > uint_arr[0]) ? 1 : 0;
     uintptr_t second_idx = 1 ^ top_idx;
-    uint32_t  top_val    = uint_arr[top_idx];
-    uint32_t  second_val = uint_arr[second_idx];
+    uint32_t top_val = uint_arr[top_idx];
+    uint32_t second_val = uint_arr[second_idx];
     uintptr_t cur_idx;
     uintptr_t cur_val;
     for (cur_idx = 2; cur_idx < uia_size; ++cur_idx) {
@@ -855,8 +855,8 @@ void get_top_two_ui(const uint32_t* __restrict uint_arr, uintptr_t uia_size,
             if (cur_val > top_val) {
                 second_val = top_val;
                 second_idx = top_idx;
-                top_val    = cur_val;
-                top_idx    = cur_idx;
+                top_val = cur_val;
+                top_idx = cur_idx;
             }
             else
             {
@@ -865,13 +865,13 @@ void get_top_two_ui(const uint32_t* __restrict uint_arr, uintptr_t uia_size,
             }
         }
     }
-    *top_idx_ptr    = top_idx;
+    *top_idx_ptr = top_idx;
     *second_idx_ptr = second_idx;
 }
 
 uint32_t intlen(int32_t num)
 {
-    int32_t  retval = 1;
+    int32_t retval = 1;
     uint32_t absnum;
     if (num < 0) {
         absnum = -num;
@@ -953,11 +953,11 @@ uint32_t count_tokens(const char* bufptr)
 }
 
 uint32_t count_and_measure_multistr(const char* multistr,
-                                    uintptr_t*  max_slen_ptr)
+                                    uintptr_t* max_slen_ptr)
 {
     // max_slen includes null terminator
     // assumes multistr is nonempty
-    uint32_t  ct       = 0;
+    uint32_t ct = 0;
     uintptr_t max_slen = *max_slen_ptr;
     uintptr_t slen;
     do
@@ -1039,18 +1039,18 @@ char* uint32toa(uint32_t uii, char* start)
                 uii -= 100000000 * quotient;
             }
             quotient = uii / 1000000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uint32toa_6b:
             uii -= 1000000 * quotient;
         uint32toa_6:
             quotient = uii / 10000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         }
         uii -= 10000 * quotient;
     uint32toa_4:
         // could make a uitoa_z4() call here, but that's slightly slower
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     }
     uii -= 100 * quotient;
 uint32toa_2:
@@ -1063,7 +1063,7 @@ char* int32toa(int32_t ii, char* start)
     if (ii < 0) {
         // -INT_MIN is undefined, but negating the unsigned int equivalent works
         *start++ = '-';
-        uii      = -uii;
+        uii = -uii;
     }
     return uint32toa(uii, start);
 }
@@ -1080,14 +1080,14 @@ char* uitoa_z4(uint32_t uii, char* start)
 char* uitoa_z6(uint32_t uii, char* start)
 {
     uint32_t quotient = uii / 10000;
-    start             = memcpya(start, &(digit2_table[quotient * 2]), 2);
+    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     return uitoa_z4(uii - 10000 * quotient, start);
 }
 
 char* uitoa_z8(uint32_t uii, char* start)
 {
     uint32_t quotient = uii / 1000000;
-    start             = memcpya(start, &(digit2_table[quotient * 2]), 2);
+    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     return uitoa_z6(uii - 1000000 * quotient, start);
 }
 
@@ -1099,21 +1099,21 @@ char* int64toa(int64_t llii, char* start)
     uint32_t middle_eight;
     if (llii < 0) {
         *start++ = '-';
-        ullii    = -ullii;
+        ullii = -ullii;
     }
     if (ullii <= 0xffffffffLLU) {
         return uint32toa((uint32_t) ullii, start);
     }
-    top_digits   = ullii / 100000000;
+    top_digits = ullii / 100000000;
     bottom_eight = (uint32_t)(ullii - (top_digits * 100000000));
     if (top_digits <= 0xffffffffLLU) {
         start = uint32toa((uint32_t) top_digits, start);
         return uitoa_z8(bottom_eight, start);
     }
-    ullii        = top_digits / 100000000;
+    ullii = top_digits / 100000000;
     middle_eight = (uint32_t)(top_digits - (ullii * 100000000));
-    start        = uint32toa((uint32_t) ullii, start);
-    start        = uitoa_z8(middle_eight, start);
+    start = uint32toa((uint32_t) ullii, start);
+    start = uitoa_z8(middle_eight, start);
     return uitoa_z8(bottom_eight, start);
 }
 
@@ -1151,7 +1151,7 @@ char* uint32toa_w6(uint32_t uii, char* start)
     uint32_t quotient;
     if (uii < 1000) {
         if (uii < 10) {
-            start    = memseta(start, 32, 5);
+            start = memseta(start, 32, 5);
             *start++ = '0' + uii;
             return start;
         }
@@ -1163,7 +1163,7 @@ char* uint32toa_w6(uint32_t uii, char* start)
         // the little-endian trick doesn't seem to help here.  possibly relevant
         // differences from uint32toa_w4() and _w8(): sequential dependence on
         // quotient, need to interpret pointer as a char* again
-        start    = memseta(start, 32, 3);
+        start = memseta(start, 32, 3);
         *start++ = '0' + quotient;
     }
     else
@@ -1203,17 +1203,17 @@ char* uint32toa_w6(uint32_t uii, char* start)
                 uii -= 100000000 * quotient;
             }
             quotient = uii / 1000000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uint32toa_w6_6b:
             uii -= 1000000 * quotient;
         uint32toa_w6_6:
             quotient = uii / 10000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         }
         uii -= 10000 * quotient;
     uint32toa_w6_4:
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     }
     uii -= 100 * quotient;
 uint32toa_w6_2:
@@ -1225,7 +1225,7 @@ char* uint32toa_w7(uint32_t uii, char* start)
     uint32_t quotient;
     if (uii < 1000) {
         if (uii < 10) {
-            start    = memseta(start, 32, 6);
+            start = memseta(start, 32, 6);
             *start++ = '0' + uii;
             return start;
         }
@@ -1234,7 +1234,7 @@ char* uint32toa_w7(uint32_t uii, char* start)
             goto uint32toa_w7_2;
         }
         quotient = uii / 100;
-        start    = memseta(start, 32, 4);
+        start = memseta(start, 32, 4);
         *start++ = '0' + quotient;
     }
     else
@@ -1251,7 +1251,7 @@ char* uint32toa_w7(uint32_t uii, char* start)
             }
             else if (uii >= 10000)
             {
-                start    = memseta(start, 32, 2);
+                start = memseta(start, 32, 2);
                 quotient = uii / 10000;
                 *start++ = '0' + quotient;
             }
@@ -1275,17 +1275,17 @@ char* uint32toa_w7(uint32_t uii, char* start)
                 uii -= 100000000 * quotient;
             }
             quotient = uii / 1000000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uint32toa_w7_6b:
             uii -= 1000000 * quotient;
         uint32toa_w7_6:
             quotient = uii / 10000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         }
         uii -= 10000 * quotient;
     uint32toa_w7_4:
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     }
     uii -= 100 * quotient;
 uint32toa_w7_2:
@@ -1312,7 +1312,7 @@ char* uint32toa_w8(uint32_t uii, char* start)
             goto uint32toa_w8_2;
         }
         quotient = uii / 100;
-        start    = memseta(start, 32, 5);
+        start = memseta(start, 32, 5);
         *start++ = '0' + quotient;
     }
     else
@@ -1324,7 +1324,7 @@ char* uint32toa_w8(uint32_t uii, char* start)
                     goto uint32toa_w8_6;
                 }
                 quotient = uii / 1000000;
-                *start   = ' ';
+                *start = ' ';
                 start[1] = '0' + quotient;
                 start += 2;
                 goto uint32toa_w8_6b;
@@ -1353,17 +1353,17 @@ char* uint32toa_w8(uint32_t uii, char* start)
                 uii -= 100000000 * quotient;
             }
             quotient = uii / 1000000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uint32toa_w8_6b:
             uii -= 1000000 * quotient;
         uint32toa_w8_6:
             quotient = uii / 10000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         }
         uii -= 10000 * quotient;
     uint32toa_w8_4:
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     }
     uii -= 100 * quotient;
 uint32toa_w8_2:
@@ -1377,7 +1377,7 @@ char* uint32toa_w10(uint32_t uii, char* start)
     uint32_t quotient;
     if (uii < 1000) {
         if (uii < 10) {
-            start    = memseta(start, 32, 9);
+            start = memseta(start, 32, 9);
             *start++ = '0' + uii;
             return start;
         }
@@ -1386,7 +1386,7 @@ char* uint32toa_w10(uint32_t uii, char* start)
             goto uint32toa_w10_2;
         }
         quotient = uii / 100;
-        start    = memseta(start, 32, 7);
+        start = memseta(start, 32, 7);
         *start++ = '0' + quotient;
     }
     else
@@ -1422,7 +1422,7 @@ char* uint32toa_w10(uint32_t uii, char* start)
                 }
                 else
                 {
-                    *start   = ' ';
+                    *start = ' ';
                     start[1] = '0' + quotient;
                 }
                 uii -= 100000000 * quotient;
@@ -1438,12 +1438,12 @@ char* uint32toa_w10(uint32_t uii, char* start)
             uii -= 1000000 * quotient;
         uint32toa_w10_6:
             quotient = uii / 10000;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         }
         uii -= 10000 * quotient;
     uint32toa_w10_4:
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
     }
     uii -= 100 * quotient;
 uint32toa_w10_2:
@@ -1657,11 +1657,11 @@ static inline char* qrtoa_1p7(uint32_t quotient, uint32_t remainder,
 // To avoid inadvertent printing of an extra digit, there's a deliberate gap
 // between the 99.9994999...-type bounds and the largest numbers that would
 // actually round down.
-static const double banker_round5[]  = {0.499995, 0.500005};
-static const double banker_round6[]  = {0.4999995, 0.5000005};
-static const double banker_round7[]  = {0.49999995, 0.50000005};
-static const double banker_round8[]  = {0.499999995, 0.500000005};
-static const double banker_round9[]  = {0.4999999995, 0.5000000005};
+static const double banker_round5[] = {0.499995, 0.500005};
+static const double banker_round6[] = {0.4999995, 0.5000005};
+static const double banker_round7[] = {0.49999995, 0.50000005};
+static const double banker_round8[] = {0.499999995, 0.500000005};
+static const double banker_round9[] = {0.4999999995, 0.5000000005};
 static const double banker_round10[] = {0.49999999995, 0.50000000005};
 static const double banker_round11[] = {0.499999999995, 0.500000000005};
 static const double banker_round12[] = {0.4999999999995, 0.5000000000005};
@@ -1682,7 +1682,7 @@ static inline void double_bround1(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 10;
+    *quotientp = remainder / 10;
     *remainderp = remainder - (*quotientp) * 10;
 }
 
@@ -1693,7 +1693,7 @@ static inline void double_bround2(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 100;
+    *quotientp = remainder / 100;
     *remainderp = remainder - (*quotientp) * 100;
 }
 
@@ -1704,7 +1704,7 @@ static inline void double_bround3(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 1000;
+    *quotientp = remainder / 1000;
     *remainderp = remainder - (*quotientp) * 1000;
 }
 
@@ -1715,7 +1715,7 @@ static inline void double_bround4(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 10000;
+    *quotientp = remainder / 10000;
     *remainderp = remainder - (*quotientp) * 10000;
 }
 
@@ -1726,7 +1726,7 @@ static inline void double_bround5(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 100000;
+    *quotientp = remainder / 100000;
     *remainderp = remainder - (*quotientp) * 100000;
 }
 
@@ -1737,7 +1737,7 @@ static inline void double_bround6(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 1000000;
+    *quotientp = remainder / 1000000;
     *remainderp = remainder - (*quotientp) * 1000000;
 }
 
@@ -1748,7 +1748,7 @@ static inline void double_bround7(double dxx, const double* banker_round,
     uint32_t remainder = (int32_t) dxx;
     remainder +=
         (int32_t)((dxx - ((int32_t) remainder)) + banker_round[remainder & 1]);
-    *quotientp  = remainder / 10000000;
+    *quotientp = remainder / 10000000;
     *remainderp = remainder - (*quotientp) * 10000000;
 }
 
@@ -1792,7 +1792,7 @@ char* dtoa_so6(double dxx, char* start)
             quotient = uii / 100;
             *start++ = '0' + quotient;
             quotient = uii - 100 * quotient;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
             if (!remainder) {
                 return start;
             }
@@ -1808,9 +1808,9 @@ char* dtoa_so6(double dxx, char* start)
         }
         double_bround2(dxx, banker_round8, &uii, &remainder);
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         if (!remainder) {
             return start;
         }
@@ -1821,17 +1821,17 @@ char* dtoa_so6(double dxx, char* start)
     {
         double_bround1(dxx, banker_round8, &uii, &remainder);
         quotient = uii / 10000;
-        *start   = '0' + quotient;
+        *start = '0' + quotient;
         uii -= 10000 * quotient;
         quotient = uii / 100;
-        start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
-        uii      = uii - 100 * quotient;
-        start    = memcpya(start, &(digit2_table[uii * 2]), 2);
+        start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+        uii = uii - 100 * quotient;
+        start = memcpya(start, &(digit2_table[uii * 2]), 2);
         if (!remainder) {
             return start;
         }
         *start++ = '.';
-        *start   = '0' + remainder;
+        *start = '0' + remainder;
         return &(start[1]);
     }
     else
@@ -1855,48 +1855,48 @@ static inline void float_round1(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 10);
-    *quotientp         = remainder / 10;
-    *remainderp        = remainder - (*quotientp) * 10;
+    *quotientp = remainder / 10;
+    *remainderp = remainder - (*quotientp) * 10;
 }
 
 static inline void float_round2(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 100);
-    *quotientp         = remainder / 100;
-    *remainderp        = remainder - (*quotientp) * 100;
+    *quotientp = remainder / 100;
+    *remainderp = remainder - (*quotientp) * 100;
 }
 
 static inline void float_round3(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 1000);
-    *quotientp         = remainder / 1000;
-    *remainderp        = remainder - (*quotientp) * 1000;
+    *quotientp = remainder / 1000;
+    *remainderp = remainder - (*quotientp) * 1000;
 }
 
 static inline void float_round4(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 10000);
-    *quotientp         = remainder / 10000;
-    *remainderp        = remainder - (*quotientp) * 10000;
+    *quotientp = remainder / 10000;
+    *remainderp = remainder - (*quotientp) * 10000;
 }
 
 static inline void float_round5(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 100000);
-    *quotientp         = remainder / 100000;
-    *remainderp        = remainder - (*quotientp) * 100000;
+    *quotientp = remainder / 100000;
+    *remainderp = remainder - (*quotientp) * 100000;
 }
 
 static inline void float_round6(float fxx, uint32_t* quotientp,
                                 uint32_t* remainderp)
 {
     uint32_t remainder = float_round(fxx * 1000000);
-    *quotientp         = remainder / 1000000;
-    *remainderp        = remainder - (*quotientp) * 1000000;
+    *quotientp = remainder / 1000000;
+    *remainderp = remainder - (*quotientp) * 1000000;
 }
 
 char* ftoa_so6(float fxx, char* start)
@@ -1939,9 +1939,9 @@ char* ftoa_so6(float fxx, char* start)
         if (fxx < 999.99944) {
             float_round3(fxx, &uii, &remainder);
             quotient = uii / 100;
-            *start   = '0' + quotient;
+            *start = '0' + quotient;
             quotient = uii - 100 * quotient;
-            start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+            start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
             if (!remainder) {
                 return start;
             }
@@ -1957,9 +1957,9 @@ char* ftoa_so6(float fxx, char* start)
         }
         float_round2(fxx, &uii, &remainder);
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         if (!remainder) {
             return start;
         }
@@ -1970,16 +1970,16 @@ char* ftoa_so6(float fxx, char* start)
     {
         float_round1(fxx, &uii, &remainder);
         quotient = uii / 10000;
-        *start   = '0' + quotient;
+        *start = '0' + quotient;
         uii -= 10000 * quotient;
         quotient = uii / 100;
-        start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
-        uii      = uii - 100 * quotient;
-        start    = memcpya(start, &(digit2_table[uii * 2]), 2);
+        start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+        uii = uii - 100 * quotient;
+        start = memcpya(start, &(digit2_table[uii * 2]), 2);
         if (!remainder) {
             return start;
         }
-        *start   = '.';
+        *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
     }
@@ -2021,8 +2021,8 @@ char* dtoa_so3(double dxx, char* start)
     }
     else
     {
-        quotient  = double_bround(dxx, banker_round11);
-        start     = memcpya(start, &(digit2_table[(quotient / 10) * 2]), 2);
+        quotient = double_bround(dxx, banker_round11);
+        start = memcpya(start, &(digit2_table[(quotient / 10) * 2]), 2);
         remainder = quotient % 10;
     }
     *start = '0' + remainder;
@@ -2056,13 +2056,13 @@ char* dtoa_so4(double dxx, char* start)
     {
         double_bround1(dxx, banker_round10, &uii, &remainder);
         quotient = uii / 100;
-        *start   = '0' + quotient;
+        *start = '0' + quotient;
         quotient = uii - 100 * quotient;
-        start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+        start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
         if (!remainder) {
             return start;
         }
-        *start   = '.';
+        *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
     }
@@ -2118,7 +2118,7 @@ char* dtoa_so8(double dxx, char* start)
             quotient = uii / 100;
             *start++ = '0' + quotient;
             quotient = uii - 100 * quotient;
-            start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+            start = memcpya(start, &(digit2_table[quotient * 2]), 2);
             if (!remainder) {
                 return start;
             }
@@ -2142,9 +2142,9 @@ char* dtoa_so8(double dxx, char* start)
         }
         double_bround4(dxx, banker_round6, &uii, &remainder);
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         if (!remainder) {
             return start;
         }
@@ -2156,10 +2156,10 @@ char* dtoa_so8(double dxx, char* start)
         if (dxx < 99999.999499999) {
             double_bround3(dxx, banker_round6, &uii, &remainder);
             quotient = uii / 10000;
-            *start   = '0' + quotient;
+            *start = '0' + quotient;
             uii -= 10000 * quotient;
             quotient = uii / 100;
-            start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+            start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
             uii -= 100 * quotient;
             start = memcpya(start, &(digit2_table[uii * 2]), 2);
             if (!remainder) {
@@ -2170,10 +2170,10 @@ char* dtoa_so8(double dxx, char* start)
         }
         double_bround2(dxx, banker_round6, &uii, &remainder);
         quotient = uii / 10000;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uii -= 10000 * quotient;
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uii -= 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
         if (!remainder) {
@@ -2186,19 +2186,19 @@ char* dtoa_so8(double dxx, char* start)
     {
         double_bround1(dxx, banker_round6, &uii, &remainder);
         quotient = uii / 1000000;
-        *start   = '0' + quotient;
+        *start = '0' + quotient;
         uii -= 1000000 * quotient;
         quotient = uii / 10000;
-        start    = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
+        start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
         uii -= 10000 * quotient;
         quotient = uii / 100;
-        start    = memcpya(start, &(digit2_table[quotient * 2]), 2);
+        start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uii -= 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
         if (!remainder) {
             return start;
         }
-        *start   = '.';
+        *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
     }
@@ -2213,7 +2213,7 @@ char* dtoa_e(double dxx, char* start)
     uint32_t xp10 = 0;
     uint32_t quotient;
     uint32_t remainder;
-    char     sign;
+    char sign;
     if (dxx != dxx) {
         // do this first to avoid generating exception
         return memcpyl3a(start, "nan");
@@ -2221,7 +2221,7 @@ char* dtoa_e(double dxx, char* start)
     else if (dxx < 0)
     {
         *start++ = '-';
-        dxx      = -dxx;
+        dxx = -dxx;
     }
     if (dxx >= 9.9999994999999e-1) {
         if (dxx >= 9.9999994999999e7) {
@@ -2323,7 +2323,7 @@ char* dtoa_e(double dxx, char* start)
     double_bround6(dxx, banker_round7, &quotient, &remainder);
     *start++ = '0' + quotient;
     *start++ = '.';
-    start    = uitoa_z6(remainder, start);
+    start = uitoa_z6(remainder, start);
     *start++ = 'e';
     *start++ = sign;
     if (xp10 >= 100) {
@@ -2339,7 +2339,7 @@ char* ftoa_e(float fxx, char* start)
     uint32_t xp10 = 0;
     uint32_t quotient;
     uint32_t remainder;
-    char     sign;
+    char sign;
     if (fxx != fxx) {
         // do this first to avoid generating exception
         return memcpyl3a(start, "nan");
@@ -2347,7 +2347,7 @@ char* ftoa_e(float fxx, char* start)
     else if (fxx < 0)
     {
         *start++ = '-';
-        fxx      = -fxx;
+        fxx = -fxx;
     }
     if (fxx >= 9.9999995e-1) {
         if (fxx >= 9.9999995e15) {
@@ -2421,7 +2421,7 @@ char* ftoa_e(float fxx, char* start)
     float_round6(fxx, &quotient, &remainder);
     *start++ = '0' + quotient;
     *start++ = '.';
-    start    = uitoa_z6(remainder, start);
+    start = uitoa_z6(remainder, start);
     *start++ = 'e';
     *start++ = sign;
     return memcpya(start, &(digit2_table[xp10 * 2]), 2);
@@ -2430,8 +2430,8 @@ char* ftoa_e(float fxx, char* start)
 char* dtoa_f_p2(double dxx, char* start)
 {
     const double* br_ptr;
-    uint32_t      quotient;
-    uint32_t      remainder;
+    uint32_t quotient;
+    uint32_t remainder;
     if (dxx != dxx) {
         return memcpyl3a(start, "nan");
     }
@@ -2439,7 +2439,7 @@ char* dtoa_f_p2(double dxx, char* start)
     {
         if (dxx < 0) {
             *start++ = '-';
-            dxx      = -dxx;
+            dxx = -dxx;
             if (dxx >= 9.9949999999999) {
                 goto dtoa_f_p2_10;
             }
@@ -2494,8 +2494,8 @@ dtoa_f_p2_10:
 char* dtoa_f_p3(double dxx, char* start)
 {
     const double* br_ptr;
-    uint32_t      quotient;
-    uint32_t      remainder;
+    uint32_t quotient;
+    uint32_t remainder;
     if (dxx != dxx) {
         return memcpyl3a(start, "nan");
     }
@@ -2503,7 +2503,7 @@ char* dtoa_f_p3(double dxx, char* start)
     {
         if (dxx < 0) {
             *start++ = '-';
-            dxx      = -dxx;
+            dxx = -dxx;
             if (dxx >= 9.9994999999999) {
                 goto dtoa_f_p3_10;
             }
@@ -2564,7 +2564,7 @@ char* dtoa_f_w9p6(double dxx, char* start)
     {
         if (dxx < 0) {
             *start++ = '-';
-            dxx      = -dxx;
+            dxx = -dxx;
             if (dxx >= 9.9999994999999) {
                 goto dtoa_f_w9p6_10;
             }
@@ -2597,8 +2597,8 @@ dtoa_f_w9p6_10:
 char* dtoa_f_w7p4(double dxx, char* start)
 {
     const double* br_ptr;
-    uint32_t      quotient;
-    uint32_t      remainder;
+    uint32_t quotient;
+    uint32_t remainder;
     if (dxx != dxx) {
         return memcpya(start, "    nan", 7);
     }
@@ -2606,7 +2606,7 @@ char* dtoa_f_w7p4(double dxx, char* start)
     {
         if (dxx < 0) {
             *start++ = '-';
-            dxx      = -dxx;
+            dxx = -dxx;
             if (dxx >= 9.9999499999999) {
                 goto dtoa_f_w7p4_10;
             }
@@ -2660,7 +2660,7 @@ char* dtoa_f_w9p6_spaced(double dxx, char* start)
     // the match appears to be exact. Does not detect exact matches when
     // abs(dxx) > 2^31 / 10^5.
     double dyy = dxx * 100000 + 0.00000005;
-    start      = dtoa_f_w9p6(dxx, start);
+    start = dtoa_f_w9p6(dxx, start);
     if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) {
         return start;
     }
@@ -2672,7 +2672,7 @@ char* dtoa_f_w9p6_clipped(double dxx, char* start)
 {
     // same conditions as _spaced()
     double dyy = dxx * 100000 + 0.00000005;
-    start      = dtoa_f_w9p6(dxx, start);
+    start = dtoa_f_w9p6(dxx, start);
     if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) {
         return start;
     }
@@ -2690,7 +2690,7 @@ char* dtoa_g(double dxx, char* start)
     else if (dxx < 0)
     {
         *start++ = '-';
-        dxx      = -dxx;
+        dxx = -dxx;
     }
     if (dxx < 9.9999949999999e-5) {
         // 6 sig fig exponential notation, small
@@ -2837,7 +2837,7 @@ char* ftoa_g(float fxx, char* start)
     else if (fxx < 0)
     {
         *start++ = '-';
-        fxx      = -fxx;
+        fxx = -fxx;
     }
     if (fxx < 9.9999944e-5) {
         if (fxx < 9.9999944e-16) {
@@ -2937,8 +2937,8 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
 {
     assert(min_width >= 5);
     uint32_t xp10 = 0;
-    char     wbuf[16];
-    char*    wpos = wbuf;
+    char wbuf[16];
+    char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
     if (dxx != dxx) {
@@ -2948,7 +2948,7 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
     else if (dxx < 0)
     {
         *wpos++ = '-';
-        dxx     = -dxx;
+        dxx = -dxx;
     }
     if (dxx < 9.9499999999999e-5) {
         // 2 sig fig exponential notation, small
@@ -3000,7 +3000,7 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround1(dxx, banker_round12, &quotient, &remainder);
-        wpos      = qrtoa_1p1(quotient, remainder, wpos);
+        wpos = qrtoa_1p1(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder < min_width - 5) {
@@ -3013,7 +3013,7 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e-", 2, '0' + quotient);
+            start = memcpyax(start, "e-", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3087,7 +3087,7 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround1(dxx, banker_round12, &quotient, &remainder);
-        wpos      = qrtoa_1p1(quotient, remainder, wpos);
+        wpos = qrtoa_1p1(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder < min_width - 5) {
@@ -3100,7 +3100,7 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e+", 2, '0' + quotient);
+            start = memcpyax(start, "e+", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3153,8 +3153,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
 {
     assert(min_width >= 5);
     uint32_t xp10 = 0;
-    char     wbuf[16];
-    char*    wpos = wbuf;
+    char wbuf[16];
+    char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
     if (dxx != dxx) {
@@ -3164,7 +3164,7 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
     else if (dxx < 0)
     {
         *wpos++ = '-';
-        dxx     = -dxx;
+        dxx = -dxx;
     }
     if (dxx < 9.9949999999999e-5) {
         // 3 sig fig exponential notation, small
@@ -3216,7 +3216,7 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround2(dxx, banker_round11, &quotient, &remainder);
-        wpos      = qrtoa_1p2(quotient, remainder, wpos);
+        wpos = qrtoa_1p2(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder < min_width - 5) {
@@ -3229,7 +3229,7 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e-", 2, '0' + quotient);
+            start = memcpyax(start, "e-", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3303,7 +3303,7 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround2(dxx, banker_round11, &quotient, &remainder);
-        wpos      = qrtoa_1p2(quotient, remainder, wpos);
+        wpos = qrtoa_1p2(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder < min_width - 5) {
@@ -3316,7 +3316,7 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e+", 2, '0' + quotient);
+            start = memcpyax(start, "e+", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3369,8 +3369,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
 char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
 {
     uint32_t xp10 = 0;
-    char     wbuf[16];
-    char*    wpos = wbuf;
+    char wbuf[16];
+    char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
     if (dxx != dxx) {
@@ -3382,7 +3382,7 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
     else if (dxx < 0)
     {
         *wpos++ = '-';
-        dxx     = -dxx;
+        dxx = -dxx;
     }
     if (dxx < 9.9994999999999e-5) {
         // 4 sig fig exponential notation, small
@@ -3434,7 +3434,7 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround3(dxx, banker_round10, &quotient, &remainder);
-        wpos      = qrtoa_1p3(quotient, remainder, wpos);
+        wpos = qrtoa_1p3(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder + 5 < min_width) {
@@ -3447,7 +3447,7 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e-", 2, '0' + quotient);
+            start = memcpyax(start, "e-", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3523,7 +3523,7 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround3(dxx, banker_round10, &quotient, &remainder);
-        wpos      = qrtoa_1p3(quotient, remainder, wpos);
+        wpos = qrtoa_1p3(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder + 5 < min_width) {
@@ -3536,7 +3536,7 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e+", 2, '0' + quotient);
+            start = memcpyax(start, "e+", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3589,8 +3589,8 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
 char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
 {
     uint32_t xp10 = 0;
-    char     wbuf[16];
-    char*    wpos = wbuf;
+    char wbuf[16];
+    char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
     if (dxx != dxx) {
@@ -3602,7 +3602,7 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
     else if (dxx < 0)
     {
         *wpos++ = '-';
-        dxx     = -dxx;
+        dxx = -dxx;
     }
     if (dxx < 9.9999999499999e-5) {
         // 8 sig fig exponential notation, small
@@ -3654,7 +3654,7 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround7(dxx, banker_round6, &quotient, &remainder);
-        wpos      = qrtoa_1p7(quotient, remainder, wpos);
+        wpos = qrtoa_1p7(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder + 5 < min_width) {
@@ -3667,7 +3667,7 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e-", 2, '0' + quotient);
+            start = memcpyax(start, "e-", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3743,7 +3743,7 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
             xp10++;
         }
         double_bround7(dxx, banker_round6, &quotient, &remainder);
-        wpos      = qrtoa_1p7(quotient, remainder, wpos);
+        wpos = qrtoa_1p7(quotient, remainder, wpos);
         remainder = wpos - wbuf;
         if (xp10 >= 100) {
             if (remainder + 5 < min_width) {
@@ -3756,7 +3756,7 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
                 start = memcpya(start, wbuf, remainder);
             }
             quotient = xp10 / 100;
-            start    = memcpyax(start, "e+", 2, '0' + quotient);
+            start = memcpyax(start, "e+", 2, '0' + quotient);
             xp10 -= 100 * quotient;
         }
         else
@@ -3815,8 +3815,8 @@ char* chrom_print_human(uint32_t num, char* buf)
     }
     else if (num < 23)
     {
-        n10    = num / 10;
-        *buf   = '0' + n10;
+        n10 = num / 10;
+        *buf = '0' + n10;
         buf[1] = '0' + (num - 10 * n10);
         return &(buf[2]);
     }
@@ -3853,25 +3853,25 @@ void magic_num(uint32_t divisor, uint64_t* multp,
     // Assumes divisor is not zero, of course.
     // May want to populate a struct instead.
     uint32_t down_multiplier = 0;
-    uint32_t down_exponent   = 0;
-    uint32_t has_magic_down  = 0;
+    uint32_t down_exponent = 0;
+    uint32_t has_magic_down = 0;
     uint32_t quotient;
     uint32_t remainder;
     uint32_t ceil_log_2_d;
     uint32_t exponent;
     uint32_t uii;
     if (divisor & (divisor - 1)) {
-        quotient     = 0x80000000U / divisor;
-        remainder    = 0x80000000U - (quotient * divisor);
+        quotient = 0x80000000U / divisor;
+        remainder = 0x80000000U - (quotient * divisor);
         ceil_log_2_d = 32 - __builtin_clz(divisor);
         for (exponent = 0;; exponent++) {
             if (remainder >= divisor - remainder) {
-                quotient  = quotient * 2 + 1;
+                quotient = quotient * 2 + 1;
                 remainder = remainder * 2 - divisor;
             }
             else
             {
-                quotient  = quotient * 2;
+                quotient = quotient * 2;
                 remainder = remainder * 2;
             }
             if ((exponent >= ceil_log_2_d)
@@ -3880,24 +3880,24 @@ void magic_num(uint32_t divisor, uint64_t* multp,
                 break;
             }
             if ((!has_magic_down) && (remainder <= (1U << exponent))) {
-                has_magic_down  = 1;
+                has_magic_down = 1;
                 down_multiplier = quotient;
-                down_exponent   = exponent;
+                down_exponent = exponent;
             }
         }
         if (exponent < ceil_log_2_d) {
-            *multp       = quotient + 1;
-            *pre_shiftp  = 0;
+            *multp = quotient + 1;
+            *pre_shiftp = 0;
             *post_shiftp = 32 + exponent;
-            *incrp       = 0;
+            *incrp = 0;
             return;
         }
         else if (divisor & 1)
         {
-            *multp       = down_multiplier;
-            *pre_shiftp  = 0;
+            *multp = down_multiplier;
+            *pre_shiftp = 0;
             *post_shiftp = 32 + down_exponent;
-            *incrp       = 1;
+            *incrp = 1;
             return;
         }
         else
@@ -3911,10 +3911,10 @@ void magic_num(uint32_t divisor, uint64_t* multp,
     else
     {
         // power of 2
-        *multp       = 1;
-        *pre_shiftp  = 0;
+        *multp = 1;
+        *pre_shiftp = 0;
         *post_shiftp = __builtin_ctz(divisor);
-        *incrp       = 0;
+        *incrp = 0;
     }
 }
 
@@ -3922,7 +3922,7 @@ void fill_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
 {
     assert(len);
     uintptr_t maj_start = loc_start / BITCT;
-    uintptr_t maj_end   = (loc_start + len) / BITCT;
+    uintptr_t maj_end = (loc_start + len) / BITCT;
     uintptr_t minor;
     if (maj_start == maj_end) {
         bitarr[maj_start] |= (ONELU << ((loc_start + len) % BITCT))
@@ -3943,7 +3943,7 @@ void clear_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
 {
     assert(len);
     uintptr_t maj_start = loc_start / BITCT;
-    uintptr_t maj_end   = (loc_start + len) / BITCT;
+    uintptr_t maj_end = (loc_start + len) / BITCT;
     uintptr_t minor;
     if (maj_start == maj_end) {
         bitarr[maj_start] &= ~((ONELU << ((loc_start + len) % BITCT))
@@ -3963,7 +3963,7 @@ void clear_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
 uint32_t next_unset_unsafe(const uintptr_t* bitarr, uint32_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (~(*bitarr_ptr)) >> (loc % BITCT);
+    uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     if (ulii) {
         return loc + CTZLU(ulii);
     }
@@ -3978,7 +3978,7 @@ uint32_t next_unset_unsafe(const uintptr_t* bitarr, uint32_t loc)
 uintptr_t next_unset_ul_unsafe(const uintptr_t* bitarr, uintptr_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (~(*bitarr_ptr)) >> (loc % BITCT);
+    uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     if (ulii) {
         return loc + CTZLU(ulii);
     }
@@ -3995,7 +3995,7 @@ uint32_t next_unset(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
     // safe version.
     assert(ceil >= 1);
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (~(*bitarr_ptr)) >> (loc % BITCT);
+    uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
     if (ulii) {
         loc += CTZLU(ulii);
@@ -4017,7 +4017,7 @@ uint32_t next_unset(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
 uintptr_t next_unset_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (~(*bitarr_ptr)) >> (loc % BITCT);
+    uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
     if (ulii) {
         ulii = loc + CTZLU(ulii);
@@ -4039,7 +4039,7 @@ uintptr_t next_unset_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
 uint32_t next_set_unsafe(const uintptr_t* bitarr, uint32_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (*bitarr_ptr) >> (loc % BITCT);
+    uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     if (ulii) {
         return loc + CTZLU(ulii);
     }
@@ -4054,7 +4054,7 @@ uint32_t next_set_unsafe(const uintptr_t* bitarr, uint32_t loc)
 uintptr_t next_set_ul_unsafe(const uintptr_t* bitarr, uintptr_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (*bitarr_ptr) >> (loc % BITCT);
+    uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     if (ulii) {
         return loc + CTZLU(ulii);
     }
@@ -4069,9 +4069,9 @@ uintptr_t next_set_ul_unsafe(const uintptr_t* bitarr, uintptr_t loc)
 uint32_t next_set(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (*bitarr_ptr) >> (loc % BITCT);
+    uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
-    uint32_t         rval;
+    uint32_t rval;
     if (ulii) {
         rval = loc + CTZLU(ulii);
         return MINV(rval, ceil);
@@ -4092,7 +4092,7 @@ uint32_t next_set(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
 uintptr_t next_set_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uintptr_t        ulii       = (*bitarr_ptr) >> (loc % BITCT);
+    uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
     if (ulii) {
         ulii = loc + CTZLU(ulii);
@@ -4114,7 +4114,7 @@ uintptr_t next_set_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
 int32_t last_set_bit(const uintptr_t* bitarr, uint32_t word_ct)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[word_ct]);
-    uintptr_t        ulii;
+    uintptr_t ulii;
     do
     {
         ulii = *(--bitarr_ptr);
@@ -4130,8 +4130,8 @@ int32_t last_clear_bit(const uintptr_t* bitarr, uint32_t ceil)
 {
     // can return ceil or any lower number
     const uintptr_t* bitarr_ptr = &(bitarr[ceil / BITCT]);
-    uint32_t         remainder  = ceil % BITCT;
-    uintptr_t        ulii;
+    uint32_t remainder = ceil % BITCT;
+    uintptr_t ulii;
     if (remainder) {
         ulii = (~(*bitarr_ptr)) & ((ONELU << remainder) - ONELU);
         if (ulii) {
@@ -4153,8 +4153,8 @@ uint32_t prev_unset_unsafe(const uintptr_t* bitarr, uint32_t loc)
     // unlike the next_{un}set family, this always returns a STRICTLY earlier
     // position
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
-    uint32_t         remainder  = loc % BITCT;
-    uintptr_t        ulii;
+    uint32_t remainder = loc % BITCT;
+    uintptr_t ulii;
     if (remainder) {
         ulii = (~(*bitarr_ptr)) & ((ONELU << remainder) - ONELU);
         if (ulii) {
@@ -4341,8 +4341,8 @@ static inline uint32_t fmix32(uint32_t h)
 
 uint32_t murmurhash3_32(const void* key, uint32_t len)
 {
-    const uint8_t* data    = (const uint8_t*) key;
-    const int32_t  nblocks = len / 4;
+    const uint8_t* data = (const uint8_t*) key;
+    const int32_t nblocks = len / 4;
 
     uint32_t h1 = 0;
     // uint32_t h1 = seed;
@@ -4355,7 +4355,7 @@ uint32_t murmurhash3_32(const void* key, uint32_t len)
 
     const uint32_t* blocks = (const uint32_t*) (data + nblocks * 4);
 
-    int32_t  i;
+    int32_t i;
     uint32_t k1;
     for (i = -nblocks; i; i++) {
         k1 = getblock32(blocks, i);
@@ -4442,7 +4442,7 @@ uintptr_t geqprime(uintptr_t floor)
     return floor;
 }
 
-int32_t populate_id_htable(uintptr_t        unfiltered_ct,
+int32_t populate_id_htable(uintptr_t unfiltered_ct,
                            const uintptr_t* exclude_arr, uintptr_t item_ct,
                            const char* item_ids, uintptr_t max_id_len,
                            uint32_t store_dups, uint32_t id_htable_size,
@@ -4456,29 +4456,29 @@ int32_t populate_id_htable(uintptr_t        unfiltered_ct,
     // unfiltered indexes of duplicate names.  (This requires the
     // alloc_and_populate_id_htable interface; bigstack_end_alloc doesn't work
     // there.)
-    uintptr_t item_uidx   = 0;
-    uint32_t  extra_alloc = 0;
-    uint32_t  prev_llidx  = 0;
+    uintptr_t item_uidx = 0;
+    uint32_t extra_alloc = 0;
+    uint32_t prev_llidx = 0;
     // needs to be synced with extract_exclude_flag_norange()
-    uint32_t*   extra_alloc_base = (uint32_t*) g_bigstack_base;
-    uint32_t    item_idx         = 0;
+    uint32_t* extra_alloc_base = (uint32_t*) g_bigstack_base;
+    uint32_t item_idx = 0;
     const char* sptr;
-    uintptr_t   prev_uidx;
-    uintptr_t   cur_bigstack_left;
-    uint32_t    max_extra_alloc;
-    uint32_t    slen;
-    uint32_t    hashval;
-    uint32_t    next_incr;
-    uint32_t    top_diff;
-    uint32_t    hash_result;
-    uint32_t    cur_dup;
+    uintptr_t prev_uidx;
+    uintptr_t cur_bigstack_left;
+    uint32_t max_extra_alloc;
+    uint32_t slen;
+    uint32_t hashval;
+    uint32_t next_incr;
+    uint32_t top_diff;
+    uint32_t hash_result;
+    uint32_t cur_dup;
     fill_uint_one(id_htable_size, id_htable);
     if (!store_dups) {
         for (; item_idx < item_ct; item_uidx++, item_idx++) {
             next_unset_ul_unsafe_ck(exclude_arr, &item_uidx);
-            sptr      = &(item_ids[item_uidx * max_id_len]);
-            slen      = strlen(sptr);
-            hashval   = murmurhash3_32(sptr, slen) % id_htable_size;
+            sptr = &(item_ids[item_uidx * max_id_len]);
+            slen = strlen(sptr);
+            hashval = murmurhash3_32(sptr, slen) % id_htable_size;
             next_incr = 1;
             while (1) {
                 hash_result = id_htable[hashval];
@@ -4523,9 +4523,9 @@ int32_t populate_id_htable(uintptr_t        unfiltered_ct,
 #endif
         for (; item_idx < item_ct; item_uidx++, item_idx++) {
             next_unset_ul_unsafe_ck(exclude_arr, &item_uidx);
-            sptr      = &(item_ids[item_uidx * max_id_len]);
-            slen      = strlen(sptr);
-            hashval   = murmurhash3_32(sptr, slen) % id_htable_size;
+            sptr = &(item_ids[item_uidx * max_id_len]);
+            slen = strlen(sptr);
+            hashval = murmurhash3_32(sptr, slen) % id_htable_size;
             next_incr = 1;
             while (1) {
                 hash_result = id_htable[hashval];
@@ -4538,7 +4538,7 @@ int32_t populate_id_htable(uintptr_t        unfiltered_ct,
                     cur_dup = hash_result >> 31;
                     if (cur_dup) {
                         prev_llidx = hash_result << 1;
-                        prev_uidx  = extra_alloc_base[prev_llidx];
+                        prev_uidx = extra_alloc_base[prev_llidx];
                     }
                     else
                     {
@@ -4558,7 +4558,7 @@ int32_t populate_id_htable(uintptr_t        unfiltered_ct,
                             prev_llidx = extra_alloc;
                             extra_alloc += 2;
                         }
-                        extra_alloc_base[extra_alloc]     = item_uidx;
+                        extra_alloc_base[extra_alloc] = item_uidx;
                         extra_alloc_base[extra_alloc + 1] = prev_llidx;
                         id_htable[hashval] = 0x80000000U | (extra_alloc >> 1);
                         extra_alloc += 2;
@@ -4592,11 +4592,11 @@ uint32_t id_htable_find(const char* id_buf, uintptr_t cur_id_len,
     if (cur_id_len >= max_id_len) {
         return 0xffffffffU;
     }
-    uint32_t    hashval   = murmurhash3_32(id_buf, cur_id_len) % id_htable_size;
-    uint32_t    next_incr = 1;
+    uint32_t hashval = murmurhash3_32(id_buf, cur_id_len) % id_htable_size;
+    uint32_t next_incr = 1;
     const char* sptr;
-    uint32_t    hash_result;
-    uint32_t    top_diff;
+    uint32_t hash_result;
+    uint32_t top_diff;
     while (1) {
         hash_result = id_htable[hashval];
         if (hash_result == 0xffffffffU) {
@@ -4623,10 +4623,10 @@ void fill_idx_to_uidx(const uintptr_t* exclude_arr,
                       uint32_t* idx_to_uidx)
 {
     uint32_t* idx_to_uidx_end = &(idx_to_uidx[item_ct]);
-    uint32_t  item_uidx       = 0;
-    uint32_t  item_uidx_stop;
+    uint32_t item_uidx = 0;
+    uint32_t item_uidx_stop;
     while (idx_to_uidx < idx_to_uidx_end) {
-        item_uidx      = next_unset_unsafe(exclude_arr, item_uidx);
+        item_uidx = next_unset_unsafe(exclude_arr, item_uidx);
         item_uidx_stop = next_set(exclude_arr, item_uidx, unfiltered_item_ct);
         do
         {
@@ -4640,10 +4640,10 @@ void fill_idx_to_uidx_incl(const uintptr_t* include_arr,
                            uint32_t* idx_to_uidx)
 {
     uint32_t* idx_to_uidx_end = &(idx_to_uidx[item_ct]);
-    uint32_t  item_uidx       = 0;
-    uint32_t  item_uidx_stop;
+    uint32_t item_uidx = 0;
+    uint32_t item_uidx_stop;
     while (idx_to_uidx < idx_to_uidx_end) {
-        item_uidx      = next_set_unsafe(include_arr, item_uidx);
+        item_uidx = next_set_unsafe(include_arr, item_uidx);
         item_uidx_stop = next_unset(include_arr, item_uidx, unfiltered_item_ct);
         do
         {
@@ -4655,14 +4655,14 @@ void fill_idx_to_uidx_incl(const uintptr_t* include_arr,
 void fill_uidx_to_idx(const uintptr_t* exclude_arr, uint32_t unfiltered_item_ct,
                       uint32_t item_ct, uint32_t* uidx_to_idx)
 {
-    uint32_t  item_uidx = 0;
-    uint32_t  item_idx  = 0;
+    uint32_t item_uidx = 0;
+    uint32_t item_idx = 0;
     uint32_t* uidx_to_idx_ptr;
     uint32_t* uidx_to_idx_stop;
     while (item_idx < item_ct) {
-        item_uidx        = next_unset_unsafe(exclude_arr, item_uidx);
-        uidx_to_idx_ptr  = &(uidx_to_idx[item_uidx]);
-        item_uidx        = next_set(exclude_arr, item_uidx, unfiltered_item_ct);
+        item_uidx = next_unset_unsafe(exclude_arr, item_uidx);
+        uidx_to_idx_ptr = &(uidx_to_idx[item_uidx]);
+        item_uidx = next_set(exclude_arr, item_uidx, unfiltered_item_ct);
         uidx_to_idx_stop = &(uidx_to_idx[item_uidx]);
         do
         {
@@ -4675,12 +4675,12 @@ void fill_uidx_to_idx_incl(const uintptr_t* include_arr,
                            uint32_t unfiltered_item_ct, uint32_t item_ct,
                            uint32_t* uidx_to_idx)
 {
-    uint32_t  item_uidx = 0;
-    uint32_t  item_idx  = 0;
+    uint32_t item_uidx = 0;
+    uint32_t item_idx = 0;
     uint32_t* uidx_to_idx_ptr;
     uint32_t* uidx_to_idx_stop;
     while (item_idx < item_ct) {
-        item_uidx       = next_set_unsafe(include_arr, item_uidx);
+        item_uidx = next_set_unsafe(include_arr, item_uidx);
         uidx_to_idx_ptr = &(uidx_to_idx[item_uidx]);
         item_uidx = next_unset(include_arr, item_uidx, unfiltered_item_ct);
         uidx_to_idx_stop = &(uidx_to_idx[item_uidx]);
@@ -4700,7 +4700,7 @@ void fill_midx_to_idx(const uintptr_t* exclude_arr_orig,
     // May want to switch to alternate behavior: when current midx is excluded,
     // fill midx_to_idx[] with the next item_idx.
     uint32_t item_uidx = next_unset_unsafe(exclude_arr_orig, 0);
-    uint32_t item_idx  = 0;
+    uint32_t item_idx = 0;
     uint32_t item_midx;
     for (item_midx = 0; item_idx < item_ct; item_uidx++, item_midx++) {
         next_unset_unsafe_ck(exclude_arr_orig, &item_uidx);
@@ -4714,10 +4714,10 @@ void fill_quatervec_55(uint32_t ct, uintptr_t* quatervec)
 {
     uint32_t rem = ct & (BITCT - 1);
 #ifdef __LP64__
-    const __m128i m1      = {FIVEMASK, FIVEMASK};
-    __m128i*      vecp    = (__m128i*) quatervec;
-    __m128i*      vec_end = (__m128i*) (&(quatervec[2 * (ct / BITCT)]));
-    uintptr_t*    second_to_last;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    __m128i* vecp = (__m128i*) quatervec;
+    __m128i* vec_end = (__m128i*) (&(quatervec[2 * (ct / BITCT)]));
+    uintptr_t* second_to_last;
     while (vecp < vec_end) {
         *vecp++ = m1;
     }
@@ -4762,12 +4762,12 @@ void quaterarr_collapse_init(const uintptr_t* __restrict unfiltered_bitarr,
     // a raw input bitmask.
     // Assumes output_quaterarr is sized to a multiple of 16 bytes.
     uintptr_t cur_write = 0;
-    uint32_t  item_uidx = 0;
-    uint32_t  write_bit = 0;
-    uint32_t  item_idx  = 0;
-    uint32_t  item_uidx_stop;
+    uint32_t item_uidx = 0;
+    uint32_t write_bit = 0;
+    uint32_t item_idx = 0;
+    uint32_t item_uidx_stop;
     while (item_idx < filtered_ct) {
-        item_uidx      = next_set_unsafe(filter_bitarr, item_uidx);
+        item_uidx = next_set_unsafe(filter_bitarr, item_uidx);
         item_uidx_stop = next_unset(filter_bitarr, item_uidx, unfiltered_ct);
         item_idx += item_uidx_stop - item_uidx;
         do
@@ -4778,8 +4778,8 @@ void quaterarr_collapse_init(const uintptr_t* __restrict unfiltered_bitarr,
                 << (write_bit * 2);
             if (++write_bit == BITCT2) {
                 *output_quaterarr++ = cur_write;
-                cur_write           = 0;
-                write_bit           = 0;
+                cur_write = 0;
+                write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
@@ -4792,15 +4792,15 @@ void quaterarr_collapse_init(const uintptr_t* __restrict unfiltered_bitarr,
 }
 
 void quaterarr_collapse_init_exclude(
-    const uintptr_t* __restrict unfiltered_bitarr, uint32_t     unfiltered_ct,
+    const uintptr_t* __restrict unfiltered_bitarr, uint32_t unfiltered_ct,
     const uintptr_t* __restrict filter_exclude_bitarr, uint32_t filtered_ct,
     uintptr_t* __restrict output_quaterarr)
 {
     uintptr_t cur_write = 0;
-    uint32_t  item_uidx = 0;
-    uint32_t  write_bit = 0;
-    uint32_t  item_idx  = 0;
-    uint32_t  item_uidx_stop;
+    uint32_t item_uidx = 0;
+    uint32_t write_bit = 0;
+    uint32_t item_idx = 0;
+    uint32_t item_uidx_stop;
     while (item_idx < filtered_ct) {
         item_uidx = next_unset_unsafe(filter_exclude_bitarr, item_uidx);
         item_uidx_stop =
@@ -4814,8 +4814,8 @@ void quaterarr_collapse_init_exclude(
                 << (write_bit * 2);
             if (++write_bit == BITCT2) {
                 *output_quaterarr++ = cur_write;
-                cur_write           = 0;
-                write_bit           = 0;
+                cur_write = 0;
+                write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
@@ -4869,18 +4869,18 @@ uint32_t alloc_collapsed_haploid_filters(
     return 0;
 }
 
-void sample_delim_convert(uintptr_t        unfiltered_sample_ct,
+void sample_delim_convert(uintptr_t unfiltered_sample_ct,
                           const uintptr_t* sample_exclude, uint32_t sample_ct,
                           uintptr_t max_sample_id_len, char oldc, char newc,
                           char* sample_ids)
 {
     // assumes there is exactly one delimiter to convert per name
     uintptr_t sample_uidx = 0;
-    uint32_t  sample_idx;
-    char*     nptr;
+    uint32_t sample_idx;
+    char* nptr;
     for (sample_idx = 0; sample_idx < sample_ct; sample_uidx++, sample_idx++) {
         next_unset_ul_unsafe_ck(sample_exclude, &sample_uidx);
-        nptr  = (char*) memchr(&(sample_ids[sample_uidx * max_sample_id_len]),
+        nptr = (char*) memchr(&(sample_ids[sample_uidx * max_sample_id_len]),
                               (unsigned char) oldc, max_sample_id_len);
         *nptr = newc;
     }
@@ -4906,7 +4906,7 @@ void get_set_wrange_align(const uintptr_t* __restrict bitarr, uintptr_t word_ct,
     }
     if ((bitarr_end2 != bitarr_end) && (*bitarr_end2)) {
         *firstw_ptr = word_ct - 1;
-        *wlen_ptr   = 1;
+        *wlen_ptr = 1;
         return;
     }
 #else
@@ -4922,7 +4922,7 @@ void get_set_wrange_align(const uintptr_t* __restrict bitarr, uintptr_t word_ct,
     }
 #endif
     *firstw_ptr = 0;
-    *wlen_ptr   = 0;
+    *wlen_ptr = 0;
 }
 
 // hashval computation left to caller since this is frequently used with
@@ -4973,7 +4973,7 @@ static inline uint32_t nonstd_chrom_name_htable_find(
 // g_species_plural are just for pretty printing and lend no insight into what
 // the functions which reference them are doing.)
 const char* g_species_singular = nullptr;
-const char* g_species_plural   = nullptr;
+const char* g_species_plural = nullptr;
 
 int32_t init_chrom_info(Chrom_info* chrom_info_ptr)
 {
@@ -4992,7 +4992,7 @@ int32_t init_chrom_info(Chrom_info* chrom_info_ptr)
         + (CHROM_NAME_HTABLE_SIZE + (VEC_INT32 - 1)) / VEC_INT32;
 
     // needed for proper cleanup
-    chrom_info_ptr->name_ct              = 0;
+    chrom_info_ptr->name_ct = 0;
     chrom_info_ptr->incl_excl_name_stack = nullptr;
     if (aligned_malloc(vecs_required * VEC_BYTES,
                        &(chrom_info_ptr->chrom_mask)))
@@ -5011,8 +5011,8 @@ int32_t init_chrom_info(Chrom_info* chrom_info_ptr)
         &(alloc_iter[((MAX_POSSIBLE_CHROM / VEC_INT32) + 1) * VEC_WORDS]);
     chrom_info_ptr->chrom_idx_to_foidx = (uint32_t*) alloc_iter;
     alloc_iter = &(alloc_iter[(MAX_POSSIBLE_CHROM / VEC_INT32) * VEC_WORDS]);
-    chrom_info_ptr->nonstd_names     = (char**) alloc_iter;
-    alloc_iter                       = &(alloc_iter[MAX_POSSIBLE_CHROM]);
+    chrom_info_ptr->nonstd_names = (char**) alloc_iter;
+    alloc_iter = &(alloc_iter[MAX_POSSIBLE_CHROM]);
     chrom_info_ptr->nonstd_id_htable = (uint32_t*) alloc_iter;
     // alloc_iter = &(alloc_iter[((CHROM_NAME_HTABLE_SIZE + (VEC_INT32 - 1)) /
     // VEC_INT32) * VEC_WORDS]); postpone nonstd_id_htable initialization until
@@ -5041,14 +5041,14 @@ void init_species(uint32_t species_code, Chrom_info* chrom_info_ptr)
         23, 24, 25, 26, 30, 31, -1, 33, 39, 40, 41, 42, 32, 33,
         -1, -1, 20, 21, -1, -1, -1, -1, -1, -1, 27, 28, -1, -1};
     const uint32_t species_autosome_ct[] = {22, 29, 38, 31, 19, 12, 26};
-    const uint32_t species_max_code[]    = {26, 33, 42, 33, 21, 12, 28};
+    const uint32_t species_max_code[] = {26, 33, 42, 33, 21, 12, 28};
     fill_ulong_zero(CHROM_MASK_WORDS, chrom_info_ptr->chrom_mask);
-    chrom_info_ptr->output_encoding   = 0;
+    chrom_info_ptr->output_encoding = 0;
     chrom_info_ptr->zero_extra_chroms = 0;
-    chrom_info_ptr->species           = species_code;
-    chrom_info_ptr->is_include_stack  = 0;
+    chrom_info_ptr->species = species_code;
+    chrom_info_ptr->is_include_stack = 0;
     g_species_singular = species_singular_constants[species_code];
-    g_species_plural   = species_plural_constants[species_code];
+    g_species_plural = species_plural_constants[species_code];
     if (species_code != SPECIES_UNKNOWN) {
         // these are assumed to be already initialized in the SPECIES_UNKNOWN
         // case
@@ -5059,7 +5059,7 @@ void init_species(uint32_t species_code, Chrom_info* chrom_info_ptr)
                &(species_xymt_codes[species_code * XYMT_OFFSET_CT]),
                XYMT_OFFSET_CT * sizeof(int32_t));
         chrom_info_ptr->autosome_ct = species_autosome_ct[species_code];
-        chrom_info_ptr->max_code    = species_max_code[species_code];
+        chrom_info_ptr->max_code = species_max_code[species_code];
         switch (species_code)
         {
         case SPECIES_HUMAN: chrom_info_ptr->haploid_mask[0] = 0x1800000; break;
@@ -5112,7 +5112,7 @@ void forget_extra_chrom_names(uint32_t reinitialize, Chrom_info* chrom_info_ptr)
     const uint32_t name_ct = chrom_info_ptr->name_ct;
     // guard against init_species() not being called yet
     if (name_ct) {
-        char**         nonstd_names   = chrom_info_ptr->nonstd_names;
+        char** nonstd_names = chrom_info_ptr->nonstd_names;
         const uint32_t chrom_idx_last = chrom_info_ptr->max_code + name_ct;
         for (uint32_t chrom_idx = chrom_info_ptr->max_code + 1;
              chrom_idx <= chrom_idx_last; ++chrom_idx)
@@ -5130,8 +5130,8 @@ void forget_extra_chrom_names(uint32_t reinitialize, Chrom_info* chrom_info_ptr)
 
 int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
 {
-    const uint32_t chrom_ct       = chrom_info_ptr->chrom_ct;
-    const uint32_t name_ct        = chrom_info_ptr->name_ct;
+    const uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
+    const uint32_t name_ct = chrom_info_ptr->name_ct;
     const uint32_t chrom_code_end = chrom_info_ptr->max_code + 1 + name_ct;
     const uint32_t chrom_code_bitvec_ct = BITCT_TO_VECCT(chrom_code_end);
     const uint32_t chrom_ct_int32vec_ct =
@@ -5153,7 +5153,7 @@ int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
     if (aligned_malloc(final_vecs_required * VEC_BYTES, &new_alloc)) {
         return RET_NOMEM;
     }
-    uintptr_t* old_alloc      = chrom_info_ptr->chrom_mask;
+    uintptr_t* old_alloc = chrom_info_ptr->chrom_mask;
     uintptr_t* new_alloc_iter = new_alloc;
 
     memcpy(new_alloc_iter, chrom_info_ptr->chrom_mask,
@@ -5181,7 +5181,7 @@ int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
     chrom_info_ptr->chrom_idx_to_foidx = (uint32_t*) new_alloc_iter;
 
     if (!name_ct) {
-        chrom_info_ptr->nonstd_names     = nullptr;
+        chrom_info_ptr->nonstd_names = nullptr;
         chrom_info_ptr->nonstd_id_htable = nullptr;
     }
     else
@@ -5355,9 +5355,9 @@ uint32_t get_max_chrom_slen(const Chrom_info* chrom_info_ptr)
     if (chrom_info_ptr->zero_extra_chroms) {
         return 3 + MAX_CHROM_TEXTNUM_SLEN;
     }
-    const uint32_t chrom_ct       = chrom_info_ptr->chrom_ct;
-    const uint32_t max_code       = chrom_info_ptr->max_code;
-    uint32_t       max_chrom_slen = 3 + MAX_CHROM_TEXTNUM_SLEN;
+    const uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
+    const uint32_t max_code = chrom_info_ptr->max_code;
+    uint32_t max_chrom_slen = 3 + MAX_CHROM_TEXTNUM_SLEN;
     for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++) {
         const uint32_t chrom_idx =
             chrom_info_ptr->chrom_file_order[chrom_fo_idx];
@@ -5377,7 +5377,7 @@ uint32_t get_max_chrom_slen(const Chrom_info* chrom_info_ptr)
 
 uint32_t haploid_chrom_present(const Chrom_info* chrom_info_ptr)
 {
-    const uintptr_t* chrom_mask   = chrom_info_ptr->chrom_mask;
+    const uintptr_t* chrom_mask = chrom_info_ptr->chrom_mask;
     const uintptr_t* haploid_mask = chrom_info_ptr->haploid_mask;
     for (uint32_t widx = 0; widx < CHROM_MASK_INITIAL_WORDS; widx++) {
         if (chrom_mask[widx] & haploid_mask[widx]) {
@@ -5413,14 +5413,14 @@ int32_t get_chrom_code_raw(const char* sptr)
     // note that char arithmetic tends to be compiled to int32 operations, so we
     // mostly work with ints here
     // assumes MAX_CHROM_TEXTNUM_SLEN == 2
-    uint32_t first_char_code  = (unsigned char) sptr[0];
+    uint32_t first_char_code = (unsigned char) sptr[0];
     uint32_t second_char_code = (unsigned char) sptr[1];
     if ((first_char_code & 0xdf) == 'C') {
         if (((second_char_code & 0xdf) == 'H')
             && ((((unsigned char) sptr[2]) & 0xdf) == 'R'))
         {
-            sptr             = &(sptr[3]);
-            first_char_code  = (unsigned char) sptr[0];
+            sptr = &(sptr[3]);
+            first_char_code = (unsigned char) sptr[0];
             second_char_code = (unsigned char) sptr[1];
         }
         else
@@ -5506,9 +5506,9 @@ int32_t get_chrom_code_counted(const Chrom_info* chrom_info_ptr,
                                uint32_t name_slen, char* chrom_name)
 {
     // when the chromosome name isn't null-terminated
-    char*      s_end = &(chrom_name[name_slen]);
-    const char tmpc  = *s_end;
-    *s_end           = '\0';
+    char* s_end = &(chrom_name[name_slen]);
+    const char tmpc = *s_end;
+    *s_end = '\0';
     const int32_t retval =
         get_chrom_code(chrom_name, chrom_info_ptr, name_slen);
     *s_end = tmpc;
@@ -5516,11 +5516,11 @@ int32_t get_chrom_code_counted(const Chrom_info* chrom_info_ptr,
 }
 
 uint32_t get_variant_chrom_fo_idx(const Chrom_info* chrom_info_ptr,
-                                  uintptr_t         variant_uidx)
+                                  uintptr_t variant_uidx)
 {
     const uint32_t* variant_binsearch = chrom_info_ptr->chrom_fo_vidx_start;
-    uint32_t        chrom_fo_min      = 0;
-    uint32_t        chrom_ct          = chrom_info_ptr->chrom_ct;
+    uint32_t chrom_fo_min = 0;
+    uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
     while (chrom_ct - chrom_fo_min > 1) {
         const uint32_t chrom_fo_cur = (chrom_ct + chrom_fo_min) / 2;
         if (variant_binsearch[chrom_fo_cur] > variant_uidx) {
@@ -5586,8 +5586,8 @@ void chrom_error(const char* chrom_name, const char* file_descrip,
 
 int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
                               uintptr_t line_idx, uint32_t name_slen,
-                              uint32_t    allow_extra_chroms,
-                              int32_t*    chrom_idx_ptr,
+                              uint32_t allow_extra_chroms,
+                              int32_t* chrom_idx_ptr,
                               Chrom_info* chrom_info_ptr)
 {
     // assumes chrom_name is nonstandard (i.e. not "2", "chr2", "chrX", etc.)
@@ -5626,8 +5626,8 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
         }
         return RET_MALFORMED_INPUT;
     }
-    const uint32_t max_code_p1    = chrom_info_ptr->max_code + 1;
-    const uint32_t name_ct        = chrom_info_ptr->name_ct;
+    const uint32_t max_code_p1 = chrom_info_ptr->max_code + 1;
+    const uint32_t name_ct = chrom_info_ptr->name_ct;
     const uint32_t chrom_code_end = max_code_p1 + name_ct;
     if (chrom_code_end == MAX_POSSIBLE_CHROM) {
         logprint("\n");
@@ -5639,13 +5639,13 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
         // lazy initialization
         fill_uint_one(CHROM_NAME_HTABLE_SIZE, chrom_info_ptr->nonstd_id_htable);
     }
-    char** nonstd_names          = chrom_info_ptr->nonstd_names;
+    char** nonstd_names = chrom_info_ptr->nonstd_names;
     nonstd_names[chrom_code_end] = (char*) malloc(name_slen + 1);
     if (!nonstd_names[chrom_code_end]) {
         return RET_NOMEM;
     }
-    Ll_str*  name_stack_ptr = chrom_info_ptr->incl_excl_name_stack;
-    uint32_t in_name_stack  = 0;
+    Ll_str* name_stack_ptr = chrom_info_ptr->incl_excl_name_stack;
+    uint32_t in_name_stack = 0;
     while (name_stack_ptr) {
         // there shouldn't be many of these, so sorting is unimportant
         if (!strcmp(chrom_name, name_stack_ptr->ss)) {
@@ -5663,10 +5663,10 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
         }
     }
     memcpy(nonstd_names[chrom_code_end], chrom_name, name_slen + 1);
-    *chrom_idx_ptr          = (int32_t) chrom_code_end;
+    *chrom_idx_ptr = (int32_t) chrom_code_end;
     chrom_info_ptr->name_ct = name_ct + 1;
-    uint32_t* id_htable     = chrom_info_ptr->nonstd_id_htable;
-    uint32_t  hashval =
+    uint32_t* id_htable = chrom_info_ptr->nonstd_id_htable;
+    uint32_t hashval =
         murmurhash3_32(chrom_name, name_slen) % CHROM_NAME_HTABLE_SIZE;
     uint32_t next_incr = 1;
     while (1) {
@@ -5722,9 +5722,9 @@ uint32_t allele_reset(const char* newval, uint32_t slen, char** allele_ptr)
     return 0;
 }
 
-void cleanup_allele_storage(uint32_t  max_allele_slen,
+void cleanup_allele_storage(uint32_t max_allele_slen,
                             uintptr_t allele_storage_entry_ct,
-                            char**    allele_storage)
+                            char** allele_storage)
 {
     if (allele_storage && (max_allele_slen > 1)) {
         const uintptr_t one_char_strs_addr = (uintptr_t) g_one_char_strs;
@@ -5758,15 +5758,15 @@ void refresh_chrom_info(const Chrom_info* chrom_info_ptr, uintptr_t marker_uidx,
     }
     const int32_t chrom_idx =
         chrom_info_ptr->chrom_file_order[*chrom_fo_idx_ptr];
-    *is_x_ptr       = (chrom_idx == chrom_info_ptr->xymt_codes[X_OFFSET]);
-    *is_y_ptr       = (chrom_idx == chrom_info_ptr->xymt_codes[Y_OFFSET]);
-    *is_mt_ptr      = (chrom_idx == chrom_info_ptr->xymt_codes[MT_OFFSET]);
+    *is_x_ptr = (chrom_idx == chrom_info_ptr->xymt_codes[X_OFFSET]);
+    *is_y_ptr = (chrom_idx == chrom_info_ptr->xymt_codes[Y_OFFSET]);
+    *is_mt_ptr = (chrom_idx == chrom_info_ptr->xymt_codes[MT_OFFSET]);
     *is_haploid_ptr = is_set(chrom_info_ptr->haploid_mask, chrom_idx);
 }
 
 int32_t single_chrom_start(const Chrom_info* chrom_info_ptr,
-                           const uintptr_t*  marker_exclude,
-                           uint32_t          unfiltered_marker_ct)
+                           const uintptr_t* marker_exclude,
+                           uint32_t unfiltered_marker_ct)
 {
     // Assumes there is at least one marker, and there are no split chromosomes.
     // Returns first marker_uidx in chromosome if there is only one, or -1 if
@@ -6018,7 +6018,7 @@ int32_t get_uidx_from_unsorted(const char* idstr, const uintptr_t* exclude_arr,
 {
     uintptr_t id_uidx = 0;
     uintptr_t slen_p1 = strlen(idstr) + 1;
-    uint32_t  id_idx;
+    uint32_t id_idx;
     if (slen_p1 > max_id_len) {
         return -1;
     }
@@ -6047,21 +6047,21 @@ char* scan_for_duplicate_ids(char* sorted_ids, uintptr_t id_ct,
 }
 
 char* scan_for_duplicate_or_overlap_ids(char* sorted_ids, uintptr_t id_ct,
-                                        uintptr_t   max_id_len,
+                                        uintptr_t max_id_len,
                                         const char* sorted_nonoverlap_ids,
-                                        uintptr_t   nonoverlap_id_ct,
-                                        uintptr_t   max_nonoverlap_id_len)
+                                        uintptr_t nonoverlap_id_ct,
+                                        uintptr_t max_nonoverlap_id_len)
 {
     // extended scan_for_duplicate_ids() which also verifies that no entry in
     // sorted_ids matches any entry in sorted_nonoverlap_ids.
     // nonoverlap_id_ct == 0 and sorted_nonoverlap_ids == nullptr ok.  id_ct
     // cannot be zero, though.
-    uintptr_t   nonoverlap_id_idx = 0;
-    uintptr_t   id_idx            = 0;
-    char*       cur_id_ptr        = sorted_ids;
+    uintptr_t nonoverlap_id_idx = 0;
+    uintptr_t id_idx = 0;
+    char* cur_id_ptr = sorted_ids;
     const char* nonoverlap_id_ptr;
-    char*       other_id_ptr;
-    int32_t     ii;
+    char* other_id_ptr;
+    int32_t ii;
     while (1) {
         if (nonoverlap_id_idx == nonoverlap_id_ct) {
             return scan_for_duplicate_ids(cur_id_ptr, id_ct - id_idx,
@@ -6094,7 +6094,7 @@ int32_t eval_affection(const char* bufptr, double missing_phenod)
     // turns out --1 had the side-effect of *forcing* case/control
     // interpretation in 1.07.  We replicate that for backward compatibility,
     // and no longer call this function in that context.
-    char*  ss;
+    char* ss;
     double dxx;
     // this used to be an integer read, but that could do the wrong thing if
     // e.g. all phenotypes were -9.xxx...
@@ -6136,7 +6136,7 @@ void parallel_bounds(uint32_t ct, int32_t start, uint32_t parallel_idx,
                      uint32_t parallel_tot, int32_t* __restrict bound_start_ptr,
                      int32_t* __restrict bound_end_ptr)
 {
-    int32_t modif  = 1 - start * 2;
+    int32_t modif = 1 - start * 2;
     int64_t ct_tot = ((int64_t) ct) * (ct + modif);
     *bound_start_ptr =
         triangle_divide((ct_tot * parallel_idx) / parallel_tot, modif);
@@ -6150,26 +6150,26 @@ void triangle_fill(uint32_t ct, uint32_t pieces, uint32_t parallel_idx,
                    uint32_t parallel_tot, uint32_t start, uint32_t align,
                    uint32_t* target_arr)
 {
-    int32_t  modif     = 1 - start * 2;
+    int32_t modif = 1 - start * 2;
     uint32_t cur_piece = 1;
-    int64_t  ct_tr;
-    int64_t  cur_prod;
-    int32_t  lbound;
-    int32_t  ubound;
+    int64_t ct_tr;
+    int64_t cur_prod;
+    int32_t lbound;
+    int32_t ubound;
     uint32_t uii;
     uint32_t align_m1;
     parallel_bounds(ct, start, parallel_idx, parallel_tot, &lbound, &ubound);
     // x(x+1)/2 is divisible by y iff (x % (2y)) is 0 or (2y - 1).
     align *= 2;
-    align_m1           = align - 1;
-    target_arr[0]      = lbound;
+    align_m1 = align - 1;
+    target_arr[0] = lbound;
     target_arr[pieces] = ubound;
-    cur_prod           = ((int64_t) lbound) * (lbound + modif);
+    cur_prod = ((int64_t) lbound) * (lbound + modif);
     ct_tr = (((int64_t) ubound) * (ubound + modif) - cur_prod) / pieces;
     while (cur_piece < pieces) {
         cur_prod += ct_tr;
         lbound = triangle_divide(cur_prod, modif);
-        uii    = (lbound - ((int32_t) start)) & align_m1;
+        uii = (lbound - ((int32_t) start)) & align_m1;
         if ((uii) && (uii != align_m1)) {
             lbound = start + ((lbound - ((int32_t) start)) | align_m1);
         }
@@ -6362,9 +6362,9 @@ int32_t qsort_ext(char* main_arr, uintptr_t arr_length, uintptr_t item_length,
     //                 would be a lookup table for the original position of each
     //                 main_arr item.)
     // secondary_item_len = byte count of each secondary_arr item
-    uintptr_t      proxy_len     = secondary_item_len + sizeof(void*);
+    uintptr_t proxy_len = secondary_item_len + sizeof(void*);
     unsigned char* bigstack_mark = g_bigstack_base;
-    char*          proxy_arr;
+    char* proxy_arr;
     if (!arr_length) {
         return 0;
     }
@@ -6380,7 +6380,7 @@ int32_t qsort_ext(char* main_arr, uintptr_t arr_length, uintptr_t item_length,
     return 0;
 }
 
-int32_t sort_item_ids_noalloc(uintptr_t        unfiltered_ct,
+int32_t sort_item_ids_noalloc(uintptr_t unfiltered_ct,
                               const uintptr_t* exclude_arr, uintptr_t item_ct,
                               const char* __restrict item_ids,
                               uintptr_t max_id_len, uint32_t allow_dups,
@@ -6395,8 +6395,8 @@ int32_t sort_item_ids_noalloc(uintptr_t        unfiltered_ct,
     // sort_item_ids() wrapper if they haven't been. Note that this DOES still
     // perform a "stack" allocation (in the qsort_ext() call).
     uint32_t uii = 0;
-    char*    dup_id;
-    char*    tptr;
+    char* dup_id;
+    char* tptr;
     uint32_t ujj;
     if (!item_ct) {
         return 0;
@@ -6467,7 +6467,7 @@ uint32_t uint32arr_greater_than(const uint32_t* sorted_uint32_arr,
     // similarly, uii guaranteed to be no greater than
     // sorted_uint32_arr[max_idx + 1] if it exists, but not necessarily
     // sorted_uint32_arr[max_idx].  Signed integer since it could become -1.
-    int32_t  max_idx = arr_length - 1;
+    int32_t max_idx = arr_length - 1;
     uint32_t mid_idx;
     while (min_idx < max_idx) {
         mid_idx = (((uint32_t) min_idx) + ((uint32_t) max_idx)) / 2;
@@ -6491,8 +6491,8 @@ uint32_t uint32arr_greater_than(const uint32_t* sorted_uint32_arr,
 uint32_t int32arr_greater_than(const int32_t* sorted_int32_arr,
                                uint32_t arr_length, int32_t ii)
 {
-    int32_t  min_idx = 0;
-    int32_t  max_idx = arr_length - 1;
+    int32_t min_idx = 0;
+    int32_t max_idx = arr_length - 1;
     uint32_t mid_idx;
     while (min_idx < max_idx) {
         mid_idx = (((uint32_t) min_idx) + ((uint32_t) max_idx)) / 2;
@@ -6516,8 +6516,8 @@ uint32_t int32arr_greater_than(const int32_t* sorted_int32_arr,
 uintptr_t uint64arr_greater_than(const uint64_t* sorted_uint64_arr,
                                  uintptr_t arr_length, uint64_t ullii)
 {
-    intptr_t  min_idx = 0;
-    intptr_t  max_idx = arr_length - 1;
+    intptr_t min_idx = 0;
+    intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
     while (min_idx < max_idx) {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
@@ -6543,8 +6543,8 @@ uintptr_t doublearr_greater_than(const double* sorted_dbl_arr,
 {
     // returns number of items in sorted_dbl_arr which dxx is greater than.
     // assumes array is nonempty and sorted in nondecreasing order
-    intptr_t  min_idx = 0;
-    intptr_t  max_idx = arr_length - 1;
+    intptr_t min_idx = 0;
+    intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
     while (min_idx < max_idx) {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
@@ -6571,8 +6571,8 @@ uintptr_t nonincr_doublearr_leq_stride(const double* nonincr_dbl_arr,
 {
     // assumes relevant elements of array are sorted in nonincreasing order
     // instead, and they are spaced stride units apart
-    intptr_t  min_idx = 0;
-    intptr_t  max_idx = arr_length - 1;
+    intptr_t min_idx = 0;
+    intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
     while (min_idx < max_idx) {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
@@ -6601,13 +6601,13 @@ int32_t bsearch_str(const char* id_buf, uintptr_t cur_id_len, const char* lptr,
     // NOT.
     uintptr_t start_idx = 0;
     uintptr_t mid_idx;
-    int32_t   ii;
+    int32_t ii;
     if (cur_id_len >= max_id_len) {
         return -1;
     }
     while (start_idx < end_idx) {
         mid_idx = (start_idx + end_idx) / 2;
-        ii      = memcmp(id_buf, &(lptr[mid_idx * max_id_len]), cur_id_len);
+        ii = memcmp(id_buf, &(lptr[mid_idx * max_id_len]), cur_id_len);
         if (ii > 0) {
             start_idx = mid_idx + 1;
         }
@@ -6630,10 +6630,10 @@ int32_t bsearch_str_natural(const char* id_buf, const char* lptr,
     // if appropriate here
     uintptr_t start_idx = 0;
     uintptr_t mid_idx;
-    int32_t   ii;
+    int32_t ii;
     while (start_idx < end_idx) {
         mid_idx = (start_idx + end_idx) / 2;
-        ii      = strcmp_natural(id_buf, &(lptr[mid_idx * max_id_len]));
+        ii = strcmp_natural(id_buf, &(lptr[mid_idx * max_id_len]));
         if (ii > 0) {
             start_idx = mid_idx + 1;
         }
@@ -6684,12 +6684,12 @@ uint32_t bsearch_read_fam_indiv(char* __restrict read_ptr,
     // any space/eoln character, then IID is assumed to follow it (and is also
     // terminated by any space/eoln).  Nonzero error value is returned if IID
     // does not exist.
-    char*     iid_ptr;
+    char* iid_ptr;
     uintptr_t slen_fid;
     uintptr_t slen_iid;
     uintptr_t slen_final;
     slen_fid = strlen_se(read_ptr);
-    iid_ptr  = skip_initial_spaces(&(read_ptr[slen_fid]));
+    iid_ptr = skip_initial_spaces(&(read_ptr[slen_fid]));
     if (is_eoln_kns(*iid_ptr)) {
         return 1;
     }
@@ -6731,17 +6731,17 @@ void bsearch_fam(const char* __restrict fam_id, const char* __restrict lptr,
         goto bsearch_fam_ret_null;
     }
     id_buf[slen] = ' ';
-    loff         = bsearch_str_lb(id_buf, slen + 1, &(lptr[fidx * max_id_len]),
+    loff = bsearch_str_lb(id_buf, slen + 1, &(lptr[fidx * max_id_len]),
                           max_id_len, filter_line_ct - fidx);
     if (!loff) {
         goto bsearch_fam_ret_null;
     }
     *first_idx_ptr = fidx;
-    *last_idx_ptr  = fidx + loff;
+    *last_idx_ptr = fidx + loff;
     return;
 bsearch_fam_ret_null:
     *first_idx_ptr = 0;
-    *last_idx_ptr  = 0;
+    *last_idx_ptr = 0;
 }
 
 void bitarr_invert(uintptr_t bit_ct, uintptr_t* bitarr)
@@ -6774,9 +6774,9 @@ void bitvec_and(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
 {
 // main_bitvec := main_bitvec AND arg_bitvec
 #ifdef __LP64__
-    __m128i*       vv128     = (__m128i*) main_bitvec;
-    const __m128i* iv128     = (const __m128i*) arg_bitvec;
-    __m128i*       vv128_end = &(vv128[word_ct / 2]);
+    __m128i* vv128 = (__m128i*) main_bitvec;
+    const __m128i* iv128 = (const __m128i*) arg_bitvec;
+    __m128i* vv128_end = &(vv128[word_ct / 2]);
     while (vv128 < vv128_end) {
         *vv128 = _mm_and_si128(*iv128++, *vv128);
         vv128++;
@@ -6799,9 +6799,9 @@ void bitvec_andnot(const uintptr_t* __restrict exclude_bitvec,
 // main_bitvec := main_bitvec ANDNOT exclude_bitvec
 // note that this is the reverse of the _mm_andnot() operand order
 #ifdef __LP64__
-    __m128i*       vv128     = (__m128i*) main_bitvec;
-    const __m128i* ev128     = (const __m128i*) exclude_bitvec;
-    __m128i*       vv128_end = &(vv128[word_ct / 2]);
+    __m128i* vv128 = (__m128i*) main_bitvec;
+    const __m128i* ev128 = (const __m128i*) exclude_bitvec;
+    __m128i* vv128_end = &(vv128[word_ct / 2]);
     while (vv128 < vv128_end) {
         *vv128 = _mm_andnot_si128(*ev128++, *vv128);
         vv128++;
@@ -6824,9 +6824,9 @@ void bitvec_andnot_reversed_args(const uintptr_t* __restrict include_bitvec,
 {
 // main_bitvec := (~main_bitvec) AND include_bitvec
 #ifdef __LP64__
-    __m128i*       vv128     = (__m128i*) main_bitvec;
-    const __m128i* iv128     = (const __m128i*) include_bitvec;
-    __m128i*       vv128_end = &(vv128[word_ct / 2]);
+    __m128i* vv128 = (__m128i*) main_bitvec;
+    const __m128i* iv128 = (const __m128i*) include_bitvec;
+    __m128i* vv128_end = &(vv128[word_ct / 2]);
     while (vv128 < vv128_end) {
         *vv128 = _mm_andnot_si128(*vv128, *iv128++);
         vv128++;
@@ -6850,9 +6850,9 @@ void bitvec_or(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
 {
 // main_bitvec := main_bitvec OR arg_bitvec
 #ifdef __LP64__
-    __m128i*       vv128     = (__m128i*) main_bitvec;
-    const __m128i* ov128     = (const __m128i*) arg_bitvec;
-    __m128i*       vv128_end = &(vv128[word_ct / 2]);
+    __m128i* vv128 = (__m128i*) main_bitvec;
+    const __m128i* ov128 = (const __m128i*) arg_bitvec;
+    __m128i* vv128_end = &(vv128[word_ct / 2]);
     while (vv128 < vv128_end) {
         *vv128 = _mm_or_si128(*ov128++, *vv128);
         vv128++;
@@ -6879,9 +6879,9 @@ void bitvec_ornot(const uintptr_t* __restrict inverted_or_bitvec,
 #else
     const __m128i all1 = {-1LL, -1LL};
 #endif
-    __m128i*       vv128     = (__m128i*) main_bitvec;
-    const __m128i* ev128     = (const __m128i*) inverted_or_bitvec;
-    __m128i*       vv128_end = &(vv128[word_ct / 2]);
+    __m128i* vv128 = (__m128i*) main_bitvec;
+    const __m128i* ev128 = (const __m128i*) inverted_or_bitvec;
+    __m128i* vv128_end = &(vv128[word_ct / 2]);
     while (vv128 < vv128_end) {
         *vv128 = _mm_or_si128(_mm_xor_si128(*ev128++, all1), *vv128);
         vv128++;
@@ -6903,8 +6903,8 @@ void bitvec_xor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
 {
 // main_bitvec := main_bitvec XOR xor_bitvec
 #ifdef __LP64__
-    __m128i* bitv128     = (__m128i*) main_bitvec;
-    __m128i* xorv128     = (__m128i*) arg_bitvec;
+    __m128i* bitv128 = (__m128i*) main_bitvec;
+    __m128i* xorv128 = (__m128i*) arg_bitvec;
     __m128i* bitv128_end = &(bitv128[word_ct / 2]);
     while (bitv128 < bitv128_end) {
         *bitv128 = _mm_xor_si128(*xorv128++, *bitv128);
@@ -6924,8 +6924,8 @@ void bitvec_xor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
 
 uint32_t is_monomorphic_a2(const uintptr_t* geno_arr, uint32_t sample_ct)
 {
-    const uintptr_t* loop_end   = &(geno_arr[sample_ct / BITCT2]);
-    uint32_t         sample_rem = sample_ct % BITCT2;
+    const uintptr_t* loop_end = &(geno_arr[sample_ct / BITCT2]);
+    uint32_t sample_rem = sample_ct % BITCT2;
     for (; geno_arr < loop_end; geno_arr++) {
         if ((~(*geno_arr)) & FIVEMASK) {
             return 0;
@@ -6939,8 +6939,8 @@ uint32_t is_monomorphic_a2(const uintptr_t* geno_arr, uint32_t sample_ct)
 
 uint32_t is_monomorphic(const uintptr_t* geno_arr, uint32_t sample_ct)
 {
-    uint32_t  sample_ctd2 = sample_ct / BITCT2;
-    uint32_t  sample_rem  = sample_ct % BITCT2;
+    uint32_t sample_ctd2 = sample_ct / BITCT2;
+    uint32_t sample_rem = sample_ct % BITCT2;
     uintptr_t ulii;
     uintptr_t uljj;
     while (sample_ctd2) {
@@ -7002,12 +7002,12 @@ uint32_t is_monomorphic(const uintptr_t* geno_arr, uint32_t sample_ct)
 
 uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
 {
-    uint32_t  sample_ctd2 = sample_ct / BITCT2;
-    uint32_t  sample_rem  = sample_ct % BITCT2;
+    uint32_t sample_ctd2 = sample_ct / BITCT2;
+    uint32_t sample_rem = sample_ct % BITCT2;
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
-    uint32_t  distinct_genotype_ct;
+    uint32_t distinct_genotype_ct;
     while (sample_ctd2) {
         ulii = *geno_arr++;
         uljj = (ulii >> 1) & FIVEMASK;
@@ -7139,17 +7139,17 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
 static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
 {
     // popcounts vptr[0..(ct-1)].  Assumes ct is a multiple of 3 (0 ok).
-    const __m128i  m1  = {FIVEMASK, FIVEMASK};
-    const __m128i  m2  = {0x3333333333333333LLU, 0x3333333333333333LLU};
-    const __m128i  m4  = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    const __m128i  m8  = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    uintptr_t      tot = 0;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
     const __m128i* vend;
-    __m128i        count1;
-    __m128i        count2;
-    __m128i        half1;
-    __m128i        half2;
-    __univec       acc;
+    __m128i count1;
+    __m128i count2;
+    __m128i half1;
+    __m128i half2;
+    __univec acc;
 
     while (ct >= 30) {
         ct -= 30;
@@ -7160,9 +7160,9 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
         {
             count1 = *vptr++;
             count2 = *vptr++;
-            half1  = *vptr++;
-            half2  = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
-            half1  = _mm_and_si128(half1, m1);
+            half1 = *vptr++;
+            half2 = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
+            half1 = _mm_and_si128(half1, m1);
             // Two bits can represent values from 0-3, so make each pair in
             // count1 count2 store a partial bitcount covering themselves AND
             // another bit from elsewhere.
@@ -7193,7 +7193,7 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
     }
     if (ct) {
         vend = &(vptr[ct]);
-        ct   = 0;
+        ct = 0;
         goto popcount_vecs_main_loop;
     }
     return tot;
@@ -7202,16 +7202,16 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
 static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
 {
     // assumes ct is a multiple of 6.
-    const __m128i  m2  = {0x3333333333333333LLU, 0x3333333333333333LLU};
-    const __m128i  m4  = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    const __m128i  m8  = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    uintptr_t      tot = 0;
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
     const __m128i* vend;
-    __m128i        loader1;
-    __m128i        loader2;
-    __m128i        count1;
-    __m128i        count2;
-    __univec       acc;
+    __m128i loader1;
+    __m128i loader2;
+    __m128i count1;
+    __m128i count2;
+    __univec acc;
 
     while (ct >= 30) {
         ct -= 30;
@@ -7231,7 +7231,7 @@ static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
 
             loader1 = *vptr++;
             loader2 = *vptr++;
-            count1  = _mm_add_epi64(
+            count1 = _mm_add_epi64(
                 count1,
                 _mm_add_epi64(_mm_and_si128(loader1, m2),
                               _mm_and_si128(_mm_srli_epi64(loader1, 2), m2)));
@@ -7242,7 +7242,7 @@ static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
 
             loader1 = *vptr++;
             loader2 = *vptr++;
-            count1  = _mm_add_epi64(
+            count1 = _mm_add_epi64(
                 count1,
                 _mm_add_epi64(_mm_and_si128(loader1, m2),
                               _mm_and_si128(_mm_srli_epi64(loader1, 2), m2)));
@@ -7266,7 +7266,7 @@ static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
     }
     if (ct) {
         vend = &(vptr[ct]);
-        ct   = 0;
+        ct = 0;
         goto popcount2_vecs_main_loop;
     }
     return tot;
@@ -7277,14 +7277,14 @@ popcount_vecs_exclude(const __m128i* __restrict vptr,
                       const __m128i* __restrict exclude_ptr, uintptr_t ct)
 {
     // popcounts vptr ANDNOT exclude_ptr[0..(ct-1)].  ct is a multiple of 3.
-    const __m128i  m1  = {FIVEMASK, FIVEMASK};
-    const __m128i  m2  = {0x3333333333333333LLU, 0x3333333333333333LLU};
-    const __m128i  m4  = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    const __m128i  m8  = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    uintptr_t      tot = 0;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
     const __m128i* vend;
-    __m128i        count1, count2, half1, half2;
-    __univec       acc;
+    __m128i count1, count2, half1, half2;
+    __univec acc;
 
     while (ct >= 30) {
         ct -= 30;
@@ -7296,9 +7296,9 @@ popcount_vecs_exclude(const __m128i* __restrict vptr,
             // nots the FIRST value
             count1 = _mm_andnot_si128(*exclude_ptr++, *vptr++);
             count2 = _mm_andnot_si128(*exclude_ptr++, *vptr++);
-            half1  = _mm_andnot_si128(*exclude_ptr++, *vptr++);
-            half2  = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
-            half1  = _mm_and_si128(half1, m1);
+            half1 = _mm_andnot_si128(*exclude_ptr++, *vptr++);
+            half2 = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
+            half1 = _mm_and_si128(half1, m1);
             count1 = _mm_sub_epi64(
                 count1, _mm_and_si128(_mm_srli_epi64(count1, 1), m1));
             count2 = _mm_sub_epi64(
@@ -7323,7 +7323,7 @@ popcount_vecs_exclude(const __m128i* __restrict vptr,
     }
     if (ct) {
         vend = &(vptr[ct]);
-        ct   = 0;
+        ct = 0;
         goto popcount_vecs_exclude_main_loop;
     }
     return tot;
@@ -7334,14 +7334,14 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
                                                 uintptr_t ct)
 {
     // popcounts vptr1 AND vptr2[0..(ct-1)].  ct is a multiple of 3.
-    const __m128i  m1  = {FIVEMASK, FIVEMASK};
-    const __m128i  m2  = {0x3333333333333333LLU, 0x3333333333333333LLU};
-    const __m128i  m4  = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    const __m128i  m8  = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    uintptr_t      tot = 0;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
     const __m128i* vend1;
-    __m128i        count1, count2, half1, half2;
-    __univec       acc;
+    __m128i count1, count2, half1, half2;
+    __univec acc;
 
     while (ct >= 30) {
         ct -= 30;
@@ -7352,9 +7352,9 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
         {
             count1 = _mm_and_si128(*vptr2++, *vptr1++);
             count2 = _mm_and_si128(*vptr2++, *vptr1++);
-            half1  = _mm_and_si128(*vptr2++, *vptr1++);
-            half2  = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
-            half1  = _mm_and_si128(half1, m1);
+            half1 = _mm_and_si128(*vptr2++, *vptr1++);
+            half2 = _mm_and_si128(_mm_srli_epi64(half1, 1), m1);
+            half1 = _mm_and_si128(half1, m1);
             count1 = _mm_sub_epi64(
                 count1, _mm_and_si128(_mm_srli_epi64(count1, 1), m1));
             count2 = _mm_sub_epi64(
@@ -7379,7 +7379,7 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
     }
     if (ct) {
         vend1 = &(vptr1[ct]);
-        ct    = 0;
+        ct = 0;
         goto popcount_vecs_intersect_main_loop;
     }
     return tot;
@@ -7392,12 +7392,12 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
     // must be 16-byte aligned.
     // The popcount_longs_nzbase() wrapper takes care of starting from a later
     // index.
-    uintptr_t        tot      = 0;
+    uintptr_t tot = 0;
     const uintptr_t* lptr_end = &(lptr[word_ct]);
 #ifdef __LP64__
-    uintptr_t      six_ct;
+    uintptr_t six_ct;
     const __m128i* vptr;
-    vptr   = (const __m128i*) lptr;
+    vptr = (const __m128i*) lptr;
     six_ct = word_ct / 6;
     tot += popcount_vecs(vptr, six_ct * 3);
     lptr = &(lptr[six_ct * 6]);
@@ -7451,12 +7451,12 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
 uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
 {
     // treats lptr[] as an array of two-bit instead of one-bit numbers
-    uintptr_t        tot      = 0;
+    uintptr_t tot = 0;
     const uintptr_t* lptr_end = &(lptr[word_ct]);
 #ifdef __LP64__
-    uintptr_t      twelve_ct;
+    uintptr_t twelve_ct;
     const __m128i* vptr;
-    vptr      = (const __m128i*) lptr;
+    vptr = (const __m128i*) lptr;
     twelve_ct = word_ct / 12;
     tot += popcount2_vecs(vptr, twelve_ct * 6);
     lptr = &(lptr[twelve_ct * 12]);
@@ -7498,11 +7498,11 @@ uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
 uintptr_t popcount_bit_idx(const uintptr_t* lptr, uintptr_t start_idx,
                            uintptr_t end_idx)
 {
-    uintptr_t start_idxl  = start_idx / BITCT;
+    uintptr_t start_idxl = start_idx / BITCT;
     uintptr_t start_idxlr = start_idx & (BITCT - 1);
-    uintptr_t end_idxl    = end_idx / BITCT;
-    uintptr_t end_idxlr   = end_idx & (BITCT - 1);
-    uintptr_t ct          = 0;
+    uintptr_t end_idxl = end_idx / BITCT;
+    uintptr_t end_idxlr = end_idx & (BITCT - 1);
+    uintptr_t ct = 0;
     if (start_idxl == end_idxl) {
         return popcount_long(lptr[start_idxl]
                              & ((ONELU << end_idxlr) - (ONELU << start_idxlr)));
@@ -7519,8 +7519,8 @@ uintptr_t popcount_bit_idx(const uintptr_t* lptr, uintptr_t start_idx,
     return ct;
 }
 
-uint32_t chrom_window_max(const uint32_t*   marker_pos,
-                          const uintptr_t*  marker_exclude,
+uint32_t chrom_window_max(const uint32_t* marker_pos,
+                          const uintptr_t* marker_exclude,
                           const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
                           uint32_t ct_max, uint32_t bp_max,
                           uint32_t cur_window_max)
@@ -7545,9 +7545,9 @@ uint32_t chrom_window_max(const uint32_t*   marker_pos,
     if (marker_ct <= cur_window_max) {
         return cur_window_max;
     }
-    uint32_t window_idx_first  = 0;
+    uint32_t window_idx_first = 0;
     uint32_t window_uidx_first = marker_uidx;
-    uint32_t window_pos_first  = marker_pos[marker_uidx];
+    uint32_t window_pos_first = marker_pos[marker_uidx];
     uint32_t marker_idx;
     uint32_t marker_pos_thresh;
     for (marker_idx = 0; marker_idx < marker_ct; marker_uidx++, marker_idx++) {
@@ -7595,15 +7595,15 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
         return marker_uidx_min;
     }
     double min_cm = marker_cms ? (marker_cms[marker_uidx_start] - cm_max) : 0.0;
-    uint32_t         min_pos            = 0;
-    uint32_t         marker_uwidx_cur   = marker_uidx_start / BITCT;
-    uint32_t         uii                = marker_uidx_start % BITCT;
-    uint32_t         marker_uidx_last   = marker_uidx_start;
-    uint32_t         remaining_count    = count_max;
+    uint32_t min_pos = 0;
+    uint32_t marker_uwidx_cur = marker_uidx_start / BITCT;
+    uint32_t uii = marker_uidx_start % BITCT;
+    uint32_t marker_uidx_last = marker_uidx_start;
+    uint32_t remaining_count = count_max;
     const uintptr_t* marker_exclude_cur = &(marker_exclude[marker_uwidx_cur]);
-    uintptr_t        cur_word;
-    uint32_t         ujj;
-    uint32_t         ukk;
+    uintptr_t cur_word;
+    uint32_t ujj;
+    uint32_t ukk;
     marker_uwidx_cur *= BITCT;
     if (bp_max <= marker_pos[marker_uidx_start]) {
         min_pos = marker_pos[marker_uidx_start] - bp_max;
@@ -7616,7 +7616,7 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
         if (marker_uwidx_cur <= marker_uidx_min) {
             cur_word &= ~((ONELU << (marker_uidx_min % BITCT)) - ONELU);
             marker_uwidx_cur = marker_uidx_min;
-            uii              = popcount_long(cur_word);
+            uii = popcount_long(cur_word);
             if (uii >= remaining_count) {
                 goto window_back_count;
             }
@@ -7694,15 +7694,15 @@ uint32_t window_forward(const uint32_t* __restrict marker_pos,
         return marker_uidx_start;
     }
     double max_cm = marker_cms ? (cm_max + marker_cms[marker_uidx_start]) : 0.0;
-    uint32_t         marker_uwidx_prev = marker_uidx_start;
-    uint32_t         max_pos           = bp_max + marker_pos[marker_uidx_start];
-    uint32_t         marker_uwidx_cur  = (marker_uidx_start + 1) / BITCT;
-    uint32_t         uii               = (marker_uidx_start + 1) % BITCT;
-    uint32_t         remaining_count   = count_max;
+    uint32_t marker_uwidx_prev = marker_uidx_start;
+    uint32_t max_pos = bp_max + marker_pos[marker_uidx_start];
+    uint32_t marker_uwidx_cur = (marker_uidx_start + 1) / BITCT;
+    uint32_t uii = (marker_uidx_start + 1) % BITCT;
+    uint32_t remaining_count = count_max;
     const uintptr_t* marker_exclude_cur = &(marker_exclude[marker_uwidx_cur]);
-    uintptr_t        cur_word;
-    uint32_t         ujj;
-    uint32_t         ukk;
+    uintptr_t cur_word;
+    uint32_t ujj;
+    uint32_t ukk;
     marker_uwidx_cur *= BITCT;
     cur_word = ~((*marker_exclude_cur) | ((ONELU << uii) - ONELU));
     while (1) {
@@ -7778,11 +7778,11 @@ uintptr_t jump_forward_unset_unsafe(const uintptr_t* bitvec, uintptr_t cur_pos,
     // interface, easy to introduce off-by-one bugs...)
     // In usual 64-bit case, also assumes bitvec is 16-byte aligned and the end
     // of the trailing 16-byte block can be safely read from.
-    uintptr_t        widx = cur_pos / BITCT;
-    uintptr_t        ulii = cur_pos % BITCT;
+    uintptr_t widx = cur_pos / BITCT;
+    uintptr_t ulii = cur_pos % BITCT;
     const uintptr_t* bptr = &(bitvec[widx]);
-    uintptr_t        uljj;
-    uintptr_t        ulkk;
+    uintptr_t uljj;
+    uintptr_t ulkk;
 #ifdef __LP64__
     const __m128i* vptr;
 #endif
@@ -7850,13 +7850,13 @@ uintptr_t popcount_longs_exclude(const uintptr_t* __restrict lptr,
 {
     // popcounts lptr ANDNOT exclude_arr[0..(end_idx-1)].
     // N.B. on 64-bit systems, assumes lptr and exclude_arr are 16-byte aligned.
-    uintptr_t        tot      = 0;
+    uintptr_t tot = 0;
     const uintptr_t* lptr_end = &(lptr[end_idx]);
 #ifdef __LP64__
     uintptr_t six_ct = end_idx / 6;
     tot += popcount_vecs_exclude((const __m128i*) lptr,
                                  (const __m128i*) exclude_arr, six_ct * 3);
-    lptr        = &(lptr[six_ct * 6]);
+    lptr = &(lptr[six_ct * 6]);
     exclude_arr = &(exclude_arr[six_ct * 6]);
 #else
     const uintptr_t* lptr_six_end;
@@ -7904,7 +7904,7 @@ uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
                                    const uintptr_t* __restrict lptr2,
                                    uintptr_t word_ct)
 {
-    uintptr_t        tot       = 0;
+    uintptr_t tot = 0;
     const uintptr_t* lptr1_end = &(lptr1[word_ct]);
 #ifdef __LP64__
     uintptr_t six_ct = word_ct / 6;
@@ -7959,8 +7959,8 @@ void vertical_bitct_subtract(const uintptr_t* bitarr, uint32_t item_ct,
 {
     // assumes trailing bits are zeroed out
     uintptr_t cur_word;
-    uint32_t  idx_offset;
-    uint32_t  last_set_bit;
+    uint32_t idx_offset;
+    uint32_t last_set_bit;
     for (idx_offset = 0; idx_offset < item_ct; idx_offset += BITCT) {
         cur_word = *bitarr++;
         while (cur_word) {
@@ -7980,36 +7980,36 @@ void count_2freq_dbl_960b(
 {
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       to_ct1_ab;
-    __m128i       to_ct_abtmp;
-    __m128i       to_ct1_c;
-    __m128i       to_ct2_ab;
-    __m128i       to_ct2_c;
-    __univec      acc1_ab;
-    __univec      acc1_c;
-    __univec      acc2_ab;
-    __univec      acc2_c;
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i to_ct1_ab;
+    __m128i to_ct_abtmp;
+    __m128i to_ct1_c;
+    __m128i to_ct2_ab;
+    __m128i to_ct2_c;
+    __univec acc1_ab;
+    __univec acc1_c;
+    __univec acc2_ab;
+    __univec acc2_c;
 
     acc1_ab.vi = _mm_setzero_si128();
-    acc1_c.vi  = _mm_setzero_si128();
+    acc1_c.vi = _mm_setzero_si128();
     acc2_ab.vi = _mm_setzero_si128();
-    acc2_c.vi  = _mm_setzero_si128();
+    acc2_c.vi = _mm_setzero_si128();
     do
     {
-        loader    = *geno_vvec++;
-        loader2   = *mask1vp++;
-        loader3   = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2   = _mm_and_si128(loader2, loader);
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct1_ab = _mm_add_epi64(loader3, loader2);
-        to_ct1_c  = _mm_andnot_si128(loader3, loader2);
-        loader2   = *mask2vp++;
-        loader3   = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2   = _mm_and_si128(loader2, loader);
+        to_ct1_c = _mm_andnot_si128(loader3, loader2);
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct2_ab = _mm_add_epi64(loader3, loader2);
-        to_ct2_c  = _mm_andnot_si128(loader3, loader2);
+        to_ct2_c = _mm_andnot_si128(loader3, loader2);
         to_ct1_ab =
             _mm_add_epi64(_mm_and_si128(to_ct1_ab, m2),
                           _mm_and_si128(_mm_srli_epi64(to_ct1_ab, 2), m2));
@@ -8017,41 +8017,41 @@ void count_2freq_dbl_960b(
             _mm_add_epi64(_mm_and_si128(to_ct2_ab, m2),
                           _mm_and_si128(_mm_srli_epi64(to_ct2_ab, 2), m2));
 
-        loader      = *geno_vvec++;
-        loader2     = *mask1vp++;
-        loader3     = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2     = _mm_and_si128(loader2, loader);
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct_abtmp = _mm_add_epi64(loader3, loader2);
-        to_ct1_c  = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
+        to_ct1_c = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
         to_ct1_ab = _mm_add_epi64(
             to_ct1_ab,
             _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
                           _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
-        loader2     = *mask2vp++;
-        loader3     = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2     = _mm_and_si128(loader2, loader);
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct_abtmp = _mm_add_epi64(loader3, loader2);
-        to_ct2_c  = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
+        to_ct2_c = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
         to_ct2_ab = _mm_add_epi64(
             to_ct2_ab,
             _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
                           _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
 
-        loader      = *geno_vvec++;
-        loader2     = *mask1vp++;
-        loader3     = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2     = _mm_and_si128(loader2, loader);
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct_abtmp = _mm_add_epi64(loader3, loader2);
-        to_ct1_c  = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
+        to_ct1_c = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
         to_ct1_ab = _mm_add_epi64(
             to_ct1_ab,
             _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
                           _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
-        loader2     = *mask2vp++;
-        loader3     = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        loader2     = _mm_and_si128(loader2, loader);
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
         to_ct_abtmp = _mm_add_epi64(loader3, loader2);
-        to_ct2_c  = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
+        to_ct2_c = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
         to_ct2_ab = _mm_add_epi64(
             to_ct2_ab,
             _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
@@ -8106,65 +8106,65 @@ void count_3freq_1920b(const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
 {
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       even1;
-    __m128i       odd1;
-    __m128i       homset1;
-    __m128i       even2;
-    __m128i       odd2;
-    __m128i       homset2;
-    __univec      acc_even;
-    __univec      acc_odd;
-    __univec      acc_homset;
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i even1;
+    __m128i odd1;
+    __m128i homset1;
+    __m128i even2;
+    __m128i odd2;
+    __m128i homset2;
+    __univec acc_even;
+    __univec acc_odd;
+    __univec acc_homset;
 
-    acc_even.vi   = _mm_setzero_si128();
-    acc_odd.vi    = _mm_setzero_si128();
+    acc_even.vi = _mm_setzero_si128();
+    acc_odd.vi = _mm_setzero_si128();
     acc_homset.vi = _mm_setzero_si128();
     do
     {
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
-        odd1    = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even1   = _mm_and_si128(loader2, loader);
+        odd1 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even1 = _mm_and_si128(loader2, loader);
         homset1 = _mm_and_si128(odd1, loader);
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
         loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even1   = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
-        odd1    = _mm_add_epi64(odd1, loader3);
+        even1 = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
+        odd1 = _mm_add_epi64(odd1, loader3);
         homset1 = _mm_add_epi64(homset1, _mm_and_si128(loader3, loader));
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
         loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even1   = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
-        odd1    = _mm_add_epi64(odd1, loader3);
+        even1 = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
+        odd1 = _mm_add_epi64(odd1, loader3);
         homset1 = _mm_add_epi64(homset1, _mm_and_si128(loader3, loader));
 
-        even1   = _mm_add_epi64(_mm_and_si128(even1, m2),
+        even1 = _mm_add_epi64(_mm_and_si128(even1, m2),
                               _mm_and_si128(_mm_srli_epi64(even1, 2), m2));
-        odd1    = _mm_add_epi64(_mm_and_si128(odd1, m2),
+        odd1 = _mm_add_epi64(_mm_and_si128(odd1, m2),
                              _mm_and_si128(_mm_srli_epi64(odd1, 2), m2));
         homset1 = _mm_add_epi64(_mm_and_si128(homset1, m2),
                                 _mm_and_si128(_mm_srli_epi64(homset1, 2), m2));
 
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
-        odd2    = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even2   = _mm_and_si128(loader2, loader);
+        odd2 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even2 = _mm_and_si128(loader2, loader);
         homset2 = _mm_and_si128(odd2, loader);
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
         loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even2   = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
-        odd2    = _mm_add_epi64(odd2, loader3);
+        even2 = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
+        odd2 = _mm_add_epi64(odd2, loader3);
         homset2 = _mm_add_epi64(homset2, _mm_and_si128(loader3, loader));
-        loader  = *geno_vvec++;
+        loader = *geno_vvec++;
         loader2 = *maskvp++;
         loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
-        even2   = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
-        odd2    = _mm_add_epi64(odd2, loader3);
+        even2 = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
+        odd2 = _mm_add_epi64(odd2, loader3);
         homset2 = _mm_add_epi64(homset2, _mm_and_si128(loader3, loader));
 
         even1 = _mm_add_epi64(
@@ -8448,39 +8448,39 @@ void count_set_freq_60v(const __m128i* vptr, const __m128i* vend,
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
     const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       odds;
-    __m128i       evens;
-    __m128i       missings;
-    __univec      acc;
-    __univec      accm;
-    acc.vi  = _mm_setzero_si128();
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i odds;
+    __m128i evens;
+    __m128i missings;
+    __univec acc;
+    __univec accm;
+    acc.vi = _mm_setzero_si128();
     accm.vi = _mm_setzero_si128();
     do
     {
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        odds     = _mm_and_si128(loader2, loader3);
-        evens    = _mm_and_si128(odds, loader);
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        odds = _mm_and_si128(loader2, loader3);
+        evens = _mm_and_si128(odds, loader);
         missings = _mm_and_si128(loader, _mm_andnot_si128(loader2, loader3));
 
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        odds     = _mm_add_epi64(odds, _mm_and_si128(loader2, loader3));
-        loader3  = _mm_and_si128(loader, loader3);
-        evens    = _mm_add_epi64(evens, _mm_and_si128(loader2, loader3));
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        odds = _mm_add_epi64(odds, _mm_and_si128(loader2, loader3));
+        loader3 = _mm_and_si128(loader, loader3);
+        evens = _mm_add_epi64(evens, _mm_and_si128(loader2, loader3));
         missings = _mm_add_epi64(missings, _mm_andnot_si128(loader2, loader3));
 
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        odds     = _mm_add_epi64(odds, _mm_and_si128(loader2, loader3));
-        loader3  = _mm_and_si128(loader, loader3);
-        evens    = _mm_add_epi64(evens, _mm_and_si128(loader2, loader3));
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        odds = _mm_add_epi64(odds, _mm_and_si128(loader2, loader3));
+        loader3 = _mm_and_si128(loader, loader3);
+        evens = _mm_add_epi64(evens, _mm_and_si128(loader2, loader3));
         missings = _mm_add_epi64(missings, _mm_andnot_si128(loader2, loader3));
 
         odds = _mm_add_epi64(_mm_and_si128(odds, m2),
@@ -8520,32 +8520,32 @@ void count_set_freq_hap_120v(const __m128i* vptr, const __m128i* vend,
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
     const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    __univec      acc;
-    __univec      accm;
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       partial;
-    __m128i       partialm;
-    __m128i       partial2;
-    __m128i       partial2m;
-    acc.vi  = _mm_setzero_si128();
+    __univec acc;
+    __univec accm;
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i partial;
+    __m128i partialm;
+    __m128i partial2;
+    __m128i partial2m;
+    acc.vi = _mm_setzero_si128();
     accm.vi = _mm_setzero_si128();
     do
     {
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        partial  = _mm_and_si128(loader3, _mm_and_si128(loader, loader2));
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        partial = _mm_and_si128(loader3, _mm_and_si128(loader, loader2));
         partialm = _mm_and_si128(loader3, _mm_xor_si128(loader, loader2));
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        partial  = _mm_add_epi64(
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        partial = _mm_add_epi64(
             partial, _mm_and_si128(loader3, _mm_and_si128(loader, loader2)));
         partialm = _mm_add_epi64(
             partialm, _mm_and_si128(loader3, _mm_and_si128(loader, loader2)));
-        loader  = *vptr++;
+        loader = *vptr++;
         loader2 = _mm_srli_epi64(loader, 1);
         loader3 = *include_vec++;
         partial = _mm_add_epi64(
@@ -8558,19 +8558,19 @@ void count_set_freq_hap_120v(const __m128i* vptr, const __m128i* vend,
             _mm_add_epi64(_mm_and_si128(partialm, m2),
                           _mm_and_si128(_mm_srli_epi64(partialm, 2), m2));
 
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        partial  = _mm_and_si128(loader3, _mm_and_si128(loader, loader2));
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        partial = _mm_and_si128(loader3, _mm_and_si128(loader, loader2));
         partialm = _mm_and_si128(loader3, _mm_xor_si128(loader, loader2));
-        loader   = *vptr++;
-        loader2  = _mm_srli_epi64(loader, 1);
-        loader3  = *include_vec++;
-        partial  = _mm_add_epi64(
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        partial = _mm_add_epi64(
             partial, _mm_and_si128(loader3, _mm_and_si128(loader, loader2)));
         partialm = _mm_add_epi64(
             partialm, _mm_and_si128(loader3, _mm_and_si128(loader, loader2)));
-        loader  = *vptr++;
+        loader = *vptr++;
         loader2 = _mm_srli_epi64(loader, 1);
         loader3 = *include_vec++;
         partial = _mm_add_epi64(
@@ -8594,7 +8594,7 @@ void count_set_freq_hap_120v(const __m128i* vptr, const __m128i* vend,
             _mm_add_epi64(_mm_and_si128(partial2m, m4),
                           _mm_and_si128(_mm_srli_epi64(partial2m, 4), m4)));
     } while (vptr < vend);
-    acc.vi  = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+    acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
                            _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
     accm.vi = _mm_add_epi64(_mm_and_si128(accm.vi, m8),
                             _mm_and_si128(_mm_srli_epi64(accm.vi, 8), m8));
@@ -8611,67 +8611,67 @@ void count_set_freq_x_60v(const __m128i* vptr, const __m128i* vend,
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
     const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       loader4;
-    __m128i       set_odds;
-    __m128i       set_evens;
-    __m128i       missings_nm;
-    __m128i       missings_m;
-    __m128i       males;
-    __univec      acc;
-    __univec      accm;
-    acc.vi  = _mm_setzero_si128();
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i loader4;
+    __m128i set_odds;
+    __m128i set_evens;
+    __m128i missings_nm;
+    __m128i missings_m;
+    __m128i males;
+    __univec acc;
+    __univec accm;
+    acc.vi = _mm_setzero_si128();
     accm.vi = _mm_setzero_si128();
     do
     {
-        loader  = *vptr++;
+        loader = *vptr++;
         loader2 = _mm_srli_epi64(loader, 1);
         loader3 = *include_vec++;
         loader4 = _mm_andnot_si128(*male_vec, loader3);
         set_evens =
             _mm_and_si128(loader, loader4); // subtract missings_nm later
-        set_odds    = _mm_and_si128(loader2, loader4);
+        set_odds = _mm_and_si128(loader2, loader4);
         missings_nm = _mm_andnot_si128(loader2, set_evens);
-        males       = _mm_and_si128(loader3, *male_vec++);
-        set_evens   = _mm_or_si128(
+        males = _mm_and_si128(loader3, *male_vec++);
+        set_evens = _mm_or_si128(
             set_evens, _mm_and_si128(_mm_and_si128(loader, loader2), males));
         missings_m = _mm_and_si128(_mm_xor_si128(loader, loader2), males);
 
-        loader    = *vptr++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader3   = *include_vec++;
-        loader4   = _mm_andnot_si128(*male_vec, loader3);
-        set_odds  = _mm_add_epi64(set_odds, _mm_and_si128(loader2, loader4));
-        loader4   = _mm_and_si128(loader, loader4);
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        loader4 = _mm_andnot_si128(*male_vec, loader3);
+        set_odds = _mm_add_epi64(set_odds, _mm_and_si128(loader2, loader4));
+        loader4 = _mm_and_si128(loader, loader4);
         set_evens = _mm_add_epi64(set_evens, loader4);
         missings_nm =
             _mm_add_epi64(missings_nm, _mm_andnot_si128(loader2, loader4));
-        loader4   = _mm_and_si128(loader3, *male_vec++);
+        loader4 = _mm_and_si128(loader3, *male_vec++);
         set_evens = _mm_add_epi64(
             set_evens, _mm_and_si128(_mm_and_si128(loader, loader2), loader4));
         missings_m = _mm_add_epi64(
             missings_m, _mm_and_si128(_mm_xor_si128(loader, loader2), loader4));
         males = _mm_add_epi64(males, loader4);
 
-        loader    = *vptr++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader3   = *include_vec++;
-        loader4   = _mm_andnot_si128(*male_vec, loader3);
-        set_odds  = _mm_add_epi64(set_odds, _mm_and_si128(loader2, loader4));
-        loader4   = _mm_and_si128(loader, loader4);
+        loader = *vptr++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader3 = *include_vec++;
+        loader4 = _mm_andnot_si128(*male_vec, loader3);
+        set_odds = _mm_add_epi64(set_odds, _mm_and_si128(loader2, loader4));
+        loader4 = _mm_and_si128(loader, loader4);
         set_evens = _mm_add_epi64(set_evens, loader4);
         missings_nm =
             _mm_add_epi64(missings_nm, _mm_andnot_si128(loader2, loader4));
-        loader4   = _mm_and_si128(loader3, *male_vec++);
+        loader4 = _mm_and_si128(loader3, *male_vec++);
         set_evens = _mm_add_epi64(
             set_evens, _mm_and_si128(_mm_and_si128(loader, loader2), loader4));
         missings_m = _mm_add_epi64(
             missings_m, _mm_and_si128(_mm_xor_si128(loader, loader2), loader4));
         males = _mm_add_epi64(males, loader4);
 
-        set_evens   = _mm_sub_epi64(set_evens, missings_nm);
+        set_evens = _mm_sub_epi64(set_evens, missings_nm);
         missings_nm = _mm_slli_epi64(
             _mm_add_epi64(_mm_and_si128(missings_nm, m2),
                           _mm_and_si128(_mm_srli_epi64(missings_nm, 2), m2)),
@@ -8700,7 +8700,7 @@ void count_set_freq_x_60v(const __m128i* vptr, const __m128i* vend,
             _mm_add_epi64(_mm_and_si128(missings_nm, m4),
                           _mm_and_si128(_mm_srli_epi64(missings_nm, 4), m4)));
     } while (vptr < vend);
-    acc.vi  = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+    acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
                            _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
     accm.vi = _mm_add_epi64(_mm_and_si128(accm.vi, m8),
                             _mm_and_si128(_mm_srli_epi64(accm.vi, 8), m8));
@@ -8717,34 +8717,34 @@ void count_set_freq_y_120v(const __m128i* vptr, const __m128i* vend,
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
     const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    __m128i       loader;
-    __m128i       loader2;
-    __m128i       loader3;
-    __m128i       loader4;
-    __m128i       sets1;
-    __m128i       missings1;
-    __m128i       sets2;
-    __m128i       missings2;
-    __univec      acc;
-    __univec      accm;
-    acc.vi  = _mm_setzero_si128();
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i loader4;
+    __m128i sets1;
+    __m128i missings1;
+    __m128i sets2;
+    __m128i missings2;
+    __univec acc;
+    __univec accm;
+    acc.vi = _mm_setzero_si128();
     accm.vi = _mm_setzero_si128();
     do
     {
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets1     = _mm_and_si128(_mm_andnot_si128(loader4, loader3),
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets1 = _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                               _mm_and_si128(loader, loader2));
         missings1 = _mm_and_si128(
             loader3, _mm_or_si128(loader4, _mm_xor_si128(loader, loader2)));
 
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets1     = _mm_add_epi64(sets1,
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets1 = _mm_add_epi64(sets1,
                               _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                                             _mm_and_si128(loader, loader2)));
         missings1 = _mm_add_epi64(
@@ -8753,11 +8753,11 @@ void count_set_freq_y_120v(const __m128i* vptr, const __m128i* vend,
                 loader3,
                 _mm_or_si128(loader4, _mm_xor_si128(loader, loader2))));
 
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets1     = _mm_add_epi64(sets1,
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets1 = _mm_add_epi64(sets1,
                               _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                                             _mm_and_si128(loader, loader2)));
         missings1 = _mm_add_epi64(
@@ -8771,20 +8771,20 @@ void count_set_freq_y_120v(const __m128i* vptr, const __m128i* vend,
             _mm_add_epi64(_mm_and_si128(missings1, m2),
                           _mm_and_si128(_mm_srli_epi64(missings1, 2), m2));
 
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets2     = _mm_and_si128(_mm_andnot_si128(loader4, loader3),
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets2 = _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                               _mm_and_si128(loader, loader2));
         missings2 = _mm_and_si128(
             loader3, _mm_or_si128(loader4, _mm_xor_si128(loader, loader2)));
 
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets2     = _mm_add_epi64(sets2,
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets2 = _mm_add_epi64(sets2,
                               _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                                             _mm_and_si128(loader, loader2)));
         missings2 = _mm_add_epi64(
@@ -8793,11 +8793,11 @@ void count_set_freq_y_120v(const __m128i* vptr, const __m128i* vend,
                 loader3,
                 _mm_or_si128(loader4, _mm_xor_si128(loader, loader2))));
 
-        loader    = *vptr++;
-        loader3   = *include_vec++;
-        loader2   = _mm_srli_epi64(loader, 1);
-        loader4   = *nonmale_vec++;
-        sets2     = _mm_add_epi64(sets2,
+        loader = *vptr++;
+        loader3 = *include_vec++;
+        loader2 = _mm_srli_epi64(loader, 1);
+        loader4 = *nonmale_vec++;
+        sets2 = _mm_add_epi64(sets2,
                               _mm_and_si128(_mm_andnot_si128(loader4, loader3),
                                             _mm_and_si128(loader, loader2)));
         missings2 = _mm_add_epi64(
@@ -8820,7 +8820,7 @@ void count_set_freq_y_120v(const __m128i* vptr, const __m128i* vend,
             _mm_add_epi64(_mm_and_si128(missings1, m4),
                           _mm_and_si128(_mm_srli_epi64(missings1, 4), m4)));
     } while (vptr < vend);
-    acc.vi  = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+    acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
                            _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
     accm.vi = _mm_add_epi64(_mm_and_si128(accm.vi, m8),
                             _mm_and_si128(_mm_srli_epi64(accm.vi, 8), m8));
@@ -8832,17 +8832,17 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
 {
     // counts number of aligned 01s (i.e. PLINK missing genotypes) in
     // [vptr, vend).  Assumes number of words in interval is a multiple of 12.
-    const __m128i  m1  = {FIVEMASK, FIVEMASK};
-    const __m128i  m2  = {0x3333333333333333LLU, 0x3333333333333333LLU};
-    const __m128i  m4  = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    const __m128i  m8  = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-    uintptr_t      tot = 0;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
     const __m128i* vend;
-    __m128i        loader1;
-    __m128i        loader2;
-    __m128i        count1;
-    __m128i        count2;
-    __univec       acc;
+    __m128i loader1;
+    __m128i loader2;
+    __m128i count1;
+    __m128i count2;
+    __univec acc;
 
     while (vct >= 60) {
         vct -= 60;
@@ -8853,13 +8853,13 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
         {
             loader1 = *vptr++;
             loader2 = *vptr++;
-            count1  = _mm_and_si128(
+            count1 = _mm_and_si128(
                 _mm_andnot_si128(_mm_srli_epi64(loader1, 1), loader1), m1);
             count2 = _mm_and_si128(
                 _mm_andnot_si128(_mm_srli_epi64(loader2, 1), loader2), m1);
             loader1 = *vptr++;
             loader2 = *vptr++;
-            count1  = _mm_add_epi64(
+            count1 = _mm_add_epi64(
                 count1,
                 _mm_and_si128(
                     _mm_andnot_si128(_mm_srli_epi64(loader1, 1), loader1), m1));
@@ -8869,7 +8869,7 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
                     _mm_andnot_si128(_mm_srli_epi64(loader2, 1), loader2), m1));
             loader1 = *vptr++;
             loader2 = *vptr++;
-            count1  = _mm_add_epi64(
+            count1 = _mm_add_epi64(
                 count1,
                 _mm_and_si128(
                     _mm_andnot_si128(_mm_srli_epi64(loader1, 1), loader1), m1));
@@ -8895,7 +8895,7 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
     }
     if (vct) {
         vend = &(vptr[vct]);
-        vct  = 0;
+        vct = 0;
         goto count_01_vecs_main_loop;
     }
     return tot;
@@ -9332,13 +9332,13 @@ void genovec_set_freq(const uintptr_t* __restrict geno_vec,
     // missing count: popcount2(genotype & (~(genotype >> 1)) & 0x5555...)
     // set allele count: popcount(genotype) - missing count
     const uintptr_t* geno_vec_end = &(geno_vec[sample_ctl2]);
-    uintptr_t        loader;
-    uintptr_t        loader2;
-    uintptr_t        missing_incr;
-    uint32_t         acc  = 0;
-    uint32_t         accm = 0;
+    uintptr_t loader;
+    uintptr_t loader2;
+    uintptr_t missing_incr;
+    uint32_t acc = 0;
+    uint32_t accm = 0;
 #ifdef __LP64__
-    uintptr_t        cur_decr = 60;
+    uintptr_t cur_decr = 60;
     const uintptr_t* geno_vec_6x_end;
     sample_ctl2 -= sample_ctl2 % 6;
     while (sample_ctl2 >= 60) {
@@ -9347,7 +9347,7 @@ void genovec_set_freq(const uintptr_t* __restrict geno_vec,
         count_set_freq_60v((const __m128i*) geno_vec,
                            (const __m128i*) geno_vec_6x_end,
                            (const __m128i*) include_quatervec, &acc, &accm);
-        geno_vec          = geno_vec_6x_end;
+        geno_vec = geno_vec_6x_end;
         include_quatervec = &(include_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
@@ -9365,13 +9365,13 @@ void genovec_set_freq(const uintptr_t* __restrict geno_vec,
     }
 #endif
     while (geno_vec < geno_vec_end) {
-        loader       = *geno_vec++;
-        loader2      = *include_quatervec++;
+        loader = *geno_vec++;
+        loader2 = *include_quatervec++;
         missing_incr = popcount2_long(loader & (~(loader >> 1)) & loader2);
         accm += missing_incr;
         acc += popcount_long(loader & (loader2 * 3)) - missing_incr;
     }
-    *set_ctp     = acc;
+    *set_ctp = acc;
     *missing_ctp = accm;
 }
 
@@ -9384,15 +9384,15 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
     // diploid counting for nonmales, haploid counting for males
     // missing_ct := male_obs + male_missing + 2 * female_missing
     const uintptr_t* geno_vec_end = &(geno_vec[sample_ctl2]);
-    uintptr_t        loader;
-    uintptr_t        loader2;
-    uintptr_t        loader3;
-    uintptr_t        loader4;
-    uintptr_t        missing_incr;
-    uint32_t         acc  = 0;
-    uint32_t         accm = 0;
+    uintptr_t loader;
+    uintptr_t loader2;
+    uintptr_t loader3;
+    uintptr_t loader4;
+    uintptr_t missing_incr;
+    uint32_t acc = 0;
+    uint32_t accm = 0;
 #ifdef __LP64__
-    uintptr_t        cur_decr = 60;
+    uintptr_t cur_decr = 60;
     const uintptr_t* geno_vec_6x_end;
     sample_ctl2 -= sample_ctl2 % 6;
     while (sample_ctl2 >= 60) {
@@ -9402,9 +9402,9 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
                              (const __m128i*) geno_vec_6x_end,
                              (const __m128i*) include_quatervec,
                              (const __m128i*) male_quatervec, &acc, &accm);
-        geno_vec          = geno_vec_6x_end;
+        geno_vec = geno_vec_6x_end;
         include_quatervec = &(include_quatervec[cur_decr]);
-        male_quatervec    = &(male_quatervec[cur_decr]);
+        male_quatervec = &(male_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
     if (sample_ctl2) {
@@ -9423,10 +9423,10 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
     }
 #endif
     while (geno_vec < geno_vec_end) {
-        loader       = *geno_vec++;
-        loader2      = loader >> 1;
-        loader3      = *include_quatervec++;
-        loader4      = loader3 & (~(*male_quatervec));
+        loader = *geno_vec++;
+        loader2 = loader >> 1;
+        loader3 = *include_quatervec++;
+        loader4 = loader3 & (~(*male_quatervec));
         missing_incr = popcount2_long(loader & (~loader2) & loader4);
         accm += 2 * missing_incr;
         acc += popcount_long(loader & (loader4 * 3)) - missing_incr;
@@ -9435,7 +9435,7 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
         acc += popcount2_long(loader & loader2 & loader4);
         accm += popcount_long(((loader ^ loader2) & loader4) | (loader4 << 1));
     }
-    *set_ctp     = acc;
+    *set_ctp = acc;
     *missing_ctp = accm;
 }
 
@@ -9447,14 +9447,14 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
 {
     // all nonmales contribute to missing_ct here
     const uintptr_t* geno_vec_end = &(geno_vec[sample_ctl2]);
-    uintptr_t        loader;
-    uintptr_t        loader2;
-    uintptr_t        loader3;
-    uintptr_t        loader4;
-    uint32_t         acc  = 0;
-    uint32_t         accm = 0;
+    uintptr_t loader;
+    uintptr_t loader2;
+    uintptr_t loader3;
+    uintptr_t loader4;
+    uint32_t acc = 0;
+    uint32_t accm = 0;
 #ifdef __LP64__
-    uintptr_t        cur_decr = 120;
+    uintptr_t cur_decr = 120;
     const uintptr_t* geno_vec_12x_end;
     sample_ctl2 -= sample_ctl2 % 12;
     while (sample_ctl2 >= 120) {
@@ -9463,7 +9463,7 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
         count_set_freq_y_120v((__m128i*) geno_vec, (__m128i*) geno_vec_12x_end,
                               (__m128i*) include_quatervec,
                               (__m128i*) nonmale_quatervec, &acc, &accm);
-        geno_vec          = geno_vec_12x_end;
+        geno_vec = geno_vec_12x_end;
         include_quatervec = &(include_quatervec[cur_decr]);
         nonmale_quatervec = &(nonmale_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
@@ -9484,14 +9484,14 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
     }
 #endif
     while (geno_vec < geno_vec_end) {
-        loader  = *geno_vec++;
+        loader = *geno_vec++;
         loader2 = loader >> 1;
         loader3 = *include_quatervec++;
         loader4 = *nonmale_quatervec++;
         acc += popcount2_long(loader & loader2 & loader3 & (~loader4));
         accm += popcount2_long(loader3 & ((loader ^ loader2) | loader4));
     }
-    *set_ctp     = acc;
+    *set_ctp = acc;
     *missing_ctp = accm;
 }
 
@@ -9503,14 +9503,14 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
 {
     // generic routine for getting all counts.
     const uintptr_t* geno_vec_end = &(geno_vec[sample_ctl2]);
-    uintptr_t        loader;
-    uintptr_t        loader2;
-    uintptr_t        loader3;
-    uint32_t         acc_even = 0;
-    uint32_t         acc_odd  = 0;
-    uint32_t         acc_and  = 0;
+    uintptr_t loader;
+    uintptr_t loader2;
+    uintptr_t loader3;
+    uint32_t acc_even = 0;
+    uint32_t acc_odd = 0;
+    uint32_t acc_and = 0;
 #ifdef __LP64__
-    uintptr_t        cur_decr = 120;
+    uintptr_t cur_decr = 120;
     const uintptr_t* geno_vec_12x_end;
     sample_ctl2 -= sample_ctl2 % 12;
     while (sample_ctl2 >= 120) {
@@ -9519,7 +9519,7 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
         count_3freq_1920b(
             (const __m128i*) geno_vec, (const __m128i*) geno_vec_12x_end,
             (const __m128i*) include_quatervec, &acc_even, &acc_odd, &acc_and);
-        geno_vec          = geno_vec_12x_end;
+        geno_vec = geno_vec_12x_end;
         include_quatervec = &(include_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
@@ -9538,7 +9538,7 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
     }
 #endif
     while (geno_vec < geno_vec_end) {
-        loader  = *geno_vec++;
+        loader = *geno_vec++;
         loader2 = *include_quatervec++;
         loader3 = loader2 & (loader >> 1);
         acc_even += popcount2_long(loader & loader2);
@@ -9546,8 +9546,8 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
         acc_and += popcount2_long(loader & loader3);
     }
     *missing_ctp = acc_even - acc_and;
-    *het_ctp     = acc_odd - acc_and;
-    *homset_ctp  = acc_and;
+    *het_ctp = acc_odd - acc_and;
+    *homset_ctp = acc_and;
 }
 
 uintptr_t count_01(const uintptr_t* quatervec, uintptr_t word_ct)
@@ -9555,11 +9555,11 @@ uintptr_t count_01(const uintptr_t* quatervec, uintptr_t word_ct)
     // really just for getting a missing count
     // unlike popcount01_longs, this does not assume quatervec[] has no 11s
     const uintptr_t* quatervec_end = &(quatervec[word_ct]);
-    uintptr_t        loader;
+    uintptr_t loader;
 #ifdef __LP64__
     uintptr_t acc;
     word_ct -= word_ct % 12;
-    acc       = count_01_vecs((__m128i*) quatervec, word_ct / 2);
+    acc = count_01_vecs((__m128i*) quatervec, word_ct / 2);
     quatervec = &(quatervec[word_ct]);
 #else
     const uintptr_t* quatervec_twelve_end =
@@ -9581,7 +9581,7 @@ void fill_all_bits(uintptr_t ct, uintptr_t* bitarr)
 {
     // leaves bits beyond the end unset
     // ok for ct == 0
-    uintptr_t quotient  = ct / BITCT;
+    uintptr_t quotient = ct / BITCT;
     uintptr_t remainder = ct % BITCT;
     fill_ulong_one(quotient, bitarr);
     if (remainder) {
@@ -9591,18 +9591,18 @@ void fill_all_bits(uintptr_t ct, uintptr_t* bitarr)
 
 uint32_t numeric_range_list_to_bitarr(const Range_list* range_list_ptr,
                                       uint32_t item_ct, uint32_t offset,
-                                      uint32_t   ignore_overflow,
+                                      uint32_t ignore_overflow,
                                       uintptr_t* bitarr)
 {
     // bitarr assumed to be initialized
-    const char*          names        = range_list_ptr->names;
+    const char* names = range_list_ptr->names;
     const unsigned char* starts_range = range_list_ptr->starts_range;
-    uint32_t             name_ct      = range_list_ptr->name_ct;
-    uint32_t             name_max_len = range_list_ptr->name_max_len;
-    uint32_t             idx_max      = item_ct + offset;
-    uint32_t             name_idx;
-    uint32_t             idx1;
-    uint32_t             idx2;
+    uint32_t name_ct = range_list_ptr->name_ct;
+    uint32_t name_max_len = range_list_ptr->name_max_len;
+    uint32_t idx_max = item_ct + offset;
+    uint32_t name_idx;
+    uint32_t idx1;
+    uint32_t idx2;
     for (name_idx = 0; name_idx < name_ct; name_idx++) {
         if (scan_uint_capped(&(names[name_idx * name_max_len]), idx_max, &idx1))
         {
@@ -9642,15 +9642,15 @@ int32_t string_range_list_to_bitarr(
     // if fixed_len is zero, header_line is assumed to be a list of
     // space-delimited unequal-length names
     uintptr_t max_id_len = range_list_ptr->name_max_len;
-    uintptr_t name_ct    = range_list_ptr->name_ct;
-    uint32_t  item_idx   = 0;
-    int32_t   retval     = 0;
-    char*     bufptr;
-    uint32_t  cmdline_pos;
-    int32_t   ii;
+    uintptr_t name_ct = range_list_ptr->name_ct;
+    uint32_t item_idx = 0;
+    int32_t retval = 0;
+    char* bufptr;
+    uint32_t cmdline_pos;
+    int32_t ii;
     while (1) {
         bufptr = token_endnn(header_line);
-        ii     = bsearch_str(header_line, (uintptr_t)(bufptr - header_line),
+        ii = bsearch_str(header_line, (uintptr_t)(bufptr - header_line),
                          sorted_ids, max_id_len, name_ct);
         if (ii != -1) {
             cmdline_pos = id_map[(uint32_t) ii];
@@ -9715,10 +9715,10 @@ int32_t string_range_list_to_bitarr_alloc(
     // wrapper for string_range_list_to_bitarr which allocates the bitfield and
     // temporary buffers on the heap
     uintptr_t item_ctl = BITCT_TO_WORDCT(item_ct);
-    uintptr_t name_ct  = range_list_ptr->name_ct;
-    int32_t   retval   = 0;
-    int32_t*  seen_idxs;
-    char*     sorted_ids;
+    uintptr_t name_ct = range_list_ptr->name_ct;
+    int32_t retval = 0;
+    int32_t* seen_idxs;
+    char* sorted_ids;
     uint32_t* id_map;
     if (bigstack_calloc_ul(item_ctl, bitarr_ptr)
         || bigstack_alloc_i(name_ct, &seen_idxs))
@@ -9750,19 +9750,19 @@ int32_t string_range_list_to_bitarr2(
     // sorted_ids/id_map is for e.g. marker IDs instead of command line
     // parameters.  bitfield_excl is assumed to be initialized (since its length
     // is not known by this function).
-    char*                names        = range_list_ptr->names;
+    char* names = range_list_ptr->names;
     const unsigned char* starts_range = range_list_ptr->starts_range;
-    uintptr_t            name_max_len = range_list_ptr->name_max_len;
-    uint32_t             name_ct      = range_list_ptr->name_ct;
-    int32_t              retval       = 0;
-    uint32_t             param_idx;
-    char*                bufptr;
-    uint32_t             item_uidx;
-    uint32_t             item_uidx2;
-    int32_t              ii;
+    uintptr_t name_max_len = range_list_ptr->name_max_len;
+    uint32_t name_ct = range_list_ptr->name_ct;
+    int32_t retval = 0;
+    uint32_t param_idx;
+    char* bufptr;
+    uint32_t item_uidx;
+    uint32_t item_uidx2;
+    int32_t ii;
     for (param_idx = 0; param_idx < name_ct; param_idx++) {
         bufptr = &(names[param_idx * name_max_len]);
-        ii     = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
+        ii = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
         if (ii == -1) {
             goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3;
         }
@@ -9770,7 +9770,7 @@ int32_t string_range_list_to_bitarr2(
         if (starts_range[param_idx]) {
             param_idx++;
             bufptr = &(names[param_idx * name_max_len]);
-            ii     = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
+            ii = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
             if (ii == -1) {
                 goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3;
             }
@@ -9801,15 +9801,15 @@ int32_t string_range_list_to_bitarr2(
 }
 
 uint32_t count_non_autosomal_markers(const Chrom_info* chrom_info_ptr,
-                                     const uintptr_t*  marker_exclude,
+                                     const uintptr_t* marker_exclude,
                                      uint32_t count_x, uint32_t count_mt)
 {
     // for backward compatibility, unplaced markers are considered to be
     // autosomal here
-    const int32_t x_code  = chrom_info_ptr->xymt_codes[X_OFFSET];
-    const int32_t y_code  = chrom_info_ptr->xymt_codes[Y_OFFSET];
+    const int32_t x_code = chrom_info_ptr->xymt_codes[X_OFFSET];
+    const int32_t y_code = chrom_info_ptr->xymt_codes[Y_OFFSET];
     const int32_t mt_code = chrom_info_ptr->xymt_codes[MT_OFFSET];
-    uint32_t      ct      = 0;
+    uint32_t ct = 0;
     if (count_x && (x_code != -1)) {
         ct += count_chrom_markers(chrom_info_ptr, marker_exclude, x_code);
     }
@@ -9834,7 +9834,7 @@ int32_t conditional_allocate_non_autosomal_markers(
     const uintptr_t unfiltered_marker_ctl =
         BITCT_TO_WORDCT(unfiltered_marker_ct);
     const int32_t* xymt_codes = chrom_info_ptr->xymt_codes;
-    uint32_t       xymt_cts[XYMT_OFFSET_CT];
+    uint32_t xymt_cts[XYMT_OFFSET_CT];
     fill_uint_zero(XYMT_OFFSET_CT, xymt_cts);
     if (is_set(chrom_info_ptr->haploid_mask, 0)) {
         *newly_excluded_ct_ptr = marker_ct;
@@ -9887,12 +9887,12 @@ int32_t conditional_allocate_non_autosomal_markers(
 }
 
 uint32_t get_max_chrom_size(const Chrom_info* chrom_info_ptr,
-                            const uintptr_t*  marker_exclude,
-                            uint32_t*         last_chrom_fo_idx_ptr)
+                            const uintptr_t* marker_exclude,
+                            uint32_t* last_chrom_fo_idx_ptr)
 {
-    const uint32_t chrom_ct          = chrom_info_ptr->chrom_ct;
-    uint32_t       max_chrom_size    = 0;
-    uint32_t       last_chrom_fo_idx = 0;
+    const uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
+    uint32_t max_chrom_size = 0;
+    uint32_t last_chrom_fo_idx = 0;
     for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++) {
         const uint32_t cur_chrom_size =
             count_chrom_markers(chrom_info_ptr, marker_exclude,
@@ -9919,11 +9919,11 @@ void count_genders(const uintptr_t* __restrict sex_nm,
                    uint32_t* __restrict unk_ct_ptr)
 {
     // unfiltered_sample_ct can be zero
-    uint32_t  male_ct                  = 0;
-    uint32_t  female_ct                = 0;
-    uint32_t  unk_ct                   = 0;
-    uint32_t  unfiltered_sample_ctld   = unfiltered_sample_ct / BITCT;
-    uint32_t  unfiltered_sample_ct_rem = unfiltered_sample_ct & (BITCT - 1);
+    uint32_t male_ct = 0;
+    uint32_t female_ct = 0;
+    uint32_t unk_ct = 0;
+    uint32_t unfiltered_sample_ctld = unfiltered_sample_ct / BITCT;
+    uint32_t unfiltered_sample_ct_rem = unfiltered_sample_ct & (BITCT - 1);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t sample_bidx;
@@ -9943,31 +9943,31 @@ void count_genders(const uintptr_t* __restrict sex_nm,
         unfiltered_sample_ct_rem = 0;
         goto count_genders_last_loop;
     }
-    *male_ct_ptr   = male_ct;
+    *male_ct_ptr = male_ct;
     *female_ct_ptr = female_ct;
-    *unk_ct_ptr    = unk_ct;
+    *unk_ct_ptr = unk_ct;
 }
 
 void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
 {
     // unfiltered_sample_ct can be zero
-    uintptr_t      sample_bidx = 0;
+    uintptr_t sample_bidx = 0;
     unsigned char* loadbuf_end = &(loadbuf[(unfiltered_sample_ct + 3) / 4]);
-    unsigned char  ucc;
-    unsigned char  ucc2;
-    uintptr_t      unfiltered_sample_ctd;
-    uint32_t*      loadbuf_alias32;
-    uint32_t       uii;
-    uint32_t       ujj;
+    unsigned char ucc;
+    unsigned char ucc2;
+    uintptr_t unfiltered_sample_ctd;
+    uint32_t* loadbuf_alias32;
+    uint32_t uii;
+    uint32_t ujj;
 #ifdef __LP64__
     const __m128i m1 = {FIVEMASK, FIVEMASK};
-    __m128i*      loadbuf_alias;
-    __m128i       vii;
-    __m128i       vjj;
+    __m128i* loadbuf_alias;
+    __m128i vii;
+    __m128i vjj;
     // todo: use this vector loop even when loadbuf is unaligned, so stuff like
     // recode_load_to() is faster
     if (!(((uintptr_t) loadbuf) & 15)) {
-        loadbuf_alias         = (__m128i*) loadbuf;
+        loadbuf_alias = (__m128i*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             vii = *loadbuf_alias;
@@ -9983,7 +9983,7 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     }
     else if (!(((uintptr_t) loadbuf) & 3))
     {
-        loadbuf_alias32       = (uint32_t*) loadbuf;
+        loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
@@ -10007,7 +10007,7 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     }
 #endif
     for (; loadbuf < loadbuf_end;) {
-        ucc  = *loadbuf;
+        ucc = *loadbuf;
         ucc2 = 0x55 & (~(ucc ^ (ucc >> 1)));
         ucc2 *= 3;
         *loadbuf++ = ucc ^ ucc2;
@@ -10026,15 +10026,15 @@ void copy_quaterarr_nonempty_subset_excl(
 {
     assert(subset_size);
     assert(raw_quaterarr_size >= subset_size);
-    uintptr_t  cur_output_word = 0;
+    uintptr_t cur_output_word = 0;
     uintptr_t* output_quaterarr_last =
         &(output_quaterarr[subset_size / BITCT2]);
     const uint32_t word_write_halfshift_end = subset_size % BITCT2;
-    uint32_t       word_write_halfshift     = 0;
+    uint32_t word_write_halfshift = 0;
     // if < 2/3-filled, use sparse copy algorithm
     if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU)) {
         const uint32_t subset_excl_widx_last = raw_quaterarr_size / BITCT;
-        uint32_t       subset_excl_widx      = 0;
+        uint32_t subset_excl_widx = 0;
         while (1) {
             uintptr_t cur_include_word = ~subset_excl[subset_excl_widx];
 
@@ -10064,9 +10064,9 @@ void copy_quaterarr_nonempty_subset_excl(
                                  & 3)
                                 << (word_write_halfshift * 2);
                             if (++word_write_halfshift == BITCT2) {
-                                *output_quaterarr++  = cur_output_word;
+                                *output_quaterarr++ = cur_output_word;
                                 word_write_halfshift = 0;
-                                cur_output_word      = 0;
+                                cur_output_word = 0;
                             }
                             cur_include_halfword &= cur_include_halfword - 1;
                         } while (cur_include_halfword);
@@ -10111,12 +10111,12 @@ void copy_quaterarr_nonempty_subset_excl(
         while (1) {
             uintptr_t raw_quaterarr_word = *raw_quaterarr++;
             while (cur_include_halfword) {
-                uint32_t  rqa_idx_lowbits = CTZLU(cur_include_halfword);
+                uint32_t rqa_idx_lowbits = CTZLU(cur_include_halfword);
                 uintptr_t halfword_invshifted =
                     (~cur_include_halfword) >> rqa_idx_lowbits;
                 uintptr_t raw_quaterarr_curblock_unmasked =
                     raw_quaterarr_word >> (rqa_idx_lowbits * 2);
-                uint32_t rqa_block_len   = CTZLU(halfword_invshifted);
+                uint32_t rqa_block_len = CTZLU(halfword_invshifted);
                 uint32_t block_len_limit = BITCT2 - word_write_halfshift;
                 cur_output_word |= raw_quaterarr_curblock_unmasked
                                    << (2 * word_write_halfshift);
@@ -10128,7 +10128,7 @@ void copy_quaterarr_nonempty_subset_excl(
                 else
                 {
                     // no need to mask, extra bits vanish off the high end
-                    *output_quaterarr++  = cur_output_word;
+                    *output_quaterarr++ = cur_output_word;
                     word_write_halfshift = rqa_block_len - block_len_limit;
                     cur_output_word =
                         (raw_quaterarr_curblock_unmasked
@@ -10198,11 +10198,11 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
     // cases re: iterating past the end of arrays.
     assert(subset_size);
     assert(raw_quaterarr_size >= subset_size);
-    uintptr_t  cur_output_word = 0;
+    uintptr_t cur_output_word = 0;
     uintptr_t* output_quaterarr_last =
         &(output_quaterarr[subset_size / BITCT2]);
     const uint32_t word_write_halfshift_end = subset_size % BITCT2;
-    uint32_t       word_write_halfshift     = 0;
+    uint32_t word_write_halfshift = 0;
     // if < 2/3-filled, use sparse copy algorithm
     if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU)) {
         uint32_t subset_mask_widx = 0;
@@ -10228,9 +10228,9 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                                  & 3)
                                 << (word_write_halfshift * 2);
                             if (++word_write_halfshift == BITCT2) {
-                                *output_quaterarr++  = cur_output_word;
+                                *output_quaterarr++ = cur_output_word;
                                 word_write_halfshift = 0;
-                                cur_output_word      = 0;
+                                cur_output_word = 0;
                             }
                             cur_include_halfword &= cur_include_halfword - 1;
                         } while (cur_include_halfword);
@@ -10260,7 +10260,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
     // blocked copy
     while (1) {
         const uintptr_t cur_include_word = *subset_mask++;
-        uint32_t        wordhalf_idx     = 0;
+        uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
         uintptr_t cur_include_halfword = (uint32_t) cur_include_word;
 #else
@@ -10269,12 +10269,12 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
         while (1) {
             uintptr_t raw_quaterarr_word = *raw_quaterarr++;
             while (cur_include_halfword) {
-                uint32_t  rqa_idx_lowbits = CTZLU(cur_include_halfword);
+                uint32_t rqa_idx_lowbits = CTZLU(cur_include_halfword);
                 uintptr_t halfword_invshifted =
                     (~cur_include_halfword) >> rqa_idx_lowbits;
                 uintptr_t raw_quaterarr_curblock_unmasked =
                     raw_quaterarr_word >> (rqa_idx_lowbits * 2);
-                uint32_t rqa_block_len   = CTZLU(halfword_invshifted);
+                uint32_t rqa_block_len = CTZLU(halfword_invshifted);
                 uint32_t block_len_limit = BITCT2 - word_write_halfshift;
                 cur_output_word |= raw_quaterarr_curblock_unmasked
                                    << (2 * word_write_halfshift);
@@ -10286,7 +10286,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                 else
                 {
                     // no need to mask, extra bits vanish off the high end
-                    *output_quaterarr++  = cur_output_word;
+                    *output_quaterarr++ = cur_output_word;
                     word_write_halfshift = rqa_block_len - block_len_limit;
                     if (word_write_halfshift) {
                         cur_output_word =
@@ -10511,17 +10511,17 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
                         uintptr_t* __restrict ctrlbuf)
 {
     // add do_reverse later if needed
-    uintptr_t* rawbuf_end            = &(rawbuf[unfiltered_sample_ct / BITCT2]);
-    uintptr_t  case_word             = 0;
-    uintptr_t  ctrl_word             = 0;
-    uint32_t   unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-    uint32_t   case_shift2           = 0;
-    uint32_t   ctrl_shift2           = 0;
-    uint32_t   read_shift_max        = BITCT2;
-    uint32_t   sample_uidx           = 0;
-    uint32_t   read_shift;
-    uintptr_t  read_word;
-    uintptr_t  ulii;
+    uintptr_t* rawbuf_end = &(rawbuf[unfiltered_sample_ct / BITCT2]);
+    uintptr_t case_word = 0;
+    uintptr_t ctrl_word = 0;
+    uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
+    uint32_t case_shift2 = 0;
+    uint32_t ctrl_shift2 = 0;
+    uint32_t read_shift_max = BITCT2;
+    uint32_t sample_uidx = 0;
+    uint32_t read_shift;
+    uintptr_t read_word;
+    uintptr_t ulii;
     if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
         return RET_READ_FAIL;
     }
@@ -10537,8 +10537,8 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
                         case_word |= ulii << case_shift2;
                         case_shift2 += 2;
                         if (case_shift2 == BITCT) {
-                            *casebuf++  = case_word;
-                            case_word   = 0;
+                            *casebuf++ = case_word;
+                            case_word = 0;
                             case_shift2 = 0;
                         }
                     }
@@ -10547,8 +10547,8 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
                         ctrl_word |= ulii << ctrl_shift2;
                         ctrl_shift2 += 2;
                         if (ctrl_shift2 == BITCT) {
-                            *ctrlbuf++  = ctrl_word;
-                            ctrl_word   = 0;
+                            *ctrlbuf++ = ctrl_word;
+                            ctrl_word = 0;
                             ctrl_shift2 = 0;
                         }
                     }
@@ -10575,12 +10575,12 @@ void init_quaterarr_from_bitarr(const uintptr_t* __restrict bitarr,
                                 uintptr_t* __restrict new_quaterarr)
 {
     // allows unfiltered_sample_ct == 0
-    uint32_t  unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
     uintptr_t ulmm;
-    uint32_t  bit_idx;
+    uint32_t bit_idx;
     while (unfiltered_sample_ctl) {
         ulii = ~(*bitarr++);
         ulkk = FIVEMASK;
@@ -10632,12 +10632,12 @@ void init_quaterarr_from_inverted_bitarr(
     uintptr_t* __restrict new_quaterarr)
 {
     // allows unfiltered_sample_ct == 0
-    uint32_t  unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
     uintptr_t ulmm;
-    uint32_t  bit_idx;
+    uint32_t bit_idx;
     while (unfiltered_sample_ctl) {
         ulii = *inverted_bitarr++;
         ulkk = FIVEMASK;
@@ -10691,13 +10691,13 @@ void quatervec_01_init_invert(const uintptr_t* __restrict source_quatervec,
     // Initializes a quatervec as the inverse of another.
     // Some modifications needed for AVX2.
     uint32_t vec_wsize = QUATERCT_TO_ALIGNED_WORDCT(entry_ct);
-    uint32_t rem       = entry_ct & (BITCT - 1);
+    uint32_t rem = entry_ct & (BITCT - 1);
 #ifdef __LP64__
-    const __m128i m1       = {FIVEMASK, FIVEMASK};
-    __m128i*      tptr     = (__m128i*) target_quatervec;
-    __m128i*      sptr     = (__m128i*) source_quatervec;
-    __m128i*      tptr_end = (__m128i*) (&(target_quatervec[vec_wsize]));
-    uintptr_t*    second_to_last;
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    __m128i* tptr = (__m128i*) target_quatervec;
+    __m128i* sptr = (__m128i*) source_quatervec;
+    __m128i* tptr_end = (__m128i*) (&(target_quatervec[vec_wsize]));
+    uintptr_t* second_to_last;
     while (tptr < tptr_end) {
         *tptr++ = _mm_andnot_si128(*sptr++, m1);
     }
@@ -10758,16 +10758,16 @@ void bitvec_andnot_copy(const uintptr_t* __restrict source_vec,
 }
 
 void apply_bitarr_mask_to_quaterarr_01(const uintptr_t* __restrict mask_bitarr,
-                                       uintptr_t  unfiltered_sample_ct,
+                                       uintptr_t unfiltered_sample_ct,
                                        uintptr_t* main_quaterarr)
 {
     // allows unfiltered_sample_ct == 0
-    uint32_t  unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
     uintptr_t ulmm;
-    uint32_t  bit_idx;
+    uint32_t bit_idx;
     while (unfiltered_sample_ctl) {
         ulii = ~(*mask_bitarr++);
         ulkk = *main_quaterarr;
@@ -10807,12 +10807,12 @@ void apply_bitarr_excl_to_quaterarr_01(const uintptr_t* __restrict excl_bitarr,
                                        uintptr_t* __restrict main_quaterarr)
 {
     assert(unfiltered_sample_ct);
-    uint32_t  unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
     uintptr_t ulmm;
-    uint32_t  bit_idx;
+    uint32_t bit_idx;
     do
     {
         ulii = *excl_bitarr++;
@@ -10853,12 +10853,12 @@ void apply_excl_intersect_to_quaterarr_01(
     uintptr_t* __restrict main_quaterarr)
 {
     assert(unfiltered_sample_ct);
-    uint32_t  unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t unfiltered_sample_ctl = BITCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t ulkk;
     uintptr_t ulmm;
-    uint32_t  bit_idx;
+    uint32_t bit_idx;
     do
     {
         ulii = (*excl_bitarr_1++) & (*excl_bitarr_2++);
@@ -10900,14 +10900,14 @@ void quatervec_copy_only_01(const uintptr_t* __restrict input_quatervec,
     // initializes result_ptr bits 01 iff input_quatervec bits are 01
     assert(unfiltered_sample_ct);
 #ifdef __LP64__
-    const __m128i m1        = {FIVEMASK, FIVEMASK};
-    __m128i*      vec2_read = (__m128i*) input_quatervec;
-    __m128i* read_end   = &(vec2_read[QUATERCT_TO_VECCT(unfiltered_sample_ct)]);
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    __m128i* vec2_read = (__m128i*) input_quatervec;
+    __m128i* read_end = &(vec2_read[QUATERCT_TO_VECCT(unfiltered_sample_ct)]);
     __m128i* vec2_write = (__m128i*) output_quatervec;
-    __m128i  loader;
+    __m128i loader;
     do
     {
-        loader        = *vec2_read++;
+        loader = *vec2_read++;
         *vec2_write++ = _mm_and_si128(
             _mm_andnot_si128(_mm_srli_epi64(loader, 1), loader), m1);
     } while (vec2_read < read_end);
@@ -10923,15 +10923,15 @@ void quatervec_copy_only_01(const uintptr_t* __restrict input_quatervec,
 #endif
 }
 
-void quatervec_01_invert(uintptr_t  unfiltered_sample_ct,
+void quatervec_01_invert(uintptr_t unfiltered_sample_ct,
                          uintptr_t* main_quatervec)
 {
     uintptr_t* vec2_last = &(main_quatervec[unfiltered_sample_ct / BITCT2]);
-    uint32_t   remainder = unfiltered_sample_ct & (BITCT2 - 1);
+    uint32_t remainder = unfiltered_sample_ct & (BITCT2 - 1);
 #ifdef __LP64__
-    const __m128i m1           = {FIVEMASK, FIVEMASK};
-    __m128i*      vec2_128     = (__m128i*) main_quatervec;
-    __m128i*      vec2_last128 = &(vec2_128[unfiltered_sample_ct / BITCT]);
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    __m128i* vec2_128 = (__m128i*) main_quatervec;
+    __m128i* vec2_last128 = &(vec2_128[unfiltered_sample_ct / BITCT]);
     while (vec2_128 < vec2_last128) {
         *vec2_128 = _mm_xor_si128(*vec2_128, m1);
         vec2_128++;
@@ -10967,7 +10967,7 @@ void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
     __m128i* data_read_end =
         &(data_read[QUATERCT_TO_VECCT(unfiltered_sample_ct)]);
     __m128i* writer = (__m128i*) result_ptr;
-    __m128i  loader;
+    __m128i loader;
 #else
     uintptr_t* data_read_end =
         &(data_ptr[QUATERCT_TO_ALIGNED_WORDCT(unfiltered_sample_ct)]);
@@ -10978,7 +10978,7 @@ void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
 #ifdef __LP64__
             do
             {
-                loader    = *data_read++;
+                loader = *data_read++;
                 *writer++ = _mm_and_si128(
                     _mm_andnot_si128(loader, _mm_srli_epi64(loader, 1)),
                     *mask_read++);
@@ -10996,7 +10996,7 @@ void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
 #ifdef __LP64__
             do
             {
-                loader    = *data_read++;
+                loader = *data_read++;
                 *writer++ = _mm_and_si128(
                     _mm_and_si128(loader, _mm_srli_epi64(loader, 1)),
                     *mask_read++);
@@ -11015,7 +11015,7 @@ void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
 #ifdef __LP64__
         do
         {
-            loader    = *data_read++;
+            loader = *data_read++;
             *writer++ = _mm_andnot_si128(
                 _mm_or_si128(loader, _mm_srli_epi64(loader, 1)), *mask_read++);
         } while (data_read < data_read_end);
@@ -11066,34 +11066,34 @@ void rotate_plink1_to_a2ct_and_copy(uintptr_t* loadbuf, uintptr_t* writebuf,
 {
     // assumes positive word_ct
     uintptr_t* loadbuf_end = &(loadbuf[word_ct]);
-    uintptr_t  ulii;
-    uintptr_t  uljj;
+    uintptr_t ulii;
+    uintptr_t uljj;
     do
     {
-        ulii        = *loadbuf++;
-        uljj        = ulii & FIVEMASK;
-        ulii        = (ulii >> 1) & FIVEMASK;
+        ulii = *loadbuf++;
+        uljj = ulii & FIVEMASK;
+        ulii = (ulii >> 1) & FIVEMASK;
         *writebuf++ = ulii ^ (uljj * 3);
     } while (loadbuf < loadbuf_end);
 }
 
 void extract_collapsed_missing_bitfield(uintptr_t* lptr,
-                                        uintptr_t  unfiltered_sample_ct,
+                                        uintptr_t unfiltered_sample_ct,
                                         uintptr_t* sample_include_quaterarr,
-                                        uintptr_t  sample_ct,
+                                        uintptr_t sample_ct,
                                         uintptr_t* missing_bitfield)
 {
-    uint32_t  word_ct = QUATERCT_TO_WORDCT(unfiltered_sample_ct);
+    uint32_t word_ct = QUATERCT_TO_WORDCT(unfiltered_sample_ct);
     uintptr_t sample_idx;
     uintptr_t cur_word;
     uintptr_t cur_mask;
     uintptr_t cur_write;
-    uint32_t  woffset;
-    uint32_t  widx;
-    uint32_t  uii;
+    uint32_t woffset;
+    uint32_t widx;
+    uint32_t uii;
     if (unfiltered_sample_ct == sample_ct) {
         cur_write = 0;
-        woffset   = 0;
+        woffset = 0;
         for (widx = 0; widx < word_ct; widx++) {
             cur_word = *lptr++;
             cur_word =
@@ -11105,8 +11105,8 @@ void extract_collapsed_missing_bitfield(uintptr_t* lptr,
             }
             if (woffset) {
                 *missing_bitfield++ = cur_write;
-                cur_write           = 0;
-                woffset             = 0;
+                cur_write = 0;
+                woffset = 0;
             }
             else
             {
@@ -11164,24 +11164,24 @@ void extract_collapsed_missing_bitfield(uintptr_t* lptr,
 void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
               uintptr_t unfiltered_sample_ct)
 {
-    uintptr_t      sample_bidx = 0;
+    uintptr_t sample_bidx = 0;
     unsigned char* loadbuf_end = &(loadbuf[(unfiltered_sample_ct + 3) / 4]);
     unsigned char* iicp;
-    unsigned char  ucc;
-    unsigned char  ucc2;
-    uintptr_t      unfiltered_sample_ctd;
-    uint32_t*      loadbuf_alias32;
-    uint32_t       uii;
-    uint32_t       ujj;
+    unsigned char ucc;
+    unsigned char ucc2;
+    uintptr_t unfiltered_sample_ctd;
+    uint32_t* loadbuf_alias32;
+    uint32_t uii;
+    uint32_t ujj;
 #ifdef __LP64__
     uint32_t* sample_include_quaterarr_alias32;
-    __m128i*  loadbuf_alias;
-    __m128i*  iivp;
-    __m128i   vii;
-    __m128i   vjj;
+    __m128i* loadbuf_alias;
+    __m128i* iivp;
+    __m128i vii;
+    __m128i vjj;
     if (!(((uintptr_t) loadbuf) & 15)) {
-        loadbuf_alias         = (__m128i*) loadbuf;
-        iivp                  = (__m128i*) sample_include_quaterarr;
+        loadbuf_alias = (__m128i*) loadbuf;
+        iivp = (__m128i*) sample_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             vii = *loadbuf_alias;
@@ -11190,20 +11190,20 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
             *loadbuf_alias++ = _mm_sub_epi64(vii, vjj);
         }
         loadbuf = (unsigned char*) loadbuf_alias;
-        iicp    = (unsigned char*) iivp;
+        iicp = (unsigned char*) iivp;
     }
     else if (!(((uintptr_t) loadbuf) & 3))
     {
-        loadbuf_alias32                  = (uint32_t*) loadbuf;
+        loadbuf_alias32 = (uint32_t*) loadbuf;
         sample_include_quaterarr_alias32 = (uint32_t*) sample_include_quaterarr;
-        unfiltered_sample_ctd            = unfiltered_sample_ct / BITCT2;
+        unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = ((uii >> 1) & (~uii)) & (*sample_include_quaterarr_alias32++);
             *loadbuf_alias32++ = uii - ujj;
         }
         loadbuf = (unsigned char*) loadbuf_alias32;
-        iicp    = (unsigned char*) sample_include_quaterarr_alias32;
+        iicp = (unsigned char*) sample_include_quaterarr_alias32;
     }
     else
     {
@@ -11223,50 +11223,50 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     iicp = (unsigned char*) sample_include_quaterarr;
 #endif
     for (; loadbuf < loadbuf_end;) {
-        ucc        = *loadbuf;
-        ucc2       = ((ucc >> 1) & (~ucc)) & (*iicp++);
+        ucc = *loadbuf;
+        ucc2 = ((ucc >> 1) & (~ucc)) & (*iicp++);
         *loadbuf++ = ucc - ucc2;
     }
 }
 
 void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
                 uintptr_t* sample_male_include_quaterarr,
-                uintptr_t  unfiltered_sample_ct)
+                uintptr_t unfiltered_sample_ct)
 {
-    uintptr_t      sample_bidx = 0;
+    uintptr_t sample_bidx = 0;
     unsigned char* loadbuf_end = &(loadbuf[(unfiltered_sample_ct + 3) / 4]);
     unsigned char* iicp;
     unsigned char* imicp;
-    unsigned char  ucc;
-    unsigned char  ucc2;
-    unsigned char  ucc3;
-    uintptr_t      unfiltered_sample_ctd;
-    uint32_t*      loadbuf_alias32;
-    uint32_t       uii;
-    uint32_t       ujj;
-    uint32_t       ukk;
+    unsigned char ucc;
+    unsigned char ucc2;
+    unsigned char ucc3;
+    uintptr_t unfiltered_sample_ctd;
+    uint32_t* loadbuf_alias32;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
 #ifdef __LP64__
     const __m128i m1 = {FIVEMASK, FIVEMASK};
-    uint32_t*     sample_include_quaterarr_alias32;
-    uint32_t*     sample_male_include_quaterarr_alias32;
-    __m128i*      loadbuf_alias;
-    __m128i*      iivp;
-    __m128i*      imivp;
-    __m128i       vii;
-    __m128i       vjj;
-    __m128i       vkk;
+    uint32_t* sample_include_quaterarr_alias32;
+    uint32_t* sample_male_include_quaterarr_alias32;
+    __m128i* loadbuf_alias;
+    __m128i* iivp;
+    __m128i* imivp;
+    __m128i vii;
+    __m128i vjj;
+    __m128i vkk;
     if (!(((uintptr_t) loadbuf) & 15)) {
-        loadbuf_alias         = (__m128i*) loadbuf;
-        iivp                  = (__m128i*) sample_include_quaterarr;
-        imivp                 = (__m128i*) sample_male_include_quaterarr;
+        loadbuf_alias = (__m128i*) loadbuf;
+        iivp = (__m128i*) sample_include_quaterarr;
+        imivp = (__m128i*) sample_male_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             // sample_include_quaterarr & ~sample_male_include_quaterarr: force
             // to 01 sample_male_include_quaterarr: convert 10 to 01, keep
             // everything else
-            vii              = *imivp++;
-            vjj              = *iivp++;
-            vkk              = _mm_and_si128(*loadbuf_alias,
+            vii = *imivp++;
+            vjj = *iivp++;
+            vkk = _mm_and_si128(*loadbuf_alias,
                                 _mm_or_si128(vii, _mm_slli_epi64(vii, 1)));
             *loadbuf_alias++ = _mm_or_si128(
                 _mm_andnot_si128(vii, vjj),
@@ -11276,12 +11276,12 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
                                   m1)));
         }
         loadbuf = (unsigned char*) loadbuf_alias;
-        iicp    = (unsigned char*) iivp;
-        imicp   = (unsigned char*) imivp;
+        iicp = (unsigned char*) iivp;
+        imicp = (unsigned char*) imivp;
     }
     else if (!(((uintptr_t) loadbuf) & 3))
     {
-        loadbuf_alias32                  = (uint32_t*) loadbuf;
+        loadbuf_alias32 = (uint32_t*) loadbuf;
         sample_include_quaterarr_alias32 = (uint32_t*) sample_include_quaterarr;
         sample_male_include_quaterarr_alias32 =
             (uint32_t*) sample_male_include_quaterarr;
@@ -11294,12 +11294,12 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
                 ((~uii) & ujj) | (ukk - ((~ukk) & (ukk >> 1) & 0x55555555));
         }
         loadbuf = (unsigned char*) loadbuf_alias32;
-        iicp    = (unsigned char*) sample_include_quaterarr_alias32;
-        imicp   = (unsigned char*) sample_male_include_quaterarr_alias32;
+        iicp = (unsigned char*) sample_include_quaterarr_alias32;
+        imicp = (unsigned char*) sample_male_include_quaterarr_alias32;
     }
     else
     {
-        iicp  = (unsigned char*) sample_include_quaterarr;
+        iicp = (unsigned char*) sample_include_quaterarr;
         imicp = (unsigned char*) sample_male_include_quaterarr;
     }
 #else
@@ -11319,9 +11319,9 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     imicp = (unsigned char*) sample_male_include_quaterarr;
 #endif
     for (; loadbuf < loadbuf_end;) {
-        ucc        = *imicp++;
-        ucc2       = *iicp++;
-        ucc3       = (*loadbuf) & (ucc * 3);
+        ucc = *imicp++;
+        ucc2 = *iicp++;
+        ucc3 = (*loadbuf) & (ucc * 3);
         *loadbuf++ = ((~ucc) & ucc2) | (ucc3 - ((~ucc3) & (ucc3 >> 1) & 0x55));
     }
 }
@@ -11329,7 +11329,7 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
 uint32_t
 alloc_raw_haploid_filters(uint32_t unfiltered_sample_ct, uint32_t hh_exists,
                           uint32_t is_include, uintptr_t* sample_bitarr,
-                          uintptr_t*  sex_male,
+                          uintptr_t* sex_male,
                           uintptr_t** sample_raw_include_quatervec_ptr,
                           uintptr_t** sample_raw_male_include_quatervec_ptr)
 {
@@ -11397,19 +11397,19 @@ void haploid_fix_multiple(
         next_unset_ul_unsafe(marker_exclude, marker_uidx_start);
     uint32_t chrom_fo_idx =
         get_variant_chrom_fo_idx(chrom_info_ptr, marker_uidx);
-    uint32_t  chrom_idx;
-    uint32_t  is_x;
-    uint32_t  is_y;
-    uint32_t  is_mt;
-    uint32_t  is_haploid;
+    uint32_t chrom_idx;
+    uint32_t is_x;
+    uint32_t is_y;
+    uint32_t is_mt;
+    uint32_t is_haploid;
     uintptr_t chrom_end;
     uintptr_t marker_idx_chrom_end;
 
     while (marker_idx < marker_ct) {
         chrom_idx = chrom_info_ptr->chrom_file_order[chrom_fo_idx];
         chrom_end = chrom_info_ptr->chrom_fo_vidx_start[chrom_fo_idx + 1];
-        is_x  = (chrom_info_ptr->xymt_codes[X_OFFSET] == (int32_t) chrom_idx);
-        is_y  = (chrom_info_ptr->xymt_codes[Y_OFFSET] == (int32_t) chrom_idx);
+        is_x = (chrom_info_ptr->xymt_codes[X_OFFSET] == (int32_t) chrom_idx);
+        is_y = (chrom_info_ptr->xymt_codes[Y_OFFSET] == (int32_t) chrom_idx);
         is_mt = (chrom_info_ptr->xymt_codes[MT_OFFSET] == (int32_t) chrom_idx);
         is_haploid = IS_SET(chrom_info_ptr->haploid_mask, chrom_idx);
         marker_idx_chrom_end =
@@ -11462,40 +11462,40 @@ void haploid_fix_multiple(
 void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
                    uintptr_t unfiltered_sample_ct)
 {
-    uintptr_t      sample_bidx = 0;
+    uintptr_t sample_bidx = 0;
     unsigned char* loadbuf_end = &(loadbuf[(unfiltered_sample_ct + 3) / 4]);
     unsigned char* fmicp;
-    unsigned char  ucc;
-    unsigned char  ucc2;
-    uintptr_t      unfiltered_sample_ctd;
-    uint32_t*      loadbuf_alias32;
-    uint32_t       uii;
-    uint32_t       ujj;
+    unsigned char ucc;
+    unsigned char ucc2;
+    uintptr_t unfiltered_sample_ctd;
+    uint32_t* loadbuf_alias32;
+    uint32_t uii;
+    uint32_t ujj;
 #ifdef __LP64__
     uint32_t* force_missing_include2_alias32;
-    __m128i*  loadbuf_alias;
-    __m128i*  fmivp;
-    __m128i   vii;
-    __m128i   vjj;
+    __m128i* loadbuf_alias;
+    __m128i* fmivp;
+    __m128i vii;
+    __m128i vjj;
     if (!(((uintptr_t) loadbuf) & 15)) {
-        loadbuf_alias         = (__m128i*) loadbuf;
-        fmivp                 = (__m128i*) force_missing_include2;
+        loadbuf_alias = (__m128i*) loadbuf;
+        fmivp = (__m128i*) force_missing_include2;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
-            vii              = *loadbuf_alias;
-            vjj              = *fmivp++;
-            vii              = _mm_or_si128(vii, vjj);
-            vjj              = _mm_slli_epi64(vjj, 1);
+            vii = *loadbuf_alias;
+            vjj = *fmivp++;
+            vii = _mm_or_si128(vii, vjj);
+            vjj = _mm_slli_epi64(vjj, 1);
             *loadbuf_alias++ = _mm_andnot_si128(vjj, vii);
         }
         loadbuf = (unsigned char*) loadbuf_alias;
-        fmicp   = (unsigned char*) fmivp;
+        fmicp = (unsigned char*) fmivp;
     }
     else if (!(((uintptr_t) loadbuf) & 3))
     {
-        loadbuf_alias32                = (uint32_t*) loadbuf;
+        loadbuf_alias32 = (uint32_t*) loadbuf;
         force_missing_include2_alias32 = (uint32_t*) force_missing_include2;
-        unfiltered_sample_ctd          = unfiltered_sample_ct / BITCT2;
+        unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
         for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = *force_missing_include2_alias32++;
@@ -11504,7 +11504,7 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
             *loadbuf_alias32++ = uii & (~ujj);
         }
         loadbuf = (unsigned char*) loadbuf_alias32;
-        fmicp   = (unsigned char*) force_missing_include2_alias32;
+        fmicp = (unsigned char*) force_missing_include2_alias32;
     }
     else
     {
@@ -11526,7 +11526,7 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
     fmicp = (unsigned char*) force_missing_include2;
 #endif
     for (; loadbuf < loadbuf_end;) {
-        ucc  = *loadbuf;
+        ucc = *loadbuf;
         ucc2 = *fmicp++;
         ucc |= ucc2;
         ucc2 <<= 1;
@@ -11539,12 +11539,12 @@ int32_t open_and_size_string_list(char* fname, FILE** infile_ptr,
                                   uintptr_t* max_str_len_ptr)
 {
     // assumes file is not open yet, and g_textbuf is safe to clobber
-    uint32_t  max_len  = 0;
+    uint32_t max_len = 0;
     uintptr_t line_idx = 0;
     uintptr_t list_len = 0;
-    int32_t   retval   = 0;
-    char*     bufptr;
-    uint32_t  cur_len;
+    int32_t retval = 0;
+    char* bufptr;
+    uint32_t cur_len;
     if (fopen_checked(fname, "r", infile_ptr)) {
         goto open_and_size_string_list_ret_OPEN_FAIL;
     }
@@ -11571,7 +11571,7 @@ int32_t open_and_size_string_list(char* fname, FILE** infile_ptr,
     if (!feof(*infile_ptr)) {
         goto open_and_size_string_list_ret_READ_FAIL;
     }
-    *list_len_ptr    = list_len;
+    *list_len_ptr = list_len;
     *max_str_len_ptr = max_len;
     while (0) {
     open_and_size_string_list_ret_OPEN_FAIL:
@@ -11592,8 +11592,8 @@ int32_t load_string_list(FILE** infile_ptr, uintptr_t max_str_len,
 {
     // assumes file is open (probably by open_and_size_string_list), and
     // g_textbuf is safe to clobber
-    int32_t  retval = 0;
-    char*    bufptr;
+    int32_t retval = 0;
+    char* bufptr;
     uint32_t cur_len;
     rewind(*infile_ptr);
     while (fgets(g_textbuf, MAXLINELEN, *infile_ptr)) {
@@ -11604,7 +11604,7 @@ int32_t load_string_list(FILE** infile_ptr, uintptr_t max_str_len,
         cur_len = strlen_se(bufptr);
         memcpy(str_list, bufptr, cur_len);
         str_list[cur_len] = '\0';
-        str_list          = &(str_list[max_str_len]);
+        str_list = &(str_list[max_str_len]);
     }
     if (!feof(*infile_ptr)) {
         goto load_string_list_ret_READ_FAIL;
@@ -11619,7 +11619,7 @@ int32_t load_string_list(FILE** infile_ptr, uintptr_t max_str_len,
 
 int32_t open_and_skip_first_lines(FILE** infile_ptr, char* fname, char* loadbuf,
                                   uintptr_t loadbuf_size,
-                                  uint32_t  lines_to_skip)
+                                  uint32_t lines_to_skip)
 {
     uint32_t line_idx;
     loadbuf[loadbuf_size - 1] = ' ';
@@ -11721,19 +11721,19 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
     // colnum and colnum2 are 1-based indices.  If colnum2 is zero, only colnum
     // is scanned.
     // Includes terminating null in lengths.
-    FILE*     infile       = nullptr;
+    FILE* infile = nullptr;
     uintptr_t loadbuf_size = bigstack_left();
-    uintptr_t max_str_len  = *max_str_len_ptr;
+    uintptr_t max_str_len = *max_str_len_ptr;
     uintptr_t max_str2_len = 0;
-    char*     loadbuf      = (char*) g_bigstack_base;
-    uint32_t  colmin;
-    uint32_t  coldiff;
-    char*     str1_ptr;
-    char*     str2_ptr;
-    char      cc;
+    char* loadbuf = (char*) g_bigstack_base;
+    uint32_t colmin;
+    uint32_t coldiff;
+    char* str1_ptr;
+    char* str2_ptr;
+    char cc;
     uintptr_t cur_str_len;
     uintptr_t line_idx;
-    int32_t   retval;
+    int32_t retval;
     if (loadbuf_size > MAXLINEBUFLEN) {
         loadbuf_size = MAXLINEBUFLEN;
     }
@@ -11748,19 +11748,19 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
     }
     if (colnum < colnum2) {
         max_str2_len = *max_str2_len_ptr;
-        colmin       = colnum - 1;
-        coldiff      = colnum2 - colnum;
+        colmin = colnum - 1;
+        coldiff = colnum2 - colnum;
     }
     else if (colnum2)
     {
         max_str2_len = max_str_len;
-        max_str_len  = *max_str2_len_ptr;
-        colmin       = colnum2 - 1;
-        coldiff      = colnum - colnum2;
+        max_str_len = *max_str2_len_ptr;
+        colmin = colnum2 - 1;
+        coldiff = colnum - colnum2;
     }
     else
     {
-        colmin  = colnum - 1;
+        colmin = colnum - 1;
         coldiff = 0;
         colnum2 = 0xffffffffU;
     }
@@ -11780,7 +11780,7 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
             }
         }
         str1_ptr = skip_initial_spaces(loadbuf);
-        cc       = *str1_ptr;
+        cc = *str1_ptr;
         if (is_eoln_kns(cc) || (cc == skipchar)) {
             continue;
         }
@@ -11815,7 +11815,7 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
     }
     else
     {
-        *max_str_len_ptr  = max_str2_len;
+        *max_str_len_ptr = max_str2_len;
         *max_str2_len_ptr = max_str_len;
     }
     while (0) {
@@ -11841,15 +11841,15 @@ int32_t scan_max_fam_indiv_strlen(char* fname, uint32_t colnum,
     // colnum is a 1-based index with the FID column number; IID column is
     // assumed to follow.
     // Includes terminating null in lengths.
-    FILE*     infile            = nullptr;
-    uintptr_t loadbuf_size      = bigstack_left();
+    FILE* infile = nullptr;
+    uintptr_t loadbuf_size = bigstack_left();
     uintptr_t max_sample_id_len = *max_sample_id_len_ptr;
-    uintptr_t line_idx          = 0;
-    char*     loadbuf           = (char*) g_bigstack_base;
-    char*     bufptr;
-    char*     bufptr2;
+    uintptr_t line_idx = 0;
+    char* loadbuf = (char*) g_bigstack_base;
+    char* bufptr;
+    char* bufptr2;
     uintptr_t cur_sample_id_len;
-    int32_t   retval;
+    int32_t retval;
     colnum--;
     if (loadbuf_size > MAXLINEBUFLEN) {
         loadbuf_size = MAXLINEBUFLEN;
@@ -11881,7 +11881,7 @@ int32_t scan_max_fam_indiv_strlen(char* fname, uint32_t colnum,
         if (is_eoln_kns(*bufptr)) {
             continue;
         }
-        bufptr  = next_token_multz(bufptr, colnum);
+        bufptr = next_token_multz(bufptr, colnum);
         bufptr2 = next_token(bufptr);
         if (no_more_tokens_kns(bufptr2)) {
             LOGPREPRINTFWW("Error: Line %" PRIuPTR
@@ -11936,7 +11936,7 @@ void inplace_collapse_uint32_incl(uint32_t* item_arr, uint32_t unfiltered_ct,
         return;
     }
     uint32_t item_uidx = next_unset_unsafe(incl_arr, 0);
-    uint32_t item_idx  = item_uidx;
+    uint32_t item_idx = item_uidx;
     for (; item_idx < filtered_ct; item_idx++, item_uidx++) {
         next_set_unsafe_ck(incl_arr, &item_uidx);
         item_arr[item_idx] = item_arr[item_uidx];
@@ -11944,14 +11944,14 @@ void inplace_collapse_uint32_incl(uint32_t* item_arr, uint32_t unfiltered_ct,
 }
 
 char* alloc_and_init_collapsed_arr(char* item_arr, uintptr_t item_len,
-                                   uintptr_t  unfiltered_ct,
+                                   uintptr_t unfiltered_ct,
                                    uintptr_t* exclude_arr,
                                    uintptr_t filtered_ct, uint32_t read_only)
 {
-    uint32_t  item_uidx = 0;
-    char*     new_arr;
-    char*     wptr;
-    char*     wptr_end;
+    uint32_t item_uidx = 0;
+    char* new_arr;
+    char* wptr;
+    char* wptr_end;
     uintptr_t item_uidx_stop;
     uintptr_t delta;
     if (read_only && (unfiltered_ct == filtered_ct)) {
@@ -11960,29 +11960,29 @@ char* alloc_and_init_collapsed_arr(char* item_arr, uintptr_t item_len,
     if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) {
         return nullptr;
     }
-    wptr     = new_arr;
+    wptr = new_arr;
     wptr_end = &(new_arr[filtered_ct * item_len]);
     while (wptr < wptr_end) {
-        item_uidx      = next_unset_ul_unsafe(exclude_arr, item_uidx);
+        item_uidx = next_unset_ul_unsafe(exclude_arr, item_uidx);
         item_uidx_stop = next_set_ul(exclude_arr, item_uidx, unfiltered_ct);
-        delta          = item_uidx_stop - item_uidx;
+        delta = item_uidx_stop - item_uidx;
         memcpy(wptr, &(item_arr[item_uidx * item_len]), delta * item_len);
-        wptr      = &(wptr[delta * item_len]);
+        wptr = &(wptr[delta * item_len]);
         item_uidx = item_uidx_stop;
     }
     return new_arr;
 }
 
 char* alloc_and_init_collapsed_arr_incl(char* item_arr, uintptr_t item_len,
-                                        uintptr_t  unfiltered_ct,
+                                        uintptr_t unfiltered_ct,
                                         uintptr_t* include_arr,
-                                        uintptr_t  filtered_ct,
-                                        uint32_t   read_only)
+                                        uintptr_t filtered_ct,
+                                        uint32_t read_only)
 {
-    uint32_t  item_uidx = 0;
-    char*     new_arr;
-    char*     wptr;
-    char*     wptr_end;
+    uint32_t item_uidx = 0;
+    char* new_arr;
+    char* wptr;
+    char* wptr_end;
     uintptr_t item_uidx_stop;
     uintptr_t delta;
     if (read_only && (unfiltered_ct == filtered_ct)) {
@@ -11991,36 +11991,36 @@ char* alloc_and_init_collapsed_arr_incl(char* item_arr, uintptr_t item_len,
     if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) {
         return nullptr;
     }
-    wptr     = new_arr;
+    wptr = new_arr;
     wptr_end = &(new_arr[filtered_ct * item_len]);
     do
     {
-        item_uidx      = next_set_ul_unsafe(include_arr, item_uidx);
+        item_uidx = next_set_ul_unsafe(include_arr, item_uidx);
         item_uidx_stop = next_unset_ul(include_arr, item_uidx, unfiltered_ct);
-        delta          = item_uidx_stop - item_uidx;
+        delta = item_uidx_stop - item_uidx;
         memcpy(wptr, &(item_arr[item_uidx * item_len]), delta * item_len);
-        wptr      = &(wptr[delta * item_len]);
+        wptr = &(wptr[delta * item_len]);
         item_uidx = item_uidx_stop;
     } while (wptr < wptr_end);
     return new_arr;
 }
 
 void inplace_delta_collapse_arr(char* item_arr, uintptr_t item_len,
-                                uintptr_t  filtered_ct_orig,
-                                uintptr_t  filtered_ct_new,
+                                uintptr_t filtered_ct_orig,
+                                uintptr_t filtered_ct_new,
                                 uintptr_t* exclude_orig, uintptr_t* exclude_new)
 {
     // if this sort of collapse function is ever in an important loop, check
     // whether specialized 4-byte and 8-byte versions are much faster
     uintptr_t* exclude_orig_start = exclude_orig;
-    char*      write_end          = &(item_arr[filtered_ct_new * item_len]);
-    uintptr_t  read_idx           = 1;
-    uint32_t   uii                = 0;
-    char*      write_ptr;
-    uintptr_t  ulii;
-    uintptr_t  uljj;
-    uint32_t   read_uidx;
-    uint32_t   ujj;
+    char* write_end = &(item_arr[filtered_ct_new * item_len]);
+    uintptr_t read_idx = 1;
+    uint32_t uii = 0;
+    char* write_ptr;
+    uintptr_t ulii;
+    uintptr_t uljj;
+    uint32_t read_uidx;
+    uint32_t ujj;
     if (filtered_ct_new == filtered_ct_orig) {
         return;
     }
@@ -12037,12 +12037,12 @@ void inplace_delta_collapse_arr(char* item_arr, uintptr_t item_len,
     }
     exclude_new -= ((uintptr_t)(exclude_orig - exclude_orig_start));
     read_uidx = BITCT * ((uintptr_t)(exclude_orig - exclude_orig_start));
-    ujj       = CTZLU(ulii ^ uljj);
+    ujj = CTZLU(ulii ^ uljj);
     read_uidx += ujj;
     uii += popcount_long(ulii & ((ONELU << ujj) - ONELU));
     uii = read_uidx - uii; // now equal to # initial filtered indices skipped
     filtered_ct_new -= uii;
-    item_arr  = &(item_arr[uii * item_len]);
+    item_arr = &(item_arr[uii * item_len]);
     write_ptr = item_arr;
     read_uidx++;
     for (; write_ptr < write_end; read_uidx++, read_idx++) {
@@ -12056,18 +12056,18 @@ void inplace_delta_collapse_arr(char* item_arr, uintptr_t item_len,
 }
 
 void inplace_delta_collapse_bitfield(uintptr_t* read_ptr,
-                                     uint32_t   filtered_ct_new,
+                                     uint32_t filtered_ct_new,
                                      uintptr_t* exclude_orig,
                                      uintptr_t* exclude_new)
 {
     // only guaranteed to zero out trailing bits up to the nearest 16-byte
     // boundary on 64-bit systems
-    uintptr_t* write_ptr  = read_ptr;
-    uintptr_t  readw      = *read_ptr++;
-    uintptr_t  writew     = 0;
-    uint32_t   item_uidx  = 0;
-    uint32_t   item_mwidx = 0;
-    uint32_t   item_idx   = 0;
+    uintptr_t* write_ptr = read_ptr;
+    uintptr_t readw = *read_ptr++;
+    uintptr_t writew = 0;
+    uint32_t item_uidx = 0;
+    uint32_t item_mwidx = 0;
+    uint32_t item_idx = 0;
     for (; item_idx < filtered_ct_new; item_uidx++) {
         next_unset_unsafe_ck(exclude_orig, &item_uidx);
         if (!is_set(exclude_new, item_uidx)) {
@@ -12076,12 +12076,12 @@ void inplace_delta_collapse_bitfield(uintptr_t* read_ptr,
             }
             if (!((++item_idx) % BITCT)) {
                 *write_ptr++ = writew;
-                writew       = 0;
+                writew = 0;
             }
         }
         if (++item_mwidx == BITCT) {
             item_mwidx = 0;
-            readw      = *read_ptr++;
+            readw = *read_ptr++;
         }
     }
     if (write_ptr < read_ptr) {
@@ -12098,19 +12098,19 @@ void copy_bitarr_subset_excl(const uintptr_t* __restrict raw_bitarr,
                              uintptr_t* __restrict output_bitarr)
 {
     uintptr_t cur_write = 0;
-    uint32_t  item_uidx = 0;
-    uint32_t  write_bit = 0;
-    uint32_t  item_idx  = 0;
-    uint32_t  item_uidx_stop;
+    uint32_t item_uidx = 0;
+    uint32_t write_bit = 0;
+    uint32_t item_idx = 0;
+    uint32_t item_uidx_stop;
     if (!subset_excl[0]) {
         item_uidx = next_set(subset_excl, 0, raw_bitarr_size & (~(BITCT - 1)))
                     & (~(BITCT - 1));
         memcpy(output_bitarr, raw_bitarr, item_uidx / 8);
-        item_idx      = item_uidx;
+        item_idx = item_uidx;
         output_bitarr = &(output_bitarr[item_uidx / BITCT]);
     }
     while (item_idx < subset_size) {
-        item_uidx      = next_unset_unsafe(subset_excl, item_uidx);
+        item_uidx = next_unset_unsafe(subset_excl, item_uidx);
         item_uidx_stop = next_set(subset_excl, item_uidx, raw_bitarr_size);
         item_idx += item_uidx_stop - item_uidx;
         do
@@ -12120,8 +12120,8 @@ void copy_bitarr_subset_excl(const uintptr_t* __restrict raw_bitarr,
                 << write_bit;
             if (++write_bit == BITCT) {
                 *output_bitarr++ = cur_write;
-                cur_write        = 0;
-                write_bit        = 0;
+                cur_write = 0;
+                write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
@@ -12137,16 +12137,16 @@ void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
 {
     // full-blown blocked copy not worth it due to undefined CTZLU(0), >> 64,
     // << 64
-    uintptr_t cur_output_word  = 0;
-    uint32_t  item_uidx        = 0;
-    uint32_t  word_write_shift = 0;
-    uint32_t  item_idx         = 0;
-    uint32_t  item_uidx_stop;
+    uintptr_t cur_output_word = 0;
+    uint32_t item_uidx = 0;
+    uint32_t word_write_shift = 0;
+    uint32_t item_idx = 0;
+    uint32_t item_uidx_stop;
     if (!(~subset_mask[0])) {
         item_uidx = next_unset(subset_mask, 0, raw_bitarr_size & (~(BITCT - 1)))
                     & (~(BITCT - 1));
         memcpy(output_bitarr, raw_bitarr, item_uidx / 8);
-        item_idx      = item_uidx;
+        item_idx = item_uidx;
         output_bitarr = &(output_bitarr[item_uidx / BITCT]);
     }
     while (item_idx < subset_size) {
@@ -12164,7 +12164,7 @@ void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
                 << word_write_shift;
             if (++word_write_shift == BITCT) {
                 *output_bitarr++ = cur_output_word;
-                cur_output_word  = 0;
+                cur_output_word = 0;
                 word_write_shift = 0;
             }
         } while (++item_uidx < item_uidx_stop);
@@ -12175,17 +12175,17 @@ void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
 }
 
 void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
-                                      uintptr_t  unfiltered_ct,
+                                      uintptr_t unfiltered_ct,
                                       uintptr_t* exclude_arr,
                                       uintptr_t* output_exclude_arr)
 {
-    uintptr_t  unfiltered_ctl          = BITCT_TO_WORDCT(unfiltered_ct);
+    uintptr_t unfiltered_ctl = BITCT_TO_WORDCT(unfiltered_ct);
     uintptr_t* output_exclude_true_end = &(output_exclude_arr[unfiltered_ctl]);
     uintptr_t* output_exclude_end =
         &(output_exclude_arr[unfiltered_ct / BITCT]);
     uintptr_t cea_read = 0;
-    uint32_t  read_bit = BITCT;
-    uint32_t  write_bit;
+    uint32_t read_bit = BITCT;
+    uint32_t write_bit;
     uintptr_t cur_write;
     uintptr_t cur_read = 0;
     if (!exclude_arr[0]) {
@@ -12225,7 +12225,7 @@ void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
             else
             {
                 cur_write = cea_read;
-                cea_read  = ~(*collapsed_include_arr++);
+                cea_read = ~(*collapsed_include_arr++);
                 *output_exclude_arr =
                     cur_write | (cea_read << (BITCT - read_bit));
                 cea_read >>= read_bit;
@@ -12235,7 +12235,7 @@ void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
     }
     if (output_exclude_arr < output_exclude_true_end) {
         cur_write = *exclude_arr++;
-        cur_read  = (~cur_write) & ((ONELU << (unfiltered_ct % BITCT)) - ONELU);
+        cur_read = (~cur_write) & ((ONELU << (unfiltered_ct % BITCT)) - ONELU);
         goto uncollapse_copy_flip_include_arr_loop;
     }
 }
@@ -12246,7 +12246,7 @@ void copy_when_nonmissing(uintptr_t* loadbuf, char* source, uintptr_t elem_size,
 {
     uintptr_t* loadbuf_end =
         &(loadbuf[QUATERCT_TO_WORDCT(unfiltered_sample_ct)]);
-    uintptr_t last_missing_p1   = 0;
+    uintptr_t last_missing_p1 = 0;
     uintptr_t sample_idx_offset = 0;
     uintptr_t cur_word;
     uintptr_t new_missing_idx;
@@ -12261,7 +12261,7 @@ void copy_when_nonmissing(uintptr_t* loadbuf, char* source, uintptr_t elem_size,
         cur_word = cur_word & (~(cur_word >> 1)) & FIVEMASK;
         while (cur_word) {
             new_missing_idx = sample_idx_offset + (CTZLU(cur_word) / 2);
-            diff            = new_missing_idx - last_missing_p1;
+            diff = new_missing_idx - last_missing_p1;
             if (diff) {
                 dest = memcpya(dest, &(source[last_missing_p1 * elem_size]),
                                diff * elem_size);
@@ -12335,9 +12335,9 @@ uint32_t collapse_duplicate_ids(char* sorted_ids, uintptr_t id_ct,
 
 void range_list_init(Range_list* range_list_ptr)
 {
-    range_list_ptr->names        = nullptr;
+    range_list_ptr->names = nullptr;
     range_list_ptr->starts_range = nullptr;
-    range_list_ptr->name_ct      = 0;
+    range_list_ptr->name_ct = 0;
     range_list_ptr->name_max_len = 0;
 }
 
@@ -12370,8 +12370,8 @@ double normdist(double zz)
 double rand_normal(double* secondval_ptr)
 {
     // N(0, 1)
-    double dxx     = sqrt(-2 * log(rand_unif()));
-    double dyy     = 2 * PI * rand_unif();
+    double dxx = sqrt(-2 * log(rand_unif()));
+    double dyy = 2 * PI * rand_unif();
     *secondval_ptr = dxx * cos(dyy);
     return dxx * sin(dyy);
 }
@@ -12394,19 +12394,19 @@ void generate_perm1_interleaved(uint32_t tot_ct, uint32_t set_ct,
                                 uintptr_t perm_idx, uintptr_t perm_ct,
                                 uintptr_t* perm_buf)
 {
-    uintptr_t  tot_ctl      = BITCT_TO_WORDCT(tot_ct);
-    uintptr_t  tot_rem      = tot_ct & (BITCT - 1);
-    uint32_t   tot_quotient = (uint32_t)(0x100000000LLU / tot_ct);
-    uint32_t   upper_bound  = tot_ct * tot_quotient - 1;
-    uintptr_t  uljj         = perm_ct - perm_idx;
-    uint32_t   totq_preshift;
-    uint64_t   totq_magic;
-    uint32_t   totq_postshift;
-    uint32_t   totq_incr;
+    uintptr_t tot_ctl = BITCT_TO_WORDCT(tot_ct);
+    uintptr_t tot_rem = tot_ct & (BITCT - 1);
+    uint32_t tot_quotient = (uint32_t)(0x100000000LLU / tot_ct);
+    uint32_t upper_bound = tot_ct * tot_quotient - 1;
+    uintptr_t uljj = perm_ct - perm_idx;
+    uint32_t totq_preshift;
+    uint64_t totq_magic;
+    uint32_t totq_postshift;
+    uint32_t totq_incr;
     uintptr_t* pbptr;
-    uint32_t   num_set;
-    uint32_t   urand;
-    uintptr_t  ulii;
+    uint32_t num_set;
+    uint32_t urand;
+    uintptr_t ulii;
     // seeing as how we're gonna divide by the same number a billion times or
     // so, it just might be worth optimizing that division...
     magic_num(tot_quotient, &totq_magic, &totq_preshift, &totq_postshift,
@@ -12459,7 +12459,7 @@ void generate_perm1_interleaved(uint32_t tot_ct, uint32_t set_ct,
             }
         }
         if (tot_rem) {
-            uljj  = (~ZEROLU) >> (BITCT - tot_rem);
+            uljj = (~ZEROLU) >> (BITCT - tot_rem);
             pbptr = &(perm_buf[(tot_ctl - 1) * perm_ct + perm_idx]);
             for (ulii = perm_idx; ulii < perm_ct; ulii++) {
                 *pbptr &= uljj;
@@ -12480,14 +12480,14 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     double qq = (a2 - 3 * coef_b) * (1.0 / 9.0);
     double rr =
         (2 * a2 * coef_a - 9 * coef_a * coef_b + 27 * coef_c) * (1.0 / 54.0);
-    double r2    = rr * rr;
-    double q3    = qq * qq * qq;
+    double r2 = rr * rr;
+    double q3 = qq * qq * qq;
     double adiv3 = coef_a * (1.0 / 3.0);
     double sq;
     double dxx;
     if (r2 < q3) {
         // three real roots
-        sq  = sqrt(qq);
+        sq = sqrt(qq);
         dxx = acos(rr / (qq * sq)) * (1.0 / 3.0);
         sq *= -2;
         solutions[0] = sq * cos(dxx) - adiv3;
@@ -12495,7 +12495,7 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
         solutions[2] = sq * cos(dxx - (2.0 * PI / 3.0)) - adiv3;
         // now sort and check for within-epsilon equality
         if (solutions[0] > solutions[1]) {
-            dxx          = solutions[0];
+            dxx = solutions[0];
             solutions[0] = solutions[1];
             if (dxx > solutions[2]) {
                 solutions[1] = solutions[2];
@@ -12506,14 +12506,14 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
                 solutions[1] = dxx;
             }
             if (solutions[0] > solutions[1]) {
-                dxx          = solutions[0];
+                dxx = solutions[0];
                 solutions[0] = solutions[1];
                 solutions[1] = dxx;
             }
         }
         else if (solutions[1] > solutions[2])
         {
-            dxx          = solutions[1];
+            dxx = solutions[1];
             solutions[1] = solutions[2];
             solutions[2] = dxx;
         }
@@ -12531,7 +12531,7 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     if (rr < 0.0) {
         dxx = -dxx;
     }
-    sq           = qq / dxx;
+    sq = qq / dxx;
     solutions[0] = dxx + sq - adiv3;
     // use of regular epsilon here has actually burned us
     if (fabs(dxx - sq) >= (EPSILON * 8)) {
@@ -12664,7 +12664,7 @@ int32_t spawn_threads(pthread_t* threads, void* (*start_routine)(void*),
 // doing, though, so it may want a job queue to go with it.
 
 uintptr_t g_thread_spawn_ct;
-uint32_t  g_is_last_thread_block = 0;
+uint32_t g_is_last_thread_block = 0;
 #ifdef _WIN32
 HANDLE g_thread_start_next_event[MAX_THREADS];
 HANDLE g_thread_cur_block_done_events[MAX_THREADS];
@@ -12759,7 +12759,7 @@ int32_t spawn_threads2(pthread_t* threads, void* (*start_routine)(void*),
     }
 #ifdef _WIN32
     if (!g_thread_mutex_initialized) {
-        g_thread_spawn_ct          = 0;
+        g_thread_spawn_ct = 0;
         g_thread_mutex_initialized = 1;
         if (ct == 1) {
             return 0;

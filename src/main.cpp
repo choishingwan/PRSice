@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
-    bool          verbose = true;
+    bool verbose = true;
     GenomeFactory factory;
     // change the factory according to the file type
     // to get the file type, we might want to revemp the commander class

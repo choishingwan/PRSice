@@ -142,11 +142,11 @@ static const w128_t sse2_param_mask = {
 /*----------------
   STATIC FUNCTIONS
   ----------------*/
-inline static int      idxof(int i);
-inline static void     gen_rand_array(sfmt_t* sfmt, w128_t* array, int size);
+inline static int idxof(int i);
+inline static void gen_rand_array(sfmt_t* sfmt, w128_t* array, int size);
 inline static uint32_t func1(uint32_t x);
 inline static uint32_t func2(uint32_t x);
-static void            period_certification(sfmt_t* sfmt);
+static void period_certification(sfmt_t* sfmt);
 
 #ifdef __LP64__
 inline static void mm_recursion(__m128i* r, __m128i a, __m128i b, __m128i c,
@@ -165,15 +165,15 @@ inline static void mm_recursion(__m128i* r, __m128i a, __m128i b, __m128i c,
 {
     __m128i v, x, y, z;
 
-    y  = _mm_srli_epi32(b, SFMT_SR1);
-    z  = _mm_srli_si128(c, SFMT_SR2);
-    v  = _mm_slli_epi32(d, SFMT_SL1);
-    z  = _mm_xor_si128(z, a);
-    z  = _mm_xor_si128(z, v);
-    x  = _mm_slli_si128(a, SFMT_SL2);
-    y  = _mm_and_si128(y, sse2_param_mask.si);
-    z  = _mm_xor_si128(z, x);
-    z  = _mm_xor_si128(z, y);
+    y = _mm_srli_epi32(b, SFMT_SR1);
+    z = _mm_srli_si128(c, SFMT_SR2);
+    v = _mm_slli_epi32(d, SFMT_SL1);
+    z = _mm_xor_si128(z, a);
+    z = _mm_xor_si128(z, v);
+    x = _mm_slli_si128(a, SFMT_SL2);
+    y = _mm_and_si128(y, sse2_param_mask.si);
+    z = _mm_xor_si128(z, x);
+    z = _mm_xor_si128(z, y);
     *r = z;
 }
 
@@ -184,7 +184,7 @@ inline static void mm_recursion(__m128i* r, __m128i a, __m128i b, __m128i c,
  */
 void sfmt_gen_rand_all(sfmt_t* sfmt)
 {
-    int     i;
+    int i;
     __m128i r1, r2;
     w128_t* pstate = sfmt->state;
 
@@ -213,7 +213,7 @@ void sfmt_gen_rand_all(sfmt_t* sfmt)
  */
 static void gen_rand_array(sfmt_t* sfmt, w128_t* array, int size)
 {
-    int     i, j;
+    int i, j;
     __m128i r1, r2;
     w128_t* pstate = sfmt->state;
 
@@ -243,8 +243,8 @@ static void gen_rand_array(sfmt_t* sfmt, w128_t* array, int size)
     for (; i < size; i++, j++) {
         mm_recursion(&array[i].si, array[i - SFMT_N].si,
                      array[i + SFMT_POS1 - SFMT_N].si, r1, r2);
-        r1        = r2;
-        r2        = array[i].si;
+        r1 = r2;
+        r2 = array[i].si;
         pstate[j] = array[i];
     }
 }
@@ -268,7 +268,7 @@ inline static int idxof(int i) { return i; }
  */
 inline static void gen_rand_array(sfmt_t* sfmt, w128_t* array, int size)
 {
-    int     i, j;
+    int i, j;
     w128_t *r1, *r2;
 
     r1 = &sfmt->state[SFMT_N - 2];
@@ -297,8 +297,8 @@ inline static void gen_rand_array(sfmt_t* sfmt, w128_t* array, int size)
     for (; i < size; i++, j++) {
         do_recursion(&array[i], &array[i - SFMT_N],
                      &array[i + SFMT_POS1 - SFMT_N], r1, r2);
-        r1             = r2;
-        r2             = &array[i];
+        r1 = r2;
+        r2 = &array[i];
         sfmt->state[j] = array[i];
     }
 }
@@ -332,10 +332,10 @@ static uint32_t func2(uint32_t x)
  */
 static void period_certification(sfmt_t* sfmt)
 {
-    int            inner = 0;
-    int            i, j;
-    uint32_t       work;
-    uint32_t*      psfmt32   = &sfmt->state[0].u[0];
+    int inner = 0;
+    int i, j;
+    uint32_t work;
+    uint32_t* psfmt32 = &sfmt->state[0].u[0];
     const uint32_t parity[4] = {SFMT_PARITY1, SFMT_PARITY2, SFMT_PARITY3,
                                 SFMT_PARITY4};
 
@@ -407,7 +407,7 @@ int sfmt_get_min_array_size64(sfmt_t* sfmt)
  */
 void sfmt_gen_rand_all(sfmt_t* sfmt)
 {
-    int     i;
+    int i;
     w128_t *r1, *r2;
 
     r1 = &sfmt->state[SFMT_N - 2];
@@ -532,11 +532,11 @@ void sfmt_init_gen_rand(sfmt_t* sfmt, uint32_t seed)
  */
 void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length)
 {
-    int       i, j, count;
-    uint32_t  r;
-    int       lag;
-    int       mid;
-    int       size    = SFMT_N * 4;
+    int i, j, count;
+    uint32_t r;
+    int lag;
+    int mid;
+    int size = SFMT_N * 4;
     uint32_t* psfmt32 = &sfmt->state[0].u[0];
 
     if (size >= 623) {
@@ -579,7 +579,7 @@ void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length)
         r += init_key[j] + i;
         psfmt32[idxof((i + mid + lag) % SFMT_N32)] += r;
         psfmt32[idxof(i)] = r;
-        i                 = (i + 1) % SFMT_N32;
+        i = (i + 1) % SFMT_N32;
     }
     for (; j < count; j++) {
         r = func1(psfmt32[idxof(i)] ^ psfmt32[idxof((i + mid) % SFMT_N32)]
@@ -588,7 +588,7 @@ void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length)
         r += i;
         psfmt32[idxof((i + mid + lag) % SFMT_N32)] += r;
         psfmt32[idxof(i)] = r;
-        i                 = (i + 1) % SFMT_N32;
+        i = (i + 1) % SFMT_N32;
     }
     for (j = 0; j < SFMT_N32; j++) {
         r = func2(psfmt32[idxof(i)] + psfmt32[idxof((i + mid) % SFMT_N32)]
@@ -597,7 +597,7 @@ void sfmt_init_by_array(sfmt_t* sfmt, uint32_t* init_key, int key_length)
         r -= i;
         psfmt32[idxof((i + mid + lag) % SFMT_N32)] ^= r;
         psfmt32[idxof(i)] = r;
-        i                 = (i + 1) % SFMT_N32;
+        i = (i + 1) % SFMT_N32;
     }
 
     sfmt->idx = SFMT_N32;

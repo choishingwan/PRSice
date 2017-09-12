@@ -41,12 +41,12 @@ Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta);
 Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
                                     const Eigen::VectorXd& mu,
                                     const Eigen::VectorXd& wt);
-double          binomial_dev_resids_sum(const Eigen::VectorXd& y,
-                                        const Eigen::VectorXd& mu,
-                                        const Eigen::VectorXd& wt);
-void            logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
-                           Eigen::VectorXd& gprime);
-inline double   y_log_y(double y, double mu)
+double binomial_dev_resids_sum(const Eigen::VectorXd& y,
+                               const Eigen::VectorXd& mu,
+                               const Eigen::VectorXd& wt);
+void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
+                Eigen::VectorXd& gprime);
+inline double y_log_y(double y, double mu)
 {
     return (y != 0.) ? (y * log(y / mu)) : 0;
 }

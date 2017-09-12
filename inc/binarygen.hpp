@@ -68,8 +68,8 @@ private:
         }
         m_bgen_file.seekg(snp_index, std::ios_base::beg);
 
-        Data                         probability;
-        ProbSetter                   setter(&probability);
+        Data probability;
+        ProbSetter setter(&probability);
         std::vector<genfile::byte_t> buffer1, buffer2;
 
         genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
@@ -121,10 +121,10 @@ private:
     };
 
     // borrowed from plink
-    uint32_t load_and_collapse_incl(const uint32_t     snp_index,
+    uint32_t load_and_collapse_incl(const uint32_t snp_index,
                                     const std::string& file_name,
-                                    uint32_t           unfiltered_sample_ct,
-                                    uint32_t           sample_ct,
+                                    uint32_t unfiltered_sample_ct,
+                                    uint32_t sample_ct,
                                     const uintptr_t* __restrict sample_include,
                                     uintptr_t final_mask, uint32_t do_reverse,
                                     uintptr_t* __restrict rawbuf,
@@ -160,8 +160,8 @@ private:
     void dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
                       size_t start_index, size_t end_bound);
     std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
-    std::unordered_map<std::string, uint32_t>               m_offset_map;
-    std::ifstream                                           m_bgen_file;
+    std::unordered_map<std::string, uint32_t> m_offset_map;
+    std::ifstream m_bgen_file;
     /** DON'T TOUCH      */
     struct ProbSetter
     {
@@ -198,8 +198,8 @@ private:
 
         // Called once per sample to set the number of probabilities that are
         // present.
-        void set_number_of_entries(std::size_t        ploidy,
-                                   std::size_t        number_of_entries,
+        void set_number_of_entries(std::size_t ploidy,
+                                   std::size_t number_of_entries,
                                    genfile::OrderType order_type,
                                    genfile::ValueType value_type)
         {
@@ -229,11 +229,11 @@ private:
         }
 
     private:
-        Data*       m_result;
+        Data* m_result;
         std::size_t m_sample_i;
         std::size_t m_entry_i;
     };
-    void read_genotype_data_block(std::istream&                 aStream,
+    void read_genotype_data_block(std::istream& aStream,
                                   genfile::bgen::Context const& context,
                                   std::vector<genfile::byte_t>* buffer)
     {

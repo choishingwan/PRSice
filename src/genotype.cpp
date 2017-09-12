@@ -38,20 +38,20 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
     // this initialize haploid mask as the maximum possible number
 
     if (num_auto < 0) {
-        num_auto                = -num_auto;
-        m_autosome_ct           = num_auto;
-        m_xymt_codes[X_OFFSET]  = -1;
-        m_xymt_codes[Y_OFFSET]  = -1;
+        num_auto = -num_auto;
+        m_autosome_ct = num_auto;
+        m_xymt_codes[X_OFFSET] = -1;
+        m_xymt_codes[Y_OFFSET] = -1;
         m_xymt_codes[XY_OFFSET] = -1;
         m_xymt_codes[MT_OFFSET] = -1;
-        m_max_code              = num_auto;
+        m_max_code = num_auto;
         fill_all_bits(((uint32_t) num_auto) + 1, m_haploid_mask);
     }
     else
     {
-        m_autosome_ct           = num_auto;
-        m_xymt_codes[X_OFFSET]  = num_auto + 1;
-        m_xymt_codes[Y_OFFSET]  = num_auto + 2;
+        m_autosome_ct = num_auto;
+        m_xymt_codes[X_OFFSET] = num_auto + 1;
+        m_xymt_codes[Y_OFFSET] = num_auto + 2;
         m_xymt_codes[XY_OFFSET] = num_auto + 3;
         m_xymt_codes[MT_OFFSET] = num_auto + 4;
         set_bit(num_auto + 1, m_haploid_mask);
@@ -117,7 +117,7 @@ void Genotype::set_genotype_files(std::string prefix)
 
 void Genotype::update_include(const std::vector<Sample>& inclusion)
 {
-    m_sample_ct                     = 0;
+    m_sample_ct = 0;
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     std::fill(m_sample_include, m_sample_include + unfiltered_sample_ctl, 0);
     // std::memset(m_sample_include, 0x0,
@@ -138,9 +138,9 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
         std::string error_message = "ERROR: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
-    std::string                     line;
+    std::string line;
     std::unordered_set<std::string> result;
-    bool                            error = false;
+    bool error = false;
     while (std::getline(in, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -170,7 +170,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
 }
 
 std::unordered_set<std::string> Genotype::load_ref(std::string input,
-                                                   bool        ignore_fid)
+                                                   bool ignore_fid)
 {
     std::ifstream in;
     in.open(input.c_str());
@@ -178,7 +178,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
         std::string error_message = "ERROR: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
-    std::string                     line;
+    std::string line;
     std::unordered_set<std::string> result;
     while (std::getline(in, line)) {
         misc::trim(line);
@@ -208,19 +208,19 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
 {
     m_thread = thread;
     if (!remove_sample.empty()) {
-        m_remove_sample      = true;
+        m_remove_sample = true;
         m_remove_sample_list = load_ref(remove_sample, ignore_fid);
     }
     if (!keep_sample.empty()) {
-        m_keep_sample      = false;
+        m_keep_sample = false;
         m_keep_sample_list = load_ref(keep_sample, ignore_fid);
     }
     if (!extract_snp.empty()) {
-        m_extract_snp      = true;
+        m_extract_snp = true;
         m_extract_snp_list = load_snp_list(extract_snp);
     }
     if (!exclude_snp.empty()) {
-        m_exclude_snp      = true;
+        m_exclude_snp = true;
         m_exclude_snp_list = load_snp_list(exclude_snp);
     }
 
@@ -263,12 +263,12 @@ Genotype::~Genotype()
 void Genotype::read_base(const Commander& c_commander, Region& region)
 {
     // can assume region is of the same order as m_existed_snp
-    m_scoring                   = c_commander.get_scoring();
-    const std::string input     = c_commander.base_name();
-    const bool        beta      = c_commander.beta();
-    const bool        fastscore = c_commander.fastscore();
-    const bool        full      = c_commander.full();
-    std::vector<int>  index =
+    m_scoring = c_commander.get_scoring();
+    const std::string input = c_commander.base_name();
+    const bool beta = c_commander.beta();
+    const bool fastscore = c_commander.fastscore();
+    const bool full = c_commander.full();
+    std::vector<int> index =
         c_commander.index(); // more appropriate for commander
     // now coordinates obtained from target file instead. Coordinate information
     // in base file only use for validation
@@ -278,7 +278,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         std::string error_message = "ERROR: Cannot open base file: " + input;
         throw std::runtime_error(error_message);
     }
-    size_t      max_index = index[+BASE_INDEX::MAX];
+    size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
     if (!c_commander.has_index()) std::getline(snp_file, line);
 
@@ -286,7 +286,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
     double bound_start = c_commander.lower();
-    double bound_end   = c_commander.upper();
+    double bound_end = c_commander.upper();
     double bound_inter = c_commander.inter();
 
     threshold = (full) ? 1.0 : threshold;
@@ -295,12 +295,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     bool exclude = false;
     // Some QC countss
     size_t num_duplicated = 0;
-    size_t num_excluded   = 0;
-    size_t num_ambiguous  = 0;
-    size_t num_haploid    = 0;
+    size_t num_excluded = 0;
+    size_t num_ambiguous = 0;
+    size_t num_haploid = 0;
 
-    size_t num_not_found     = 0;
-    size_t num_mismatched    = 0;
+    size_t num_not_found = 0;
+    size_t num_mismatched = 0;
     size_t num_not_converted = 0; // this is for NA
     size_t num_negative_stat = 0;
 
@@ -311,7 +311,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t file_length = snp_file.tellg();
     snp_file.seekg(0, snp_file.beg);
     std::unordered_set<int> unique_thresholds;
-    double                  prev_progress = 0.0;
+    double prev_progress = 0.0;
     while (std::getline(snp_file, line)) {
         double progress =
             (double) snp_file.tellg() / (double) (file_length) *100;
@@ -322,7 +322,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         misc::trim(line);
         if (line.empty()) continue;
         exclude = false;
-        token   = misc::split(line);
+        token = misc::split(line);
 
         if (token.size() <= max_index) {
             std::cerr << line << std::endl;
@@ -334,7 +334,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
             && dup_index.find(rs_id) == dup_index.end())
         {
             dup_index.insert(rs_id);
-            auto&&  cur_snp  = m_existed_snps[m_existed_snps_index[rs_id]];
+            auto&& cur_snp = m_existed_snps[m_existed_snps_index[rs_id]];
             int32_t chr_code = -1;
             if (index[+BASE_INDEX::CHR] >= 0) {
                 chr_code =
@@ -452,11 +452,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                 exclude = !filter.keep_ambig;
             }
             if (!exclude) {
-                int    category = -1;
-                double pthres   = 0.0;
+                int category = -1;
+                double pthres = 0.0;
                 if (fastscore) {
                     category = c_commander.get_category(pvalue);
-                    pthres   = c_commander.get_threshold(category);
+                    pthres = c_commander.get_threshold(category);
                 }
                 else
                 {
@@ -464,14 +464,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                     if (pvalue > bound_end && full) {
                         category = std::ceil((bound_end + 0.1 - bound_start)
                                              / bound_inter);
-                        pthres   = 1.0;
+                        pthres = 1.0;
                     }
                     else
                     {
                         category =
                             std::ceil((pvalue - bound_start) / bound_inter);
                         category = (category < 0) ? 0 : category;
-                        pthres   = category * bound_inter + bound_start;
+                        pthres = category * bound_inter + bound_start;
                     }
                 }
                 if (flipped) cur_snp.set_flipped();
@@ -504,7 +504,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         // we assume exist_index doesn't have any duplicated index
         std::sort(exist_index.begin(), exist_index.end());
         int start = (exist_index.empty()) ? -1 : exist_index.front();
-        int end   = start;
+        int end = start;
         std::vector<SNP>::iterator last = m_existed_snps.begin();
         ;
         for (auto&& ind : exist_index) {
@@ -516,7 +516,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                           m_existed_snps.begin() + end + 1, last);
                 last += end + 1 - start;
                 start = ind;
-                end   = ind;
+                end = ind;
             }
         }
         if (!exist_index.empty()) {
@@ -569,44 +569,44 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
             num_negative_stat);
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
-    clump_info.p_value           = c_commander.clump_p();
-    clump_info.r2                = c_commander.clump_r2();
-    clump_info.proxy             = c_commander.proxy();
-    clump_info.use_proxy         = c_commander.use_proxy();
-    clump_info.distance          = c_commander.clump_dist();
-    filter.filter_geno           = c_commander.filter_geno();
-    filter.filter_maf            = c_commander.filter_maf();
-    filter.filter_info           = c_commander.filter_info();
+    clump_info.p_value = c_commander.clump_p();
+    clump_info.r2 = c_commander.clump_r2();
+    clump_info.proxy = c_commander.proxy();
+    clump_info.use_proxy = c_commander.use_proxy();
+    clump_info.distance = c_commander.clump_dist();
+    filter.filter_geno = c_commander.filter_geno();
+    filter.filter_maf = c_commander.filter_maf();
+    filter.filter_info = c_commander.filter_info();
     filter.filter_hard_threshold = c_commander.filter_hard_threshold();
-    filter.geno                  = c_commander.geno();
-    filter.info_score            = c_commander.info_score();
-    filter.maf                   = c_commander.maf();
-    filter.hard_threshold        = c_commander.hard_threshold();
-    filter.use_hard              = c_commander.hard_coding();
-    m_num_threshold              = unique_thresholds.size();
+    filter.geno = c_commander.geno();
+    filter.info_score = c_commander.info_score();
+    filter.maf = c_commander.maf();
+    filter.hard_threshold = c_commander.hard_threshold();
+    filter.use_hard = c_commander.hard_coding();
+    m_num_threshold = unique_thresholds.size();
 }
 
 void Genotype::clump(Genotype& reference)
 {
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    uint32_t  founder_ctv3          = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    uint32_t  founder_ctsplit       = 3 * founder_ctv3;
-    auto&&    cur_snp               = m_existed_snps.front();
-    size_t    bp_of_core            = cur_snp.loc();
-    int       prev_chr              = cur_snp.chr();
-    int       mismatch              = 0;
-    int       total                 = 0;
-    size_t    core_genotype_index   = 0;
-    int       progress              = 0;
-    int       num_snp               = m_existed_snps.size();
-    int       begin_index           = 0;
-    bool      mismatch_error        = false;
-    bool      require_clump         = false;
-    double    prev_progress         = 0.0;
+    uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    uint32_t founder_ctsplit = 3 * founder_ctv3;
+    auto&& cur_snp = m_existed_snps.front();
+    size_t bp_of_core = cur_snp.loc();
+    int prev_chr = cur_snp.chr();
+    int mismatch = 0;
+    int total = 0;
+    size_t core_genotype_index = 0;
+    int progress = 0;
+    int num_snp = m_existed_snps.size();
+    int begin_index = 0;
+    bool mismatch_error = false;
+    bool require_clump = false;
+    double prev_progress = 0.0;
     std::unordered_set<int> overlapped_snps;
-    uintptr_t*              genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
     for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
-        auto&& snp    = m_existed_snps[i_snp];
+        auto&& snp = m_existed_snps[i_snp];
         auto&& target = reference.m_existed_snps_index.find(snp.rs());
         if (target == reference.m_existed_snps_index.end())
             continue; // only work on SNPs that are in both
@@ -660,9 +660,9 @@ void Genotype::clump(Genotype& reference)
 
         if (!require_clump && snp.p_value() < clump_info.p_value)
         { // Set this as the core SNP
-            bp_of_core          = snp.loc();
+            bp_of_core = snp.loc();
             core_genotype_index = i_snp; // Should store the index on genotype
-            require_clump       = true;
+            require_clump = true;
         }
         double cur_progress = (double) progress++ / (double) (num_snp) *100.0;
         if (cur_progress - prev_progress > 0.01) {
@@ -679,11 +679,11 @@ void Genotype::clump(Genotype& reference)
 
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
 
-    std::vector<int>           remain_snps;
+    std::vector<int> remain_snps;
     std::unordered_set<double> used_thresholds;
     m_existed_snps_index.clear();
-    std::vector<size_t>     p_sort_order = SNP::sort_by_p(m_existed_snps);
-    bool                    proxy        = clump_info.use_proxy;
+    std::vector<size_t> p_sort_order = SNP::sort_by_p(m_existed_snps);
+    bool proxy = clump_info.use_proxy;
     std::unordered_set<int> unique_threshold;
     m_thresholds.clear();
     for (auto&& i_snp : p_sort_order) {
@@ -730,7 +730,7 @@ void Genotype::clump(Genotype& reference)
         // we assume exist_index doesn't have any duplicated index
         std::sort(remain_snps.begin(), remain_snps.end());
         int start = (remain_snps.empty()) ? -1 : remain_snps.front();
-        int end   = start;
+        int end = start;
         std::vector<SNP>::iterator last = m_existed_snps.begin();
         ;
         for (auto&& ind : remain_snps) {
@@ -742,7 +742,7 @@ void Genotype::clump(Genotype& reference)
                           m_existed_snps.begin() + end + 1, last);
                 last += end + 1 - start;
                 start = ind;
-                end   = ind;
+                end = ind;
             }
         }
         if (!remain_snps.empty()) {
@@ -767,11 +767,11 @@ void Genotype::perform_clump(size_t& core_genotype_index, int& begin_index,
      * Previous use of SNP + genotype vector are way too complicated
      * Now do everything with m_existed_snps
      */
-    int    core_chr       = m_existed_snps[core_genotype_index].chr();
-    size_t core_loc       = m_existed_snps[core_genotype_index].loc();
+    int core_chr = m_existed_snps[core_genotype_index].chr();
+    size_t core_loc = m_existed_snps[core_genotype_index].loc();
     size_t infinite_guard = 0; // guard against infinite while loop
-    size_t max_possible   = current_index - core_genotype_index;
-    int    next_chr       = (current_index >= m_existed_snps.size())
+    size_t max_possible = current_index - core_genotype_index;
+    int next_chr = (current_index >= m_existed_snps.size())
                        ? m_existed_snps.back().chr() + 1
                        : m_existed_snps[current_index].chr();
     int next_loc = (current_index >= m_existed_snps.size())
@@ -788,8 +788,8 @@ void Genotype::perform_clump(size_t& core_genotype_index, int& begin_index,
             if (m_existed_snps[core_genotype_index].p_value()
                 < clump_info.p_value)
             {
-                core_chr      = m_existed_snps[core_genotype_index].chr();
-                core_loc      = m_existed_snps[core_genotype_index].loc();
+                core_chr = m_existed_snps[core_genotype_index].chr();
+                core_loc = m_existed_snps[core_genotype_index].loc();
                 require_clump = true;
                 break;
             }
@@ -849,7 +849,7 @@ void Genotype::clump_thread(const size_t c_core_genotype_index,
 {
 
     uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    size_t   wind_size    = c_current_index - c_begin_index;
+    size_t wind_size = c_current_index - c_begin_index;
     if (wind_size <= 1) return; // nothing to do
     uint32_t tot1[6];
     tot1[0] = popcount_longs(m_existed_snps[c_core_genotype_index].clump_geno(),
@@ -891,9 +891,9 @@ void Genotype::clump_thread(const size_t c_core_genotype_index,
     {
         int num_snp_per_thread =
             (int) (wind_size) / (int) m_thread; // round down
-        int remain    = (int) (wind_size) % (int) m_thread;
+        int remain = (int) (wind_size) % (int) m_thread;
         int cur_start = c_begin_index;
-        int cur_end   = num_snp_per_thread + cur_start;
+        int cur_end = num_snp_per_thread + cur_start;
         for (size_t i_thread = 0; i_thread < m_thread; ++i_thread) {
             thread_store.push_back(std::thread(
                 &Genotype::compute_clump, this, c_core_genotype_index,
@@ -917,19 +917,19 @@ void Genotype::compute_clump(size_t core_genotype_index, size_t i_start,
 {
     uint32_t counts[18];
     uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    double   freq11;
-    double   freq11_expected;
-    double   freq1x;
-    double   freq2x;
-    double   freqx1;
-    double   freqx2;
-    double   dxx;
-    double   r2          = 0.0;
-    bool     zmiss2      = false;
-    size_t   max_size    = m_existed_snps.size();
-    double   ref_p_value = m_existed_snps[core_genotype_index].p_value();
-    int      ref_loc     = m_existed_snps[core_genotype_index].loc();
-    auto&&   ref_geno    = m_existed_snps[core_genotype_index].clump_geno();
+    double freq11;
+    double freq11_expected;
+    double freq1x;
+    double freq2x;
+    double freqx1;
+    double freqx2;
+    double dxx;
+    double r2 = 0.0;
+    bool zmiss2 = false;
+    size_t max_size = m_existed_snps.size();
+    double ref_p_value = m_existed_snps[core_genotype_index].p_value();
+    int ref_loc = m_existed_snps[core_genotype_index].loc();
+    auto&& ref_geno = m_existed_snps[core_genotype_index].clump_geno();
     std::vector<double> r2_store;
     std::vector<size_t>
         target_index_store; // index we want to push into the current index
@@ -943,7 +943,7 @@ void Genotype::compute_clump(size_t core_genotype_index, size_t i_start,
             // if the target is not as significant as the reference SNP or if it
             // is the same significance but with appear later in the genome
 
-            auto&&    target_geno = m_existed_snps[i_snp].clump_geno();
+            auto&& target_geno = m_existed_snps[i_snp].clump_geno();
             uintptr_t uiptr[3];
             uiptr[0] = popcount_longs(target_geno, founder_ctv3);
             uiptr[1] =
@@ -996,7 +996,7 @@ void Genotype::compute_clump(size_t core_genotype_index, size_t i_start,
             else
             {
                 freq11_expected = freqx1 * freq1x;
-                dxx             = freq11 - freq11_expected;
+                dxx = freq11 - freq11_expected;
                 if (fabs(dxx) < SMALL_EPSILON) {
                     r2 = 0.0;
                 }
@@ -1042,11 +1042,11 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
-    int  end_index = 0;
-    bool ended     = false;
+    int end_index = 0;
+    bool ended = false;
     if (cur_index == -1) // first run
     {
-        cur_index    = 0;
+        cur_index = 0;
         cur_category = m_existed_snps[cur_index].category();
     }
     cur_threshold = m_existed_snps[cur_index].get_threshold();
@@ -1055,7 +1055,7 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
     for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
         if (m_existed_snps[i].category() != cur_category) {
             end_index = i;
-            ended     = true;
+            ended = true;
             break;
         }
         //		// Use as part of the output
@@ -1072,7 +1072,7 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
     debug.close();
     // exit(0);
     if (!ended) {
-        end_index    = m_existed_snps.size();
+        end_index = m_existed_snps.size();
         cur_category = m_existed_snps.back().category();
     }
     else
@@ -1149,38 +1149,38 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
     double center_ct_d = (int32_t) center_ct;
     double twice_tot = known11 + known12 + known21 + known22 + 2 * center_ct_d;
     uint32_t sol_start_idx = 0;
-    uint32_t sol_end_idx   = 1;
-    double   solutions[3];
-    double   twice_tot_recip;
-    double   half_hethet_share;
-    double   freq11;
-    double   freq12;
-    double   freq21;
-    double   freq22;
-    double   prod_1122;
-    double   prod_1221;
-    double   incr_1122;
-    double   best_sol;
-    double   best_lnlike;
-    double   cur_lnlike;
-    double   freq1x;
-    double   freq2x;
-    double   freqx1;
-    double   freqx2;
-    double   lbound;
-    double   dxx;
+    uint32_t sol_end_idx = 1;
+    double solutions[3];
+    double twice_tot_recip;
+    double half_hethet_share;
+    double freq11;
+    double freq12;
+    double freq21;
+    double freq22;
+    double prod_1122;
+    double prod_1221;
+    double incr_1122;
+    double best_sol;
+    double best_lnlike;
+    double cur_lnlike;
+    double freq1x;
+    double freq2x;
+    double freqx1;
+    double freqx2;
+    double lbound;
+    double dxx;
     uint32_t cur_sol_idx;
     // shouldn't have to worry about subtractive cancellation problems here
     if (twice_tot == 0.0) {
         return 1;
     }
-    twice_tot_recip   = 1.0 / twice_tot;
-    freq11            = known11 * twice_tot_recip;
-    freq12            = known12 * twice_tot_recip;
-    freq21            = known21 * twice_tot_recip;
-    freq22            = known22 * twice_tot_recip;
-    prod_1122         = freq11 * freq22;
-    prod_1221         = freq12 * freq21;
+    twice_tot_recip = 1.0 / twice_tot;
+    freq11 = known11 * twice_tot_recip;
+    freq12 = known12 * twice_tot_recip;
+    freq21 = known21 * twice_tot_recip;
+    freq22 = known22 * twice_tot_recip;
+    prod_1122 = freq11 * freq22;
+    prod_1221 = freq12 * freq21;
     half_hethet_share = center_ct_d * twice_tot_recip;
     // the following four values should all be guaranteed nonzero except in the
     // NAN case
@@ -1218,9 +1218,9 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
                 // lost root must be a double root at one of the boundary
                 // points, just check their likelihoods
                 sol_start_idx = 0;
-                sol_end_idx   = 2;
-                solutions[0]  = 0;
-                solutions[1]  = half_hethet_share;
+                sol_end_idx = 2;
+                solutions[0] = 0;
+                solutions[1] = half_hethet_share;
             }
             else
             {
@@ -1239,13 +1239,13 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
             if ((freq22 + SMALLISH_EPSILON < half_hethet_share + freq21)
                 && (freq21 + SMALLISH_EPSILON < half_hethet_share + freq22))
             {
-                sol_end_idx  = 3;
+                sol_end_idx = 3;
                 solutions[1] = (half_hethet_share + freq21 - freq22) * 0.5;
                 solutions[2] = half_hethet_share;
             }
             else
             {
-                sol_end_idx  = 2;
+                sol_end_idx = 2;
                 solutions[1] = half_hethet_share;
             }
         }
@@ -1258,13 +1258,13 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
             cur_sol_idx = sol_start_idx + 1;
             do
             {
-                incr_1122  = solutions[cur_sol_idx];
+                incr_1122 = solutions[cur_sol_idx];
                 cur_lnlike = calc_lnlike(known11, known12, known21, known22,
                                          center_ct_d, freq11, freq12, freq21,
                                          freq22, half_hethet_share, incr_1122);
                 if (cur_lnlike > best_lnlike) {
                     cur_lnlike = best_lnlike;
-                    best_sol   = incr_1122;
+                    best_sol = incr_1122;
                 }
             } while (++cur_sol_idx < sol_end_idx);
         }
@@ -1387,27 +1387,27 @@ uint32_t Genotype::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1,
 }
 
 uint32_t Genotype::load_and_split3(uintptr_t* rawbuf,
-                                   uint32_t   unfiltered_sample_ct,
+                                   uint32_t unfiltered_sample_ct,
                                    uintptr_t* casebuf, uint32_t case_ctv,
                                    uint32_t ctrl_ctv, uint32_t do_reverse,
-                                   uint32_t   is_case_only,
+                                   uint32_t is_case_only,
                                    uintptr_t* nm_info_ptr)
 {
     uintptr_t* rawbuf_end = &(rawbuf[unfiltered_sample_ct / BITCT2]);
-    uintptr_t* ctrlbuf    = &(casebuf[3 * case_ctv]);
-    uintptr_t  case_words[4];
-    uintptr_t  ctrl_words[4];
-    uint32_t   case_rem       = 0;
-    uint32_t   ctrl_rem       = 0;
-    uint32_t   read_shift_max = BITCT2;
-    uint32_t   sample_uidx    = 0;
-    uint32_t   offset0_case   = do_reverse * 2 * case_ctv;
-    uint32_t   offset2_case   = (1 - do_reverse) * 2 * case_ctv;
-    uint32_t   offset0_ctrl   = do_reverse * 2 * ctrl_ctv;
-    uint32_t   offset2_ctrl   = (1 - do_reverse) * 2 * ctrl_ctv;
-    uint32_t   read_shift;
-    uintptr_t  read_word;
-    uintptr_t  ulii;
+    uintptr_t* ctrlbuf = &(casebuf[3 * case_ctv]);
+    uintptr_t case_words[4];
+    uintptr_t ctrl_words[4];
+    uint32_t case_rem = 0;
+    uint32_t ctrl_rem = 0;
+    uint32_t read_shift_max = BITCT2;
+    uint32_t sample_uidx = 0;
+    uint32_t offset0_case = do_reverse * 2 * case_ctv;
+    uint32_t offset2_case = (1 - do_reverse) * 2 * case_ctv;
+    uint32_t offset0_ctrl = do_reverse * 2 * ctrl_ctv;
+    uint32_t offset2_ctrl = (1 - do_reverse) * 2 * ctrl_ctv;
+    uint32_t read_shift;
+    uintptr_t read_word;
+    uintptr_t ulii;
 
     case_words[0] = 0;
     case_words[1] = 0;
@@ -1428,13 +1428,13 @@ uint32_t Genotype::load_and_split3(uintptr_t* rawbuf,
                 case_words[ulii] |= ONELU << case_rem;
                 if (++case_rem == BITCT) {
                     casebuf[offset0_case] = case_words[0];
-                    casebuf[case_ctv]     = case_words[2];
+                    casebuf[case_ctv] = case_words[2];
                     casebuf[offset2_case] = case_words[3];
                     casebuf++;
                     case_words[0] = 0;
                     case_words[2] = 0;
                     case_words[3] = 0;
-                    case_rem      = 0;
+                    case_rem = 0;
                 }
                 read_word >>= 2;
             }
@@ -1442,12 +1442,12 @@ uint32_t Genotype::load_and_split3(uintptr_t* rawbuf,
         if (sample_uidx == unfiltered_sample_ct) {
             if (case_rem) {
                 casebuf[offset0_case] = case_words[0];
-                casebuf[case_ctv]     = case_words[2];
+                casebuf[case_ctv] = case_words[2];
                 casebuf[offset2_case] = case_words[3];
             }
             if (ctrl_rem) {
                 ctrlbuf[offset0_ctrl] = ctrl_words[0];
-                ctrlbuf[ctrl_ctv]     = ctrl_words[2];
+                ctrlbuf[ctrl_ctv] = ctrl_words[2];
                 ctrlbuf[offset2_ctrl] = ctrl_words[3];
             }
             ulii = 3;
@@ -1480,7 +1480,7 @@ void Genotype::two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2,
     {
         two_locus_3x3_tablev((__m128i*) lptr2, (__m128i*) lptr1, counts_3x3,
                              sample_ctv3 / 2, 2);
-        uii           = counts_3x3[1];
+        uii = counts_3x3[1];
         counts_3x3[1] = counts_3x3[3];
         counts_3x3[3] = uii;
         counts_3x3[6] = counts_3x3[2];
@@ -1492,14 +1492,14 @@ void Genotype::two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2,
         popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
     counts_3x3[6] =
         popcount_longs_intersect(lptr2, &(lptr1[2 * sample_ctv3]), sample_ctv3);
-    lptr2         = &(lptr2[sample_ctv3]);
+    lptr2 = &(lptr2[sample_ctv3]);
     counts_3x3[1] = popcount_longs_intersect(lptr2, lptr1, sample_ctv3);
     counts_3x3[4] =
         popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
     counts_3x3[7] =
         popcount_longs_intersect(lptr2, &(lptr1[2 * sample_ctv3]), sample_ctv3);
     if (!is_zmiss2) {
-        lptr2         = &(lptr2[sample_ctv3]);
+        lptr2 = &(lptr2[sample_ctv3]);
         counts_3x3[2] = popcount_longs_intersect(lptr2, lptr1, sample_ctv3);
         counts_3x3[5] =
             popcount_longs_intersect(lptr2, &(lptr1[sample_ctv3]), sample_ctv3);
@@ -1511,8 +1511,8 @@ void Genotype::two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2,
 
 void Genotype::two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2,
                                             uint32_t* counts_3x3,
-                                            uint32_t  sample_ctv3,
-                                            uint32_t  is_zmiss2)
+                                            uint32_t sample_ctv3,
+                                            uint32_t is_zmiss2)
 {
 
 #ifdef __LP64__
@@ -1536,7 +1536,7 @@ void Genotype::two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2,
         counts_3x3[5] = popcount_longs_intersect(
             &(lptr1[sample_ctv3]), &(lptr2[2 * sample_ctv3]), sample_ctv3);
     }
-    lptr1         = &(lptr1[sample_ctv3]);
+    lptr1 = &(lptr1[sample_ctv3]);
     counts_3x3[3] = popcount_longs_intersect(lptr1, lptr2, sample_ctv3);
     counts_3x3[4] =
         popcount_longs_intersect(lptr1, &(lptr2[sample_ctv3]), sample_ctv3);
@@ -1551,47 +1551,47 @@ void Genotype::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
     const __m128i m1 = {FIVEMASK, FIVEMASK};
     const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
     const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-    __m128i*      vec20;
-    __m128i*      vec21;
-    __m128i*      vec22;
-    __m128i*      vend1;
-    __m128i       loader1;
-    __m128i       loader20;
-    __m128i       loader21;
-    __m128i       loader22;
-    __m128i       count10;
-    __m128i       count11;
-    __m128i       count12;
-    __m128i       count20;
-    __m128i       count21;
-    __m128i       count22;
-    __univec      acc0;
-    __univec      acc1;
-    __univec      acc2;
-    uint32_t      ct;
-    uint32_t      ct2;
+    __m128i* vec20;
+    __m128i* vec21;
+    __m128i* vec22;
+    __m128i* vend1;
+    __m128i loader1;
+    __m128i loader20;
+    __m128i loader21;
+    __m128i loader22;
+    __m128i count10;
+    __m128i count11;
+    __m128i count12;
+    __m128i count20;
+    __m128i count21;
+    __m128i count22;
+    __univec acc0;
+    __univec acc1;
+    __univec acc2;
+    uint32_t ct;
+    uint32_t ct2;
     while (iter_ct--) {
-        ct    = sample_ctv6;
+        ct = sample_ctv6;
         vec20 = vec2;
         vec21 = &(vec20[sample_ctv6]);
         vec22 = &(vec20[2 * sample_ctv6]);
         while (ct >= 30) {
             ct -= 30;
-            vend1   = &(vec1[30]);
+            vend1 = &(vec1[30]);
             acc0.vi = _mm_setzero_si128();
             acc1.vi = _mm_setzero_si128();
             acc2.vi = _mm_setzero_si128();
             do
             {
             two_locus_3x3_tablev_outer:
-                loader1  = *vec1++;
+                loader1 = *vec1++;
                 loader20 = *vec20++;
                 loader21 = *vec21++;
                 loader22 = *vec22++;
-                count10  = _mm_and_si128(loader1, loader20);
-                count11  = _mm_and_si128(loader1, loader21);
-                count12  = _mm_and_si128(loader1, loader22);
-                count10  = _mm_sub_epi64(
+                count10 = _mm_and_si128(loader1, loader20);
+                count11 = _mm_and_si128(loader1, loader21);
+                count12 = _mm_and_si128(loader1, loader22);
+                count10 = _mm_sub_epi64(
                     count10, _mm_and_si128(_mm_srli_epi64(count10, 1), m1));
                 count11 = _mm_sub_epi64(
                     count11, _mm_and_si128(_mm_srli_epi64(count11, 1), m1));
@@ -1601,37 +1601,37 @@ void Genotype::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
                 // unlike the zmiss variant, this apparently does not suffer
                 // from enough register spill to justify shrinking the inner
                 // loop
-                loader1  = *vec1++;
+                loader1 = *vec1++;
                 loader20 = *vec20++;
                 loader21 = *vec21++;
                 loader22 = *vec22++;
-                count20  = _mm_and_si128(loader1, loader20);
-                count21  = _mm_and_si128(loader1, loader21);
-                count22  = _mm_and_si128(loader1, loader22);
-                count20  = _mm_sub_epi64(
+                count20 = _mm_and_si128(loader1, loader20);
+                count21 = _mm_and_si128(loader1, loader21);
+                count22 = _mm_and_si128(loader1, loader22);
+                count20 = _mm_sub_epi64(
                     count20, _mm_and_si128(_mm_srli_epi64(count20, 1), m1));
                 count21 = _mm_sub_epi64(
                     count21, _mm_and_si128(_mm_srli_epi64(count21, 1), m1));
                 count22 = _mm_sub_epi64(
                     count22, _mm_and_si128(_mm_srli_epi64(count22, 1), m1));
             two_locus_3x3_tablev_one_left:
-                loader1  = *vec1++;
+                loader1 = *vec1++;
                 loader20 = *vec20++;
                 loader21 = _mm_and_si128(loader1, loader20); // half1
                 loader22 =
                     _mm_and_si128(_mm_srli_epi64(loader21, 1), m1); // half2
-                count10  = _mm_add_epi64(count10, _mm_and_si128(loader21, m1));
-                count20  = _mm_add_epi64(count20, loader22);
+                count10 = _mm_add_epi64(count10, _mm_and_si128(loader21, m1));
+                count20 = _mm_add_epi64(count20, loader22);
                 loader20 = *vec21++;
                 loader21 = _mm_and_si128(loader1, loader20);
                 loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1), m1);
-                count11  = _mm_add_epi64(count11, _mm_and_si128(loader21, m1));
-                count21  = _mm_add_epi64(count21, loader22);
+                count11 = _mm_add_epi64(count11, _mm_and_si128(loader21, m1));
+                count21 = _mm_add_epi64(count21, loader22);
                 loader20 = *vec22++;
                 loader21 = _mm_and_si128(loader1, loader20);
                 loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1), m1);
-                count12  = _mm_add_epi64(count12, _mm_and_si128(loader21, m1));
-                count22  = _mm_add_epi64(count22, loader22);
+                count12 = _mm_add_epi64(count12, _mm_and_si128(loader21, m1));
+                count22 = _mm_add_epi64(count22, loader22);
 
                 count10 = _mm_add_epi64(
                     _mm_and_si128(count10, m2),
@@ -1691,12 +1691,12 @@ void Genotype::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
                 ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
         }
         if (ct) {
-            vend1   = &(vec1[ct]);
-            ct2     = ct % 3;
+            vend1 = &(vec1[ct]);
+            ct2 = ct % 3;
             acc0.vi = _mm_setzero_si128();
             acc1.vi = _mm_setzero_si128();
             acc2.vi = _mm_setzero_si128();
-            ct      = 0;
+            ct = 0;
             if (ct2) {
                 count10 = _mm_setzero_si128();
                 count11 = _mm_setzero_si128();

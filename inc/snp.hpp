@@ -40,14 +40,14 @@ public:
     void set_statistic(const double stat, const double se, const double p_value,
                        const int category, const double p_threshold)
     {
-        statistic.stat        = stat;
-        statistic.se          = se;
-        statistic.p_value     = p_value;
-        threshold.category    = category;
+        statistic.stat = stat;
+        statistic.se = se;
+        statistic.p_value = p_value;
+        threshold.category = category;
         threshold.p_threshold = p_threshold;
     };
-    void                       set_flipped() { statistic.flipped = true; };
-    std::string                get_rs() const { return basic.rs; };
+    void set_flipped() { statistic.flipped = true; };
+    std::string get_rs() const { return basic.rs; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
 
     bool operator==(const SNP& Ref) const
@@ -142,18 +142,18 @@ public:
             return false; // cannot flip nor match
     };
 
-    int         chr() const { return basic.chr; };
-    int         loc() const { return basic.loc; };
-    int         snp_id() const { return file_info.id; };
-    int         category() const { return threshold.category; };
-    double      p_value() const { return statistic.p_value; };
-    double      stat() const { return statistic.stat; };
-    double      get_threshold() const { return threshold.p_threshold; };
+    int chr() const { return basic.chr; };
+    int loc() const { return basic.loc; };
+    int snp_id() const { return file_info.id; };
+    int category() const { return threshold.category; };
+    double p_value() const { return statistic.p_value; };
+    double stat() const { return statistic.stat; };
+    double get_threshold() const { return threshold.p_threshold; };
     std::string file_name() const { return file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };
     std::string alt() const { return basic.alt; };
-    bool        is_flipped() { return statistic.flipped; };
+    bool is_flipped() { return statistic.flipped; };
     /*
     inline bool in(size_t i) const
     {
@@ -193,12 +193,12 @@ public:
     bool clumped() const { return clump_info.clumped; };
     void set_clump_geno(uintptr_t* geno, int contain_miss)
     {
-        clump_info.genotype        = geno;
+        clump_info.genotype = geno;
         clump_info.contain_missing = (contain_miss == 3);
     }
     uintptr_t* clump_geno() const { return clump_info.genotype; };
-    bool       clump_missing() const { return clump_info.contain_missing; };
-    void       clean_clump()
+    bool clump_missing() const { return clump_info.contain_missing; };
+    void clean_clump()
     {
         if (clump_info.genotype != nullptr) {
             delete[] clump_info.genotype;
@@ -210,11 +210,11 @@ private:
     // basic info
     struct
     {
-        bool                clumped;
+        bool clumped;
         std::vector<size_t> target;
         std::vector<double> r2;
-        uintptr_t*          genotype;
-        bool                contain_missing;
+        uintptr_t* genotype;
+        bool contain_missing;
     } clump_info;
 
     struct
@@ -222,14 +222,14 @@ private:
         std::string ref;
         std::string alt;
         std::string rs;
-        int         chr;
-        int         loc;
+        int chr;
+        int loc;
     } basic;
 
     struct
     {
         std::string file;
-        int         id;
+        int id;
     } file_info;
 
     struct
@@ -237,12 +237,12 @@ private:
         double stat;
         double se;
         double p_value;
-        bool   flipped;
+        bool flipped;
     } statistic;
 
     struct
     {
-        int    category;
+        int category;
         double p_threshold;
     } threshold;
 
@@ -253,7 +253,7 @@ private:
     // the target / reference file
     // the bound is [ )
     // prset related
-    size_t                 m_max_flag_index = 0;
+    size_t m_max_flag_index = 0;
     std::vector<uintptr_t> m_flags;
 
     inline std::string complement(const std::string& allele) const

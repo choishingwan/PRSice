@@ -32,9 +32,9 @@ public:
     ~BinaryPlink();
 
 private:
-    uintptr_t           m_bed_offset = 3;
+    uintptr_t m_bed_offset = 3;
     std::vector<Sample> load_samples(bool ignore_fid);
-    std::vector<SNP>    load_snps();
+    std::vector<SNP> load_snps();
     std::vector<size_t> m_num_snp_per_file; // for bed file size check
 
     void check_bed();
@@ -82,7 +82,7 @@ private:
     void read_score(misc::vec2d<Sample_lite>& current_prs_score,
                     size_t start_index, size_t end_bound);
 
-    FILE*       m_bedfile = nullptr;
+    FILE* m_bedfile = nullptr;
     std::string m_cur_file;
 };
 

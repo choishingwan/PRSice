@@ -68,13 +68,13 @@ public:
             throw std::out_of_range("2d vector out of range!");
         return m_storage[row * m_col + col];
     }
-    void   clear() { m_storage.clear(); }
+    void clear() { m_storage.clear(); }
     size_t rows() const { return m_row; };
     size_t cols() const { return m_col; };
 
 private:
-    size_t         m_row = 0;
-    size_t         m_col = 0;
+    size_t m_row = 0;
+    size_t m_col = 0;
     std::vector<T> m_storage;
 };
 
@@ -108,7 +108,7 @@ template <typename T>
 inline T convert(const std::string& str)
 {
     std::istringstream iss(str);
-    T                  obj;
+    T obj;
     iss >> std::ws >> obj >> std::ws;
     if (!iss.eof()) throw std::runtime_error("Unable to convert the input");
 

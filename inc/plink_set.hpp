@@ -30,29 +30,29 @@
 typedef struct make_set_range_struct
 {
     struct make_set_range_struct* next;
-    uint32_t                      uidx_start;
-    uint32_t                      uidx_end;
+    uint32_t uidx_start;
+    uint32_t uidx_end;
 } Make_set_range;
 
 typedef struct
 {
     // command-line, allocated on heap and freed by main()
-    char*    fname;
-    char*    setnames_flattened;
-    char*    subset_fname;
-    char*    merged_set_name;
-    char*    genekeep_flattened;
+    char* fname;
+    char* setnames_flattened;
+    char* subset_fname;
+    char* merged_set_name;
+    char* genekeep_flattened;
     uint32_t modifier;
 
     // main data structure, allocated on stack
     uint32_t make_set_border;
-    double   set_r2;
-    double   set_p;
-    double   set_test_lambda;
+    double set_r2;
+    double set_p;
+    double set_test_lambda;
     uint32_t set_max;
 
     uintptr_t ct;
-    char*     names;
+    char* names;
     uintptr_t max_name_len;
 
     // The simplest set representation is a bitfield of length
@@ -88,13 +88,13 @@ typedef struct
 
 typedef struct
 {
-    char*    fname;
-    char*    attrib_fname;
-    char*    ranges_fname;
-    char*    filter_fname;
-    char*    snps_fname;
-    char*    subset_fname;
-    char*    snpfield;
+    char* fname;
+    char* attrib_fname;
+    char* ranges_fname;
+    char* filter_fname;
+    char* snps_fname;
+    char* subset_fname;
+    char* snpfield;
     uint32_t modifier;
     uint32_t border;
 } Annot_info;
@@ -117,12 +117,12 @@ uint32_t setdef_iter(uint32_t* setdef, uint32_t* cur_idx_ptr,
                      uint32_t* aux_ptr);
 
 uint32_t
-alloc_and_populate_nonempty_set_incl(Set_info*   sip,
-                                     uint32_t*   nonempty_set_ct_ptr,
+alloc_and_populate_nonempty_set_incl(Set_info* sip,
+                                     uint32_t* nonempty_set_ct_ptr,
                                      uintptr_t** nonempty_set_incl_ptr);
 
 int32_t extract_exclude_range(char* fname, uint32_t* marker_pos,
-                              uintptr_t  unfiltered_marker_ct,
+                              uintptr_t unfiltered_marker_ct,
                               uintptr_t* marker_exclude,
                               uintptr_t* marker_exclude_ct_ptr,
                               uint32_t is_exclude, uint32_t allow_no_variants,
@@ -160,13 +160,13 @@ uint32_t extract_set_union(uint32_t** setdefs, uintptr_t set_ct,
                            uintptr_t marker_ct);
 
 uint32_t extract_set_union_unfiltered(Set_info* sip, uintptr_t* set_incl,
-                                      uintptr_t   unfiltered_marker_ct,
-                                      uintptr_t*  marker_exclude,
+                                      uintptr_t unfiltered_marker_ct,
+                                      uintptr_t* marker_exclude,
                                       uintptr_t** union_marker_exclude_ptr,
-                                      uintptr_t*  union_marker_ct_ptr);
+                                      uintptr_t* union_marker_ct_ptr);
 
 uint32_t setdefs_compress(Set_info* sip, uintptr_t* set_incl, uintptr_t set_ct,
-                          uintptr_t  unfiltered_marker_ct,
+                          uintptr_t unfiltered_marker_ct,
                           uintptr_t* marker_exclude_orig,
                           uintptr_t marker_ct_orig, uintptr_t* marker_exclude,
                           uintptr_t marker_ct, uint32_t*** new_setdefs_ptr);

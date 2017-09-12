@@ -25,15 +25,15 @@ struct Sample
     std::string FID;
     std::string IID;
     std::string pheno;
-    double      prs;
-    int         num_snp;
-    bool        included;
+    double prs;
+    int num_snp;
+    bool included;
 };
 
 struct Sample_lite
 {
     double prs;
-    int    num_snp;
+    int num_snp;
 };
 
 struct prsice_result
@@ -44,7 +44,7 @@ struct prsice_result
     double coefficient;
     double p;
     double emp_p;
-    int    num_snp;
+    int num_snp;
 };
 
 

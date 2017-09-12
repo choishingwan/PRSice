@@ -55,14 +55,14 @@ public:
         , m_region_size(num_region)
         , m_ignore_fid(ignore_fid){};
     virtual ~PRSice();
-    void   pheno_check(const Commander& c_commander);
-    void   init_matrix(const Commander& c_commander, const size_t pheno_index,
-                       Genotype& target, const bool prslice = false);
+    void pheno_check(const Commander& c_commander);
+    void init_matrix(const Commander& c_commander, const size_t pheno_index,
+                     Genotype& target, const bool prslice = false);
     size_t num_phenotype() const
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
-    void prsice(const Commander&                c_commander,
+    void prsice(const Commander& c_commander,
                 const std::vector<std::string>& region_name,
                 const size_t c_pheno_index, Genotype& target,
                 bool prslice = false);
@@ -84,25 +84,25 @@ protected:
 private:
     struct
     {
-        std::vector<int>         col;
+        std::vector<int> col;
         std::vector<std::string> name;
-        std::vector<int>         order;
-        std::vector<bool>        binary;
-        bool                     use_pheno;
+        std::vector<int> order;
+        std::vector<bool> binary;
+        bool use_pheno;
     } pheno_info;
 
     // slowly update the class
     // input related
-    std::string       m_base_name;
-    std::string       m_target;
+    std::string m_base_name;
+    std::string m_target;
     std::vector<bool> m_target_binary;
-    SCORING           m_score          = SCORING::MEAN_IMPUTE;
-    size_t            m_region_size    = 1;
-    size_t            m_all_thresholds = 0;
-    bool              m_ignore_fid     = false;
+    SCORING m_score = SCORING::MEAN_IMPUTE;
+    size_t m_region_size = 1;
+    size_t m_all_thresholds = 0;
+    bool m_ignore_fid = false;
 
-    misc::vec2d<double>                     m_region_perm_result;
-    std::vector<Sample>                     m_sample_names;
+    misc::vec2d<double> m_region_perm_result;
+    std::vector<Sample> m_sample_names;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
     Eigen::VectorXd m_phenotype;
@@ -121,17 +121,17 @@ private:
     misc::vec2d<Sample_lite> m_current_sample_score;
     misc::vec2d<Sample_lite> m_best_sample_score;
     std::vector<std::string> m_sample_included;
-    std::vector<int>         m_sample_index;
-    std::vector<size_t>      m_num_snp_included;
+    std::vector<int> m_sample_index;
+    std::vector<size_t> m_num_snp_included;
     /**
      * function area
      */
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress);
     std::vector<size_t>
-         get_cov_index(const std::string&              c_cov_file,
-                       const std::vector<std::string>& c_cov_header);
-    void gen_cov_matrix(const std::string&              c_cov_file,
+    get_cov_index(const std::string& c_cov_file,
+                  const std::vector<std::string>& c_cov_header);
+    void gen_cov_matrix(const std::string& c_cov_file,
                         const std::vector<std::string>& c_cov_header);
     // This should help us to update the m_prs_results
     void process_permutations();

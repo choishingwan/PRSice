@@ -19,14 +19,14 @@
 bool Commander::process(int argc, char* argv[], const char* optString,
                         const struct option longOpts[])
 {
-    int         longIndex = 0;
-    int         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
+    int longIndex = 0;
+    int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string command;
-    std::string message        = argv[0];
+    std::string message = argv[0];
     std::string error_messages = "";
-    std::string temp_string    = "";
-    bool        dummy          = false;
-    bool        error          = false;
+    std::string temp_string = "";
+    bool dummy = false;
+    bool error = false;
     while (opt != -1) {
         switch (opt)
         {
@@ -166,7 +166,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
         case 'n':
             temp_string = optarg;
             if (temp_string.compare("max") == 0) {
-                misc.thread         = std::thread::hardware_concurrency();
+                misc.thread = std::thread::hardware_concurrency();
                 misc.provide_thread = true;
                 message.append("\\\n    --thread "
                                + std::to_string(misc.thread));
@@ -236,13 +236,13 @@ bool Commander::process(int argc, char* argv[], const char* optString,
 
 
     std::chrono::time_point<std::chrono::system_clock> start;
-    start                  = std::chrono::system_clock::now();
+    start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
     std::cerr << std::ctime(&start_time) << std::endl;
     std::cerr << message << std::endl;
     // fprintf(stderr, "%s\n", message.c_str());
     std::ofstream logFile;
-    std::string   logName = misc.out + ".log";
+    std::string logName = misc.out + ".log";
     logFile.open(logName.c_str());
     if (!logFile.is_open()) {
         std::string file_error = "ERROR: Cannot open log file: " + logName;
@@ -274,106 +274,106 @@ Commander::Commander()
               << std::endl;
     std::cerr << "GNU General Public License v3" << std::endl << std::endl;
 
-    base.beta           = false;
-    base.name           = "";
-    base.chr            = "CHR";
-    base.ref_allele     = "A1";
-    base.alt_allele     = "A2";
-    base.statistic      = "OR";
-    base.snp            = "SNP";
-    base.bp             = "BP";
+    base.beta = false;
+    base.name = "";
+    base.chr = "CHR";
+    base.ref_allele = "A1";
+    base.alt_allele = "A2";
+    base.statistic = "OR";
+    base.snp = "SNP";
+    base.bp = "BP";
     base.standard_error = "SE";
-    base.p_value        = "P";
-    base.index          = false;
-    base.provided_chr   = false;
-    base.provided_ref   = false;
-    base.provided_alt   = false;
-    base.provided_stat  = false;
-    base.provided_snp   = false;
-    base.provided_bp    = false;
-    base.provided_se    = false;
-    base.provided_p     = false;
+    base.p_value = "P";
+    base.index = false;
+    base.provided_chr = false;
+    base.provided_ref = false;
+    base.provided_alt = false;
+    base.provided_stat = false;
+    base.provided_snp = false;
+    base.provided_bp = false;
+    base.provided_se = false;
+    base.provided_p = false;
     base.col_index.resize(+BASE_INDEX::MAX + 1, -1);
 
 
-    clumping.distance         = 250;
-    clumping.keep_sample      = false;
-    clumping.ld               = "";
-    clumping.no_clump         = false;
-    clumping.provide_proxy    = false;
-    clumping.proxy            = -1.0;
-    clumping.p_value          = 1.0;
-    clumping.r2               = 0.1;
-    clumping.remove_sample    = false;
-    clumping.type             = "bed";
-    clumping.provide_p        = false;
-    clumping.provide_r2       = false;
+    clumping.distance = 250;
+    clumping.keep_sample = false;
+    clumping.ld = "";
+    clumping.no_clump = false;
+    clumping.provide_proxy = false;
+    clumping.proxy = -1.0;
+    clumping.p_value = 1.0;
+    clumping.r2 = 0.1;
+    clumping.remove_sample = false;
+    clumping.type = "bed";
+    clumping.provide_p = false;
+    clumping.provide_r2 = false;
     clumping.provide_distance = false;
 
-    covariate.name         = "";
+    covariate.name = "";
     covariate.ancestry_dim = "MDS";
 
-    filter.exclude        = false;
-    filter.extract        = false;
-    filter.geno           = 0.0;
-    filter.mind           = 0.0;
+    filter.exclude = false;
+    filter.extract = false;
+    filter.geno = 0.0;
+    filter.mind = 0.0;
     filter.hard_threshold = 0.8;
-    filter.maf            = 0.01;
-    filter.hard_coding    = false;
+    filter.maf = 0.01;
+    filter.hard_coding = false;
     filter.hard_threshold = 0.9;
-    filter.info_score     = 0.9;
-    filter.keep_ambig     = false;
-    filter.use_prob       = false;
-    filter.use_maf        = false;
-    filter.use_mind       = false;
+    filter.info_score = 0.9;
+    filter.keep_ambig = false;
+    filter.use_prob = false;
+    filter.use_maf = false;
+    filter.use_mind = false;
     filter.use_hard_thres = false;
-    filter.use_info       = false;
-    filter.use_geno       = false;
+    filter.use_info = false;
+    filter.use_geno = false;
 
-    misc.all                  = false;
-    misc.ignore_fid           = false;
-    misc.logit_perm           = false;
-    misc.memory               = 10000;
-    misc.out                  = "PRSice";
-    misc.permutation          = 10000;
-    misc.print_snp            = false;
-    misc.print_all_samples    = false;
+    misc.all = false;
+    misc.ignore_fid = false;
+    misc.logit_perm = false;
+    misc.memory = 10000;
+    misc.out = "PRSice";
+    misc.permutation = 10000;
+    misc.print_snp = false;
+    misc.print_all_samples = false;
     misc.provided_permutation = false;
-    misc.provided_seed        = false;
-    misc.seed                 = 0;
-    misc.thread               = 1;
-    misc.provide_thread       = false;
+    misc.provided_seed = false;
+    misc.seed = 0;
+    misc.thread = 1;
+    misc.provide_thread = false;
 
-    prset.gtf           = "";
-    prset.msigdb        = "";
+    prset.gtf = "";
+    prset.msigdb = "";
     prset.perform_prset = false;
 
     prsice.missing_score = "";
-    prsice.lower         = 0.0001;
-    prsice.upper         = 0.5;
-    prsice.inter         = 0.00005;
-    prsice.fastscore     = false;
-    prsice.no_regress    = false;
-    prsice.full          = false;
+    prsice.lower = 0.0001;
+    prsice.upper = 0.5;
+    prsice.inter = 0.00005;
+    prsice.fastscore = false;
+    prsice.no_regress = false;
+    prsice.full = false;
     prsice.provide_lower = false;
     prsice.provide_upper = false;
     prsice.provide_inter = false;
 
-    prslice.size     = -1;
+    prslice.size = -1;
     prslice.provided = false;
 
-    species.num_auto   = 22;
-    species.no_x       = false;
-    species.no_y       = false;
-    species.no_xy      = false;
-    species.no_mt      = false;
+    species.num_auto = 22;
+    species.no_x = false;
+    species.no_y = false;
+    species.no_xy = false;
+    species.no_mt = false;
     species.double_set = false;
 
     target.remove_sample = false;
-    target.keep_sample   = false;
-    target.name          = "";
-    target.pheno_file    = "";
-    target.type          = "bed";
+    target.keep_sample = false;
+    target.name = "";
+    target.pheno_file = "";
+    target.type = "bed";
     info();
 }
 
@@ -383,7 +383,7 @@ bool Commander::init(int argc, char* argv[])
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    const char*         optString  = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
+    const char* optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
     const struct option longOpts[] = {
         // parameters with short flags
         {"ancestry", required_argument, NULL, 'a'},
@@ -784,8 +784,8 @@ void Commander::base_check(std::string& message, bool& error,
             std::string line;
             std::getline(base_test, line);
             base_test.close();
-            std::vector<std::string> token    = misc::split(line);
-            int                      max_size = token.size();
+            std::vector<std::string> token = misc::split(line);
+            int max_size = token.size();
             if (!base.index) {
                 if (base.provided_stat) {
                     if (base.statistic.length() == 2
@@ -806,7 +806,7 @@ void Commander::base_check(std::string& message, bool& error,
                 else if (!base.provided_stat && base.beta)
                 {
                     base.provided_stat = true;
-                    base.statistic     = "BETA";
+                    base.statistic = "BETA";
                     message.append(" \\\n    --stat BETA");
                     // fprintf(stderr, "Base statistic not provided, assumed to
                     // be %s\n", base.statistic.c_str());
@@ -819,8 +819,8 @@ void Commander::base_check(std::string& message, bool& error,
                             && toupper(token[i][1] == 'R'))
                         {
                             base.provided_stat = true;
-                            base.beta          = false;
-                            base.statistic     = token[i];
+                            base.beta = false;
+                            base.statistic = token[i];
                             /*
                             fprintf(stderr, "Base statistic guessed to be %s
                             (%s)\n", token[i].c_str(),"OR");
@@ -835,8 +835,8 @@ void Commander::base_check(std::string& message, bool& error,
                                  && toupper(token[i][3]) == 'A')
                         {
                             base.provided_stat = true;
-                            base.beta          = true;
-                            base.statistic     = token[i];
+                            base.beta = true;
+                            base.statistic = token[i];
                             /*
                             fprintf(stderr, "Base statistic guessed to be %s
                             (%s)\n", token[i].c_str(),"BETA");
@@ -1038,7 +1038,7 @@ void Commander::covariate_check(bool& error, std::string& error_message)
                 cov.erase(0, 1);
                 std::vector<std::string> open = misc::split(cov, "[");
                 std::vector<std::string> info;
-                std::vector<bool>        list;
+                std::vector<bool> list;
                 for (auto o : open) {
                     if (o.find("]") != std::string::npos) {
                         std::vector<std::string> close = misc::split(o, "]");
@@ -1074,11 +1074,11 @@ void Commander::covariate_check(bool& error, std::string& error_message)
                                 try
                                 {
                                     int start = misc::convert<int>(range[0]);
-                                    int end   = misc::convert<int>(range[1]);
+                                    int end = misc::convert<int>(range[1]);
                                     if (start > end) {
                                         int temp = end;
-                                        end      = start;
-                                        start    = temp;
+                                        end = start;
+                                        start = temp;
                                     }
                                     for (size_t s = start; s <= end; ++s) {
                                         numeric.push_back(s);
@@ -1152,13 +1152,13 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         }
     }
 
-    std::vector<std::string>        token   = misc::split(line);
-    std::string                     missing = "";
+    std::vector<std::string> token = misc::split(line);
+    std::string missing = "";
     std::unordered_set<std::string> ref;
     for (auto&& head : token) {
         ref.insert(head);
     }
-    size_t                   valid_cov = 0;
+    size_t valid_cov = 0;
     std::vector<std::string> final_cov;
     for (auto&& cov : included) {
         if (ref.find(cov) != ref.end()) {
