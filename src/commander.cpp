@@ -25,6 +25,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string message = argv[0];
     std::string error_messages = "";
     std::string temp_string = "";
+    int temp_int = 0;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
@@ -54,6 +55,9 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("se") == 0)
                 set_string(optarg, message, base.standard_error,
                            base.provided_se, command);
+            else if(command.compare("cov-header")==0) // cerr for backward compatibility
+            		load_string_vector(optarg, message, covariate.covariates,
+                               "cov-col");
             else if (command.compare("keep") == 0)
                 set_string(optarg, message, target.keep_file,
                            target.keep_sample, command);
@@ -135,7 +139,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'c':
             load_string_vector(optarg, message, covariate.covariates,
-                               "cov-header");
+                               "cov-col");
             break;
         case 'C':
             set_string(optarg, message, covariate.name, dummy, "cov-file");
@@ -165,15 +169,38 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'n':
             temp_string = optarg;
+            temp_int = std::thread::hardware_concurrency();
             if (temp_string.compare("max") == 0) {
-                misc.thread = std::thread::hardware_concurrency();
+                misc.thread = temp_int;
                 misc.provide_thread = true;
                 message.append("\\\n    --thread "
                                + std::to_string(misc.thread));
             }
             else
-                set_numeric<int>(optarg, message, error_messages, misc.thread,
-                                 misc.provide_thread, error, "thread");
+            {
+                temp_int = 1;
+                try
+                {
+                    temp_int = misc::convert<int>(optarg);
+                }
+                catch (const std::runtime_error& er)
+                {
+                    error_messages.append(
+                        "ERROR: Non numeric argument passed to thread: "
+                        + std::string(optarg) + "!\n");
+                }
+                if (temp_int > std::thread::hardware_concurrency()) {
+                    misc.thread = std::thread::hardware_concurrency();
+                    misc.provide_thread = true;
+                }
+                else
+                {
+                    misc.thread = temp_int;
+                    misc.provide_thread = true;
+                }
+                message.append("\\\n    --thread "
+                               + std::to_string(misc.thread));
+            }
             break;
         case 'o': set_string(optarg, message, misc.out, dummy, "out"); break;
         case 'p':
@@ -390,7 +417,8 @@ bool Commander::init(int argc, char* argv[])
         {"ancestry", required_argument, NULL, 'a'},
         {"base", required_argument, NULL, 'b'},
         {"bed", required_argument, NULL, 'B'},
-        {"cov-header", required_argument, NULL, 'c'},
+		{"cov-col", required_argument, NULL, 'c'},
+		{"cov-header", required_argument, NULL, 0}, // retain here for backward compatibility
         {"cov-file", required_argument, NULL, 'C'},
         {"pheno-file", required_argument, NULL, 'f'},
         {"gtf", required_argument, NULL, 'g'},
@@ -575,7 +603,7 @@ void Commander::info()
           "                            the second column should be IID. If "
           "--ignore-fid\n"
           "                            is set, first column should be IID\n"
-          "    --cov-header    | -c    Header of covariates. If not provided, "
+          "    --cov-col       | -c    Header of covariates. If not provided, "
           "will use\n"
           "                            all variables in the covariate file\n"
           "\nDosage:\n"

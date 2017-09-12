@@ -155,6 +155,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                            const int pheno_index, bool regress)
 {
     std::vector<double> pheno_store;
+    pheno_store.reserve(m_sample_names.size()); // reserve the maximum size
     bool binary = pheno_info.binary[pheno_index];
 
     int max_num = 0;
@@ -164,7 +165,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     size_t num_not_found = 0;
     std::string line;
     size_t sample_index_ct = 0;
-    if (pheno_info.use_pheno) // use phenotype file
+    std::unordered_set<double> input_sanity_check; // check if input is sensible
+    if (pheno_info.use_pheno)                      // use phenotype file
     {
         int pheno_col_index = pheno_info.col[pheno_index];
         std::ifstream pheno_file;
@@ -226,6 +228,9 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                     {
                         pheno_store.push_back(
                             misc::convert<double>(phenotype_info[id]));
+                        if (input_sanity_check.size() < 2) {
+                            input_sanity_check.insert(pheno_store.back());
+                        }
                         m_sample_with_phenotypes[id] = sample_index_ct++;
                     }
                 }
@@ -274,6 +279,9 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                 else
                 {
                     pheno_store.push_back(misc::convert<double>(sample.pheno));
+                    if (input_sanity_check.size() < 2) {
+                        input_sanity_check.insert(pheno_store.back());
+                    }
                     m_sample_with_phenotypes[m_ignore_fid ? sample.IID
                                                           : sample.FID + "_"
                                                                 + sample.IID] =
@@ -306,6 +314,14 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         fprintf(stderr, "Number of invalid phenotyps: %zu\n", invalid_pheno);
         log_file_stream << invalid_pheno << " sample(s) with invalid phenotype"
                         << std::endl;
+    }
+    if (input_sanity_check.size() < 2 && !binary) {
+        fprintf(stderr, "Only one phenotype value detected\n");
+        auto itr = input_sanity_check.begin();
+        if ((*itr) == -9) {
+            fprintf(stderr, "and they are all -9\n");
+            throw std::runtime_error("Not enough valid phenotype");
+        }
     }
     bool error = false;
     if (max_num > 1 && binary) {

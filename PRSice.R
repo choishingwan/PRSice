@@ -310,7 +310,8 @@ for (library in libraries)
 option_list <- list(
     make_option(c("-b", "--base"), type = "character"),
     make_option(c("-B", "--bed"), type = "character"),
-    make_option(c("-c", "--cov-header"), type = "character", dest="cov_header"),
+    make_option(c("-c", "--cov-col"), type = "character", dest="cov_col"),
+    make_option(c("--cov-header"), type = "character", dest="cov_header"), #For backward compatibility
     make_option(c("-C", "--cov-file"), type = "character", dest="cov_file"),
     make_option(c("-f", "--pheno-file"), type = "character", dest="pheno_file"),
     make_option(c("-g", "--gtf"), type = "character"),
@@ -404,6 +405,10 @@ not_cpp <-c(
     "dir"
   )
 
+if(is.null(argv$cov_col) && !is.null(argv$cov_header))
+{
+    argv$cov_col = argv$cov_header
+}
 
 # Check help messages --------------------------------------------------
 
@@ -945,8 +950,8 @@ update_cov_header <- function(c){
 covariance = NULL
 if (provided("cov_file", argv)) {
     covariance <- fread(argv$cov_file, data.table = F, header = T)
-    if (provided("cov_header", argv)) {
-        c = strsplit(argv$cov_header, split = ",")[[1]]
+    if (provided("cov_col", argv)) {
+        c = strsplit(argv$cov_col, split = ",")[[1]]
         c <- update_cov_header(c)
         selected <- colnames(covariance)%in%c
         if(!ignore_fid){
