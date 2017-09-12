@@ -112,7 +112,7 @@ private:
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
         if (load_and_collapse_incl(snp_index, file_name, m_unfiltered_sample_ct,
-                                   m_founder_ct, m_founder_info, final_mask,
+                                   m_founder_ct, m_founder_info.data(), final_mask,
                                    false, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");

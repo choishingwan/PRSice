@@ -31,7 +31,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         m_xymt_codes[XY_OFFSET] = -1;
         m_xymt_codes[MT_OFFSET] = -1;
         m_max_code = num_auto;
-        fill_all_bits(((uint32_t) num_auto) + 1, &m_haploid_mask[0]);
+        fill_all_bits(((uint32_t) num_auto) + 1, m_haploid_mask.data());
     }
     else
     {
@@ -40,15 +40,15 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         m_xymt_codes[Y_OFFSET] = num_auto + 2;
         m_xymt_codes[XY_OFFSET] = num_auto + 3;
         m_xymt_codes[MT_OFFSET] = num_auto + 4;
-        set_bit(num_auto + 1, &m_haploid_mask[0]);
-        set_bit(num_auto + 2, &m_haploid_mask[0]);
+        set_bit(num_auto + 1, m_haploid_mask.data());
+        set_bit(num_auto + 2, m_haploid_mask.data());
         if (no_x) {
             m_xymt_codes[X_OFFSET] = -1;
-            clear_bit(num_auto + 1, &m_haploid_mask[0]);
+            clear_bit(num_auto + 1, m_haploid_mask.data());
         }
         if (no_y) {
             m_xymt_codes[Y_OFFSET] = -1;
-            clear_bit(num_auto + 2, &m_haploid_mask[0]);
+            clear_bit(num_auto + 2, m_haploid_mask.data());
         }
         if (no_xy) {
             m_xymt_codes[XY_OFFSET] = -1;
@@ -76,11 +76,11 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
             m_max_code = num_auto;
         }
     }
-    fill_all_bits(m_autosome_ct + 1, &m_chrom_mask[0]);
+    fill_all_bits(m_autosome_ct + 1, m_chrom_mask.data());
     for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
         int32_t cur_code = m_xymt_codes[xymt_idx];
         if (cur_code != -1) {
-            set_bit(m_xymt_codes[xymt_idx], &m_chrom_mask[0]);
+            set_bit(m_xymt_codes[xymt_idx], m_chrom_mask.data());
         }
     }
     m_chrom_start.resize(m_max_code); // 1 extra for the info
@@ -105,10 +105,10 @@ void Genotype::update_include(const std::vector<Sample>& inclusion)
 {
     m_sample_ct = 0;
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    std::fill(m_sample_include, m_sample_include + unfiltered_sample_ctl, 0);
+    std::fill(m_sample_include.begin(), m_sample_include.end(), 0);
     for (size_t i_sample = 0; i_sample < inclusion.size(); ++i_sample) {
-        if (IS_SET(m_founder_info, i_sample) && inclusion[i_sample].included) {
-            SET_BIT(i_sample, m_sample_include);
+        if (IS_SET(m_founder_info.data(), i_sample) && inclusion[i_sample].included) {
+            SET_BIT(i_sample, m_sample_include.data());
             m_sample_ct++;
         }
     }
@@ -228,13 +228,7 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
     }
 }
 
-Genotype::~Genotype()
-{
-    // TODO Auto-generated destructor stub
-    if (m_founder_info != nullptr) delete[] m_founder_info;
-    // if(m_sex_male != nullptr) delete [] m_sex_male;
-    if (m_sample_include != nullptr) delete[] m_sample_include;
-}
+Genotype::~Genotype(){}
 
 void Genotype::read_base(const Commander& c_commander, Region& region)
 {
@@ -335,7 +329,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                         }
                     }
                 }
-                else if (is_set(&m_haploid_mask[0], chr_code)
+                else if (is_set(m_haploid_mask.data(), chr_code)
                          || chr_code == m_xymt_codes[X_OFFSET]
                          || chr_code == m_xymt_codes[Y_OFFSET])
                 {

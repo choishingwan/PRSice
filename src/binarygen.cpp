@@ -80,7 +80,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     }
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2,0);
     m_sample_selection_list.clear();
     m_snp_selection_list.clear();
 }
@@ -228,7 +228,7 @@ std::vector<SNP> BinaryGen::load_snps()
                         continue;
                     }
                     else if (!chr_sex_error
-                             && (is_set(&m_haploid_mask[0], chr_code)
+                             && (is_set(m_haploid_mask.data(), chr_code)
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
@@ -335,7 +335,7 @@ void BinaryGen::dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
                 throw std::runtime_error("");
             }
             double expected = 0.0;
-            if (IS_SET(m_sample_include,
+            if (IS_SET(m_sample_include.data(),
                        i_sample)) // to ignore non-selected SNPs
             {
                 for (int g = 0; g < prob.size(); ++g) {
@@ -433,7 +433,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
-                                   m_sample_include, final_mask, false,
+                                   m_sample_include.data(), final_mask, false,
                                    m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
@@ -700,18 +700,13 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     // std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     // assume all are founder
-    m_founder_info = new uintptr_t[unfiltered_sample_ctl];
+    m_founder_info.resize(unfiltered_sample_ctl,0);
     m_founder_ct = m_unfiltered_sample_ct;
-    std::fill(m_founder_info, m_founder_info + unfiltered_sample_ctl, 0);
-    // std::memset(m_founder_info, 0,
-    // m_unfiltered_sample_ctl*sizeof(uintptr_t));
-    m_sample_include = new uintptr_t[unfiltered_sample_ctl];
-    std::fill(m_sample_include, m_sample_include + unfiltered_sample_ctl, 0);
-    // std::memset(m_sample_include, 0x0,
-    // m_unfiltered_sample_ctl*sizeof(uintptr_t));
+
+    m_sample_include.resize(unfiltered_sample_ctl, 0);
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
-            SET_BIT(i, m_founder_info);
+            SET_BIT(i, m_founder_info.data());
         }
     }
 

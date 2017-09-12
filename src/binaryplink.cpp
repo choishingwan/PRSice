@@ -80,7 +80,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_cur_file = "";
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2,0);
     m_sample_selection_list.clear();
     m_snp_selection_list.clear();
 }
@@ -140,16 +140,10 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 
     // try to use fill instead of memset for better readability (will be tiny
     // bit slower according to stackoverflow)
-    m_founder_info = new uintptr_t[unfiltered_sample_ctl];
-    std::fill(m_founder_info, m_founder_info + unfiltered_sample_ctl, 0);
-    // std::memset(m_founder_info, 0x0,
-    // unfiltered_sample_ctl*sizeof(uintptr_t));
+    m_founder_info.resize(unfiltered_sample_ctl,0);
 
     // Initialize this, but will copy founder into this later on
-    m_sample_include = new uintptr_t[unfiltered_sample_ctl];
-    std::fill(m_sample_include, m_sample_include + unfiltered_sample_ctl, 0);
-    // std::memset(m_sample_include, 0x0,
-    // m_unfiltered_sample_ctl*sizeof(uintptr_t));
+    m_sample_include.resize(unfiltered_sample_ctl,0);
 
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
@@ -190,7 +184,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
             && cur_sample.included)
         {
             m_founder_ct++;
-            SET_BIT(sample_uidx, m_founder_info); // if individual is founder
+            SET_BIT(sample_uidx, m_founder_info.data()); // if individual is founder
                                                   // e.g. 0 0, then set bit
         }
         else if (!cur_sample.included)
@@ -310,7 +304,7 @@ std::vector<SNP> BinaryPlink::load_snps()
                         continue;
                     }
                     else if (!chr_sex_error
-                             && (is_set(&m_haploid_mask[0], chr_code)
+                             && (is_set(m_haploid_mask.data(), chr_code)
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
@@ -526,7 +520,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
-                                   m_sample_include, final_mask, false,
+                                   m_sample_include.data(), final_mask, false,
                                    m_bedfile, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");

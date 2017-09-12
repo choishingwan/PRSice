@@ -100,10 +100,10 @@ protected:
     {
         return std::vector<Sample>(0);
     };
-    uintptr_t m_unfiltered_sample_ct = 0;
-    uintptr_t m_sample_ct = 0;
+    uintptr_t m_unfiltered_sample_ct = 0; //number of unfiltered samples
+    uintptr_t m_sample_ct = 0; // number of final samples
     // storage of sample information
-    std::vector<Sample> m_sample_names;
+    std::vector<Sample> m_sample_names; // vector storing the sample information
 
     /** SNP/Sample selection **/
     // default is remove (if not provided, the list is empty,
@@ -114,7 +114,8 @@ protected:
     bool m_exclude_snp = true;
     std::unordered_set<std::string> m_snp_selection_list;
 
-    /** Storage of the genotype information **/
+    // tempory storage for genotype information
+    // use for plink read
     std::vector<uintptr_t> m_tmp_genotype;
 
     static std::mutex clump_mtx;
@@ -155,32 +156,27 @@ protected:
     // founder_info stores the samples that are included from
     // the genotype file. All non-founder and removed samples
     // will have bit set to 0
-    uintptr_t* m_founder_info = nullptr;
-    // uintptr_t* m_sex_male = nullptr;
-    uintptr_t* m_sample_include = nullptr;
+    std::vector<uintptr_t> m_founder_info;
+
+    std::vector<uintptr_t> m_sex_male;
+    std::vector<uintptr_t> m_sample_include;
     size_t m_num_male = 0;
     size_t m_num_female = 0;
     size_t m_num_ambig_sex = 0;
     size_t m_num_non_founder = 0;
     uintptr_t m_founder_ct = 0;
-    // uintptr_t m_founder_ctl;
-    // uint32_t m_founder_ctv3;
-    // uint32_t m_founder_ctsplit;
 
     virtual std::vector<SNP> load_snps() { return std::vector<SNP>(0); };
-    // due to the type of operation we did, most of the following uintptr_t were
-    // not in use
+
     uintptr_t m_unfiltered_marker_ct = 0;
-    // uintptr_t m_unfiltered_marker_ctl = 0;
     uintptr_t m_marker_ct = 0;
-    uint32_t m_num_ambig;
-    // uintptr_t m_marker_exclude_ct = 0;
-    // uintptr_t* m_marker_exclude = nullptr;
+    uint32_t m_num_ambig =0;
+
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
-    // uint32_t m_hh_exists; // might be a bit harsh, but should also read in
-    // maf when loading SNPs
+    // uint32_t m_hh_exists;
+
 
 
     uint32_t m_thread;
