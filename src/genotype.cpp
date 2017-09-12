@@ -537,6 +537,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         cur_snp.set_flag(region);
     }
     m_region_size = region.size();
+    fprintf(stderr, "%zu SNP(s) observed in base file, with:\n",
+            num_line_in_base);
     log_file_stream << num_line_in_base
                     << " SNP(s) observed in base file, with:" << std::endl;
     if (num_duplicated) {
@@ -790,6 +792,17 @@ void Genotype::clump(Genotype& reference)
     m_existed_snps_index.clear();
     // we don't need the index any more because we don't need to match SNPs
     // anymore
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+    log_file_stream << "Number of SNPs after clumping : "
+                    << m_existed_snps.size() << std::endl
+                    << std::endl;
+    log_file_stream.close();
     fprintf(stderr, "Number of SNPs after clumping : %zu\n\n",
             m_existed_snps.size());
 }
