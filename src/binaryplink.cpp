@@ -80,7 +80,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_cur_file = "";
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2,0);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
     m_sample_selection_list.clear();
     m_snp_selection_list.clear();
 }
@@ -140,10 +140,10 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
 
     // try to use fill instead of memset for better readability (will be tiny
     // bit slower according to stackoverflow)
-    m_founder_info.resize(unfiltered_sample_ctl,0);
+    m_founder_info.resize(unfiltered_sample_ctl, 0);
 
     // Initialize this, but will copy founder into this later on
-    m_sample_include.resize(unfiltered_sample_ctl,0);
+    m_sample_include.resize(unfiltered_sample_ctl, 0);
 
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
@@ -184,8 +184,9 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
             && cur_sample.included)
         {
             m_founder_ct++;
-            SET_BIT(sample_uidx, m_founder_info.data()); // if individual is founder
-                                                  // e.g. 0 0, then set bit
+            SET_BIT(sample_uidx,
+                    m_founder_info.data()); // if individual is founder
+                                            // e.g. 0 0, then set bit
         }
         else if (!cur_sample.included)
         {

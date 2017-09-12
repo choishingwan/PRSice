@@ -80,7 +80,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     }
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2,0);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
     m_sample_selection_list.clear();
     m_snp_selection_list.clear();
 }
@@ -700,7 +700,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     // std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     // assume all are founder
-    m_founder_info.resize(unfiltered_sample_ctl,0);
+    m_founder_info.resize(unfiltered_sample_ctl, 0);
     m_founder_ct = m_unfiltered_sample_ct;
 
     m_sample_include.resize(unfiltered_sample_ctl, 0);

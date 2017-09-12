@@ -100,8 +100,8 @@ protected:
     {
         return std::vector<Sample>(0);
     };
-    uintptr_t m_unfiltered_sample_ct = 0; //number of unfiltered samples
-    uintptr_t m_sample_ct = 0; // number of final samples
+    uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
+    uintptr_t m_sample_ct = 0;            // number of final samples
     // storage of sample information
     std::vector<Sample> m_sample_names; // vector storing the sample information
 
@@ -170,13 +170,12 @@ protected:
 
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_marker_ct = 0;
-    uint32_t m_num_ambig =0;
+    uint32_t m_num_ambig = 0;
 
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
     // uint32_t m_hh_exists;
-
 
 
     uint32_t m_thread;

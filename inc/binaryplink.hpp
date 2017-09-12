@@ -71,8 +71,8 @@ private:
         // the sample inclusion / exclusion is already handled during file
         // loading
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
-                                   m_founder_info.data(), final_mask, false, m_bedfile,
-                                   m_tmp_genotype.data(), genotype))
+                                   m_founder_info.data(), final_mask, false,
+                                   m_bedfile, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
