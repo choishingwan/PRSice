@@ -188,10 +188,12 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
 
 Genotype::Genotype(std::string prefix, std::string remove_sample,
                    std::string keep_sample, std::string extract_snp,
-                   std::string exclude_snp, bool ignore_fid, int num_auto,
-                   bool no_x, bool no_y, bool no_xy, bool no_mt,
-                   bool keep_ambig, const size_t thread, bool verbose)
+                   std::string exclude_snp, std::string log_file,
+                   bool ignore_fid, int num_auto, bool no_x, bool no_y,
+                   bool no_xy, bool no_mt, bool keep_ambig, const size_t thread,
+                   bool verbose)
 {
+    m_log_file = log_file;
     m_thread = thread;
     if (!remove_sample.empty()) {
         m_sample_selection_list = load_ref(remove_sample, ignore_fid);
@@ -220,13 +222,35 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
     m_sample_names = load_samples(ignore_fid);
     m_existed_snps = load_snps();
     if (verbose) {
+        std::ofstream log_file_stream;
+        log_file_stream.open(log_file.c_str(), std::ofstream::app);
+        if (!log_file_stream.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + log_file;
+            throw std::runtime_error(error_message);
+        }
         fprintf(stderr, "%zu people (%zu males, %zu females) included\n",
                 m_unfiltered_sample_ct, m_num_male, m_num_female);
-        if (m_num_ambig != 0 && !keep_ambig)
-            fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+        fprintf(stderr, "%zu founder(s) included\n", m_founder_ct);
+        log_file_stream << m_unfiltered_sample_ct << " people (" << m_num_male
+                        << " male(s), " << m_num_female
+                        << " female(s)) observed" << std::endl;
+        log_file_stream << m_founder_ct << " founder(s) included" << std::endl;
+        if (m_num_ambig != 0 && !keep_ambig) {
+            fprintf(stderr, "%u ambiguous variant(s) excluded\n", m_num_ambig);
+            log_file_stream << m_num_ambig << " ambiguous variant(s) excluded"
+                            << std::endl;
+        }
         else if (m_num_ambig != 0)
+        {
             fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
+            log_file_stream << m_num_ambig << " ambiguous variant(s) kept"
+                            << std::endl;
+        }
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
+        log_file_stream << m_marker_ct << " variant(s) included" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
     }
 }
 
@@ -254,6 +278,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     std::string line;
     if (!c_commander.has_index()) std::getline(snp_file, line);
 
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+    log_file_stream << "Base file: " << input << std::endl;
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
@@ -270,11 +302,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t num_excluded = 0;
     size_t num_ambiguous = 0;
     size_t num_haploid = 0;
-
     size_t num_not_found = 0;
     size_t num_mismatched = 0;
     size_t num_not_converted = 0; // this is for NA
     size_t num_negative_stat = 0;
+    size_t num_line_in_base = 0;
 
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
@@ -293,6 +325,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         }
         misc::trim(line);
         if (line.empty()) continue;
+        num_line_in_base++;
         exclude = false;
         token = misc::split(line);
 
@@ -504,38 +537,69 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         cur_snp.set_flag(region);
     }
     m_region_size = region.size();
-
-    if (num_duplicated)
+    log_file_stream << num_line_in_base
+                    << " SNP(s) observed in base file, with:" << std::endl;
+    if (num_duplicated) {
         fprintf(stderr, "%zu duplicated variant(s) in base file\n",
                 num_duplicated);
-    if (num_excluded)
+        log_file_stream << num_duplicated << " duplicated variant(s)"
+                        << std::endl;
+    }
+    if (num_excluded) {
         fprintf(stderr, "%zu variant(s) excluded due to p-value threshold\n",
                 num_excluded);
+        log_file_stream << num_excluded
+                        << " variant(s) excluded due to p-value threshold"
+                        << std::endl;
+    }
     if (num_ambiguous) {
         fprintf(stderr, "%zu ambiguous variant(s)", num_ambiguous);
+        log_file_stream << num_ambiguous << " ambiguous variant(s)";
         if (!filter.keep_ambig) {
+            log_file_stream << " excluded";
             fprintf(stderr, " excluded");
         }
+        log_file_stream << std::endl;
         fprintf(stderr, "\n");
     }
-    if (num_haploid)
+    if (num_haploid) {
         fprintf(stderr, "%zu variant(s) located on haploid chromosome\n",
                 num_haploid);
-    if (num_not_found)
+        log_file_stream << num_haploid
+                        << " variant(s) located on haploid chromosome"
+                        << std::endl;
+    }
+    if (num_not_found) {
         fprintf(stderr, "%zu variant(s) not found in target file\n",
                 num_not_found);
-    if (num_mismatched)
+        log_file_stream << num_not_found
+                        << " variant(s) not found in target file" << std::endl;
+    }
+    if (num_mismatched) {
         fprintf(stderr, "%zu mismatched variant(s) excluded\n", num_mismatched);
-    if (num_not_converted)
+        log_file_stream << num_mismatched << " mismatched variant(s) excluded"
+                        << std::endl;
+    }
+    if (num_not_converted) {
         fprintf(stderr, "%zu NA stat/p-value observed\n", num_not_converted);
-    if (num_negative_stat)
+        log_file_stream << num_not_converted << " NA stat/p-value observed"
+                        << std::endl;
+    }
+    if (num_negative_stat) {
         fprintf(
             stderr,
             "%zu negative statistic observed. Please make sure it is really "
             "OR\n",
             num_negative_stat);
+        log_file_stream << num_negative_stat << " negative statistic observed"
+                        << std::endl;
+    }
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
+    log_file_stream << m_existed_snps.size()
+                    << " total SNPs included for the analysis" << std::endl;
+    log_file_stream << std::endl;
+    log_file_stream.close();
 
     m_num_threshold = unique_thresholds.size();
 }

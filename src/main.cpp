@@ -119,39 +119,6 @@ int main(int argc, char* argv[])
                     prsice.output(commander, region, i_pheno, *target_file);
             }
         }
-        /*
-
-         if (!perform_prslice) {
-         prsice.categorize(commander);
-         for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-         if(num_pheno==0)
-         {
-         fprintf(stderr, "\nPRSice Analysis\n");
-         fprintf(stderr, "==============================\n");
-         }
-         prsice.init_matrix(commander, i_pheno, perform_prslice);
-         try {
-         prsice.prsice(commander, region, i_pheno);
-         fprintf(stderr, "\n");
-         prsice.output(commander, region, i_pheno);
-         } catch (const std::runtime_error &error) {
-         std::cerr << "Error is: " << error.what() << std::endl;
-         fprintf(stderr,
-         "None of the SNPs fall within the threshold\n");
-         }
-         }
-
-         } else {
-         // clean up the region such that it is easier to handle later on
-         region.prslice();
-         for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-         prsice.init_matrix(commander, i_pheno, perform_prslice);
-         prsice.prslice_windows(commander, region);
-         prsice.prslice(commander, region, i_pheno);
-         prsice.output(commander, i_pheno);
-         }
-         }
-         */
     }
     catch (const std::out_of_range& error)
     {

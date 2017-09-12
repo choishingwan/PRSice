@@ -471,14 +471,14 @@ void Region::info() const
         throw std::runtime_error(error_message);
     }
     if (m_region_name.size() == 1) {
-        fprintf(stderr, "1 region included\n");
+        fprintf(stderr, "\n1 region included\n");
         logFile << "1 region included" << std::endl;
     }
     else if (m_region_name.size() > 1)
     {
         fprintf(stderr, "A total of %zu regions are included\n",
                 m_region_name.size());
-        logFile << "A total of " << m_region_name.size()
+        logFile << "\nA total of " << m_region_name.size()
                 << " regions are included" << std::endl;
     }
     logFile.close();

@@ -21,10 +21,11 @@ namespace bgenlib = genfile::bgen;
 BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
                      std::string remove_sample, std::string keep_sample,
                      std::string extract_snp, std::string exclude_snp,
-                     bool ignore_fid, int num_auto, bool no_x, bool no_y,
-                     bool no_xy, bool no_mt, bool keep_ambig,
-                     const size_t thread, bool verbose)
+                     std::string log_file, bool ignore_fid, int num_auto,
+                     bool no_x, bool no_y, bool no_xy, bool no_mt,
+                     bool keep_ambig, const size_t thread, bool verbose)
 {
+    m_log_file = log_file;
     m_thread = thread;
     filter.keep_ambig = keep_ambig;
     if (!remove_sample.empty()) {
@@ -67,16 +68,35 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     m_marker_ct = m_existed_snps.size();
 
     if (verbose) {
-        if (m_num_non_founder != 0)
-            fprintf(stderr, "%zu non-founder sample(s) removed\n",
-                    m_num_non_founder);
-        fprintf(stderr, "%zu people (%zu males, %zu females) included\n",
+        std::ofstream log_file_stream;
+        log_file_stream.open(log_file.c_str(), std::ofstream::app);
+        if (!log_file_stream.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + log_file;
+            throw std::runtime_error(error_message);
+        }
+        fprintf(stderr, "%zu people (%zu males, %zu females) observed\n",
                 m_unfiltered_sample_ct, m_num_male, m_num_female);
-        if (m_num_ambig != 0 && !keep_ambig)
-            fprintf(stderr, "%u ambiguous variants excluded\n", m_num_ambig);
+        fprintf(stderr, "%zu founder(s) included\n", m_founder_ct);
+        log_file_stream << m_unfiltered_sample_ct << " people (" << m_num_male
+                        << " male(s), " << m_num_female
+                        << " female(s)) observed" << std::endl;
+        log_file_stream << m_founder_ct << " founder(s) included" << std::endl;
+        if (m_num_ambig != 0 && !keep_ambig) {
+            fprintf(stderr, "%u ambiguous variant(s) excluded\n", m_num_ambig);
+            log_file_stream << m_num_ambig << " ambiguous variant(s) excluded"
+                            << std::endl;
+        }
         else if (m_num_ambig != 0)
+        {
             fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
+            log_file_stream << m_num_ambig << " ambiguous variant(s) kept"
+                            << std::endl;
+        }
         fprintf(stderr, "%zu variants included\n", m_marker_ct);
+        log_file_stream << m_marker_ct << " variant(s) included" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
     }
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
