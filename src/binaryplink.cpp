@@ -28,30 +28,27 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_thread = thread;
     // get the exclusion and extraction list
     if (!remove_sample.empty()) {
-        m_remove_sample = true;
-        m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+        m_sample_selection_list = load_ref(remove_sample, ignore_fid);
     }
     if (!keep_sample.empty()) {
-        m_keep_sample = true;
-        m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+        m_remove_sample = false;
+        m_sample_selection_list = load_ref(keep_sample, ignore_fid);
     }
     if (!extract_snp.empty()) {
-        m_extract_snp = true;
-        m_extract_snp_list = load_snp_list(extract_snp);
+        m_exclude_snp = false;
+        m_snp_selection_list = load_snp_list(extract_snp);
     }
     if (!exclude_snp.empty()) {
-        m_exclude_snp = true;
-        m_exclude_snp_list = load_snp_list(exclude_snp);
+        m_snp_selection_list = load_snp_list(exclude_snp);
     }
 
 
     /** setting the chromosome information **/
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
-    m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
-    m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
+    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+
     // now initialize the chromosome
     init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 
@@ -83,16 +80,13 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_cur_file = "";
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype = new uintptr_t[unfiltered_sample_ctl * 2];
-    m_remove_sample_list.clear();
-    m_keep_sample_list.clear();
-    m_extract_snp_list.clear();
-    m_exclude_snp_list.clear();
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2);
+    m_sample_selection_list.clear();
+    m_snp_selection_list.clear();
 }
 
 BinaryPlink::~BinaryPlink()
 {
-    if (m_tmp_genotype != nullptr) delete[] m_tmp_genotype;
     if (m_bedfile != nullptr) {
         fclose(m_bedfile);
         m_bedfile = nullptr;
@@ -178,17 +172,15 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
-        if (m_keep_sample) {
-            cur_sample.included =
-                (m_keep_sample_list.find(id) != m_keep_sample_list.end());
-        }
-        else if (m_remove_sample)
-        {
-            cur_sample.included =
-                !(m_remove_sample_list.find(id) != m_remove_sample_list.end());
+        if (!m_remove_sample) {
+            cur_sample.included = (m_sample_selection_list.find(id)
+                                   != m_sample_selection_list.end());
         }
         else
-            cur_sample.included = true;
+        {
+            cur_sample.included = (m_sample_selection_list.find(id)
+                                   == m_sample_selection_list.end());
+        }
 
         cur_sample.prs = 0;
         cur_sample.num_snp = 0;
@@ -273,21 +265,21 @@ std::vector<SNP> BinaryPlink::load_snps()
             std::transform(token[+BIM::A2].begin(), token[+BIM::A2].end(),
                            token[+BIM::A2].begin(), ::toupper);
             std::string chr = token[+BIM::CHR];
-            // check inclusion / exclusion
-            if (m_extract_snp
-                && m_extract_snp_list.find(token[+BIM::RS])
-                       == m_extract_snp_list.end())
+            // exclude SNPs that are not required
+            if (!m_exclude_snp
+                && m_snp_selection_list.find(token[+BIM::RS])
+                       == m_snp_selection_list.end())
             {
-                m_unfiltered_marker_ct++; // add in the checking later on
+                m_unfiltered_marker_ct++;
                 m_num_snp_per_file[cur_file]++;
                 num_line++;
                 continue;
             }
             else if (m_exclude_snp
-                     && m_exclude_snp_list.find(token[+BIM::RS])
-                            != m_exclude_snp_list.end())
+                     && m_snp_selection_list.find(token[+BIM::RS])
+                            != m_snp_selection_list.end())
             {
-                m_unfiltered_marker_ct++; // add in the checking later on
+                m_unfiltered_marker_ct++;
                 m_num_snp_per_file[cur_file]++;
                 num_line++;
                 continue;
@@ -318,7 +310,7 @@ std::vector<SNP> BinaryPlink::load_snps()
                         continue;
                     }
                     else if (!chr_sex_error
-                             && (is_set(m_haploid_mask, chr_code)
+                             && (is_set(&m_haploid_mask[0], chr_code)
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
@@ -532,15 +524,10 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
-        std::fill(m_tmp_genotype, m_tmp_genotype + unfiltered_sample_ctl * 2,
-                  0);
-        // std::memset(genotype, 0x0,
-        // unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        // std::memset(m_tmp_genotype, 0x0,
-        // unfiltered_sample_ctl*2*sizeof(uintptr_t));
+        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include, final_mask, false,
-                                   m_bedfile, m_tmp_genotype, genotype))
+                                   m_bedfile, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }

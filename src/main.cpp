@@ -55,8 +55,6 @@ int main(int argc, char* argv[])
     {
         std::cerr << ia.what() << std::endl;
     }
-    // calculate the maf and genotype missingness here? This will give us the
-    // hh_exist information required for processing sex chromosomes
     bool used_ld = false;
     Genotype* ld_file = nullptr;
     if (!commander.ld_prefix().empty()
@@ -92,6 +90,7 @@ int main(int argc, char* argv[])
     try
     {
         target_file->read_base(commander, region);
+        target_file->set_clump_info(commander);
         std::string region_out_name = commander.out() + ".region";
         region.print_file(region_out_name);
 

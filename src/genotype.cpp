@@ -18,20 +18,6 @@
 
 std::mutex Genotype::clump_mtx;
 
-/* we don't want to do this as this seems to be root of some problems
-void Genotype::initialize()
-{
-// Don't use this. For some reason, this does not work
-    m_founder_ctl = BITCT_TO_WORDCT(m_founder_ct);
-    m_founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    m_founder_ctsplit = 3 * m_founder_ctv3;
-    m_final_mask = get_final_mask(m_founder_ct);
-    m_unfiltered_marker_ctl = BITCT_TO_WORDCT(m_unfiltered_marker_ct);
-    m_marker_exclude = new uintptr_t[m_unfiltered_marker_ctl];
-    std::memset(m_marker_exclude, 0x0,
-m_unfiltered_marker_ctl*sizeof(uintptr_t)); m_marker_ct = m_existed_snps.size();
-}
-*/
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
@@ -45,7 +31,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         m_xymt_codes[XY_OFFSET] = -1;
         m_xymt_codes[MT_OFFSET] = -1;
         m_max_code = num_auto;
-        fill_all_bits(((uint32_t) num_auto) + 1, m_haploid_mask);
+        fill_all_bits(((uint32_t) num_auto) + 1, &m_haploid_mask[0]);
     }
     else
     {
@@ -54,15 +40,15 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         m_xymt_codes[Y_OFFSET] = num_auto + 2;
         m_xymt_codes[XY_OFFSET] = num_auto + 3;
         m_xymt_codes[MT_OFFSET] = num_auto + 4;
-        set_bit(num_auto + 1, m_haploid_mask);
-        set_bit(num_auto + 2, m_haploid_mask);
+        set_bit(num_auto + 1, &m_haploid_mask[0]);
+        set_bit(num_auto + 2, &m_haploid_mask[0]);
         if (no_x) {
             m_xymt_codes[X_OFFSET] = -1;
-            clear_bit(num_auto + 1, m_haploid_mask);
+            clear_bit(num_auto + 1, &m_haploid_mask[0]);
         }
         if (no_y) {
             m_xymt_codes[Y_OFFSET] = -1;
-            clear_bit(num_auto + 2, m_haploid_mask);
+            clear_bit(num_auto + 2, &m_haploid_mask[0]);
         }
         if (no_xy) {
             m_xymt_codes[XY_OFFSET] = -1;
@@ -90,11 +76,11 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
             m_max_code = num_auto;
         }
     }
-    fill_all_bits(m_autosome_ct + 1, m_chrom_mask);
+    fill_all_bits(m_autosome_ct + 1, &m_chrom_mask[0]);
     for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
         int32_t cur_code = m_xymt_codes[xymt_idx];
         if (cur_code != -1) {
-            set_bit(m_xymt_codes[xymt_idx], m_chrom_mask);
+            set_bit(m_xymt_codes[xymt_idx], &m_chrom_mask[0]);
         }
     }
     m_chrom_start.resize(m_max_code); // 1 extra for the info
@@ -120,8 +106,6 @@ void Genotype::update_include(const std::vector<Sample>& inclusion)
     m_sample_ct = 0;
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     std::fill(m_sample_include, m_sample_include + unfiltered_sample_ctl, 0);
-    // std::memset(m_sample_include, 0x0,
-    // m_unfiltered_sample_ctl*sizeof(uintptr_t));
     for (size_t i_sample = 0; i_sample < inclusion.size(); ++i_sample) {
         if (IS_SET(m_founder_info, i_sample) && inclusion[i_sample].included) {
             SET_BIT(i_sample, m_sample_include);
@@ -208,29 +192,25 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
 {
     m_thread = thread;
     if (!remove_sample.empty()) {
-        m_remove_sample = true;
-        m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+        m_sample_selection_list = load_ref(remove_sample, ignore_fid);
     }
     if (!keep_sample.empty()) {
-        m_keep_sample = false;
-        m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+        m_remove_sample = false;
+        m_sample_selection_list = load_ref(keep_sample, ignore_fid);
     }
     if (!extract_snp.empty()) {
-        m_extract_snp = true;
-        m_extract_snp_list = load_snp_list(extract_snp);
+        m_exclude_snp = false;
+        m_snp_selection_list = load_snp_list(extract_snp);
     }
     if (!exclude_snp.empty()) {
-        m_exclude_snp = true;
-        m_exclude_snp_list = load_snp_list(exclude_snp);
+        m_snp_selection_list = load_snp_list(exclude_snp);
     }
 
     /** setting the chromosome information **/
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
-    m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
-    m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
+    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     // now initialize the chromosome
     init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 
@@ -254,10 +234,6 @@ Genotype::~Genotype()
     if (m_founder_info != nullptr) delete[] m_founder_info;
     // if(m_sex_male != nullptr) delete [] m_sex_male;
     if (m_sample_include != nullptr) delete[] m_sample_include;
-    // if(m_marker_exclude != nullptr) delete [] m_marker_exclude;
-    if (m_haploid_mask != nullptr) delete[] m_haploid_mask;
-    if (m_chrom_mask != nullptr) delete[] m_chrom_mask;
-    // if(m_tmp_genotype != nullptr) delete [] m_tmp_genotype;
 }
 
 void Genotype::read_base(const Commander& c_commander, Region& region)
@@ -359,15 +335,10 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                         }
                     }
                 }
-                else if (is_set(m_haploid_mask, chr_code)
+                else if (is_set(&m_haploid_mask[0], chr_code)
                          || chr_code == m_xymt_codes[X_OFFSET]
                          || chr_code == m_xymt_codes[Y_OFFSET])
                 {
-                    // again, doesn't need to provide this message
-                    // the only time this will happen is when the target & base
-                    // has different chromosome information
-                    // if(!hap_error) fprintf(stderr, "\nWARNING: Currently not
-                    // supporting haploid chromosome and sex chromosomes\n");
                     exclude = true;
                     num_haploid++;
                 }
@@ -406,9 +377,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
             if (!cur_snp.matching(chr_code, loc, ref_allele, alt_allele,
                                   flipped))
             {
+                // Mismatched SNPs
                 num_mismatched++;
-                exclude = true; // hard check, as we can't tell if that is
-                                // correct or not anyway
+                exclude = true;
             }
             double pvalue = 2.0;
             try
@@ -569,6 +540,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
             num_negative_stat);
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
+
+    m_num_threshold = unique_thresholds.size();
+}
+
+void Genotype::set_clump_info(const Commander& c_commander)
+{
     clump_info.p_value = c_commander.clump_p();
     clump_info.r2 = c_commander.clump_r2();
     clump_info.proxy = c_commander.proxy();
@@ -583,9 +560,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     filter.maf = c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();
-    m_num_threshold = unique_thresholds.size();
 }
-
 void Genotype::clump(Genotype& reference)
 {
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);

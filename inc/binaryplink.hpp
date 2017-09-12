@@ -62,8 +62,7 @@ private:
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        std::fill(m_tmp_genotype, m_tmp_genotype + unfiltered_sample_ctl * 2,
-                  0);
+        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
         // this is for LD calculation, thus doesn't really need to worry about
@@ -73,7 +72,7 @@ private:
         // loading
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info, final_mask, false, m_bedfile,
-                                   m_tmp_genotype, genotype))
+                                   m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }

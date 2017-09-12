@@ -28,31 +28,25 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     m_thread = thread;
     filter.keep_ambig = keep_ambig;
     if (!remove_sample.empty()) {
-        m_remove_sample = true;
-        m_remove_sample_list = load_ref(remove_sample, ignore_fid);
+        m_sample_selection_list = load_ref(remove_sample, ignore_fid);
     }
-    else if (!keep_sample.empty())
-    {
-        m_keep_sample = true;
-        m_keep_sample_list = load_ref(keep_sample, ignore_fid);
+    if (!keep_sample.empty()) {
+        m_remove_sample = false;
+        m_sample_selection_list = load_ref(keep_sample, ignore_fid);
     }
     if (!extract_snp.empty()) {
-        m_extract_snp = true;
-        m_extract_snp_list = load_snp_list(extract_snp);
+        m_exclude_snp = false;
+        m_snp_selection_list = load_snp_list(extract_snp);
     }
-    else if (!exclude_snp.empty())
-    {
-        m_exclude_snp = true;
-        m_exclude_snp_list = load_snp_list(exclude_snp);
+    if (!exclude_snp.empty()) {
+        m_snp_selection_list = load_snp_list(exclude_snp);
     }
 
     /** setting the chromosome information **/
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
-    m_haploid_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_haploid_mask);
-    m_chrom_mask = new uintptr_t[CHROM_MASK_WORDS];
-    fill_ulong_zero(CHROM_MASK_WORDS, m_chrom_mask);
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
+    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     // now initialize the chromosome
     init_chr(num_auto, no_x, no_y, no_xy, no_mt);
 
@@ -86,16 +80,13 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     }
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    m_tmp_genotype = new uintptr_t[unfiltered_sample_ctl * 2];
-    m_remove_sample_list.clear();
-    m_keep_sample_list.clear();
-    m_extract_snp_list.clear();
-    m_exclude_snp_list.clear();
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2);
+    m_sample_selection_list.clear();
+    m_snp_selection_list.clear();
 }
 
 BinaryGen::~BinaryGen()
 {
-    if (m_tmp_genotype != nullptr) delete[] m_tmp_genotype;
     if (m_bgen_file.is_open()) m_bgen_file.close();
 }
 
@@ -237,7 +228,7 @@ std::vector<SNP> BinaryGen::load_snps()
                         continue;
                     }
                     else if (!chr_sex_error
-                             && (is_set(m_haploid_mask, chr_code)
+                             && (is_set(&m_haploid_mask[0], chr_code)
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
@@ -255,11 +246,12 @@ std::vector<SNP> BinaryGen::load_snps()
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
-            if ((m_extract_snp
-                 && m_extract_snp_list.find(RSID) == m_extract_snp_list.end())
+            if ((!m_exclude_snp
+                 && m_snp_selection_list.find(RSID)
+                        == m_snp_selection_list.end())
                 || (m_exclude_snp
-                    && m_exclude_snp_list.find(RSID)
-                           != m_exclude_snp_list.end()))
+                    && m_snp_selection_list.find(RSID)
+                           != m_snp_selection_list.end()))
             {
                 m_unfiltered_marker_ct++;
                 continue;
@@ -435,15 +427,14 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
         // std::memset(genotype, 0x0,
         // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
-        std::fill(m_tmp_genotype, m_tmp_genotype + unfiltered_sample_ctl * 2,
-                  0);
+        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0,
         // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include, final_mask, false,
-                                   m_tmp_genotype, genotype))
+                                   m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
@@ -567,17 +558,15 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         cur_sample.IID = (ignore_fid) ? token[0] : token[1];
         cur_sample.pheno = "NA";
         cur_sample.included = false;
-        if (m_keep_sample) {
-            cur_sample.included =
-                (m_keep_sample_list.find(id) != m_keep_sample_list.end());
-        }
-        else if (m_remove_sample)
-        {
-            cur_sample.included =
-                !(m_remove_sample_list.find(id) != m_remove_sample_list.end());
+        if (m_remove_sample) {
+            cur_sample.included = (m_sample_selection_list.find(id)
+                                   != m_sample_selection_list.end());
         }
         else
-            cur_sample.included = true;
+        {
+            cur_sample.included = (m_sample_selection_list.find(id)
+                                   == m_sample_selection_list.end());
+        }
         cur_sample.prs = 0;
         cur_sample.num_snp = 0;
         if (has_sex) {

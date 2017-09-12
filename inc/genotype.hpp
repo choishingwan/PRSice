@@ -55,19 +55,6 @@ public:
         return m_chr_order;
     };
 
-    inline bool existed(const std::string& rs) const
-    {
-        return m_existed_snps_index.find(rs) != m_existed_snps_index.end();
-    };
-
-    inline bool matched(const SNP& target) const
-    {
-        if (existed(target.get_rs())) {
-            return m_existed_snps.at(m_existed_snps_index.at(target.get_rs()))
-                   == target;
-        }
-        return false;
-    };
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
@@ -80,16 +67,15 @@ public:
     void update_include(const std::vector<Sample>& inclusion);
     void read_base(const Commander& c_commander, Region& region);
     void clump(Genotype& reference);
+    void set_clump_info(const Commander& c_commander);
 
 protected:
-    // need to better organize the stuffs
-    // void initialize();
-
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
     // for loading the SNP inclusion / exclusion set
     std::unordered_set<std::string> load_snp_list(std::string input);
+
     // for processing the genotype file (mainly for multiple chromosome input)
     void set_genotype_files(std::string prefix);
     // storage of genotype file names
@@ -99,12 +85,12 @@ protected:
     /** chromosome information **/
 
     void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
-    uint32_t m_autosome_ct;
     std::vector<int32_t> m_xymt_codes;
     std::vector<int32_t> m_chrom_start;
+    uint32_t m_autosome_ct;
     uint32_t m_max_code;
-    uintptr_t* m_haploid_mask = nullptr;
-    uintptr_t* m_chrom_mask = nullptr;
+    std::vector<uintptr_t> m_haploid_mask;
+    std::vector<uintptr_t> m_chrom_mask;
 
     // for easy calculatable items, remove them from the class to keep things
     // more organized and easier to debug
@@ -118,21 +104,18 @@ protected:
     uintptr_t m_sample_ct = 0;
     // storage of sample information
     std::vector<Sample> m_sample_names;
-    /** Selection of samples **/
-    bool m_keep_sample = false;
-    bool m_remove_sample = false;
-    std::unordered_set<std::string> m_keep_sample_list;
-    std::unordered_set<std::string> m_remove_sample_list;
 
-    /** Selection of SNPs **/
-    bool m_extract_snp = false;
-    bool m_exclude_snp = false;
-    std::unordered_set<std::string> m_extract_snp_list;
-    std::unordered_set<std::string> m_exclude_snp_list;
+    /** SNP/Sample selection **/
+    // default is remove (if not provided, the list is empty,
+    // thus nothing will be removed)
+    bool m_remove_sample = true;
+    std::unordered_set<std::string> m_sample_selection_list;
+
+    bool m_exclude_snp = true;
+    std::unordered_set<std::string> m_snp_selection_list;
 
     /** Storage of the genotype information **/
-    uintptr_t* m_tmp_genotype =
-        nullptr; // initialize this once to speed things up
+    std::vector<uintptr_t> m_tmp_genotype;
 
     static std::mutex clump_mtx;
 
