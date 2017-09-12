@@ -17,118 +17,143 @@
 #ifndef COMMANDER_H
 #define COMMANDER_H
 
+#include "misc.hpp"
 #include "storage.hpp"
-#include <string>
+#include <fstream>
 #include <getopt.h>
+#include <iostream>
+#include <stdexcept>
+#include <string>
 #include <unistd.h>
 #include <vector>
-#include <stdexcept>
-#include <iostream>
-#include <fstream>
-#include "misc.hpp"
 
 class Commander
 {
 public:
-	// so that we don't need to include plink_common.hpp here
+    // so that we don't need to include plink_common.hpp here
     Commander();
     virtual ~Commander();
-    bool initialize(int argc, char *argv[]);
+    bool initialize(int argc, char* argv[]);
 
-    //base
+    // base
     std::vector<int> index() const { return base.col_index; };
-    bool has_index() const { return base.index; };
-    bool beta() const { return base.beta; };
-    std::string base_name() const { return base.name; };
+    bool             has_index() const { return base.index; };
+    bool             beta() const { return base.beta; };
+    std::string      base_name() const { return base.name; };
 
-    //clump
+    // clump
     std::string ld_prefix() const { return clumping.ld; };
     std::string ld_type() const { return clumping.type; };
-    bool no_clump() const { return clumping.no_clump; };
-    bool use_proxy() const { return clumping.provide_proxy; };
-    double proxy() const { return clumping.proxy; };
-    double clump_p() const { return clumping.p_value; };
-    double clump_r2() const { return clumping.r2; };
-    double clump_dist() const { return clumping.distance; };
+    bool        no_clump() const { return clumping.no_clump; };
+    bool        use_proxy() const { return clumping.provide_proxy; };
+    double      proxy() const { return clumping.proxy; };
+    double      clump_p() const { return clumping.p_value; };
+    double      clump_r2() const { return clumping.r2; };
+    double      clump_dist() const { return clumping.distance; };
 
-    //covariate
-    std::string get_cov_file() const { return covariate.name; };
-    std::vector<std::string> get_cov_header() const { return covariate.covariates; };
+    // covariate
+    std::string              get_cov_file() const { return covariate.name; };
+    std::vector<std::string> get_cov_header() const
+    {
+        return covariate.covariates;
+    };
 
-    //filtering
-    bool filter_maf() const { return filter.use_maf; };
-    bool filter_geno() const { return filter.use_geno; };
-    bool filter_mind() const { return filter.use_mind; };
-    bool filter_info() const { return filter.use_info; };
-    bool filter_hard_threshold() const { return filter.hard_threshold; };
-    bool hard_coding() const { return filter.hard_coding; };
-    bool keep_ambig() const { return filter.keep_ambig; };
-    std::string extract_snp_file() const { return filter.extract? filter.extract_file : ""; };
-    std::string exclude_snp_file() const { return filter.exclude? filter.exclude_file : ""; };
+    // filtering
+    bool        filter_maf() const { return filter.use_maf; };
+    bool        filter_geno() const { return filter.use_geno; };
+    bool        filter_mind() const { return filter.use_mind; };
+    bool        filter_info() const { return filter.use_info; };
+    bool        filter_hard_threshold() const { return filter.hard_threshold; };
+    bool        hard_coding() const { return filter.hard_coding; };
+    bool        keep_ambig() const { return filter.keep_ambig; };
+    std::string extract_snp_file() const
+    {
+        return filter.extract ? filter.extract_file : "";
+    };
+    std::string exclude_snp_file() const
+    {
+        return filter.exclude ? filter.exclude_file : "";
+    };
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
     double info_score() const { return filter.info_score; };
     double hard_threshold() const { return filter.hard_threshold; };
 
-    //misc
-    bool all() const { return misc.all; };
-    bool ignore_fid() const { return misc.ignore_fid; };
-    bool logit_perm() const { return misc.logit_perm; };
-    bool permute() const { return misc.provided_permutation; };
-    bool print_snp() const { return misc.print_snp; };
-    bool seeded() const { return misc.provided_seed; };
-    void set_ignore_fid() { misc.ignore_fid = true; };
+    // misc
+    bool        all() const { return misc.all; };
+    bool        ignore_fid() const { return misc.ignore_fid; };
+    bool        logit_perm() const { return misc.logit_perm; };
+    bool        permute() const { return misc.provided_permutation; };
+    bool        print_snp() const { return misc.print_snp; };
+    bool        seeded() const { return misc.provided_seed; };
+    void        set_ignore_fid() { misc.ignore_fid = true; };
     std::string out() const { return misc.out; };
-    int num_permutation() const { return misc.permutation; };
-    int seed() const { return misc.seed; };
-    int thread() const { return misc.thread; };
+    int         num_permutation() const { return misc.permutation; };
+    int         seed() const { return misc.seed; };
+    int         thread() const { return misc.thread; };
 
 
     // prset
     std::vector<std::string> bed() const { return prset.bed; };
     std::vector<std::string> feature() const { return prset.feature; };
-    std::string gtf() const { return prset.gtf; };
-    std::string msigdb() const { return prset.msigdb; };
+    std::string              gtf() const { return prset.gtf; };
+    std::string              msigdb() const { return prset.msigdb; };
 
     // prsice
     std::string missing_score() const { return prsice.missing_score; };
-    SCORING get_scoring() const{
-    		if(prsice.missing_score == "no_mean_imputation") return SCORING::SET_ZERO;
-    		else if(prsice.missing_score == "center") return SCORING::CENTER;
-    		else return SCORING::MEAN_IMPUTE;
+    SCORING     get_scoring() const
+    {
+        if (prsice.missing_score == "no_mean_imputation")
+            return SCORING::SET_ZERO;
+        else if (prsice.missing_score == "center")
+            return SCORING::CENTER;
+        else
+            return SCORING::MEAN_IMPUTE;
     }
 
     double lower() const { return prsice.lower; };
     double upper() const { return prsice.upper; };
     double inter() const { return prsice.inter; };
-    bool no_regress() const { return prsice.no_regress; };
-    bool full() const { return prsice.full; };
-    bool fastscore() const { return prsice.fastscore; };
-    double bar_upper() const { return prsice.barlevel.back(); };// we have sorted it
+    bool   no_regress() const { return prsice.no_regress; };
+    bool   full() const { return prsice.full; };
+    bool   fastscore() const { return prsice.fastscore; };
+    double bar_upper() const
+    {
+        return prsice.barlevel.back();
+    }; // we have sorted it
     double bar_lower() const { return prsice.barlevel.front(); };
 
-    //prslice
+    // prslice
     bool perform_prslice() const { return prslice.provided; };
-    int prslice_size() const { return prslice.size; };
+    int  prslice_size() const { return prslice.size; };
 
-    //species
-    int num_auto() const { return species.num_auto; };
+    // species
+    int  num_auto() const { return species.num_auto; };
     bool no_x() const { return species.no_x; };
     bool no_y() const { return species.no_y; };
     bool no_xy() const { return species.no_xy; };
     bool no_mt() const { return species.no_mt; };
 
-    //target
+    // target
     std::string target_name() const { return target.name; };
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };
-    std::string pheno_col(size_t index) const { return target.pheno_col.at(index); };
-    std::string keep_sample_file() const { return target.keep_sample? target.keep_file : ""; };
-    std::string remove_sample_file() const { return target.remove_sample? target.remove_file : ""; };
+    std::string pheno_col(size_t index) const
+    {
+        return target.pheno_col.at(index);
+    };
+    std::string keep_sample_file() const
+    {
+        return target.keep_sample ? target.keep_file : "";
+    };
+    std::string remove_sample_file() const
+    {
+        return target.remove_sample ? target.remove_file : "";
+    };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
-    std::vector<bool> is_binary() const { return target.is_binary; };
-    std::vector<double> prevalence() const { return target.prevalence; };
+    std::vector<bool>        is_binary() const { return target.is_binary; };
+    std::vector<double>      prevalence() const { return target.prevalence; };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
     bool keep_sample() const { return target.keep_sample; };
     bool remove_sample() const { return target.remove_sample; };
@@ -136,319 +161,331 @@ public:
 
     int get_category(double p) const
     {
-        for(size_t i = 0; i < prsice.barlevel.size(); ++i)
-        {
-            if(p <= prsice.barlevel[i])
-            {
+        for (size_t i = 0; i < prsice.barlevel.size(); ++i) {
+            if (p <= prsice.barlevel[i]) {
                 return i;
             }
         }
-        if(p > prsice.barlevel.back()) return prsice.barlevel.size();
-        return -2;// this is impossible because something will always either be bigger than the end or smaller than the front
-
+        if (p > prsice.barlevel.back()) return prsice.barlevel.size();
+        return -2; // this is impossible because something will always either be
+                   // bigger than the end or smaller than the front
     };
     double get_threshold(int i) const
     {
-      	return(i < 0)? prsice.barlevel.at(0) :
-      	        ((i>=(int)prsice.barlevel.size())? 1.0 :prsice.barlevel.at(i));
+        return (i < 0) ? prsice.barlevel.at(0)
+                       : ((i >= (int) prsice.barlevel.size())
+                              ? 1.0
+                              : prsice.barlevel.at(i));
     };
 
     void user_input() const;
+
 protected:
 private:
-    std::string version ="2.0.8.beta";
-    std::string date = "27 August 2017";
+    std::string              version         = "2.0.8.beta";
+    std::string              date            = "27 August 2017";
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct{
-    	std::string name;
-        std::string chr;
-        std::string ref_allele;
-        std::string alt_allele;
-        std::string statistic;
-        std::string snp;
-        std::string bp;
-        std::string standard_error;
-        std::string p_value;
+    struct
+    {
+        std::string      name;
+        std::string      chr;
+        std::string      ref_allele;
+        std::string      alt_allele;
+        std::string      statistic;
+        std::string      snp;
+        std::string      bp;
+        std::string      standard_error;
+        std::string      p_value;
         std::vector<int> col_index;
-    	int beta;
-        int index;
-        bool provided_chr;
-        bool provided_ref;
-        bool provided_alt;
-        bool provided_stat;
-        bool provided_snp;
-        bool provided_bp;
-        bool provided_se;
-        bool provided_p;
+        int              beta;
+        int              index;
+        bool             provided_chr;
+        bool             provided_ref;
+        bool             provided_alt;
+        bool             provided_stat;
+        bool             provided_snp;
+        bool             provided_bp;
+        bool             provided_se;
+        bool             provided_p;
     } base;
 
-    struct{
+    struct
+    {
         std::string ld;
         std::string type;
         std::string keep_file;
         std::string remove_file;
-        int no_clump;
-        double proxy;
-        double p_value;
-        double r2;
-        int distance;
-        bool provide_proxy;
-        bool keep_sample;
-        bool remove_sample;
+        int         no_clump;
+        double      proxy;
+        double      p_value;
+        double      r2;
+        int         distance;
+        bool        provide_proxy;
+        bool        keep_sample;
+        bool        remove_sample;
     } clumping;
 
-    struct{
-        std::string name;
-        std::string ancestry_dim;
+    struct
+    {
+        std::string              name;
+        std::string              ancestry_dim;
         std::vector<std::string> covariates;
     } covariate;
 
-    struct{
-            std::string exclude_file;
-            std::string extract_file;
-    		double geno;
-    		double hard_threshold;
-    		double info_score;
-            double maf;
-            double mind;
-            int hard_coding;
-    		int use_geno;
-            int use_hard_thres;
-    		int use_info;
-            int use_maf;
-            int use_mind;
-            int use_prob;
-            int keep_ambig;
-            bool extract;
-            bool exclude;
+    struct
+    {
+        std::string exclude_file;
+        std::string extract_file;
+        double      geno;
+        double      hard_threshold;
+        double      info_score;
+        double      maf;
+        double      mind;
+        int         hard_coding;
+        int         use_geno;
+        int         use_hard_thres;
+        int         use_info;
+        int         use_maf;
+        int         use_mind;
+        int         use_prob;
+        int         keep_ambig;
+        bool        extract;
+        bool        exclude;
     } filter;
 
-    struct{
+    struct
+    {
         std::string out;
-        int all;
-        int ignore_fid;
-        int logit_perm;
-        int permutation;
-        int print_snp;
-        int thread;
-        int seed;
-        bool provided_seed;
-        bool provided_permutation;
+        int         all;
+        int         ignore_fid;
+        int         logit_perm;
+        int         permutation;
+        int         print_snp;
+        int         thread;
+        int         seed;
+        bool        provided_seed;
+        bool        provided_permutation;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
     } misc;
 
-    struct{
+    struct
+    {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
-        std::string gtf;
-        std::string msigdb;
+        std::string              gtf;
+        std::string              msigdb;
     } prset;
 
-    struct{
-        std::string missing_score;
+    struct
+    {
+        std::string         missing_score;
         std::vector<double> barlevel;
-        double lower;
-        double upper;
-        double inter;
-        int fastscore;
-        int no_regress;
-        int full;
+        double              lower;
+        double              upper;
+        double              inter;
+        int                 fastscore;
+        int                 no_regress;
+        int                 full;
     } prsice;
 
-    struct{
-        int size;
+    struct
+    {
+        int  size;
         bool provided;
     } prslice;
 
-    struct{
-        int num_auto;
-        int no_x;
-        int no_y;
-        int no_xy;
-        int no_mt;
+    struct
+    {
+        int  num_auto;
+        int  no_x;
+        int  no_y;
+        int  no_xy;
+        int  no_mt;
         bool double_set;
     } species;
 
-    struct{
-        std::string name;
-        std::string keep_file;
-        std::string remove_file;
-        std::string pheno_file;
-        std::string type;
+    struct
+    {
+        std::string              name;
+        std::string              keep_file;
+        std::string              remove_file;
+        std::string              pheno_file;
+        std::string              type;
         std::vector<std::string> pheno_col;
-        std::vector<double> prevalence; // should equal to number of binary target
-        bool keep_sample;
-        bool remove_sample;
+        std::vector<double>
+                          prevalence; // should equal to number of binary target
+        bool              keep_sample;
+        bool              remove_sample;
         std::vector<bool> is_binary;
     } target;
 
     std::string help_message;
-    void usage();
-    void info();
-    void program_info();
-    void base_check(bool &error, std::string &error_message);
-    void clump_check(bool &error, std::string &error_message);
-    void misc_check(bool &error, std::string &error_message);
-    void prset_check(bool &error, std::string &error_message);
-    void prslice_check(bool &error, std::string &error_message);
-    void target_check(bool &error, std::string &error_message);
-    void prsice_check(bool &error, std::string &error_message);
+    void        usage();
+    void        info();
+    void        program_info();
+    void        base_check(bool& error, std::string& error_message);
+    void        clump_check(bool& error, std::string& error_message);
+    void        misc_check(bool& error, std::string& error_message);
+    void        prset_check(bool& error, std::string& error_message);
+    void        prslice_check(bool& error, std::string& error_message);
+    void        target_check(bool& error, std::string& error_message);
+    void        prsice_check(bool& error, std::string& error_message);
 
-    inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt, bool &error,
-    		std::string &error_message, bool &species_error)
+    inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
+                            bool no_mt, bool& error, std::string& error_message,
+                            bool& species_error)
     {
-        if(species.double_set && !species_error){
-      		species_error = true;
-      		error = true;
-      		error_message.append("ERROR: Can only specify one species\n");
+        if (species.double_set && !species_error) {
+            species_error = true;
+            error         = true;
+            error_message.append("ERROR: Can only specify one species\n");
         }
-     	species.num_auto = num_auto;
-     	species.no_x = no_x;
-     	species.no_y = no_y;
-     	species.no_xy = no_xy;
-     	species.no_mt = no_mt;
-     	species.double_set = true;
+        species.num_auto   = num_auto;
+        species.no_x       = no_x;
+        species.no_y       = no_y;
+        species.no_xy      = no_xy;
+        species.no_mt      = no_mt;
+        species.double_set = true;
     };
 
     inline void set_stat(std::string stat)
     {
-        base.statistic = stat;
+        base.statistic     = stat;
         base.provided_stat = true;
     };
 
-    inline void set_beta(bool beta)
-    {
-    	    base.beta = beta;
-    };
+    inline void set_beta(bool beta) { base.beta = beta; };
 
     inline void set_chr(std::string chr)
     {
-        base.chr = chr;
+        base.chr          = chr;
         base.provided_chr = true;
     };
 
     inline void set_ref(std::string ref)
     {
-        base.ref_allele = ref;
+        base.ref_allele   = ref;
         base.provided_ref = true;
     };
 
     inline void set_alt(std::string alt)
     {
-    	base.alt_allele = alt;
-    	base.provided_alt = true;
+        base.alt_allele   = alt;
+        base.provided_alt = true;
     };
 
     inline void set_snp(std::string snp)
     {
-        base.snp = snp;
+        base.snp          = snp;
         base.provided_snp = true;
     };
 
     inline void set_bp(std::string bp)
     {
-        base.bp = bp;
+        base.bp          = bp;
         base.provided_bp = true;
     };
 
     inline void set_se(std::string se)
     {
         base.standard_error = se;
-        base.provided_se = true;
+        base.provided_se    = true;
     };
 
     inline void set_p(std::string p)
     {
-        base.p_value = p;
+        base.p_value    = p;
         base.provided_p = true;
     };
 
     inline void set_prslice(int size)
     {
-        prslice.size = size;
+        prslice.size     = size;
         prslice.provided = true;
     };
 
     inline void set_remove(std::string file)
     {
-        target.remove_file = file;
+        target.remove_file   = file;
         target.remove_sample = true;
     };
     inline void set_remove_ld(std::string file)
     {
-        clumping.remove_file = file;
+        clumping.remove_file   = file;
         clumping.remove_sample = true;
     };
     inline void set_info(std::string info)
     {
-        filter.use_info  =true;
+        filter.use_info   = true;
         filter.info_score = misc::convert<double>(info);
     }
     inline void set_keep(std::string file)
     {
-        target.keep_file = file;
+        target.keep_file   = file;
         target.keep_sample = true;
     };
     inline void set_exclude(std::string file)
     {
-        filter.exclude = true;
+        filter.exclude      = true;
         filter.exclude_file = file;
     };
     inline void set_extract(std::string file)
     {
-        filter.extract = true;
+        filter.extract      = true;
         filter.extract_file = file;
     };
     inline void set_keep_ld(std::string file)
     {
-        clumping.keep_file = file;
+        clumping.keep_file   = file;
         clumping.keep_sample = true;
     };
     inline void set_permutation(std::string perm)
     {
-        misc.permutation = misc::convert<int>(perm);
+        misc.permutation          = misc::convert<int>(perm);
         misc.provided_permutation = true;
     }
     inline void set_seed(std::string s)
     {
-        misc.seed = misc::convert<int>(s);
+        misc.seed          = misc::convert<int>(s);
         misc.provided_seed = true;
     }
-    inline int index_check(const std::string &target, const std::vector<std::string> ref) const
+    inline int index_check(const std::string&             target,
+                           const std::vector<std::string> ref) const
     {
-        for(size_t i = 0; i < ref.size(); ++i)
-        {
-            if(target.compare(ref[i])==0)
-            {
+        for (size_t i = 0; i < ref.size(); ++i) {
+            if (target.compare(ref[i]) == 0) {
                 return i;
             }
         }
         return -1;
     };
 
-    inline int index_check(const std::string &target, const int max, bool &error,
-    		std::string &error_message, std::string name)
+    inline int index_check(const std::string& target, const int max,
+                           bool& error, std::string& error_message,
+                           std::string name)
     {
-        try{
+        try
+        {
             int index = misc::convert<int>(optarg);
-            if(index >= max){
-                error =true;
-                error_message.append("ERROR: "+name+" index out of bound!\n");
+            if (index >= max) {
+                error = true;
+                error_message.append("ERROR: " + name
+                                     + " index out of bound!\n");
                 return -1;
             }
-            if(index < 0){
-                error =true;
-                error_message.append("ERROR: Negative "+name+" index!\n");
+            if (index < 0) {
+                error = true;
+                error_message.append("ERROR: Negative " + name + " index!\n");
                 return -1;
             }
             return index;
-     	}
-        catch(const std::runtime_error &er)
+        }
+        catch (const std::runtime_error& er)
         {
-            error =true;
-            error_message.append("ERROR: "+name+" index is not numeric!\n");
+            error = true;
+            error_message.append("ERROR: " + name + " index is not numeric!\n");
             return -1;
         }
     }
