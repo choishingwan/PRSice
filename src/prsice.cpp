@@ -98,6 +98,7 @@ void PRSice::pheno_check(const Commander& c_commander)
 void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                          Genotype& target, const bool prslice)
 {
+    m_log_file = c_commander.out() + ".log";
     m_null_r2 = 0.0;
     m_phenotype = Eigen::VectorXd::Zero(0);
     m_independent_variables.resize(0, 0);
@@ -286,11 +287,25 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
             }
         }
     }
+
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+
+
     if (num_not_found != 0) {
+        log_file_stream << num_not_found << " sample(s) without phenotype"
+                        << std::endl;
         fprintf(stderr, "Number of missing samples: %zu\n", num_not_found);
     }
     if (invalid_pheno != 0) {
         fprintf(stderr, "Number of invalid phenotyps: %zu\n", invalid_pheno);
+        log_file_stream << invalid_pheno << " sample(s) with invalid phenotype"
+                        << std::endl;
     }
     bool error = false;
     if (max_num > 1 && binary) {
@@ -315,7 +330,11 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         throw std::runtime_error("No phenotype presented");
     m_phenotype =
         Eigen::Map<Eigen::VectorXd>(pheno_store.data(), pheno_store.size());
+
+
     if (binary) {
+        log_file_stream << num_control << " control(s)" << std::endl;
+        log_file_stream << num_case << " case(s)" << std::endl;
         fprintf(stderr, "Number of controls : %i\n", num_control);
         fprintf(stderr, "Number of cases : %i\n", num_case);
         if (regress) {
@@ -326,9 +345,13 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     }
     else
     {
+        log_file_stream << m_phenotype.rows() << " sample(s) with phenotype"
+                        << std::endl;
         fprintf(stderr, "Number of sample(s) with phenotype  : %zu\n",
                 m_phenotype.rows());
     }
+    log_file_stream << std::endl;
+    log_file_stream.close();
 }
 
 
@@ -648,6 +671,18 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         fprintf(stderr, "\nFinal number of samples: %zu\n\n",
                 valid_sample_index.size());
     }
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+    log_file_stream << "After reading covariate file:" << std::endl;
+    log_file_stream << valid_sample_index.size()
+                    << " sample(s) included in the analysis" << std::endl;
+    log_file_stream << std::endl;
+    log_file_stream.close();
 }
 
 
@@ -1266,7 +1301,8 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         std::string out_best = output_name + ".best";
         std::string out_prsice = output_name + ".prsice";
         std::string out_snp = output_name + ".snps";
-        std::ofstream best_out, prsice_out, snp_out;
+        std::string out_summary = output_name + ".summary";
+        std::ofstream best_out, prsice_out, snp_out, summary_out;
         prsice_out.open(out_prsice.c_str());
         if (!prsice_out.is_open()) {
             std::string error_message =
@@ -1279,7 +1315,7 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         for (size_t i = 0; i < m_prs_results.cols(); ++i) {
             if (m_prs_results(i_region, i).threshold < 0) continue;
             double r2 = m_prs_results(i_region, i).r2 - m_null_r2;
-            r2 = top * r2 / (bottom * r2);
+            r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
             prsice_out << m_prs_results(i_region, i).threshold << "\t" << r2
                        << "\t" << m_prs_results(i_region, i).p << "\t"
                        << m_prs_results(i_region, i).coefficient << "\t"
@@ -1300,6 +1336,26 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
                 "ERROR: Cannot open file: " + out_best + " to write";
             throw std::runtime_error(error_message);
         }
+        summary_out.open(out_summary.c_str());
+        if (!summary_out.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open file: " + out_summary + " to write";
+            throw std::runtime_error(error_message);
+        }
+        auto&& best_info = m_prs_results(i_region, m_best_index[i_region]);
+        summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
+        double r2 = best_info.r2 - m_null_r2;
+        r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
+        summary_out << "R2:               " << r2 << std::endl;
+        summary_out << "R2 of full model: " << best_info.r2 << std::endl;
+        summary_out << "Null R2:          " << m_null_r2 << std::endl;
+        summary_out << "P-value:          " << best_info.p << std::endl;
+        if (perm)
+            summary_out << "Empirical P:      " << best_info.emp_p << std::endl;
+        summary_out << "Coefficient:      " << best_info.coefficient
+                    << std::endl;
+        summary_out << "Number of SNPs:   " << best_info.num_snp << std::endl;
+        summary_out.close();
         best_out << "FID\tIID\tprs_"
                  << m_prs_results(i_region, m_best_index[i_region]).threshold
                  << std::endl;
