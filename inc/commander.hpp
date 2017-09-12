@@ -19,21 +19,28 @@
 
 #include "misc.hpp"
 #include "storage.hpp"
+#include <chrono>
+#include <ctime>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unistd.h>
+#include <unordered_set>
 #include <vector>
+#include "misc.hpp"
 
+const std::string version ="2.0.8.beta";
+const std::string date = "27 August 2017";
 class Commander
 {
 public:
     // so that we don't need to include plink_common.hpp here
     Commander();
     virtual ~Commander();
-    bool initialize(int argc, char* argv[]);
+    bool init(int argc, char *argv[]);
 
     // base
     std::vector<int> index() const { return base.col_index; };
@@ -80,14 +87,13 @@ public:
     double info_score() const { return filter.info_score; };
     double hard_threshold() const { return filter.hard_threshold; };
 
-    // misc
-    bool        all() const { return misc.all; };
-    bool        ignore_fid() const { return misc.ignore_fid; };
-    bool        logit_perm() const { return misc.logit_perm; };
-    bool        permute() const { return misc.provided_permutation; };
-    bool        print_snp() const { return misc.print_snp; };
-    bool        seeded() const { return misc.provided_seed; };
-    void        set_ignore_fid() { misc.ignore_fid = true; };
+    //misc
+    bool all() const { return misc.all; };
+    bool ignore_fid() const { return misc.ignore_fid; };
+    bool logit_perm() const { return misc.logit_perm; };
+    bool permute() const { return misc.provided_permutation; };
+    bool print_snp() const { return misc.print_snp; };
+    bool seeded() const { return misc.provided_seed; };
     std::string out() const { return misc.out; };
     int         num_permutation() const { return misc.permutation; };
     int         seed() const { return misc.seed; };
@@ -177,36 +183,31 @@ public:
                               ? 1.0
                               : prsice.barlevel.at(i));
     };
-
-    void user_input() const;
-
 protected:
 private:
-    std::string              version         = "2.0.8.beta";
-    std::string              date            = "27 August 2017";
+    bool process(int argc, char *argv[], const char *optString, const struct option longOpts[]);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct
-    {
-        std::string      name;
-        std::string      chr;
-        std::string      ref_allele;
-        std::string      alt_allele;
-        std::string      statistic;
-        std::string      snp;
-        std::string      bp;
-        std::string      standard_error;
-        std::string      p_value;
+    struct{
+    		std::string name;
+        std::string chr;
+        std::string ref_allele;
+        std::string alt_allele;
+        std::string statistic;
+        std::string snp;
+        std::string bp;
+        std::string standard_error;
+        std::string p_value;
         std::vector<int> col_index;
-        int              beta;
-        int              index;
-        bool             provided_chr;
-        bool             provided_ref;
-        bool             provided_alt;
-        bool             provided_stat;
-        bool             provided_snp;
-        bool             provided_bp;
-        bool             provided_se;
-        bool             provided_p;
+        int beta;
+        int index;
+        bool provided_chr;
+        bool provided_ref;
+        bool provided_alt;
+        bool provided_stat;
+        bool provided_snp;
+        bool provided_bp;
+        bool provided_se;
+        bool provided_p;
     } base;
 
     struct
@@ -215,14 +216,18 @@ private:
         std::string type;
         std::string keep_file;
         std::string remove_file;
-        int         no_clump;
-        double      proxy;
-        double      p_value;
-        double      r2;
-        int         distance;
-        bool        provide_proxy;
-        bool        keep_sample;
-        bool        remove_sample;
+        int no_clump;
+        double proxy;
+        double p_value;
+        double r2;
+        int distance;
+        bool provide_r2;
+        bool provide_p;
+        bool provide_distance;
+        bool provide_proxy;
+        bool keep_sample;
+        bool remove_sample;
+        bool use_type;
     } clumping;
 
     struct
@@ -232,39 +237,42 @@ private:
         std::vector<std::string> covariates;
     } covariate;
 
-    struct
-    {
-        std::string exclude_file;
-        std::string extract_file;
-        double      geno;
-        double      hard_threshold;
-        double      info_score;
-        double      maf;
-        double      mind;
-        int         hard_coding;
-        int         use_geno;
-        int         use_hard_thres;
-        int         use_info;
-        int         use_maf;
-        int         use_mind;
-        int         use_prob;
-        int         keep_ambig;
-        bool        extract;
-        bool        exclude;
+    struct{
+    		std::string exclude_file;
+    		std::string extract_file;
+    		double geno;
+    		double hard_threshold;
+    		double info_score;
+    		double maf;
+    		double mind;
+    		int hard_coding;
+    		int use_geno;
+    		int use_info;
+    		int use_maf;
+    		int use_mind;
+    		int use_prob;
+    		int keep_ambig;
+    		bool extract;
+    		bool exclude;
+    		bool use_hard_thres;
     } filter;
 
     struct
     {
         std::string out;
-        int         all;
-        int         ignore_fid;
-        int         logit_perm;
-        int         permutation;
-        int         print_snp;
-        int         thread;
-        int         seed;
-        bool        provided_seed;
-        bool        provided_permutation;
+        int all;
+        int ignore_fid;
+        int logit_perm;
+        int memory;
+        int permutation;
+        int print_snp;
+        int print_all_samples;
+        int thread;
+        int seed;
+        bool provided_seed;
+        bool provided_permutation;
+        bool provide_thread;
+        bool provided_memory;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
@@ -274,20 +282,24 @@ private:
     {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
-        std::string              gtf;
-        std::string              msigdb;
+        std::string gtf;
+        std::string msigdb;
+        bool perform_prset;
     } prset;
 
     struct
     {
         std::string         missing_score;
         std::vector<double> barlevel;
-        double              lower;
-        double              upper;
-        double              inter;
-        int                 fastscore;
-        int                 no_regress;
-        int                 full;
+        double lower;
+        double upper;
+        double inter;
+        bool provide_lower;
+        bool provide_upper;
+        bool provide_inter;
+        int fastscore;
+        int no_regress;
+        int full;
     } prsice;
 
     struct
@@ -314,24 +326,25 @@ private:
         std::string              pheno_file;
         std::string              type;
         std::vector<std::string> pheno_col;
-        std::vector<double>
-                          prevalence; // should equal to number of binary target
-        bool              keep_sample;
-        bool              remove_sample;
+        std::vector<double> prevalence; // should equal to number of binary target
+        bool keep_sample;
+        bool remove_sample;
+        bool use_type;
         std::vector<bool> is_binary;
     } target;
 
     std::string help_message;
-    void        usage();
-    void        info();
-    void        program_info();
-    void        base_check(bool& error, std::string& error_message);
-    void        clump_check(bool& error, std::string& error_message);
-    void        misc_check(bool& error, std::string& error_message);
-    void        prset_check(bool& error, std::string& error_message);
-    void        prslice_check(bool& error, std::string& error_message);
-    void        target_check(bool& error, std::string& error_message);
-    void        prsice_check(bool& error, std::string& error_message);
+    void usage();
+    void info();
+    void base_check(std::string &message, bool &error, std::string &error_message);
+    void clump_check(std::string &message, bool &error, std::string &error_message);
+    void covariate_check(bool &error, std::string &error_message);
+    void filter_check(bool &error, std::string &error_message);
+    void misc_check(std::string &message, bool &error, std::string &error_message);
+    void prset_check(std::string &message, bool &error, std::string &error_message);
+    void prslice_check(bool &error, std::string &error_message);
+    void prsice_check(std::string &message, bool &error, std::string &error_message);
+    void target_check(std::string &message, bool &error, std::string &error_message);
 
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
                             bool no_mt, bool& error, std::string& error_message,
@@ -350,109 +363,72 @@ private:
         species.double_set = true;
     };
 
-    inline void set_stat(std::string stat)
+    inline void load_binary_vector(std::string input, std::string &message, std::string &error_message,
+    		std::vector<bool> &target, bool &error, std::string c)
     {
-        base.statistic     = stat;
-        base.provided_stat = true;
-    };
-
-    inline void set_beta(bool beta) { base.beta = beta; };
-
-    inline void set_chr(std::string chr)
-    {
-        base.chr          = chr;
-        base.provided_chr = true;
-    };
-
-    inline void set_ref(std::string ref)
-    {
-        base.ref_allele   = ref;
-        base.provided_ref = true;
-    };
-
-    inline void set_alt(std::string alt)
-    {
-        base.alt_allele   = alt;
-        base.provided_alt = true;
-    };
-
-    inline void set_snp(std::string snp)
-    {
-        base.snp          = snp;
-        base.provided_snp = true;
-    };
-
-    inline void set_bp(std::string bp)
-    {
-        base.bp          = bp;
-        base.provided_bp = true;
-    };
-
-    inline void set_se(std::string se)
-    {
-        base.standard_error = se;
-        base.provided_se    = true;
-    };
-
-    inline void set_p(std::string p)
-    {
-        base.p_value    = p;
-        base.provided_p = true;
-    };
-
-    inline void set_prslice(int size)
-    {
-        prslice.size     = size;
-        prslice.provided = true;
-    };
-
-    inline void set_remove(std::string file)
-    {
-        target.remove_file   = file;
-        target.remove_sample = true;
-    };
-    inline void set_remove_ld(std::string file)
-    {
-        clumping.remove_file   = file;
-        clumping.remove_sample = true;
-    };
-    inline void set_info(std::string info)
-    {
-        filter.use_info   = true;
-        filter.info_score = misc::convert<double>(info);
+    		message.append(" \\\n    --"+c+" "+input);
+    		std::vector<std::string> token = misc::split(input, ",");
+    		try{
+    			for(auto &&bin : token) target.push_back(misc::to_bool(bin));
+    		}
+    		catch(const std::runtime_error &er)
+    		{
+    			error_message.append("ERROR: Invalid argument passed to "+c+": "+input+"!\n");
+    			error_message.append("       Require binary arguments e.g. T/F, True/False\n");
+    		}
     }
-    inline void set_keep(std::string file)
+
+    inline void load_string_vector(std::string input, std::string &message, std::vector<std::string> &target,
+    		std::string c)
     {
-        target.keep_file   = file;
-        target.keep_sample = true;
-    };
-    inline void set_exclude(std::string file)
-    {
-        filter.exclude      = true;
-        filter.exclude_file = file;
-    };
-    inline void set_extract(std::string file)
-    {
-        filter.extract      = true;
-        filter.extract_file = file;
-    };
-    inline void set_keep_ld(std::string file)
-    {
-        clumping.keep_file   = file;
-        clumping.keep_sample = true;
-    };
-    inline void set_permutation(std::string perm)
-    {
-        misc.permutation          = misc::convert<int>(perm);
-        misc.provided_permutation = true;
+		message.append(" \\\n    --"+c+" "+input);
+    		std::vector<std::string> token = misc::split(input, ",");
+    		target.insert(target.end(), token.begin(), token.end());
     }
-    inline void set_seed(std::string s)
+
+    template <typename T>
+    inline void load_numeric_vector(std::string input, std::string &message, std::string &error_message,
+    		std::vector<T> &target, bool &error, std::string c)
     {
-        misc.seed          = misc::convert<int>(s);
-        misc.provided_seed = true;
+
+		message.append(" \\\n    --"+c+" "+input);
+		std::vector<std::string> token = misc::split(optarg, ",");
+		try
+		{
+			for(auto &&bar : token) target.push_back(misc::convert<T>(bar));
+		}
+		catch(const std::runtime_error &er)
+		{
+			error_message.append("ERROR: Non numeric argument passed to "+c+": "+input+"!\n");
+			error=true;
+		}
     }
-    inline int index_check(const std::string&             target,
-                           const std::vector<std::string> ref) const
+
+    template <typename Type>
+    inline void set_numeric(std::string input, std::string &message, std::string &error_message, Type &target,
+    		bool &target_boolean, bool &error, std::string c)
+    {
+    		message.append(" \\\n    --"+c+" "+input);
+    		try{
+    			target = misc::convert<Type>(input);
+    			target_boolean = true;
+    		}
+    		catch(const std::runtime_error &er)
+    		{
+    			error_message.append("ERROR: Non numeric argument passed to "+c+": "+input+"!\n");
+    		}
+    }
+
+    inline void set_string(std::string input, std::string &message, std::string &target, bool &target_boolean,
+    		std::string c)
+    {
+    		message.append(" \\\n    --"+c+" "+input);
+    		target=input;
+    		target_boolean=true;
+
+    }
+
+    inline int index_check(const std::string &target, const std::vector<std::string> ref) const
     {
         for (size_t i = 0; i < ref.size(); ++i) {
             if (target.compare(ref[i]) == 0) {

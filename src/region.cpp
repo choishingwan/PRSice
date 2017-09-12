@@ -33,11 +33,10 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
                  const std::vector<std::string>& bed, const std::string& out)
 {
     process_bed(bed);
+    m_out_prefix = out;
 
-
-    std::unordered_map<std::string, std::set<std::string>> id_to_name;
-    if (!gtf.empty()) // without the gtf file, we will not process the msigdb
-                      // file
+    std::unordered_map<std::string, std::set<std::string> > id_to_name;
+    if(!gtf.empty())  // without the gtf file, we will not process the msigdb file
     {
         fprintf(stderr, "Processing the GTF file\n");
         std::unordered_map<std::string, region_bound> gtf_boundary;
@@ -461,11 +460,24 @@ void Region::check(std::string chr, size_t loc, std::vector<uintptr_t>& flag)
     }
 }
 
-void Region::info() const
-{
-    if (m_region_name.size() == 1)
-        fprintf(stderr, "1 region included\n");
-    else if (m_region_name.size() > 1)
-        fprintf(stderr, "A total of %zu regions are included\n",
-                m_region_name.size());
+void Region::info() const{
+	std::ofstream logFile;
+	std::string logName = m_out_prefix+".log";
+	logFile.open(logName.c_str(), std::ofstream::app);
+	if(!logFile.is_open())
+	{
+		std::string error_message = "ERROR: Cannot open log file: " +logName;
+		throw std::runtime_error(error_message);
+	}
+	if (m_region_name.size() == 1)
+	{
+		fprintf(stderr, "1 region included\n");
+		logFile << "1 region included" << std::endl;
+	}
+	else if (m_region_name.size() > 1)
+	{
+		fprintf(stderr, "A total of %zu regions are included\n", m_region_name.size());
+		logFile << "A total of "<<m_region_name.size()<<" regions are included" << std::endl;
+	}
+	logFile.close();
 }
