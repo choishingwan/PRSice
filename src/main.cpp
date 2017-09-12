@@ -42,18 +42,27 @@ int main(int argc, char* argv[])
     }
 
     bool verbose = true;
+    // this allow us to generate the appropriate object (i.e. binaryplink /
+    // binarygen)
     GenomeFactory factory;
-    // change the factory according to the file type
-    // to get the file type, we might want to revemp the commander class
-    // such that we can have a more elegant handling of the files.
-    Genotype* target_file = factory.createGenotype(
-        commander, commander.target_name(), commander.target_type(), verbose);
+    Genotype* target_file;
+    try
+    {
+        target_file = factory.createGenotype(commander, commander.target_name(),
+                                             commander.target_type(), verbose);
+    }
+    catch (const std::invalid_argument& ia)
+    {
+        std::cerr << ia.what() << std::endl;
+    }
     // calculate the maf and genotype missingness here? This will give us the
     // hh_exist information required for processing sex chromosomes
+    bool used_ld = false;
     Genotype* ld_file = nullptr;
     if (!commander.ld_prefix().empty()
         && commander.ld_prefix().compare(commander.target_name()) != 0)
     {
+        used_ld = true;
         ld_file = factory.createGenotype(commander, commander.ld_prefix(),
                                          commander.ld_type(), verbose);
     }
@@ -156,7 +165,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }
     fprintf(stderr, "\n");
-    if (target_file != nullptr) delete target_file;
-    if (ld_file != nullptr) delete ld_file;
+    delete target_file;
+    if (used_ld) delete ld_file;
     return 0;
 }

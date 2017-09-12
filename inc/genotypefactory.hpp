@@ -36,13 +36,15 @@ public:
             (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
         switch (code)
         {
-        case 1:
-            /*
-             return std::unique_ptr<Genotype>(new Plink(prefix,
-             commander.num_auto(), commander.no_x(), commander.no_y(),
-             commander.no_xy(), commander.no_mt(), commander.thread(),
-             verbose));
-             */
+        case 0:
+            fprintf(stderr, "(bed)\n");
+            return new BinaryPlink(
+                prefix, commander.remove_sample_file(),
+                commander.keep_sample_file(), commander.extract_snp_file(),
+                commander.exclude_snp_file(), commander.ignore_fid(),
+                commander.num_auto(), commander.no_x(), commander.no_y(),
+                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
+                commander.thread(), verbose);
         case 2:
             fprintf(stderr, "(bgen)\n");
             if (commander.pheno_file().empty() && !commander.no_regress()) {
@@ -63,15 +65,7 @@ public:
                 commander.no_y(), commander.no_xy(), commander.no_mt(),
                 commander.keep_ambig(), commander.thread(), verbose);
         default:
-        case 0:
-            fprintf(stderr, "(bed)\n");
-            return new BinaryPlink(
-                prefix, commander.remove_sample_file(),
-                commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), commander.ignore_fid(),
-                commander.num_auto(), commander.no_x(), commander.no_y(),
-                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
-                commander.thread(), verbose);
+            throw std::invalid_argument("ERROR: Only support bgen and bed");
         }
     }
 };
