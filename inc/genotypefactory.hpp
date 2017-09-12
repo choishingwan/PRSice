@@ -18,7 +18,10 @@
 #define SRC_GENOTYPEFACTORY_HPP_
 #include "binarygen.hpp"
 #include "binaryplink.hpp"
+#include "commander.hpp"
 #include "genotype.hpp"
+#include <fstream>
+#include <string>
 
 class GenomeFactory
 {
@@ -32,21 +35,37 @@ public:
                              const std::string& type, bool verbose)
     {
         fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
+        std::ofstream log_file;
+        std::string log_name = commander.out() + ".log";
+        log_file.open(log_name.c_str(), std::ofstream::app);
+        if (!log_file.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + log_name;
+            throw std::runtime_error(error_message);
+        }
+        log_file << "Load Genotype file: " << prefix.c_str();
+
         int code =
             (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
         switch (code)
         {
         case 0:
             fprintf(stderr, "(bed)\n");
+            log_file << " (bed)" << std::endl;
+            log_file << std::endl;
+            log_file.close();
             return new BinaryPlink(
                 prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), commander.ignore_fid(),
+                commander.exclude_snp_file(), log_name, commander.ignore_fid(),
                 commander.num_auto(), commander.no_x(), commander.no_y(),
                 commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
                 commander.thread(), verbose);
         case 2:
             fprintf(stderr, "(bgen)\n");
+            log_file << " (bgen)" << std::endl;
+            log_file << std::endl;
+            log_file.close();
             if (commander.pheno_file().empty() && !commander.no_regress()) {
                 throw std::runtime_error("ERROR: You must provide a phenotype "
                                          "file for bgen format!\n");
@@ -61,9 +80,10 @@ public:
                 prefix, commander.pheno_file(), commander.has_pheno_col(),
                 commander.remove_sample_file(), commander.keep_sample_file(),
                 commander.extract_snp_file(), commander.exclude_snp_file(),
-                commander.ignore_fid(), commander.num_auto(), commander.no_x(),
-                commander.no_y(), commander.no_xy(), commander.no_mt(),
-                commander.keep_ambig(), commander.thread(), verbose);
+                log_name, commander.ignore_fid(), commander.num_auto(),
+                commander.no_x(), commander.no_y(), commander.no_xy(),
+                commander.no_mt(), commander.keep_ambig(), commander.thread(),
+                verbose);
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");
         }

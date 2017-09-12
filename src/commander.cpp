@@ -256,8 +256,9 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     logFile << "GNU General Public License v3" << std::endl << std::endl;
     logFile << std::ctime(&start_time) << std::endl << std::endl;
     logFile << message << std::endl;
-    if (!error_messages.empty()) logFile << error_messages << std::endl;
+    logFile << std::endl;
     logFile.close();
+    if (!error_messages.empty()) logFile << error_messages << std::endl;
     if (error) throw std::runtime_error(error_messages);
     fprintf(stderr, "\n");
     return true;

@@ -44,9 +44,9 @@ public:
     Genotype(){};
     Genotype(std::string prefix, std::string remove_sample,
              std::string keep_sample, std::string extract_snp,
-             std::string exclude_snp, bool ignore_fid, int num_auto = 22,
-             bool no_x = false, bool no_y = false, bool no_xy = false,
-             bool no_mt = false, bool keep_ambig = false,
+             std::string exclude_snp, std::string log_file, bool ignore_fid,
+             int num_auto = 22, bool no_x = false, bool no_y = false,
+             bool no_xy = false, bool no_mt = false, bool keep_ambig = false,
              const size_t thread = 1, bool verbose = false);
 
     virtual ~Genotype();
@@ -70,6 +70,7 @@ public:
     void set_clump_info(const Commander& c_commander);
 
 protected:
+    std::string m_log_file;
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);

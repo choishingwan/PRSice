@@ -82,6 +82,7 @@ public:
 
 protected:
 private:
+    std::string m_log_file;
     struct
     {
         std::vector<int> col;
