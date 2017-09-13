@@ -1381,7 +1381,7 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
         double r2 = best_info.r2 - m_null_r2;
         r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
-        summary_out << "R2:               " << r2 << std::endl;
+        summary_out << "R2 of PRS only:   " << r2 << std::endl;
         summary_out << "R2 of full model: " << best_info.r2 << std::endl;
         summary_out << "Null R2:          " << m_null_r2 << std::endl;
         summary_out << "P-value:          " << best_info.p << std::endl;
