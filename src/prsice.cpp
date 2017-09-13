@@ -315,6 +315,25 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         log_file_stream << invalid_pheno << " sample(s) with invalid phenotype"
                         << std::endl;
     }
+    if (num_not_found == m_sample_names.size()) {
+        fprintf(
+            stderr,
+            "None of the target samples were found in the phenotype file\n");
+        if (m_ignore_fid)
+            fprintf(
+                stderr,
+                "Maybe the first column of your phenotype file is the FID?\n");
+        else
+        {
+            fprintf(stderr,
+                    "Maybe your phenotype file doesn not contain the FID?\n");
+            fprintf(stderr, "Might consider using --ignore-fid\n");
+        }
+        throw std::runtime_error("ERROR: No sample left");
+    }
+    if (invalid_pheno == m_sample_names.size()) {
+        throw std::runtime_error("ERROR: No sample left");
+    }
     if (input_sanity_check.size() < 2 && !binary) {
         fprintf(stderr, "Only one phenotype value detected\n");
         auto itr = input_sanity_check.begin();

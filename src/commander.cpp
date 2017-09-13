@@ -55,9 +55,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("se") == 0)
                 set_string(optarg, message, base.standard_error,
                            base.provided_se, command);
-            else if(command.compare("cov-header")==0) // cerr for backward compatibility
-            		load_string_vector(optarg, message, covariate.covariates,
-                               "cov-col");
+            else if (command.compare("cov-header")
+                     == 0) // cerr for backward compatibility
+                load_string_vector(optarg, message, covariate.covariates,
+                                   "cov-col");
             else if (command.compare("keep") == 0)
                 set_string(optarg, message, target.keep_file,
                            target.keep_sample, command);
@@ -417,8 +418,9 @@ bool Commander::init(int argc, char* argv[])
         {"ancestry", required_argument, NULL, 'a'},
         {"base", required_argument, NULL, 'b'},
         {"bed", required_argument, NULL, 'B'},
-		{"cov-col", required_argument, NULL, 'c'},
-		{"cov-header", required_argument, NULL, 0}, // retain here for backward compatibility
+        {"cov-col", required_argument, NULL, 'c'},
+        {"cov-header", required_argument, NULL,
+         0}, // retain here for backward compatibility
         {"cov-file", required_argument, NULL, 'C'},
         {"pheno-file", required_argument, NULL, 'f'},
         {"gtf", required_argument, NULL, 'g'},
