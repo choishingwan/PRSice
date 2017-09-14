@@ -578,6 +578,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         cur_sample.IID = (ignore_fid) ? token[0] : token[1];
         cur_sample.pheno = "NA";
         cur_sample.included = false;
+        cur_sample.has_pheno = false;
         if (m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
                                    != m_sample_selection_list.end());
@@ -720,13 +721,14 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     // std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     // assume all are founder
-    m_founder_info.resize(unfiltered_sample_ctl, 1);
+    m_founder_info.resize(unfiltered_sample_ctl, 0);
     m_founder_ct = m_unfiltered_sample_ct;
 
     m_sample_include.resize(unfiltered_sample_ctl, 0);
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
             SET_BIT(i, m_founder_info.data());
+            SET_BIT(i, m_sample_include.data());
         }
     }
 

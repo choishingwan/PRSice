@@ -196,6 +196,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
+        cur_sample.has_pheno = false; // only true when we have evaluated it to be true
         if (!m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
                                    != m_sample_selection_list.end());
@@ -215,19 +216,19 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
-            SET_BIT(sample_uidx, m_founder_info.data());
+            SET_BIT(sample_uidx, m_founder_info.data()); // essentially, m_founder is a subset of m_sample_include
             SET_BIT(sample_uidx, m_sample_include.data());
         }
-        else if (cur_sample.included)
+        else if (cur_sample.included && m_nonfounder)
         {
-            // ignore this sample if not require nonfounders
-            cur_sample.included = m_nonfounder;
-            if(m_nonfounder) SET_BIT(sample_uidx, m_sample_include.data());
+            // nonfounder but we want to keep it
+        		SET_BIT(sample_uidx, m_sample_include.data());
             m_num_non_founder++;
         }
         else
         {
-            m_num_non_founder++;
+        		// nonfounder / unwanted sample
+        		if(cur_sample.included) m_num_non_founder++;
         }
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
