@@ -20,9 +20,9 @@
 #include "binaryplink.hpp"
 #include "commander.hpp"
 #include "genotype.hpp"
+#include "misc.hpp"
 #include <fstream>
 #include <string>
-#include "misc.hpp"
 #include <vector>
 
 class GenomeFactory
@@ -51,32 +51,31 @@ public:
         switch (code)
         {
         case 0:
-        	std::vector<std::string> token;
-        	token = misc::split(prefix, ",");
-        	std::string fam ="";
-        	std::string bfile_prefix = prefix;
-        	if(token.size()==2){
-        		fam = token[1];
-        		bfile_prefix = token[0];
-        	}
+            std::vector<std::string> token;
+            token = misc::split(prefix, ",");
+            std::string fam = "";
+            std::string bfile_prefix = prefix;
+            if (token.size() == 2) {
+                fam = token[1];
+                bfile_prefix = token[0];
+            }
             fprintf(stderr, "Loading Genotype file: %s ", bfile_prefix.c_str());
             log_file << "Load Genotype file: " << bfile_prefix;
             fprintf(stderr, "(bed)\n");
             log_file << " (bed)" << std::endl;
-            if(!fam.empty())
-            {
-            	fprintf(stderr, "With external fam file: %s\n", fam.c_str());
-            	log_file << "With external fam file: " << fam <<std::endl;
+            if (!fam.empty()) {
+                fprintf(stderr, "With external fam file: %s\n", fam.c_str());
+                log_file << "With external fam file: " << fam << std::endl;
             }
             log_file << std::endl;
             log_file.close();
             return new BinaryPlink(
                 prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), fam, log_name, commander.ignore_fid(),
-                commander.num_auto(), commander.no_x(), commander.no_y(),
-                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
-                commander.thread(), verbose);
+                commander.exclude_snp_file(), fam, log_name,
+                commander.ignore_fid(), commander.num_auto(), commander.no_x(),
+                commander.no_y(), commander.no_xy(), commander.no_mt(),
+                commander.keep_ambig(), commander.thread(), verbose);
         case 2:
             fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
             log_file << "Load Genotype file: " << prefix.c_str();

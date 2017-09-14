@@ -1277,7 +1277,9 @@ void Commander::prset_check(std::string& message, bool& error,
 void Commander::prsice_check(std::string& message, bool& error,
                              std::string& error_message)
 {
-    if (prsice.fastscore && prsice.barlevel.size() == 0) {
+    if (prsice.fastscore && prsice.barlevel.size() == 0
+        && !preset.perform_prset)
+    {
         // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,
         // 0.4, 0.5\n");
         message.append(" \\\n    --bar-levels 0.001,0.05,0.1,0.2,0.3,0.4,0.5");
@@ -1287,7 +1289,17 @@ void Commander::prsice_check(std::string& message, bool& error,
     prsice.barlevel.erase(
         std::unique(prsice.barlevel.begin(), prsice.barlevel.end()),
         prsice.barlevel.end());
-    if (!prsice.fastscore) {
+    if (prset.perform_prset) {
+        if (!prsice.provide_inter && !prsice.provide_upper
+            && !prsice.provide_lower && !prsice.fastscore)
+        {
+            prsice.fastscore = true;
+            prsice.barlevel = {1};
+        }
+        // if any of those was included, use whatever, the user specify
+    }
+    else if (!prsice.fastscore)
+    {
         if (prsice.no_regress) {
             error = true;
             error_message.append(
@@ -1369,26 +1381,30 @@ void Commander::target_check(std::string& message, bool& error,
         }
         else if (target.pheno_col.empty() && target.is_binary.empty())
         {
-        	if(base.beta){
-        		message.append(" \\\n    --binary-target F");
+            if (base.beta) {
+                message.append(" \\\n    --binary-target F");
                 target.is_binary.push_back(false);
-        	}else{
-        		message.append(" \\\n    --binary-target T");
+            }
+            else
+            {
+                message.append(" \\\n    --binary-target T");
                 target.is_binary.push_back(true);
-        	}
+            }
             // fprintf(stderr, "Phenotype assumed to be binary\n");
         }
         else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
             // fprintf(stderr, "%s assumed to be binary\n",
             // target.pheno_col.front().c_str());
-        	if(base.beta){
-        		message.append(" \\\n    --binary-target F");
-        		target.is_binary.push_back(false);
-        	}else{
-        		message.append(" \\\n    --binary-target T");
-        		target.is_binary.push_back(true);
-        	}
+            if (base.beta) {
+                message.append(" \\\n    --binary-target F");
+                target.is_binary.push_back(false);
+            }
+            else
+            {
+                message.append(" \\\n    --binary-target T");
+                target.is_binary.push_back(true);
+            }
             target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() != target.is_binary.size())

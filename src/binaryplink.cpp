@@ -19,12 +19,12 @@
 
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,
-                         std::string exclude_snp, std::string fam_name, std::string log_file,
-                         bool ignore_fid, int num_auto, bool no_x, bool no_y,
-                         bool no_xy, bool no_mt, bool keep_ambig,
-                         const size_t thread, bool verbose)
+                         std::string exclude_snp, std::string fam_name,
+                         std::string log_file, bool ignore_fid, int num_auto,
+                         bool no_x, bool no_y, bool no_xy, bool no_mt,
+                         bool keep_ambig, const size_t thread, bool verbose)
 {
-	m_fam_name = fam_name;
+    m_fam_name = fam_name;
     /** simple assignments **/
     m_log_file = log_file;
     filter.keep_ambig = keep_ambig;
@@ -125,8 +125,10 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
     // get the name of the first fam file (we only need the first as they should
     // all contain the same information)
     std::string famName = "";
-    if(!m_fam_name.empty()) famName = m_fam_name;
-    else m_genotype_files.front() + ".fam";
+    if (!m_fam_name.empty())
+        famName = m_fam_name;
+    else
+        m_genotype_files.front() + ".fam";
     // open the fam file
     std::ifstream famfile;
     famfile.open(famName.c_str());
