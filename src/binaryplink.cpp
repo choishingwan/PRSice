@@ -20,11 +20,12 @@
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,
                          std::string exclude_snp, std::string fam_name,
-                         std::string log_file, bool ignore_fid, bool nonfounder, int num_auto,
-                         bool no_x, bool no_y, bool no_xy, bool no_mt,
-                         bool keep_ambig, const size_t thread, bool verbose)
+                         std::string log_file, bool ignore_fid, bool nonfounder,
+                         int num_auto, bool no_x, bool no_y, bool no_xy,
+                         bool no_mt, bool keep_ambig, const size_t thread,
+                         bool verbose)
 {
-	m_nonfounder = nonfounder;
+    m_nonfounder = nonfounder;
     m_fam_name = fam_name;
     /** simple assignments **/
     m_log_file = log_file;
@@ -196,7 +197,8 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
-        cur_sample.has_pheno = false; // only true when we have evaluated it to be true
+        cur_sample.has_pheno =
+            false; // only true when we have evaluated it to be true
         if (!m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
                                    != m_sample_selection_list.end());
@@ -216,19 +218,22 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
-            SET_BIT(sample_uidx, m_founder_info.data()); // essentially, m_founder is a subset of m_sample_include
+            SET_BIT(sample_uidx, m_founder_info.data()); // essentially,
+                                                         // m_founder is a
+                                                         // subset of
+                                                         // m_sample_include
             SET_BIT(sample_uidx, m_sample_include.data());
         }
         else if (cur_sample.included && m_nonfounder)
         {
             // nonfounder but we want to keep it
-        		SET_BIT(sample_uidx, m_sample_include.data());
+            SET_BIT(sample_uidx, m_sample_include.data());
             m_num_non_founder++;
         }
         else
         {
-        		// nonfounder / unwanted sample
-        		if(cur_sample.included) m_num_non_founder++;
+            // nonfounder / unwanted sample
+            if (cur_sample.included) m_num_non_founder++;
         }
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;

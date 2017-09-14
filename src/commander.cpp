@@ -261,7 +261,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (prsice.fastscore) message.append(" \\\n    --fastscore");
     if (prsice.full) message.append(" \\\n    --full");
     if (prsice.no_regress) message.append(" \\\n    --no-regression");
-    if(target.nonfounders) message.append(" \\\n    --nonfounders");
+    if (target.nonfounders) message.append(" \\\n    --nonfounders");
 
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
@@ -451,7 +451,7 @@ bool Commander::init(int argc, char* argv[])
         {"no-y", no_argument, &species.no_y, 1},
         {"no-xy", no_argument, &species.no_xy, 1},
         {"no-mt", no_argument, &species.no_mt, 1},
-		{"nonfounders", no_argument, &target.nonfounders, 1},
+        {"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
         {"print_all_samples", no_argument, &misc.print_all_samples, 1},
@@ -731,7 +731,7 @@ void Commander::info()
           "                            phenotype file\n"
           "    --prevalence    | -k    Prevalence of all binary trait. If "
           "provided\n"
-		  "    --nonfounders           Keep the nonfounders in the analysis"
+          "    --nonfounders           Keep the nonfounders in the analysis"
           "    --remove                will adjust the ascertainment bias of "
           "the R2.\n"
           "                            Note that when multiple binary trait is "
@@ -1280,8 +1280,7 @@ void Commander::prset_check(std::string& message, bool& error,
 void Commander::prsice_check(std::string& message, bool& error,
                              std::string& error_message)
 {
-    if (prsice.fastscore && prsice.barlevel.size() == 0
-        && !prset.perform_prset)
+    if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
     {
         // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,
         // 0.4, 0.5\n");
