@@ -95,8 +95,6 @@ int main(int argc, char* argv[])
         region.print_file(region_out_name);
 
         if (!commander.no_clump()) {
-            // we will perform clumping on all samples that are included
-            // ignoring if they have valid phenotype/covariates or not
             target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
         }
         PRSice prsice = PRSice(base_name, commander.target_name(),

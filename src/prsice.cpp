@@ -23,10 +23,6 @@ void PRSice::pheno_check(const Commander& c_commander)
 {
     std::vector<std::string> pheno_header = c_commander.pheno_col();
     std::string pheno_file = c_commander.pheno_file();
-    if (pheno_header.size() != 0 && pheno_file.empty()) {
-        throw std::runtime_error("You must provide a phenotype file for "
-                                 "multiple phenotype analysis");
-    }
     if (pheno_file.empty()) {
         pheno_info.use_pheno = false;
         pheno_info.binary.push_back(c_commander.is_binary(0));
@@ -49,15 +45,36 @@ void PRSice::pheno_check(const Commander& c_commander)
         pheno.close();
         misc::trim(line);
         std::vector<std::string> col = misc::split(line);
+        std::string sample_id = col[0];
+        if (col.size() < 1 + !m_ignore_fid) {
+            throw std::runtime_error(
+                "ERROR: Not enough column in Phenotype file."
+                "Maybe you've forgot --ignore-fid ?");
+        }
+        if (!m_ignore_fid && col.size() > 1) sample_id.append("+" + col[1]);
+        std::ofstream log_file_stream;
+        log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+        if (!log_file_stream.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + m_log_file;
+            throw std::runtime_error(error_message);
+        }
+        log_file_stream << "Check Phenotype file: " << pheno_file << std::endl;
+        log_file_stream << "Column Name of Sample ID: " << sample_id
+                        << std::endl;
+
         bool found = false;
         std::unordered_map<std::string, bool> dup_col;
         if (pheno_header.size() == 0) {
-            // use the second column from the pheno file
             pheno_info.use_pheno = true;
             pheno_info.col.push_back(1 + !m_ignore_fid);
+
             pheno_info.name.push_back("");
             pheno_info.order.push_back(0);
             pheno_info.binary.push_back(c_commander.is_binary(0));
+
+            log_file_stream << "Phenotype Name: " << col[pheno_info.col.back()]
+                            << std::endl;
         }
         else
         {
@@ -85,10 +102,16 @@ void PRSice::pheno_check(const Commander& c_commander)
                             stderr,
                             "Phenotype: %s cannot be found in phenotype file\n",
                             pheno_header[i_pheno].c_str());
+                        log_file_stream
+                            << "Phenotype: " << pheno_header[i_pheno]
+                            << " cannot be found in phenotype file"
+                            << std::endl;
                     }
                 }
             }
         }
+        log_file_stream << std::endl;
+        log_file_stream.close();
     }
     size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
     fprintf(stderr, "There are a total of %zu phenotype to process\n",
@@ -157,7 +180,6 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     std::vector<double> pheno_store;
     pheno_store.reserve(m_sample_names.size()); // reserve the maximum size
     bool binary = pheno_info.binary[pheno_index];
-
     int max_num = 0;
     int num_case = 0;
     int num_control = 0;
@@ -168,7 +190,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     std::unordered_set<double> input_sanity_check; // check if input is sensible
     if (pheno_info.use_pheno)                      // use phenotype file
     {
-        int pheno_col_index = pheno_info.col[pheno_index];
+        int pheno_col_index =
+            pheno_info.col[pheno_index]; // obtain the phenotype index
         std::ifstream pheno_file;
         pheno_file.open(pheno_file_name.c_str());
         if (!pheno_file.is_open()) {

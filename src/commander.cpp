@@ -1371,6 +1371,11 @@ void Commander::target_check(std::string& message, bool& error,
         error_message.append("ERROR: Unsupported target format: " + target.type
                              + "\n");
     }
+    if (target.pheno_col.size() != 0 && target.pheno_file.empty()) {
+        error = true;
+        error_message.append("ERROR: You must provide a phenotype file for "
+                             "multiple phenotype analysis");
+    }
     if (target.pheno_file.empty() && target.is_binary.empty()) {
         message.append(" \\\n    --binary-target T");
 
