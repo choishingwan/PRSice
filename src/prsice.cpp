@@ -1541,7 +1541,7 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
                 continue;
             }
             double r2 = m_prs_results(i_region, bi).r2 - m_null_r2;
-            r2 = top * r2 / (bottom * r2);
+            r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
             region_out << c_region.get_name(i_region) << "\t"
                        << m_prs_results(i_region, bi).threshold << "\t" << r2
                        << "\t" << m_prs_results(i_region, bi).coefficient
