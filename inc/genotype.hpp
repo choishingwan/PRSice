@@ -157,8 +157,8 @@ protected:
     // founder_info stores the samples that are included from
     // the genotype file. All non-founder and removed samples
     // will have bit set to 0
+    bool m_nonfounder = false;
     std::vector<uintptr_t> m_founder_info;
-
     std::vector<uintptr_t> m_sex_male;
     std::vector<uintptr_t> m_sample_include;
     size_t m_num_male = 0;

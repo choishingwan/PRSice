@@ -74,7 +74,7 @@ public:
                 prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
                 commander.exclude_snp_file(), fam, log_name,
-                commander.ignore_fid(), commander.num_auto(), commander.no_x(),
+                commander.ignore_fid(), commander.nonfounders(), commander.num_auto(), commander.no_x(),
                 commander.no_y(), commander.no_xy(), commander.no_mt(),
                 commander.keep_ambig(), commander.thread(), verbose);
         }

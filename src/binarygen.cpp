@@ -720,7 +720,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     // std::memset(m_sex_male, 0x0, m_unfiltered_sample_ctl*sizeof(uintptr_t));
 
     // assume all are founder
-    m_founder_info.resize(unfiltered_sample_ctl, 0);
+    m_founder_info.resize(unfiltered_sample_ctl, 1);
     m_founder_ct = m_unfiltered_sample_ct;
 
     m_sample_include.resize(unfiltered_sample_ctl, 0);

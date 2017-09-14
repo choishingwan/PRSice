@@ -248,20 +248,20 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             "ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     // check all flags
-    if (misc.all) message.append(" \\\n    --all");
     if (base.beta) message.append(" \\\n    --beta");
-    if (prsice.full) message.append(" \\\n    --full");
-    if (filter.hard_coding) message.append(" \\\n    --hard");
-    if (misc.ignore_fid) message.append(" \\\n    --ignore-fid");
     if (base.index) message.append(" \\\n    --index");
-    if (filter.keep_ambig) message.append(" \\\n    --keep-ambig");
-    if (misc.logit_perm) message.append(" \\\n    --logit-perm");
     if (clumping.no_clump) message.append(" \\\n    --no-clump");
-    if (prsice.no_regress) message.append(" \\\n    --no-regression");
-    if (prsice.fastscore) message.append(" \\\n    --fastscore");
-    if (misc.print_snp) message.append(" \\\n    --print-snp");
+    if (filter.hard_coding) message.append(" \\\n    --hard");
+    if (filter.keep_ambig) message.append(" \\\n    --keep-ambig");
+    if (misc.all) message.append(" \\\n    --all");
+    if (misc.ignore_fid) message.append(" \\\n    --ignore-fid");
+    if (misc.logit_perm) message.append(" \\\n    --logit-perm");
     if (misc.print_all_samples) message.append(" \\\n    --print_all_samples");
-
+    if (misc.print_snp) message.append(" \\\n    --print-snp");
+    if (prsice.fastscore) message.append(" \\\n    --fastscore");
+    if (prsice.full) message.append(" \\\n    --full");
+    if (prsice.no_regress) message.append(" \\\n    --no-regression");
+    if(target.nonfounders) message.append(" \\\n    --nonfounders");
 
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
@@ -400,6 +400,7 @@ Commander::Commander()
 
     target.remove_sample = false;
     target.keep_sample = false;
+    target.nonfounders = false;
     target.name = "";
     target.pheno_file = "";
     target.type = "bed";
@@ -450,6 +451,7 @@ bool Commander::init(int argc, char* argv[])
         {"no-y", no_argument, &species.no_y, 1},
         {"no-xy", no_argument, &species.no_xy, 1},
         {"no-mt", no_argument, &species.no_mt, 1},
+		{"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
         {"print_all_samples", no_argument, &misc.print_all_samples, 1},
@@ -729,6 +731,7 @@ void Commander::info()
           "                            phenotype file\n"
           "    --prevalence    | -k    Prevalence of all binary trait. If "
           "provided\n"
+		  "    --nonfounders           Keep the nonfounders in the analysis"
           "    --remove                will adjust the ascertainment bias of "
           "the R2.\n"
           "                            Note that when multiple binary trait is "

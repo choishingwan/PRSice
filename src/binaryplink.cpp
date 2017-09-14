@@ -20,10 +20,11 @@
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,
                          std::string exclude_snp, std::string fam_name,
-                         std::string log_file, bool ignore_fid, int num_auto,
+                         std::string log_file, bool ignore_fid, bool nonfounder, int num_auto,
                          bool no_x, bool no_y, bool no_xy, bool no_mt,
                          bool keep_ambig, const size_t thread, bool verbose)
 {
+	m_nonfounder = nonfounder;
     m_fam_name = fam_name;
     /** simple assignments **/
     m_log_file = log_file;
@@ -215,15 +216,17 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
             // only set this if no parents were found in the fam file
             m_founder_ct++;
             SET_BIT(sample_uidx, m_founder_info.data());
+            SET_BIT(sample_uidx, m_sample_include.data());
         }
-        else if (!cur_sample.included)
+        else if (cur_sample.included)
         {
-            // ignore this sample
-            cur_sample.included = false;
+            // ignore this sample if not require nonfounders
+            cur_sample.included = m_nonfounder;
+            if(m_nonfounder) SET_BIT(sample_uidx, m_sample_include.data());
+            m_num_non_founder++;
         }
         else
         {
-            // this is not a founder, we will ignore it
             m_num_non_founder++;
         }
         if (token[+FAM::SEX].compare("1") == 0) {

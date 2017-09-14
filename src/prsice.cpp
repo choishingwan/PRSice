@@ -114,9 +114,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     m_num_snp_included.clear();
 
 
-    bool no_regress = c_commander.no_regress();
-    std::string pheno_file = c_commander.pheno_file();
-    std::string output_name = c_commander.out();
+    const bool no_regress = c_commander.no_regress();
+    const std::string pheno_file = c_commander.pheno_file();
+    const std::string output_name = c_commander.out();
 
     m_sample_names = target.sample_names();
     gen_pheno_vec(pheno_file, pheno_index, !no_regress);

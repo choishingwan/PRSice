@@ -26,7 +26,7 @@ public:
     BinaryPlink(std::string prefix, std::string remove_sample,
                 std::string keep_sample, std::string extract_snp,
                 std::string exclude_snp, std::string fam_name,
-                std::string log_file, bool ignore_fid, int num_auto = 22,
+                std::string log_file, bool ignore_fid, bool nonfounder, int num_auto = 22,
                 bool no_x = false, bool no_y = false, bool no_xy = false,
                 bool no_mt = false, bool keep_ambig = false,
                 const size_t thread = 1, bool verbose = false);
