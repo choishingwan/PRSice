@@ -155,6 +155,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     if (m_independent_variables.cols() > 2 && !no_regress) {
         assert(m_independent_variables.rows() == m_phenotype.rows());
         if (c_commander.is_binary(pheno_index)) {
+        	// ignore the first column
+        	// this is ok as both the first column (intercept) and the
+        	// second column (PRS) is currently 1
             Regression::glm(m_phenotype,
                             m_independent_variables.topRightCorner(
                                 m_independent_variables.rows(),
@@ -163,6 +166,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
         }
         else
         {
+        	// ignore the first column
             Regression::linear_regression(
                 m_phenotype,
                 m_independent_variables.topRightCorner(
@@ -171,7 +175,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                 null_p, m_null_r2, null_r2_adjust, null_coeff, n_thread, true);
         }
     }
-    target.update_include(m_sample_names);
+
 }
 
 void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
@@ -585,9 +589,10 @@ void PRSice::check_factor_cov(
                 }
                 catch (const std::runtime_error& error)
                 {
-                    std::string str = std::transform(
-                        token[covar_index].begin(), token[covar_index].end(),
-                        token[covar_index].begin(), ::toupper);
+                	std::string str = token[covar_index];
+                    std::transform(
+                        str.begin(), str.end(),
+                        str.begin(), ::toupper);
                     // we also consider missing as convertable
                     if (str.compare("NA") == 0 || str.compare("NULL") == 0)
                         convertable[i_cov]++;
@@ -611,7 +616,7 @@ void PRSice::check_factor_cov(
         if (convertable[i_cov] == num_sample) continue;
         factor_levels[i_cov] = current_factors[i_cov];
         log_file_stream << c_cov_header[cov_index[i_cov]]
-                        << " is a factor with " << factor_levels[i_cov]
+                        << " is a factor with " << factor_levels[i_cov].size()
                         << " levels" << std::endl;
     }
     log_file_stream << std::endl;
