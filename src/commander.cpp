@@ -1369,21 +1369,26 @@ void Commander::target_check(std::string& message, bool& error,
         }
         else if (target.pheno_col.empty() && target.is_binary.empty())
         {
-            message.append(" \\\n    --binary-target T");
+        	if(base.beta){
+        		message.append(" \\\n    --binary-target F");
+                target.is_binary.push_back(false);
+        	}else{
+        		message.append(" \\\n    --binary-target T");
+                target.is_binary.push_back(true);
+        	}
             // fprintf(stderr, "Phenotype assumed to be binary\n");
-            target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
             // fprintf(stderr, "%s assumed to be binary\n",
             // target.pheno_col.front().c_str());
-            message.append(" \\\n    --binary-target T");
-            target.is_binary.push_back(true);
-        }
-        else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
-        {
-            fprintf(stderr, "%s assumed to be binary\n",
-                    target.pheno_col.front().c_str());
+        	if(base.beta){
+        		message.append(" \\\n    --binary-target F");
+        		target.is_binary.push_back(false);
+        	}else{
+        		message.append(" \\\n    --binary-target T");
+        		target.is_binary.push_back(true);
+        	}
             target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() != target.is_binary.size())
