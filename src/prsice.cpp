@@ -49,7 +49,7 @@ void PRSice::pheno_check(const Commander& c_commander)
         if (col.size() < 1 + !m_ignore_fid) {
             throw std::runtime_error(
                 "ERROR: Not enough column in Phenotype file."
-                "Maybe you've forgot --ignore-fid ?");
+                "Have you use the --ignore-fid option");
         }
         if (!m_ignore_fid && col.size() > 1) sample_id.append("+" + col[1]);
         std::ofstream log_file_stream;
@@ -200,6 +200,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
             throw std::runtime_error(error_message);
         }
 
+        // Read in phenotype from phenotype file
         std::unordered_map<std::string, std::string> phenotype_info;
         std::getline(pheno_file, line); // remove header line
         while (std::getline(pheno_file, line)) {
@@ -221,7 +222,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
-        // now go through the sample information
+
+        // Add phenotype information to each sample
         for (auto&& sample : m_sample_names) {
             std::string id =
                 (m_ignore_fid) ? sample.IID : sample.FID + "_" + sample.IID;
@@ -238,13 +240,11 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                             max_num = (temp > max_num) ? temp : max_num;
                             num_case += (temp == 1);
                             num_control += (temp == 0);
+                            sample.has_pheno = true;
                         }
                         else
                         {
                             invalid_pheno++;
-                            if (regress) sample.included = false;
-                            // we don't care about invalid phenotype when we are
-                            // not performing regression
                         }
                     }
                     else
@@ -255,27 +255,27 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                             input_sanity_check.insert(pheno_store.back());
                         }
                         m_sample_with_phenotypes[id] = sample_index_ct++;
+                        sample.has_pheno = true;
                     }
                 }
                 catch (const std::runtime_error& error)
                 {
                     invalid_pheno++;
-                    if (regress) sample.included = false;
                 }
             }
             else
             {
-                if (regress) sample.included = false;
                 num_not_found++;
             }
         }
     }
     else
     {
-        // directly extract it from the sample_name stuff
+        // No phenotype file is provided
+        // Use information from the fam file directly
         for (auto&& sample : m_sample_names) {
             if (sample.pheno.compare("NA") == 0 || !sample.included) {
-                if (regress) sample.included = false;
+                // it is ok to skip NA as default = sample.has_pheno = false
                 continue;
             }
             try
@@ -292,11 +292,11 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                         max_num = (temp > max_num) ? temp : max_num;
                         num_case += (temp == 1);
                         num_control += (temp == 0);
+                        sample.has_pheno = true;
                     }
                     else
                     {
                         invalid_pheno++;
-                        if (regress) sample.included = false;
                     }
                 }
                 else
@@ -309,15 +309,29 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                                                           : sample.FID + "_"
                                                                 + sample.IID] =
                         sample_index_ct++;
+                    sample.has_pheno = true;
                 }
             }
             catch (const std::runtime_error& error)
             {
                 invalid_pheno++;
-                if (regress) sample.included = false;
             }
         }
     }
+    /**
+     * As this has become rather common bug in our previous implementation
+     * it is important for me to write down exactly what we are trying to do
+     * m_sample_with_phenotypes stores the index of each sample on the phenotype
+     * vector
+     * Therefore, the value should only be inserted into
+     * m_sample_with_phenotypes if we have a valid phenotype (thus, the
+     * assignment is always after the convert)
+     *
+     *
+     * Also, due to popular demand, we should provide the PRS for all included
+     * samples. So we seperate out the included flag and the has_pheno flag.
+     * Only samples that has a phenotype will be used for regression
+     */
 
     std::ofstream log_file_stream;
     log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
@@ -339,31 +353,53 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                         << std::endl;
     }
     if (num_not_found == m_sample_names.size()) {
+
+        log_file_stream
+            << "None of the target samples were found in the phenotype file"
+            << std::endl;
         fprintf(
             stderr,
             "None of the target samples were found in the phenotype file\n");
-        if (m_ignore_fid)
+        if (m_ignore_fid) {
             fprintf(
                 stderr,
                 "Maybe the first column of your phenotype file is the FID?\n");
+            log_file_stream
+                << "Maybe the first column of your phenotype file is the FID?"
+                << std::endl;
+        }
         else
         {
             fprintf(stderr,
                     "Maybe your phenotype file doesn not contain the FID?\n");
+            log_file_stream
+                << "Maybe your phenotype file doesn not contain the FID?"
+                << std::endl;
             fprintf(stderr, "Might consider using --ignore-fid\n");
+            log_file_stream << "Might consider using --ignore-fid" << std::endl;
         }
+        log_file_stream << std::endl;
+        log_file_stream.close();
         throw std::runtime_error("ERROR: No sample left");
     }
     if (invalid_pheno == m_sample_names.size()) {
+        log_file_stream << "ERROR: No sample left" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
         throw std::runtime_error("ERROR: No sample left");
     }
     if (input_sanity_check.size() < 2 && !binary) {
         fprintf(stderr, "Only one phenotype value detected\n");
+        log_file_stream << "Only one phenotype value detected" << std::endl;
         auto itr = input_sanity_check.begin();
         if ((*itr) == -9) {
             fprintf(stderr, "and they are all -9\n");
-            throw std::runtime_error("Not enough valid phenotype");
+            log_file_stream << "and they are all -9" << std::endl;
         }
+        log_file_stream << "Not enough valid phenotype" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
+        throw std::runtime_error("Not enough valid phenotype");
     }
     bool error = false;
     if (max_num > 1 && binary) {
@@ -381,11 +417,20 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         }
     }
     if (error && regress) {
+        log_file_stream << "Mixed encoding! Both 0/1 and 1/2 encoding found!"
+                        << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
         throw std::runtime_error(
             "Mixed encoding! Both 0/1 and 1/2 encoding found!");
     }
-    if (pheno_store.size() == 0 && regress)
+    if (pheno_store.size() == 0 && regress) {
+        log_file_stream << "No phenotype presented" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
         throw std::runtime_error("No phenotype presented");
+    }
+    // now store the vector into the m_phenotype vector
     m_phenotype =
         Eigen::Map<Eigen::VectorXd>(pheno_store.data(), pheno_store.size());
 
@@ -438,136 +483,14 @@ PRSice::get_cov_index(const std::string& c_cov_file,
     }
     else
     {
+        // The command class should have phrased the covariate regrex.
+        // we just need to perform the matching
         std::unordered_set<std::string> included;
         for (auto cov : c_cov_header) {
             if (cov.empty()) continue;
-            if (included.find(cov)
-                == included.end()) // to avoid duplicated covariance headers
-            {
-                // got annoyed with the input of PC.1 PC.2 PC.3, do this
-                // automatic thingy to substitute them
-                if (cov.at(0) == '@') {
-                    cov.erase(0, 1);
-                    std::vector<std::string> open = misc::split(cov, "[");
-                    std::vector<std::string> info;
-                    std::vector<bool> list;
-                    for (auto o : open) {
-                        if (o.find("]") != std::string::npos) {
-                            std::vector<std::string> close =
-                                misc::split(o, "]");
-                            // the first one will always be the list
-                            info.push_back(close[0]);
-                            list.push_back(true);
-                            for (size_t cl = 1; cl < close.size(); ++cl) {
-                                info.push_back(close[cl]);
-                                list.push_back(false);
-                            }
-                        }
-                        else
-                        {
-                            info.push_back(o);
-                            list.push_back(false);
-                        }
-                    }
-                    std::vector<std::string> final_covariates;
-                    for (size_t c = 0; c < info.size(); ++c) {
-                        if (list[c]) {
-                            std::vector<std::string> individual =
-                                misc::split(info[c], ".");
-                            std::vector<int> numeric;
-                            for (auto&& ind : individual) {
-                                if (ind.find("-") != std::string::npos) {
-                                    std::vector<std::string> range =
-                                        misc::split(ind, "-");
-                                    if (range.size() != 2) {
-                                        throw std::runtime_error(
-                                            "ERROR: Invalid range format, "
-                                            "range must be in the form of "
-                                            "start-end");
-                                    }
-                                    try
-                                    {
-                                        int start =
-                                            misc::convert<int>(range[0]);
-                                        int end = misc::convert<int>(range[1]);
-                                        if (start > end) {
-                                            int temp = end;
-                                            end = start;
-                                            start = temp;
-                                        }
-                                        for (size_t s = start; s <= end; ++s) {
-                                            numeric.push_back(s);
-                                        }
-                                    }
-                                    catch (const std::runtime_error& error)
-                                    {
-                                        std::string error_message =
-                                            "ERROR: Invalid parameter: "
-                                            + range[0] + " or " + range[1]
-                                            + ", only allow integer!";
-                                        throw std::runtime_error(error_message);
-                                    }
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        int temp = misc::convert<int>(ind);
-                                        numeric.push_back(temp);
-                                    }
-                                    catch (const std::runtime_error& error)
-                                    {
-                                        std::string error_message =
-                                            "ERROR: Invalid parameter: " + ind
-                                            + ", only allow integer!";
-                                        throw std::runtime_error(error_message);
-                                    }
-                                }
-                            }
-
-                            // Now we have all the numeric parameters
-                            if (final_covariates.empty()) {
-                                for (auto n : numeric) {
-                                    final_covariates.push_back(
-                                        std::to_string(n));
-                                }
-                            }
-                            else
-                            {
-                                size_t cur_size = final_covariates.size();
-                                for (size_t final = 0; final < cur_size;
-                                     ++final)
-                                {
-                                    std::string cur = final_covariates[final];
-                                    final_covariates[final].append(
-                                        std::to_string(numeric.front()));
-                                    for (size_t s = 1; s < numeric.size(); ++s)
-                                    {
-                                        final_covariates.push_back(
-                                            cur + std::to_string(numeric[s]));
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            for (size_t final = 0;
-                                 final < final_covariates.size(); ++final)
-                            {
-                                final_covariates[final].append(info[c]);
-                            }
-                            if (final_covariates.empty())
-                                final_covariates.push_back(info[c]);
-                        }
-                    }
-                    for (auto res : final_covariates) {
-                        if (included.find(res) == included.end()) {
-                            included.insert(res);
-                        }
-                    }
-                }
-                else
-                    included.insert(cov);
+            // to avoid duplicated covariance
+            if (included.find(cov) == included.end()) {
+                included.insert(cov);
             }
         }
         // same, +1 when fid is include
@@ -579,33 +502,155 @@ PRSice::get_cov_index(const std::string& c_cov_file,
             }
         }
     }
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+
     std::sort(cov_index.begin(), cov_index.end());
     if (cov_index.size() == 0) {
+        log_file_stream << "ERROR: No valid covariates!" << std::endl;
+        log_file_stream << std::endl;
+        log_file_stream.close();
         throw std::runtime_error("ERROR: No valid covariates!");
     }
     else
     {
-        if (cov_index.size() == 1)
+        if (cov_index.size() == 1) {
+            log_file_stream << "1 valid covariate included" << std::endl;
             fprintf(stderr, "1 valid covariate included\n");
+        }
         else
             fprintf(stderr, "%zu valid covariates included\n",
                     cov_index.size());
+        log_file_stream << cov_index.size() << " valid covariates included"
+                        << std::endl;
     }
+    log_file_stream << std::endl;
+    log_file_stream.close();
     return cov_index;
+}
+
+
+void PRSice::check_factor_cov(
+    const std::string& c_cov_file, const std::vector<std::string>& c_cov_header,
+    const std::vector<size_t>& cov_index,
+    std::vector<std::unordered_map<std::string, int>>& factor_levels)
+{
+    std::ifstream cov;
+    cov.open(c_cov_file.c_str());
+    if (!cov.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open covariate file: " + c_cov_file;
+        throw std::runtime_error(error_message);
+    }
+    std::string line;
+    std::getline(cov, line); // remove header
+    std::vector<std::unordered_map<std::string, int>> current_factors(
+        cov_index.size());
+    std::vector<size_t> convertable(cov_index.size(), 0);
+    int max_index = cov_index.back() + 1;
+    while (std::getline(cov, line)) {
+        misc::trim(line);
+        if (line.empty()) continue;
+        std::vector<std::string> token = misc::split(line);
+        if (token.size() < max_index) {
+            std::string error_message =
+                "ERROR: Malformed covariate file, should contain at least "
+                + std::to_string(max_index) + " column!";
+            throw std::runtime_error(error_message);
+        }
+        std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+        if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
+        { // sample is found in the phenotype vector
+            int index = m_sample_with_phenotypes[id];
+            for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
+                size_t covar_index = cov_index[i_cov];
+                if (current_factors[i_cov].find(token[covar_index])
+                    != current_factors[i_cov].end())
+                {
+                    current_factors[i_cov][token[covar_index]]++;
+                }
+                else
+                {
+                    current_factors[i_cov][token[covar_index]] = 1;
+                }
+                try
+                {
+                    double temp = misc::convert<double>(token[covar_index]);
+                    convertable[i_cov]++;
+                }
+                catch (const std::runtime_error& error)
+                {
+                    std::string str = std::transform(
+                        token[covar_index].begin(), token[covar_index].end(),
+                        token[covar_index].begin(), ::toupper);
+                    // we also consider missing as convertable
+                    if (str.compare("NA") == 0 || str.compare("NULL") == 0)
+                        convertable[i_cov]++;
+                }
+            }
+        }
+    }
+    cov.close();
+    factor_levels.resize(cov_index.size()); // make sure size is ok
+    size_t num_sample = m_sample_with_phenotypes.size();
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+
+    for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
+        // if all convertable,then it is not a factor
+        if (convertable[i_cov] == num_sample) continue;
+        factor_levels[i_cov] = current_factors[i_cov];
+        log_file_stream << c_cov_header[cov_index[i_cov]]
+                        << " is a factor with " << factor_levels[i_cov]
+                        << " levels" << std::endl;
+    }
+    log_file_stream << std::endl;
+    log_file_stream.close();
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             const std::vector<std::string>& c_cov_header)
 {
+    // The size of the map should be informative of the number of sample
     size_t num_sample = m_sample_with_phenotypes.size();
     if (c_cov_file.empty()) {
+        // if no covariates, just return a matrix of 1
         m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
         return;
     }
+    // obtain the index of each covariate
+
     std::vector<size_t> cov_index = get_cov_index(c_cov_file, c_cov_header);
+
+    std::ofstream log_file_stream;
+    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+    if (!log_file_stream.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open log file: " + m_log_file;
+        throw std::runtime_error(error_message);
+    }
+    log_file_stream << "Processing the covariate file: " << c_cov_file
+                    << std::endl;
+    // log_flie_stream.close(); // if check factor covariates
     fprintf(stderr, "\nStart processing the covariates\n");
     fprintf(stderr, "==============================\n");
     std::vector<std::pair<std::string, size_t>> valid_sample_index;
+    // Initialize the independent variables matrix with 1s
+    // might be worth while to check the covariates
+    // not live yet. Wait till we have time to debug it
+    // std::vector<std::unordered_map<std::string, int>> factor_levels;
+    // check_factor_cov( c_cov_file,c_cov_header, cov_index, factor_levels);
+
     m_independent_variables =
         Eigen::MatrixXd::Ones(num_sample, cov_index.size() + 2);
     bool valid = true;
@@ -620,13 +665,16 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::string line;
     std::getline(cov, line); // remove header
     int max_index = cov_index.back() + 1;
+    // Check the number of missingness for each covariates
     std::vector<int> missing_count(cov_index.size(), 0);
+
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
         valid = true;
         std::vector<std::string> token = misc::split(line);
         if (token.size() < max_index) {
+            log_file_stream.close();
             std::string error_message =
                 "ERROR: Malformed covariate file, should contain at least "
                 + std::to_string(max_index) + " column!";
@@ -634,14 +682,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         }
         std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
-        { // sample is found in the phenotype vector
-            int index = m_sample_with_phenotypes[id];
+        {
+            // sample is found in the phenotype vector
+            int index = m_sample_with_phenotypes[id]; // index on vector
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
                 try
                 {
                     double temp =
                         misc::convert<double>(token[cov_index[i_cov]]);
-                    // here is where we can handle the covariates as factor
                     m_independent_variables(index, i_cov + 2) =
                         temp; // + 2 because first line = intercept, second line
                               // = PRS
@@ -649,6 +697,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                 catch (const std::runtime_error& error)
                 {
                     valid = false;
+                    // place holder as 0, will remove it later
                     m_independent_variables(index, i_cov + 2) = 0;
                     missing_count[i_cov]++;
                 }
@@ -660,16 +709,26 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             }
         }
     }
-    // now we need to handle the situation where there are a different number of
-    // samples
+
+    // update the phenotype and independent variable matrix to
+    // remove missing samples
+    // we don't bother imputing the value for the user as of now
 
     if (valid_sample_index.size() != num_sample && num_sample != 0) {
+        // helpful to give the overview
         int removed = num_sample - valid_sample_index.size();
         fprintf(stderr, "Number of samples with invalid covariate: %d\n",
                 removed);
+        log_file_stream << removed << " sample(s) with invalid covariate"
+                        << std::endl;
+        log_file_stream << "Covariate\tNumber of Missing Samples" << std::endl;
+        for (size_t miss = 0; miss < missing_count.size(); ++miss) {
+            log_file_stream << c_cov_header[cov_index[miss]] << "\t"
+                            << missing_count[miss] << std::endl;
+        }
         double portion = (double) removed / (double) num_sample;
         if (valid_sample_index.size() == 0) {
-            // check which column is the main problem
+            // if all samples are removed
             for (size_t miss = 0; miss < missing_count.size(); ++miss) {
                 if (missing_count[miss] == num_sample) {
                     // we sorted the column index so we can't tell what the
@@ -681,17 +740,31 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             miss);
                 }
             }
+
+            log_file_stream
+                << "All samples removed due to missingness in covariate file!"
+                << std::endl;
+            log_file_stream << std::endl;
+            log_file_stream.close();
             throw std::runtime_error(
                 "All samples removed due to missingness in covariate file!");
         }
         if (portion > 0.05) {
             fprintf(
                 stderr,
-                "WARNING! More than %03.2f%% of the samples were removed!\n",
+                "WARNING: More than %03.2f%% of the samples were removed!\n",
                 portion * 100);
+
             fprintf(stderr,
                     "         Do check if your covariate file is correct\n");
+            log_file_stream << "WARNING: More than " << portion * 100
+                            << "% of the samples were removed!" << std::endl;
+            log_file_stream
+                << "         Do check if your covariate file is correct"
+                << std::endl;
         }
+
+        // sort the sample index
         std::sort(begin(valid_sample_index), end(valid_sample_index),
                   [](std::pair<std::string, size_t> const& t1,
                      std::pair<std::string, size_t> const& t2) {
@@ -708,12 +781,12 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         {
             std::string name = std::get<0>(valid_sample_index[cur_index]);
             m_sample_with_phenotypes[name] = cur_index;
-            size_t update_index = std::get<1>(valid_sample_index[cur_index]);
-            if (update_index != cur_index) {
-                m_phenotype(cur_index, 0) = m_phenotype(update_index, 0);
+            size_t original_index = std::get<1>(valid_sample_index[cur_index]);
+            if (original_index != cur_index) {
+                m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
                 for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
                     m_independent_variables(cur_index, i_cov + 2) =
-                        m_independent_variables(update_index, i_cov + 2);
+                        m_independent_variables(original_index, i_cov + 2);
                 }
             }
         }
@@ -729,13 +802,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         fprintf(stderr, "\nFinal number of samples: %zu\n\n",
                 valid_sample_index.size());
     }
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
+
     log_file_stream << "After reading covariate file:" << std::endl;
     log_file_stream << valid_sample_index.size()
                     << " sample(s) included in the analysis" << std::endl;

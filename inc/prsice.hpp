@@ -134,6 +134,11 @@ private:
                   const std::vector<std::string>& c_cov_header);
     void gen_cov_matrix(const std::string& c_cov_file,
                         const std::vector<std::string>& c_cov_header);
+    void check_factor_cov(
+        const std::string& c_cov_file,
+        const std::vector<std::string>& c_cov_header,
+        const std::vector<size_t>& cov_index,
+        std::vector<std::unordered_map<std::string, int>>& factor_levels);
     // This should help us to update the m_prs_results
     void process_permutations();
 
