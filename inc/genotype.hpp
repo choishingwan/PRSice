@@ -64,7 +64,6 @@ public:
     bool prepare_prsice();
     void print_snp(std::string& output, double threshold);
     size_t num_threshold() const { return m_num_threshold; };
-    void update_include(const std::vector<Sample>& inclusion);
     void read_base(const Commander& c_commander, Region& region);
     void clump(Genotype& reference);
     void set_clump_info(const Commander& c_commander);
@@ -160,7 +159,6 @@ protected:
     bool m_nonfounder = false;
     std::vector<uintptr_t> m_founder_info;
     std::vector<uintptr_t> m_sex_male;
-    std::vector<uintptr_t> m_sample_include;
     size_t m_num_male = 0;
     size_t m_num_female = 0;
     size_t m_num_ambig_sex = 0;

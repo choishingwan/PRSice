@@ -233,8 +233,15 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         else
         {
             // nonfounder / unwanted sample
-            if (cur_sample.included) m_num_non_founder++;
+            if (cur_sample.included)
+            {
+            	// user didn't specify they want the nonfounder
+            	// so ignore it
+            	cur_sample.included=false;
+            	m_num_non_founder++;
+            }
         }
+        m_sample_ct += cur_sample.included;
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
             // SET_BIT(sample_uidx, m_sex_male); // if that individual is male,

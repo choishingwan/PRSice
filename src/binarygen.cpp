@@ -356,7 +356,7 @@ void BinaryGen::dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
             double expected = 0.0;
             if (IS_SET(m_sample_include.data(),
-                       i_sample)) // to ignore non-selected SNPs
+                       i_sample)) // to ignore unwanted samples
             {
                 for (int g = 0; g < prob.size(); ++g) {
                     if (*max_element(prob.begin(), prob.end())
@@ -588,6 +588,8 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
             cur_sample.included = (m_sample_selection_list.find(id)
                                    == m_sample_selection_list.end());
         }
+        // there isn't any founder/nonfounder, so directly using this is ok
+        m_sample_ct += cur_sample.included;
         cur_sample.prs = 0;
         cur_sample.num_snp = 0;
         if (has_sex) {

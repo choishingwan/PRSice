@@ -101,20 +101,6 @@ void Genotype::set_genotype_files(std::string prefix)
     }
 }
 
-void Genotype::update_include(const std::vector<Sample>& inclusion)
-{
-    m_sample_ct = 0;
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    std::fill(m_sample_include.begin(), m_sample_include.end(), 0);
-    for (size_t i_sample = 0; i_sample < inclusion.size(); ++i_sample) {
-        if (IS_SET(m_founder_info.data(), i_sample)
-            && inclusion[i_sample].included)
-        {
-            SET_BIT(i_sample, m_sample_include.data());
-            m_sample_ct++;
-        }
-    }
-}
 
 std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
 {
