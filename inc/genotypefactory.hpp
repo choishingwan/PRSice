@@ -51,6 +51,7 @@ public:
         switch (code)
         {
         case 0:
+        {
             std::vector<std::string> token;
             token = misc::split(prefix, ",");
             std::string fam = "";
@@ -76,7 +77,9 @@ public:
                 commander.ignore_fid(), commander.num_auto(), commander.no_x(),
                 commander.no_y(), commander.no_xy(), commander.no_mt(),
                 commander.keep_ambig(), commander.thread(), verbose);
+        }
         case 2:
+        {
             fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
             log_file << "Load Genotype file: " << prefix.c_str();
             fprintf(stderr, "(bgen)\n");
@@ -101,6 +104,7 @@ public:
                 commander.no_x(), commander.no_y(), commander.no_xy(),
                 commander.no_mt(), commander.keep_ambig(), commander.thread(),
                 verbose);
+        }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");
         }
