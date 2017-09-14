@@ -1293,6 +1293,7 @@ void Commander::prsice_check(std::string& message, bool& error,
         if (!prsice.provide_inter && !prsice.provide_upper
             && !prsice.provide_lower && !prsice.fastscore)
         {
+            message.append(" \\\n    --bar-levels 1");
             prsice.fastscore = true;
             prsice.barlevel = {1};
         }
