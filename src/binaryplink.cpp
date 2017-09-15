@@ -233,12 +233,11 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         else
         {
             // nonfounder / unwanted sample
-            if (cur_sample.included)
-            {
-            	// user didn't specify they want the nonfounder
-            	// so ignore it
-            	cur_sample.included=false;
-            	m_num_non_founder++;
+            if (cur_sample.included) {
+                // user didn't specify they want the nonfounder
+                // so ignore it
+                cur_sample.included = false;
+                m_num_non_founder++;
             }
         }
         m_sample_ct += cur_sample.included;

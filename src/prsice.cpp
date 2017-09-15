@@ -155,9 +155,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     if (m_independent_variables.cols() > 2 && !no_regress) {
         assert(m_independent_variables.rows() == m_phenotype.rows());
         if (c_commander.is_binary(pheno_index)) {
-        	// ignore the first column
-        	// this is ok as both the first column (intercept) and the
-        	// second column (PRS) is currently 1
+            // ignore the first column
+            // this is ok as both the first column (intercept) and the
+            // second column (PRS) is currently 1
             Regression::glm(m_phenotype,
                             m_independent_variables.topRightCorner(
                                 m_independent_variables.rows(),
@@ -166,7 +166,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
         }
         else
         {
-        	// ignore the first column
+            // ignore the first column
             Regression::linear_regression(
                 m_phenotype,
                 m_independent_variables.topRightCorner(
@@ -175,7 +175,6 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                 null_p, m_null_r2, null_r2_adjust, null_coeff, n_thread, true);
         }
     }
-
 }
 
 void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
@@ -589,10 +588,9 @@ void PRSice::check_factor_cov(
                 }
                 catch (const std::runtime_error& error)
                 {
-                	std::string str = token[covar_index];
-                    std::transform(
-                        str.begin(), str.end(),
-                        str.begin(), ::toupper);
+                    std::string str = token[covar_index];
+                    std::transform(str.begin(), str.end(), str.begin(),
+                                   ::toupper);
                     // we also consider missing as convertable
                     if (str.compare("NA") == 0 || str.compare("NULL") == 0)
                         convertable[i_cov]++;
@@ -821,8 +819,8 @@ void PRSice::prsice(const Commander& c_commander,
                     const size_t c_pheno_index, Genotype& target, bool prslice)
 {
     // Let the Genotype class lead the way
-    bool no_regress = c_commander.no_regress() && !prslice;
-    bool all = c_commander.all() && !prslice;
+    const bool no_regress = c_commander.no_regress() && !prslice;
+    const bool all = c_commander.all() && !prslice;
 
     Eigen::initParallel();
     std::vector<std::thread> thread_store;
@@ -841,10 +839,22 @@ void PRSice::prsice(const Commander& c_commander,
         }
     }
 
-    /** REMEMBER, WE WANT ALL PRS FOR ALL SAMPLES **/
-    /** 1/7 CHANGE BEHAVIOUR, WE ONLY RETAIN THE SELECTED SAMPLES
-     *  (THIS IS FOR SCORE READING, i.e MAF calculation)
+
+    /**
+     * 1/7 CHANGE BEHAVIOUR, WE ONLY RETAIN THE SELECTED SAMPLES
+     * 15/9 CHANGE BEHAVIOUR, WE RETAIN ALL SAMPLES AGAIN =.="
+     * (THIS IS FOR SCORE READING, i.e MAF calculation)
      **/
+    /**
+     * These length parameter is used for all.score output
+     * The trick for outputing the transposed all score output
+     * is to first generate a file with predefined number of
+     * white spaces. We then overwrite those write space with
+     * the score information
+     * But this require us to know the number of white space
+     * in advance. So we need to count the length of each
+     * output
+     */
     size_t max_fid_length = 3, max_iid_length = 3;
     for (size_t i_sample = 0; i_sample < m_sample_names.size(); ++i_sample) {
         auto&& sample = m_sample_names[i_sample];
@@ -855,13 +865,12 @@ void PRSice::prsice(const Commander& c_commander,
             max_iid_length = (max_iid_length > sample.IID.length())
                                  ? max_iid_length
                                  : sample.IID.length();
-            std::string id =
-                (m_ignore_fid) ? sample.IID : sample.FID + "_" + sample.IID;
-            m_sample_included.push_back(id);
-            m_sample_index.push_back(i_sample);
         }
     }
-    bool multi = pheno_info.name.size() > 1;
+    // more than one phenotype? When more than one phenotype,
+    // we will add the phenotype name to the output
+    // otherwise we will ignore it
+    const bool multi = pheno_info.name.size() > 1;
     std::vector<std::fstream> all_out;
     size_t width_of_line = 0;
     size_t num_thresholds = 0;
@@ -870,6 +879,10 @@ void PRSice::prsice(const Commander& c_commander,
         std::vector<double> avail_thresholds = target.get_thresholds();
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         num_thresholds = avail_thresholds.size();
+        // Most of the length below are hard coded. Not sure if
+        // they will mess up in some crazy machine
+        // i.e if those machine output numbers larger than
+        // 12 digits...
         width_of_line = num_thresholds + num_thresholds * 12 + 1
                         + max_fid_length + max_iid_length;
         std::string header = "FID IID";
@@ -928,23 +941,29 @@ void PRSice::prsice(const Commander& c_commander,
         width_of_line++; // to account for the new line
     }
 
-    size_t num_included_samples = m_sample_included.size();
+
     // These are lite version. We can ignore the FID and IID because we
     // know they will always follow the sequence in m_sample_names
     // this will help us saving some memory spaces
-    // by default, m_current_sample_score only contains samples that are
-    // included so doesn't need the included field
+    // Note: Change of behaviour. We now include samples without phenotype
+    //       and we need to know if the sample has the phenotype information
     m_current_sample_score =
-        misc::vec2d<Sample_lite>(m_region_size, num_included_samples);
-    m_best_sample_score =
-        misc::vec2d<Sample_lite>(m_region_size, num_included_samples);
-    // now let Genotype class do the work
+        misc::vec2d<Sample_lite>(m_region_size, m_sample_names.size());
+    // now initialize them
+    for (size_t i_sample = 0; i_sample < m_sample_names.size(); ++i_sample) {
+        bool has_pheno = m_sample_names[i_sample].has_pheno;
+        for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
+            m_current_sample_score(i_region, i_sample).has_pheno = has_pheno;
+        }
+    }
+    // directly copy it;
+    m_best_sample_score = m_current_sample_score;
 
     unsigned int seed = std::random_device()(); // might need to comment out
                                                 // this for valgrind cerr
     if (c_commander.seeded()) seed = c_commander.seed();
     // seed need to be outside the loop so each iteration will return the same
-    // sequence therefore the same permutation we also want to know how many
+    // sequence, i.e. the same permutation. We also want to know how many
     // samples we can hold within 1gb ram
     int perm_per_slice = 0;
     int remain_slice = 0;
@@ -952,14 +971,14 @@ void PRSice::prsice(const Commander& c_commander,
         m_region_perm_result = misc::vec2d<double>(
             m_region_size, c_commander.num_permutation(), 2.0);
         // first check for ridiculously large sample size
-        if (CHAR_BIT * num_included_samples > 1000000000) {
+        if (CHAR_BIT * m_sample_names.size() > 1000000000) {
             perm_per_slice = 1;
         }
         else
         {
             // in theory, most of the time, perm_per_slice should be
             // equal to c_commander.num_permutation();
-            int sample_memory = CHAR_BIT * num_included_samples;
+            int sample_memory = CHAR_BIT * m_sample_names.size();
             perm_per_slice = 1000000000 / sample_memory;
             perm_per_slice = (perm_per_slice > c_commander.num_permutation())
                                  ? c_commander.num_permutation()
@@ -987,12 +1006,24 @@ void PRSice::prsice(const Commander& c_commander,
                 fprintf(stderr,
                         "         by setting the --logit-perm flag\n\n");
             }
+            else
+            {
+                fprintf(
+                    stderr,
+                    "         Using --logit-perm can be ridiculously slow\n");
+            }
         }
     }
 
+    // current threshold iteration
     size_t iter_threshold = 0;
-    size_t max_category = target.max_category()
-                          + 1; // so that it won't be 100% until the very end
+    // Number of category to process + 1
+    // so it won't be 100% until we have processed
+    // everything
+    size_t max_category = target.max_category() + 1;
+    // cur_category = current category
+    // cur_index = current index on the m_existed_snp of the genotype
+    // class
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
     while (target.get_score(m_current_sample_score, cur_index, cur_category,
@@ -1011,7 +1042,7 @@ void PRSice::prsice(const Commander& c_commander,
         if (all) {
             size_t i_region = 0;
             for (auto&& a_out : all_out) {
-                for (size_t sample = 0; sample < num_included_samples; ++sample)
+                for (size_t sample = 0; sample < m_sample_names.size(); ++sample)
                 {
                     double score =
                         (m_current_sample_score(i_region, sample).num_snp == 0)
@@ -1026,7 +1057,6 @@ void PRSice::prsice(const Commander& c_commander,
                                  + iter_threshold + iter_threshold * 12;
                     a_out.seekp(loc);
                     a_out << score;
-                    // a_out.write(score_string.substr(0,length).c_str(),length);
                 }
                 i_region++;
             }
@@ -1076,7 +1106,6 @@ void PRSice::prsice(const Commander& c_commander,
         }
         iter_threshold++;
     }
-    // if (all_out.is_open()) all_out.close();
     for (auto&& a_out : all_out) {
         if (a_out.is_open()) a_out.close();
     }

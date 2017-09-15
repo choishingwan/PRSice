@@ -121,8 +121,6 @@ private:
     // misc::vec2d<Sample_lite> m_best_score;
     misc::vec2d<Sample_lite> m_current_sample_score;
     misc::vec2d<Sample_lite> m_best_sample_score;
-    std::vector<std::string> m_sample_included;
-    std::vector<int> m_sample_index;
     std::vector<size_t> m_num_snp_included;
     /**
      * function area

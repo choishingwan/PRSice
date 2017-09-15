@@ -35,6 +35,7 @@ struct Sample_lite
 {
     double prs;
     int num_snp;
+    bool has_pheno;
 };
 
 struct prsice_result
