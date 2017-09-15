@@ -47,13 +47,16 @@ class PRSice
 public:
     PRSice(std::string base_name, std::string target,
            std::vector<bool> target_binary, SCORING score, size_t num_region,
-           bool ignore_fid)
+           bool ignore_fid, std::string out)
         : m_base_name(base_name)
         , m_target(target)
         , m_target_binary(target_binary)
         , m_score(score)
         , m_region_size(num_region)
-        , m_ignore_fid(ignore_fid){};
+        , m_ignore_fid(ignore_fid)
+    {
+        m_log_file = out + ".log";
+    };
     virtual ~PRSice();
     void pheno_check(const Commander& c_commander);
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
@@ -83,6 +86,8 @@ public:
 protected:
 private:
     std::string m_log_file;
+    std::vector<std::string> m_sample_included;
+    std::vector<size_t> m_sample_index;
     struct
     {
         std::vector<int> col;
@@ -121,19 +126,21 @@ private:
     // misc::vec2d<Sample_lite> m_best_score;
     misc::vec2d<Sample_lite> m_current_sample_score;
     misc::vec2d<Sample_lite> m_best_sample_score;
-    std::vector<std::string> m_sample_included;
-    std::vector<int> m_sample_index;
     std::vector<size_t> m_num_snp_included;
     /**
      * function area
      */
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress);
-    std::vector<size_t>
-    get_cov_index(const std::string& c_cov_file,
-                  const std::vector<std::string>& c_cov_header);
+    std::vector<size_t> get_cov_index(const std::string& c_cov_file,
+                                      std::vector<std::string>& cov_header);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        const std::vector<std::string>& c_cov_header);
+                        std::vector<std::string>& cov_header);
+    void check_factor_cov(
+        const std::string& c_cov_file,
+        const std::vector<std::string>& c_cov_header,
+        const std::vector<size_t>& cov_index,
+        std::vector<std::unordered_map<std::string, int>>& factor_levels);
     // This should help us to update the m_prs_results
     void process_permutations();
 

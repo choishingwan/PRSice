@@ -20,8 +20,10 @@
 #include "binaryplink.hpp"
 #include "commander.hpp"
 #include "genotype.hpp"
+#include "misc.hpp"
 #include <fstream>
 #include <string>
+#include <vector>
 
 class GenomeFactory
 {
@@ -34,7 +36,6 @@ public:
     Genotype* createGenotype(Commander& commander, const std::string& prefix,
                              const std::string& type, bool verbose)
     {
-        fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
         std::ofstream log_file;
         std::string log_name = commander.out() + ".log";
         log_file.open(log_name.c_str(), std::ofstream::app);
@@ -43,25 +44,45 @@ public:
                 "ERROR: Cannot open log file: " + log_name;
             throw std::runtime_error(error_message);
         }
-        log_file << "Load Genotype file: " << prefix.c_str();
+
 
         int code =
             (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
         switch (code)
         {
         case 0:
+        {
+            std::vector<std::string> token;
+            token = misc::split(prefix, ",");
+            std::string fam = "";
+            std::string bfile_prefix = prefix;
+            if (token.size() == 2) {
+                fam = token[1];
+                bfile_prefix = token[0];
+            }
+            fprintf(stderr, "Loading Genotype file: %s ", bfile_prefix.c_str());
+            log_file << "Load Genotype file: " << bfile_prefix;
             fprintf(stderr, "(bed)\n");
             log_file << " (bed)" << std::endl;
+            if (!fam.empty()) {
+                fprintf(stderr, "With external fam file: %s\n", fam.c_str());
+                log_file << "With external fam file: " << fam << std::endl;
+            }
             log_file << std::endl;
             log_file.close();
             return new BinaryPlink(
                 prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), log_name, commander.ignore_fid(),
+                commander.exclude_snp_file(), fam, log_name,
+                commander.ignore_fid(), commander.nonfounders(),
                 commander.num_auto(), commander.no_x(), commander.no_y(),
                 commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
                 commander.thread(), verbose);
+        }
         case 2:
+        {
+            fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
+            log_file << "Load Genotype file: " << prefix.c_str();
             fprintf(stderr, "(bgen)\n");
             log_file << " (bgen)" << std::endl;
             log_file << std::endl;
@@ -84,6 +105,7 @@ public:
                 commander.no_x(), commander.no_y(), commander.no_xy(),
                 commander.no_mt(), commander.keep_ambig(), commander.thread(),
                 verbose);
+        }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");
         }

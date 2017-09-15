@@ -248,20 +248,20 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             "ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     // check all flags
-    if (misc.all) message.append(" \\\n    --all");
     if (base.beta) message.append(" \\\n    --beta");
-    if (prsice.full) message.append(" \\\n    --full");
-    if (filter.hard_coding) message.append(" \\\n    --hard");
-    if (misc.ignore_fid) message.append(" \\\n    --ignore-fid");
     if (base.index) message.append(" \\\n    --index");
-    if (filter.keep_ambig) message.append(" \\\n    --keep-ambig");
-    if (misc.logit_perm) message.append(" \\\n    --logit-perm");
     if (clumping.no_clump) message.append(" \\\n    --no-clump");
-    if (prsice.no_regress) message.append(" \\\n    --no-regression");
-    if (prsice.fastscore) message.append(" \\\n    --fastscore");
-    if (misc.print_snp) message.append(" \\\n    --print-snp");
+    if (filter.hard_coding) message.append(" \\\n    --hard");
+    if (filter.keep_ambig) message.append(" \\\n    --keep-ambig");
+    if (misc.all) message.append(" \\\n    --all");
+    if (misc.ignore_fid) message.append(" \\\n    --ignore-fid");
+    if (misc.logit_perm) message.append(" \\\n    --logit-perm");
     if (misc.print_all_samples) message.append(" \\\n    --print_all_samples");
-
+    if (misc.print_snp) message.append(" \\\n    --print-snp");
+    if (prsice.fastscore) message.append(" \\\n    --fastscore");
+    if (prsice.full) message.append(" \\\n    --full");
+    if (prsice.no_regress) message.append(" \\\n    --no-regression");
+    if (target.nonfounders) message.append(" \\\n    --nonfounders");
 
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
@@ -400,6 +400,7 @@ Commander::Commander()
 
     target.remove_sample = false;
     target.keep_sample = false;
+    target.nonfounders = false;
     target.name = "";
     target.pheno_file = "";
     target.type = "bed";
@@ -450,6 +451,7 @@ bool Commander::init(int argc, char* argv[])
         {"no-y", no_argument, &species.no_y, 1},
         {"no-xy", no_argument, &species.no_xy, 1},
         {"no-mt", no_argument, &species.no_mt, 1},
+        {"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
         {"print_all_samples", no_argument, &misc.print_all_samples, 1},
@@ -729,6 +731,9 @@ void Commander::info()
           "                            phenotype file\n"
           "    --prevalence    | -k    Prevalence of all binary trait. If "
           "provided\n"
+          "    --nonfounders           Keep the nonfounders in the analysis\n"
+          "                            Note: They will still be excluded from "
+          "LD calculation\n"
           "    --remove                will adjust the ascertainment bias of "
           "the R2.\n"
           "                            Note that when multiple binary trait is "
@@ -1277,7 +1282,8 @@ void Commander::prset_check(std::string& message, bool& error,
 void Commander::prsice_check(std::string& message, bool& error,
                              std::string& error_message)
 {
-    if (prsice.fastscore && prsice.barlevel.size() == 0) {
+    if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
+    {
         // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,
         // 0.4, 0.5\n");
         message.append(" \\\n    --bar-levels 0.001,0.05,0.1,0.2,0.3,0.4,0.5");
@@ -1287,7 +1293,18 @@ void Commander::prsice_check(std::string& message, bool& error,
     prsice.barlevel.erase(
         std::unique(prsice.barlevel.begin(), prsice.barlevel.end()),
         prsice.barlevel.end());
-    if (!prsice.fastscore) {
+    if (prset.perform_prset) {
+        if (!prsice.provide_inter && !prsice.provide_upper
+            && !prsice.provide_lower && !prsice.fastscore)
+        {
+            message.append(" \\\n    --bar-levels 1");
+            prsice.fastscore = true;
+            prsice.barlevel = {1};
+        }
+        // if any of those was included, use whatever, the user specify
+    }
+    else if (!prsice.fastscore)
+    {
         if (prsice.no_regress) {
             error = true;
             error_message.append(
@@ -1356,6 +1373,11 @@ void Commander::target_check(std::string& message, bool& error,
         error_message.append("ERROR: Unsupported target format: " + target.type
                              + "\n");
     }
+    if (target.pheno_col.size() != 0 && target.pheno_file.empty()) {
+        error = true;
+        error_message.append("ERROR: You must provide a phenotype file for "
+                             "multiple phenotype analysis");
+    }
     if (target.pheno_file.empty() && target.is_binary.empty()) {
         message.append(" \\\n    --binary-target T");
 
@@ -1369,21 +1391,30 @@ void Commander::target_check(std::string& message, bool& error,
         }
         else if (target.pheno_col.empty() && target.is_binary.empty())
         {
-            message.append(" \\\n    --binary-target T");
+            if (base.beta) {
+                message.append(" \\\n    --binary-target F");
+                target.is_binary.push_back(false);
+            }
+            else
+            {
+                message.append(" \\\n    --binary-target T");
+                target.is_binary.push_back(true);
+            }
             // fprintf(stderr, "Phenotype assumed to be binary\n");
-            target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
             // fprintf(stderr, "%s assumed to be binary\n",
             // target.pheno_col.front().c_str());
-            message.append(" \\\n    --binary-target T");
-            target.is_binary.push_back(true);
-        }
-        else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
-        {
-            fprintf(stderr, "%s assumed to be binary\n",
-                    target.pheno_col.front().c_str());
+            if (base.beta) {
+                message.append(" \\\n    --binary-target F");
+                target.is_binary.push_back(false);
+            }
+            else
+            {
+                message.append(" \\\n    --binary-target T");
+                target.is_binary.push_back(true);
+            }
             target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() != target.is_binary.size())

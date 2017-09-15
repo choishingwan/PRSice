@@ -159,10 +159,11 @@ public:
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
     std::vector<double> prevalence() const { return target.prevalence; };
+    bool has_pheno_col() const { return !target.pheno_col.empty(); };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
+    bool nonfounders() const { return target.nonfounders; };
     bool keep_sample() const { return target.keep_sample; };
     bool remove_sample() const { return target.remove_sample; };
-    bool has_pheno_col() const { return !target.pheno_col.empty(); };
 
     int get_category(double p) const
     {
@@ -331,6 +332,7 @@ private:
         std::vector<std::string> pheno_col;
         std::vector<double>
             prevalence; // should equal to number of binary target
+        int nonfounders;
         bool keep_sample;
         bool remove_sample;
         bool use_type;

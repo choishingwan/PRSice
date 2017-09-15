@@ -356,7 +356,7 @@ void BinaryGen::dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
             double expected = 0.0;
             if (IS_SET(m_sample_include.data(),
-                       i_sample)) // to ignore non-selected SNPs
+                       i_sample)) // to ignore unwanted samples
             {
                 for (int g = 0; g < prob.size(); ++g) {
                     if (*max_element(prob.begin(), prob.end())
@@ -445,11 +445,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
-        // std::memset(genotype, 0x0,
-        // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        // std::memset(m_tmp_genotype, 0x0,
-        // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
@@ -467,7 +463,6 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         int total_num = 0;
         uint32_t sample_idx = 0;
         int nmiss = 0;
-        // This whole thing was wrong...
         do
         {
             ulii = ~(*lbptr++);
@@ -578,6 +573,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         cur_sample.IID = (ignore_fid) ? token[0] : token[1];
         cur_sample.pheno = "NA";
         cur_sample.included = false;
+        cur_sample.has_pheno = false;
         if (m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
                                    != m_sample_selection_list.end());
@@ -587,6 +583,8 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
             cur_sample.included = (m_sample_selection_list.find(id)
                                    == m_sample_selection_list.end());
         }
+        // there isn't any founder/nonfounder, so directly using this is ok
+        m_sample_ct += cur_sample.included;
         cur_sample.prs = 0;
         cur_sample.num_snp = 0;
         if (has_sex) {
@@ -727,6 +725,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
             SET_BIT(i, m_founder_info.data());
+            SET_BIT(i, m_sample_include.data());
         }
     }
 

@@ -28,12 +28,14 @@ struct Sample
     double prs;
     int num_snp;
     bool included;
+    bool has_pheno;
 };
 
 struct Sample_lite
 {
     double prs;
     int num_snp;
+    bool has_pheno;
 };
 
 struct prsice_result

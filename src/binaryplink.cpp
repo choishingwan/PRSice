@@ -19,11 +19,14 @@
 
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,
-                         std::string exclude_snp, std::string log_file,
-                         bool ignore_fid, int num_auto, bool no_x, bool no_y,
-                         bool no_xy, bool no_mt, bool keep_ambig,
-                         const size_t thread, bool verbose)
+                         std::string exclude_snp, std::string fam_name,
+                         std::string log_file, bool ignore_fid, bool nonfounder,
+                         int num_auto, bool no_x, bool no_y, bool no_xy,
+                         bool no_mt, bool keep_ambig, const size_t thread,
+                         bool verbose)
 {
+    m_nonfounder = nonfounder;
+    m_fam_name = fam_name;
     /** simple assignments **/
     m_log_file = log_file;
     filter.keep_ambig = keep_ambig;
@@ -123,7 +126,11 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
     assert(m_genotype_files.size() > 0);
     // get the name of the first fam file (we only need the first as they should
     // all contain the same information)
-    std::string famName = m_genotype_files.front() + ".fam";
+    std::string famName = "";
+    if (!m_fam_name.empty())
+        famName = m_fam_name;
+    else
+        famName = m_genotype_files.front() + ".fam";
     // open the fam file
     std::ifstream famfile;
     famfile.open(famName.c_str());
@@ -190,6 +197,8 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
+        cur_sample.has_pheno =
+            false; // only true when we have evaluated it to be true
         if (!m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
                                    != m_sample_selection_list.end());
@@ -209,18 +218,29 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
-            SET_BIT(sample_uidx, m_founder_info.data());
+            SET_BIT(sample_uidx, m_founder_info.data()); // essentially,
+                                                         // m_founder is a
+                                                         // subset of
+                                                         // m_sample_include
         }
-        else if (!cur_sample.included)
+        else if (cur_sample.included && m_nonfounder)
         {
-            // ignore this sample
-            cur_sample.included = false;
+            // nonfounder but we want to keep it
+            SET_BIT(sample_uidx, m_sample_include.data());
+            m_num_non_founder++;
         }
         else
         {
-            // this is not a founder, we will ignore it
-            m_num_non_founder++;
+            // nonfounder / unwanted sample
+            if (cur_sample.included) {
+                // user didn't specify they want the nonfounder
+                // so ignore it
+                cur_sample.included = false;
+                m_num_non_founder++;
+            }
         }
+        m_sample_ct += cur_sample.included;
+        if (cur_sample.included) SET_BIT(sample_uidx, m_sample_include.data());
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
             // SET_BIT(sample_uidx, m_sex_male); // if that individual is male,
@@ -486,18 +506,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                              size_t start_index, size_t end_bound)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
+    // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    uint32_t uii;
-    uint32_t ujj;
-    uint32_t ukk;
-    uintptr_t ulii = 0;
     size_t num_included_samples = current_prs_score.cols();
-    // m_final_mask
 
-    // a lot of code in PLINK is to handle the sex chromosome
-    // which suggest that PRS can be done on sex chromosome
-    // that should be something later
     m_cur_file = ""; // just close it
     if (m_bedfile != nullptr) {
         fclose(m_bedfile);
@@ -512,14 +525,18 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
     }
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
-    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2,0);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
-    { // for each SNP
+    {
+    	// for each SNP
         if (m_cur_file.empty()
             || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
         {
+        	// If we are processing a new file
             if (m_bedfile != nullptr) {
                 fclose(m_bedfile);
+                // doesn't help at all, better switch to ifstream
+                // if we have time. That'd be safer
                 m_bedfile = nullptr;
             }
             m_cur_file = m_existed_snps[i_snp].file_name();
@@ -529,8 +546,13 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                 FOPEN_RB); // again, we are assuming that the file is correct
         }
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
+        	//  check if the SNP fall within the region
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
+        // current location of the snp in the bed file
+        // allow for quick jumping
+        // very useful for read score as most SNPs might not
+        // be next to each other
         size_t cur_line = m_existed_snps[i_snp].snp_id();
         if (fseeko(m_bedfile,
                    m_bed_offset
@@ -541,16 +563,19 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
-        std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
+        std::fill(genotype.begin(), genotype.end(), 0);
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_bedfile, m_tmp_genotype.data(), genotype))
+                                   m_bedfile, m_tmp_genotype.data(), genotype.data()))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        uintptr_t* lbptr = genotype;
-        uii = 0;
+        uintptr_t* lbptr = genotype.data();
+        uint32_t uii = 0;
+        uintptr_t ulii = 0;
+        uint32_t ujj;
+        uint32_t ukk;
         std::vector<size_t> missing_samples;
         std::vector<double> sample_genotype(num_included_samples);
         double stat = m_existed_snps[i_snp].stat();
@@ -630,5 +655,4 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
         }
     }
-    delete[] genotype;
 }
