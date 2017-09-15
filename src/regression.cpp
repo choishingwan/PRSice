@@ -297,9 +297,9 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
             devold = dev;
         }
     }
-    r2=0;
-    coeff=0;
-    p_value=-1;
+    r2 = 0;
+    coeff = 0;
+    p_value = -1;
     if (!converge) throw std::runtime_error("GLM algorithm did not converge");
     Eigen::VectorXd residuals =
         (y.array() - mu.array()) / (logit_mu_eta(eta).array());

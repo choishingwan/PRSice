@@ -525,14 +525,13 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
     }
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
-    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2,0);
-    for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
-    {
-    	// for each SNP
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
+        // for each SNP
         if (m_cur_file.empty()
             || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
         {
-        	// If we are processing a new file
+            // If we are processing a new file
             if (m_bedfile != nullptr) {
                 fclose(m_bedfile);
                 // doesn't help at all, better switch to ifstream
@@ -546,7 +545,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                 FOPEN_RB); // again, we are assuming that the file is correct
         }
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
-        	//  check if the SNP fall within the region
+            //  check if the SNP fall within the region
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
         // current location of the snp in the bed file
@@ -567,7 +566,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_bedfile, m_tmp_genotype.data(), genotype.data()))
+                                   m_bedfile, m_tmp_genotype.data(),
+                                   genotype.data()))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
