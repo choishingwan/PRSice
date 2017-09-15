@@ -86,6 +86,8 @@ public:
 protected:
 private:
     std::string m_log_file;
+    std::vector<std::string> m_sample_included;
+    std::vector<size_t> m_sample_index;
     struct
     {
         std::vector<int> col;

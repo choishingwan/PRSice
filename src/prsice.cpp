@@ -859,10 +859,22 @@ void PRSice::prsice(const Commander& c_commander,
                                  : sample.IID.length();
         }
     }
+
     // more than one phenotype? When more than one phenotype,
     // we will add the phenotype name to the output
     // otherwise we will ignore it
     const bool multi = pheno_info.name.size() > 1;
+    m_sample_included.clear();
+    m_sample_index.clear();
+    for(size_t index = 0; index < m_sample_names.size(); ++index)
+    {
+    	if(!m_sample_names[index].included) continue;
+    	auto &&sample = m_sample_names[index];
+    	std::string id =(m_ignore_fid)? sample.IID : sample.FID+"_"+sample.IID;
+    	m_sample_included.push_back(id);
+    	m_sample_index.push_back(index);
+
+    }
     std::vector<std::fstream> all_out;
     size_t width_of_line = 0;
     size_t num_thresholds = 0;
@@ -900,9 +912,8 @@ void PRSice::prsice(const Commander& c_commander,
                     throw std::runtime_error(error_message);
                 }
                 cur_stream << header << std::endl;
-                for (auto&& sample : m_sample_names) {
-                	if(!sample.included) continue;
-                    std::string name = sample.FID + " " + sample.IID;
+                for (auto&& sample : m_sample_index) {
+                    std::string name = m_sample_names[sample].FID + " " + m_sample_names[sample].IID;
                     cur_stream << std::setfill(' ') << std::setw(width_of_line)
                                << std::left << name << std::endl;
                 }
@@ -922,9 +933,8 @@ void PRSice::prsice(const Commander& c_commander,
                 throw std::runtime_error(error_message);
             }
             cur_stream << header << std::endl;
-            for (auto&& index : m_sample_names) {
-            	if(!index.included) continue;
-                std::string name = index.FID + " " + index.IID;
+            for (auto&& sample : m_sample_index) {
+                std::string name = m_sample_names[sample].FID + " " + m_sample_names[sample].IID;
                 cur_stream << std::setfill(' ') << std::setw(width_of_line)
                            << std::left << name << std::endl;
             }
@@ -934,16 +944,19 @@ void PRSice::prsice(const Commander& c_commander,
     }
 
 
-    // These are lite version. We can ignore the FID and IID because we
-    // know they will always follow the sequence in m_sample_names
-    // this will help us saving some memory spaces
-    // Note: Change of behaviour. We now include samples without phenotype
-    //       and we need to know if the sample has the phenotype information
+    /**
+     *  These are lite version. We can ignore the FID and IID because we
+     * know they will always follow the sequence in m_sample_names
+     * this will help us saving some memory spaces
+     * Note: Change of behaviour. We now include samples without phenotype
+     *       and we need to know if the sample has the phenotype information
+     * We only want the included samples
+    **/
     m_current_sample_score =
-        misc::vec2d<Sample_lite>(m_region_size, m_sample_names.size());
+        misc::vec2d<Sample_lite>(m_region_size, m_sample_included.size());
     // now initialize them
-    for (size_t i_sample = 0; i_sample < m_sample_names.size(); ++i_sample) {
-        bool has_pheno = m_sample_names[i_sample].has_pheno;
+    for (size_t i_sample = 0; i_sample < m_sample_included.size(); ++i_sample) {
+        bool has_pheno = m_sample_names[m_sample_index[i_sample]].has_pheno;
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
             m_current_sample_score(i_region, i_sample).has_pheno = has_pheno;
         }
@@ -963,14 +976,14 @@ void PRSice::prsice(const Commander& c_commander,
         m_region_perm_result = misc::vec2d<double>(
             m_region_size, c_commander.num_permutation(), 2.0);
         // first check for ridiculously large sample size
-        if (CHAR_BIT * m_sample_names.size() > 1000000000) {
+        if (CHAR_BIT * m_sample_included.size() > 1000000000) {
             perm_per_slice = 1;
         }
         else
         {
             // in theory, most of the time, perm_per_slice should be
             // equal to c_commander.num_permutation();
-            int sample_memory = CHAR_BIT * m_sample_names.size();
+            int sample_memory = CHAR_BIT * m_sample_included.size();
             perm_per_slice = 1000000000 / sample_memory;
             perm_per_slice = (perm_per_slice > c_commander.num_permutation())
                                  ? c_commander.num_permutation()
@@ -1023,7 +1036,6 @@ void PRSice::prsice(const Commander& c_commander,
     while (target.get_score(m_current_sample_score, cur_index, cur_category,
                             cur_threshold, m_num_snp_included))
     {
-    	exit(0); //cerr check if the score getter is correct
         if (!prslice) {
             double progress =
                 (double) cur_category / (double) (max_category) *100.0;
@@ -1036,12 +1048,9 @@ void PRSice::prsice(const Commander& c_commander,
         if (all) {
             size_t i_region = 0;
             for (auto&& a_out : all_out) {
-            	size_t actual_row = 0;
-                for (size_t sample = 0; sample < m_sample_names.size();
+                for (size_t sample = 0; sample < m_sample_included.size();
                      ++sample)
                 {
-
-                	if(!m_sample_names[sample].included) continue;
                     double score =
                         (m_current_sample_score(i_region, sample).num_snp == 0)
                             ? 0
@@ -1050,10 +1059,9 @@ void PRSice::prsice(const Commander& c_commander,
                                                                     sample)
                                         .num_snp;
                     // this need to be smart
-                    size_t loc = header_length + actual_row * width_of_line
+                    size_t loc = header_length + sample * width_of_line
                                  + max_fid_length + 1 + max_iid_length + 1
                                  + iter_threshold + iter_threshold * 12;
-                    actual_row++;
                     a_out.seekp(loc);
                     a_out << score;
                 }
@@ -1139,15 +1147,12 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id)
         {
 
-            std::string sample = (m_ignore_fid)
-                                     ? m_sample_names[sample_id].IID
-                                     : m_sample_names[sample_id].FID + "_"
-                                           + m_sample_names[sample_id].IID;
+            std::string sample = m_sample_included[sample_id];
             // only check samples within the matrix
             // basically, those with has_pheno
             if (m_sample_with_phenotypes.find(sample)
                     != m_sample_with_phenotypes.end()
-                && m_sample_names[sample_id].has_pheno)
+					)
             {
                 double score =
                     (m_current_sample_score(iter, sample_id).num_snp == 0)
@@ -1529,13 +1534,13 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         }
         else
         {
-            for (size_t sample = 0; sample < m_sample_names.size(); ++sample) {
+            for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
             	// samples that are extracted are ignored
-            	if(!m_sample_names[sample].included) continue;
+            	if(!m_sample_names[m_sample_index[sample]].included) continue;
                 std::string has_pheno =
-                    (m_sample_names[sample].has_pheno) ? "Yes" : "No";
-                best_out << m_sample_names[sample].FID << "\t"
-                         << m_sample_names[sample].IID << "\t"
+                    (m_sample_names[m_sample_index[sample]].has_pheno) ? "Yes" : "No";
+                best_out << m_sample_names[m_sample_index[sample]].FID << "\t"
+                         << m_sample_names[m_sample_index[sample]].IID << "\t"
                          << m_best_sample_score(i_region, sample).prs
                                 / (double) best_snp_size
                          << "\t" << has_pheno << std::endl;
