@@ -47,13 +47,16 @@ class PRSice
 public:
     PRSice(std::string base_name, std::string target,
            std::vector<bool> target_binary, SCORING score, size_t num_region,
-           bool ignore_fid)
+           bool ignore_fid, std::string out)
         : m_base_name(base_name)
         , m_target(target)
         , m_target_binary(target_binary)
         , m_score(score)
         , m_region_size(num_region)
-        , m_ignore_fid(ignore_fid){};
+        , m_ignore_fid(ignore_fid)
+    {
+        m_log_file = out + ".log";
+    };
     virtual ~PRSice();
     void pheno_check(const Commander& c_commander);
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
@@ -127,11 +130,10 @@ private:
      */
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress);
-    std::vector<size_t>
-    get_cov_index(const std::string& c_cov_file,
-                  const std::vector<std::string>& c_cov_header);
+    std::vector<size_t> get_cov_index(const std::string& c_cov_file,
+                                      std::vector<std::string>& cov_header);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        const std::vector<std::string>& c_cov_header);
+                        std::vector<std::string>& cov_header);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,

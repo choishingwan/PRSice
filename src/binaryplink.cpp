@@ -506,18 +506,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                              size_t start_index, size_t end_bound)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
+    // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    uint32_t uii;
-    uint32_t ujj;
-    uint32_t ukk;
-    uintptr_t ulii = 0;
     size_t num_included_samples = current_prs_score.cols();
-    // m_final_mask
 
-    // a lot of code in PLINK is to handle the sex chromosome
-    // which suggest that PRS can be done on sex chromosome
-    // that should be something later
     m_cur_file = ""; // just close it
     if (m_bedfile != nullptr) {
         fclose(m_bedfile);
@@ -532,14 +525,18 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
     }
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
-    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2,0);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
-    { // for each SNP
+    {
+    	// for each SNP
         if (m_cur_file.empty()
             || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
         {
+        	// If we are processing a new file
             if (m_bedfile != nullptr) {
                 fclose(m_bedfile);
+                // doesn't help at all, better switch to ifstream
+                // if we have time. That'd be safer
                 m_bedfile = nullptr;
             }
             m_cur_file = m_existed_snps[i_snp].file_name();
@@ -549,8 +546,13 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                 FOPEN_RB); // again, we are assuming that the file is correct
         }
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
+        	//  check if the SNP fall within the region
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
+        // current location of the snp in the bed file
+        // allow for quick jumping
+        // very useful for read score as most SNPs might not
+        // be next to each other
         size_t cur_line = m_existed_snps[i_snp].snp_id();
         if (fseeko(m_bedfile,
                    m_bed_offset
@@ -561,16 +563,19 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
-        std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
+        std::fill(genotype.begin(), genotype.end(), 0);
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_bedfile, m_tmp_genotype.data(), genotype))
+                                   m_bedfile, m_tmp_genotype.data(), genotype.data()))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        uintptr_t* lbptr = genotype;
-        uii = 0;
+        uintptr_t* lbptr = genotype.data();
+        uint32_t uii = 0;
+        uintptr_t ulii = 0;
+        uint32_t ujj;
+        uint32_t ukk;
         std::vector<size_t> missing_samples;
         std::vector<double> sample_genotype(num_included_samples);
         double stat = m_existed_snps[i_snp].stat();
@@ -650,5 +655,4 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
         }
     }
-    delete[] genotype;
 }

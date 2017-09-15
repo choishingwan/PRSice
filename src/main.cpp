@@ -97,9 +97,10 @@ int main(int argc, char* argv[])
         if (!commander.no_clump()) {
             target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
         }
-        PRSice prsice = PRSice(base_name, commander.target_name(),
-                               commander.is_binary(), commander.get_scoring(),
-                               region.size(), commander.ignore_fid());
+        PRSice prsice =
+            PRSice(base_name, commander.target_name(), commander.is_binary(),
+                   commander.get_scoring(), region.size(),
+                   commander.ignore_fid(), commander.out());
         prsice.pheno_check(commander);
         size_t num_pheno = prsice.num_phenotype();
         if (!perform_prslice) {
