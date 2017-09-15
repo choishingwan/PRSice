@@ -158,6 +158,7 @@ protected:
     // will have bit set to 0
     bool m_nonfounder = false;
     std::vector<uintptr_t> m_founder_info;
+    std::vector<uintptr_t> m_sample_include;
     std::vector<uintptr_t> m_sex_male;
     size_t m_num_male = 0;
     size_t m_num_female = 0;

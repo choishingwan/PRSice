@@ -445,11 +445,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
-        // std::memset(genotype, 0x0,
-        // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        // std::memset(m_tmp_genotype, 0x0,
-        // m_unfiltered_sample_ctl*2*sizeof(uintptr_t));
         if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
@@ -467,7 +463,6 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         int total_num = 0;
         uint32_t sample_idx = 0;
         int nmiss = 0;
-        // This whole thing was wrong...
         do
         {
             ulii = ~(*lbptr++);

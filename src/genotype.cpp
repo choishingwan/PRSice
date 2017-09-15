@@ -1097,14 +1097,6 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
             if (m_existed_snps[i].in(i_region)) num_snp_included[i_region]++;
         }
     }
-    std::ofstream debug;
-    debug.open("DEBUG");
-    for (size_t i = 0; i < num_snp_included.size(); ++i) {
-        debug << i << "\t" << num_snp_included[i]
-              << std::endl; // need to match with region info
-    }
-    debug.close();
-    // exit(0);
     if (!ended) {
         end_index = m_existed_snps.size();
         cur_category = m_existed_snps.back().category();

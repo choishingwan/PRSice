@@ -132,8 +132,6 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     m_best_index.clear();
     m_current_sample_score.clear();
     m_best_sample_score.clear();
-    m_sample_included.clear();
-    m_sample_index.clear();
     m_num_snp_included.clear();
 
 
@@ -856,8 +854,7 @@ void PRSice::prsice(const Commander& c_commander,
      * output
      */
     size_t max_fid_length = 3, max_iid_length = 3;
-    for (size_t i_sample = 0; i_sample < m_sample_names.size(); ++i_sample) {
-        auto&& sample = m_sample_names[i_sample];
+    for (auto&& sample : m_sample_names) {
         if (sample.included) {
             max_fid_length = (max_fid_length > sample.FID.length())
                                  ? max_fid_length
@@ -908,9 +905,8 @@ void PRSice::prsice(const Commander& c_commander,
                     throw std::runtime_error(error_message);
                 }
                 cur_stream << header << std::endl;
-                for (auto&& index : m_sample_index) {
-                    std::string name = m_sample_names[index].FID + " "
-                                       + m_sample_names[index].IID;
+                for (auto&& sample : m_sample_names) {
+                    std::string name = sample.FID + " " + sample.IID;
                     cur_stream << std::setfill(' ') << std::setw(width_of_line)
                                << std::left << name << std::endl;
                 }
@@ -930,9 +926,9 @@ void PRSice::prsice(const Commander& c_commander,
                 throw std::runtime_error(error_message);
             }
             cur_stream << header << std::endl;
-            for (auto&& index : m_sample_index) {
+            for (auto&& index : m_sample_names) {
                 std::string name =
-                    m_sample_names[index].FID + " " + m_sample_names[index].IID;
+                    index.FID + " " + index.IID;
                 cur_stream << std::setfill(' ') << std::setw(width_of_line)
                            << std::left << name << std::endl;
             }
@@ -1026,6 +1022,8 @@ void PRSice::prsice(const Commander& c_commander,
     // class
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
+    // we don't need to update get_score
+    // because all it does is to fill up the m_current_sample_score matrix
     while (target.get_score(m_current_sample_score, cur_index, cur_category,
                             cur_threshold, m_num_snp_included))
     {
@@ -1042,7 +1040,8 @@ void PRSice::prsice(const Commander& c_commander,
         if (all) {
             size_t i_region = 0;
             for (auto&& a_out : all_out) {
-                for (size_t sample = 0; sample < m_sample_names.size(); ++sample)
+                for (size_t sample = 0; sample < m_sample_names.size();
+                     ++sample)
                 {
                     double score =
                         (m_current_sample_score(i_region, sample).num_snp == 0)
@@ -1127,8 +1126,8 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         X = m_independent_variables;
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
     size_t num_include_samples = m_current_sample_score.cols();
+    // looping through each region
     for (size_t iter = region_start; iter < region_end; ++iter) {
-        // The m_prs size check is just so that the back will be valid
         // m_prs will only be empty for the first run
         if (m_num_snp_included[iter] == 0
             || (m_num_snp_included[iter]
@@ -1136,17 +1135,19 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
         {
             continue; // don't bother when there is no additional SNPs added
         }
-        // Problem is, if we do sample selection, it is possible for that SNP to
-        // have MAF of 0 because of the small resulting sample size
-
         double total = 0.0;
         for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id)
         {
-            std::string sample = m_sample_included[sample_id];
-            // The reason why we need to update the m_sample_with_phenotypes
-            // matrix
+
+            std::string sample = (m_ignore_fid)
+                                     ? m_sample_names[sample_id].IID
+                                     : m_sample_names[sample_id].FID + "_"
+                                           + m_sample_names[sample_id].IID;
+            // only check samples within the matrix
+            // basically, those with has_pheno
             if (m_sample_with_phenotypes.find(sample)
-                != m_sample_with_phenotypes.end())
+                    != m_sample_with_phenotypes.end()
+                && m_sample_names[sample_id].has_pheno)
             {
                 double score =
                     (m_current_sample_score(iter, sample_id).num_snp == 0)
@@ -1271,9 +1272,11 @@ void PRSice::permutation(unsigned int seed, int perm_per_slice,
         // get the decomposition
         for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id)
         {
-            std::string sample = m_sample_included[sample_id];
-            // The reason why we need to update the m_sample_with_phenotypes
-            // matrix
+            std::string sample = (m_ignore_fid)
+                                     ? m_sample_names[sample_id].IID
+                                     : m_sample_names[sample_id].FID + "_"
+                                           + m_sample_names[sample_id].IID;
+
             if (m_sample_with_phenotypes.find(sample)
                 != m_sample_with_phenotypes.end())
             {
@@ -1517,7 +1520,7 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         summary_out.close();
         best_out << "FID\tIID\tprs_"
                  << m_prs_results(i_region, m_best_index[i_region]).threshold
-                 << std::endl;
+                 << "\tHas_Phenotype" << std::endl;
         int best_snp_size =
             m_prs_results(i_region, m_best_index[i_region]).num_snp;
         if (best_snp_size == 0) {
@@ -1527,13 +1530,14 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         }
         else
         {
-            for (size_t sample = 0; sample < m_sample_included.size(); ++sample)
-            {
-                best_out << m_sample_names[m_sample_index[sample]].FID << "\t"
-                         << m_sample_names[m_sample_index[sample]].IID << "\t"
+            for (size_t sample = 0; sample < m_sample_names.size(); ++sample) {
+                std::string has_pheno =
+                    (m_sample_names[sample].has_pheno) ? "Yes" : "No";
+                best_out << m_sample_names[sample].FID << "\t"
+                         << m_sample_names[sample].IID << "\t"
                          << m_best_sample_score(i_region, sample).prs
                                 / (double) best_snp_size
-                         << std::endl;
+                         << "\t" << has_pheno << std::endl;
             }
         }
         best_out.close();

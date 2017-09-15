@@ -130,7 +130,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
     if (!m_fam_name.empty())
         famName = m_fam_name;
     else
-        m_genotype_files.front() + ".fam";
+    	famName = m_genotype_files.front() + ".fam";
     // open the fam file
     std::ifstream famfile;
     famfile.open(famName.c_str());
@@ -222,7 +222,6 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                                                          // m_founder is a
                                                          // subset of
                                                          // m_sample_include
-            SET_BIT(sample_uidx, m_sample_include.data());
         }
         else if (cur_sample.included && m_nonfounder)
         {
@@ -241,6 +240,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
             }
         }
         m_sample_ct += cur_sample.included;
+        if (cur_sample.included) SET_BIT(sample_uidx, m_sample_include.data());
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
             // SET_BIT(sample_uidx, m_sex_male); // if that individual is male,
