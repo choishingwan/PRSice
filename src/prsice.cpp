@@ -927,8 +927,7 @@ void PRSice::prsice(const Commander& c_commander,
             }
             cur_stream << header << std::endl;
             for (auto&& index : m_sample_names) {
-                std::string name =
-                    index.FID + " " + index.IID;
+                std::string name = index.FID + " " + index.IID;
                 cur_stream << std::setfill(' ') << std::setw(width_of_line)
                            << std::left << name << std::endl;
             }

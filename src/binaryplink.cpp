@@ -130,7 +130,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
     if (!m_fam_name.empty())
         famName = m_fam_name;
     else
-    	famName = m_genotype_files.front() + ".fam";
+        famName = m_genotype_files.front() + ".fam";
     // open the fam file
     std::ifstream famfile;
     famfile.open(famName.c_str());
