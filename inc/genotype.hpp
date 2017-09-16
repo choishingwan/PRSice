@@ -66,6 +66,7 @@ public:
     size_t num_threshold() const { return m_num_threshold; };
     void read_base(const Commander& c_commander, Region& region);
     void clump(Genotype& reference);
+    void efficient_clumping(Genotype& reference);
     void set_clump_info(const Commander& c_commander);
 
 protected:
@@ -92,9 +93,6 @@ protected:
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<uintptr_t> m_chrom_mask;
 
-    // for easy calculatable items, remove them from the class to keep things
-    // more organized and easier to debug
-
     /** sample information **/
     virtual std::vector<Sample> load_samples(bool ignore_fid)
     {
@@ -102,8 +100,9 @@ protected:
     };
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_sample_ct = 0;            // number of final samples
+
     // storage of sample information
-    std::vector<Sample> m_sample_names; // vector storing the sample information
+    std::vector<Sample> m_sample_names;
 
     /** SNP/Sample selection **/
     // default is remove (if not provided, the list is empty,
@@ -125,6 +124,12 @@ protected:
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     SCORING m_scoring;
+
+    struct boundary{
+    	int start;
+    	int end;
+    	int core;
+    };
 
     struct
     {
