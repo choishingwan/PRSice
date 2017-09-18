@@ -611,6 +611,99 @@ void Genotype::set_clump_info(const Commander& c_commander)
 }
 
 
+void Genotype::clump_snp(const size_t start_index, const size_t end_index)
+{
+	// all we need to know here is:
+	// from where to where
+	for(size_t i_snp = start_index; i_snp < end_index; ++i_snp)
+	{
+
+	}
+}
+
+
+
+// return the remaining number of SNPs
+int Genotype::process_block(size_t &start_index, size_t end_index, size_t &first_core_index)
+{
+	// note: only allow to invoke clean_clump in this function
+
+	// first, remove any SNPs that is too far away from the first core index
+	auto &&first_core = m_existed_snps[first_core_index];
+	for(size_t i_snp = start_index; i_snp < first_core_index; ++i_snp)
+	{
+		auto &&cur_snp = m_existed_snps[i_snp];
+		if(cur_snp.chr()!=first_core.chr() || cur_snp.loc()-first_core.loc() > clumping_info.distance)
+		{
+			start_index++;
+			cur_snp.clean_clump();
+		}
+		else break;
+	}
+	// now the other way round. Go from the back of the range
+	// and find the last core SNP with all the information
+	// the last SNP in our range must be outside of the first core's range
+	// due to how we did it
+	// the only exception is when end_index == m_existed_snps.size()
+	size_t last_core_index = m_existed_snps.size()-1;
+	// if the end index equals to the size of the vector
+	// then we know we should just finish the whole job
+	// thus the last_core_index == m_existed_snps.size()
+	if(end_index < m_existed_snps.size())
+	{
+		auto &&last_snp = m_existed_snps[end_index-1];
+		// -2 because the current SNP won't be in place
+		for(size_t i_snp = end_index-2; i_snp > first_core_index; --i_snp)
+		{
+			auto &&cur_snp = m_existed_snps[i_snp];
+			if((cur_snp.chr()==last_snp.chr() && last_snp.loc() - cur_snp.loc() > clumping_info.distance) ||
+					cur_snp.chr() != last_snp.chr())
+			{
+				// different chromosome with the last SNP, or
+				// on same chromosome but far enough
+				last_core_index = i_snp;
+				break;
+			}
+		}
+	}
+	// now we know where to work
+	// from start_index to last_core_index
+	int range = last_core_index-start_index+1;
+	if(m_thread==1 )
+	{
+		// don't do multi-threading to save time on mutex
+	}
+	else
+	{
+		 std::vector<std::thread> thread_store;
+		 int num_snp_per_thread= range/m_thread;
+		 int remain = range%m_thread;
+		 for(size_t i_thread=0; i_thread<m_thread; ++i_thread)
+		 {
+
+		 }
+		 for(auto && thread : thread_store)
+		 {
+			 thread.join()
+		 }
+		 thread_store.clear();
+	}
+	for(size_t i_snp = start_index; i_snp <= last_core_index; ++i_snp)
+	{
+		m_existed_snps[i_snp].clean_clump();
+	}
+	int remain_snps = end_index-last_core_index-1;
+	if(remain_snps > 0)
+	{
+		// there are still SNPs left to be processed
+		start_index = last_core_index+1;
+
+	}
+	return remain_snps;
+}
+
+
+
 void Genotype::efficient_clumping(Genotype& reference)
 {
     /*
@@ -639,9 +732,6 @@ void Genotype::efficient_clumping(Genotype& reference)
         + sizeof(uint32_t) * 6;
     size_t used_memory = 0;
 
-    // block info
-    std::vector<boundary> block_store;
-
     // place holder information i.e. number of mismatch, number of total SNPs
     // etc
     bool mismatch_error = false;
@@ -658,8 +748,14 @@ void Genotype::efficient_clumping(Genotype& reference)
     int end_index = 0;
     std::unordered_set<int> processed_snps;
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
-    // now transverse the genome
-    // have something to start with
+
+    /**
+     * This while loop should only do a few things
+     * 1. Check if used up too much memory + contain enough information for clumping
+     *    a) If true, call clump function
+     *    b) If false, continue
+     * 2. Read in the genotype information and do the popcount
+     */
     do
     {
         // add memory before we actually read in the genotype
@@ -674,7 +770,8 @@ void Genotype::efficient_clumping(Genotype& reference)
         // interested
         if (cur_snp.p_value() > clump_info.p_value) continue;
         auto&& ld_snp = reference.m_existed_snps[target_pair->second];
-
+        // total number of SNPs with both target & reference information
+        // and are valid index SNP candidate
         total++;
         // check if the reference and the target are the same
         // if not, invoke a warning and continue
@@ -706,28 +803,40 @@ void Genotype::efficient_clumping(Genotype& reference)
                 mismatch_error = true;
             }
         }
+        // location cannot be negative
+        // if this become a problem, we can also put it forward
+        // and skip it just like SNPs with large p-values
         assert(cur_snp.loc() >= 0);
-
 
         used_memory += size_of_store;
         if (block_available && used_memory >= memory_constrain) {
-        	// start processing the data and calculate the LD
-        	// input should be
-        	// start index inclusive
-        	// end index exclusive
-        	// core index
-
-
+				// start processing the data and calculate the LD
+				// input should be
+				// start index inclusive
+				// end index exclusive
+				// core index so that we can remove SNPs that are too far from it
+        		int remain = process_block(start_index, end_index, core_index);
+        		if(remain==0)
+        		{
+        			completed = true;
+            		break;
+        		}
+        		else
+        		{
+        			used_memory = remain*size_of_store;
+        		}
+        		block_available = false;
         }
 
         // allow equal just in case
         if (core_index == -1 && cur_snp.p_value() <= clump_info.p_value) {
+        		// this is an index SNP
             core_index = cur_snp_index;
-            // because there's no core_snp, the block must be relatively new
             block_available = false;
         }
-        else
+        else if(!block_available)
         {
+        		// only do this when there isn't a block yet
             // this when there's core SNP, check if the core block is complete
             // after reading this SNP
             auto&& core = m_existed_snps[core_index];
@@ -735,30 +844,44 @@ void Genotype::efficient_clumping(Genotype& reference)
                 || (cur_snp.loc() - core.loc()) > clump_info.distance)
                 block_available = true;
         }
-        // now read in
+        // we have used this SNP
         processed_snps.insert(cur_snp_index);
         // so that end_index will always be bigger than current index
         end_index= ++cur_snp_index;
 
+
         // initialize the genotype vector
         std::fill(genotype_vector.begin(), genotype_vector.end(), 0);
+        // read in the genotype
         reference.read_genotype(genotype_vector.data(), cur_snp.snp_id(),
                                 cur_snp.file_name());
+        // no idea why we need to initialize it this way...
+        // actually, it doesn't matter as load_and_split3 never use this
+        // variable except assignment
         uintptr_t contain_missing = founder_ctsplit * sizeof(intptr_t)
                                     + 2 * sizeof(int32_t)
                                     + (m_marker_ct - 1) * 2 * sizeof(double);
-        uintptr_t* geno1 = new uintptr_t[3 * founder_ctsplit + founder_ctv3];
-        std::fill(geno1, geno1 + (3 * founder_ctsplit + founder_ctv3), 0);
-        load_and_split3(genotype_vector.data(), m_founder_ct, geno1,
+        // resize the geno1 vector in SNP
+        cur_snp.geno_size((3 * founder_ctsplit + founder_ctv3), Passkey<Genotype>());
+        // use the geno1 pointer directly and fill it in using PLINK's function
+        load_and_split3(genotype_vector.data(), m_founder_ct, cur_snp.geno(Passkey<Genotype>()),
                         founder_ctv3, 0, 0, 1, &contain_missing);
-        std::vector<uint32_t> tot1(6, 0);
-        tot1[0] = popcount_longs(geno1, founder_ctv3);
-        tot1[1] = popcount_longs(&(geno1[founder_ctv3]), founder_ctv3);
-        tot1[2] = popcount_longs(&(geno1[2 * founder_ctv3]), founder_ctv3);
-
-
+        // do the popcount within the SNP class (don't need to pass around pointers)
+        cur_snp.load_tot(founder_ctv3);
+        // set the missing information
+        cur_snp.set_contain_missing(contain_missing);
+        // now we have all the required information for this SNP
     } while (!completed);
 
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    ///				OLD STUFF
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /*
     std::unordered_set<int> overlapped_snps;
 
     uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
@@ -803,25 +926,6 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
         assert(snp.loc() >= 0);
 
-
-        if (prev_chr != snp.chr()) {
-            // New chromosome
-            /*
-            perform_clump(core_genotype_index, begin_index, i_snp,
-                          require_clump);
-                          */
-            prev_chr = snp.chr();
-        }
-        else if ((snp.loc() - bp_of_core) > clump_info.distance)
-        {
-            // distance too far
-            /*
-            perform_clump(core_genotype_index, begin_index, i_snp,
-                          require_clump);
-                          */
-        }
-
-
         overlapped_snps.insert(i_snp);
         std::fill(genotype_vector.begin(), genotype_vector.end(), 0);
         std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
@@ -859,13 +963,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
     }
     delete[] genotype;
-    if (core_genotype_index != m_existed_snps.size()) {
-        // this make sure this will be the last
-        /*
-        perform_clump(core_genotype_index, begin_index, m_existed_snps.size(),
-                      require_clump);
-                      */
-    }
+
 
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
 
@@ -958,6 +1056,7 @@ void Genotype::efficient_clumping(Genotype& reference)
     log_file_stream.close();
     fprintf(stderr, "Number of SNPs after clumping : %zu\n\n",
             m_existed_snps.size());
+     */
 }
 void Genotype::clump(Genotype& reference)
 {

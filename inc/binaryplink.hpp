@@ -44,8 +44,6 @@ private:
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
-        uintptr_t unfiltered_sample_ctl =
-            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bedfile != nullptr) {

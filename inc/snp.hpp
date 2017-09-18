@@ -28,6 +28,8 @@
 #include <stdexcept>
 #include <string>
 
+
+class Genotype;
 class SNP
 {
 public:
@@ -194,16 +196,37 @@ public:
     void set_clump_geno(uintptr_t* geno, int contain_miss)
     {
         clump_info.genotype = geno;
+        clump_info.contain_geno = true;
         clump_info.contain_missing = (contain_miss == 3);
     }
     uintptr_t* clump_geno() const { return clump_info.genotype; };
+    uint32_t* tot() { return clump_info.tot.data(); };
     bool clump_missing() const { return clump_info.contain_missing; };
     void clean_clump()
     {
-        if (clump_info.genotype != nullptr) {
-            delete[] clump_info.genotype;
-            clump_info.genotype = nullptr;
-        }
+        clump_info.geno1.clear();
+        clump_info.tot.clear();
+    }
+
+    // Now only genotype can access this pointer
+    void geno_size(size_t size, Passkey<Genotype>){
+    		clump_info.geno1.resize(size, 0);
+    }
+    uintptr_t* geno(Passkey<Genotype>) {
+    		// pretty sure this is unsafe practice
+    		// as we expose the pointer to other stuff
+    		// not sure how to limit the access of this function
+    		return clump_info.geno1.data();
+    };
+    void load_tot(const uint32_t founder_ctv3){
+    		clump_info.tot.resize(6,0);
+    		clump_info.tot[0] = popcount_longs(clump_info.geno1.data(), founder_ctv3);
+    		clump_info.tot[1] = popcount_longs(&(clump_info.geno1.data()[founder_ctv3]), founder_ctv3);
+    		clump_info.tot[2] = popcount_longs(&(clump_info.geno1.data()[2 * founder_ctv3]), founder_ctv3);
+    }
+    void set_contain_missing(int contain_miss)
+    {
+    		clump_info.contain_missing = (contain_miss == 3);
     }
 
 private:
@@ -211,10 +234,13 @@ private:
     struct
     {
         bool clumped;
-        std::vector<size_t> target;
-        std::vector<double> r2;
-        uintptr_t* genotype;
         bool contain_missing;
+        bool contain_geno;
+        std::vector<double> r2;
+        std::vector<size_t> target;
+        std::vector<uint32_t> tot;
+        std::vector<uintptr_t> geno1;
+        uintptr_t *genotype;// delete this once ready
     } clump_info;
 
     struct

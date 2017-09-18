@@ -37,7 +37,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
 class Genotype
 {
 public:
@@ -70,6 +69,8 @@ public:
     void set_clump_info(const Commander& c_commander);
 
 protected:
+    int process_block(size_t &start_index, size_t end_index, size_t &first_core_index);
+    void clump_snp(const size_t start_index, const size_t end_index);
     std::string m_log_file;
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
@@ -124,12 +125,6 @@ protected:
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     SCORING m_scoring;
-
-    struct boundary{
-    	int start;
-    	int end;
-    	int core;
-    };
 
     struct
     {

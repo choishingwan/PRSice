@@ -30,6 +30,7 @@ SNP::SNP()
     clump_info.clumped = false;
     clump_info.genotype = nullptr;
     clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
 }
 
 
@@ -51,6 +52,7 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
     clump_info.clumped = false;
     clump_info.genotype = nullptr;
     clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
     file_info.file = file_name;
     file_info.id = num_line;
 }
