@@ -95,7 +95,10 @@ int main(int argc, char* argv[])
         region.print_file(region_out_name);
 
         if (!commander.no_clump()) {
-            target_file->clump((ld_file == nullptr) ? *target_file : *ld_file);
+            // target_file->clump((ld_file == nullptr) ? *target_file :
+            // *ld_file);
+            target_file->efficient_clumping((ld_file == nullptr) ? *target_file
+                                                                 : *ld_file);
         }
         PRSice prsice =
             PRSice(base_name, commander.target_name(), commander.is_binary(),

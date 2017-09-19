@@ -52,12 +52,13 @@ struct prsice_result
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP
 template <typename T>
-class Passkey {
-	private:
-	friend T;
-	Passkey() {}
-	Passkey(const Passkey&) {}
-	Passkey& operator=(const Passkey&) = delete;
+class Passkey
+{
+private:
+    friend T;
+    Passkey() {}
+    Passkey(const Passkey&) {}
+    Passkey& operator=(const Passkey&) = delete;
 };
 
 template <typename e>

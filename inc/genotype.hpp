@@ -64,12 +64,12 @@ public:
     void print_snp(std::string& output, double threshold);
     size_t num_threshold() const { return m_num_threshold; };
     void read_base(const Commander& c_commander, Region& region);
-    void clump(Genotype& reference);
+    //void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference);
     void set_clump_info(const Commander& c_commander);
 
 protected:
-    int process_block(size_t &start_index, size_t end_index, size_t &first_core_index);
+    int process_block(int& start_index, int end_index, int& first_core_index);
     void clump_snp(const size_t start_index, const size_t end_index);
     std::string m_log_file;
     // for loading the sample inclusion / exclusion set
@@ -201,13 +201,14 @@ protected:
                || (alt_allele == "g" && ref_allele == "c");
     };
 
+    /*
     void perform_clump(size_t& core_genotype_index, int& begin_index,
                        int current_index, bool require_clump);
     void clump_thread(const size_t c_core_genotype_index,
                       const size_t c_begin_index, const size_t c_current_index);
     void compute_clump(size_t core_genotype_index, size_t i_start, size_t i_end,
                        bool nm_fixed, uint32_t* tot1);
-
+*/
 
     // no touchy area (PLINK Code)
     uint32_t em_phase_hethet(double known11, double known12, double known21,
