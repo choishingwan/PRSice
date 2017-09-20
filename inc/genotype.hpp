@@ -64,7 +64,7 @@ public:
     void print_snp(std::string& output, double threshold);
     size_t num_threshold() const { return m_num_threshold; };
     void read_base(const Commander& c_commander, Region& region);
-    //void clump(Genotype& reference);
+    // void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference);
     void set_clump_info(const Commander& c_commander);
 

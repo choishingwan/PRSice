@@ -191,12 +191,19 @@ public:
     {
         clump_info.r2.insert(clump_info.r2.end(), i.begin(), i.end());
     };
+
+    void add_clump(size_t index, double r2)
+    {
+        std::lock_guard<std::mutex> self_lock(thread_safty_inspector);
+        clump_info.target.push_back(index);
+        clump_info.r2.push_back(r2);
+    }
     void set_clumped() { clump_info.clumped = true; };
-    void proxy_clump(std::vector<SNP>& snp_list, double r2_threshold);
-    void clump(std::vector<SNP>& snp_list);
+    void clump(std::vector<SNP>& snp_list, double proxy = 2);
     bool clumped() const { return clump_info.clumped; };
 
-    uintptr_t* clump_geno() { return clump_info.geno1.data(); };;
+    uintptr_t* clump_geno() { return clump_info.geno1.data(); };
+    ;
     uint32_t* tot() { return clump_info.tot.data(); };
     uint32_t get_tot(int i) { return clump_info.tot.at(i); };
     bool clump_missing() const { return clump_info.contain_missing; };

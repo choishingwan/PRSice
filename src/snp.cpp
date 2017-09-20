@@ -56,8 +56,7 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
 }
 
 
-SNP::~SNP()
-{}
+SNP::~SNP() {}
 
 std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
 {
@@ -90,56 +89,41 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
 }
 
 
-void SNP::clump(std::vector<SNP>& snp_list)
+void SNP::clump(std::vector<SNP>& snp_list, double proxy)
 {
-    for (auto&& target : clump_info.target) {
-        if (!snp_list[target].clumped()) {
-            bool completed = true;
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
-                snp_list[target].m_flags[i_flag] =
-                    snp_list[target].m_flags[i_flag]
-                    ^ (m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
-                if (snp_list[target].m_flags[i_flag]
-                    != 0) // if completed, it will have flag of 0
-                {
-                    completed = false;
-                }
-            }
-            if (completed) {
-                snp_list[target].set_clumped();
-            }
-        }
-    }
-    clump_info.clumped = true; // protect from other SNPs tempering its flags
-}
-
-void SNP::proxy_clump(std::vector<SNP>& snp_list, double r2_threshold)
-{
+    // when proxy = 2, we will not perform proxy
+    // That's because no SNP can have an R2 > 2
+    // go through each of the target
     for (size_t i_target = 0; i_target < clump_info.target.size(); ++i_target) {
-        auto&& target = clump_info.target[i_target];
-        if (!snp_list[target].clumped()) {
-            if (clump_info.r2[i_target] >= r2_threshold) {
-                // Both SNP now considered to be in the same set
-                for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
-                    m_flags[i_flag] |= snp_list[target].m_flags[i_flag];
-                }
-                // we will set clumped as we now fully represent the target SNP
-                snp_list[target].set_clumped();
+
+        auto&& target_index = clump_info.target[i_target];
+        // don't bother with anyone who are already clumped
+        if (snp_list[target_index].clumped()) continue;
+        // check if we are going to proxy clump it or just normal clump it
+        bool completed = false;
+        // if we can perform proxy clump, we will always perform proxy
+        // clump instead of normal clump
+        if (clump_info.r2[i_target] > proxy) {
+            // proxy clump
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+                // two become one
+                m_flags[i_flag] |= snp_list[target_index].m_flags[i_flag];
             }
-            else
-            {
-                bool completed = true;
-                for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
-                    snp_list[target].m_flags[i_flag] =
-                        snp_list[target].m_flags[i_flag]
-                        ^ (m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
-                    if (snp_list[target].m_flags[i_flag] != 0)
-                        completed = false; // unless all unset, this will always
-                                           // be non-zero
-                }
-                if (completed) snp_list[target].set_clumped();
-            }
+            completed = true;
         }
+        else
+        {
+            // normal clumping
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+                snp_list[target_index].m_flags[i_flag] =
+                    snp_list[target_index].m_flags[i_flag]
+                    ^ (m_flags[i_flag]
+                       & snp_list[target_index].m_flags[i_flag]);
+                completed = (snp_list[target_index].m_flags[i_flag] == 0);
+            }
+
+        }
+        if (completed) snp_list[target_index].set_clumped();
     }
     clump_info.clumped = true; // protect from other SNPs tempering its flags
 }

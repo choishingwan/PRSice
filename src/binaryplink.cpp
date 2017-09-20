@@ -516,7 +516,6 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         fclose(m_bedfile);
         m_bedfile = nullptr;
     }
-
     // haven't figured out what this max_reverse does
     // a simple size check
     if (current_prs_score.rows() != m_region_size) {
@@ -571,6 +570,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+
         uintptr_t* lbptr = genotype.data();
         uint32_t uii = 0;
         uintptr_t ulii = 0;
