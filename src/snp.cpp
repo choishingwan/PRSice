@@ -121,7 +121,6 @@ void SNP::clump(std::vector<SNP>& snp_list, double proxy)
                        & snp_list[target_index].m_flags[i_flag]);
                 completed = (snp_list[target_index].m_flags[i_flag] == 0);
             }
-
         }
         if (completed) snp_list[target_index].set_clumped();
     }

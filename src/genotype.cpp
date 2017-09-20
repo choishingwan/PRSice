@@ -631,7 +631,7 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
     for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.has_geno()) continue;
-        for (size_t j_snp = i_snp+1; j_snp < end_index; ++j_snp) {
+        for (size_t j_snp = i_snp + 1; j_snp < end_index; ++j_snp) {
             auto&& target_snp = m_existed_snps[j_snp];
             if (target_snp.chr() != cur_snp.chr()) break;
             if (target_snp.loc() - cur_snp.loc() > clump_info.distance) break;
