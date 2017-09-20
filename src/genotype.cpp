@@ -1005,12 +1005,12 @@ void Genotype::efficient_clumping(Genotype& reference)
         // set the missing information
         cur_snp.set_contain_missing(contain_missing);
         // now we have all the required information for this SNP
-        double cur_progress = (double) (cur_snp_index) / (double)(num_snp) * 100.0;
+        double cur_progress =
+            (double) (cur_snp_index) / (double) (num_snp) *100.0;
 
-        if (cur_progress - prev_progress > 0.01)
-        {
+        if (cur_progress - prev_progress > 0.01) {
             fprintf(stderr, "\rClumping Progress: %03.2f%%", cur_progress);
-        		prev_progress = cur_progress;
+            prev_progress = cur_progress;
         }
     } while (!completed);
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
