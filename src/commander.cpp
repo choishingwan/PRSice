@@ -126,6 +126,13 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("memory") == 0)
                 set_numeric<int>(optarg, message, error_messages, misc.memory,
                                  misc.provided_memory, error, command);
+            else if(command.compare("info")==0)
+            		set_numeric<double>(optarg, message, error_messages, base.info_score,
+            				dummy, error, command);
+            else if(command.compare("info-col")==0)
+            		set_string(optarg, message, base.info_col, base.use_info,
+                            command);
+
             else
             {
                 std::string er = "Undefined operator: " + command
@@ -313,6 +320,7 @@ Commander::Commander()
     base.bp = "BP";
     base.standard_error = "SE";
     base.p_value = "P";
+    base.info_score = 0.9;
     base.index = false;
     base.provided_chr = false;
     base.provided_ref = false;
@@ -322,6 +330,7 @@ Commander::Commander()
     base.provided_bp = false;
     base.provided_se = false;
     base.provided_p = false;
+    base.use_info = false;
     base.col_index.resize(+BASE_INDEX::MAX + 1, -1);
 
 
@@ -350,13 +359,11 @@ Commander::Commander()
     filter.maf = 0.01;
     filter.hard_coding = false;
     filter.hard_threshold = 0.9;
-    filter.info_score = 0.9;
     filter.keep_ambig = false;
     filter.use_prob = false;
     filter.use_maf = false;
     filter.use_mind = false;
     filter.use_hard_thres = false;
-    filter.use_info = false;
     filter.use_geno = false;
 
     misc.all = false;
@@ -615,11 +622,11 @@ void Commander::info()
           "call less than\n"
           "                            this will be treated as missing. Note "
           "that if dosage\n"
-          "                            data, is used as a LD reference, it "
+          "                            data is used as a LD reference, it "
           "will always be\n"
           "                            hard coded to calculate the LD\n"
           "                            Default: "
-        + std::to_string(filter.info_score)
+        + std::to_string(filter.hard_threshold)
         + "\n"
           "    --hard                  Use hard coding instead of dosage for "
           "PRS construction.\n"
@@ -808,6 +815,14 @@ void Commander::base_check(std::string& message, bool& error,
     }
     else
     {
+
+    	//cerr need to update this for better defaults. For now, just leave it be
+        if (base.use_info && (base.info_score < 0 || base.info_score > 1)) {
+            error = true;
+            error_message.append("ERROR: Info score should be between 0 and 1\n");
+        }
+
+
         // check the base file and get the corresponding index
         std::ifstream base_test;
         base_test.open(base.name.c_str());
@@ -1219,10 +1234,6 @@ void Commander::covariate_check(bool& error, std::string& error_message)
 
 void Commander::filter_check(bool& error, std::string& error_message)
 {
-    if (filter.use_info && (filter.info_score < 0 || filter.info_score > 1)) {
-        error = true;
-        error_message.append("ERROR: Info score should be between 0 and 1\n");
-    }
     if (filter.use_hard_thres
         && (filter.hard_threshold < 0 || filter.hard_threshold > 1))
     {

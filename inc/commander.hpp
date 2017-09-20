@@ -45,6 +45,8 @@ public:
     std::vector<int> index() const { return base.col_index; };
     bool has_index() const { return base.index; };
     bool beta() const { return base.beta; };
+    bool filter_info() const { return base.use_info; };
+    double info_score() const { return base.info_score; };
     std::string base_name() const { return base.name; };
 
     // clump
@@ -68,7 +70,6 @@ public:
     bool filter_maf() const { return filter.use_maf; };
     bool filter_geno() const { return filter.use_geno; };
     bool filter_mind() const { return filter.use_mind; };
-    bool filter_info() const { return filter.use_info; };
     bool filter_hard_threshold() const { return filter.hard_threshold; };
     bool hard_coding() const { return filter.hard_coding; };
     bool keep_ambig() const { return filter.keep_ambig; };
@@ -83,7 +84,6 @@ public:
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
-    double info_score() const { return filter.info_score; };
     double hard_threshold() const { return filter.hard_threshold; };
 
     // misc
@@ -200,6 +200,7 @@ private:
         std::string bp;
         std::string standard_error;
         std::string p_value;
+        std::string info_col;
         std::vector<int> col_index;
         int beta;
         int index;
@@ -211,6 +212,8 @@ private:
         bool provided_bp;
         bool provided_se;
         bool provided_p;
+        bool use_info;
+        double info_score;
     } base;
 
     struct
@@ -246,12 +249,10 @@ private:
         std::string extract_file;
         double geno;
         double hard_threshold;
-        double info_score;
         double maf;
         double mind;
         int hard_coding;
         int use_geno;
-        int use_info;
         int use_maf;
         int use_mind;
         int use_prob;

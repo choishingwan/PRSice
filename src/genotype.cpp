@@ -591,7 +591,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     m_num_threshold = unique_thresholds.size();
 }
 
-void Genotype::set_clump_info(const Commander& c_commander)
+void Genotype::set_info(const Commander& c_commander)
 {
     clump_info.p_value = c_commander.clump_p();
     clump_info.r2 = c_commander.clump_r2();

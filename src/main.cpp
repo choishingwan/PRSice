@@ -89,8 +89,8 @@ int main(int argc, char* argv[])
     fprintf(stderr, "==============================\n");
     try
     {
+        target_file->set_info(commander);
         target_file->read_base(commander, region);
-        target_file->set_clump_info(commander);
         std::string region_out_name = commander.out() + ".region";
         region.print_file(region_out_name);
 

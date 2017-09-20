@@ -66,7 +66,7 @@ public:
     void read_base(const Commander& c_commander, Region& region);
     // void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference);
-    void set_clump_info(const Commander& c_commander);
+    void set_info(const Commander& c_commander);
 
 protected:
     int process_block(int& start_index, int end_index, int& first_core_index);
