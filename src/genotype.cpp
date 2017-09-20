@@ -1030,7 +1030,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             }
             else if (!m_existed_snps[i_snp].clumped())
             {
-                m_existed_snps[i_snp].clump(m_existed_snps, clump_in);
+                m_existed_snps[i_snp].clump(m_existed_snps);
             }
             else
                 continue;
