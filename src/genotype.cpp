@@ -850,7 +850,6 @@ void Genotype::efficient_clumping(Genotype& reference)
     int core_index = -1;
     int cur_snp_index = 0;
     int start_index = 0;
-    int end_index = 0;
     std::unordered_set<int> processed_snps;
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
 

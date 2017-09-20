@@ -561,7 +561,6 @@ void PRSice::check_factor_cov(
         std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         { // sample is found in the phenotype vector
-            int index = m_sample_with_phenotypes[id];
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
                 size_t covar_index = cov_index[i_cov];
                 if (current_factors[i_cov].find(token[covar_index])
@@ -575,6 +574,7 @@ void PRSice::check_factor_cov(
                 }
                 try
                 {
+                		// this is for catching unconvertable covariate
                     double temp = misc::convert<double>(token[covar_index]);
                     convertable[i_cov]++;
                 }
@@ -1216,7 +1216,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 
 
         // If this is the best r2, then we will add it
-        size_t best_index = m_best_index[iter];
+        int best_index = m_best_index[iter];
         if (iter_threshold == 0 || best_index < 0
             || m_prs_results(iter, best_index).r2 < r2)
         {
