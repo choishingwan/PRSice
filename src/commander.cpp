@@ -559,7 +559,7 @@ void Commander::info()
         "\nClumping:\n"
         "    --clump-kb              The distance for clumping in kb\n"
         "                            Default: "
-        + std::to_string(clumping.distance / 1000)
+        + std::to_string(clumping.distance)
         + "\n"
           "    --clump-r2              The R2 threshold for clumping\n"
           "                            Default: "
@@ -1027,13 +1027,6 @@ void Commander::clump_check(std::string& message, bool& error,
             error_message.append(
                 "ERROR: R2 threshold must be within 0 and 1!\n");
         }
-        if (clumping.distance < 0.0) {
-            error = true;
-            error_message.append(
-                "ERROR: Clumping distance must be positive!\n");
-        }
-        else
-            clumping.distance *= 1000;
         if (!clumping.type.empty()) {
             bool alright = false;
             for (auto&& type : supported_types) {
@@ -1057,6 +1050,12 @@ void Commander::clump_check(std::string& message, bool& error,
         if (!clumping.provide_distance)
             message.append(" \\\n    --clump-kb "
                            + std::to_string(clumping.distance));
+
+        if (clumping.distance < 0.0) {
+            error = true;
+            error_message.append(
+                "ERROR: Clumping distance must be positive!\n");
+        }
     }
 }
 

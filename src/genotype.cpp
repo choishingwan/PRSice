@@ -659,7 +659,8 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
     for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.has_geno()) continue;
-        // we allow j_snp to go as far as possible, until it find all the SNPs in the region
+        // we allow j_snp to go as far as possible, until it find all the SNPs
+        // in the region
         for (size_t j_snp = i_snp + 1; j_snp < m_existed_snps.size(); ++j_snp) {
 
             auto&& target_snp = m_existed_snps[j_snp];
@@ -744,6 +745,7 @@ int Genotype::process_block(int& start_index, int end_index,
 {
     // note: only allow to invoke clean_clump in this function
     // first, remove any SNPs that is too far away from the first core index
+
     auto&& first_core = m_existed_snps[first_core_index];
     for (size_t i_snp = start_index; i_snp < first_core_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
@@ -986,6 +988,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             block_available = false;
         }
 
+        // a safe way will be to remove SNPs that are too far off
         // allow equal just in case
         if (core_index == -1 && cur_snp.p_value() <= clump_info.p_value) {
             // this is an index SNP
@@ -1042,6 +1045,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             fprintf(stderr, "\rClumping Progress: %03.2f%%", cur_progress);
             prev_progress = cur_progress;
         }
+
     } while (!completed);
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     std::vector<int> remain_snps;
