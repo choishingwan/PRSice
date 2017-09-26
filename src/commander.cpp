@@ -126,12 +126,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("memory") == 0)
                 set_numeric<int>(optarg, message, error_messages, misc.memory,
                                  misc.provided_memory, error, command);
-            else if(command.compare("info")==0)
-            		set_numeric<double>(optarg, message, error_messages, base.info_score,
-            				dummy, error, command);
-            else if(command.compare("info-col")==0)
-            		set_string(optarg, message, base.info_col, base.use_info,
-                            command);
+            else if (command.compare("info") == 0)
+                set_numeric<double>(optarg, message, error_messages,
+                                    base.info_score, dummy, error, command);
+            else if (command.compare("info-col") == 0)
+                set_string(optarg, message, base.info_col, base.use_info,
+                           command);
 
             else
             {
@@ -320,6 +320,7 @@ Commander::Commander()
     base.bp = "BP";
     base.standard_error = "SE";
     base.p_value = "P";
+    base.info_col = "INFO";
     base.info_score = 0.9;
     base.index = false;
     base.provided_chr = false;
@@ -557,7 +558,7 @@ void Commander::info()
         "\nClumping:\n"
         "    --clump-kb              The distance for clumping in kb\n"
         "                            Default: "
-        + std::to_string(clumping.distance / 1000)
+        + std::to_string(clumping.distance)
         + "\n"
           "    --clump-r2              The R2 threshold for clumping\n"
           "                            Default: "
@@ -814,14 +815,6 @@ void Commander::base_check(std::string& message, bool& error,
     }
     else
     {
-
-    	//cerr need to update this for better defaults. For now, just leave it be
-        if (base.use_info && (base.info_score < 0 || base.info_score > 1)) {
-            error = true;
-            error_message.append("ERROR: Info score should be between 0 and 1\n");
-        }
-
-
         // check the base file and get the corresponding index
         std::ifstream base_test;
         base_test.open(base.name.c_str());
@@ -831,6 +824,7 @@ void Commander::base_check(std::string& message, bool& error,
         }
         else
         {
+            // check the base file header is correct
             std::string line;
             std::getline(base_test, line);
             base_test.close();
@@ -929,6 +923,13 @@ void Commander::base_check(std::string& message, bool& error,
                     index_check(base.p_value, token);
                 if (!base.provided_p && base.col_index[+BASE_INDEX::P] != -1)
                     message.append(" \\\n    --pvalue " + base.p_value);
+                base.col_index[+BASE_INDEX::INFO] =
+                    index_check(base.info_col, token);
+                if (!base.use_info && base.col_index[+BASE_INDEX::INFO] != -1) {
+                    message.append(" \\\n    --info-col " + base.info_col);
+                    message.append(" \\\n    --info "
+                                   + std::to_string(base.info_score));
+                }
             }
             else
             { // only required for index, as the defaults are in string
@@ -953,7 +954,10 @@ void Commander::base_check(std::string& message, bool& error,
                         index_check(base.standard_error, max_size, error,
                                     error_message, "SE");
                 }
-
+                if (base.use_info) {
+                    base.col_index[+BASE_INDEX::INFO] = index_check(
+                        base.info_col, max_size, error, error_message, "INFO");
+                }
                 base.col_index[+BASE_INDEX::P] = index_check(
                     base.p_value, max_size, error, error_message, "P");
                 base.col_index[+BASE_INDEX::STAT] = index_check(
@@ -1022,13 +1026,6 @@ void Commander::clump_check(std::string& message, bool& error,
             error_message.append(
                 "ERROR: R2 threshold must be within 0 and 1!\n");
         }
-        if (clumping.distance < 0.0) {
-            error = true;
-            error_message.append(
-                "ERROR: Clumping distance must be positive!\n");
-        }
-        else
-            clumping.distance *= 1000;
         if (!clumping.type.empty()) {
             bool alright = false;
             for (auto&& type : supported_types) {
@@ -1052,6 +1049,12 @@ void Commander::clump_check(std::string& message, bool& error,
         if (!clumping.provide_distance)
             message.append(" \\\n    --clump-kb "
                            + std::to_string(clumping.distance));
+
+        if (clumping.distance < 0.0) {
+            error = true;
+            error_message.append(
+                "ERROR: Clumping distance must be positive!\n");
+        }
     }
 }
 

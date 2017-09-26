@@ -57,7 +57,7 @@ public:
     double proxy() const { return clumping.proxy; };
     double clump_p() const { return clumping.p_value; };
     double clump_r2() const { return clumping.r2; };
-    double clump_dist() const { return clumping.distance; };
+    double clump_dist() const { return clumping.distance * 1000; };
 
     // covariate
     std::string get_cov_file() const { return covariate.name; };

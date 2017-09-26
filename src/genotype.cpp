@@ -249,6 +249,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     const bool beta = c_commander.beta();
     const bool fastscore = c_commander.fastscore();
     const bool full = c_commander.full();
+    const bool filter_info = c_commander.filter_info();
+    const double info_threshold = c_commander.info_score();
     std::vector<int> index =
         c_commander.index(); // more appropriate for commander
     // now coordinates obtained from target file instead. Coordinate information
@@ -274,9 +276,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
-    double bound_start = c_commander.lower();
-    double bound_end = c_commander.upper();
-    double bound_inter = c_commander.inter();
+    const double bound_start = c_commander.lower();
+    const double bound_end = c_commander.upper();
+    const double bound_inter = c_commander.inter();
 
     threshold = (full) ? 1.0 : threshold;
     std::vector<std::string> token;
@@ -292,6 +294,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t num_not_converted = 0; // this is for NA
     size_t num_negative_stat = 0;
     size_t num_line_in_base = 0;
+    size_t num_info_filter = 0;
 
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
@@ -385,6 +388,25 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                     std::string error_message =
                         "ERROR: Non-numeric loci for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
+                }
+            }
+            double info_score = 1;
+            if (filter_info && index[+BASE_INDEX::INFO] >= 0) {
+                // obtain the INFO score
+                try
+                {
+                    info_score = misc::convert<double>(
+                        token[index[+BASE_INDEX::INFO]].c_str());
+                }
+                catch (const std::runtime_error& error)
+                {
+                    // if no info score, just assume it doesn't pass the QC
+                    num_info_filter++;
+                    exclude = true;
+                }
+                if (info_score < info_threshold) {
+                    num_info_filter++;
+                    exclude = true;
                 }
             }
             bool flipped = false;
@@ -581,6 +603,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         log_file_stream << num_negative_stat << " negative statistic observed"
                         << std::endl;
     }
+    if (num_info_filter) {
+        fprintf(stderr, "%zu SNPs with INFO score less than %f\n",
+                num_info_filter, info_threshold);
+        log_file_stream << num_info_filter
+                        << " SNP filtered due to info threshold" << std::endl;
+    }
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
     log_file_stream << m_existed_snps.size()
@@ -631,7 +659,10 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
     for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.has_geno()) continue;
-        for (size_t j_snp = i_snp + 1; j_snp < end_index; ++j_snp) {
+        // we allow j_snp to go as far as possible, until it find all the SNPs
+        // in the region
+        for (size_t j_snp = i_snp + 1; j_snp < m_existed_snps.size(); ++j_snp) {
+
             auto&& target_snp = m_existed_snps[j_snp];
             if (target_snp.chr() != cur_snp.chr()) break;
             if (target_snp.loc() - cur_snp.loc() > clump_info.distance) break;
@@ -714,6 +745,7 @@ int Genotype::process_block(int& start_index, int end_index,
 {
     // note: only allow to invoke clean_clump in this function
     // first, remove any SNPs that is too far away from the first core index
+
     auto&& first_core = m_existed_snps[first_core_index];
     for (size_t i_snp = start_index; i_snp < first_core_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
@@ -956,6 +988,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             block_available = false;
         }
 
+        // a safe way will be to remove SNPs that are too far off
         // allow equal just in case
         if (core_index == -1 && cur_snp.p_value() <= clump_info.p_value) {
             // this is an index SNP
@@ -1005,13 +1038,14 @@ void Genotype::efficient_clumping(Genotype& reference)
         // set the missing information
         cur_snp.set_contain_missing(contain_missing);
         // now we have all the required information for this SNP
-        double cur_progress = (double) (cur_snp_index) / (double)(num_snp) * 100.0;
+        double cur_progress =
+            (double) (cur_snp_index) / (double) (num_snp) *100.0;
 
-        if (cur_progress - prev_progress > 0.01)
-        {
+        if (cur_progress - prev_progress > 0.01) {
             fprintf(stderr, "\rClumping Progress: %03.2f%%", cur_progress);
-        		prev_progress = cur_progress;
+            prev_progress = cur_progress;
         }
+
     } while (!completed);
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     std::vector<int> remain_snps;

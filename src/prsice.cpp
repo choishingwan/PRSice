@@ -574,7 +574,7 @@ void PRSice::check_factor_cov(
                 }
                 try
                 {
-                		// this is for catching unconvertable covariate
+                    // this is for catching unconvertable covariate
                     double temp = misc::convert<double>(token[covar_index]);
                     convertable[i_cov]++;
                 }
