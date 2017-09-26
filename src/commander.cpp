@@ -461,7 +461,6 @@ bool Commander::init(int argc, char* argv[])
         {"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
-        {"print_all_samples", no_argument, &misc.print_all_samples, 1},
         // long flags, need to work on them
         {"A1", required_argument, NULL, 0},
         {"A2", required_argument, NULL, 0},
@@ -776,7 +775,7 @@ void Commander::info()
           "                            first column of most file will be "
           "assume to\n"
           "                            be IID instead of FID\n"
-          "    --logit_perm            When performing permutation, still use "
+          "    --logit-perm            When performing permutation, still use "
           "logistic\n"
           "                            regression instead of linear "
           "regression. This\n"
