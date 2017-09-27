@@ -82,6 +82,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
             set_bit(m_xymt_codes[xymt_idx], m_chrom_mask.data());
         }
     }
+    m_max_code = 22;                  // we currently only really allow human
     m_chrom_start.resize(m_max_code); // 1 extra for the info
 }
 
@@ -656,7 +657,9 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
     double freqx2;
     double dxx;
     double r2 = 0.0;
-    for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
+    for (size_t i_snp = start_index;
+         i_snp < end_index && i_snp < m_existed_snps.size(); ++i_snp)
+    {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.has_geno()) continue;
         // we allow j_snp to go as far as possible, until it find all the SNPs
@@ -1014,7 +1017,7 @@ void Genotype::efficient_clumping(Genotype& reference)
 
 
         // initialize the genotype vector
-        std::fill(genotype_vector.begin(), genotype_vector.end(), 0);
+        // std::fill(genotype_vector.begin(), genotype_vector.end(), 0);
         // read in the genotype
         reference.read_genotype(genotype_vector.data(), cur_snp.snp_id(),
                                 cur_snp.file_name());

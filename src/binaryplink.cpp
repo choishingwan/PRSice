@@ -561,8 +561,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
-        std::fill(genotype.begin(), genotype.end(), 0);
-        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
+        // std::fill(genotype.begin(), genotype.end(), 0);
+        // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
                                    m_bedfile, m_tmp_genotype.data(),
