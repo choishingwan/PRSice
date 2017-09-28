@@ -296,6 +296,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t num_negative_stat = 0;
     size_t num_line_in_base = 0;
     size_t num_info_filter = 0;
+    size_t num_chr_filter = 0;
 
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
@@ -346,10 +347,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                         }
                         else
                         {
-                            std::string error_message =
-                                "ERROR: Cannot parse chromosome code: "
-                                + token[index[+BASE_INDEX::CHR]];
-                            throw std::runtime_error(error_message);
+                        		exclude=true;
+                        		chr_code=-1;
+                        		num_chr_filter++;
                         }
                     }
                 }
@@ -560,6 +560,13 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                 num_excluded);
         log_file_stream << num_excluded
                         << " variant(s) excluded due to p-value threshold"
+                        << std::endl;
+    }
+    if(num_chr_filter){
+        fprintf(stderr, "%zu variant(s) excluded as they are on unknown/sex chromosome\n",
+        		num_chr_filter);
+        log_file_stream << num_excluded
+                        << " variant(s) excluded as they are on unknown/sex chromosome"
                         << std::endl;
     }
     if (num_ambiguous) {

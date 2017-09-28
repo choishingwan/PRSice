@@ -341,10 +341,12 @@ std::vector<SNP> BinaryPlink::load_snps()
                         // only print this if an error isn't previously given
                         fprintf(stderr,
                                 "WARNING: SNPs with chromosome number larger "
-                                "than %du\n",
+                                "than %d\n",
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
                         chr_error = true;
+                        m_unfiltered_marker_ct++;
+                        m_num_snp_per_file[cur_file]++;
                         continue;
                     }
                     else if (!chr_sex_error
@@ -357,6 +359,8 @@ std::vector<SNP> BinaryPlink::load_snps()
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
+                        m_unfiltered_marker_ct++;
+                        m_num_snp_per_file[cur_file]++;
                         continue;
                     }
                 }
