@@ -97,7 +97,7 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
     --cov-file      | -C    Covariate file. First column should be FID and \n
                             the second column should be IID. If --ignore-fid\n
                             is set, first column should be IID\n
-    --cov-header    | -c    Header of covariates. If not provided, will use\n
+    --cov-col       | -c    Header of covariates. If not provided, will use\n
                             all variables in the covariate file\n
 \nDosage:\n
     --hard-thres            Hard threshold for dosage data. Any call less than\n
@@ -184,6 +184,9 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
     --pheno-col             Headers of phenotypes to be included from the\n
                             phenotype file\n
     --prevalence    | -k    Prevalence of all binary trait. If provided\n
+    --nonfounders           Keep the nonfounders in the analysis\n
+                            Note: They will still be excluded from\n
+                            LD calculation
     --remove                will adjust the ascertainment bias of the R2.\n
                             Note that when multiple binary trait is found,\n
                             you must provide prevalence information for\n

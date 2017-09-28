@@ -126,6 +126,13 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("memory") == 0)
                 set_numeric<int>(optarg, message, error_messages, misc.memory,
                                  misc.provided_memory, error, command);
+            else if (command.compare("info") == 0)
+                set_numeric<double>(optarg, message, error_messages,
+                                    base.info_score, dummy, error, command);
+            else if (command.compare("info-col") == 0)
+                set_string(optarg, message, base.info_col, base.use_info,
+                           command);
+
             else
             {
                 std::string er = "Undefined operator: " + command
@@ -313,6 +320,8 @@ Commander::Commander()
     base.bp = "BP";
     base.standard_error = "SE";
     base.p_value = "P";
+    base.info_col = "INFO";
+    base.info_score = 0.9;
     base.index = false;
     base.provided_chr = false;
     base.provided_ref = false;
@@ -322,6 +331,7 @@ Commander::Commander()
     base.provided_bp = false;
     base.provided_se = false;
     base.provided_p = false;
+    base.use_info = false;
     base.col_index.resize(+BASE_INDEX::MAX + 1, -1);
 
 
@@ -350,13 +360,11 @@ Commander::Commander()
     filter.maf = 0.01;
     filter.hard_coding = false;
     filter.hard_threshold = 0.9;
-    filter.info_score = 0.9;
     filter.keep_ambig = false;
     filter.use_prob = false;
     filter.use_maf = false;
     filter.use_mind = false;
     filter.use_hard_thres = false;
-    filter.use_info = false;
     filter.use_geno = false;
 
     misc.all = false;
@@ -454,7 +462,6 @@ bool Commander::init(int argc, char* argv[])
         {"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
-        {"print_all_samples", no_argument, &misc.print_all_samples, 1},
         // long flags, need to work on them
         {"A1", required_argument, NULL, 0},
         {"A2", required_argument, NULL, 0},
@@ -551,7 +558,7 @@ void Commander::info()
         "\nClumping:\n"
         "    --clump-kb              The distance for clumping in kb\n"
         "                            Default: "
-        + std::to_string(clumping.distance / 1000)
+        + std::to_string(clumping.distance)
         + "\n"
           "    --clump-r2              The R2 threshold for clumping\n"
           "                            Default: "
@@ -615,11 +622,11 @@ void Commander::info()
           "call less than\n"
           "                            this will be treated as missing. Note "
           "that if dosage\n"
-          "                            data, is used as a LD reference, it "
+          "                            data is used as a LD reference, it "
           "will always be\n"
           "                            hard coded to calculate the LD\n"
           "                            Default: "
-        + std::to_string(filter.info_score)
+        + std::to_string(filter.hard_threshold)
         + "\n"
           "    --hard                  Use hard coding instead of dosage for "
           "PRS construction.\n"
@@ -769,7 +776,7 @@ void Commander::info()
           "                            first column of most file will be "
           "assume to\n"
           "                            be IID instead of FID\n"
-          "    --logit_perm            When performing permutation, still use "
+          "    --logit-perm            When performing permutation, still use "
           "logistic\n"
           "                            regression instead of linear "
           "regression. This\n"
@@ -817,6 +824,7 @@ void Commander::base_check(std::string& message, bool& error,
         }
         else
         {
+            // check the base file header is correct
             std::string line;
             std::getline(base_test, line);
             base_test.close();
@@ -915,6 +923,13 @@ void Commander::base_check(std::string& message, bool& error,
                     index_check(base.p_value, token);
                 if (!base.provided_p && base.col_index[+BASE_INDEX::P] != -1)
                     message.append(" \\\n    --pvalue " + base.p_value);
+                base.col_index[+BASE_INDEX::INFO] =
+                    index_check(base.info_col, token);
+                if (!base.use_info && base.col_index[+BASE_INDEX::INFO] != -1) {
+                    message.append(" \\\n    --info-col " + base.info_col);
+                    message.append(" \\\n    --info "
+                                   + std::to_string(base.info_score));
+                }
             }
             else
             { // only required for index, as the defaults are in string
@@ -939,7 +954,10 @@ void Commander::base_check(std::string& message, bool& error,
                         index_check(base.standard_error, max_size, error,
                                     error_message, "SE");
                 }
-
+                if (base.use_info) {
+                    base.col_index[+BASE_INDEX::INFO] = index_check(
+                        base.info_col, max_size, error, error_message, "INFO");
+                }
                 base.col_index[+BASE_INDEX::P] = index_check(
                     base.p_value, max_size, error, error_message, "P");
                 base.col_index[+BASE_INDEX::STAT] = index_check(
@@ -1008,13 +1026,6 @@ void Commander::clump_check(std::string& message, bool& error,
             error_message.append(
                 "ERROR: R2 threshold must be within 0 and 1!\n");
         }
-        if (clumping.distance < 0.0) {
-            error = true;
-            error_message.append(
-                "ERROR: Clumping distance must be positive!\n");
-        }
-        else
-            clumping.distance *= 1000;
         if (!clumping.type.empty()) {
             bool alright = false;
             for (auto&& type : supported_types) {
@@ -1038,6 +1049,12 @@ void Commander::clump_check(std::string& message, bool& error,
         if (!clumping.provide_distance)
             message.append(" \\\n    --clump-kb "
                            + std::to_string(clumping.distance));
+
+        if (clumping.distance < 0.0) {
+            error = true;
+            error_message.append(
+                "ERROR: Clumping distance must be positive!\n");
+        }
     }
 }
 
@@ -1219,10 +1236,6 @@ void Commander::covariate_check(bool& error, std::string& error_message)
 
 void Commander::filter_check(bool& error, std::string& error_message)
 {
-    if (filter.use_info && (filter.info_score < 0 || filter.info_score > 1)) {
-        error = true;
-        error_message.append("ERROR: Info score should be between 0 and 1\n");
-    }
     if (filter.use_hard_thres
         && (filter.hard_threshold < 0 || filter.hard_threshold > 1))
     {

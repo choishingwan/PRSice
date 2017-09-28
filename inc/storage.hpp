@@ -49,6 +49,17 @@ struct prsice_result
     int num_snp;
 };
 
+// Passkey idiom, allow safer access to
+// the raw pointer info in SNP
+template <typename T>
+class Passkey
+{
+private:
+    friend T;
+    Passkey() {}
+    Passkey(const Passkey&) {}
+    Passkey& operator=(const Passkey&) = delete;
+};
 
 template <typename e>
 struct enumeration_traits;
@@ -93,6 +104,7 @@ enum class BASE_INDEX
     BP,
     SE,
     P,
+    INFO,
     MAX
 };
 enum class FAM

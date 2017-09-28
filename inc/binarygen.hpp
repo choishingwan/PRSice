@@ -107,8 +107,6 @@ private:
         // try to use PLINK one. The difficulty is ifstream vs FILE
         // this is for the LD calculation
         uintptr_t final_mask = get_final_mask(m_founder_ct);
-        uintptr_t unfiltered_sample_ctl =
-            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));

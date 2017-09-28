@@ -24,10 +24,13 @@
 #include "storage.hpp"
 #include <algorithm>
 #include <limits.h>
+#include <mutex>
 #include <numeric>
 #include <stdexcept>
 #include <string>
 
+
+class Genotype;
 class SNP
 {
 public:
@@ -179,6 +182,7 @@ public:
         region.check(std::to_string(basic.chr), basic.loc, m_flags);
     };
 
+
     void add_clump(std::vector<size_t>& i)
     {
         clump_info.target.insert(clump_info.target.end(), i.begin(), i.end());
@@ -187,34 +191,190 @@ public:
     {
         clump_info.r2.insert(clump_info.r2.end(), i.begin(), i.end());
     };
-    void set_clumped() { clump_info.clumped = true; };
-    void proxy_clump(std::vector<SNP>& snp_list, double r2_threshold);
-    void clump(std::vector<SNP>& snp_list);
-    bool clumped() const { return clump_info.clumped; };
-    void set_clump_geno(uintptr_t* geno, int contain_miss)
+
+    void add_clump(size_t index, double r2)
     {
-        clump_info.genotype = geno;
-        clump_info.contain_missing = (contain_miss == 3);
+        std::lock_guard<std::mutex> self_lock(thread_safty_inspector);
+        clump_info.target.push_back(index);
+        clump_info.r2.push_back(r2);
     }
-    uintptr_t* clump_geno() const { return clump_info.genotype; };
+    void set_clumped() { clump_info.clumped = true; };
+    void clump(std::vector<SNP>& snp_list, double proxy = 2);
+    bool clumped() const { return clump_info.clumped; };
+
+    uintptr_t* clump_geno() { return clump_info.geno1.data(); };
+    ;
+    uint32_t* tot() { return clump_info.tot.data(); };
+    uint32_t get_tot(int i) { return clump_info.tot.at(i); };
     bool clump_missing() const { return clump_info.contain_missing; };
     void clean_clump()
     {
-        if (clump_info.genotype != nullptr) {
-            delete[] clump_info.genotype;
-            clump_info.genotype = nullptr;
-        }
+        std::vector<uintptr_t>().swap(clump_info.geno1);
+        std::vector<uint32_t>().swap(clump_info.tot);
+    }
+
+    // Now only genotype can access this pointer
+    void geno_size(size_t size, Passkey<Genotype>)
+    {
+        clump_info.geno1.resize(size, 0);
+    }
+    bool has_geno() const { return !clump_info.geno1.empty(); }
+    uintptr_t* geno(Passkey<Genotype>)
+    {
+        // pretty sure this is unsafe practice
+        // as we expose the pointer to other stuff
+        // not sure how to limit the access of this function
+        return clump_info.geno1.data();
+    };
+    void load_tot(const uint32_t founder_ctv3)
+    {
+        clump_info.tot.resize(6, 0);
+        clump_info.tot[0] =
+            popcount_longs(clump_info.geno1.data(), founder_ctv3);
+        clump_info.tot[1] = popcount_longs(
+            &(clump_info.geno1.data()[founder_ctv3]), founder_ctv3);
+        clump_info.tot[2] = popcount_longs(
+            &(clump_info.geno1.data()[2 * founder_ctv3]), founder_ctv3);
+    }
+    void set_contain_missing(int contain_miss)
+    {
+        clump_info.contain_missing = (contain_miss == 3);
+    }
+
+    // need this so that we can allow a member mutex class
+    // Copy assignment
+    SNP& operator=(const SNP& other)
+    {
+        if (this == &other) return *this;
+        std::lock(thread_safty_inspector, other.thread_safty_inspector);
+        std::lock_guard<std::mutex> self_lock(thread_safty_inspector,
+                                              std::adopt_lock);
+        std::lock_guard<std::mutex> other_lock(other.thread_safty_inspector,
+                                               std::adopt_lock);
+        // now we need to copy everything
+        clump_info.clumped = other.clump_info.clumped;
+        clump_info.contain_missing = other.clump_info.contain_missing;
+        clump_info.contain_geno = other.clump_info.contain_geno;
+        clump_info.r2 = other.clump_info.r2;
+        clump_info.target = other.clump_info.target;
+        clump_info.tot = other.clump_info.tot;
+        clump_info.geno1 = other.clump_info.geno1;
+        // on purposely ignore genotype pointer (we will remove it later)
+        basic.ref = other.basic.ref;
+        basic.alt = other.basic.alt;
+        basic.rs = other.basic.rs;
+        basic.chr = other.basic.chr;
+        basic.loc = other.basic.loc;
+        file_info.file = other.file_info.file;
+        file_info.id = other.file_info.id;
+        statistic.stat = other.statistic.stat;
+        statistic.se = other.statistic.se;
+        statistic.p_value = other.statistic.p_value;
+        statistic.flipped = other.statistic.flipped;
+        threshold.category = other.threshold.category;
+        threshold.p_threshold = other.threshold.p_threshold;
+        m_max_flag_index = other.m_max_flag_index;
+        m_flags = other.m_flags;
+        return *this;
+    }
+    // Copy initialization
+    SNP(const SNP& other)
+    {
+        std::lock_guard<std::mutex> lock(other.thread_safty_inspector);
+        clump_info.clumped = other.clump_info.clumped;
+        clump_info.contain_missing = other.clump_info.contain_missing;
+        clump_info.contain_geno = other.clump_info.contain_geno;
+        clump_info.r2 = other.clump_info.r2;
+        clump_info.target = other.clump_info.target;
+        clump_info.tot = other.clump_info.tot;
+        clump_info.geno1 = other.clump_info.geno1;
+        // on purposely ignore genotype pointer (we will remove it later)
+        basic.ref = other.basic.ref;
+        basic.alt = other.basic.alt;
+        basic.rs = other.basic.rs;
+        basic.chr = other.basic.chr;
+        basic.loc = other.basic.loc;
+        file_info.file = other.file_info.file;
+        file_info.id = other.file_info.id;
+        statistic.stat = other.statistic.stat;
+        statistic.se = other.statistic.se;
+        statistic.p_value = other.statistic.p_value;
+        statistic.flipped = other.statistic.flipped;
+        threshold.category = other.threshold.category;
+        threshold.p_threshold = other.threshold.p_threshold;
+        m_max_flag_index = other.m_max_flag_index;
+        m_flags = other.m_flags;
+    }
+
+    // move assignment
+    SNP& operator=(SNP&& other)
+    {
+        if (this == &other) return *this;
+        std::lock(thread_safty_inspector, other.thread_safty_inspector);
+        std::lock_guard<std::mutex> self_lock(thread_safty_inspector,
+                                              std::adopt_lock);
+        std::lock_guard<std::mutex> other_lock(other.thread_safty_inspector,
+                                               std::adopt_lock);
+        clump_info.clumped = std::move(other.clump_info.clumped);
+        other.clump_info.clumped = false;
+        clump_info.contain_missing =
+            std::move(other.clump_info.contain_missing);
+        other.clump_info.contain_missing = false;
+        clump_info.contain_geno = std::move(other.clump_info.contain_geno);
+        other.clump_info.contain_geno = false;
+        clump_info.r2 = std::move(other.clump_info.r2);
+        other.clump_info.r2.clear();
+        clump_info.target = std::move(other.clump_info.target);
+        other.clump_info.target.clear();
+        clump_info.tot = std::move(other.clump_info.tot);
+        other.clump_info.tot.clear();
+        clump_info.geno1 = std::move(other.clump_info.geno1);
+        other.clump_info.geno1.clear();
+        // on purposely ignore genotype pointer (we will remove it later)
+        basic.ref = std::move(other.basic.ref);
+        other.basic.ref = "";
+        basic.alt = std::move(other.basic.alt);
+        other.basic.alt = "";
+        basic.rs = std::move(other.basic.rs);
+        other.basic.rs = "";
+        basic.chr = std::move(other.basic.chr);
+        other.basic.chr = 0;
+        basic.loc = std::move(other.basic.loc);
+        other.basic.loc = 0;
+        file_info.file = std::move(other.file_info.file);
+        other.file_info.file = "";
+        file_info.id = std::move(other.file_info.id);
+        other.file_info.id = 0;
+        statistic.stat = std::move(other.statistic.stat);
+        other.statistic.stat = 0.0;
+        statistic.se = std::move(other.statistic.se);
+        other.statistic.se = 0.0;
+        statistic.p_value = std::move(other.statistic.p_value);
+        other.statistic.p_value = 0.0;
+        statistic.flipped = std::move(other.statistic.flipped);
+        threshold.category = std::move(other.threshold.category);
+        other.threshold.category = 0.0;
+        threshold.p_threshold = std::move(other.threshold.p_threshold);
+        other.threshold.p_threshold = 0.0;
+        m_max_flag_index = std::move(other.m_max_flag_index);
+        other.m_max_flag_index = 0;
+        m_flags = std::move(other.m_flags);
+        other.m_flags.clear();
+        return *this;
     }
 
 private:
     // basic info
+    mutable std::mutex thread_safty_inspector;
     struct
     {
         bool clumped;
-        std::vector<size_t> target;
-        std::vector<double> r2;
-        uintptr_t* genotype;
         bool contain_missing;
+        bool contain_geno;
+        std::vector<double> r2;
+        std::vector<size_t> target;
+        std::vector<uint32_t> tot;
+        std::vector<uintptr_t> geno1;
     } clump_info;
 
     struct

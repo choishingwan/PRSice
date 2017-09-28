@@ -341,10 +341,12 @@ std::vector<SNP> BinaryPlink::load_snps()
                         // only print this if an error isn't previously given
                         fprintf(stderr,
                                 "WARNING: SNPs with chromosome number larger "
-                                "than %du\n",
+                                "than %d\n",
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
                         chr_error = true;
+                        m_unfiltered_marker_ct++;
+                        m_num_snp_per_file[cur_file]++;
                         continue;
                     }
                     else if (!chr_sex_error
@@ -357,6 +359,8 @@ std::vector<SNP> BinaryPlink::load_snps()
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
+                        m_unfiltered_marker_ct++;
+                        m_num_snp_per_file[cur_file]++;
                         continue;
                     }
                 }
@@ -516,7 +520,6 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         fclose(m_bedfile);
         m_bedfile = nullptr;
     }
-
     // haven't figured out what this max_reverse does
     // a simple size check
     if (current_prs_score.rows() != m_region_size) {
@@ -562,8 +565,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
-        std::fill(genotype.begin(), genotype.end(), 0);
-        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
+        // std::fill(genotype.begin(), genotype.end(), 0);
+        // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
                                    m_bedfile, m_tmp_genotype.data(),
@@ -571,6 +574,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+
         uintptr_t* lbptr = genotype.data();
         uint32_t uii = 0;
         uintptr_t ulii = 0;

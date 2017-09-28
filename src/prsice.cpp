@@ -561,7 +561,6 @@ void PRSice::check_factor_cov(
         std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         { // sample is found in the phenotype vector
-            int index = m_sample_with_phenotypes[id];
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
                 size_t covar_index = cov_index[i_cov];
                 if (current_factors[i_cov].find(token[covar_index])
@@ -575,6 +574,7 @@ void PRSice::check_factor_cov(
                 }
                 try
                 {
+                    // this is for catching unconvertable covariate
                     double temp = misc::convert<double>(token[covar_index]);
                     convertable[i_cov]++;
                 }
@@ -1159,7 +1159,7 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
                         : m_current_sample_score(iter, sample_id).prs
                               / (double) m_current_sample_score(iter, sample_id)
                                     .num_snp;
-                total += score;
+                if (sample_id < 10) total += score;
                 if (thread_safe) {
                     m_independent_variables(m_sample_with_phenotypes.at(sample),
                                             1) = score;
@@ -1216,8 +1216,10 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 
 
         // If this is the best r2, then we will add it
-        size_t best_index = m_best_index[iter];
-        if (iter_threshold == 0 || m_prs_results(iter, best_index).r2 < r2) {
+        int best_index = m_best_index[iter];
+        if (iter_threshold == 0 || best_index < 0
+            || m_prs_results(iter, best_index).r2 < r2)
+        {
             m_best_index[iter] = iter_threshold;
             for (size_t s = 0; s < m_current_sample_score.cols(); ++s) {
                 m_best_sample_score(iter, s) = m_current_sample_score(iter, s);
@@ -1242,6 +1244,9 @@ void PRSice::thread_score(size_t region_start, size_t region_end,
 void PRSice::process_permutations()
 {
     for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
+        // can't generate an empirical p-value if there is no observed p-value
+        if (m_best_index[i_region] == -1) continue;
+
         double best_p = m_prs_results(i_region, m_best_index[i_region]).p;
         size_t num_perm = m_region_perm_result.cols();
         size_t num_better = 0;
