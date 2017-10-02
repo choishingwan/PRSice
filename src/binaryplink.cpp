@@ -411,7 +411,7 @@ std::vector<SNP> BinaryPlink::load_snps()
     if(dup_list.size()!=0)
     {
         std::ofstream log_file_stream;
-        std::string dup_name = m_log_file.substr(0, fullname.find_last_of("."))+".dup";
+        std::string dup_name = m_log_file.substr(0, m_log_file.find_last_of("."))+".dup";
     		log_file_stream.open(dup_name.c_str());
     		if (!log_file_stream.is_open()) {
     			std::string error_message =
