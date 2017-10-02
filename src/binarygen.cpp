@@ -460,23 +460,24 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
 
     std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
-    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    //    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
             in_region[i_region] = m_existed_snps[i_snp].in(i_region);
         }
-        std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
-        std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
+        // std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
+        // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype))
+                                   m_tmp_genotype.data(), genotype.data()))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        uintptr_t* lbptr = genotype;
+        uintptr_t* lbptr = genotype.data();
         uii = 0;
         std::vector<size_t> missing_samples;
         double stat = m_existed_snps[i_snp].stat();

@@ -581,7 +581,7 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         // loadbuff is where the genotype will be located
         // std::fill(genotype.begin(), genotype.end(), 0);
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        //m_bed_file.read((char*) &genotype[0], unfiltered_sample_ct4);
+        // m_bed_file.read((char*) &genotype[0], unfiltered_sample_ct4);
 
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
