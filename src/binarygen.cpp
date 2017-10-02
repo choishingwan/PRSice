@@ -122,6 +122,7 @@ std::vector<SNP> BinaryGen::load_snps()
     for (auto&& info : m_bgen_info) {
         expected_total += info.second.number_of_variants;
     }
+    std::unordered_set<std::string> dup_list;
     snp_res.resize(expected_total);
     for (auto&& prefix : m_genotype_files) {
         std::string bgen_name = prefix + ".bgen";
@@ -278,8 +279,7 @@ std::vector<SNP> BinaryGen::load_snps()
             }
 
             if (m_existed_snps_index.find(RSID) != m_existed_snps_index.end()) {
-                throw std::runtime_error(
-                    "ERROR: Duplicated SNP ID detected!\n");
+                dup_list.insert(RSID);
             }
             else if (ambiguous(final_alleles.front(), final_alleles.back()))
             {
@@ -306,6 +306,28 @@ std::vector<SNP> BinaryGen::load_snps()
     fprintf(stderr, "\n");
     snp_res.resize(m_unfiltered_marker_ct); // so that it will be more suitable
     if (m_bgen_file.is_open()) m_bgen_file.close();
+
+    if (dup_list.size() != 0) {
+        std::ofstream log_file_stream;
+        std::string dup_name =
+            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".dup";
+        log_file_stream.open(dup_name.c_str());
+        if (!log_file_stream.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + dup_name;
+            throw std::runtime_error(error_message);
+        }
+        for (auto&& dup : dup_list) {
+            log_file_stream << dup << std::endl;
+        }
+        log_file_stream.close();
+        std::string error_message =
+            "ERROR: Duplicated SNP ID detected!. Duplicated ID stored at "
+            + dup_name + ". You can avoid this error by using --exclude "
+            + dup_name;
+        throw std::runtime_error(error_message);
+    }
+
     return snp_res;
 }
 

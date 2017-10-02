@@ -71,7 +71,7 @@ public:
             log_file << std::endl;
             log_file.close();
             return new BinaryPlink(
-            		bfile_prefix, commander.remove_sample_file(),
+                bfile_prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
                 commander.exclude_snp_file(), fam, log_name,
                 commander.ignore_fid(), commander.nonfounders(),
