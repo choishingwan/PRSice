@@ -347,9 +347,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                         }
                         else
                         {
-                        		exclude=true;
-                        		chr_code=-1;
-                        		num_chr_filter++;
+                            exclude = true;
+                            chr_code = -1;
+                            num_chr_filter++;
                         }
                     }
                 }
@@ -562,12 +562,15 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                         << " variant(s) excluded due to p-value threshold"
                         << std::endl;
     }
-    if(num_chr_filter){
-        fprintf(stderr, "%zu variant(s) excluded as they are on unknown/sex chromosome\n",
-        		num_chr_filter);
-        log_file_stream << num_excluded
-                        << " variant(s) excluded as they are on unknown/sex chromosome"
-                        << std::endl;
+    if (num_chr_filter) {
+        fprintf(
+            stderr,
+            "%zu variant(s) excluded as they are on unknown/sex chromosome\n",
+            num_chr_filter);
+        log_file_stream
+            << num_excluded
+            << " variant(s) excluded as they are on unknown/sex chromosome"
+            << std::endl;
     }
     if (num_ambiguous) {
         fprintf(stderr, "%zu ambiguous variant(s)", num_ambiguous);
@@ -723,8 +726,8 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
                 freq11_expected = freqx1 * freq1x;
                 dxx = freq11 - freq11_expected;
                 // also want to avoid divide by 0
-                if (fabs(dxx) < SMALL_EPSILON ||
-                		fabs(freq11_expected*freq2x*freqx2) < SMALL_EPSILON)
+                if (fabs(dxx) < SMALL_EPSILON
+                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
                 {
                     r2 = 0.0;
                 }
@@ -748,21 +751,21 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
                         && target_snp.loc() > cur_snp.loc()))
                 {
                     // cur is clumping out target
-                		pairwise_result.push_back(pairwise_r2(i_snp,j_snp, r2));
-                    //cur_snp.add_clump(j_snp, r2);
+                    pairwise_result.push_back(pairwise_r2(i_snp, j_snp, r2));
+                    // cur_snp.add_clump(j_snp, r2);
                 }
                 else
                 {
                     // target is clumping out cur
-                		pairwise_result.push_back(pairwise_r2(j_snp,i_snp, r2));
-                    //target_snp.add_clump(i_snp, r2);
+                    pairwise_result.push_back(pairwise_r2(j_snp, i_snp, r2));
+                    // target_snp.add_clump(i_snp, r2);
                 }
             }
         }
     }
-    for(auto &&res : pairwise_result)
-    {
-    		m_existed_snps[std::get<0>(res)].add_clump(std::get<1>(res), std::get<2>(res));
+    for (auto&& res : pairwise_result) {
+        m_existed_snps[std::get<0>(res)].add_clump(std::get<1>(res),
+                                                   std::get<2>(res));
     }
 }
 
@@ -773,7 +776,6 @@ int Genotype::process_block(int& start_index, int end_index,
 {
     // note: only allow to invoke clean_clump in this function
     // first, remove any SNPs that is too far away from the first core index
-
     auto&& first_core = m_existed_snps[first_core_index];
     for (size_t i_snp = start_index; i_snp < first_core_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];

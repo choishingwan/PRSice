@@ -38,6 +38,7 @@ private:
     std::vector<SNP> load_snps();
     std::vector<size_t> m_num_snp_per_file; // for bed file size check
     std::string m_fam_name = "";
+
     void check_bed();
 
     inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
@@ -45,21 +46,24 @@ private:
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+        bool jump = !(snp_index - m_prev_index == 1);
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
-            if (m_bedfile != nullptr) {
-                fclose(m_bedfile);
-                m_bedfile = nullptr;
+            if (m_bed_file.is_open()) {
+                m_bed_file.close();
             }
             std::string bedname = file_name + ".bed";
-            m_bedfile =
-                fopen(bedname.c_str(), FOPEN_RB); // assume there is no error
+            m_bed_file.open(bedname.c_str(), std::ios::binary);
+            jump = true;
         }
-        if (fseeko(m_bedfile,
-                   m_bed_offset
-                       + (snp_index * ((uint64_t) unfiltered_sample_ct4)),
-                   SEEK_SET))
-        {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+        // don't do jumping unless we have to
+        if (jump) {
+            if (!m_bed_file.seekg(
+                    m_bed_offset
+                        + (snp_index * ((uint64_t) unfiltered_sample_ct4)),
+                    std::ios_base::beg))
+            {
+                throw std::runtime_error("ERROR: Cannot read the bed file!");
+            }
         }
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
@@ -71,7 +75,7 @@ private:
         // loading
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
-                                   m_bedfile, m_tmp_genotype.data(), genotype))
+                                   m_bed_file, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
@@ -80,8 +84,42 @@ private:
     void read_score(misc::vec2d<Sample_lite>& current_prs_score,
                     size_t start_index, size_t end_bound);
 
-    FILE* m_bedfile = nullptr;
+    std::ifstream m_bed_file;
     std::string m_cur_file;
+    int m_prev_index = -1;
+
+
+    uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
+                                    uint32_t sample_ct,
+                                    const uintptr_t* __restrict sample_include,
+                                    uintptr_t final_mask, uint32_t do_reverse,
+                                    std::ifstream& bedfile,
+                                    uintptr_t* __restrict rawbuf,
+                                    uintptr_t* __restrict mainbuf)
+    {
+        assert(unfiltered_sample_ct);
+        uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
+        if (unfiltered_sample_ct == sample_ct) {
+            rawbuf = mainbuf;
+        }
+        if (m_bed_file.read((char*) &rawbuf[0], unfiltered_sample_ct4)) {
+            return RET_READ_FAIL;
+        }
+        if (unfiltered_sample_ct != sample_ct) {
+            copy_quaterarr_nonempty_subset(rawbuf, sample_include,
+                                           unfiltered_sample_ct, sample_ct,
+                                           mainbuf);
+        }
+        else
+        {
+            mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+        }
+        if (do_reverse) {
+            reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+        }
+        // mainbuf should contains the information
+        return 0;
+    }
 };
 
 #endif

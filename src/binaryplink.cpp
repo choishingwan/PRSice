@@ -112,13 +112,7 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_snp_selection_list.clear();
 }
 
-BinaryPlink::~BinaryPlink()
-{
-    if (m_bedfile != nullptr) {
-        fclose(m_bedfile);
-        m_bedfile = nullptr;
-    }
-}
+BinaryPlink::~BinaryPlink() {}
 
 
 std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
@@ -379,8 +373,8 @@ std::vector<SNP> BinaryPlink::load_snps()
             if (m_existed_snps_index.find(token[+BIM::RS])
                 != m_existed_snps_index.end())
             {
-            		dup_list.insert(token[+BIM::RS]);
-                //throw std::runtime_error(
+                dup_list.insert(token[+BIM::RS]);
+                // throw std::runtime_error(
                 //    "ERROR: Duplicated SNP ID detected!\n");
             }
             else if (ambiguous(token[+BIM::A1], token[+BIM::A2]))
@@ -408,23 +402,24 @@ std::vector<SNP> BinaryPlink::load_snps()
         bimfile.close();
         cur_file++;
     }
-    if(dup_list.size()!=0)
-    {
+    if (dup_list.size() != 0) {
         std::ofstream log_file_stream;
-        std::string dup_name = m_log_file.substr(0, m_log_file.find_last_of("."))+".dup";
-    		log_file_stream.open(dup_name.c_str());
-    		if (!log_file_stream.is_open()) {
-    			std::string error_message =
-    					"ERROR: Cannot open log file: " + dup_name;
-    			throw std::runtime_error(error_message);
-    		}
-    		for(auto &&dup : dup_list)
-    		{
-    			log_file_stream <<dup << std::endl;
-    		}
-    		log_file_stream.close();
-    		std::string error_message = "ERROR: Duplicated SNP ID detected!. Duplicated ID stored at "+
-    				dup_name+". You can avoid this error by using --exclude "+dup_name;
+        std::string dup_name =
+            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".dup";
+        log_file_stream.open(dup_name.c_str());
+        if (!log_file_stream.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open log file: " + dup_name;
+            throw std::runtime_error(error_message);
+        }
+        for (auto&& dup : dup_list) {
+            log_file_stream << dup << std::endl;
+        }
+        log_file_stream.close();
+        std::string error_message =
+            "ERROR: Duplicated SNP ID detected!. Duplicated ID stored at "
+            + dup_name + ". You can avoid this error by using --exclude "
+            + dup_name;
         throw std::runtime_error(error_message);
     }
     if (m_unfiltered_marker_ct > 2147483645) {
@@ -448,19 +443,21 @@ void BinaryPlink::check_bed()
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     for (auto&& prefix : m_genotype_files) {
         std::string bedname = prefix + ".bed";
-        m_bedfile = fopen(bedname.c_str(), FOPEN_RB);
-        if (fseeko(m_bedfile, 0, SEEK_END)) {
+        m_bed_file.open(bedname.c_str(), std::ios::binary);
+        if (!m_bed_file.is_open()) {
             std::string error_message = "Cannot read bed file: " + bedname;
             throw std::runtime_error(error_message);
         }
-        llxx = ftello(m_bedfile);
+        m_bed_file.seekg(0, m_bed_file.end);
+        llxx = m_bed_file.tellg();
         if (!llxx) {
             throw std::runtime_error("Error: Empty .bed file.");
         }
-        rewind(m_bedfile);
+        m_bed_file.seekg(0, m_bed_file.beg);
         // will let the g_textbuf stay for now
         char version_check[3];
-        uii = fread(version_check, 1, 3, m_bedfile);
+        m_bed_file.read(version_check, 3);
+        uii = m_bed_file.gcount();
         size_t marker_ct = m_num_snp_per_file[cur_file];
         llyy = ((uint64_t) unfiltered_sample_ct4) * marker_ct;
         llzz = ((uint64_t) m_unfiltered_sample_ct) * ((marker_ct + 3) / 4);
@@ -519,8 +516,7 @@ void BinaryPlink::check_bed()
             throw std::runtime_error(
                 "Error: Currently do not support sample major format");
         }
-        fclose(m_bedfile);
-        m_bedfile = nullptr;
+        m_bed_file.close();
         cur_file++;
     }
 }
@@ -536,9 +532,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
     size_t num_included_samples = current_prs_score.cols();
 
     m_cur_file = ""; // just close it
-    if (m_bedfile != nullptr) {
-        fclose(m_bedfile);
-        m_bedfile = nullptr;
+    if (m_bed_file.is_open()) {
+        m_bed_file.close();
     }
     // haven't figured out what this max_reverse does
     // a simple size check
@@ -555,17 +550,17 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
             || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
         {
             // If we are processing a new file
-            if (m_bedfile != nullptr) {
-                fclose(m_bedfile);
-                // doesn't help at all, better switch to ifstream
-                // if we have time. That'd be safer
-                m_bedfile = nullptr;
+            if (m_bed_file.is_open()) {
+                m_bed_file.close();
             }
             m_cur_file = m_existed_snps[i_snp].file_name();
             std::string bedname = m_cur_file + ".bed";
-            m_bedfile = fopen(
-                bedname.c_str(),
-                FOPEN_RB); // again, we are assuming that the file is correct
+            m_bed_file.open(bedname.c_str(), std::ios::binary);
+            if (!m_bed_file.is_open()) {
+                std::string error_message =
+                    "ERROR: Cannot open bed file: " + bedname;
+                throw std::runtime_error(error_message);
+            }
         }
         for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
             //  check if the SNP fall within the region
@@ -576,10 +571,9 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         // very useful for read score as most SNPs might not
         // be next to each other
         size_t cur_line = m_existed_snps[i_snp].snp_id();
-        if (fseeko(m_bedfile,
-                   m_bed_offset
-                       + (cur_line * ((uint64_t) unfiltered_sample_ct4)),
-                   SEEK_SET))
+        if (!m_bed_file.seekg(
+                m_bed_offset + (cur_line * ((uint64_t) unfiltered_sample_ct4)),
+                std::ios_base::beg))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
@@ -587,9 +581,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         // loadbuff is where the genotype will be located
         // std::fill(genotype.begin(), genotype.end(), 0);
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
+        m_bed_file.read((char*) &genotype[0], unfiltered_sample_ct4);
+
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_bedfile, m_tmp_genotype.data(),
+                                   m_bed_file, m_tmp_genotype.data(),
                                    genotype.data()))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");

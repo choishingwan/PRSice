@@ -209,8 +209,8 @@ public:
     bool clump_missing() const { return clump_info.contain_missing; };
     void clean_clump()
     {
-    	clump_info.geno1= std::vector<uintptr_t>();
-    	clump_info.tot= std::vector<uint32_t>();
+        clump_info.geno1 = std::vector<uintptr_t>();
+        clump_info.tot = std::vector<uint32_t>();
     }
 
     // Now only genotype can access this pointer
