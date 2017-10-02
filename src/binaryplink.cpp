@@ -274,6 +274,7 @@ std::vector<SNP> BinaryPlink::load_snps()
     bool chr_error = false, chr_sex_error = false;
     m_num_ambig = 0;
     std::vector<SNP> snp_info;
+    std::unordered_set<std::string> dup_list;
     m_num_snp_per_file.resize(m_genotype_files.size());
     size_t cur_file = 0;
     for (auto&& prefix : m_genotype_files) {
@@ -378,8 +379,9 @@ std::vector<SNP> BinaryPlink::load_snps()
             if (m_existed_snps_index.find(token[+BIM::RS])
                 != m_existed_snps_index.end())
             {
-                throw std::runtime_error(
-                    "ERROR: Duplicated SNP ID detected!\n");
+            		dup_list.insert(token[+BIM::RS]);
+                //throw std::runtime_error(
+                //    "ERROR: Duplicated SNP ID detected!\n");
             }
             else if (ambiguous(token[+BIM::A1], token[+BIM::A2]))
             {
@@ -406,7 +408,25 @@ std::vector<SNP> BinaryPlink::load_snps()
         bimfile.close();
         cur_file++;
     }
-
+    if(dup_list.size()!=0)
+    {
+        std::ofstream log_file_stream;
+        std::string dup_name = m_log_file.substr(0, fullname.find_last_of("."))+".dup";
+    		log_file_stream.open(dup_name.c_str());
+    		if (!log_file_stream.is_open()) {
+    			std::string error_message =
+    					"ERROR: Cannot open log file: " + dup_name;
+    			throw std::runtime_error(error_message);
+    		}
+    		for(auto &&dup : dup_list)
+    		{
+    			log_file_stream <<dup << std::endl;
+    		}
+    		log_file_stream.close();
+    		std::string error_message = "ERROR: Duplicated SNP ID detected!. Duplicated ID stored at "+
+    				dup_name+". You can avoid this error by using --exclude "+dup_name;
+        throw std::runtime_error(error_message);
+    }
     if (m_unfiltered_marker_ct > 2147483645) {
         throw std::runtime_error(
             "Error: PLINK does not suport more than 2^31 -3 variants. "
