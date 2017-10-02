@@ -664,6 +664,15 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
     double freqx2;
     double dxx;
     double r2 = 0.0;
+    /**
+     * TIL: False sharing. When object we touch is close in memory space
+     *      multi-threading will actually slows down
+     *      So we need to avoid this by putting all the updates at the
+     *      end of the function to minimize this problem
+     */
+    typedef std::tuple<size_t, size_t, double> pairwise_r2;
+    std::vector<pairwise_r2> pairwise_result;
+
     for (size_t i_snp = start_index;
          i_snp < end_index && i_snp < m_existed_snps.size(); ++i_snp)
     {
@@ -713,7 +722,10 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
             {
                 freq11_expected = freqx1 * freq1x;
                 dxx = freq11 - freq11_expected;
-                if (fabs(dxx) < SMALL_EPSILON) {
+                // also want to avoid divide by 0
+                if (fabs(dxx) < SMALL_EPSILON ||
+                		fabs(freq11_expected*freq2x*freqx2) < SMALL_EPSILON)
+                {
                     r2 = 0.0;
                 }
                 else
@@ -736,15 +748,21 @@ void Genotype::clump_snp(const size_t start_index, const size_t end_index)
                         && target_snp.loc() > cur_snp.loc()))
                 {
                     // cur is clumping out target
-                    cur_snp.add_clump(j_snp, r2);
+                		pairwise_result.push_back(pairwise_r2(i_snp,j_snp, r2));
+                    //cur_snp.add_clump(j_snp, r2);
                 }
                 else
                 {
                     // target is clumping out cur
-                    target_snp.add_clump(i_snp, r2);
+                		pairwise_result.push_back(pairwise_r2(j_snp,i_snp, r2));
+                    //target_snp.add_clump(i_snp, r2);
                 }
             }
         }
+    }
+    for(auto &&res : pairwise_result)
+    {
+    		m_existed_snps[std::get<0>(res)].add_clump(std::get<1>(res), std::get<2>(res));
     }
 }
 
