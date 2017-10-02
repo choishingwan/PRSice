@@ -65,6 +65,7 @@ private:
                 throw std::runtime_error("ERROR: Cannot read the bed file!");
             }
         }
+        m_prev_index= snp_index;
         std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
@@ -86,7 +87,7 @@ private:
 
     std::ifstream m_bed_file;
     std::string m_cur_file;
-    int m_prev_index = -1;
+    int m_prev_index = -2;
 
 
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
@@ -102,7 +103,7 @@ private:
         if (unfiltered_sample_ct == sample_ct) {
             rawbuf = mainbuf;
         }
-        if (m_bed_file.read((char*) &rawbuf[0], unfiltered_sample_ct4)) {
+        if (!m_bed_file.read((char*)rawbuf, unfiltered_sample_ct4)) {
             return RET_READ_FAIL;
         }
         if (unfiltered_sample_ct != sample_ct) {
