@@ -20,6 +20,7 @@ SNP::SNP()
 {
     basic.chr = -1;
     basic.loc = -1; // default is -1 to indicate that it is not provided
+    basic.valid = true;
     statistic.flipped = false;
     statistic.stat = 0.0;
     statistic.se = 0.0;
@@ -30,6 +31,7 @@ SNP::SNP()
     clump_info.clumped = false;
     clump_info.contain_missing = false;
     clump_info.contain_geno = false;
+
 }
 
 
@@ -42,6 +44,7 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
     basic.rs = rs_id;
     basic.chr = chr;
     basic.loc = loc;
+    basic.valid = true;
     statistic.se = 0.0;
     statistic.p_value = 0.0;
     statistic.stat = 0.0;

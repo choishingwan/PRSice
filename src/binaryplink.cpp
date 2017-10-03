@@ -637,6 +637,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         double maf = ((double) total_num
                       / ((double) (num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
+        if(num_included_samples == nmiss || maf - 0 <  std::numeric_limits<double>::epsilon())
+        {
+        	m_existed_snps[i_snp].invalidate();
+        	continue;
+        }
         if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();

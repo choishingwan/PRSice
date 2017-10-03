@@ -241,6 +241,9 @@ public:
         clump_info.contain_missing = (contain_miss == 3);
     }
 
+    bool valid() const { return basic.valid; };
+    void invalidate() { basic.valid = false; };
+
     // need this so that we can allow a member mutex class
     // Copy assignment
     SNP& operator=(const SNP& other)
@@ -384,6 +387,7 @@ private:
         std::string rs;
         int chr;
         int loc;
+        bool valid;
     } basic;
 
     struct
