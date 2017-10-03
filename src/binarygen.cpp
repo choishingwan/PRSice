@@ -559,7 +559,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
         }
     }
-    delete[] genotype;
+
 }
 
 void BinaryGen::read_score(misc::vec2d<Sample_lite>& current_prs_score,
