@@ -526,6 +526,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
     }
     log_file_stream << std::endl;
     log_file_stream.close();
+    cov_header = token;
     return cov_index;
 }
 

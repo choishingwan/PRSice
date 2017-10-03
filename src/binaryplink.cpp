@@ -405,20 +405,21 @@ std::vector<SNP> BinaryPlink::load_snps()
     if (dup_list.size() != 0) {
         std::ofstream log_file_stream;
         std::string dup_name =
-            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".dup";
+            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".valid";
         log_file_stream.open(dup_name.c_str());
         if (!log_file_stream.is_open()) {
             std::string error_message =
                 "ERROR: Cannot open log file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for (auto&& dup : dup_list) {
-            log_file_stream << dup << std::endl;
+        for(auto &&snp : m_existed_snps){
+        	if(dup_list.find(snp.rs())!= dup_list.end()) continue;
+            log_file_stream << snp.rs()<< std::endl;
         }
         log_file_stream.close();
         std::string error_message =
-            "ERROR: Duplicated SNP ID detected!. Duplicated ID stored at "
-            + dup_name + ". You can avoid this error by using --exclude "
+            "ERROR: Duplicated SNP ID detected!.Valid SNP ID stored at "
+            + dup_name + ". You can avoid this error by using --extract "
             + dup_name;
         throw std::runtime_error(error_message);
     }
