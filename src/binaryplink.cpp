@@ -383,17 +383,17 @@ std::vector<SNP> BinaryPlink::load_snps()
                 if (filter.keep_ambig) {
                     // keep it if user want to
                     m_existed_snps_index[token[+BIM::RS]] = snp_info.size();
-                    snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc,
-                                           token[+BIM::A1], token[+BIM::A2],
-                                           prefix, num_line));
+                    snp_info.emplace_back(SNP(token[+BIM::RS], chr_code, loc,
+                                              token[+BIM::A1], token[+BIM::A2],
+                                              prefix, num_line));
                 }
             }
             else
             {
                 m_existed_snps_index[token[+BIM::RS]] = snp_info.size();
-                snp_info.push_back(SNP(token[+BIM::RS], chr_code, loc,
-                                       token[+BIM::A1], token[+BIM::A2], prefix,
-                                       num_line));
+                snp_info.emplace_back(SNP(token[+BIM::RS], chr_code, loc,
+                                          token[+BIM::A1], token[+BIM::A2],
+                                          prefix, num_line));
             }
             m_unfiltered_marker_ct++; // add in the checking later on
             m_num_snp_per_file[cur_file]++;
@@ -412,9 +412,9 @@ std::vector<SNP> BinaryPlink::load_snps()
                 "ERROR: Cannot open log file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for(auto &&snp : m_existed_snps){
-        	if(dup_list.find(snp.rs())!= dup_list.end()) continue;
-            log_file_stream << snp.rs()<< std::endl;
+        for (auto&& snp : m_existed_snps) {
+            if (dup_list.find(snp.rs()) != dup_list.end()) continue;
+            log_file_stream << snp.rs() << std::endl;
         }
         log_file_stream.close();
         std::string error_message =
@@ -637,10 +637,11 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         double maf = ((double) total_num
                       / ((double) (num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
-        if(num_included_samples == nmiss || maf - 0 <  std::numeric_limits<double>::epsilon())
+        if (num_included_samples == nmiss
+            || maf - 0 < std::numeric_limits<double>::epsilon())
         {
-        	m_existed_snps[i_snp].invalidate();
-        	continue;
+            m_existed_snps[i_snp].invalidate();
+            continue;
         }
         if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;

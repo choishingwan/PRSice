@@ -123,7 +123,7 @@ std::vector<SNP> BinaryGen::load_snps()
         expected_total += info.second.number_of_variants;
     }
     std::unordered_set<std::string> dup_list;
-    snp_res.resize(expected_total);
+    snp_res.reserve(expected_total);
     for (auto&& prefix : m_genotype_files) {
         std::string bgen_name = prefix + ".bgen";
         if (m_bgen_file.is_open()) m_bgen_file.close();
@@ -146,7 +146,7 @@ std::vector<SNP> BinaryGen::load_snps()
             if (m_unfiltered_marker_ct % 1000 == 0
                 && m_unfiltered_marker_ct > 0)
             {
-                fprintf(stderr, "\r%zuK SNPs processed\r",
+                fprintf(stderr, " \r%zuK SNPs processed\r",
                         m_unfiltered_marker_ct / 1000);
             }
             uint16_t SNPID_size = 0;
@@ -285,26 +285,26 @@ std::vector<SNP> BinaryGen::load_snps()
             {
                 m_num_ambig++;
                 if (filter.keep_ambig) {
-                    m_existed_snps_index[RSID] = m_unfiltered_marker_ct;
-                    snp_res[m_unfiltered_marker_ct] =
+                    m_existed_snps_index[RSID] = snp_res.size();
+                    snp_res.emplace_back(
                         SNP(RSID, chr_code, SNP_position, final_alleles.front(),
-                            final_alleles.back(), prefix, snp_id);
+                            final_alleles.back(), prefix, snp_id));
                     m_unfiltered_marker_ct++;
                 }
             }
             else
             {
-                m_existed_snps_index[RSID] = m_unfiltered_marker_ct;
-                snp_res[m_unfiltered_marker_ct] =
-                    SNP(RSID, chr_code, SNP_position, final_alleles.front(),
-                        final_alleles.back(), prefix, snp_id);
+                m_existed_snps_index[RSID] = snp_res.size();
+                snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
+                                         final_alleles.front(),
+                                         final_alleles.back(), prefix, snp_id));
                 m_unfiltered_marker_ct++;
                 // directly ignore all others?
             }
         }
     }
     fprintf(stderr, "\n");
-    snp_res.resize(m_unfiltered_marker_ct); // so that it will be more suitable
+    snp_res.shrink_to_fit(); // so that it will be more suitable
     if (m_bgen_file.is_open()) m_bgen_file.close();
 
     if (dup_list.size() != 0) {
@@ -317,9 +317,9 @@ std::vector<SNP> BinaryGen::load_snps()
                 "ERROR: Cannot open log file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for(auto &&snp : m_existed_snps){
-        	if(dup_list.find(snp.rs())!= dup_list.end()) continue;
-            log_file_stream << snp.rs()<< std::endl;
+        for (auto&& snp : m_existed_snps) {
+            if (dup_list.find(snp.rs()) != dup_list.end()) continue;
+            log_file_stream << snp.rs() << std::endl;
         }
         log_file_stream.close();
         std::string error_message =

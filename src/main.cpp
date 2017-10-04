@@ -55,9 +55,9 @@ int main(int argc, char* argv[])
     {
         std::cerr << ia.what() << std::endl;
     }
-    catch (const std::runtime_error &error)
+    catch (const std::runtime_error& error)
     {
-    	std::cerr << error.what() << std::endl;
+        std::cerr << error.what() << std::endl;
     }
     bool used_ld = false;
     Genotype* ld_file = nullptr;

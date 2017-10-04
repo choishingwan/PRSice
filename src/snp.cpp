@@ -31,7 +31,6 @@ SNP::SNP()
     clump_info.clumped = false;
     clump_info.contain_missing = false;
     clump_info.contain_geno = false;
-
 }
 
 
