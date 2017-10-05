@@ -1486,7 +1486,6 @@ namespace bgen
                                             Context const& context,
                                             Setter& setter,
                                             std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2)
                                             std::vector<byte_t>* buffer2, bool quick)
     {
         read_genotype_data_block(aStream, context, buffer1);
