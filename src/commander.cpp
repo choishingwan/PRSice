@@ -356,7 +356,6 @@ Commander::Commander()
     filter.extract = false;
     filter.geno = 0.0;
     filter.mind = 0.0;
-    filter.hard_threshold = 0.8;
     filter.maf = 0.01;
     filter.hard_coding = false;
     filter.hard_threshold = 0.9;
