@@ -693,11 +693,12 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
 
     // assume all are founder
     m_founder_info.resize(unfiltered_sample_ctl, 0);
-    m_founder_ct = m_unfiltered_sample_ct;
+    m_founder_ct = 0;
 
     m_sample_include.resize(unfiltered_sample_ctl, 0);
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
+        	m_founder_ct++;
             SET_BIT(i, m_founder_info.data());
             SET_BIT(i, m_sample_include.data());
         }
@@ -706,6 +707,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     m_num_male = 0, m_num_female = 0,
     m_num_ambig_sex = (has_sex) ? 0 : m_unfiltered_sample_ct;
     for (size_t i = 0; i < sex_info.size() && has_sex; ++i) {
+    	if (!sample_res[i].included) continue;
         switch (sex_info[i])
         {
         case 1:
