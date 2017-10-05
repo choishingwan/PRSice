@@ -41,11 +41,12 @@ private:
 
     void check_bed();
 
-    inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
+    inline void read_genotype(uintptr_t* genotype, const SNP &snp,
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+        size_t snp_index = snp.snp_id();
         bool jump = !(snp_index - m_prev_index == 1);
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {

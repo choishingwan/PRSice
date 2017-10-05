@@ -82,14 +82,14 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
             set_bit(m_xymt_codes[xymt_idx], m_chrom_mask.data());
         }
     }
-    m_max_code = 22;                  // we currently only really allow human
     m_chrom_start.resize(m_max_code); // 1 extra for the info
 }
 
 void Genotype::set_genotype_files(std::string prefix)
 {
     if (prefix.find("#") != std::string::npos) {
-        for (size_t chr = 1; chr < m_max_code; ++chr) {
+        // auto read will only include the autosomes unless otherwise?
+        for (size_t chr = 1; chr < m_autosome_ct; ++chr) {
             std::string name = prefix;
             misc::replace_substring(name, "#", std::to_string(chr));
             m_genotype_files.push_back(name);
@@ -1046,7 +1046,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         // initialize the genotype vector
         // std::fill(genotype_vector.begin(), genotype_vector.end(), 0);
         // read in the genotype
-        reference.read_genotype(genotype_vector.data(), cur_snp.snp_id(),
+        reference.read_genotype(genotype_vector.data(), cur_snp,
                                 cur_snp.file_name());
         // no idea why we need to initialize it this way...
         // actually, it doesn't matter as load_and_split3 never use this

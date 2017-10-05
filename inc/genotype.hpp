@@ -180,7 +180,7 @@ protected:
 
     uint32_t m_thread;
     virtual inline void read_genotype(uintptr_t* genotype,
-                                      const uint32_t snp_index,
+                                      const SNP &snp,
                                       const std::string& file_name)
     {
         genotype = nullptr;

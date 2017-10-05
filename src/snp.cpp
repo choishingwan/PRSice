@@ -58,6 +58,28 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
 }
 
 
+SNP::SNP(const std::string rs_id, const int chr, const int loc,
+         const std::string ref_allele, const std::string alt_allele,
+         const std::string file_name, const std::streampos byte_pos)
+{
+    basic.ref = ref_allele;
+    basic.alt = alt_allele;
+    basic.rs = rs_id;
+    basic.chr = chr;
+    basic.loc = loc;
+    basic.valid = true;
+    statistic.se = 0.0;
+    statistic.p_value = 0.0;
+    statistic.stat = 0.0;
+    statistic.flipped = false;
+    threshold.p_threshold = 0.0;
+    threshold.category = 0;
+    clump_info.clumped = false;
+    clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
+    file_info.file = file_name;
+    file_info.byte_pos = byte_pos;
+}
 SNP::~SNP() {}
 
 std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
