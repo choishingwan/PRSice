@@ -150,12 +150,12 @@ public:
 
     int chr() const { return basic.chr; };
     int loc() const { return basic.loc; };
-    int byte_pos() const { return file_info.byte_pos; };
     int category() const { return threshold.category; };
     double p_value() const { return statistic.p_value; };
     double stat() const { return statistic.stat; };
     double get_threshold() const { return threshold.p_threshold; };
     size_t snp_id() const { return file_info.id; };
+    std::streampos byte_pos() const { return file_info.byte_pos; };
     std::string file_name() const { return file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };

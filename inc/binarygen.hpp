@@ -56,7 +56,9 @@ private:
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
                          const std::string& file_name)
     {
-        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0 || !m_bgen_file.is_open()) {
+        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+            || !m_bgen_file.is_open())
+        {
             if (m_bgen_file.is_open()) m_bgen_file.close();
             std::string bgen_name = file_name + ".bgen";
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
@@ -67,7 +69,7 @@ private:
             }
             m_cur_file = file_name;
         }
-        auto && context = m_bgen_info[file_name];
+        auto&& context = m_bgen_info[file_name];
         Data probability;
         ProbSetter setter(&probability);
         std::vector<genfile::byte_t> buffer1, buffer2;
@@ -100,7 +102,7 @@ private:
         }
     };
 
-    inline void read_genotype(uintptr_t* genotype, const SNP &snp,
+    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)
     {
         // the bgen library seems over complicated
@@ -110,10 +112,10 @@ private:
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
-        if (load_and_collapse_incl(snp.byte_pos(), file_name, m_unfiltered_sample_ct,
-                                   m_founder_ct, m_founder_info.data(),
-                                   final_mask, false, m_tmp_genotype.data(),
-                                   genotype))
+        if (load_and_collapse_incl(snp.byte_pos(), file_name,
+                                   m_unfiltered_sample_ct, m_founder_ct,
+                                   m_founder_info.data(), final_mask, false,
+                                   m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }

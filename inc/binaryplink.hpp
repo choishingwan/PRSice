@@ -41,7 +41,7 @@ private:
 
     void check_bed();
 
-    inline void read_genotype(uintptr_t* genotype, const SNP &snp,
+    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);

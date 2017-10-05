@@ -177,7 +177,7 @@ std::vector<SNP> BinaryGen::load_snps()
             std::vector<genfile::byte_t> buffer1, buffer2;
 
             genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-                        m_bgen_file, context, setter, &buffer1, &buffer2, true);
+                m_bgen_file, context, setter, &buffer1, &buffer2, true);
             // but we will not process anything
             if (chromosome.compare(prev_chr) != 0) {
                 prev_chr = chromosome;
