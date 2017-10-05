@@ -550,12 +550,12 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         cur_sample.has_pheno = false;
         if (m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
-                                   != m_sample_selection_list.end());
+                                   == m_sample_selection_list.end());
         }
         else
         {
             cur_sample.included = (m_sample_selection_list.find(id)
-                                   == m_sample_selection_list.end());
+                                   != m_sample_selection_list.end());
         }
         // there isn't any founder/nonfounder, so directly using this is ok
         m_sample_ct += cur_sample.included;
