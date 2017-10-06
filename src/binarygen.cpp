@@ -470,9 +470,16 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
 
 
         size_t i_missing = 0;
+
         double maf = ((double) total_num
                       / ((double) ((int) num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
+        if (num_included_samples == nmiss
+        		|| maf - 0 < std::numeric_limits<double>::epsilon())
+        {
+        	m_existed_snps[i_snp].invalidate();
+        	continue;
+        }
         if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
