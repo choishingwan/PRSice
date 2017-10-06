@@ -148,7 +148,7 @@ std::vector<SNP> BinaryGen::load_snps()
             if (m_unfiltered_marker_ct % 1000 == 0
                 && m_unfiltered_marker_ct > 0)
             {
-                fprintf(stderr, " \r%zuK SNPs processed\r",
+                fprintf(stderr, "\r %zuK SNPs processed\r",
                         m_unfiltered_marker_ct / 1000);
             }
             uint16_t SNPID_size = 0;
@@ -421,7 +421,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
+        if (load_and_collapse_incl(m_existed_snps[i_snp].byte_pos(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
