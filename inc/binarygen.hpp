@@ -90,7 +90,7 @@ private:
             uintptr_t cur_geno = 1;
             for (size_t g = 0; g < prob.size(); ++g) {
                 if (prob[g] >= filter.hard_threshold) {
-                    cur_geno = (g == 2) ? 0 : 3 - g; // binary code for plink
+                    cur_geno = (g == 0) ? 0 : g+1; // binary code for plink
                     break;
                 }
             }
