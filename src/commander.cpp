@@ -636,7 +636,7 @@ void Commander::info()
           "                            and ] will be parsed. E.g. @PC[1-3] "
           "will be\n"
           "                            read as PC1,PC2,PC3. Discontinuous "
-          "input also\n"
+          "input are also\n"
           "                            supported: @cov[1.3-5] will be parsed "
           "as \n"
           "                            cov1,cov3,cov4,cov5\n"

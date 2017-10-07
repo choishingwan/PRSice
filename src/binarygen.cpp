@@ -550,7 +550,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         == m_sample_index_check.end())
     {
         Sample cur_sample;
-        cur_sample.FID = (ignore_fid) ? "" : token[0];
+        cur_sample.FID = token[0];
         cur_sample.IID = (ignore_fid) ? token[0] : token[1];
         cur_sample.pheno = "NA";
         cur_sample.included = false;
