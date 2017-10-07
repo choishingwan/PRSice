@@ -212,7 +212,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'o': set_string(optarg, message, misc.out, dummy, "out"); break;
         case 'p':
-            set_string(optarg, message, base.p_value, base.provided_p, "pvalue");
+            set_string(optarg, message, base.p_value, base.provided_p,
+                       "pvalue");
             break;
         case 's':
             set_numeric<int>(optarg, message, error_messages, misc.seed,
@@ -269,7 +270,14 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (prsice.full) message.append(" \\\n    --full");
     if (prsice.no_regress) message.append(" \\\n    --no-regression");
     if (target.nonfounders) message.append(" \\\n    --nonfounders");
-
+    if ((clumping.ld.empty() && target.type.compare("bgen") == 0)
+        || clumping.type.compare("bgen") == 0)
+    {
+        if (!filter.use_hard_thres) {
+            message.append(" \\\n    --hard-thres "
+                           + std::to_string(filter.hard_threshold));
+        }
+    }
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -535,11 +543,16 @@ void Commander::info()
         "    --chr                   Column header containing the chromosome\n"
         "                            Default: CHR\n"
         "    --index                 If set, assume the INDEX instead of NAME "
-        "of\n"
+        "for\n"
         "                            the corresponding columns are provided. "
         "Index\n"
         "                            should be 0-based (start counting from "
         "0)\n"
+        "    --info                  INFO score threshold. SNPs with info "
+        "score\n"
+        "                            less than this will be ignored\n"
+        "    --info-col              Column header containing the info score\n"
+        "                            Default: INFO\n"
         "    --pvalue        | -p    Column header containing the p-value\n"
         "                            Default: P\n"
         "    --se                    Column header containing the standard "
@@ -551,7 +564,7 @@ void Commander::info()
         "statistic\n"
         "                            If --beta is set, default as BETA. "
         "Otherwise,\n"
-        "                            try and search for OR or BETA from the "
+        "                            will search for OR or BETA from the "
         "header\n"
         "                            of the base file\n"
         "\nClumping:\n"
@@ -584,6 +597,7 @@ void Commander::info()
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
           "                            Mutually exclusive from --ld-remove\n"
+          "                            No effect if --ld was not provided\n"
           "    --ld-remove             File containing the sample(s) to be "
           "removed from\n"
           "                            the LD reference file. First column "
@@ -595,7 +609,7 @@ void Commander::info()
           "    --ld-type               File type of the LD file. Support bed "
           "(binary plink)\n"
           "                            and bgen format. Default: bed\n"
-          "    --no-clump              Avoid performing clumping\n"
+          "    --no-clump              Stop PRSice from performing clumping\n"
           "    --proxy                 Proxy threshold for index SNP to be "
           "considered\n"
           "                            as part of the region represented by "
@@ -615,14 +629,24 @@ void Commander::info()
           "                            is set, first column should be IID\n"
           "    --cov-col       | -c    Header of covariates. If not provided, "
           "will use\n"
-          "                            all variables in the covariate file\n"
+          "                            all variables in the covariate file. By "
+          "adding\n"
+          "                            @ in front of the string, any numbers "
+          "within [\n"
+          "                            and ] will be parsed. E.g. @PC[1-3] "
+          "will be\n"
+          "                            read as PC1,PC2,PC3. Discontinuous "
+          "input also\n"
+          "                            supported: @cov[1.3-5] will be parsed "
+          "as \n"
+          "                            cov1,cov3,cov4,cov5\n"
           "\nDosage:\n"
           "    --hard-thres            Hard threshold for dosage data. Any "
           "call less than\n"
           "                            this will be treated as missing. Note "
           "that if dosage\n"
-          "                            data is used as a LD reference, it "
-          "will always be\n"
+          "                            data is used as a LD reference, it will "
+          "always be\n"
           "                            hard coded to calculate the LD\n"
           "                            Default: "
         + std::to_string(filter.hard_threshold)
@@ -701,7 +725,8 @@ void Commander::info()
           "                            again to find the best bin "
           "combination.\n"
           "                            This cannot be performed together with "
-          "PRSet"
+          "PRSet\n"
+          "                            (Currently not implemented)\n"
           "\nTarget File:\n"
           "    --binary-target         Indicate whether the target phenotype\n"
           "                            is binary or not. Either T or F should "
@@ -710,8 +735,9 @@ void Commander::info()
           "phenotype.\n"
           "                            For multiple phenotypes, the input "
           "should be\n"
-          "                            separated by comma without space. "
-          "Default: T\n"
+          "                            separated by comma without space. \n"
+          "                            Default: T if --beta and F if --beta is "
+          "not\n"
           "    --keep                  File containing the sample(s) to be "
           "extracted from\n"
           "                            the target file. First column should be "
@@ -720,6 +746,14 @@ void Commander::info()
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
           "                            Mutually exclusive from --remove\n"
+          "    --remove                File containing the sample(s) to be "
+          "removed from\n"
+          "                            the target file. First column should be "
+          "FID and\n"
+          "                            the second column should be IID. If "
+          "--ignore-fid is\n"
+          "                            set, first column should be IID\n"
+          "                            Mutually exclusive from --keep\n"
           "    --pheno-file    | -f    Phenotype file containing the "
           "phenotype(s).\n"
           "                            First column must be FID of the samples "
@@ -737,16 +771,18 @@ void Commander::info()
           "                            phenotype file\n"
           "    --prevalence    | -k    Prevalence of all binary trait. If "
           "provided\n"
-          "    --nonfounders           Keep the nonfounders in the analysis\n"
-          "                            Note: They will still be excluded from "
-          "LD calculation\n"
-          "    --remove                will adjust the ascertainment bias of "
+          "                            will adjust the ascertainment bias of "
           "the R2.\n"
           "                            Note that when multiple binary trait is "
           "found,\n"
-          "                            you must provide prevalence information "
+          "                            prevalence information must be provided "
           "for\n"
-          "                            all of them.\n"
+          "                            all of them (Either adjust all binary "
+          "traits,\n"
+          "                            or don't adjust at all)\n"
+          "    --nonfounders           Keep the nonfounders in the analysis\n"
+          "                            Note: They will still be excluded from "
+          "LD calculation\n"
           "    --target        | -t    Target genotype file. Currently "
           "support\n"
           "                            both BGEN and binary PLINK format. For "
@@ -756,6 +792,10 @@ void Commander::info()
           "                            the chromosome number with #. PRSice "
           "will\n"
           "                            automatically replace # with 1-22\n"
+          "                            For binary plink format, you can also "
+          "specify\n"
+          "                            a seperate fam file by <prefix>,<fam "
+          "file>\n"
           "    --type                  File type of the target file. Support "
           "bed \n"
           "                            (binary plink) and bgen format. "
@@ -772,8 +812,8 @@ void Commander::info()
           "                            analysis\n"
           "    --ignore-fid            Ignore FID for all input. When this is "
           "set,\n"
-          "                            first column of most file will be "
-          "assume to\n"
+          "                            first column of all file will be assume "
+          "to\n"
           "                            be IID instead of FID\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
@@ -793,11 +833,13 @@ void Commander::info()
           "                            use value larger than 10,000\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
-          "    --print-snp             system time will be used as seed. When "
+          "                            system time will be used as seed. When "
           "same\n"
           "                            seed and same input is provided, same "
           "result\n"
-          "                            should be generated\n"
+          "                            can be generated\n"
+          "    --print-snp             Print all SNPs used to construct the "
+          "best PRS\n"
           "    --thread        | -n    Number of thread use\n"
           "    --help          | -h    Display this help message\n";
 }

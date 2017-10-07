@@ -475,10 +475,10 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
                       / ((double) ((int) num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
         if (num_included_samples == nmiss
-        		|| maf - 0 < std::numeric_limits<double>::epsilon())
+            || maf - 0 < std::numeric_limits<double>::epsilon())
         {
-        	m_existed_snps[i_snp].invalidate();
-        	continue;
+            m_existed_snps[i_snp].invalidate();
+            continue;
         }
         if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;
@@ -705,7 +705,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     m_sample_include.resize(unfiltered_sample_ctl, 0);
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
-        	m_founder_ct++;
+            m_founder_ct++;
             SET_BIT(i, m_founder_info.data());
             SET_BIT(i, m_sample_include.data());
         }
@@ -714,7 +714,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     m_num_male = 0, m_num_female = 0,
     m_num_ambig_sex = (has_sex) ? 0 : m_unfiltered_sample_ct;
     for (size_t i = 0; i < sex_info.size() && has_sex; ++i) {
-    	if (!sample_res[i].included) continue;
+        if (!sample_res[i].included) continue;
         switch (sex_info[i])
         {
         case 1:

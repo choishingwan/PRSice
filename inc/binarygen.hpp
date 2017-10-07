@@ -91,20 +91,20 @@ private:
             uintptr_t cur_geno = 1;
             for (size_t g = 0; g < prob.size(); ++g) {
                 if (prob[g] >= filter.hard_threshold) {
-                    cur_geno = (g == 0) ? 0 : g+1; // binary code for plink
+                    cur_geno = (g == 0) ? 0 : g + 1; // binary code for plink
                     break;
                 }
             }
             // now genotype contain the genotype of this sample after filtering
             // need to bit shift here
-            if(shift==0) genotype[index] = 0; // match behaviour of binaryplink
+            if (shift == 0)
+                genotype[index] = 0; // match behaviour of binaryplink
             genotype[index] |= cur_geno << shift;
-            shift+=2;
-            if(shift==BITCT){
+            shift += 2;
+            if (shift == BITCT) {
                 index++;
-                shift=0;
+                shift = 0;
             }
-
         }
     };
 
