@@ -76,7 +76,8 @@ private:
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
         genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
-
+        int shift = 0;
+        int index = 0;
         for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample) {
             auto&& prob = probability[i_sample];
             if (prob.size() != 3) {
@@ -96,9 +97,14 @@ private:
             }
             // now genotype contain the genotype of this sample after filtering
             // need to bit shift here
-            int shift = (i_sample % BITCT * 2);
-            int index = (i_sample * 2) / BITCT;
+            if(shift==0) genotype[index] = 0; // match behaviour of binaryplink
             genotype[index] |= cur_geno << shift;
+            shift+=2;
+            if(shift==BITCT){
+                index++;
+                shift=0;
+            }
+
         }
     };
 
