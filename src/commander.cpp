@@ -212,7 +212,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'o': set_string(optarg, message, misc.out, dummy, "out"); break;
         case 'p':
-            set_string(optarg, message, base.p_value, dummy, "pvalue");
+            set_string(optarg, message, base.p_value, base.provided_p, "pvalue");
             break;
         case 's':
             set_numeric<int>(optarg, message, error_messages, misc.seed,
