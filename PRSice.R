@@ -98,7 +98,12 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
                             the second column should be IID. If --ignore-fid\n
                             is set, first column should be IID\n
     --cov-col       | -c    Header of covariates. If not provided, will use\n
-                            all variables in the covariate file\n
+                            all variables in the covariate file. By adding\n
+                            @ in front of the string, any numbers within [\n
+                            and ] will be parsed. E.g. @PC[1-3] will be\n
+                            read as PC1,PC2,PC3. Discontinuous input are also\n
+                            supported: @cov[1.3-5] will be parsed as \n
+                            cov1,cov3,cov4,cov5\n
 \nDosage:\n
     --hard-thres            Hard threshold for dosage data. Any call less than\n
                             this will be treated as missing. Note that if dosage\n
@@ -174,6 +179,11 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
                             the second column should be IID. If --ignore-fid is\n
                             set, first column should be IID\n
                             Mutually exclusive from --remove\n
+    --remove                File containing the sample(s) to be removed from\n
+                            the target file. First column should be FID and\n
+                            the second column should be IID. If --ignore-fid is\n
+                            set, first column should be IID\n
+                            Mutually exclusive from --keep\n
     --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
                             First column must be FID of the samples and\n
                             the second column must be IID of the samples.\n
@@ -184,13 +194,13 @@ help_message <-"usage: Rscript PRSice.R [options] <-b base_file> <-t target_file
     --pheno-col             Headers of phenotypes to be included from the\n
                             phenotype file\n
     --prevalence    | -k    Prevalence of all binary trait. If provided\n
-    --nonfounders           Keep the nonfounders in the analysis\n
-                            Note: They will still be excluded from\n
-                            LD calculation
-    --remove                will adjust the ascertainment bias of the R2.\n
+                            will adjust the ascertainment bias of the R2.\n
                             Note that when multiple binary trait is found,\n
-                            you must provide prevalence information for\n
-                            all of them.\n
+                            prevalence information must be provided for\n
+                            all of them (Either adjust all binary traits,\n
+                            or don't adjust at all)\n
+    --nonfounders           Keep the nonfounders in the analysis\n
+                            Note: They will still be excluded from LD calculation\n
     --target        | -t    Target genotype file. Currently support\n
                             both BGEN and binary PLINK format. For \n
                             multiple chromosome input, simply substitute\n
@@ -233,7 +243,7 @@ if(!exists('startsWith', mode='function')){
     }
 }
 
-libraries <- c("ggplot2", "data.table", "optparse", "methods", "tools")
+libraries <- c("ggplot2", "data.table", "optparse", "methods", "tools", "cowplot")
 found <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
 dir_loc <- grep("--dir", argv)
@@ -338,6 +348,7 @@ option_list <- list(
     make_option(c("--keep-ambig"), action="store_true", dest="keep_ambig"),
     make_option(c("--logit-perm"), action="store_true", dest="logit_perm"),
     make_option(c("--no-clump"), action = "store_true", dest="no_clump"),
+    make_option(c("--nonfounders"), action = "store_true", dest="nonfounders"),
     make_option(c("--no-regress"), action = "store_true", dest="no_regress"),
     make_option(c("--no-x"), action = "store_true", dest="no_x"),
     make_option(c("--no-y"), action = "store_true", dest="no_y"),
@@ -356,6 +367,8 @@ option_list <- list(
     make_option(c("--exclude"), type = "character"),
     make_option(c("--extract"), type = "character"),
     make_option(c("--feature"), type = "character"),
+    make_option(c("--info-col"), type = "character", dest="info_col"),
+    make_option(c("--info"), type = "numeric"),
     make_option(c("--keep"), type = "character"),
     make_option(c("--ld-type"), type = "character",dest="ld_type"),
     make_option(c("--num-auto"), type = "numeric", dest="num_auto"),
@@ -372,6 +385,7 @@ option_list <- list(
     #R Specified options
     make_option(c("--plot"), action = "store_true"),
     make_option(c("--quantile", "-q"), type = "numeric"),
+    make_option(c("--quant-pheno"),action="store_true", dest="quant_pheno"),
     make_option(c("--quant-extract", "-e"), type = "character", dest="quant_extract"),
     make_option("--quant-ref", type = "numeric", dest="quant_ref"),
     make_option("--scatter-r2", action = "store_true", default = F, dest="scatter_r2" ),
@@ -386,7 +400,8 @@ option_list <- list(
 
 capture <- commandArgs(trailingOnly=TRUE)
 help <- (sum(c("--help", "-h") %in%capture)>=1)
-if(help){
+has_c <- (sum(c("--prsice") %in%capture)>=1)
+if(help && !has_c){
     cat(help_message);
     quit();
 }
@@ -399,6 +414,7 @@ not_cpp <-c(
     "quant-extract",
     "intermediate",
     "quant-ref",
+    "quant-pheno",
     "scatter-r2",
     "bar-col-p",
     "bar-col-low",
@@ -472,6 +488,9 @@ if (!provided("plot", argv)) {
     }
     if (provided("prsice", argv_c)) {
         ret <- system2(argv_c$prsice, command)
+        if(ret!=0 || provided(help, argv)){
+            stop();
+        }
     } else{
         stop("Cannot run PRSice without the PRSice binary file")
     }
@@ -479,6 +498,8 @@ if (!provided("plot", argv)) {
 
 
 # Plottings ---------------------------------------------------------------
+
+# Standard Theme for all plots
 
 
 # PLOTTING: Here contains all the function for plotting
@@ -506,7 +527,20 @@ quantile_plot <-
     }else{
       pheno.merge <- merge(PRS.best, pheno, by=c("FID", "IID"))
     }
-    if (length(unique(pheno.merge$PRS)) < num_quant) {
+    pheno.as.quant <- provided("quant_pheno", argv)
+    if(pheno.as.quant && length(unique(pheno.merge$pheno)) < num_quant){
+        writeLines(
+            paste(
+                "WARNING: There are only ",
+                length(unique(pheno.merge$pheno)),
+                " unique Phenotype but asked for ",
+                num_quant,
+                " quantiles",
+                sep = ""
+            )
+        )
+    }
+    else if (length(unique(pheno.merge$PRS)) < num_quant) {
       writeLines(
         paste(
           "WARNING: There are only ",
@@ -521,12 +555,20 @@ quantile_plot <-
       return()
       
     }
-    quants <-
-      as.numeric(cut(
-        pheno.merge$PRS,
-        breaks = unique(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant))),
-        include.lowest = T
-      ))
+    quants <- NULL
+    if(!pheno.as.quant){
+        quants <- as.numeric(cut(
+            pheno.merge$PRS,
+            breaks = unique(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant))),
+            include.lowest = T
+        ))
+    }else{
+        quants <- as.numeric(cut(
+            pheno.merge$pheno,
+            breaks = unique(quantile(pheno.merge$pheno, probs = seq(0, 1, 1 / num_quant))),
+            include.lowest = T
+        ))
+    }
     
     if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
       writeLines(paste(
@@ -543,108 +585,88 @@ quantile_plot <-
       quants[best_ID %in% extract_ID] <- num_quant + 1 # We only matched based on the IID here
       num_quant <- num_quant + 1
     }
-    quant.ref <- ceiling(argv$quantile / 2)
-    if (provided("quant_ref", argv)) {
-      quant.ref <- argv$quant_ref
-      
-      if (quant.ref > argv$quantile) {
+    if(!pheno.as.quant){
         quant.ref <- ceiling(argv$quantile / 2)
-        writeLines(
-          paste(
-            "WARNING: reference quantile",
-            quant.ref,
-            "is greater than number of quantiles",
-            argv$quantile,
-            "\n Using middle quantile by default"
-          )
-        )
-      }
+        if (provided("quant_ref", argv)) {
+          quant.ref <- argv$quant_ref
+          if (quant.ref > argv$quantile) {
+            quant.ref <- ceiling(argv$quantile / 2)
+            writeLines(
+              paste(
+                "WARNING: reference quantile",
+                quant.ref,
+                "is greater than number of quantiles",
+                argv$quantile,
+                "\n Using middle quantile by default"
+              )
+            )
+          }
+        }
+        
+        quants <-
+          factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
+    }else{
+        quants <- factor(quants)
     }
-    quants <-
-      factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
     pheno.merge$quantile <- quants
-    
-    if (num_cov > 0) {
-      pheno.merge <- pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
-    } else{
-      pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
+    if(!pheno.as.quant){
+        if (num_cov > 0) {
+          pheno.merge <- pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
+        } else{
+          pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
+        }
+        
+        
+        family <- gaussian
+        if (binary) {
+          family <- binomial
+        }
+        reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
+        coef.quantiles <- reg$coefficients[1:num_quant, 1]
+        ci <- (1.96 * reg$coefficients[1:num_quant, 2]);
+        ci.quantiles.u <-
+          reg$coefficients[1:num_quant, 1] + ci
+        ci.quantiles.l <-
+          reg$coefficients[1:num_quant, 1] - ci
+        coef.quantiles[1] <- 0
+        ci.quantiles.u[1] <- 0
+        ci.quantiles.l[1] <- 0
+        quantiles.for.table <-
+          c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
+        quantiles.df <-
+          data.frame(Coef=coef.quantiles,
+                     CI.U=ci.quantiles.u,
+                     CI.L=ci.quantiles.l,
+                     DEC=quantiles.for.table)
+        quantiles.df$Group = 0
+        if (!is.null(extract)) {
+            # Because the last quantile is set to be cases
+          quantiles.df$Group[max(quantiles.df$DEC)] = 1
+        }
+        quantiles.df$Group <-
+          factor(quantiles.df$Group, levels = c(0, 1))
+        quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
+        quantiles.plot <- ggplot(quantiles.df, aes(x = DEC, y = Coef, ymin = CI.L,
+                                                   ymax = CI.U)) +
+          ylab("Change in Phenotype given score in quantiles") +
+          xlab("Quantiles for Polygenic Score") +
+          scale_x_continuous(breaks = seq(0, num_quant, 1))
+        if (is.null(extract)) {
+          quantiles.plot <-
+            quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
+              geom_pointrange(colour = "royalblue2",size = 0.9)
+        } else{
+          quantiles.plot <-
+            quantiles.plot + geom_point(aes(color = Group), size = 4) +
+              geom_pointrange(aes(color = Group),size = 0.9) +
+              scale_colour_manual(values = c("#0072B2", "#D55E00"))
+        }
+        ggsave(
+          paste(prefix, "QUANTILES_PLOT.png", sep = "_"),
+          width = 7,
+          height = 7
+        )
     }
-    
-    
-    family <- gaussian
-    if (binary) {
-      family <- binomial
-    }
-    reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
-    coef.quantiles <- reg$coefficients[1:num_quant, 1]
-    ci.quantiles.u <-
-      reg$coefficients[1:num_quant, 1] + (1.96 * reg$coefficients[1:num_quant, 2])
-    ci.quantiles.l <-
-      reg$coefficients[1:num_quant, 1] - (1.96 * reg$coefficients[1:num_quant, 2])
-    coef.quantiles[1] <- 0
-    ci.quantiles.u[1] <- 0
-    ci.quantiles.l[1] <- 0
-    quantiles.for.table <-
-      c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
-    quantiles.df <-
-      data.frame(coef.quantiles,
-                 ci.quantiles.u,
-                 ci.quantiles.l,
-                 quantiles.for.table)
-    names(quantiles.df) <- c("Coef", "CI.U", "CI.L", "DEC")
-    quantiles.df$Group = 0
-    
-    if (!is.null(extract)) {
-      quantiles.df$Group[max(quantiles.df$DEC)] = 1
-    }
-    quantiles.df$Group <-
-      factor(quantiles.df$Group, levels = c(0, 1))
-    quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
-    quantiles.plot <- ggplot(quantiles.df) +
-      theme(
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank(),
-        axis.line = element_line(colour = "black", size = 0.5)
-      ) +
-      ylab("Change in Phenotype given score in quantiles") +
-      xlab("Quantiles for Polygenic Score") +
-      scale_x_continuous(breaks = seq(0, num_quant, 1)) +
-      theme(axis.line.x = element_line(color = "black"),
-            axis.line.y = element_line(color = "black"))
-    if (is.null(extract)) {
-      quantiles.plot <-
-        quantiles.plot + geom_point(aes(x = DEC, y = Coef),
-                                    colour = "royalblue2",
-                                    size = 4) +
-        geom_pointrange(aes(
-          ymin = CI.L,
-          ymax = CI.U,
-          y = Coef,
-          x = DEC
-        ),
-        colour = "royalblue2",
-        size = 0.9)
-    } else{
-      quantiles.plot <-
-        quantiles.plot + geom_point(aes(x = DEC,
-                                        y = Coef,
-                                        color = Group), size = 4) +
-        geom_pointrange(aes(
-          ymin = CI.L,
-          ymax = CI.U,
-          y = Coef,
-          x = DEC,
-          color = Group
-        ),
-        size = 0.9) +
-        scale_colour_manual(values = c("#0072B2", "#D55E00"))
-    }
-    ggsave(
-      paste(prefix, "QUANTILES_PLOT.png", sep = "_"),
-      width = 7,
-      height = 7
-    )
   }
 
 high_res_plot <- function(PRS, prefix, argv) {
@@ -676,34 +698,19 @@ high_res_plot <- function(PRS, prefix, argv) {
   }
   PRS = unique(PRS)
   # Need to also plot the barchart level stuff with green
-  ggfig.points <- NULL
+  ggfig.points <- ggplot(data = PRS, aes(x=Threshold))+ geom_point()+
+      xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T])))
   if (argv$scatter_r2) {
-    ggfig.points <- ggplot(data = PRS, aes(x = Threshold, y = R2)) +
-      geom_line(aes(Threshold,  R2),
-                colour = "green",
-                data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
-      geom_hline(yintercept = max(PRS$R2), colour = "red") +
-      ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
+    ggfig.points <- ggfig.points+geom_line(aes(y=R2),colour = "green",
+                                           data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
+        geom_hline(yintercept = max(PRS$R2), colour = "red") +
+        ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
   } else{
-    ggfig.points <-
-      ggplot(data = PRS, aes(x = Threshold, y = -log10(P))) +
-      geom_line(aes(Threshold, -log10(P)),
-                colour = "green",
-                data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
-      geom_hline(yintercept = max(-log10(PRS$P)), colour = "red") +
-      ylab(bquote(PRS ~ model ~ fit:~ italic(P) - value ~ (-log[10])))
+    ggfig.points <- geom_line(aes(y = -log10(P)), colour = "green",
+                              data = PRS[with(PRS, Threshold %in% barchart.levels) , ]) +
+        geom_hline(yintercept = max(-log10(PRS$P)), colour = "red") +
+        ylab(bquote(PRS ~ model ~ fit:~ italic(P) - value ~ (-log[10])))
   }
-  ggfig.points <- ggfig.points + geom_point() + geom_line() +
-    theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_blank(),
-      axis.line = element_line(colour = "black", size = 0.5),
-      axis.line.x = element_line(color = "black"),
-      axis.line.y = element_line(color = "black")
-    ) +
-    xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T])))
-  
   ggsave(
     paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
     width = 7,
@@ -746,24 +753,27 @@ bar_plot <- function(PRS, prefix, argv) {
     format(output$P[round(output$P, digits = 3) == 0], digits = 2)
   output$sign <- sign(output$Coefficient)
   output$print.p <- sub("e", "*x*10^", output$print.p)
-  ggfig.plot <- ggplot(data = output)
+  ggfig.plot <- ggplot(data = output,aes(
+      x = factor(Threshold), y=R2)) + geom_text(aes(label = paste(print.p)),
+                                                vjust = -1.5,
+                                                hjust = 0,
+                                                angle = 45,
+                                                cex = 2.8,
+                                                parse = T
+                                                )  +
+      scale_y_continuous(limits = c(0, max(output$R2) * 1.25))+
+      xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
+      ylab(expression(paste("PRS model fit:  ", R ^ 2)))
+  
   if (argv$bar_col_p) {
     ggfig.plot <-
-      ggfig.plot + geom_bar(aes(
-        x = factor(Threshold),
-        y = R2,
-        fill = factor(Threshold)
-      ), stat = "identity") +
+      ggfig.plot + geom_bar(aes( fill = factor(Threshold) ), stat = "identity") +
       scale_fill_brewer(palette = argv$palatte,
                         name = expression(italic(P) - value ~ threshold))
   }
   if (!argv$bar_col_p) {
     ggfig.plot <-
-      ggfig.plot + geom_bar(aes(
-        x = factor(Threshold),
-        y = R2,
-        fill = -log10(P)
-      ), stat = "identity") +
+      ggfig.plot + geom_bar(aes(fill = -log10(P)), stat = "identity") +
       scale_fill_gradient(
         low = argv$bar_col_low,
         high = argv$bar_col_high,
@@ -771,30 +781,6 @@ bar_plot <- function(PRS, prefix, argv) {
       )
   }
   
-  ggfig.plot <-
-    ggfig.plot + geom_text(
-      aes(
-        x = factor(Threshold),
-        y = R2,
-        label = paste(print.p)
-      ),
-      vjust = -1.5,
-      hjust = 0,
-      angle = 45,
-      cex = 2.8,
-      parse = T
-    ) +
-    scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
-    theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_blank(),
-      axis.line = element_line(colour = "black", size = 0.5) ,
-      axis.line.x = element_line(color = "black"),
-      axis.line.y = element_line(color = "black")
-    ) +
-    xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-    ylab(expression(paste("PRS model fit:  ", R ^ 2)))
   ggsave(
     paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
     width = 7,
@@ -808,7 +794,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
   #writeLines(prefix)
   PRS <- fread(paste(prefix, ".prsice", sep = ""), header = T, data.table = F)
   PRS.best <- fread(paste(prefix, ".best", sep = ""), header = T, data.table = F)
-  
+  PRS.best <- subset(PRS.best, Has_Phenotype=="Yes")
   # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
   # Good thing is, only quantile plot really needs the cov and phenotype information
   if (provided("quantile", argv) && argv$quantile > 0) {
