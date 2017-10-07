@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <stdint.h>
@@ -379,11 +380,9 @@ namespace bgen
     // values using the setter object provided. The buffers are used as
     // intermediate storage and will be resized to fit data as needed.
     template <typename Setter>
-    void read_and_parse_genotype_data_block(std::istream& aStream,
-                                            Context const& context,
-                                            Setter& setter,
-                                            std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2);
+    void read_and_parse_genotype_data_block(
+        std::istream& aStream, Context const& context, Setter& setter,
+        std::vector<byte_t>* buffer1, std::vector<byte_t>* buffer2, bool quick);
 }
 }
 
@@ -1479,13 +1478,12 @@ namespace bgen
     }
 
     template <typename Setter>
-    void read_and_parse_genotype_data_block(std::istream& aStream,
-                                            Context const& context,
-                                            Setter& setter,
-                                            std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2)
+    void read_and_parse_genotype_data_block(
+        std::istream& aStream, Context const& context, Setter& setter,
+        std::vector<byte_t>* buffer1, std::vector<byte_t>* buffer2, bool quick)
     {
         read_genotype_data_block(aStream, context, buffer1);
+        if (quick) return;
         uncompress_probability_data(context, *buffer1, buffer2);
         parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
                                context, setter);

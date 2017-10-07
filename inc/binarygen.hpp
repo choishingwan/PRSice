@@ -53,10 +53,12 @@ private:
     std::vector<SNP> load_snps();
 
     std::string m_cur_file;
-    inline void load_raw(uintptr_t* genotype, const uint32_t snp_index,
+    inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
                          const std::string& file_name)
     {
-        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0) {
+        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+            || !m_bgen_file.is_open())
+        {
             if (m_bgen_file.is_open()) m_bgen_file.close();
             std::string bgen_name = file_name + ".bgen";
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
@@ -67,14 +69,15 @@ private:
             }
             m_cur_file = file_name;
         }
-        m_bgen_file.seekg(snp_index, std::ios_base::beg);
-
+        auto&& context = m_bgen_info[file_name];
         Data probability;
         ProbSetter setter(&probability);
         std::vector<genfile::byte_t> buffer1, buffer2;
-
+        m_bgen_file.seekg(byte_pos, std::ios_base::beg);
         genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-            m_bgen_file, m_bgen_info[file_name], setter, &buffer1, &buffer2);
+            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+        int shift = 0;
+        int index = 0;
         for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample) {
             auto&& prob = probability[i_sample];
             if (prob.size() != 3) {
@@ -88,19 +91,24 @@ private:
             uintptr_t cur_geno = 1;
             for (size_t g = 0; g < prob.size(); ++g) {
                 if (prob[g] >= filter.hard_threshold) {
-                    cur_geno = (g == 2) ? 0 : 3 - g; // binary code for plink
+                    cur_geno = (g == 0) ? 0 : g+1; // binary code for plink
                     break;
                 }
             }
             // now genotype contain the genotype of this sample after filtering
             // need to bit shift here
-            int shift = (i_sample % BITCT * 2);
-            int index = (i_sample * 2) / BITCT;
+            if(shift==0) genotype[index] = 0; // match behaviour of binaryplink
             genotype[index] |= cur_geno << shift;
+            shift+=2;
+            if(shift==BITCT){
+                index++;
+                shift=0;
+            }
+
         }
     };
 
-    inline void read_genotype(uintptr_t* genotype, const uint32_t snp_index,
+    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)
     {
         // the bgen library seems over complicated
@@ -110,17 +118,17 @@ private:
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
-        if (load_and_collapse_incl(snp_index, file_name, m_unfiltered_sample_ct,
-                                   m_founder_ct, m_founder_info.data(),
-                                   final_mask, false, m_tmp_genotype.data(),
-                                   genotype))
+        if (load_and_collapse_incl(snp.byte_pos(), file_name,
+                                   m_unfiltered_sample_ct, m_founder_ct,
+                                   m_founder_info.data(), final_mask, false,
+                                   m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
     };
 
     // borrowed from plink
-    uint32_t load_and_collapse_incl(const uint32_t snp_index,
+    uint32_t load_and_collapse_incl(const std::streampos byte_pos,
                                     const std::string& file_name,
                                     uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
@@ -133,7 +141,7 @@ private:
         if (unfiltered_sample_ct == sample_ct) {
             rawbuf = mainbuf;
         }
-        load_raw(rawbuf, snp_index, file_name);
+        load_raw(rawbuf, byte_pos, file_name);
 
         if (unfiltered_sample_ct != sample_ct) {
             copy_quaterarr_nonempty_subset(rawbuf, sample_include,

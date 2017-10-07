@@ -103,6 +103,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
     m_sample_selection_list.clear();
     m_snp_selection_list.clear();
+    m_bgen_file.close();
 }
 
 BinaryGen::~BinaryGen()
@@ -142,11 +143,12 @@ std::vector<SNP> BinaryGen::load_snps()
         std::string prev_chr = "";
         int chr_code = 0;
 
+        auto&& context = m_bgen_info[prefix];
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
             if (m_unfiltered_marker_ct % 1000 == 0
                 && m_unfiltered_marker_ct > 0)
             {
-                fprintf(stderr, " \r%zuK SNPs processed\r",
+                fprintf(stderr, "\r %zuK SNPs processed\r",
                         m_unfiltered_marker_ct / 1000);
             }
             uint16_t SNPID_size = 0;
@@ -159,75 +161,24 @@ std::vector<SNP> BinaryGen::load_snps()
             std::string RSID;
             std::string chromosome;
             uint32_t SNP_position;
-            if (layout == genfile::bgen::e_Layout1
-                || layout == genfile::bgen::e_Layout0)
-            {
-                uint32_t number_of_samples;
-                bgenlib::read_little_endian_integer(m_bgen_file,
-                                                    &number_of_samples);
-                if (number_of_samples != num_sample) {
-                    throw std::runtime_error(
-                        "ERROR: Number of sample doesn't match!");
-                }
-                bgenlib::read_length_followed_by_data(m_bgen_file, &SNPID_size,
-                                                      &SNPID);
-            }
-            else if (layout == genfile::bgen::e_Layout2)
-            {
-                bgenlib::read_length_followed_by_data(m_bgen_file, &SNPID_size,
-                                                      &SNPID);
-            }
-            else
-            {
-                assert(0);
-            }
-            bgenlib::read_length_followed_by_data(m_bgen_file, &RSID_size,
-                                                  &RSID);
-            bgenlib::read_length_followed_by_data(m_bgen_file, &chromosome_size,
-                                                  &chromosome);
-            bgenlib::read_little_endian_integer(m_bgen_file, &SNP_position);
-            if (layout == bgenlib::e_Layout2) {
-                bgenlib::read_little_endian_integer(m_bgen_file,
-                                                    &numberOfAlleles);
-            }
-            else
-            {
-                numberOfAlleles = 2;
-            }
-            if (numberOfAlleles != 2) {
-                // after we finish writing up the papers, we can come back and
-                // work on this. only use the 2 most common allele and set the
-                // remaining to missing
-                throw std::runtime_error(
-                    "ERROR: Currently only support bgen with 2 alleles!");
-                // we can, in the future, allow for more than 2 alleles by
-                // setting anything but the 2 most common alleles to missing
-            }
-            std::vector<std::string> final_alleles(numberOfAlleles);
-            for (uint16_t i = 0; i < numberOfAlleles; ++i) {
-                bgenlib::read_length_followed_by_data(m_bgen_file, &allele_size,
-                                                      &allele);
-                std::transform(allele.begin(), allele.end(), allele.begin(),
-                               ::toupper);
-                final_alleles[i] = allele;
-            }
-
-            if (!m_bgen_file) {
-#if DEBUG_BGEN_FORMAT
-                std::cerr << "bgen: layout = " << layout
-                          << ", alleles = " << numberOfAlleles << ".\n"
-                          << std::flush;
-                std::cerr << *SNPID << ", " << *RSID << ", " << *chromosome
-                          << ", " << *SNP_position << ".\n"
-                          << std::flush;
-#endif
-                throw std::runtime_error("ERROR: Problem reading bgen file!");
-            }
+            std::vector<std::string> alleles;
+            // directly use the library
+            genfile::bgen::read_snp_identifying_data(
+                m_bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
+                [&alleles](std::size_t n) { alleles.resize(n); },
+                [&alleles](std::size_t i, std::string const& allele) {
+                    alleles.at(i) = allele;
+                });
 
             size_t snp_id = (unsigned int) m_bgen_file.tellg();
-            std::vector<genfile::byte_t> buffer;
-            read_genotype_data_block(m_bgen_file, m_bgen_info[prefix],
-                                     &buffer); // move read pointer forward
+            std::streampos byte_pos = m_bgen_file.tellg();
+            Data probability;
+            ProbSetter setter(&probability);
+            std::vector<genfile::byte_t> buffer1, buffer2;
+
+            genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
+                m_bgen_file, context, setter, &buffer1, &buffer2, true);
+            // but we will not process anything
             if (chromosome.compare(prev_chr) != 0) {
                 prev_chr = chromosome;
                 if (m_chr_order.find(chromosome) != m_chr_order.end()) {
@@ -281,14 +232,14 @@ std::vector<SNP> BinaryGen::load_snps()
             if (m_existed_snps_index.find(RSID) != m_existed_snps_index.end()) {
                 dup_list.insert(RSID);
             }
-            else if (ambiguous(final_alleles.front(), final_alleles.back()))
+            else if (ambiguous(alleles.front(), alleles.back()))
             {
                 m_num_ambig++;
                 if (filter.keep_ambig) {
                     m_existed_snps_index[RSID] = snp_res.size();
-                    snp_res.emplace_back(
-                        SNP(RSID, chr_code, SNP_position, final_alleles.front(),
-                            final_alleles.back(), prefix, snp_id));
+                    snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
+                                             alleles.front(), alleles.back(),
+                                             prefix, byte_pos));
                     m_unfiltered_marker_ct++;
                 }
             }
@@ -296,8 +247,8 @@ std::vector<SNP> BinaryGen::load_snps()
             {
                 m_existed_snps_index[RSID] = snp_res.size();
                 snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
-                                         final_alleles.front(),
-                                         final_alleles.back(), prefix, snp_id));
+                                         alleles.front(), alleles.back(),
+                                         prefix, byte_pos));
                 m_unfiltered_marker_ct++;
                 // directly ignore all others?
             }
@@ -356,13 +307,13 @@ void BinaryGen::dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
             }
             m_cur_file = snp.file_name();
         }
-        m_bgen_file.seekg(snp.snp_id(), std::ios_base::beg);
+        m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         Data probability;
         ProbSetter setter(&probability);
         genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
             m_bgen_file, m_bgen_info[snp.file_name()], setter, &buffer1,
-            &buffer2);
+            &buffer2, false);
         std::vector<size_t> missing_samples;
         double total = 0.0;
         std::vector<double> score(num_included_samples);
@@ -470,7 +421,7 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // std::fill(genotype, genotype + unfiltered_sample_ctl * 2, 0);
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        if (load_and_collapse_incl(m_existed_snps[i_snp].snp_id(),
+        if (load_and_collapse_incl(m_existed_snps[i_snp].byte_pos(),
                                    m_existed_snps[i_snp].file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
@@ -519,9 +470,16 @@ void BinaryGen::hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
 
 
         size_t i_missing = 0;
+
         double maf = ((double) total_num
                       / ((double) ((int) num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
+        if (num_included_samples == nmiss
+        		|| maf - 0 < std::numeric_limits<double>::epsilon())
+        {
+        	m_existed_snps[i_snp].invalidate();
+        	continue;
+        }
         if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
@@ -599,12 +557,12 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         cur_sample.has_pheno = false;
         if (m_remove_sample) {
             cur_sample.included = (m_sample_selection_list.find(id)
-                                   != m_sample_selection_list.end());
+                                   == m_sample_selection_list.end());
         }
         else
         {
             cur_sample.included = (m_sample_selection_list.find(id)
-                                   == m_sample_selection_list.end());
+                                   != m_sample_selection_list.end());
         }
         // there isn't any founder/nonfounder, so directly using this is ok
         m_sample_ct += cur_sample.included;
@@ -742,11 +700,12 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
 
     // assume all are founder
     m_founder_info.resize(unfiltered_sample_ctl, 0);
-    m_founder_ct = m_unfiltered_sample_ct;
+    m_founder_ct = 0;
 
     m_sample_include.resize(unfiltered_sample_ctl, 0);
     for (size_t i = 0; i < sample_res.size(); ++i) {
         if (sample_res[i].included) {
+        	m_founder_ct++;
             SET_BIT(i, m_founder_info.data());
             SET_BIT(i, m_sample_include.data());
         }
@@ -755,6 +714,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     m_num_male = 0, m_num_female = 0,
     m_num_ambig_sex = (has_sex) ? 0 : m_unfiltered_sample_ct;
     for (size_t i = 0; i < sex_info.size() && has_sex; ++i) {
+    	if (!sample_res[i].included) continue;
         switch (sex_info[i])
         {
         case 1:

@@ -38,6 +38,9 @@ public:
     SNP(const std::string rs_id, const int chr, const int loc,
         const std::string ref_allele, const std::string alt_allele,
         const std::string file_name, const int num_line);
+    SNP(const std::string rs_id, const int chr, const int loc,
+        const std::string ref_allele, const std::string alt_allele,
+        const std::string file_name, const std::streampos byte_pos);
     virtual ~SNP();
 
     void set_statistic(const double stat, const double se, const double p_value,
@@ -147,11 +150,12 @@ public:
 
     int chr() const { return basic.chr; };
     int loc() const { return basic.loc; };
-    int snp_id() const { return file_info.id; };
     int category() const { return threshold.category; };
     double p_value() const { return statistic.p_value; };
     double stat() const { return statistic.stat; };
     double get_threshold() const { return threshold.p_threshold; };
+    size_t snp_id() const { return file_info.id; };
+    std::streampos byte_pos() const { return file_info.byte_pos; };
     std::string file_name() const { return file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };
@@ -270,6 +274,7 @@ public:
         basic.loc = other.basic.loc;
         file_info.file = other.file_info.file;
         file_info.id = other.file_info.id;
+        file_info.byte_pos = other.file_info.byte_pos;
         statistic.stat = other.statistic.stat;
         statistic.se = other.statistic.se;
         statistic.p_value = other.statistic.p_value;
@@ -299,6 +304,7 @@ public:
         basic.loc = other.basic.loc;
         file_info.file = other.file_info.file;
         file_info.id = other.file_info.id;
+        file_info.byte_pos = other.file_info.byte_pos;
         statistic.stat = other.statistic.stat;
         statistic.se = other.statistic.se;
         statistic.p_value = other.statistic.p_value;
@@ -348,6 +354,8 @@ public:
         other.file_info.file = "";
         file_info.id = std::move(other.file_info.id);
         other.file_info.id = 0;
+        file_info.byte_pos = std::move(other.file_info.byte_pos);
+        other.file_info.byte_pos = 0;
         statistic.stat = std::move(other.statistic.stat);
         other.statistic.stat = 0.0;
         statistic.se = std::move(other.statistic.se);
@@ -393,7 +401,8 @@ private:
     struct
     {
         std::string file;
-        int id;
+        size_t id; // for checking if we should use seekg
+        std::streampos byte_pos;
     } file_info;
 
     struct
