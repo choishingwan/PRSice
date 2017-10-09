@@ -1487,8 +1487,13 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
             if (m_prs_results(i_region, i).threshold < 0
                 || m_prs_results(i_region, i).p < 0)
                 continue;
-            double r2 = m_prs_results(i_region, i).r2 - m_null_r2;
-            r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
+            double full = m_prs_results(i_region, i).r2;
+            double null = m_null_r2;
+            if(has_prevalence){
+            	full = top*full/bottom*full;
+            	null = top*null/(bottom*null);
+            }
+            double r2 = full-null;
             prsice_out << m_prs_results(i_region, i).threshold << "\t" << r2
                        << "\t" << m_prs_results(i_region, i).p << "\t"
                        << m_prs_results(i_region, i).coefficient << "\t"
@@ -1517,11 +1522,17 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         }
         auto&& best_info = m_prs_results(i_region, m_best_index[i_region]);
         summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
-        double r2 = best_info.r2 - m_null_r2;
+        double full = best_info.r2 ;
+        double null = m_null_r2;
+        if(has_prevalence){
+        	full = top*full/bottom*full;
+        	null = top*null/(bottom*null);
+        }
+        double r2 = full-null;
         r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
         summary_out << "R2 of PRS only:   " << r2 << std::endl;
-        summary_out << "R2 of full model: " << best_info.r2 << std::endl;
-        summary_out << "Null R2:          " << m_null_r2 << std::endl;
+        summary_out << "R2 of full model: " << full << std::endl;
+        summary_out << "Null R2:          " << null << std::endl;
         summary_out << "P-value:          " << best_info.p << std::endl;
         if (perm)
             summary_out << "Empirical P:      " << best_info.emp_p << std::endl;
@@ -1682,8 +1693,14 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
                 i_region++;
                 continue;
             }
-            double r2 = m_prs_results(i_region, bi).r2 - m_null_r2;
-            r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
+
+            double full = m_prs_results(i_region, bi).r2;
+            double null = m_null_r2;
+            if(has_prevalence){
+            	full = top*full/bottom*full;
+            	null = top*null/(bottom*null);
+            }
+            double r2 = full-null;
             region_out << c_region.get_name(i_region) << "\t"
                        << m_prs_results(i_region, bi).threshold << "\t" << r2
                        << "\t" << m_prs_results(i_region, bi).coefficient
