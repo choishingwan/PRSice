@@ -1490,8 +1490,8 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
             double full = m_prs_results(i_region, i).r2;
             double null = m_null_r2;
             if(has_prevalence){
-            	full = top*full/bottom*full;
-            	null = top*null/(bottom*null);
+            	full = top*full/(1+bottom*full);
+            	null = top*null/(1+bottom*null);
             }
             double r2 = full-null;
             prsice_out << m_prs_results(i_region, i).threshold << "\t" << r2
@@ -1525,11 +1525,10 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
         double full = best_info.r2 ;
         double null = m_null_r2;
         if(has_prevalence){
-        	full = top*full/bottom*full;
-        	null = top*null/(bottom*null);
+        	full = top*full/(1+bottom*full);
+        	null = top*null/(1+bottom*null);
         }
         double r2 = full-null;
-        r2 = (has_prevalence) ? top * r2 / (bottom * r2) : r2;
         summary_out << "R2 of PRS only:   " << r2 << std::endl;
         summary_out << "R2 of full model: " << full << std::endl;
         summary_out << "Null R2:          " << null << std::endl;
@@ -1697,8 +1696,8 @@ void PRSice::output(const Commander& c_commander, const Region& c_region,
             double full = m_prs_results(i_region, bi).r2;
             double null = m_null_r2;
             if(has_prevalence){
-            	full = top*full/bottom*full;
-            	null = top*null/(bottom*null);
+            	full = top*full/(1+bottom*full);
+            	null = top*null/(1+bottom*null);
             }
             double r2 = full-null;
             region_out << c_region.get_name(i_region) << "\t"
