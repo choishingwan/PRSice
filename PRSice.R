@@ -741,13 +741,17 @@ quantile_plot <-
             quantiles.df$Group <-
                 factor(quantiles.df$Group, levels = c(0, 1))
             quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
+            if(binary){
+                quantiles.df$Coef <- exp(quantiles.df$Coef)
+            }
             quantiles.plot <-
                 ggplot(quantiles.df, aes(
                     x = DEC,
                     y = Coef,
                     ymin = CI.L,
                     ymax = CI.U
-                )) +
+                )) + 
+                theme(axis.text.x = element_blank())+
                 xlab("Quantiles for Polygenic Score") +
                 scale_x_continuous(breaks = seq(0, num_quant, 1))
             if (binary) {
@@ -792,7 +796,7 @@ quantile_plot <-
                     y = mean,
                     ymin = LCI,
                     ymax = UCI
-                )) +
+                ))+ theme(axis.text.x = element_blank()) +
                 scale_x_continuous(breaks = seq(0, num_quant, 1))+
                 ylab("Mean PRS given phenotype in quantiles")
             if(num_cov>0){
