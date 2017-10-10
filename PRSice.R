@@ -714,13 +714,13 @@ quantile_plot <-
                 family <- binomial
             }
             reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
-            coef.quantiles <- reg$coefficients[1:num_quant, 1]
+            coef.quantiles <- exp(reg$coefficients[1:num_quant, 1])
             ci <- (1.96 * reg$coefficients[1:num_quant, 2])
             
             ci.quantiles.u <-
-                reg$coefficients[1:num_quant, 1] + ci
+                coef.quantiles + ci
             ci.quantiles.l <-
-                reg$coefficients[1:num_quant, 1] - ci
+                coef.quantiles - ci
             coef.quantiles[1] <- 0
             ci.quantiles.u[1] <- 0
             ci.quantiles.l[1] <- 0
@@ -741,9 +741,6 @@ quantile_plot <-
             quantiles.df$Group <-
                 factor(quantiles.df$Group, levels = c(0, 1))
             quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
-            if(binary){
-                quantiles.df$Coef <- exp(quantiles.df$Coef)
-            }
             quantiles.plot <-
                 ggplot(quantiles.df, aes(
                     x = DEC,
@@ -751,7 +748,7 @@ quantile_plot <-
                     ymin = CI.L,
                     ymax = CI.U
                 )) + 
-                theme(axis.text.x = element_blank())+
+                theme(axis.text.x = element_text(angle = 45,hjust=1))+
                 xlab("Quantiles for Polygenic Score") +
                 scale_x_continuous(breaks = seq(0, num_quant, 1))
             if (binary) {
@@ -796,7 +793,8 @@ quantile_plot <-
                     y = mean,
                     ymin = LCI,
                     ymax = UCI
-                ))+ theme(axis.text.x = element_blank()) +
+                ))+ 
+                theme(axis.text.x = element_text(angle = 45,hjust=1))+
                 scale_x_continuous(breaks = seq(0, num_quant, 1))+
                 ylab("Mean PRS given phenotype in quantiles")
             if(num_cov>0){
@@ -926,7 +924,8 @@ bar_plot <- function(PRS, prefix, argv) {
     )  +
         scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
         xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-        ylab(expression(paste("PRS model fit:  ", R ^ 2)))
+        ylab(expression(paste("PRS model fit:  ", R ^ 2)))+
+        theme(axis.text.x = element_text(angle = 45,hjust=1))
     
     if (argv$bar_col_p) {
         ggfig.plot <-
