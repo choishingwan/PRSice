@@ -721,9 +721,9 @@ quantile_plot <-
                 coef.quantiles + ci
             ci.quantiles.l <-
                 coef.quantiles - ci
-            coef.quantiles[1] <- 0
-            ci.quantiles.u[1] <- 0
-            ci.quantiles.l[1] <- 0
+            coef.quantiles[1] <- ifelse(binary,1,0)
+            ci.quantiles.u[1] <- ifelse(binary,1,0)
+            ci.quantiles.l[1] <- ifelse(binary,1,0)
             quantiles.for.table <-
                 c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
             quantiles.df <-
