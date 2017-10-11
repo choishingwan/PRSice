@@ -160,12 +160,16 @@ private:
         return 0;
     }
 
-    void read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                    size_t start_index, size_t end_bound);
-    void hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
-                         size_t start_index, size_t end_bound);
-    void dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
-                      size_t start_index, size_t end_bound);
+
+    void read_score(std::vector<Sample_lite>& current_prs_score,
+                    size_t start_index, size_t end_bound,
+                    const size_t region_index);
+    void hard_code_score(std::vector<Sample_lite>& current_prs_score,
+                         size_t start_index, size_t end_bound,
+                         const size_t region_index);
+    void dosage_score(std::vector<Sample_lite>& current_prs_score,
+                      size_t start_index, size_t end_bound,
+                      const size_t region_index);
     std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
     std::unordered_map<std::string, uint32_t> m_offset_map;
     std::ifstream m_bgen_file;

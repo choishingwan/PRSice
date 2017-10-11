@@ -1187,9 +1187,10 @@ bool Genotype::prepare_prsice()
     return true;
 }
 
-bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
+bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
                          int& cur_category, double& cur_threshold,
-                         std::vector<size_t>& num_snp_included)
+                         std::vector<size_t>& num_snp_included,
+                         const size_t region_index)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1210,9 +1211,8 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
             break;
         }
         //		// Use as part of the output
-        for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
-            if (m_existed_snps[i].in(i_region)) num_snp_included[i_region]++;
-        }
+
+        if (m_existed_snps[i].in(region_index)) num_snp_included++;
     }
     if (!ended) {
         end_index = m_existed_snps.size();
@@ -1220,7 +1220,7 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
     }
     else
         cur_category = m_existed_snps[end_index].category();
-    read_score(prs_score, cur_index, end_index);
+    read_score(prs_score, cur_index, end_index, region_index);
 
     cur_index = end_index;
     return true;
