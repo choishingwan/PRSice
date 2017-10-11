@@ -61,6 +61,12 @@ public:
         m_region_name.clear();
         m_region_name.push_back("Base");
     }
+    void clean()
+    {
+        m_region_list = std::vector<std::vector<region_bound>>();
+        ;
+        m_snp_check_index = std::vector<size_t>();
+    }
 
 private:
     struct region_bound
