@@ -544,6 +544,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         // cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
         cur_snp.set_flag(region);
     }
+    // Suggest that we want to release memory
+    // but this is only a suggest as this is non-binding request
+    // Proper way of releasing memory will be to do swarp. Yet that
+    // might lead to out of scrope or some other error here?
+    m_existed_snps.shrink_to_fit();
     m_region_size = region.size();
     fprintf(stderr, "%zu SNP(s) observed in base file, with:\n",
             num_line_in_base);
@@ -1077,6 +1082,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
 
     } while (!completed);
+
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     std::vector<int> remain_snps;
     std::unordered_set<double> used_thresholds;
@@ -1145,7 +1151,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
         m_existed_snps.erase(last, m_existed_snps.end());
     }
-
+    m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
     // no longer require the m_existed_snps_index
     std::ofstream log_file_stream;
