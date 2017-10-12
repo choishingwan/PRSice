@@ -1192,11 +1192,13 @@ if (provided("cov_file", argv)) {
 # we no longer have those complication
 prefix <- argv$out
 
-num_region = nrow(read.table(paste(prefix, "region", sep = "."), header =
-                                 T))
+
+regions <- read.table(paste(prefix, "region", sep = "."), header =
+                          T)
+num_region = nrow(regions)
 
 
-region = NULL
+region = "Base"
 # Do this for each phenotype
 
 #fam = fread(paste(argv$target, ".fam", sep = ""), data.table = F, header = F )
@@ -1217,6 +1219,8 @@ region = NULL
 #  }
 #}
 #Now match_cov contain all samples with valid covariates
+
+for(r in 1:nrow(num_region))
 if (!is.null(phenos)) {
     pheno_file = fread(argv$pheno_file,
                        header = T,
