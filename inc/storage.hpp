@@ -105,6 +105,7 @@ enum class BASE_INDEX
     SE,
     P,
     INFO,
+    MAF,
     MAX
 };
 enum class FAM

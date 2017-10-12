@@ -46,7 +46,9 @@ public:
     bool has_index() const { return base.index; };
     bool beta() const { return base.beta; };
     bool filter_info() const { return base.use_info; };
+    bool filter_base_maf() const { return base.provided_maf; };
     double info_score() const { return base.info_score; };
+    double maf_base() const { return base.maf_threshold; };
     std::string base_name() const { return base.name; };
 
     // clump
@@ -201,9 +203,11 @@ private:
         std::string standard_error;
         std::string p_value;
         std::string info_col;
+        std::string maf;
         std::vector<int> col_index;
         int beta;
         int index;
+        bool provided_maf;
         bool provided_chr;
         bool provided_ref;
         bool provided_alt;
@@ -214,6 +218,7 @@ private:
         bool provided_p;
         bool use_info;
         double info_score;
+        double maf_threshold;
     } base;
 
     struct
