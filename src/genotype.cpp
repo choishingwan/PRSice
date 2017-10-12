@@ -1225,7 +1225,7 @@ bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
     return true;
 }
 
-void Genotype::print_snp(std::string& output, double threshold)
+void Genotype::print_snp(std::string& output, double threshold, const size_t region_index)
 {
     std::ofstream snp_out;
     snp_out.open(output);
@@ -1235,7 +1235,7 @@ void Genotype::print_snp(std::string& output, double threshold)
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {
-        if (snp.get_threshold() <= threshold) {
+        if (snp.get_threshold() <= threshold && snp.in(region_index)) {
             snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
                     << "\t" << snp.p_value() << std::endl;
         }
