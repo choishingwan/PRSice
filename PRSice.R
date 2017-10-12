@@ -250,8 +250,7 @@ libraries <-
       "data.table",
       "optparse",
       "methods",
-      "tools",
-      "cowplot")
+      "tools")
 found <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
 dir_loc <- grep("--dir", argv)
@@ -570,7 +569,14 @@ if (!provided("plot", argv)) {
 
 # Standard Theme for all plots
 
-
+# Te selected theme to be used 
+theme_sam <- theme_bw()+theme(axis.title=element_text(face="bold", size=18),
+                              axis.text=element_text(size=14),
+                              legend.title=element_text(face="bold", size=18),
+                              legend.text=element_text(size=14),
+                              axis.text.x=element_text(angle=45, hjust=1),
+                              panel.grid = element_blank()
+                              )
 # PLOTTING: Here contains all the function for plotting
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
@@ -748,7 +754,7 @@ quantile_plot <-
                     ymin = CI.L,
                     ymax = CI.U
                 )) + 
-                theme(axis.text.x = element_text(angle = 45,hjust=1))+
+                theme_sam+
                 xlab("Quantiles for Polygenic Score") +
                 scale_x_continuous(breaks = seq(0, num_quant, 1))
             if (binary) {
@@ -768,10 +774,10 @@ quantile_plot <-
                     geom_pointrange(aes(color = Group), size = 0.9) +
                     scale_colour_manual(values = c("#0072B2", "#D55E00"))
             }
-            save_plot(
+            ggsave(
                 paste(prefix, "QUANTILES_PLOT.png", sep = "_"),
                 quantiles.plot,
-                base_aspect_ratio = 1.3
+                height=10, width=10
             )
         }else{
             pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
@@ -794,7 +800,7 @@ quantile_plot <-
                     ymin = LCI,
                     ymax = UCI
                 ))+ 
-                theme(axis.text.x = element_text(angle = 45,hjust=1))+
+                theme_sam+
                 scale_x_continuous(breaks = seq(0, num_quant, 1))+
                 ylab("Mean PRS given phenotype in quantiles")
             if(num_cov>0){
@@ -815,10 +821,10 @@ quantile_plot <-
                     geom_pointrange(aes(color = Group), size = 0.9) +
                     scale_colour_manual(values = c("#0072B2", "#D55E00"))
             }
-            save_plot(
+            ggsave(
                 paste(prefix, "QUANTILES_PHENO_PLOT.png", sep = "_"),
                 quantiles.plot,
-                base_aspect_ratio = 1.3
+                height=10,width=10
             )
         }
         
@@ -856,7 +862,8 @@ high_res_plot <- function(PRS, prefix, argv) {
     PRS = unique(PRS)
     # Need to also plot the barchart level stuff with green
     ggfig.points <- ggplot(data = PRS, aes(x = Threshold)) +
-        xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T])))
+        xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
+        theme_sam
     if (argv$scatter_r2) {
         ggfig.points <-
             ggfig.points + geom_point(aes(y = R2)) + geom_line(aes(y = R2), colour = "green",
@@ -870,10 +877,10 @@ high_res_plot <- function(PRS, prefix, argv) {
             geom_hline(yintercept = max(-log10(PRS$P)), colour = "red") +
             ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
     }
-    save_plot(
+    ggsave(
         paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
         ggfig.points,
-        base_aspect_ratio = 1.3
+        height=10, width=10
     )
 }
 
@@ -919,13 +926,13 @@ bar_plot <- function(PRS, prefix, argv) {
         vjust = -1.5,
         hjust = 0,
         angle = 45,
-        cex = 2.8,
+        cex = 4,
         parse = T
     )  +
+        theme_sam + 
         scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
         xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-        ylab(expression(paste("PRS model fit:  ", R ^ 2)))+
-        theme(axis.text.x = element_text(angle = 45,hjust=1))
+        ylab(expression(paste("PRS model fit:  ", R ^ 2)))
     
     if (argv$bar_col_p) {
         ggfig.plot <-
@@ -943,10 +950,10 @@ bar_plot <- function(PRS, prefix, argv) {
             )
     }
     
-    save_plot(
+    ggsave(
         paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
         ggfig.plot,
-        base_aspect_ratio = 1.3
+        height=10,width=10
     )
 }
 
