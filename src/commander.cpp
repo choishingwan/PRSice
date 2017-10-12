@@ -1012,32 +1012,36 @@ void Commander::base_check(std::string& message, bool& error,
                                    + std::to_string(base.info_score));
                 }
                 // comma separate
-                std::vector<std::string> maf = misc::split(base.maf, ",");
-                if (maf.size() != 2) {
-                    error = true;
-                    error_message.append(
-                        "ERROR: Invalid format of --maf-base.\n");
-                    error_message.append(
-                        "       Should be ColName,Threshold.\n");
-                }
-                base.col_index[+BASE_INDEX::MAF] = index_check(maf[0], token);
-                try
-                {
-                    base.maf_threshold = misc::convert<double>(maf[1]);
-                    if (base.maf_threshold < 0 || base.maf_threshold > 1) {
-                        error = true;
-                        error_message.append("ERROR: Base MAF threshold must "
-                                             "be within 0 and 1!\n");
-                    }
-                }
-                catch (const std::runtime_error& er)
-                {
-                    error = true;
-                    error_message.append(
-                        "ERROR: Invalid argument passed to --maf-base: "
-                        + base.maf + "!\n");
-                    error_message.append(
-                        "       Second argument must be numeric\n");
+                if(base.provided_maf){
+                	// won't do it unless we have something provided
+                	// as no default, will cause problem
+					std::vector<std::string> maf = misc::split(base.maf, ",");
+					if (maf.size() != 2) {
+						error = true;
+						error_message.append(
+							"ERROR: Invalid format of --maf-base.\n");
+						error_message.append(
+							"       Should be ColName,Threshold.\n");
+					}
+					base.col_index[+BASE_INDEX::MAF] = index_check(maf[0], token);
+					try
+					{
+						base.maf_threshold = misc::convert<double>(maf[1]);
+						if (base.maf_threshold < 0 || base.maf_threshold > 1) {
+							error = true;
+							error_message.append("ERROR: Base MAF threshold must "
+												 "be within 0 and 1!\n");
+						}
+					}
+					catch (const std::runtime_error& er)
+					{
+						error = true;
+						error_message.append(
+							"ERROR: Invalid argument passed to --maf-base: "
+							+ base.maf + "!\n");
+						error_message.append(
+							"       Second argument must be numeric\n");
+					}
                 }
                 // no default for MAF as there can be many differenet maf
                 // headers
