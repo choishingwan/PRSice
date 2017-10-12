@@ -123,11 +123,19 @@ int main(int argc, char* argv[])
                 // initialize the phenotype & independent variable matrix
                 prsice.init_matrix(commander, i_pheno, *target_file);
                 // go through each region separately
-                // this should reduce the memory usag
+                // this should reduce the memory usage
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0);
+                }
                 for (size_t i_region = 0; i_region < region.size(); ++i_region)
                 {
                     prsice.run_prsice(commander, region.get_name(i_region),
                                       i_pheno, i_region, *target_file);
+                    if (region.size() > 1) {
+                        fprintf(stderr, "\rProcessing %03.2f%% of sets",
+                                (double) i_region / (double) region.size()
+                                    * 100.0);
+                    }
                     if (!commander.no_regress())
                         prsice.output(commander, region, i_pheno, i_region,
                                       *target_file);

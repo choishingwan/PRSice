@@ -1225,7 +1225,8 @@ bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
     return true;
 }
 
-void Genotype::print_snp(std::string& output, double threshold, const size_t region_index)
+void Genotype::print_snp(std::string& output, double threshold,
+                         const size_t region_index)
 {
     std::ofstream snp_out;
     snp_out.open(output);

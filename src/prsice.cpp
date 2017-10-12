@@ -1332,7 +1332,8 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     best_out.close();
 
     if (c_commander.print_snp()) {
-        target.print_snp(out_snp, m_prs_results[m_best_index].threshold, region_index);
+        target.print_snp(out_snp, m_prs_results[m_best_index].threshold,
+                         region_index);
     }
 }
 
