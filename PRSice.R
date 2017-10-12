@@ -1220,7 +1220,7 @@ region = "Base"
 #}
 #Now match_cov contain all samples with valid covariates
 
-for(r in 1:nrow(num_region))
+
 if (!is.null(phenos)) {
     pheno_file = fread(argv$pheno_file,
                        header = T,
