@@ -564,6 +564,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         // cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
         cur_snp.set_flag(region);
     }
+    // Suggest that we want to release memory
+    // but this is only a suggest as this is non-binding request
+    // Proper way of releasing memory will be to do swarp. Yet that
+    // might lead to out of scrope or some other error here?
+    m_existed_snps.shrink_to_fit();
     m_region_size = region.size();
     fprintf(stderr, "%zu SNP(s) observed in base file, with:\n",
             num_line_in_base);
@@ -1103,6 +1108,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
 
     } while (!completed);
+
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     std::vector<int> remain_snps;
     std::unordered_set<double> used_thresholds;
@@ -1171,7 +1177,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
         m_existed_snps.erase(last, m_existed_snps.end());
     }
-
+    m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
     // no longer require the m_existed_snps_index
     std::ofstream log_file_stream;
@@ -1207,9 +1213,9 @@ bool Genotype::prepare_prsice()
     return true;
 }
 
-bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
+bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
                          int& cur_category, double& cur_threshold,
-                         std::vector<size_t>& num_snp_included)
+                         size_t& num_snp_included, const size_t region_index)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1230,9 +1236,8 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
             break;
         }
         //		// Use as part of the output
-        for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
-            if (m_existed_snps[i].in(i_region)) num_snp_included[i_region]++;
-        }
+
+        if (m_existed_snps[i].in(region_index)) num_snp_included++;
     }
     if (!ended) {
         end_index = m_existed_snps.size();
@@ -1240,13 +1245,14 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
     }
     else
         cur_category = m_existed_snps[end_index].category();
-    read_score(prs_score, cur_index, end_index);
+    read_score(prs_score, cur_index, end_index, region_index);
 
     cur_index = end_index;
     return true;
 }
 
-void Genotype::print_snp(std::string& output, double threshold)
+void Genotype::print_snp(std::string& output, double threshold,
+                         const size_t region_index)
 {
     std::ofstream snp_out;
     snp_out.open(output);
@@ -1256,7 +1262,7 @@ void Genotype::print_snp(std::string& output, double threshold)
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {
-        if (snp.get_threshold() <= threshold) {
+        if (snp.get_threshold() <= threshold && snp.in(region_index)) {
             snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
                     << "\t" << snp.p_value() << std::endl;
         }

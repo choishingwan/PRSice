@@ -95,10 +95,12 @@ public:
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
     bool seeded() const { return misc.provided_seed; };
+    bool provided_memory() const { return misc.provided_memory; };
     std::string out() const { return misc.out; };
     int num_permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
+    int memory() const { return misc.memory; };
 
 
     // prset

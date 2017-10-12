@@ -83,8 +83,9 @@ private:
         }
     };
 
-    void read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                    size_t start_index, size_t end_bound);
+    void read_score(std::vector<Sample_lite>& current_prs_score,
+                    size_t start_index, size_t end_bound,
+                    const size_t region_index);
 
     std::ifstream m_bed_file;
     std::string m_cur_file;

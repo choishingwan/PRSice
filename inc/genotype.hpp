@@ -57,11 +57,12 @@ public:
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
-    bool get_score(misc::vec2d<Sample_lite>& current_prs_score, int& cur_index,
+    bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
                    int& cur_category, double& cur_threshold,
-                   std::vector<size_t>& num_snp_included);
+                   size_t& num_snp_included, const size_t region_index);
     bool prepare_prsice();
-    void print_snp(std::string& output, double threshold);
+    void print_snp(std::string& output, double threshold,
+                   const size_t region_index);
     size_t num_threshold() const { return m_num_threshold; };
     void read_base(const Commander& c_commander, Region& region);
     // void clump(Genotype& reference);
@@ -184,8 +185,9 @@ protected:
     {
         genotype = nullptr;
     };
-    virtual void read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                            size_t start_index, size_t end_bound){};
+    virtual void read_score(std::vector<Sample_lite>& current_prs_score,
+                            size_t start_index, size_t end_bound,
+                            const size_t region_index){};
 
     // hh_exists
     inline bool ambiguous(std::string ref_allele, std::string alt_allele)

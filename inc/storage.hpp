@@ -25,7 +25,6 @@ struct Sample
     std::string FID;
     std::string IID;
     std::string pheno;
-    double prs;
     int num_snp;
     bool included;
     bool has_pheno;
@@ -36,17 +35,6 @@ struct Sample_lite
     double prs;
     int num_snp;
     bool has_pheno;
-};
-
-struct prsice_result
-{
-    double threshold;
-    double r2;
-    double r2_adj;
-    double coefficient;
-    double p;
-    double emp_p;
-    int num_snp;
 };
 
 // Passkey idiom, allow safer access to

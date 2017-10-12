@@ -45,49 +45,124 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, std::string target,
-           std::vector<bool> target_binary, SCORING score, size_t num_region,
-           bool ignore_fid, std::string out)
+    PRSice(std::string base_name, const Commander commander, bool prset)
         : m_base_name(base_name)
-        , m_target(target)
-        , m_target_binary(target_binary)
-        , m_score(score)
-        , m_region_size(num_region)
-        , m_ignore_fid(ignore_fid)
     {
-        m_log_file = out + ".log";
+
+        m_target = commander.target_name();
+        m_target_binary = commander.is_binary();
+        m_score = commander.get_scoring();
+        m_ignore_fid = commander.ignore_fid();
+        m_prset = prset;
+        m_out = commander.out();
+        bool perm = commander.permute();
+        m_num_perm = commander.num_permutation();
+        m_logit_perm = commander.logit_perm();
+        m_seed = std::random_device()(); // cerr valgrind doesn't like this
+        if (commander.seeded()) m_seed = commander.seed();
+        bool has_binary = false;
+        for (auto&& b : m_target_binary) {
+            if (b) {
+                has_binary = true;
+                break;
+            }
+        }
+        m_log_file = m_out + ".log";
+        if (perm) {
+            // first check for ridiculously large sample size
+            // allow 10 GB here
+            if (CHAR_BIT * m_sample_included.size() > 1000000000) {
+                m_perm_per_slice = 1;
+            }
+            else
+            {
+                // in theory, most of the time, perm_per_slice should be
+                // equal to c_commander.num_permutation();
+                int sample_memory = CHAR_BIT * m_sample_included.size();
+                m_perm_per_slice = 1000000000 / sample_memory;
+                m_perm_per_slice = (m_perm_per_slice > m_num_perm)
+                                       ? m_num_perm
+                                       : m_perm_per_slice;
+                // Additional slice to keep
+                m_remain_slice = m_num_perm % m_perm_per_slice;
+            }
+            if (has_binary) {
+                fprintf(stderr,
+                        "\nWARNING: To speed up the permutation, we perform\n");
+                fprintf(stderr,
+                        "         linear regression instead of logistic\n");
+                fprintf(
+                    stderr,
+                    "         regression within the permutation and uses\n");
+                fprintf(stderr,
+                        "         the p-value to rank the thresholds. Our "
+                        "assumptions\n");
+                fprintf(stderr, "         are as follow:\n");
+                fprintf(stderr, "         1. Linear Regression & Logistic "
+                                "Regression produce\n");
+                fprintf(stderr, "            similar p-values\n");
+                if (!m_logit_perm) {
+                    fprintf(stderr,
+                            "         2. P-value is correlated with R2\n\n");
+                    fprintf(stderr,
+                            "         If you must, you can run logistic "
+                            "regression instead\n");
+                    fprintf(stderr,
+                            "         by setting the --logit-perm flag\n\n");
+                }
+                else
+                {
+                    fprintf(stderr, "         Using --logit-perm can be "
+                                    "ridiculously slow\n");
+                }
+            }
+        }
     };
+
     virtual ~PRSice();
     void pheno_check(const Commander& c_commander);
+    // init_matrix whenever phenotype changes
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
                      Genotype& target, const bool prslice = false);
     size_t num_phenotype() const
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
-    void prsice(const Commander& c_commander,
-                const std::vector<std::string>& region_name,
-                const size_t c_pheno_index, Genotype& target,
-                bool prslice = false);
+    void run_prsice(const Commander& c_commander, const std::string region_name,
+                    const size_t pheno_index, const size_t region_index,
+                    Genotype& target);
+    void regress_score(const double threshold, size_t thread,
+                       const size_t pheno_index, const size_t iter_threshold);
 
-    // working in progress
     void prsice(const Commander& c_commander, const Region& c_region,
                 const size_t c_pheno_index, bool prslice = false);
-    void output(const Commander& c_commander, const Region& c_region,
-                size_t pheno_index, Genotype& target) const;
-    // void output(const Commander &c_commander, size_t pheno_index) const;
-    // PRSlice related stuff
-    // void prslice_windows(const Commander &c_commander, const Region
-    // &c_region);  void prslice(const Commander &c_commander, const Region
-    // &c_region, const size_t c_pheno_index);
+    void output(const Commander& c_commander, const Region& region,
+                const size_t pheno_index, const size_t region_index,
+                Genotype& target);
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
+    void summarize(const Commander& c_commander);
 
 protected:
 private:
-    std::string m_log_file;
-    std::vector<std::string> m_sample_included;
-    std::vector<size_t> m_sample_index;
+    struct prsice_result
+    {
+        double threshold;
+        double r2;
+        double r2_adj;
+        double coefficient;
+        double p;
+        double emp_p;
+        int num_snp;
+    };
+
+    struct prsice_summary
+    {
+        prsice_result result;
+        std::string pheno;
+        std::string set;
+    };
+
     struct
     {
         std::vector<int> col;
@@ -97,39 +172,58 @@ private:
         bool use_pheno;
     } pheno_info;
 
-    // slowly update the class
-    // input related
-    std::string m_base_name;
-    std::string m_target;
-    std::vector<bool> m_target_binary;
-    SCORING m_score = SCORING::MEAN_IMPUTE;
-    size_t m_region_size = 1;
-    size_t m_all_thresholds = 0;
+    static std::mutex score_mutex;
+
+
     bool m_ignore_fid = false;
-
-    misc::vec2d<double> m_region_perm_result;
-    std::vector<Sample> m_sample_names;
-    std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
-
+    bool m_prset = false;
+    bool m_logit_perm = false;
+    bool m_average_score = true;
     Eigen::VectorXd m_phenotype;
     Eigen::MatrixXd m_independent_variables;
+    double m_null_r2 = 0.0;
+    int m_best_index = -1;
+    int m_perm_per_slice = 0;
+    int m_remain_slice = 0;
+    int m_num_perm = 0;
+    unsigned int m_seed = 0;
+    size_t m_num_snp_included = 0;
+    size_t m_region_index = 0;
+    size_t m_all_thresholds = 0;
+    size_t m_max_fid_length = 3;
+    size_t m_max_iid_length = 3;
+    SCORING m_score = SCORING::MEAN_IMPUTE;
+    std::string m_log_file;
+    std::string m_base_name;
+    std::string m_target;
+    std::string m_out;
+    std::vector<bool> m_target_binary;
+    std::vector<double> m_perm_result;
+    std::vector<prsice_result> m_prs_results;
+    std::vector<prsice_summary> m_prs_summary; // for multiple traits
+    std::vector<Sample_lite> m_current_sample_score;
+    std::vector<Sample_lite> m_best_sample_score;
+    std::vector<std::string> m_sample_included;
+    std::vector<size_t> m_sample_index;
+    std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
+                                                      // non-sig, margin sig,
+                                                      // and sig pathway &
+                                                      // phenotype
+    std::vector<Sample> m_sample_names; // might want to not storing it here
+    std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
-    // Use struct for more elegant coding
-    // struct stored in storage so that Genotype class can also use it
-    misc::vec2d<prsice_result> m_prs_results;
-    // std::vector< std::vector<prsice_result> > m_prs_results; // 1d = region,
-    // 2d=results
-    std::vector<int> m_best_index; // only need to store the index for the best
-                                   // region // -1 = no
-    // we are safe to assume that the order of samples follow the read in from
-    // fam due to the way we initialize the m_pheno and m_independent_variable
-    // misc::vec2d<Sample_lite> m_best_score;
-    misc::vec2d<Sample_lite> m_current_sample_score;
-    misc::vec2d<Sample_lite> m_best_sample_score;
-    std::vector<size_t> m_num_snp_included;
-    /**
-     * function area
-     */
+
+    void thread_score(size_t region_start, size_t region_end, double threshold,
+                      size_t thread, const size_t c_pheno_index,
+                      const size_t iter_threshold);
+    void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                     std::vector<Eigen::MatrixXd>& pheno_perm, size_t start,
+                     size_t end, int rank, const Eigen::VectorXd& pre_se,
+                     size_t processed, bool logit_perm);
+    void permutation(unsigned int seed, int perm_per_slice, int remain_slice,
+                     int total_permutation, int n_thread, bool logit_perm);
+    void permutation(const int n_thread, bool logit_perm);
+    void update_sample_included();
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
@@ -143,41 +237,7 @@ private:
         std::vector<std::unordered_map<std::string, int>>& factor_levels);
     // This should help us to update the m_prs_results
     void process_permutations();
-
-
-    // Null information
-    double m_null_r2 = 0.0;
-    // others
-    // For thread safety
-    static std::mutex score_mutex;
-
-    // PRSlice related storages
-    // enum prslice_wind{WIND,SNPS, R2, P, NSNP, COEFF};
-    // typedef std::tuple<std::string, std::vector<p_partition>, double, double,
-    // double, double > windows;  std::vector<windows> m_best_snps;
-
-
-    /**
-     * Check whether if the SNP is included in the target file. This should
-     * update the m_include_snp
-     * @param c_target_bim_name The target bim file name
-     * @param num_ambig Number of ambiguous SNPs
-     * @param not_found Number of base SNPs not found in the target file
-     * @param num_duplicate Number of duplicated SNPs found in the target file
-     */
-
-    // void update_line(std::unordered_map<std::string, size_t>
-    // &partition_index);
-    void thread_score(size_t region_start, size_t region_end, double threshold,
-                      size_t thread, const size_t c_pheno_index,
-                      const size_t iter_threshold);
-    void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-                     std::vector<Eigen::MatrixXd>& pheno_perm, size_t start,
-                     size_t end, size_t i_region, int rank,
-                     const Eigen::VectorXd& pre_se, size_t processed,
-                     bool logit_perm);
-    void permutation(unsigned int seed, int perm_per_slice, int remain_slice,
-                     int total_permutation, int n_thread, bool logit_perm);
+    void summary();
 };
 
 #endif // PRSICE_H
