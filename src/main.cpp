@@ -140,6 +140,9 @@ int main(int argc, char* argv[])
                         prsice.output(commander, region, i_pheno, i_region,
                                       *target_file);
                 }
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0);
+                }
             }
             prsice.summarize(commander);
         }
