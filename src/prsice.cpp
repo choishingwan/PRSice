@@ -1385,10 +1385,10 @@ void PRSice::summarize(const Commander& commander)
         out << "Phenotype\tSet\tThreshold\tPRS.R2\tCoefficient\tP\tNum_SNP"
             << std::endl;
         for (auto&& sum : m_prs_summary) {
-            out << ((sum.pheno.empty())?"-":sum.pheno) << "\t" << sum.set << "\t" << sum.result.threshold
-                << "\t" << sum.result.r2 << "\t" << sum.result.coefficient
-                << "\t" << sum.result.p << "\t" << sum.result.num_snp
-                << std::endl;
+            out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
+                << "\t" << sum.result.threshold << "\t" << sum.result.r2 << "\t"
+                << sum.result.coefficient << "\t" << sum.result.p << "\t"
+                << sum.result.num_snp << std::endl;
         }
         out.close();
     }
