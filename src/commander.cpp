@@ -80,6 +80,9 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("ld-type") == 0)
                 set_string(optarg, message, clumping.type, clumping.use_type,
                            command);
+            else if (command.compare("maf-base") == 0)
+                set_string(optarg, message, base.maf, base.provided_maf,
+                           command);
             else if (command.compare("type") == 0)
                 set_string(optarg, message, target.type, target.use_type,
                            command);
@@ -126,10 +129,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("memory") == 0)
                 set_numeric<int>(optarg, message, error_messages, misc.memory,
                                  misc.provided_memory, error, command);
-            else if (command.compare("info") == 0)
-                set_numeric<double>(optarg, message, error_messages,
-                                    base.info_score, dummy, error, command);
-            else if (command.compare("info-col") == 0)
+            else if (command.compare("info-base") == 0)
                 set_string(optarg, message, base.info_col, base.use_info,
                            command);
 
@@ -328,12 +328,14 @@ Commander::Commander()
     base.bp = "BP";
     base.standard_error = "SE";
     base.p_value = "P";
-    base.info_col = "INFO";
+    base.info_col = "INFO,0.9";
+    base.maf = "";
     base.info_score = 0.9;
     base.index = false;
     base.provided_chr = false;
     base.provided_ref = false;
     base.provided_alt = false;
+    base.provided_maf = false;
     base.provided_stat = false;
     base.provided_snp = false;
     base.provided_bp = false;
@@ -483,13 +485,13 @@ bool Commander::init(int argc, char* argv[])
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
         {"hard-thres", required_argument, NULL, 0},
-        {"info", required_argument, NULL, 0},
-        {"info-col", required_argument, NULL, 0},
+        {"info-base", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
         {"memory", required_argument, NULL, 0},
+        {"maf-base", required_argument, NULL, 0},
         {"num-auto", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
         {"pheno-col", required_argument, NULL, 0},
@@ -542,17 +544,24 @@ void Commander::info()
         "                            Default: BP\n"
         "    --chr                   Column header containing the chromosome\n"
         "                            Default: CHR\n"
-        "    --index                 If set, assume the INDEX instead of NAME "
+        "    --index                 If set, assume the INDEX instead of NAME  "
         "for\n"
         "                            the corresponding columns are provided. "
         "Index\n"
         "                            should be 0-based (start counting from "
         "0)\n"
-        "    --info                  INFO score threshold. SNPs with info "
-        "score\n"
-        "                            less than this will be ignored\n"
-        "    --info-col              Column header containing the info score\n"
-        "                            Default: INFO\n"
+        "    --info-base             Base INFO score filtering. Format should "
+        "be\n"
+        "                            <Column name>,<Threshold>. SNPs with info "
+        "\n"
+        "                            score less than <Threshold> will be "
+        "ignored\n"
+        "                            Column name default: INFO\n"
+        "                            Threshold default: 0.9\n"
+        "    --maf-base              Base MAF filtering. Format should be\n"
+        "                            <Column name>,<Threshold>. SNPs with maf "
+        "\n"
+        "                            less than <Threshold> will be ignored\n"
         "    --pvalue        | -p    Column header containing the p-value\n"
         "                            Default: P\n"
         "    --se                    Column header containing the standard "
@@ -964,13 +973,74 @@ void Commander::base_check(std::string& message, bool& error,
                     index_check(base.p_value, token);
                 if (!base.provided_p && base.col_index[+BASE_INDEX::P] != -1)
                     message.append(" \\\n    --pvalue " + base.p_value);
-                base.col_index[+BASE_INDEX::INFO] =
-                    index_check(base.info_col, token);
+
+
+                std::vector<std::string> info = misc::split(base.info_col, ",");
+                base.col_index[+BASE_INDEX::INFO] = index_check(info[0], token);
+                if (info.size() != 2) {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid format of --info-base.\n");
+                    error_message.append(
+                        "       Should be ColName,Threshold.\n");
+                }
+                try
+                {
+                    base.info_score = misc::convert<double>(info[1]);
+                    if (base.info_score < 0 || base.info_score > 1) {
+                        error = true;
+                        error_message.append("ERROR: Base INFO threshold must "
+                                             "be within 0 and 1!\n");
+                    }
+                }
+                catch (const std::runtime_error& er)
+                {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid argument passed to --info-base: "
+                        + base.info_col + "!\n");
+                    error_message.append(
+                        "       Second argument must be numeric\n");
+                }
+
+                // found info, will use default
                 if (!base.use_info && base.col_index[+BASE_INDEX::INFO] != -1) {
+                    // as default will always be of the correct format,
+                    // we don't need to worry about the error messages above
                     message.append(" \\\n    --info-col " + base.info_col);
                     message.append(" \\\n    --info "
                                    + std::to_string(base.info_score));
                 }
+                // comma separate
+                std::vector<std::string> maf = misc::split(base.maf, ",");
+                if (maf.size() != 2) {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid format of --maf-base.\n");
+                    error_message.append(
+                        "       Should be ColName,Threshold.\n");
+                }
+                base.col_index[+BASE_INDEX::MAF] = index_check(maf[0], token);
+                try
+                {
+                    base.maf_threshold = misc::convert<double>(maf[1]);
+                    if (base.maf_threshold < 0 || base.maf_threshold > 1) {
+                        error = true;
+                        error_message.append("ERROR: Base MAF threshold must "
+                                             "be within 0 and 1!\n");
+                    }
+                }
+                catch (const std::runtime_error& er)
+                {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid argument passed to --maf-base: "
+                        + base.maf + "!\n");
+                    error_message.append(
+                        "       Second argument must be numeric\n");
+                }
+                // no default for MAF as there can be many differenet maf
+                // headers
             }
             else
             { // only required for index, as the defaults are in string
@@ -996,8 +1066,65 @@ void Commander::base_check(std::string& message, bool& error,
                                     error_message, "SE");
                 }
                 if (base.use_info) {
+                    std::vector<std::string> info =
+                        misc::split(base.info_col, ",");
                     base.col_index[+BASE_INDEX::INFO] = index_check(
-                        base.info_col, max_size, error, error_message, "INFO");
+                        info[0], max_size, error, error_message, "INFO");
+                    if (info.size() != 2) {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid format of --info-base.\n");
+                        error_message.append(
+                            "       Should be ColName,Threshold.\n");
+                    }
+                    try
+                    {
+                        base.info_score = misc::convert<double>(info[1]);
+                        if (base.info_score < 0 || base.info_score > 1) {
+                            error = true;
+                            error_message.append("ERROR: Base INFO threshold "
+                                                 "must be within 0 and 1!\n");
+                        }
+                    }
+                    catch (const std::runtime_error& er)
+                    {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid argument passed to --info-base: "
+                            + base.info_col + "!\n");
+                        error_message.append(
+                            "       Second argument must be numeric\n");
+                    }
+                }
+                if (base.provided_maf) {
+                    std::vector<std::string> maf = misc::split(base.maf, ",");
+                    base.col_index[+BASE_INDEX::MAF] = index_check(
+                        maf[0], max_size, error, error_message, "MAF");
+                    if (maf.size() != 2) {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid format of --maf-base.\n");
+                        error_message.append(
+                            "       Should be ColName,Threshold.\n");
+                    }
+                    try
+                    {
+                        base.maf_threshold = misc::convert<double>(maf[1]);
+                        if (base.maf_threshold < 0 || base.maf_threshold > 1) {
+                            error = true;
+                            error_message.append("ERROR: Base MAF threshold "
+                                                 "must be within 0 and 1!\n");
+                        }
+                    }
+                    catch (const std::runtime_error& er)
+                    {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid argument passed to --maf-base: "
+                            + base.maf + "!\n");
+                        error_message.append(
+                            "       Second argument must be numeric\n");
+                    }
                 }
                 base.col_index[+BASE_INDEX::P] = index_check(
                     base.p_value, max_size, error, error_message, "P");

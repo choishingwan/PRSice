@@ -251,7 +251,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     const bool fastscore = c_commander.fastscore();
     const bool full = c_commander.full();
     const bool filter_info = c_commander.filter_info();
+    const bool filter_maf = c_commander.filter_base_maf();
     const double info_threshold = c_commander.info_score();
+    const double maf_base = c_commander.maf_base();
     std::vector<int> index =
         c_commander.index(); // more appropriate for commander
     // now coordinates obtained from target file instead. Coordinate information
@@ -297,6 +299,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t num_line_in_base = 0;
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
+    size_t num_maf_filter = 0;
 
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
@@ -389,6 +392,23 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                     std::string error_message =
                         "ERROR: Non-numeric loci for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
+                }
+            }
+            double maf = 1;
+            if (filter_maf && index[+BASE_INDEX::MAF] >= 0) {
+                try
+                {
+                    maf = misc::convert<double>(
+                        token[index[+BASE_INDEX::MAF]].c_str());
+                }
+                catch (const std::runtime_error& error)
+                {
+                    num_maf_filter++;
+                    exclude = true;
+                }
+                if (maf < maf_base) {
+                    num_maf_filter++;
+                    exclude = true;
                 }
             }
             double info_score = 1;
@@ -619,6 +639,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                 num_info_filter, info_threshold);
         log_file_stream << num_info_filter
                         << " SNP filtered due to info threshold" << std::endl;
+    }
+    if (num_maf_filter) {
+        fprintf(stderr, "%zu SNPs with MAF less than %f\n", num_maf_filter,
+                maf_base);
+        log_file_stream << num_maf_filter
+                        << " SNP filtered due to MAF threshold" << std::endl;
     }
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
