@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
                 // go through each region separately
                 // this should reduce the memory usage
                 if (region.size() > 1) {
-                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0);
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
                 }
                 for (size_t i_region = 0; i_region < region.size(); ++i_region)
                 {
