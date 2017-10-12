@@ -1393,7 +1393,7 @@ if (!is.null(phenos)) {
 }
 
 # Now check if the overview file is present
-if(provided("multi-plot", argv)){
+if(provided("multi_plot", argv)){
     overview.name <- paste(argv$out, ".overview",sep="")
     if(file.exists(overview.name)){
         overview <- read.table(overview.name, header=T)
@@ -1419,8 +1419,9 @@ if(provided("multi-plot", argv)){
                     geom_bar(stat="identity")+
                     coord_flip()+
                     ylab("Variance explained by PRS")+
-                    scale_fill_distiller(palette = "Spectral")
-                ggsave(paste(argv$out,"_",p, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""))
+                    scale_fill_distiller(palette = "Spectral")+
+                    theme(axis.title.y=element_blank())
+                ggsave(paste(argv$out,"_",p, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""),b, height=10,width=10)
             }
         }else{
             # Only plot one set plot. If phenotype == "-", replace it with pheno
@@ -1432,8 +1433,9 @@ if(provided("multi-plot", argv)){
                 geom_bar(stat="identity")+
                 coord_flip()+
                 ylab("Variance explained by PRS")+
-                scale_fill_distiller(palette = "PuOr")
-                ggsave(paste(argv$out, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""))
+                scale_fill_distiller(palette = "PuOr")+
+                theme(axis.title.y=element_blank())
+                ggsave(paste(argv$out, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""),b,height=10,width=10)
             
         }
         
