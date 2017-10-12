@@ -129,7 +129,9 @@ help_message <-
     --bar-col-p             Change the colour of bar to p-value threshold\n
                             instead of the association with phenotype\n
     --bar-palatte           Colour palatte to be used for bar plotting when\n
-    --bar_col_p is set. Default: YlOrRd\n
+                            --bar_col_p is set. Default: YlOrRd\n
+    --multi-plot            Plot the top N phenotype / gene set in a\n
+                            summary plot\n 
     --plot                  When set, will only perform plotting.\n
     --quantile      | -q    Number of quantiles to plot. No quantile plot\n
                             will be generated when this is not provided.\n
@@ -416,6 +418,7 @@ option_list <- list(
     #R Specified options
     make_option(c("--plot"), action = "store_true"),
     make_option(c("--quantile", "-q"), type = "numeric"),
+    make_option(c("--multi-plot"), type = "numeric", dest="multi_plot"),
     make_option(c("--quant-pheno"), action = "store_true", dest = "quant_pheno"),
     make_option(c("--quant-extract", "-e"), type = "character", dest = "quant_extract"),
     make_option("--quant-ref", type = "numeric", dest = "quant_ref"),
@@ -479,6 +482,7 @@ not_cpp <- c(
     "bar-col-high",
     "bar-palatte",
     "prsice",
+    "multi-plot",
     "dir"
 )
 
@@ -542,6 +546,10 @@ flags <-
         "fastscore",
         "print-snp"
     )
+
+if(provided("full", argv)){
+    argv$bar_levels <- paste(argv$bar_levels, "1",sep="")
+}
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
@@ -1378,4 +1386,52 @@ if (!is.null(phenos)) {
     fam.final <-
         fam.final[match(cur_pheno.clean$IID, fam.final$IID), ]
     run_plot(cur_prefix, argv, fam.final, binary_target[1])
+}
+
+# Now check if the overview file is present
+if(provided("multi-plot", argv))
+overview.name <- paste(argv$out, ".overview",sep="")
+if(file.exists(overview.name)){
+    overview <- read.table(overview.name, header=T)
+    phenos <- unique(overview$Phenotype)
+    sets <- unique(overview$Set)
+    if(length(phenos)!=1){
+        multipheno <- subset(overview, Set=="Base")
+        multipheno <- multipheno[order(multipheno$PRS.R2),]
+        multipheno$Phenotype <- factor(multipheno$Phenotype, levels=multipheno$Phenotype)
+        b <- ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))),], aes(x=Phenotype,y=PRS.R2, fill=-log10(P)))+
+            theme_sam+
+            geom_bar(stat="identity")+
+            coord_flip()+
+            ylab("Variance explained by PRS")+
+            scale_fill_distiller(palette = "Spectral")
+        ggsave(paste(argv$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""))
+        for(p in phenos){
+            multiset <- subset(overview, Phenotype==p)
+            multiset <- multiset[order(multiset$PRS.R2),]
+            multiset$Set <- factor(multiset$Set, levels=multiset$Set)
+            b <- ggplot(multiset[1:(min(argv$multi_plot,nrow(multiset))),], aes(x=Set,y=PRS.R2, fill=-log10(P)))+
+                theme_sam+
+                geom_bar(stat="identity")+
+                coord_flip()+
+                ylab("Variance explained by PRS")+
+                scale_fill_distiller(palette = "Spectral")
+            ggsave(paste(argv$out,"_",p, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""))
+        }
+    }else{
+        # Only plot one set plot. If phenotype == "-", replace it with pheno
+        multiset <- overview
+        multiset <- multiset[order(multiset$PRS.R2),]
+        multiset$Set <- factor(multiset$Set, levels=multiset$Set)
+        b <- ggplot(multiset[1:(min(argv$multi_plot,nrow(multiset))),], aes(x=Set,y=PRS.R2, fill=-log10(P)))+
+            theme_sam+
+            geom_bar(stat="identity")+
+            coord_flip()+
+            ylab("Variance explained by PRS")+
+            scale_fill_distiller(palette = "PuOr")
+            ggsave(paste(argv$out, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""))
+        
+    }
+    
+    
 }
