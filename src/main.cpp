@@ -120,18 +120,20 @@ int main(int argc, char* argv[])
                 return -1;
             }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-            	// initialize the phenotype & independent variable matrix
+                // initialize the phenotype & independent variable matrix
                 prsice.init_matrix(commander, i_pheno, *target_file);
                 // go through each region separately
                 // this should reduce the memory usag
                 for (size_t i_region = 0; i_region < region.size(); ++i_region)
                 {
-                    prsice.prsice(commander, region.names(), i_pheno, i_region,
-                                  *target_file);
+                    prsice.run_prsice(commander, region.get_name(i_region),
+                                      i_pheno, i_region, *target_file);
                     if (!commander.no_regress())
-                        prsice.output(commander, region, i_pheno, *target_file);
+                        prsice.output(commander, region, i_pheno, i_region,
+                                      *target_file);
                 }
             }
+            prsice.summarize(commander);
         }
     }
     catch (const std::out_of_range& error)

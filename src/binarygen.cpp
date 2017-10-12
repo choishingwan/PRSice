@@ -534,7 +534,6 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
         }
         // there isn't any founder/nonfounder, so directly using this is ok
         m_sample_ct += cur_sample.included;
-        cur_sample.prs = 0;
         cur_sample.num_snp = 0;
         if (has_sex) {
             try

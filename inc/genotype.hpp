@@ -59,8 +59,7 @@ public:
     size_t max_category() const { return m_max_category; };
     bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
                    int& cur_category, double& cur_threshold,
-                   std::vector<size_t>& num_snp_included,
-                   const size_t region_index);
+                   size_t& num_snp_included, const size_t region_index);
     bool prepare_prsice();
     void print_snp(std::string& output, double threshold);
     size_t num_threshold() const { return m_num_threshold; };

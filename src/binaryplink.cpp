@@ -203,7 +203,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                                    == m_sample_selection_list.end());
         }
 
-        cur_sample.prs = 0;
+
         cur_sample.num_snp = 0;
 
         if (founder_info.find(token[+FAM::FATHER]) == founder_info.end()

@@ -1189,8 +1189,7 @@ bool Genotype::prepare_prsice()
 
 bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
                          int& cur_category, double& cur_threshold,
-                         std::vector<size_t>& num_snp_included,
-                         const size_t region_index)
+                         size_t& num_snp_included, const size_t region_index)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
