@@ -43,9 +43,9 @@ help_message <-
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
                             to be in the form of BETA.\n
-    --A1                    Column header containing the reference allele\n
+    --A1                    Column header containing allele 1 (effect allele)\n
                             Default: A1\n
-    --A2                    Column header containing the alternative allele\n
+    --A2                    Column header containing allele 2 (reference allele)\n
                             Default: A2\n
     --bp                    Column header containing the SNP coordinate\n
                             Default: BP\n
