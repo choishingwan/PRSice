@@ -1396,7 +1396,7 @@ if (!is.null(phenos)) {
 # Now check if the overview file is present
 if (provided("multi_plot", argv)) {
     str_wrap <- function(x) {
-        lapply(strwrap(x, width = 30, simplify = FALSE), paste, collapse = "\n")
+        lapply(strwrap(x, width = 25, simplify = FALSE), paste, collapse = "\n")
     }
     shorten_label <- function(x) {
         lab <-
