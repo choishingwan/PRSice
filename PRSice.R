@@ -1401,7 +1401,7 @@ if (provided("multi_plot", argv)) {
     shorten_label <- function(x) {
         lab <-
             paste(strsplit(paste(
-                strsplit(x, split = "\\.")[[1]], collapse = " "
+                strsplit(as.character(x), split = "\\.")[[1]], collapse = " "
             ), split = "_")[[1]], collapse = " ")
         return(str_wrap(lab)[[1]])
     }
