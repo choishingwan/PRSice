@@ -60,6 +60,16 @@ public:
         m_logit_perm = commander.logit_perm();
         m_seed = std::random_device()(); // cerr valgrind doesn't like this
         if (commander.seeded()) m_seed = commander.seed();
+        fprintf(stderr, "Seed: %zu\n", m_seed);
+        std::ofstream log_file_stream;
+        log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
+        if (!log_file_stream.is_open()) {
+        	std::string error_message =
+        			"ERROR: Cannot open log file: " + m_log_file;
+        	throw std::runtime_error(error_message);
+        }
+        log_file_stream << "Seed: "<< m_seed << std::endl;
+        log_file_stream.close();
         bool has_binary = false;
         for (auto&& b : m_target_binary) {
             if (b) {
