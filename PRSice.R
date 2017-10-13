@@ -791,7 +791,7 @@ quantile_plot <-
                     scale_colour_manual(values = c("#0072B2", "#D55E00"))
             }
             ggsave(
-                paste(prefix, "QUANTILES_PLOT.png", sep = "_"),
+                paste(prefix, "QUANTILES_PLOT_", Sys.Date(),".png", sep = "_"),
                 quantiles.plot,
                 height=10, width=10
             )
@@ -838,7 +838,7 @@ quantile_plot <-
                     scale_colour_manual(values = c("#0072B2", "#D55E00"))
             }
             ggsave(
-                paste(prefix, "QUANTILES_PHENO_PLOT.png", sep = "_"),
+                paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
                 quantiles.plot,
                 height=10,width=10
             )
