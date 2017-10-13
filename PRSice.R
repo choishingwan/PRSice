@@ -1392,50 +1392,117 @@ if (!is.null(phenos)) {
     run_plot(cur_prefix, argv, fam.final, binary_target[1])
 }
 
+
 # Now check if the overview file is present
-if(provided("multi_plot", argv)){
-    overview.name <- paste(argv$out, ".overview",sep="")
-    if(file.exists(overview.name)){
-        overview <- read.table(overview.name, header=T)
+if (provided("multi_plot", argv)) {
+    str_wrap <- function(x) {
+        lapply(strwrap(x, width = 15, simplify = FALSE), paste, collapse = "\n")
+    }
+    shorten_label <- function(x) {
+        lab <-
+            paste(strsplit(paste(
+                strsplit(x, split = "\\.")[[1]], collapse = " "
+            ), split = "_")[[1]], collapse = " ")
+        return(str_wrap(lab)[[1]])
+    }
+    overview.name <- paste(argv$out, ".summary", sep = "")
+    if (file.exists(overview.name)) {
+        overview <- read.table(overview.name, header = T)
+        if (nrow(overview) < 1)
+            stop((
+                "Error: Cannot generate multi-plot as only one phenotype and the base set was observed!"
+            )
+            )
+        overview$Phenotype <- shorten_label(overview$Phenotype)
+        overview$Set <- shorrten_label(overview$Set)
         phenos <- unique(overview$Phenotype)
         sets <- unique(overview$Set)
-        if(length(phenos)!=1){
-            multipheno <- subset(overview, Set=="Base")
-            multipheno <- multipheno[order(multipheno$PRS.R2),]
-            multipheno$Phenotype <- factor(multipheno$Phenotype, levels=multipheno$Phenotype)
-            b <- ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))),], aes(x=Phenotype,y=PRS.R2, fill=-log10(P)))+
-                theme_sam+
-                geom_bar(stat="identity")+
-                coord_flip()+
-                ylab("Variance explained by PRS")+
+        if (length(phenos) != 1) {
+            multipheno <- subset(overview, Set == "Base")
+            multipheno <- multipheno[order(multipheno$PRS.R2), ]
+            multipheno$Phenotype <-
+                factor(multipheno$Phenotype, levels = multipheno$Phenotype)
+            b <-
+                ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ],
+                       aes(
+                           x = Phenotype,
+                           y = PRS.R2,
+                           fill = -log10(P)
+                       )) +
+                theme_sam +
+                geom_bar(stat = "identity") +
+                coord_flip() +
+                ylab("Variance explained by PRS") +
                 scale_fill_distiller(palette = "Spectral")
-            ggsave(paste(argv$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""))
-            for(p in phenos){
-                multiset <- subset(overview, Phenotype==p)
-                multiset <- multiset[order(multiset$PRS.R2),]
-                multiset$Set <- factor(multiset$Set, levels=multiset$Set)
-                b <- ggplot(multiset[1:(min(argv$multi_plot,nrow(multiset))),], aes(x=Set,y=PRS.R2, fill=-log10(P)))+
-                    theme_sam+
-                    geom_bar(stat="identity")+
-                    coord_flip()+
-                    ylab("Variance explained by PRS")+
-                    scale_fill_distiller(palette = "Spectral")+
-                    theme(axis.title.y=element_blank())
-                ggsave(paste(argv$out,"_",p, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""),b, height=10,width=10)
+            ggsave(paste(
+                argv$out,
+                "_MULTIPHENO_BARPLOT_",
+                Sys.Date(),
+                ".png",
+                sep = ""
+            ))
+            for (p in phenos) {
+                multiset <- subset(overview, Phenotype == p)
+                multiset <- multiset[order(multiset$PRS.R2), ]
+                multiset$Set <-
+                    factor(multiset$Set, levels = multiset$Set)
+                b <-
+                    ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
+                        x = Set,
+                        y = PRS.R2,
+                        fill = -log10(P)
+                    )) +
+                    theme_sam +
+                    geom_bar(stat = "identity") +
+                    coord_flip() +
+                    ylab("Variance explained by PRS") +
+                    scale_fill_distiller(palette = "Spectral") +
+                    theme(axis.title.y = element_blank())
+                ggsave(
+                    paste(
+                        argv$out,
+                        "_",
+                        p,
+                        "_MULTISET_BARPLOT_",
+                        Sys.Date(),
+                        ".png",
+                        sep = ""
+                    ),
+                    b,
+                    height = 10,
+                    width = 10
+                )
             }
-        }else{
+        } else{
             # Only plot one set plot. If phenotype == "-", replace it with pheno
             multiset <- overview
-            multiset <- multiset[order(multiset$PRS.R2),]
-            multiset$Set <- factor(multiset$Set, levels=multiset$Set)
-            b <- ggplot(multiset[1:(min(argv$multi_plot,nrow(multiset))),], aes(x=Set,y=PRS.R2, fill=-log10(P)))+
-                theme_sam+
-                geom_bar(stat="identity")+
-                coord_flip()+
-                ylab("Variance explained by PRS")+
-                scale_fill_distiller(palette = "PuOr")+
-                theme(axis.title.y=element_blank())
-                ggsave(paste(argv$out, "_MULTISET_BARPLOT_", Sys.Date(), ".png", sep = ""),b,height=10,width=10)
+            multiset <- multiset[order(multiset$PRS.R2), ]
+            multiset$Set <-
+                factor(multiset$Set, levels = multiset$Set)
+            b <-
+                ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
+                    x = Set,
+                    y = PRS.R2,
+                    fill = -log10(P)
+                )) +
+                theme_sam +
+                geom_bar(stat = "identity") +
+                coord_flip() +
+                ylab("Variance explained by PRS") +
+                scale_fill_distiller(palette = "PuOr") +
+                theme(axis.title.y = element_blank())
+            ggsave(
+                paste(
+                    argv$out,
+                    "_MULTISET_BARPLOT_",
+                    Sys.Date(),
+                    ".png",
+                    sep = ""
+                ),
+                b,
+                height = 10,
+                width = 10
+            )
             
         }
         
