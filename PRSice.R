@@ -1414,7 +1414,7 @@ if (provided("multi_plot", argv)) {
             )
             )
         overview$Phenotype <- shorten_label(overview$Phenotype)
-        overview$Set <- shorrten_label(overview$Set)
+        overview$Set <- shorten_label(overview$Set)
         phenos <- unique(overview$Phenotype)
         sets <- unique(overview$Set)
         if (length(phenos) != 1) {
