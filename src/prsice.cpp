@@ -1172,7 +1172,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     std::vector<double> prev = c_commander.prevalence();
     bool has_prevalence = (prev.size() != 0);
     has_prevalence = has_prevalence && c_commander.is_binary(pheno_index);
-    double top = 1.0, bottom = 1.0;
+    double top = 1.0, bottom = 1.0, prevalence = -1;
     if (has_prevalence) {
         size_t num_binary = 0;
         for (size_t i = 0; i < pheno_index; ++i) {
@@ -1188,7 +1188,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         }
         double case_ratio =
             (double) (num_case) / (double) (num_case + num_control);
-        double prevalence = prev[num_binary];
+        prevalence = prev[num_binary];
         double x = misc::qnorm(1 - prevalence);
         double z = misc::dnorm(x);
         double i2 = z / prevalence;
@@ -1209,7 +1209,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
 
-    bool perm = c_commander.permute();
+    const bool perm = c_commander.permute();
     std::string output_name = output_prefix;
 
     size_t marginal = 0, significant = 0, not_significant = 0;
@@ -1232,7 +1232,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     std::string out_best = output_name + ".best";
     std::string out_prsice = output_name + ".prsice";
     std::string out_snp = output_name + ".snps";
-    std::string out_summary = output_name + ".summary";
+    // std::string out_summary = output_name + ".summary";
     std::ofstream best_out, prsice_out, snp_out, summary_out;
     prsice_out.open(out_prsice.c_str());
     if (!prsice_out.is_open()) {
@@ -1270,27 +1270,28 @@ void PRSice::output(const Commander& c_commander, const Region& region,
             "ERROR: Cannot open file: " + out_best + " to write";
         throw std::runtime_error(error_message);
     }
+    /*
     summary_out.open(out_summary.c_str());
     if (!summary_out.is_open()) {
         std::string error_message =
             "ERROR: Cannot open file: " + out_summary + " to write";
         throw std::runtime_error(error_message);
     }
+    */
     auto&& best_info = m_prs_results[m_best_index];
-    summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
-    double full = best_info.r2;
-    double null = m_null_r2;
-    if (has_prevalence) {
-        full = top * full / (1 + bottom * full);
-        null = top * null / (1 + bottom * null);
-    }
-    double r2 = full - null;
+    // summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
+
 
     prsice_summary prs_sum;
     prs_sum.pheno = pheno_name;
     prs_sum.set = region.get_name(region_index);
     prs_sum.result = best_info;
-    prs_sum.result.r2 = r2;
+    prs_sum.result.r2 = best_info.r2;
+    prs_sum.r2_null = m_null_r2;
+    prs_sum.top = top;
+    prs_sum.bottom = bottom;
+    prs_sum.prevalence = prevalence;
+
     m_prs_summary.push_back(prs_sum);
     if (best_info.p > 0.1)
         m_significant_store[0]++;
@@ -1298,6 +1299,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         m_significant_store[1]++;
     else
         m_significant_store[2]++;
+    /*
     summary_out << "R2 of PRS only:   " << r2 << std::endl;
     summary_out << "R2 of full model: " << full << std::endl;
     summary_out << "Null R2:          " << null << std::endl;
@@ -1307,8 +1309,8 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     summary_out << "Coefficient:      " << best_info.coefficient << std::endl;
     summary_out << "Number of SNPs:   " << best_info.num_snp << std::endl;
     summary_out.close();
-    best_out << "FID\tIID\tprs_" << best_info.threshold << "\tHas_Phenotype"
-             << std::endl;
+    */
+    best_out << "FID\tIID\tPRS\tHas_Phenotype" << std::endl;
     int best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
         fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
@@ -1340,6 +1342,9 @@ void PRSice::output(const Commander& c_commander, const Region& region,
 void PRSice::summarize(const Commander& commander)
 {
     bool prev_out;
+
+    const bool perm = commander.permute();
+
     fprintf(stderr, "There are ");
     if (m_significant_store[0] != 0) {
         fprintf(stderr,
@@ -1363,7 +1368,7 @@ void PRSice::summarize(const Commander& commander)
         fprintf(stderr, "%zu region(s) with p-value less than 1e-5\n",
                 m_significant_store[2]);
     }
-    if (!commander.permute()) {
+    if (!perm) {
         fprintf(stderr,
                 "Please note that these results are inflated due to the\n");
         fprintf(stderr, "overfitting inherent in finding the best-fit\n");
@@ -1373,25 +1378,41 @@ void PRSice::summarize(const Commander& commander)
                 "You can use the --perm option (see manual) to calculate\n");
         fprintf(stderr, "an empirical P-value.\n");
     }
-    if (m_prs_summary.size() != 1) {
-        std::string out_name = commander.out() + ".overview";
-        std::ofstream out;
-        out.open(out_name.c_str());
-        if (!out.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open file: " + out_name + " to write";
-            throw std::runtime_error(error_message);
-        }
-        out << "Phenotype\tSet\tThreshold\tPRS.R2\tCoefficient\tP\tNum_SNP"
-            << std::endl;
-        for (auto&& sum : m_prs_summary) {
-            out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
-                << "\t" << sum.result.threshold << "\t" << sum.result.r2 << "\t"
-                << sum.result.coefficient << "\t" << sum.result.p << "\t"
-                << sum.result.num_snp << std::endl;
-        }
-        out.close();
+    std::string out_name = commander.out() + ".summary";
+    std::ofstream out;
+    out.open(out_name.c_str());
+    if (!out.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open file: " + out_name + " to write";
+        throw std::runtime_error(error_message);
     }
+    out << "Phenotype\tSet\tThreshold\tPRS.R2\tFull.R2\tNull."
+           "R2\tPrevalence\tCoefficient\tP\tNum_SNP";
+    if (perm) out << "Empirical-P";
+    out << std::endl;
+    for (auto&& sum : m_prs_summary) {
+        out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
+            << "\t" << sum.result.threshold;
+        if (sum.prevalence > 0) {
+            double full = sum.result.r2;
+            double null = sum.r2_null;
+            full = sum.top * full / (1 + sum.bottom * full);
+            null = sum.top * null / (1 + sum.bottom * null);
+            out << "\t" << full - null << "\t" << full << "\t" << null << "\t"
+                << sum.prevalence << "\t" << sum.result.coefficient << "\t"
+                << sum.result.p << "\t" << sum.result.num_snp << std::endl;
+        }
+        else
+        {
+            out << "\t" << sum.result.r2 - sum.r2_null << "\t" << sum.result.r2
+                << "\t" << sum.r2_null << "\t-";
+        }
+        out << "\t" << sum.result.coefficient << "\t" << sum.result.p << "\t"
+            << sum.result.num_snp;
+        if (perm) out << "\t" << sum.result.emp_p;
+        out << std::endl;
+    }
+    out.close();
 }
 
 PRSice::~PRSice()
