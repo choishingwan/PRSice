@@ -1396,7 +1396,7 @@ if (!is.null(phenos)) {
 # Now check if the overview file is present
 if (provided("multi_plot", argv)) {
     str_wrap <- function(x) {
-        lapply(strwrap(x, width = 15, simplify = FALSE), paste, collapse = "\n")
+        lapply(strwrap(x, width = 30, simplify = FALSE), paste, collapse = "\n")
     }
     shorten_label <- function(x) {
         lab <-
@@ -1413,8 +1413,8 @@ if (provided("multi_plot", argv)) {
                 "Error: Cannot generate multi-plot as only one phenotype and the base set was observed!"
             )
             )
-        overview$Phenotype <- shorten_label(overview$Phenotype)
-        overview$Set <- shorten_label(overview$Set)
+        overview$Phenotype <- sapply(overview$Phenotype, shorten_label)
+        overview$Set <- sapply(overview$Set, shorten_label)
         phenos <- unique(overview$Phenotype)
         sets <- unique(overview$Set)
         if (length(phenos) != 1) {
