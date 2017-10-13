@@ -1407,6 +1407,8 @@ if (provided("multi_plot", argv)) {
     }
     overview.name <- paste(argv$out, ".summary", sep = "")
     if (file.exists(overview.name)) {
+        
+        writeLines("Plotting Multi-Plot")
         overview <- read.table(overview.name, header = T)
         if (nrow(overview) < 1)
             stop((
@@ -1433,7 +1435,7 @@ if (provided("multi_plot", argv)) {
                 geom_bar(stat = "identity") +
                 coord_flip() +
                 ylab("Variance explained by PRS") +
-                scale_fill_distiller(palette = "Spectral")
+                scale_fill_distiller(palette = "Spectral", name = bquote(atop(-log[10] ~ model, italic(P) - value), ))
             ggsave(paste(
                 argv$out,
                 "_MULTIPHENO_BARPLOT_",
@@ -1456,7 +1458,7 @@ if (provided("multi_plot", argv)) {
                     geom_bar(stat = "identity") +
                     coord_flip() +
                     ylab("Variance explained by PRS") +
-                    scale_fill_distiller(palette = "Spectral") +
+                    scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
                     theme(axis.title.y = element_blank())
                 ggsave(
                     paste(
@@ -1489,7 +1491,7 @@ if (provided("multi_plot", argv)) {
                 geom_bar(stat = "identity") +
                 coord_flip() +
                 ylab("Variance explained by PRS") +
-                scale_fill_distiller(palette = "PuOr") +
+                scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
                 theme(axis.title.y = element_blank())
             ggsave(
                 paste(
