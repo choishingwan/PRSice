@@ -884,13 +884,11 @@ high_res_plot <- function(PRS, prefix, argv) {
         ggfig.points <-
             ggfig.points + geom_point(aes(y = R2)) + geom_line(aes(y = R2), colour = "green",
                                                                data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
-            geom_hline(yintercept = max(PRS$R2), colour = "red") +
             ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
     } else{
         ggfig.points <-
             ggfig.points + geom_point(aes(y = -log10(P))) + geom_line(aes(y = -log10(P)), colour = "green",
                                                                       data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
-            geom_hline(yintercept = max(-log10(PRS$P)), colour = "red") +
             ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
     }
     ggsave(
