@@ -240,9 +240,10 @@ help_message <-
                             generate the empirical p-value for the BEST\n
                             threshold\n
     --seed          | -s    Seed used for permutation. If not provided,\n
-    --print-snp             system time will be used as seed. When same\n
+                            system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
                             should be generated\n
+    --print-snp             Print all SNPs used to construct the best PRS\n
     --thread        | -n    Number of thread use\n
     --help          | -h    Display this help message\n"
 
