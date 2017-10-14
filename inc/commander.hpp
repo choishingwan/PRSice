@@ -31,8 +31,8 @@
 #include <unordered_set>
 #include <vector>
 
-const std::string version = "2.0.12.beta";
-const std::string date = "7 October 2017";
+const std::string version = "2.0.13.beta";
+const std::string date = "14 October 2017";
 class Commander
 {
 public:
