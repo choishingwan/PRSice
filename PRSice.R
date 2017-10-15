@@ -133,6 +133,7 @@ help_message <-
     --multi-plot            Plot the top N phenotype / gene set in a\n
                             summary plot\n 
     --plot                  When set, will only perform plotting.\n
+    --plot-set              Define the gene set to be plot. Default: Base\n
     --quantile      | -q    Number of quantiles to plot. No quantile plot\n
                             will be generated when this is not provided.\n
     --quant-extract | -e    File containing sample ID to be plot on a separated\n
@@ -420,6 +421,7 @@ option_list <- list(
     make_option(c("--plot"), action = "store_true"),
     make_option(c("--quantile", "-q"), type = "numeric"),
     make_option(c("--multi-plot"), type = "numeric", dest="multi_plot"),
+    make_option(c("--plot-set"), type = "character", dest="plot_set", default="Base"),
     make_option(c("--quant-pheno"), action = "store_true", dest = "quant_pheno"),
     make_option(c("--quant-extract", "-e"), type = "character", dest = "quant_extract"),
     make_option("--quant-ref", type = "numeric", dest = "quant_ref"),
@@ -484,6 +486,7 @@ not_cpp <- c(
     "bar-palatte",
     "prsice",
     "multi-plot",
+    "plot-set",
     "dir"
 )
 
@@ -1197,7 +1200,7 @@ regions <- read.table(paste(prefix, "region", sep = "."), header =
 num_region = nrow(regions)
 
 
-region = "Base"
+region = argv$plot_set
 # Do this for each phenotype
 
 #fam = fread(paste(argv$target, ".fam", sep = ""), data.table = F, header = F )
