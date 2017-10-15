@@ -117,6 +117,14 @@ enum class GTF
     FRAME,
     ATTRIBUTE
 };
+
+enum class MODEL
+{
+    ADDITIVE,
+    DOMINANT,
+    RECESSIVE,
+    HETEROZYGOUS
+};
 // Mean imputed, no-mean imputed, centering is currently too complicated based
 // on our algorithm
 enum class SCORING
@@ -132,6 +140,10 @@ struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
 };
 template <>
 struct enumeration_traits<GTF> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<MODEL> : enumeration_trait_indexing
 {
 };
 template <>

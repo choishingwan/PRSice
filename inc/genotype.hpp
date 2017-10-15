@@ -125,6 +125,7 @@ protected:
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
+    int m_model = +MODEL::ADDITIVE;
     SCORING m_scoring;
 
     struct

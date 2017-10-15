@@ -677,6 +677,7 @@ void Genotype::set_info(const Commander& c_commander)
     filter.maf = c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();
+    m_model = c_commander.model();
 }
 
 

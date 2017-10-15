@@ -132,6 +132,7 @@ public:
         return prsice.barlevel.back();
     }; // we have sorted it
     double bar_lower() const { return prsice.barlevel.front(); };
+    int model() const { return prsice.model; };
 
     // prslice
     bool perform_prslice() const { return prslice.provided; };
@@ -309,6 +310,8 @@ private:
         bool provide_lower;
         bool provide_upper;
         bool provide_inter;
+        bool provided_model;
+        int model; // Use MODEL enum
         int fastscore;
         int no_regress;
         int full;
@@ -451,6 +454,40 @@ private:
         }
     }
 
+    inline void set_model(std::string input, std::string& message,
+                          std::string& error_message, bool& error)
+    {
+        if (input.empty()) {
+            error_message.append("ERROR: Model cannot be empty!\n");
+            error = true;
+        }
+        prsice.provided_model = true;
+        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        if (input.at(0) == 'A') {
+            message.append(" \\\n    --model add");
+            prsice.model = +MODEL::ADDITIVE;
+        }
+        else if (input.at(0) == 'D')
+        {
+            message.append(" \\\n    --model dom");
+            prsice.model = +MODEL::DOMINANT;
+        }
+        else if (input.at(0) == 'R')
+        {
+            message.append(" \\\n    --model rec");
+            prsice.model = +MODEL::RECESSIVE;
+        }
+        else if (input.at(0) == 'H')
+        {
+            message.append(" \\\n    --model het");
+            prsice.model = +MODEL::HETEROZYGOUS;
+        }
+        else
+        {
+            error = true;
+            error_message.append("ERROR: Unrecognized model: " + input + "!\n");
+        }
+    }
     inline void set_string(std::string input, std::string& message,
                            std::string& target, bool& target_boolean,
                            std::string c)

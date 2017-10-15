@@ -60,7 +60,7 @@ public:
         m_logit_perm = commander.logit_perm();
         m_seed = std::random_device()(); // cerr valgrind doesn't like this
         if (commander.seeded()) m_seed = commander.seed();
-        fprintf(stderr, "Seed: %zu\n", m_seed);
+        fprintf(stderr, "Seed: %u\n", m_seed);
         std::ofstream log_file_stream;
         log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
         if (!log_file_stream.is_open()) {

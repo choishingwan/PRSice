@@ -55,6 +55,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("se") == 0)
                 set_string(optarg, message, base.standard_error,
                            base.provided_se, command);
+            else if (command.compare("model") == 0)
+                set_model(optarg, message, error_messages, error);
             else if (command.compare("cov-header")
                      == 0) // cerr for backward compatibility
                 load_string_vector(optarg, message, covariate.covariates,
@@ -395,6 +397,7 @@ Commander::Commander()
     prset.perform_prset = false;
 
     prsice.missing_score = "";
+    prsice.model = +MODEL::ADDITIVE;
     prsice.lower = 0.0001;
     prsice.upper = 0.5;
     prsice.inter = 0.00005;
@@ -490,8 +493,9 @@ bool Commander::init(int argc, char* argv[])
         {"ld-keep", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
-        {"memory", required_argument, NULL, 0},
         {"maf-base", required_argument, NULL, 0},
+        {"memory", required_argument, NULL, 0},
+        {"model", required_argument, NULL, 0},
         {"num-auto", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
         {"pheno-col", required_argument, NULL, 0},
@@ -699,6 +703,15 @@ void Commander::info()
           "Default: "
         + std::to_string(prsice.lower)
         + "\n"
+          "    --model                 Genetic model use for regression. "
+          "Available\n"
+          "                            models include:\n"
+          "                            add - Additive model, code as 0/1/2 "
+          "(default)\n"
+          "                            dom - Dominant model, code as 0/1/1\n"
+          "                            rec - Recessive model, code as 0/0/1\n"
+          "                            het - Heterozygous only model, code as "
+          "0/1/0\n"
           "    --no-regress            Do not perform the regression analysis "
           "and simply\n"
           "                            output all PRS.\n"
@@ -1469,6 +1482,9 @@ void Commander::prset_check(std::string& message, bool& error,
 void Commander::prsice_check(std::string& message, bool& error,
                              std::string& error_message)
 {
+    if (!prsice.provided_model) {
+        message.append(" \\\n    --model add");
+    }
     if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
     {
         // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,
