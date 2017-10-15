@@ -59,6 +59,8 @@ public:
         m_num_perm = commander.num_permutation();
         m_logit_perm = commander.logit_perm();
         m_seed = std::random_device()(); // cerr valgrind doesn't like this
+
+        m_log_file = m_out + ".log";
         if (commander.seeded()) m_seed = commander.seed();
         fprintf(stderr, "Seed: %u\n", m_seed);
         std::ofstream log_file_stream;
@@ -77,7 +79,6 @@ public:
                 break;
             }
         }
-        m_log_file = m_out + ".log";
         if (perm) {
             // first check for ridiculously large sample size
             // allow 10 GB here
