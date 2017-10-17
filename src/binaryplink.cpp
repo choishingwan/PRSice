@@ -591,6 +591,7 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         bool flipped = m_existed_snps[i_snp].is_flipped();
         uint32_t sample_idx = 0;
         size_t total_num = 0;
+        int aa = 0, aA = 0, AA = 0;
         size_t nmiss = 0;
         do
         {
@@ -608,8 +609,14 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
                     if (sample_idx < num_included_samples) {
-                        total_num += (ukk == 3) ? 2 : ukk;
-                        sample_genotype[sample_idx] = (ukk == 3) ? 2 : ukk;
+                        int g = (ukk == 3) ? 2 : ukk;
+                        switch (g)
+                        {
+                        case 0: aa++; break;
+                        case 1: aA++; break;
+                        case 2: AA++; break;
+                        }
+                        sample_genotype[sample_idx] = g;
                     }
                 }
                 else // this should be 2
@@ -626,10 +633,36 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             m_existed_snps[i_snp].invalidate();
             continue;
         }
-        double maf = ((double) total_num
+        // due to the way the binary code works, the aa will always be 0
+        // added there just for fun tbh
+        aa = num_included_samples - nmiss - aA - AA;
+        assert(aa >= 0);
+        if (flipped) {
+            int temp = aa;
+            aa = AA;
+            AA = temp;
+        }
+        if (m_model == +MODEL::HETEROZYGOUS) {
+            // 010
+            aa += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::DOMINANT)
+        {
+            // 011;
+            aA += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::RECESSIVE)
+        {
+            // 001
+            aa += aA;
+            aA = AA;
+            AA = 0;
+        }
+        double maf = ((double) (aA + AA * 2)
                       / ((double) (num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
-        if (flipped) maf = 1.0 - maf;
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         size_t i_missing = 0;
@@ -651,6 +684,17 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
                 }
                 int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
                                   : sample_genotype[i_sample];
+                if (m_model == +MODEL::HETEROZYGOUS) {
+                    g = (g == 2) ? 0 : g;
+                }
+                else if (m_model == +MODEL::RECESSIVE)
+                {
+                    g = std::max(0, g - 1);
+                }
+                else if (m_model == +MODEL::DOMINANT)
+                {
+                    g = (g == 2) ? 1 : g;
+                }
                 current_prs_score[i_sample].prs += g * stat * 0.5;
                 current_prs_score[i_sample].num_snp++;
             }
