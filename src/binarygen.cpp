@@ -339,8 +339,16 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
                         break;
                     }
                     else
-                        expected +=
-                            prob[g] * ((snp.is_flipped()) ? abs(g - 2) : g);
+                    {
+                        int geno = (snp.is_flipped()) ? abs(g - 2) : g;
+                        if (m_model == +MODEL::HETEROZYGOUS && geno == 2)
+                            geno = 0;
+                        else if (m_model == +MODEL::DOMINANT && geno == 2)
+                            geno = 1;
+                        else if (m_model == +MODEL::RECESSIVE)
+                            geno = std::max(geno - 1, 0);
+                        expected += prob[g] * geno;
+                    }
                 }
                 score[cur_sample++] = expected;
                 total += expected;
@@ -418,9 +426,10 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
         std::vector<double> genotypes(num_included_samples);
-        int total_num = 0;
+
         uint32_t sample_idx = 0;
         int nmiss = 0;
+        int aa = 0, aA = 0, AA = 0;
         do
         {
             ulii = ~(*lbptr++);
@@ -437,8 +446,14 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
                     if (sample_idx < num_included_samples) {
-                        total_num += (ukk == 3) ? 2 : ukk;
-                        genotypes[sample_idx] = (ukk == 3) ? 2 : ukk;
+                        int g = (ukk == 3) ? 2 : ukk;
+                        switch (g)
+                        {
+                        case 0: aa++; break;
+                        case 1: aA++; break;
+                        case 2: AA++; break;
+                        }
+                        genotypes[sample_idx] = g;
                     }
                 }
                 else // this should be 2
@@ -458,11 +473,39 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
             m_existed_snps[i_snp].invalidate();
             continue;
         }
-        double maf = ((double) total_num
-                      / ((double) ((int) num_included_samples - nmiss)
+        // due to the way the binary code works, the aa will always be 0
+        // added there just for fun tbh
+        aa = num_included_samples - nmiss - aA - AA;
+        assert(aa >= 0);
+        if (flipped) {
+            int temp = aa;
+            aa = AA;
+            AA = temp;
+        }
+        if (m_model == +MODEL::HETEROZYGOUS) {
+            // 010
+            aa += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::DOMINANT)
+        {
+            // 011;
+            aA += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::RECESSIVE)
+        {
+            // 001
+            aa += aA;
+            aA = AA;
+            AA = 0;
+        }
+
+        double maf = ((double) (aA + AA * 2)
+                      / ((double) (num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
 
-        if (flipped) maf = 1.0 - maf;
+
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
@@ -481,10 +524,23 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
                     // if centering, we want to keep missing at 0
                     current_prs_score[i_sample].prs -= center_score;
                 }
-                current_prs_score[i_sample].prs +=
-                    ((flipped) ? fabs(genotypes[i_sample] - 2)
-                               : genotypes[i_sample])
-                    * stat * 0.5;
+
+                int g = (flipped) ? fabs(genotypes[i_sample] - 2)
+                                  : genotypes[i_sample];
+                if (m_model == +MODEL::HETEROZYGOUS) {
+                    g = (g == 2) ? 0 : g;
+                }
+                else if (m_model == +MODEL::RECESSIVE)
+                {
+                    g = std::max(0, g - 1);
+                }
+                else if (m_model == +MODEL::DOMINANT)
+                {
+                    g = (g == 2) ? 1 : g;
+                }
+
+
+                current_prs_score[i_sample].prs += g * stat * 0.5;
                 current_prs_score[i_sample].num_snp++;
             }
         }

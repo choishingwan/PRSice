@@ -590,7 +590,7 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
         uint32_t sample_idx = 0;
-        size_t total_num = 0;
+
         int aa = 0, aA = 0, AA = 0;
         size_t nmiss = 0;
         do
