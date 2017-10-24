@@ -258,7 +258,8 @@ if (!exists('startsWith', mode = 'function')) {
 }
 
 libraries <-
-    c("ggplot2",
+    c("lazyeval",
+      "ggplot2",
       "data.table",
       "optparse",
       "methods",
@@ -279,7 +280,8 @@ InstalledPackage <- function(package) {
             require,
             quietly = TRUE,
             character.only = TRUE,
-            warn.conflicts = FALSE
+            warn.conflicts = FALSE,
+            dependencies = TRUE
         )
     ))
     missing <- package[!available]
@@ -318,7 +320,8 @@ UsePackage <- function(package, dir)
                 install.packages(
                     package,
                     lib = paste(dir, "/lib", sep = ""),
-                    repos = "http://cran.rstudio.com/"
+                    repos = "http://cran.rstudio.com/",
+                    dependencies = TRUE
                 )
             ))
         }
