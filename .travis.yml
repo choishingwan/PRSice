@@ -151,6 +151,7 @@ addons:
     packages:
       - cmake-data
       - cmake
+      - r-base-core
       - r-base-dev
       - r-recommended
       - pandoc
