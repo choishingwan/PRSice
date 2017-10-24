@@ -5,6 +5,7 @@ compiler:
 os:
   - linux
   - osx
+  
 sudo: false
 
 matrix:
@@ -147,27 +148,10 @@ addons:
   apt:
     sources:
       - george-edison55-precise-backports
-      - r-packages-precise
     packages:
       - cmake-data
       - cmake
-      - r-base-core
-      - r-base-dev
-      - r-recommended
-      - pandoc
-cache:
-  directories:
-    - ~/Rlib
 
-install:
-    - mkdir -p ~/Rlib
-    - echo 'R_LIBS=~/Rlib' > .Renviron
-    - echo 'options(repos = "http://cran.rstudio.com")' > .Rprofile
-    - echo '.travis.yml' > .Rbuildignore
-    - Rscript -e 'if(!"devtools" %in% rownames(installed.packages())) { install.packages("devtools", dependencies = TRUE) }'
-    - Rscript -e 'if(!"covr" %in% rownames(installed.packages())) { install.packages("covr", dependencies = TRUE) }'
-    - Rscript -e 'update.packages(ask = FALSE, instlib = "~/Rlib")'
 
 script:
-  - mkdir build && cd build && cmake ../ && make && cd Rscript ../PRSice.R
-  - sh checkR.sh
+  - mkdir build && cd build && cmake ../ && make
