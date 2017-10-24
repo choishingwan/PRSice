@@ -67,7 +67,7 @@ matrix:
       osx_image: xcode8
       env:
         - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
-        
+
     - os: linux
       addons:
         apt:
@@ -145,3 +145,6 @@ addons:
     packages:
       - cmake-data
       - cmake
+
+
+script: mkdir build && cd build && cmake ../ && make
