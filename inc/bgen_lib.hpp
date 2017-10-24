@@ -14,6 +14,7 @@
 #include <iostream>
 #include <limits>
 #include <stdint.h>
+#include <stdexcept>
 #include <vector>
 #include <zlib.h>
 
