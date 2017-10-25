@@ -339,8 +339,11 @@ for (library in libraries)
         {
           if(library=="data.table"){
             use.data.table <- F
+            writeLines("Cannot install data.table, will fall back and use read.table instead")
+            writeLines("Note: It will be slower when reading large files")
           }else if(library=="ggplot2"){
             use.ggplot <- F
+            writeLines("Cannot install ggplot2, will fall back and native plotting devices")
           }else{
             stop("Error: ", library, " cannot be load nor install!")
           }
@@ -901,7 +904,7 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
   
 }
 
-high_res_plot <- function(PRS, prefix, argv) {
+high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # we will always include the best threshold
     writeLines("Plotting the high resolution plot")
     
@@ -964,7 +967,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
   )
 }
 
-bar_plot <- function(PRS, prefix, argv) {
+bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     writeLines("Plotting Bar Plot")
     barchart.levels <-
         c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
