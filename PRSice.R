@@ -318,7 +318,8 @@ UsePackage <- function(package, dir)
                 install.packages(
                     package,
                     lib = paste(dir, "/lib", sep = ""),
-                    repos = "http://cran.rstudio.com/"
+                    repos = "http://cran.rstudio.com/",
+                    quiet = T
                 )
             ))
         }
@@ -604,17 +605,20 @@ if (!provided("plot", argv)) {
 # Standard Theme for all plots
 
 # Te selected theme to be used 
-theme_sam <- theme_bw()+theme(axis.title=element_text(face="bold", size=18),
+theme_sam <- NULL
+if(use.ggplot){
+  theme_sam <- theme_bw()+theme(axis.title=element_text(face="bold", size=18),
                               axis.text=element_text(size=14),
                               legend.title=element_text(face="bold", size=18),
                               legend.text=element_text(size=14),
                               axis.text.x=element_text(angle=45, hjust=1),
                               panel.grid = element_blank()
                               )
+}
 # PLOTTING: Here contains all the function for plotting
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
-    function(PRS, PRS.best, pheno, prefix, argv, binary) {
+    function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
         writeLines("Plotting the quantile plot")
         num_cov <- ncol(pheno) - 2
         if (!provided("ignore_fid", argv)) {
@@ -787,38 +791,13 @@ quantile_plot <-
             quantiles.df$Group <-
                 factor(quantiles.df$Group, levels = c(0, 1))
             quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
-            quantiles.plot <-
-                ggplot(quantiles.df, aes(
-                    x = DEC,
-                    y = Coef,
-                    ymin = CI.L,
-                    ymax = CI.U
-                )) + 
-                theme_sam+
-                xlab("Quantiles for Polygenic Score") +
-                scale_x_continuous(breaks = seq(0, num_quant, 1))
-            if (binary) {
-                quantiles.plot <-
-                    quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-            } else{
-                quantiles.plot <- quantiles.plot +
-                    ylab("Change in Phenotype \ngiven score in quantiles")
+            
+            
+            if(use.ggplot){
+              plot.quant(quantiles.df, num_quant, binary, extract, prefix)
+            }else{
+              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix)
             }
-            if (is.null(extract)) {
-                quantiles.plot <-
-                    quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
-                    geom_pointrange(colour = "royalblue2", size = 0.9)
-            } else{
-                quantiles.plot <-
-                    quantiles.plot + geom_point(aes(color = Group), size = 4) +
-                    geom_pointrange(aes(color = Group), size = 0.9) +
-                    scale_colour_manual(values = c("#0072B2", "#D55E00"))
-            }
-            ggsave(
-                paste(prefix, "QUANTILES_PLOT_", Sys.Date(),".png", sep = "_"),
-                quantiles.plot,
-                height=10, width=10
-            )
         }else{
             pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
             for(i in 1:num_quant){
@@ -833,42 +812,94 @@ quantile_plot <-
             }
             pheno.sum$Group <-
                 factor(pheno.sum$Group, levels = c(0, 1))
-            quantiles.plot <-
-                ggplot(pheno.sum, aes(
-                    x = quantile,
-                    y = mean,
-                    ymin = LCI,
-                    ymax = UCI
-                ))+ 
-                theme_sam+
-                scale_x_continuous(breaks = seq(0, num_quant, 1))+
-                ylab("Mean PRS given phenotype in quantiles")
-            if(num_cov>0){
-                quantiles.plot <- quantiles.plot+
-                    xlab("Quantiles for Residualized Phenotype")
+            if(use.ggplot){
+              plot.pheno.quant(pheno.sum, num_cov, extract, prefix)
             }else{
-                quantiles.plot <- quantiles.plot+
-                    xlab("Quantiles for Phenotype")
+              plot.pheno.quant.no.g(pheno.sum, num_cov, extract, prefix)
             }
-            
-            if (is.null(extract)) {
-                quantiles.plot <-
-                    quantiles.plot + geom_point(colour = "#D55E00", size = 4) +
-                    geom_pointrange(colour = "#D55E00", size = 0.9)
-            } else{
-                quantiles.plot <-
-                    quantiles.plot + geom_point(aes(color = Group), size = 4) +
-                    geom_pointrange(aes(color = Group), size = 0.9) +
-                    scale_colour_manual(values = c("#0072B2", "#D55E00"))
-            }
-            ggsave(
-                paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
-                quantiles.plot,
-                height=10,width=10
-            )
         }
         
     }
+
+plot.pheno.quant.no.g <- function(pheno.sum, num_cov, extract, prefix){
+  
+}
+
+plot.pheno.quant <- function(pheno.sum, num_cov, extract, prefix){
+  quantiles.plot <-
+    ggplot(pheno.sum, aes(
+      x = quantile,
+      y = mean,
+      ymin = LCI,
+      ymax = UCI
+    ))+ 
+    theme_sam+
+    scale_x_continuous(breaks = seq(0, num_quant, 1))+
+    ylab("Mean PRS given phenotype in quantiles")
+  if(num_cov>0){
+    quantiles.plot <- quantiles.plot+
+      xlab("Quantiles for Residualized Phenotype")
+  }else{
+    quantiles.plot <- quantiles.plot+
+      xlab("Quantiles for Phenotype")
+  }
+  
+  if (is.null(extract)) {
+    quantiles.plot <-
+      quantiles.plot + geom_point(colour = "#D55E00", size = 4) +
+      geom_pointrange(colour = "#D55E00", size = 0.9)
+  } else{
+    quantiles.plot <-
+      quantiles.plot + geom_point(aes(color = Group), size = 4) +
+      geom_pointrange(aes(color = Group), size = 0.9) +
+      scale_colour_manual(values = c("#0072B2", "#D55E00"))
+  }
+  ggsave(
+    paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
+    quantiles.plot,
+    height=10,width=10
+  )
+}
+
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix){
+  
+  quantiles.plot <-
+    ggplot(quantiles.df, aes(
+      x = DEC,
+      y = Coef,
+      ymin = CI.L,
+      ymax = CI.U
+    )) + 
+    theme_sam+
+    xlab("Quantiles for Polygenic Score") +
+    scale_x_continuous(breaks = seq(0, num_quant, 1))
+  if (binary) {
+    quantiles.plot <-
+      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+  } else{
+    quantiles.plot <- quantiles.plot +
+      ylab("Change in Phenotype \ngiven score in quantiles")
+  }
+  if (is.null(extract)) {
+    quantiles.plot <-
+      quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
+      geom_pointrange(colour = "royalblue2", size = 0.9)
+  } else{
+    quantiles.plot <-
+      quantiles.plot + geom_point(aes(color = Group), size = 4) +
+      geom_pointrange(aes(color = Group), size = 0.9) +
+      scale_colour_manual(values = c("#0072B2", "#D55E00"))
+  }
+  ggsave(
+    paste(prefix, "QUANTILES_PLOT_", Sys.Date(),".png", sep = "_"),
+    quantiles.plot,
+    height=10, width=10
+  )
+}
+
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
+  
+}
 
 high_res_plot <- function(PRS, prefix, argv) {
     # we will always include the best threshold
@@ -901,25 +932,36 @@ high_res_plot <- function(PRS, prefix, argv) {
     }
     PRS = unique(PRS)
     # Need to also plot the barchart level stuff with green
-    ggfig.points <- ggplot(data = PRS, aes(x = Threshold)) +
-        xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-        theme_sam
-    if (argv$scatter_r2) {
-        ggfig.points <-
-            ggfig.points + geom_point(aes(y = R2)) + geom_line(aes(y = R2), colour = "green",
-                                                               data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
-            ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
-    } else{
-        ggfig.points <-
-            ggfig.points + geom_point(aes(y = -log10(P))) + geom_line(aes(y = -log10(P)), colour = "green",
-                                                                      data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
-            ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
+    if(use.ggplot){
+      plot.high.res(argv, PRS, prefix, barchart.levels)
+    }else{
+      plot.high.res.no.g(argv, PRS, prefix, barchart.levels)
     }
-    ggsave(
-        paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
-        ggfig.points,
-        height=10, width=10
-    )
+}
+
+plot.high.res.no.g <- function(argv, PRS, prefix, barchart.levels){
+}
+
+plot.high.res <- function(argv, PRS, prefix, barchart.levels){
+  ggfig.points <- ggplot(data = PRS, aes(x = Threshold)) +
+    xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
+    theme_sam
+  if (argv$scatter_r2) {
+    ggfig.points <-
+      ggfig.points + geom_point(aes(y = R2)) + geom_line(aes(y = R2), colour = "green",
+                                                         data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
+      ylab(expression(paste("PRS model fit:  ", R ^ 2, sep = " ")))
+  } else{
+    ggfig.points <-
+      ggfig.points + geom_point(aes(y = -log10(P))) + geom_line(aes(y = -log10(P)), colour = "green",
+                                                                data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
+      ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
+  }
+  ggsave(
+    paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
+    ggfig.points,
+    height=10, width=10
+  )
 }
 
 bar_plot <- function(PRS, prefix, argv) {
@@ -959,40 +1001,51 @@ bar_plot <- function(PRS, prefix, argv) {
         format(output$P[round(output$P, digits = 3) == 0], digits = 2)
     output$sign <- sign(output$Coefficient)
     output$print.p <- sub("e", "*x*10^", output$print.p)
-    ggfig.plot <- ggplot(data = output, aes(x = factor(Threshold), y = R2)) + geom_text(
-        aes(label = paste(print.p)),
-        vjust = -1.5,
-        hjust = 0,
-        angle = 45,
-        cex = 4,
-        parse = T
-    )  +
-        theme_sam + 
-        scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
-        xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-        ylab(expression(paste("PRS model fit:  ", R ^ 2)))
-    
-    if (argv$bar_col_p) {
-        ggfig.plot <-
-            ggfig.plot + geom_bar(aes(fill = factor(Threshold)), stat = "identity") +
-            scale_fill_brewer(palette = argv$palatte,
-                              name = expression(italic(P) - value ~ threshold))
+    if(use.ggplot){
+      plot.bar(argv, ouput, prefix)
+    }else{
+      plot.bar.no.g(argv, output,prefix)
     }
-    if (!argv$bar_col_p) {
-        ggfig.plot <-
-            ggfig.plot + geom_bar(aes(fill = -log10(P)), stat = "identity") +
-            scale_fill_gradient(
-                low = argv$bar_col_low,
-                high = argv$bar_col_high,
-                name = bquote(atop(-log[10] ~ model, italic(P) - value), )
-            )
-    }
-    
-    ggsave(
-        paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
-        ggfig.plot,
-        height=10,width=10
-    )
+}
+plot.bar.no.g <- function(argv, output, prefix){
+  
+}
+
+plot.bar <- function(argv, output, prefix){
+  ggfig.plot <- ggplot(data = output, aes(x = factor(Threshold), y = R2)) + geom_text(
+    aes(label = paste(print.p)),
+    vjust = -1.5,
+    hjust = 0,
+    angle = 45,
+    cex = 4,
+    parse = T
+  )  +
+    theme_sam + 
+    scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
+    xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
+    ylab(expression(paste("PRS model fit:  ", R ^ 2)))
+  
+  if (argv$bar_col_p) {
+    ggfig.plot <-
+      ggfig.plot + geom_bar(aes(fill = factor(Threshold)), stat = "identity") +
+      scale_fill_brewer(palette = argv$palatte,
+                        name = expression(italic(P) - value ~ threshold))
+  }
+  if (!argv$bar_col_p) {
+    ggfig.plot <-
+      ggfig.plot + geom_bar(aes(fill = -log10(P)), stat = "identity") +
+      scale_fill_gradient(
+        low = argv$bar_col_low,
+        high = argv$bar_col_high,
+        name = bquote(atop(-log[10] ~ model, italic(P) - value), )
+      )
+  }
+  
+  ggsave(
+    paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
+    ggfig.plot,
+    height=10,width=10
+  )
 }
 
 # run_plot: The function used for calling different plotting functions
@@ -1025,13 +1078,14 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
     # Good thing is, only quantile plot really needs the cov and phenotype information
     if (provided("quantile", argv) && argv$quantile > 0) {
         # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
-        quantile_plot(PRS, PRS.best, pheno_matrix, prefix, argv, binary)
+        quantile_plot(PRS, PRS.best, pheno_matrix, prefix, argv, binary, use.ggplot)
+      
     }
     # Now perform the barplotting
     if (!provided("fastscore", argv) || !argv$fastscore) {
-        high_res_plot(PRS, prefix, argv)
+        high_res_plot(PRS, prefix, argv, use.ggplot)
     }
-    bar_plot(PRS, prefix, argv)
+    bar_plot(PRS, prefix, argv, use.ggplot)
 }
 
 
