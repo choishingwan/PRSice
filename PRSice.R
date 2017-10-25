@@ -280,8 +280,7 @@ InstalledPackage <- function(package) {
             require,
             quietly = TRUE,
             character.only = TRUE,
-            warn.conflicts = FALSE,
-            dependencies = TRUE
+            warn.conflicts = FALSE
         )
     ))
     missing <- package[!available]
@@ -320,8 +319,7 @@ UsePackage <- function(package, dir)
                 install.packages(
                     package,
                     lib = paste(dir, "/lib", sep = ""),
-                    repos = "http://cran.rstudio.com/",
-                    dependencies = TRUE
+                    repos = "http://cran.rstudio.com/"
                 )
             ))
         }
