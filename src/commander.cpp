@@ -295,8 +295,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     }
     logFile << "PRSice " << version << " (" << date << ") " << std::endl;
     logFile << "https://github.com/choishingwan/PRSice" << std::endl;
-    logFile << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. "
-               "O'Reilly, Sam Choi"
+    logFile << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. Lewis, Paul F. "
+               "O'Reilly"
             << std::endl;
     logFile << "GNU General Public License v3" << std::endl << std::endl;
     logFile << std::ctime(&start_time) << std::endl << std::endl;
@@ -315,8 +315,8 @@ Commander::Commander()
     std::cerr << std::endl;
     std::cerr << "PRSice " << version << " (" << date << ") " << std::endl;
     std::cerr << "https://github.com/choishingwan/PRSice" << std::endl;
-    std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. "
-                 "O'Reilly, Sam Choi"
+    std::cerr << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. Lewis, Paul F. "
+                 "O'Reilly"
               << std::endl;
     std::cerr << "GNU General Public License v3" << std::endl << std::endl;
 
