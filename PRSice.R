@@ -336,7 +336,13 @@ for (library in libraries)
     {
         if (!UsePackage(library, argv[dir_loc]))
         {
+          if(library=="data.table"){
+            use.data.table <- F
+          }else if(library=="ggplot2"){
+            use.ggplot <- F
+          }else{
             stop("Error: ", library, " cannot be load nor install!")
+          }
         }
     } else{
         if (!UsePackage(library, "."))
