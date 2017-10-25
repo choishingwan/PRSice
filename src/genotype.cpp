@@ -829,7 +829,7 @@ int Genotype::process_block(int& start_index, int end_index,
     // if the end index equals to the size of the vector
     // then we know we should just finish the whole job
     // thus the last_core_index == m_existed_snps.size()
-    if (end_index < (int)m_existed_snps.size()) {
+    if (end_index < (int) m_existed_snps.size()) {
         auto&& last_snp = m_existed_snps[end_index - 1];
         // -2 because the current SNP won't be in place
         for (int i_snp = end_index - 2; i_snp > first_core_index; --i_snp) {

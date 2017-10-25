@@ -231,7 +231,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
             if (line.empty()) continue;
             std::vector<std::string> token = misc::split(line);
             if (token.size()
-                <= (size_t)(pheno_index + 1 + !m_ignore_fid)) // need to check the range
+                <= (size_t)(pheno_index + 1
+                            + !m_ignore_fid)) // need to check the range
             {
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
@@ -1147,7 +1148,7 @@ void PRSice::thread_perm(
                 rss += residual(r) * residual(r);
             }
             size_t se_index = intercept;
-            for (size_t ind = 0; ind < (size_t)beta.rows(); ++ind) {
+            for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
                     se_index = ind;
                     break;
@@ -1180,7 +1181,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                 num_binary++; // this is the number of previous binary traits
         }
         int num_case = 0, num_control = 0;
-        for (size_t i = 0; i < (size_t)m_phenotype.rows(); ++i) {
+        for (size_t i = 0; i < (size_t) m_phenotype.rows(); ++i) {
             if (m_phenotype(i) == 0)
                 num_control++;
             else if (m_phenotype(i) == 1)

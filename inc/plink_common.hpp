@@ -899,7 +899,6 @@ HEADER_INLINE void aligned_free_cond_null(uintptr_t** aligned_pp)
 extern uintptr_t g_failed_alloc_attempt_size;
 
 
-
 // file-scope string constants don't always have the g_ prefix, but multi-file
 // constants are always tagged.
 extern const char g_errstr_fopen[];
@@ -1132,9 +1131,9 @@ HEADER_INLINE void bigstack_end_set(const void* unaligned_end)
                                        & (~(END_ALLOC_CHUNK_M1 * ONELU)));
 }
 
-// assumes size is divisible by END_ALLOC_CHUNK
-// (no value in directly calling this with a constant size parameter: the
-// compiler will properly optimize a bigstack_end_alloc() call)
+    // assumes size is divisible by END_ALLOC_CHUNK
+    // (no value in directly calling this with a constant size parameter: the
+    // compiler will properly optimize a bigstack_end_alloc() call)
 
 #define bigstack_end_aligned_alloc bigstack_end_alloc
 
@@ -1984,7 +1983,6 @@ HEADER_INLINE int32_t alloc_and_populate_id_htable(
 }
 
 
-
 HEADER_INLINE void free_cond(void* memptr)
 {
     if (memptr) {
@@ -2231,11 +2229,9 @@ HEADER_INLINE int32_t get_or_add_chrom_code_destructive(
 }
 
 
-
 #ifndef __cplusplus
 int32_t llcmp(const void* aa, const void* bb);
 #endif
-
 
 
 int32_t bsearch_str(const char* id_buf, uintptr_t cur_id_len, const char* lptr,
@@ -2327,7 +2323,6 @@ void count_3freq_1920b(const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
 #endif
 
 
-
 HEADER_INLINE void zero_trailing_bits(uintptr_t unfiltered_ct,
                                       uintptr_t* bitarr)
 {
@@ -2354,7 +2349,6 @@ HEADER_INLINE uint32_t count_chrom_markers(const Chrom_info* chrom_info_ptr,
     return (max_idx - min_idx)
            - ((uint32_t) popcount_bit_idx(marker_exclude, min_idx, max_idx));
 }
-
 
 
 void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf);
@@ -2489,8 +2483,6 @@ HEADER_INLINE char sexchar(uintptr_t* sex_nm, uintptr_t* sex_male,
 }
 
 
-
-
 HEADER_INLINE void precompute_mods(uintptr_t sample_ct,
                                    uint32_t* precomputed_mods)
 {
@@ -2504,7 +2496,6 @@ HEADER_INLINE void precompute_mods(uintptr_t sample_ct,
 
 uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
                           double* solutions);
-
 
 
 #endif // __PLINK_COMMON_H__

@@ -242,7 +242,7 @@ private:
     private:
         Data* m_result;
         std::size_t m_sample_i;
-        std::size_t m_entry_i=0;
+        std::size_t m_entry_i = 0;
     };
     void read_genotype_data_block(std::istream& aStream,
                                   genfile::bgen::Context const& context,

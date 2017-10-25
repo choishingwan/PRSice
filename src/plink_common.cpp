@@ -58,7 +58,6 @@ const char* g_output_missing_geno_ptr = &(g_one_char_strs[96]);
 uintptr_t g_failed_alloc_attempt_size = 0;
 
 
-
 FILE* g_logfile = nullptr;
 
 char g_logbuf[MAXLINELEN * 2];
@@ -465,7 +464,6 @@ uint32_t scan_int_abs_bounded32(const char* ss, uint32_t bound_div_10,
     }
 }
 #endif
-
 
 
 char* next_token_mult(char* sptr, uint32_t ct)
@@ -3677,12 +3675,6 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
 }
 
 
-
-
-
-
-
-
 #ifndef __cplusplus
 int32_t llcmp(const void* aa, const void* bb)
 {
@@ -3700,7 +3692,6 @@ int32_t llcmp(const void* aa, const void* bb)
     }
 }
 #endif
-
 
 
 int32_t bsearch_str(const char* id_buf, uintptr_t cur_id_len, const char* lptr,
@@ -5451,7 +5442,3 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     }
     return 2;
 }
-
-
-
-

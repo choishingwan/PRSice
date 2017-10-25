@@ -1318,8 +1318,10 @@ void Commander::covariate_check(bool& error, std::string& error_message)
                                 }
                                 try
                                 {
-                                	size_t start = misc::convert<size_t>(range[0]);
-                                    size_t end = misc::convert<size_t>(range[1]);
+                                    size_t start =
+                                        misc::convert<size_t>(range[0]);
+                                    size_t end =
+                                        misc::convert<size_t>(range[1]);
                                     if (start > end) {
                                         int temp = end;
                                         end = start;
