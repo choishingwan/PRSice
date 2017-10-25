@@ -25,7 +25,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string message = argv[0];
     std::string error_messages = "";
     std::string temp_string = "";
-    int temp_int = 0;
+    size_t temp_int = 0;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
@@ -1318,8 +1318,10 @@ void Commander::covariate_check(bool& error, std::string& error_message)
                                 }
                                 try
                                 {
-                                    int start = misc::convert<int>(range[0]);
-                                    int end = misc::convert<int>(range[1]);
+                                    size_t start =
+                                        misc::convert<size_t>(range[0]);
+                                    size_t end =
+                                        misc::convert<size_t>(range[1]);
                                     if (start > end) {
                                         int temp = end;
                                         end = start;

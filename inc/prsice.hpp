@@ -47,17 +47,17 @@ class PRSice
 public:
     PRSice(std::string base_name, const Commander commander, bool prset)
         : m_base_name(base_name)
+        , m_target(commander.target_name())
+        , m_target_binary(commander.is_binary())
+        , m_score(commander.get_scoring())
+        , m_ignore_fid(commander.ignore_fid())
+        , m_prset(prset)
+        , m_out(commander.out())
+        , m_num_perm(commander.num_permutation())
+        , m_logit_perm(commander.logit_perm())
     {
 
-        m_target = commander.target_name();
-        m_target_binary = commander.is_binary();
-        m_score = commander.get_scoring();
-        m_ignore_fid = commander.ignore_fid();
-        m_prset = prset;
-        m_out = commander.out();
         bool perm = commander.permute();
-        m_num_perm = commander.num_permutation();
-        m_logit_perm = commander.logit_perm();
         m_seed = std::random_device()(); // cerr valgrind doesn't like this
 
         m_log_file = m_out + ".log";
@@ -200,8 +200,8 @@ private:
     int m_best_index = -1;
     int m_perm_per_slice = 0;
     int m_remain_slice = 0;
-    int m_num_perm = 0;
     unsigned int m_seed = 0;
+    size_t m_num_perm = 0;
     size_t m_num_snp_included = 0;
     size_t m_region_index = 0;
     size_t m_all_thresholds = 0;
@@ -235,9 +235,8 @@ private:
                      std::vector<Eigen::MatrixXd>& pheno_perm, size_t start,
                      size_t end, int rank, const Eigen::VectorXd& pre_se,
                      size_t processed, bool logit_perm);
-    void permutation(unsigned int seed, int perm_per_slice, int remain_slice,
-                     int total_permutation, int n_thread, bool logit_perm);
-    void permutation(const int n_thread, bool logit_perm);
+
+    void permutation(const size_t n_thread, bool logit_perm);
     void update_sample_included();
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress);

@@ -176,8 +176,8 @@ double qnorm(double p, double mu, double sigma, bool lower_tail, bool log_p)
 }
 
 
-std::vector<std::string> split(const std::string seq,
-                               const std::string separators)
+std::vector<std::string> split(const std::string& seq,
+                               const std::string& separators)
 {
     std::size_t prev = 0, pos;
     std::vector<std::string> result;

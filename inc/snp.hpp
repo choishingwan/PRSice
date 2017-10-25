@@ -35,12 +35,12 @@ class SNP
 {
 public:
     SNP();
-    SNP(const std::string rs_id, const int chr, const int loc,
-        const std::string ref_allele, const std::string alt_allele,
-        const std::string file_name, const int num_line);
-    SNP(const std::string rs_id, const int chr, const int loc,
-        const std::string ref_allele, const std::string alt_allele,
-        const std::string file_name, const std::streampos byte_pos);
+    SNP(const std::string& rs_id, const int chr, const int loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const std::string& file_name, const int num_line);
+    SNP(const std::string& rs_id, const int chr, const int loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const std::string& file_name, const std::streampos byte_pos);
     virtual ~SNP();
 
     void set_statistic(const double stat, const double se, const double p_value,

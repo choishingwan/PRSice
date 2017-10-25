@@ -328,18 +328,32 @@ UsePackage <- function(package, dir)
     return(TRUE)
 }
 
+use.data.table <- T
+use.ggplot <- T
 for (library in libraries)
 {
     if (found)
     {
         if (!UsePackage(library, argv[dir_loc]))
         {
+          if(library=="data.table"){
+            use.data.table <- F
+          }else if(library=="ggplot2"){
+            use.ggplot <- F
+          }else{
             stop("Error: ", library, " cannot be load nor install!")
+          }
         }
     } else{
         if (!UsePackage(library, "."))
         {
-            stop("Error: ", library, " cannot be load nor install!")
+            if(library=="data.table"){
+              use.data.table <- F
+            }else if(library=="ggplot2"){
+              use.ggplot <- F
+            }else{
+              stop("Error: ", library, " cannot be load nor install!")
+            }
         }
     }
 }
@@ -608,9 +622,15 @@ quantile_plot <-
         }
         extract = NULL
         if (provided("quant_extract", argv)) {
-            extract = fread(argv$quant_extract,
+            if(use.data.table){
+              extract <- fread(argv$quant_extract,
                             header = F,
                             data.table = F)
+            }else{
+              extract <- read.table(argv$quant_extract,
+                              header = F)
+            }
+          
         }
         num_quant <- argv$quantile
         
@@ -978,15 +998,27 @@ bar_plot <- function(PRS, prefix, argv) {
 # run_plot: The function used for calling different plotting functions
 run_plot <- function(prefix, argv, pheno_matrix, binary) {
     writeLines("")
-    #writeLines(prefix)
-    PRS <-
+    PRS <- NULL
+    PRS.best <- NULL
+    if(use.data.table){
+      PRS <-
         fread(paste(prefix, ".prsice", sep = ""),
               header = T,
               data.table = F)
-    PRS.best <-
+      PRS.best <-
         fread(paste(prefix, ".best", sep = ""),
               header = T,
               data.table = F)
+    }else{
+      
+      PRS <-
+        read.table(paste(prefix, ".prsice", sep = ""),
+              header = T)
+      PRS.best <-
+        read.table(paste(prefix, ".best", sep = ""),
+              header = T)
+    }
+    
     PRS.best <- subset(PRS.best, Has_Phenotype == "Yes")
     colnames(PRS.best)[3] <- "PRS"
     # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
@@ -1170,7 +1202,13 @@ update_cov_header <- function(c) {
 # Need to get the covariates
 covariance = NULL
 if (provided("cov_file", argv)) {
-    covariance <- fread(argv$cov_file, data.table = F, header = T)
+    covariance <- NULL
+    if(use.data.table){
+      covariance <- fread(argv$cov_file, data.table = F, header = T)
+    }else {
+      covariance <- read.table(argv$cov_file, header = T)
+    }
+      
     if (provided("cov_col", argv)) {
         c = strsplit(argv$cov_col, split = ",")[[1]]
         c <- update_cov_header(c)
@@ -1224,9 +1262,15 @@ region = argv$plot_set
 
 
 if (!is.null(phenos)) {
-    pheno_file = fread(argv$pheno_file,
+    pheno_file <- NULL
+    if(use.data.table){
+      pheno_file <- fread(argv$pheno_file,
                        header = T,
                        data.table = F)
+    }else{
+      pheno_file <- read.table(argv$pheno_file,
+                         header = T)
+    }
     if (ignore_fid) {
         colnames(pheno_file)[1] <- "IID"
     } else{
@@ -1251,12 +1295,22 @@ if (!is.null(phenos)) {
                 cur_prefix = paste(cur_prefix, region, sep = ".")
             }
             # Get the best score
+            best<-NULL
+            if(use.data.table){
             best <-
                 fread(
                     paste(cur_prefix, "best", sep = "."),
                     data.table = F,
                     header = T
                 )
+            }else{
+              
+              best <-
+                read(
+                  paste(cur_prefix, "best", sep = "."),
+                  header = T
+                )
+            }
             # Give run_plot a ready to use matrix
             cur_pheno <- NULL
             if (ignore_fid) {
@@ -1319,9 +1373,15 @@ if (!is.null(phenos)) {
     }
     pheno = NULL
     if (provided("pheno_file", argv)) {
-        pheno = fread(paste(argv$pheno_file),
+        pheno <- NULL
+        if(use.data.table){
+          pheno <- fread(paste(argv$pheno_file),
                       data.table = F,
                       header = F)
+        }else{
+          pheno <- read.table(paste(argv$pheno_file),
+                        header = F)
+        }
         if (ignore_fid) {
             colnames(pheno)[1] <- "IID"
         } else{
@@ -1330,10 +1390,17 @@ if (!is.null(phenos)) {
         #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
     }
     # Give run_plot a ready to use matrix
-    best <-
+    best <- NULL
+    if(use.data.table){
+      best <-
         fread(paste(cur_prefix, "best", sep = "."),
               data.table = F,
               header = T)
+    }else{
+      best <-
+        read.table(paste(cur_prefix, "best", sep = "."),
+              header = T)
+    }
     fam.clean = NULL
     if (!is.null(pheno))
     {
@@ -1350,10 +1417,17 @@ if (!is.null(phenos)) {
     } else{
         fam_name <- argv$target
         fam_name <- gsub("#", "1", fam_name)
-        fam <-
+        fam <- NULL
+        if(use.data.table){
+          fam <-
             fread(paste(fam_name, "fam", sep = "."),
                   data.table = F,
                   header = F)
+        }else{
+          fam <-
+            read.table(paste(fam_name, "fam", sep = "."),
+                  header = F)
+        }
         fam.clean <-
             data.frame(FID = fam$V1,
                        IID = fam$V2,
