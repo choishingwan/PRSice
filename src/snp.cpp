@@ -34,9 +34,9 @@ SNP::SNP()
 }
 
 
-SNP::SNP(const std::string rs_id, const int chr, const int loc,
-         const std::string ref_allele, const std::string alt_allele,
-         const std::string file_name, const int num_line)
+SNP::SNP(const std::string &rs_id, const int chr, const int loc,
+         const std::string &ref_allele, const std::string &alt_allele,
+         const std::string &file_name, const int num_line)
 {
     basic.ref = ref_allele;
     basic.alt = alt_allele;
@@ -58,9 +58,9 @@ SNP::SNP(const std::string rs_id, const int chr, const int loc,
 }
 
 
-SNP::SNP(const std::string rs_id, const int chr, const int loc,
-         const std::string ref_allele, const std::string alt_allele,
-         const std::string file_name, const std::streampos byte_pos)
+SNP::SNP(const std::string &rs_id, const int chr, const int loc,
+         const std::string &ref_allele, const std::string &alt_allele,
+         const std::string &file_name, const std::streampos byte_pos)
 {
     basic.ref = ref_allele;
     basic.alt = alt_allele;

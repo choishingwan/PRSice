@@ -2506,14 +2506,5 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
                           double* solutions);
 
 
-extern uintptr_t g_thread_spawn_ct;
-extern uint32_t g_is_last_thread_block;
-
-#ifdef _WIN32
-extern HANDLE g_thread_start_next_event[];
-extern HANDLE g_thread_cur_block_done_events[];
-#endif
-
-
 
 #endif // __PLINK_COMMON_H__

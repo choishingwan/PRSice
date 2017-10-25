@@ -45,7 +45,7 @@ void PRSice::pheno_check(const Commander& c_commander)
         pheno.close();
         misc::trim(line);
         std::vector<std::string> col = misc::split(line);
-        if (col.size() < 1 + !m_ignore_fid) {
+        if (col.size() < (size_t)(1 + !m_ignore_fid)) {
             throw std::runtime_error(
                 "ERROR: Not enough column in Phenotype file."
                 "Have you use the --ignore-fid option");
@@ -231,7 +231,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
             if (line.empty()) continue;
             std::vector<std::string> token = misc::split(line);
             if (token.size()
-                <= pheno_index + 1 + !m_ignore_fid) // need to check the range
+                <= (size_t)(pheno_index + 1 + !m_ignore_fid)) // need to check the range
             {
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
@@ -557,7 +557,7 @@ void PRSice::check_factor_cov(
     std::vector<std::unordered_map<std::string, int>> current_factors(
         cov_index.size());
     std::vector<size_t> convertable(cov_index.size(), 0);
-    int max_index = cov_index.back() + 1;
+    size_t max_index = cov_index.back() + 1;
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -585,7 +585,7 @@ void PRSice::check_factor_cov(
                 try
                 {
                     // this is for catching unconvertable covariate
-                    double temp = misc::convert<double>(token[covar_index]);
+                    misc::convert<double>(token[covar_index]);
                     convertable[i_cov]++;
                 }
                 catch (const std::runtime_error& error)
@@ -669,7 +669,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     }
     std::string line;
     std::getline(cov, line); // remove header
-    int max_index = cov_index.back() + 1;
+    size_t max_index = cov_index.back() + 1;
     // Check the number of missingness for each covariates
     std::vector<int> missing_count(cov_index.size(), 0);
 
@@ -1040,7 +1040,7 @@ void PRSice::process_permutations()
         (double) (num_better + 1.0) / (double) (m_num_perm + 1.0);
 }
 
-void PRSice::permutation(const int n_thread, bool logit_perm)
+void PRSice::permutation(const size_t n_thread, bool logit_perm)
 {
     int num_iter = m_num_perm / m_perm_per_slice;
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm(
@@ -1086,7 +1086,7 @@ void PRSice::permutation(const int n_thread, bool logit_perm)
     // so that we can reserve the sequence
     size_t processed = 0;
     for (int iter = 0; iter < num_iter + 1; ++iter) {
-        int cur_perm = m_perm_per_slice;
+        size_t cur_perm = m_perm_per_slice;
         cur_perm += (cur_remain > 0) ? 1 : 0;
         if (cur_perm + processed > m_num_perm) {
             cur_perm = m_num_perm - processed;
@@ -1127,7 +1127,7 @@ void PRSice::thread_perm(
 {
 
     bool intercept = true;
-    int n = m_independent_variables.rows();
+    size_t n = m_independent_variables.rows();
     for (size_t i = start; i < end; ++i) {
         double ori_p = m_perm_result[processed + i];
         double obs_p = 2.0; // for safety reason, make sure it is out bound
@@ -1147,7 +1147,7 @@ void PRSice::thread_perm(
                 rss += residual(r) * residual(r);
             }
             size_t se_index = intercept;
-            for (size_t ind = 0; ind < beta.rows(); ++ind) {
+            for (size_t ind = 0; ind < (size_t)beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
                     se_index = ind;
                     break;
@@ -1180,7 +1180,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                 num_binary++; // this is the number of previous binary traits
         }
         int num_case = 0, num_control = 0;
-        for (size_t i = 0; i < m_phenotype.rows(); ++i) {
+        for (size_t i = 0; i < (size_t)m_phenotype.rows(); ++i) {
             if (m_phenotype(i) == 0)
                 num_control++;
             else if (m_phenotype(i) == 1)
@@ -1212,7 +1212,6 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     const bool perm = c_commander.permute();
     std::string output_name = output_prefix;
 
-    size_t marginal = 0, significant = 0, not_significant = 0;
     bool valid = m_best_index != -1;
     if (!valid
         || region.get_count(region_index)

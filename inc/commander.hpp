@@ -498,7 +498,7 @@ private:
     }
 
     inline int index_check(const std::string& target,
-                           const std::vector<std::string> ref) const
+                           const std::vector<std::string> &ref) const
     {
         for (size_t i = 0; i < ref.size(); ++i) {
             if (target.compare(ref[i]) == 0) {

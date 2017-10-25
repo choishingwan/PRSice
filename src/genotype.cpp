@@ -809,7 +809,7 @@ int Genotype::process_block(int& start_index, int end_index,
     // note: only allow to invoke clean_clump in this function
     // first, remove any SNPs that is too far away from the first core index
     auto&& first_core = m_existed_snps[first_core_index];
-    for (size_t i_snp = start_index; i_snp < first_core_index; ++i_snp) {
+    for (int i_snp = start_index; i_snp < first_core_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (cur_snp.chr() != first_core.chr()
             || cur_snp.loc() - first_core.loc() > clump_info.distance)
@@ -825,14 +825,14 @@ int Genotype::process_block(int& start_index, int end_index,
     // the last SNP in our range must be outside of the first core's range
     // due to how we did it
     // the only exception is when end_index == m_existed_snps.size()
-    size_t last_core_index = m_existed_snps.size() - 1;
+    int last_core_index = m_existed_snps.size() - 1;
     // if the end index equals to the size of the vector
     // then we know we should just finish the whole job
     // thus the last_core_index == m_existed_snps.size()
-    if (end_index < m_existed_snps.size()) {
+    if (end_index < (int)m_existed_snps.size()) {
         auto&& last_snp = m_existed_snps[end_index - 1];
         // -2 because the current SNP won't be in place
-        for (size_t i_snp = end_index - 2; i_snp > first_core_index; --i_snp) {
+        for (int i_snp = end_index - 2; i_snp > first_core_index; --i_snp) {
             auto&& cur_snp = m_existed_snps[i_snp];
             if ((cur_snp.chr() == last_snp.chr()
                  && last_snp.loc() - cur_snp.loc() > clump_info.distance)
@@ -876,7 +876,7 @@ int Genotype::process_block(int& start_index, int end_index,
         thread_store.clear();
     }
 
-    for (size_t i_snp = start_index; i_snp <= last_core_index; ++i_snp) {
+    for (int i_snp = start_index; i_snp <= last_core_index; ++i_snp) {
         m_existed_snps[i_snp].clean_clump();
     }
 
@@ -887,7 +887,7 @@ int Genotype::process_block(int& start_index, int end_index,
         start_index = last_core_index + 1;
         // find the next core snp
         first_core_index = -1;
-        for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
+        for (int i_snp = start_index; i_snp < end_index; ++i_snp) {
             if (m_existed_snps[i_snp].p_value() <= clump_info.p_value) {
                 first_core_index = i_snp;
                 break;
@@ -960,8 +960,7 @@ void Genotype::efficient_clumping(Genotype& reference)
 
         if (cur_snp_index >= m_existed_snps.size()) {
             if (block_available) {
-                int remain =
-                    process_block(start_index, cur_snp_index, core_index);
+                process_block(start_index, cur_snp_index, core_index);
                 assert(remain == 0);
                 completed = true;
                 // just in case, clean everything from start to end

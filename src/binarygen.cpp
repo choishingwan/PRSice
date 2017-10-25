@@ -137,9 +137,6 @@ std::vector<SNP> BinaryGen::load_snps()
         uint32_t offset = m_offset_map[prefix];
         m_bgen_file.seekg(offset + 4);
         uint32_t num_snp = m_bgen_info[prefix].number_of_variants;
-        uint32_t const layout =
-            m_bgen_info[prefix].flags & genfile::bgen::e_Layout;
-        uint32_t num_sample = m_bgen_info[prefix].number_of_samples;
         std::string prev_chr = "";
         int chr_code = 0;
 
@@ -151,11 +148,8 @@ std::vector<SNP> BinaryGen::load_snps()
                 fprintf(stderr, "\r %zuK SNPs processed\r",
                         m_unfiltered_marker_ct / 1000);
             }
-            uint16_t SNPID_size = 0;
-            uint16_t RSID_size = 0;
-            uint16_t numberOfAlleles = 0;
-            uint16_t chromosome_size = 0;
-            uint32_t allele_size = 0;
+
+
             std::string allele;
             std::string SNPID;
             std::string RSID;
@@ -170,7 +164,7 @@ std::vector<SNP> BinaryGen::load_snps()
                     alleles.at(i) = allele;
                 });
 
-            size_t snp_id = (unsigned int) m_bgen_file.tellg();
+
             std::streampos byte_pos = m_bgen_file.tellg();
             Data probability;
             ProbSetter setter(&probability);
@@ -331,7 +325,7 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
             if (IS_SET(m_sample_include.data(),
                        i_sample)) // to ignore unwanted samples
             {
-                for (int g = 0; g < prob.size(); ++g) {
+                for (size_t g = 0; g < prob.size(); ++g) {
                     if (*max_element(prob.begin(), prob.end())
                         < filter.hard_threshold)
                     {
@@ -836,7 +830,7 @@ std::vector<Sample> BinaryGen::load_samples(bool ignore_fid)
             bytes_read += 8;
             assert(actual_number_of_samples
                    == m_bgen_info[prefix].number_of_samples);
-            for (uint32_t i = 0; i < actual_number_of_samples; ++i) {
+            for (size_t i = 0; i < actual_number_of_samples; ++i) {
                 bgenlib::read_length_followed_by_data(
                     m_bgen_file, &identifier_size, &identifier);
                 if (m_bgen_file) {

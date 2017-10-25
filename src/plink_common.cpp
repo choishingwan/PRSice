@@ -5453,16 +5453,5 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
 }
 
 
-uintptr_t g_thread_spawn_ct;
-uint32_t g_is_last_thread_block = 0;
-#ifdef _WIN32
-HANDLE g_thread_start_next_event[MAX_THREADS];
-HANDLE g_thread_cur_block_done_events[MAX_THREADS];
-#else
-static pthread_mutex_t g_thread_sync_mutex;
-static pthread_cond_t g_thread_cur_block_done_condvar;
-static pthread_cond_t g_thread_start_next_condvar;
-uint32_t g_thread_active_ct;
-#endif
 
 

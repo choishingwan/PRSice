@@ -331,6 +331,7 @@ UsePackage <- function(package, dir)
     return(TRUE)
 }
 
+use.data.table=T
 for (library in libraries)
 {
     if (found)
@@ -342,7 +343,11 @@ for (library in libraries)
     } else{
         if (!UsePackage(library, "."))
         {
-            stop("Error: ", library, " cannot be load nor install!")
+            if(library=="data.table"){
+              use.data.table=F
+            }else{
+              stop("Error: ", library, " cannot be load nor install!")
+            }
         }
     }
 }

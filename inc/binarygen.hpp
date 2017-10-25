@@ -45,7 +45,7 @@ private:
                       bool has_sex, int sex_col, std::vector<int>& sex_info);
     std::vector<Sample> preload_samples(std::string pheno, bool has_header,
                                         bool ignore_fid);
-    std::unordered_map<std::string, int> m_sample_index_check;
+    std::unordered_map<std::string, size_t> m_sample_index_check;
 
     std::vector<Sample> load_samples(bool ignore_fid);
 
@@ -242,7 +242,7 @@ private:
     private:
         Data* m_result;
         std::size_t m_sample_i;
-        std::size_t m_entry_i;
+        std::size_t m_entry_i=0;
     };
     void read_genotype_data_block(std::istream& aStream,
                                   genfile::bgen::Context const& context,

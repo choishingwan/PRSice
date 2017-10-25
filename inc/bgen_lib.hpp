@@ -101,8 +101,7 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
 {
     uLongf const source_size = (end - begin);
     uLongf dest_size = dest->size() * sizeof(T);
-    int result =
-        uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
+    uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
     assert(result == Z_OK);
     assert(dest_size % sizeof(T) == 0);

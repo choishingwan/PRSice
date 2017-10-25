@@ -72,8 +72,8 @@ private:
     struct region_bound
     {
         int chr;
-        int start;
-        int end;
+        size_t start;
+        size_t end;
     };
     std::string m_out_prefix; // for log file
     // for checking duplicated region
