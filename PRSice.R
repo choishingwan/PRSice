@@ -345,7 +345,6 @@ for (library in libraries)
           }else if(library=="ggplot2"){
             use.ggplot <- F
             writeLines("Cannot install ggplot2, will fall back and native plotting devices")
-            writeLines("Note: No legend will be displayed for bar-chart")
           }else{
             stop("Error: ", library, " cannot be load nor install!")
           }
@@ -368,8 +367,6 @@ for (library in libraries)
     }
 }
 
-# cerr
-use.ggplot <-F
 
 # Command line arguments --------------------------------------------------
 
