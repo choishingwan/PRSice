@@ -334,7 +334,7 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
                     }
                     else
                     {
-                        int geno = (snp.is_flipped()) ? abs(g - 2) : g;
+                        int geno = (snp.is_flipped()) ? fabs(g - 2) : g;
                         if (m_model == +MODEL::HETEROZYGOUS && geno == 2)
                             geno = 0;
                         else if (m_model == +MODEL::DOMINANT && geno == 2)
