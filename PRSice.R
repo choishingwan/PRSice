@@ -331,7 +331,7 @@ UsePackage <- function(package, dir)
 }
 
 use.data.table <- T
-use.ggplot <- T
+use.ggplot <- T #cerr
 for (library in libraries)
 {
     if (found)
@@ -345,6 +345,7 @@ for (library in libraries)
           }else if(library=="ggplot2"){
             use.ggplot <- F
             writeLines("Cannot install ggplot2, will fall back and native plotting devices")
+            writeLines("Note: The legends will be uglier")
           }else{
             stop("Error: ", library, " cannot be load nor install!")
           }
@@ -620,7 +621,9 @@ if(use.ggplot){
                               legend.title=element_text(face="bold", size=18),
                               legend.text=element_text(size=14),
                               axis.text.x=element_text(angle=45, hjust=1),
-                              panel.grid = element_blank()
+                              panel.grid = element_blank(),
+                              panel.border = element_blank(), 
+                              axis.line = element_line()
                               )
 }
 # PLOTTING: Here contains all the function for plotting
@@ -853,15 +856,15 @@ plot.pheno.quant.no.g <- function(pheno.sum, num_cov, num_quant, extract, prefix
             ann=F,
             ylim=c(min(LCI),max(UCI))
        ))
-  box()
-  axis(2,las=2)
-  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2))
-  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2))
+  box(bty='L', lwd=2)
+  axis(2,las=2, lwd=2)
+  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
+  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
   with(pheno.sum, arrows(quantile,mean, quantile,LCI,length=0, col=color, lwd=1.5))
   with(pheno.sum, arrows(quantile,mean, quantile,UCI,length=0, col=color, lwd=1.5))
   title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
   title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
-  dev.off()
+  g<-dev.off()
 }
 
 plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
@@ -957,15 +960,16 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
             axes=F, cex=1.5, ann=F,
             ylim=c(min(CI.L),max(CI.U))
             ))
-  box()
-  axis(2,las=2)
-  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2))
-  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2))
+
+  axis(2,las=2,lwd=2)
+  box(bty='L', lwd=2)
+  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
+  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
   with(quantiles.df, arrows(DEC,Coef, DEC,CI.L,length=0, col=color, lwd=1.5))
   with(quantiles.df, arrows(DEC,Coef, DEC,CI.U,length=0, col=color, lwd=1.5))
   title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
   title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
-  dev.off()
+  g<-dev.off()
 }
 
 high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
@@ -1030,13 +1034,13 @@ plot.high.res.no.g <- function(argv, PRS, prefix, barchart.levels){
     with(subset(PRS[order(PRS$Threshold),], Threshold%in%barchart.levels ), 
          lines(x=Threshold, y=-log10(P), col="green"))
   }
-  box()
+  box(bty='L', lwd=2)
   axis(2, las=2)
   axis(1)
   
   title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
   title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
-  dev.off()
+  g<-dev.off()
 }
 
 plot.high.res <- function(argv, PRS, prefix, barchart.levels){
@@ -1106,7 +1110,7 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
 }
 
 plot.bar.no.g <- function(argv, output, prefix){
-  png(paste(prefix, "_HIGH-_BARPLOT_", Sys.Date(), ".png", sep = ""),
+  png(paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   layout(t(1:2), widths=c(8.8,1.2))
   par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
@@ -1130,7 +1134,7 @@ plot.bar.no.g <- function(argv, output, prefix){
     text( parse(text=paste(
       output$print.p)), 
       x = b+0.1, 
-      y =  output$R2+ (max(output$R2)*1.125-max(output$R2)), 
+      y =  output$R2+ (max(output$R2)*1.05-max(output$R2)), 
       srt = 45)
   }else{
     col <- suppressWarnings(colorRampPalette(c(argv$bar_col_low, argv$bar_col_high)))
@@ -1145,16 +1149,17 @@ plot.bar.no.g <- function(argv, output, prefix){
     
     odd <- seq(0,nrow(output)+1,2)
     even <- seq(1,nrow(output),2)
-    axis(side=1, at=b[odd], labels=output$Threshold[odd])
-    axis(side=1, at=b[even], labels=output$Threshold[even])
+    axis(side=1, at=b[odd], labels=output$Threshold[odd], lwd=2)
+    axis(side=1, at=b[even], labels=output$Threshold[even],lwd=2)
+    axis(side=1, at=c(0,b[1],2*b[length(b)]-b[length(b)-1]), labels=c("","",""), lwd=2, lwd.tick=0)
     text( parse(text=paste(
       output$print.p)), 
       x = b+0.1, 
-      y =  output$R2+ (max(output$R2)*1.125-max(output$R2)), 
+      y =  output$R2+ (max(output$R2)*1.05-max(output$R2)), 
       srt = 45)
   }
-  box()
-  axis(2,las=2)
+  box(bty='L', lwd=2)
+  axis(2,las=2, lwd=2)
   
   title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
   title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
@@ -1174,7 +1179,7 @@ plot.bar.no.g <- function(argv, output, prefix){
     title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
           line=2, cex=1.5, font=2, adj=0)
   }
-  dev.off()
+  g<-dev.off()
 }
 
 plot.bar <- function(argv, output, prefix){
@@ -1718,56 +1723,147 @@ if (provided("multi_plot", argv)) {
             multipheno <- multipheno[order(multipheno$PRS.R2), ]
             multipheno$Phenotype <-
                 factor(multipheno$Phenotype, levels = multipheno$Phenotype)
-            b <-
-                ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ],
-                       aes(
-                           x = Phenotype,
-                           y = PRS.R2,
-                           fill = -log10(P)
-                       )) +
-                theme_sam +
-                geom_bar(stat = "identity") +
-                coord_flip() +
-                ylab("Variance explained by PRS") +
-                scale_fill_distiller(palette = "Spectral", name = bquote(atop(-log[10] ~ model, italic(P) - value), ))
-            ggsave(paste(
-                argv$out,
-                "_MULTIPHENO_BARPLOT_",
-                Sys.Date(),
-                ".png",
-                sep = ""
-            ))
+            if(use.ggplot){
+              b <-
+                  ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ],
+                         aes(
+                             x = Phenotype,
+                             y = PRS.R2,
+                             fill = -log10(P)
+                         )) +
+                  theme_sam +
+                  geom_bar(stat = "identity") +
+                  coord_flip() +
+                  ylab("Variance explained by PRS") +
+                  scale_fill_distiller(palette = "Spectral", name = bquote(atop(-log[10] ~ model, italic(P) - value), ))
+              ggsave(paste(
+                  argv$out,
+                  "_MULTIPHENO_BARPLOT_",
+                  Sys.Date(),
+                  ".png",
+                  sep = ""
+              ))
+            }else{
+                png(paste(argv$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""),
+                    height=10, width=10, res=300, unit="in")
+                layout(t(1:2), widths=c(8.8,1.2))
+                
+                output <- multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ]
+                max.label.length <- max(sapply(output$Phenotype, 
+                                               function(x){
+                                                   info <- strsplit(as.character(x), split="\n")[[1]];
+                                                   max(sapply(info, nchar))
+                                               }
+                ))*0.75
+                par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                     oma=c(0,0.5,0,0),
+                     mar=c(4,max.label.length,0.5,0.5))
+                ylab <- "Variance explained by PRS"
+                col <- suppressWarnings(colorRampPalette(brewer.pal(12,"RdYlBu")))
+                
+                output <- output[order(-log10(output$P)),]
+                output$color <-  col(nrow(output))
+                output <- output[order(output$PRS.R2),]
+                b<- barplot(height=output$PRS.R2, 
+                            col=output$color, 
+                            border=NA, 
+                            ann=F, horiz=TRUE,
+                            ylab="",
+                            xlab=ylab)
+                axis(2,las=2, lwd=2, at=b, labels=output$Phenotype)
+                box(bty="L",lwd=2)
+                
+                
+                par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                    mar=c(20,0,20,4))
+                output <- output[order(-log10(output$P)),]
+                image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
+                axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
+                title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
+                      line=2, cex=1.5, font=2, adj=0)
+                
+                g<-dev.off()
+            }
             for (p in phenos) {
                 multiset <- subset(overview, Phenotype == p)
                 multiset <- multiset[order(multiset$PRS.R2), ]
                 multiset$Set <-
                     factor(multiset$Set, levels = multiset$Set)
-                b <-
-                    ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
-                        x = Set,
-                        y = PRS.R2,
-                        fill = -log10(P)
-                    )) +
-                    theme_sam +
-                    geom_bar(stat = "identity") +
-                    coord_flip() +
-                    ylab("Variance explained by PRS") +
-                    scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
-                    theme(axis.title.y = element_blank())
-                ggsave(
-                    paste(
-                        argv$out,
-                        "_",
-                        p,
-                        "_MULTISET_BARPLOT_",
-                        Sys.Date(),
-                        ".png",
-                        sep = ""
+                if(use.ggplot){
+                  b <-
+                      ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
+                          x = Set,
+                          y = PRS.R2,
+                          fill = -log10(P)
+                      )) +
+                      theme_sam +
+                      geom_bar(stat = "identity") +
+                      coord_flip() +
+                      ylab("Variance explained by PRS") +
+                      scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
+                      theme(axis.title.y = element_blank())
+                  ggsave(
+                      paste(
+                          argv$out,
+                          "_",
+                          p,
+                          "_MULTISET_BARPLOT_",
+                          Sys.Date(),
+                          ".png",
+                          sep = ""
+                      ),
+                      b,
+                      height = 10,
+                      width = 10
+                  )
+                }else{
+                    png(paste(argv$out,
+                              "_",
+                              p,
+                              "_MULTISET_BARPLOT_",
+                              Sys.Date(),
+                              ".png",
+                              sep = ""
                     ),
-                    b,
-                    height = 10,
-                    width = 10
-                )
+                        height=10, width=10, res=300, unit="in")
+                    layout(t(1:2), widths=c(8.8,1.2))
+                    output <- multiset[1:(min(argv$multi_plot, nrow(multiset))), ]
+                    max.label.length <- max(sapply(output$Set, 
+                                                   function(x){
+                                                       info <- strsplit(as.character(x), split="\n")[[1]];
+                                                       max(sapply(info, nchar))
+                                                    }
+                                                   ))*0.75
+                    par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                         oma=c(0,0.5,0,0),
+                         mar=c(4,max.label.length,0.5,0.5))
+                    ylab <- "Variance explained by PRS"
+                    col <- suppressWarnings(colorRampPalette(brewer.pal(12,"PuOr")))
+                    
+                    output <- output[order(-log10(output$P)),]
+                    output$color <-  col(nrow(output))
+                    output <- output[order(output$PRS.R2),]
+                    b<- barplot(height=output$PRS.R2, 
+                                col=output$color, 
+                                border=NA, 
+                                ann=F, horiz=TRUE,
+                                ylab="",
+                                xlab=ylab)
+                    axis(2,las=2, lwd=2, at=b, labels=output$Set)
+                    box(bty="L",lwd=2)
+                    
+                    
+                    par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                        mar=c(20,0,20,4))
+                    output <- output[order(-log10(output$P)),]
+                    image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
+                    axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
+                    title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
+                          line=2, cex=1.5, font=2, adj=0)
+                    
+                    g<-dev.off()
+                }
+                
             }
         } else{
             # Only plot one set plot. If phenotype == "-", replace it with pheno
@@ -1775,30 +1871,75 @@ if (provided("multi_plot", argv)) {
             multiset <- multiset[order(multiset$PRS.R2), ]
             multiset$Set <-
                 factor(multiset$Set, levels = multiset$Set)
-            b <-
-                ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
-                    x = Set,
-                    y = PRS.R2,
-                    fill = -log10(P)
-                )) +
-                theme_sam +
-                geom_bar(stat = "identity") +
-                coord_flip() +
-                ylab("Variance explained by PRS") +
-                scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
-                theme(axis.title.y = element_blank())
-            ggsave(
-                paste(
-                    argv$out,
-                    "_MULTISET_BARPLOT_",
-                    Sys.Date(),
-                    ".png",
-                    sep = ""
-                ),
-                b,
-                height = 10,
-                width = 10
-            )
+            if(use.ggplot){
+              b <-
+                  ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
+                      x = Set,
+                      y = PRS.R2,
+                      fill = -log10(P)
+                  )) +
+                  theme_sam +
+                  geom_bar(stat = "identity") +
+                  coord_flip() +
+                  ylab("Variance explained by PRS") +
+                  scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
+                  theme(axis.title.y = element_blank())
+              ggsave(
+                  paste(
+                      argv$out,
+                      "_MULTISET_BARPLOT_",
+                      Sys.Date(),
+                      ".png",
+                      sep = ""
+                  ),
+                  b,
+                  height = 10,
+                  width = 10
+              )
+            }else{
+                png(paste(argv$out,
+                          "_MULTISET_BARPLOT_",
+                          Sys.Date(),
+                          ".png",
+                          sep = ""
+                    ),
+                height=10, width=10, res=300, unit="in")
+                layout(t(1:2), widths=c(8.8,1.2))
+                output <- multiset[1:(min(argv$multi_plot, nrow(multiset))), ]
+                max.label.length <- max(sapply(output$Set, 
+                                               function(x){
+                                                   info <- strsplit(as.character(x), split="\n")[[1]];
+                                                   max(sapply(info, nchar))
+                                               }
+                ))*0.75
+                par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                     oma=c(0,0.5,0,0),
+                     mar=c(4,max.label.length,0.5,0.5))
+                ylab <- "Variance explained by PRS"
+                col <- suppressWarnings(colorRampPalette(brewer.pal(12,"PuOr")))
+                
+                output <- output[order(-log10(output$P)),]
+                output$color <-  col(nrow(output))
+                output <- output[order(output$PRS.R2),]
+                b<- barplot(height=output$PRS.R2, 
+                            col=output$color, 
+                            border=NA, 
+                            ann=F, horiz=TRUE,
+                            ylab="",
+                            xlab=ylab)
+                axis(2,las=2, lwd=2, at=b, labels=output$Set)
+                box(bty="L",lwd=2)
+                
+                
+                par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+                    mar=c(20,0,20,4))
+                output <- output[order(-log10(output$P)),]
+                image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
+                axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
+                title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
+                      line=2, cex=1.5, font=2, adj=0)
+                g<-dev.off()
+            }
             
         }
         
