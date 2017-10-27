@@ -47,15 +47,15 @@ class PRSice
 public:
     PRSice(std::string base_name, const Commander commander, bool prset,
            size_t sample_ct)
-        : m_base_name(base_name)
+		: m_ignore_fid(commander.ignore_fid())
+		, m_prset(prset)
+		, m_logit_perm(commander.logit_perm())
+		, m_num_perm(commander.num_permutation())
+		, m_score(commander.get_scoring())
+        , m_base_name(base_name)
         , m_target(commander.target_name())
-        , m_target_binary(commander.is_binary())
-        , m_score(commander.get_scoring())
-        , m_ignore_fid(commander.ignore_fid())
-        , m_prset(prset)
         , m_out(commander.out())
-        , m_num_perm(commander.num_permutation())
-        , m_logit_perm(commander.logit_perm())
+		, m_target_binary(commander.is_binary())
     {
 
         bool perm = commander.permute();

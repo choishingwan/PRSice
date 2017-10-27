@@ -1517,9 +1517,8 @@ namespace bgen
             // below.
         }
 
-        std::size_t const max_id_length = std::numeric_limits<uint16_t>::max();
-        assert(SNPID.size() <= static_cast<std::size_t>(max_id_length));
-        assert(RSID.size() <= static_cast<std::size_t>(max_id_length));
+        assert(SNPID.size() <= static_cast<std::size_t>(std::numeric_limits<uint16_t>::max()));
+        assert(RSID.size() <= static_cast<std::size_t>(std::numeric_limits<uint16_t>::max()));
         p = write_length_followed_by_data(p, end, uint16_t(SNPID.size()),
                                           SNPID.data());
         p = write_length_followed_by_data(p, end, uint16_t(RSID.size()),
