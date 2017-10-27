@@ -67,31 +67,9 @@ uint32_t g_log_failed = 0;
 uint32_t g_thread_ct;
 
 
-
-
-
-
-
-
-
-
-
 // manually managed, very large stack
 unsigned char* g_bigstack_base;
 unsigned char* g_bigstack_end;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Okay, time to do banker's rounding when printing doubles.  14 digits of
@@ -180,18 +158,6 @@ void magic_num(uint32_t divisor, uint64_t* multp,
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 // hashval computation left to caller since this is frequently used with
 // chromosome IDs, where the compiler can optimize the integer modulus
 // operation since the hash table size is preset
@@ -205,7 +171,6 @@ void magic_num(uint32_t divisor, uint64_t* multp,
 // the functions which reference them are doing.)
 const char* g_species_singular = nullptr;
 const char* g_species_plural = nullptr;
-
 
 
 static inline int32_t single_letter_chrom(uint32_t letter)
@@ -296,8 +261,6 @@ int32_t get_chrom_code_raw(const char* sptr)
 }
 
 
-
-
 #ifndef __cplusplus
 int32_t llcmp(const void* aa, const void* bb)
 {
@@ -315,7 +278,6 @@ int32_t llcmp(const void* aa, const void* bb)
     }
 }
 #endif
-
 
 
 #ifdef __LP64__
@@ -382,7 +344,6 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
     }
     return tot;
 }
-
 
 
 static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,

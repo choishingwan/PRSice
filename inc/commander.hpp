@@ -385,7 +385,8 @@ private:
         species.double_set = true;
     };
 
-    inline void load_binary_vector(const std::string& input, std::string& message,
+    inline void load_binary_vector(const std::string& input,
+                                   std::string& message,
                                    std::string& error_message,
                                    std::vector<bool>& target, bool& error,
                                    const std::string& c)
@@ -405,7 +406,8 @@ private:
         }
     }
 
-    inline void load_string_vector(const std::string& input, std::string& message,
+    inline void load_string_vector(const std::string& input,
+                                   std::string& message,
                                    std::vector<std::string>& target,
                                    const std::string& c)
     {
@@ -415,10 +417,10 @@ private:
     }
 
     template <typename T>
-    inline void load_numeric_vector(const std::string& input, std::string& message,
-                                    std::string& error_message,
-                                    std::vector<T>& target, bool& error,
-                                    const std::string& c)
+    inline void
+    load_numeric_vector(const std::string& input, std::string& message,
+                        std::string& error_message, std::vector<T>& target,
+                        bool& error, const std::string& c)
     {
 
         message.append(" \\\n    --" + c + " " + input);
@@ -438,7 +440,8 @@ private:
     template <typename Type>
     inline void set_numeric(const std::string& input, std::string& message,
                             std::string& error_message, Type& target,
-                            bool& target_boolean, bool& error, const std::string& c)
+                            bool& target_boolean, bool& error,
+                            const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         try
@@ -456,7 +459,7 @@ private:
     inline void set_model(const std::string& in, std::string& message,
                           std::string& error_message, bool& error)
     {
-    		std::string input = in;
+        std::string input = in;
         if (input.empty()) {
             error_message.append("ERROR: Model cannot be empty!\n");
             error = true;

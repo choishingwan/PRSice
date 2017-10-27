@@ -300,10 +300,13 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                "O'Reilly"
             << std::endl;
     logFile << "GNU General Public License v3" << std::endl << std::endl;
-    logFile << "If you use PRSice in any publised work, please cite:" << std::endl;
-    logFile << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)" << std::endl;
+    logFile << "If you use PRSice in any publised work, please cite:"
+            << std::endl;
+    logFile << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
+            << std::endl;
     logFile << "PRSice: Polygenic Risk Score software." << std::endl;
-    logFile << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;;
+    logFile << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
+    ;
     logFile << std::ctime(&start_time) << std::endl << std::endl;
     logFile << message << std::endl;
     logFile << std::endl;
@@ -325,8 +328,10 @@ Commander::Commander()
                  "O'Reilly"
               << std::endl;
     std::cerr << "GNU General Public License v3" << std::endl << std::endl;
-    std::cerr << "If you use PRSice in any publised work, please cite:" << std::endl;
-    std::cerr << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)" << std::endl;
+    std::cerr << "If you use PRSice in any publised work, please cite:"
+              << std::endl;
+    std::cerr << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
+              << std::endl;
     std::cerr << "PRSice: Polygenic Risk Score software." << std::endl;
     std::cerr << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
     base.beta = false;

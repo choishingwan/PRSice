@@ -189,7 +189,8 @@ protected:
 
 
     // hh_exists
-    inline bool ambiguous(const std::string& ref_allele, const std::string& alt_allele) const
+    inline bool ambiguous(const std::string& ref_allele,
+                          const std::string& alt_allele) const
     {
         return (ref_allele == "A" && alt_allele == "T")
                || (ref_allele == "a" && alt_allele == "t")

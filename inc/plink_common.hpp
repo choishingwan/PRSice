@@ -723,21 +723,20 @@ typedef union {
 #define QUATERCT_TO_WORDCT(val) (((val) + (BITCT2 - 1)) / BITCT2)
 #define QUATERCT_TO_ALIGNED_WORDCT(val) (VEC_WORDS * QUATERCT_TO_VECCT(val))
 
-    // todo: get rid of (BITCT_TO_WORDCT(x) == QUATERCT_TO_VECCT(x)) and similar
-    // assumptions, in preparation for AVX2
-
+// todo: get rid of (BITCT_TO_WORDCT(x) == QUATERCT_TO_VECCT(x)) and similar
+// assumptions, in preparation for AVX2
 
 
 #define MAXV(aa, bb) (((bb) > (aa)) ? (bb) : (aa))
 #define MINV(aa, bb) (((aa) > (bb)) ? (bb) : (aa))
 
 #ifdef _WIN32
-    // if MAX_THREADS > 65, single WaitForMultipleObjects calls must be
-    // converted into loops
+// if MAX_THREADS > 65, single WaitForMultipleObjects calls must be
+// converted into loops
 #define MAX_THREADS 64
 #define MAX_THREADS_P1 65
 #else
-    // shouldn't be larger than MODEL_BLOCKSIZE for now
+// shouldn't be larger than MODEL_BLOCKSIZE for now
 #define MAX_THREADS 512
 #define MAX_THREADS_P1 513
 #endif
@@ -822,7 +821,6 @@ typedef union {
 #endif
 
 
-
 // Generic text I/O buffer: any function which reads from/writes to a text file
 // or the console may clobber it.  Sized to fit two MAXLINELEN-length lines
 // plus a bit extra.
@@ -831,11 +829,6 @@ extern char g_textbuf[];
 extern const char g_one_char_strs[];
 extern const char* g_missing_geno_ptr;
 extern const char* g_output_missing_geno_ptr;
-
-
-
-
-
 
 
 extern uintptr_t g_failed_alloc_attempt_size;
@@ -866,15 +859,6 @@ typedef struct ll_str_struct
 } Ll_str;
 
 
-
-
-
-
-
-
-
-
-
 #ifdef STABLE_BUILD
 #define UNSTABLE(val)                    \
     sptr = strcpya(&(g_logbuf[9]), val); \
@@ -884,31 +868,19 @@ typedef struct ll_str_struct
 #endif
 
 
-
-
-
-
-
-
-
 // manually managed, very large double-ended stack
 extern unsigned char* g_bigstack_base;
 extern unsigned char* g_bigstack_end;
 
 
-
-
-
-
 #define END_ALLOC_CHUNK 16
 #define END_ALLOC_CHUNK_M1 (END_ALLOC_CHUNK - 1)
 
-    // assumes size is divisible by END_ALLOC_CHUNK
-    // (no value in directly calling this with a constant size parameter: the
-    // compiler will properly optimize a bigstack_end_alloc() call)
+// assumes size is divisible by END_ALLOC_CHUNK
+// (no value in directly calling this with a constant size parameter: the
+// compiler will properly optimize a bigstack_end_alloc() call)
 
 #define bigstack_end_aligned_alloc bigstack_end_alloc
-
 
 
 // if we need the digit value, better to use (unsigned char)cc - '0'...
@@ -923,49 +895,12 @@ HEADER_INLINE int32_t is_eoln_kns(unsigned char ucc) {
 */
 
 
-
 // could assert ucc is not a space/tab
 #define is_eoln_kns is_space_or_eoln
 
 
 // Reads an integer in [1, cap].  Assumes first character is nonspace.  Has the
 // overflow detection atoi() lacks.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Write exactly four digits (padding with zeroes if necessary); useful for
@@ -981,16 +916,7 @@ char* uitoa_z4(uint32_t uii, char* start);
 // very good at what they do.)
 
 
-
-
-
-
-
-
-
 // assumes min_width >= 5.
-
-
 
 
 /*
@@ -1019,7 +945,6 @@ HEADER_INLINE void set_bit(uint32_t loc, uintptr_t* bitarr)
 }
 
 
-
 #define CLEAR_BIT(idx, arr) \
     ((arr)[(idx) / BITCT] &= ~(ONELU << ((idx) % BITCT)))
 
@@ -1044,12 +969,7 @@ HEADER_INLINE uint32_t is_set(const uintptr_t* bitarr, uint32_t loc)
 }
 
 
-
 #define IS_NONNULL_AND_SET(arr, idx) ((arr) && IS_SET(arr, idx))
-
-
-
-
 
 
 #ifdef __LP64__
@@ -1075,9 +995,6 @@ HEADER_INLINE void fill_ulong_one(size_t size, uintptr_t* ularr)
 }
 
 
-
-
-
 HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
 {
     size_t ulii;
@@ -1085,14 +1002,6 @@ HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
         *uiarr++ = 0;
     }
 }
-
-
-
-
-
-
-
-
 
 
 // for hash tables where maximum ID string length is not known in advance.
@@ -1134,12 +1043,8 @@ HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
 #endif
 
 
-
 extern const char* g_species_singular;
 extern const char* g_species_plural;
-
-
-
 
 
 // in the usual case where the number of chromosomes/contigs is much less than
@@ -1158,17 +1063,6 @@ int32_t get_chrom_code_raw(const char* sptr);
 
 
 // when it's okay to just replace the terminating space/tab with a \0
-
-
-
-
-
-
-
-
-
-
-
 
 
 #ifndef __cplusplus
@@ -1209,9 +1103,6 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct);
 #define popcount01_longs popcount2_longs
 
 
-
-
-
 uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
                                    const uintptr_t* __restrict lptr2,
                                    uintptr_t word_ct);
@@ -1231,9 +1122,7 @@ void count_3freq_1920b(const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
 #endif
 
 
-
 void fill_all_bits(uintptr_t ct, uintptr_t* bitarr);
-
 
 
 void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf);
@@ -1263,7 +1152,6 @@ HEADER_INLINE uintptr_t get_final_mask(uint32_t sample_ct)
         return ~ZEROLU;
     }
 }
-
 
 
 // was "collapse_copy_quaterarr_incl", but this should be better way to think
@@ -1317,13 +1205,6 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
 void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
                 uintptr_t* sample_male_include_quaterarr,
                 uintptr_t unfiltered_sample_ct);
-
-
-
-
-
-
-
 
 
 uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,

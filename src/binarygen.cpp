@@ -325,8 +325,9 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
             if (IS_SET(m_sample_include.data(),
                        i_sample)) // to ignore unwanted samples
             {
-            		// we want g to be signed so that when -2, it will not cause us troubles
-                for (int g = 0; g < (int)prob.size(); ++g) {
+                // we want g to be signed so that when -2, it will not cause us
+                // troubles
+                for (int g = 0; g < (int) prob.size(); ++g) {
                     if (*max_element(prob.begin(), prob.end())
                         < filter.hard_threshold)
                     {

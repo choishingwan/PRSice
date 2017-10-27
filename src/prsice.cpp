@@ -902,8 +902,9 @@ void PRSice::regress_score(const double threshold, size_t thread,
 
 
 void PRSice::run_prsice(const Commander& c_commander,
-                        const std::string& region_name, const size_t pheno_index,
-                        const size_t region_index, Genotype& target)
+                        const std::string& region_name,
+                        const size_t pheno_index, const size_t region_index,
+                        Genotype& target)
 {
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
