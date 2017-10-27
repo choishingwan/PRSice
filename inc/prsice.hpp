@@ -45,8 +45,8 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, const Commander commander, bool prset,
-           size_t sample_ct)
+    PRSice(const std::string& base_name, const Commander& commander, const bool prset,
+           const size_t sample_ct)
 		: m_ignore_fid(commander.ignore_fid())
 		, m_prset(prset)
 		, m_logit_perm(commander.logit_perm())
@@ -141,7 +141,7 @@ public:
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
-    void run_prsice(const Commander& c_commander, const std::string region_name,
+    void run_prsice(const Commander& c_commander, const std::string& region_name,
                     const size_t pheno_index, const size_t region_index,
                     Genotype& target);
     void regress_score(const double threshold, size_t thread,

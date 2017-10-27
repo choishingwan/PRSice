@@ -131,7 +131,6 @@ public:
     {
         return prsice.barlevel.back();
     }; // we have sorted it
-    double bar_lower() const { return prsice.barlevel.front(); };
     int model() const { return prsice.model; };
 
     // prslice
@@ -386,10 +385,10 @@ private:
         species.double_set = true;
     };
 
-    inline void load_binary_vector(std::string input, std::string& message,
+    inline void load_binary_vector(const std::string& input, std::string& message,
                                    std::string& error_message,
                                    std::vector<bool>& target, bool& error,
-                                   std::string c)
+                                   const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         std::vector<std::string> token = misc::split(input, ",");
@@ -406,9 +405,9 @@ private:
         }
     }
 
-    inline void load_string_vector(std::string input, std::string& message,
+    inline void load_string_vector(const std::string& input, std::string& message,
                                    std::vector<std::string>& target,
-                                   std::string c)
+                                   const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         std::vector<std::string> token = misc::split(input, ",");
@@ -416,10 +415,10 @@ private:
     }
 
     template <typename T>
-    inline void load_numeric_vector(std::string input, std::string& message,
+    inline void load_numeric_vector(const std::string& input, std::string& message,
                                     std::string& error_message,
                                     std::vector<T>& target, bool& error,
-                                    std::string c)
+                                    const std::string& c)
     {
 
         message.append(" \\\n    --" + c + " " + input);
@@ -437,9 +436,9 @@ private:
     }
 
     template <typename Type>
-    inline void set_numeric(std::string input, std::string& message,
+    inline void set_numeric(const std::string& input, std::string& message,
                             std::string& error_message, Type& target,
-                            bool& target_boolean, bool& error, std::string c)
+                            bool& target_boolean, bool& error, const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         try
@@ -454,9 +453,10 @@ private:
         }
     }
 
-    inline void set_model(std::string input, std::string& message,
+    inline void set_model(const std::string& in, std::string& message,
                           std::string& error_message, bool& error)
     {
+    		std::string input = in;
         if (input.empty()) {
             error_message.append("ERROR: Model cannot be empty!\n");
             error = true;
@@ -488,9 +488,9 @@ private:
             error_message.append("ERROR: Unrecognized model: " + input + "!\n");
         }
     }
-    inline void set_string(std::string input, std::string& message,
+    inline void set_string(const std::string& input, std::string& message,
                            std::string& target, bool& target_boolean,
-                           std::string c)
+                           const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         target = input;
@@ -510,7 +510,7 @@ private:
 
     inline int index_check(const std::string& target, const int max,
                            bool& error, std::string& error_message,
-                           std::string name)
+                           const std::string& name)
     {
         try
         {

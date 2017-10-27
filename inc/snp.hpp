@@ -100,12 +100,7 @@ public:
     };
 
     inline void flipped() { statistic.flipped = true; };
-    inline void fill_info(int chr, int loc, std::string alt)
-    {
-        if (basic.chr == -1) basic.chr = chr;
-        if (basic.loc == -1) basic.loc = loc;
-        if (basic.alt.empty()) basic.alt = alt;
-    };
+
     inline bool matching(int chr, int loc, std::string ref, std::string alt,
                          bool& flipped)
     {
@@ -190,10 +185,6 @@ public:
     void add_clump(std::vector<size_t>& i)
     {
         clump_info.target.insert(clump_info.target.end(), i.begin(), i.end());
-    };
-    void add_clump_r2(std::vector<double>& i)
-    {
-        clump_info.r2.insert(clump_info.r2.end(), i.begin(), i.end());
     };
 
     void add_clump(size_t index, double r2)
