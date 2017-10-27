@@ -161,6 +161,14 @@ help_message <-
     --full                  Include the full model in the analysis\n
     --interval      | -i    The step size of the threshold. Default: 0.00005\n
     --lower         | -l    The starting p-value threshold. Default: 0.0001\n
+    --model                 Genetic model use for regression. The genetic\n
+                            encoding is based on the base data where the\n
+                            encoding represent number of the effective allele\n
+                            Available models include:\n
+                            add - Additive model, code as 0/1/2 (default)\n
+                            dom - Dominant model, code as 0/1/1\n
+                            rec - Recessive model, code as 0/0/1\n
+                            het - Heterozygous only model, code as 0/1/0\n
     --no-regress            Do not perform the regression analysis and simply\n
                             output all PRS.\n
     --score                 Method to handle missing genotypes. By default, \n
@@ -430,6 +438,7 @@ option_list <- list(
     make_option(c("--maf-base"), type = "character", dest="maf_base"),
     make_option(c("--keep"), type = "character"),
     make_option(c("--ld-type"), type = "character", dest = "ld_type"),
+    make_option(c("--model"), type = "character", default="add"),
     make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
     make_option(c("--perm"), type = "numeric"),
     make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
