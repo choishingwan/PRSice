@@ -45,7 +45,8 @@
 class PRSice
 {
 public:
-    PRSice(std::string base_name, const Commander commander, bool prset)
+    PRSice(std::string base_name, const Commander commander, bool prset,
+           size_t sample_ct)
         : m_base_name(base_name)
         , m_target(commander.target_name())
         , m_target_binary(commander.is_binary())
@@ -82,14 +83,15 @@ public:
         if (perm) {
             // first check for ridiculously large sample size
             // allow 10 GB here
-            if (CHAR_BIT * m_sample_included.size() > 1000000000) {
+            if (CHAR_BIT * sample_ct > 1000000000) {
                 m_perm_per_slice = 1;
             }
             else
             {
                 // in theory, most of the time, perm_per_slice should be
                 // equal to c_commander.num_permutation();
-                int sample_memory = CHAR_BIT * m_sample_included.size();
+
+                int sample_memory = CHAR_BIT * sample_ct;
                 m_perm_per_slice = 1000000000 / sample_memory;
                 m_perm_per_slice = (m_perm_per_slice > m_num_perm)
                                        ? m_num_perm

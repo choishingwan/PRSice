@@ -57,6 +57,7 @@ public:
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
+    size_t num_sample() const { return m_sample_names.size(); }
     bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
                    int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index);
@@ -105,7 +106,6 @@ protected:
 
     // storage of sample information
     std::vector<Sample> m_sample_names;
-
     /** SNP/Sample selection **/
     // default is remove (if not provided, the list is empty,
     // thus nothing will be removed)
@@ -186,6 +186,7 @@ protected:
     virtual void read_score(std::vector<Sample_lite>& current_prs_score,
                             size_t start_index, size_t end_bound,
                             const size_t region_index){};
+
 
     // hh_exists
     inline bool ambiguous(std::string ref_allele, std::string alt_allele)

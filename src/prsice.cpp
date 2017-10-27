@@ -1388,7 +1388,7 @@ void PRSice::summarize(const Commander& commander)
     }
     out << "Phenotype\tSet\tThreshold\tPRS.R2\tFull.R2\tNull."
            "R2\tPrevalence\tCoefficient\tP\tNum_SNP";
-    if (perm) out << "Empirical-P";
+    if (perm) out << "\tEmpirical-P";
     out << std::endl;
     for (auto&& sum : m_prs_summary) {
         out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
