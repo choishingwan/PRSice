@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <stdint.h>
 #include <vector>
 #include <zlib.h>
@@ -100,9 +101,8 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
 {
     uLongf const source_size = (end - begin);
     uLongf dest_size = dest->size() * sizeof(T);
-    int result =
-        uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
-                   reinterpret_cast<Bytef const*>(begin), source_size);
+    uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
+               reinterpret_cast<Bytef const*>(begin), source_size);
     assert(result == Z_OK);
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
@@ -1517,9 +1517,10 @@ namespace bgen
             // below.
         }
 
-        std::size_t const max_id_length = std::numeric_limits<uint16_t>::max();
-        assert(SNPID.size() <= static_cast<std::size_t>(max_id_length));
-        assert(RSID.size() <= static_cast<std::size_t>(max_id_length));
+        assert(SNPID.size() <= static_cast<std::size_t>(
+                                   std::numeric_limits<uint16_t>::max()));
+        assert(RSID.size() <= static_cast<std::size_t>(
+                                  std::numeric_limits<uint16_t>::max()));
         p = write_length_followed_by_data(p, end, uint16_t(SNPID.size()),
                                           SNPID.data());
         p = write_length_followed_by_data(p, end, uint16_t(RSID.size()),

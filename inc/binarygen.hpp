@@ -45,7 +45,7 @@ private:
                       bool has_sex, int sex_col, std::vector<int>& sex_info);
     std::vector<Sample> preload_samples(std::string pheno, bool has_header,
                                         bool ignore_fid);
-    std::unordered_map<std::string, int> m_sample_index_check;
+    std::unordered_map<std::string, size_t> m_sample_index_check;
 
     std::vector<Sample> load_samples(bool ignore_fid);
 
@@ -91,20 +91,20 @@ private:
             uintptr_t cur_geno = 1;
             for (size_t g = 0; g < prob.size(); ++g) {
                 if (prob[g] >= filter.hard_threshold) {
-                    cur_geno = (g == 0) ? 0 : g+1; // binary code for plink
+                    cur_geno = (g == 0) ? 0 : g + 1; // binary code for plink
                     break;
                 }
             }
             // now genotype contain the genotype of this sample after filtering
             // need to bit shift here
-            if(shift==0) genotype[index] = 0; // match behaviour of binaryplink
+            if (shift == 0)
+                genotype[index] = 0; // match behaviour of binaryplink
             genotype[index] |= cur_geno << shift;
-            shift+=2;
-            if(shift==BITCT){
+            shift += 2;
+            if (shift == BITCT) {
                 index++;
-                shift=0;
+                shift = 0;
             }
-
         }
     };
 
@@ -160,12 +160,16 @@ private:
         return 0;
     }
 
-    void read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                    size_t start_index, size_t end_bound);
-    void hard_code_score(misc::vec2d<Sample_lite>& current_prs_score,
-                         size_t start_index, size_t end_bound);
-    void dosage_score(misc::vec2d<Sample_lite>& current_prs_score,
-                      size_t start_index, size_t end_bound);
+
+    void read_score(std::vector<Sample_lite>& current_prs_score,
+                    size_t start_index, size_t end_bound,
+                    const size_t region_index);
+    void hard_code_score(std::vector<Sample_lite>& current_prs_score,
+                         size_t start_index, size_t end_bound,
+                         const size_t region_index);
+    void dosage_score(std::vector<Sample_lite>& current_prs_score,
+                      size_t start_index, size_t end_bound,
+                      const size_t region_index);
     std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
     std::unordered_map<std::string, uint32_t> m_offset_map;
     std::ifstream m_bgen_file;
@@ -238,7 +242,7 @@ private:
     private:
         Data* m_result;
         std::size_t m_sample_i;
-        std::size_t m_entry_i;
+        std::size_t m_entry_i = 0;
     };
     void read_genotype_data_block(std::istream& aStream,
                                   genfile::bgen::Context const& context,

@@ -61,13 +61,19 @@ public:
         m_region_name.clear();
         m_region_name.push_back("Base");
     }
+    void clean()
+    {
+        m_region_list = std::vector<std::vector<region_bound>>();
+        ;
+        m_snp_check_index = std::vector<size_t>();
+    }
 
 private:
     struct region_bound
     {
         int chr;
-        int start;
-        int end;
+        size_t start;
+        size_t end;
     };
     std::string m_out_prefix; // for log file
     // for checking duplicated region

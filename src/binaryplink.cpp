@@ -203,7 +203,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
                                    == m_sample_selection_list.end());
         }
 
-        cur_sample.prs = 0;
+
         cur_sample.num_snp = 0;
 
         if (founder_info.find(token[+FAM::FATHER]) == founder_info.end()
@@ -523,26 +523,20 @@ void BinaryPlink::check_bed()
 }
 
 
-void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                             size_t start_index, size_t end_bound)
+void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
+                             size_t start_index, size_t end_bound,
+                             const size_t region_index)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    size_t num_included_samples = current_prs_score.cols();
+    size_t num_included_samples = current_prs_score.size();
 
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
     }
-    // haven't figured out what this max_reverse does
-    // a simple size check
-    if (current_prs_score.rows() != m_region_size) {
-        throw std::runtime_error(
-            "Size of Matrix doesn't match number of region!!");
-    }
-    std::vector<bool> in_region(m_region_size);
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
@@ -563,10 +557,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                 throw std::runtime_error(error_message);
             }
         }
-        for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
-            //  check if the SNP fall within the region
-            in_region[i_region] = m_existed_snps[i_snp].in(i_region);
-        }
+        // only read this SNP if it falls within our region of interest
+        if (!m_existed_snps[i_snp].in(region_index)) continue;
         // current location of the snp in the bed file
         // allow for quick jumping
         // very useful for read score as most SNPs might not
@@ -580,10 +572,6 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         }
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
-        // std::fill(genotype.begin(), genotype.end(), 0);
-        // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        // m_bed_file.read((char*) &genotype[0], unfiltered_sample_ct4);
-
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(),
@@ -602,7 +590,8 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
         double stat = m_existed_snps[i_snp].stat();
         bool flipped = m_existed_snps[i_snp].is_flipped();
         uint32_t sample_idx = 0;
-        size_t total_num = 0;
+
+        int aa = 0, aA = 0, AA = 0;
         size_t nmiss = 0;
         do
         {
@@ -620,8 +609,14 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
                     if (sample_idx < num_included_samples) {
-                        total_num += (ukk == 3) ? 2 : ukk;
-                        sample_genotype[sample_idx] = (ukk == 3) ? 2 : ukk;
+                        int g = (ukk == 3) ? 2 : ukk;
+                        switch (g)
+                        {
+                        case 0: aa++; break;
+                        case 1: aA++; break;
+                        case 2: AA++; break;
+                        }
+                        sample_genotype[sample_idx] = g;
                     }
                 }
                 else // this should be 2
@@ -634,51 +629,74 @@ void BinaryPlink::read_score(misc::vec2d<Sample_lite>& current_prs_score,
             uii += BITCT2;
         } while (uii < num_included_samples);
 
-        double maf = ((double) total_num
-                      / ((double) (num_included_samples - nmiss)
-                         * 2.0)); // MAF does not count missing
-        if (num_included_samples == nmiss
-            || maf - 0 < std::numeric_limits<double>::epsilon())
-        {
+        if (num_included_samples - nmiss == 0) {
             m_existed_snps[i_snp].invalidate();
             continue;
         }
-        if (flipped) maf = 1.0 - maf;
+        // due to the way the binary code works, the aa will always be 0
+        // added there just for fun tbh
+        aa = num_included_samples - nmiss - aA - AA;
+        assert(aa >= 0);
+        if (flipped) {
+            int temp = aa;
+            aa = AA;
+            AA = temp;
+        }
+        if (m_model == +MODEL::HETEROZYGOUS) {
+            // 010
+            aa += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::DOMINANT)
+        {
+            // 011;
+            aA += AA;
+            AA = 0;
+        }
+        else if (m_model == +MODEL::RECESSIVE)
+        {
+            // 001
+            aa += aA;
+            aA = AA;
+            AA = 0;
+        }
+        double maf = ((double) (aA + AA * 2)
+                      / ((double) (num_included_samples - nmiss)
+                         * 2.0)); // MAF does not count missing
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         size_t i_missing = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
             if (i_missing < num_miss && i_sample == missing_samples[i_missing])
             {
-                for (size_t i_region = 0; i_region < m_region_size; ++i_region)
-                {
-                    if (in_region[i_region]) {
-                        if (m_scoring == SCORING::MEAN_IMPUTE)
-                            current_prs_score(i_region, i_sample).prs +=
-                                center_score;
-                        if (m_scoring != SCORING::SET_ZERO)
-                            current_prs_score(i_region, i_sample).num_snp++;
-                    }
-                }
+                if (m_scoring == SCORING::MEAN_IMPUTE)
+                    current_prs_score[i_sample].prs += center_score;
+                if (m_scoring != SCORING::SET_ZERO)
+                    current_prs_score[i_sample].num_snp++;
+
                 i_missing++;
             }
             else
             { // not missing sample
-                for (size_t i_region = 0; i_region < m_region_size; ++i_region)
-                {
-                    if (in_region[i_region]) {
-                        if (m_scoring == SCORING::CENTER) {
-                            // if centering, we want to keep missing at 0
-                            current_prs_score(i_region, i_sample).prs -=
-                                center_score;
-                        }
-                        int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
-                                          : sample_genotype[i_sample];
-                        current_prs_score(i_region, i_sample).prs +=
-                            g * stat * 0.5;
-                        current_prs_score(i_region, i_sample).num_snp++;
-                    }
+                if (m_scoring == SCORING::CENTER) {
+                    // if centering, we want to keep missing at 0
+                    current_prs_score[i_sample].prs -= center_score;
                 }
+                int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
+                                  : sample_genotype[i_sample];
+                if (m_model == +MODEL::HETEROZYGOUS) {
+                    g = (g == 2) ? 0 : g;
+                }
+                else if (m_model == +MODEL::RECESSIVE)
+                {
+                    g = std::max(0, g - 1);
+                }
+                else if (m_model == +MODEL::DOMINANT)
+                {
+                    g = (g == 2) ? 1 : g;
+                }
+                current_prs_score[i_sample].prs += g * stat * 0.5;
+                current_prs_score[i_sample].num_snp++;
             }
         }
     }

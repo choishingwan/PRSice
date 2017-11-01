@@ -251,7 +251,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     const bool fastscore = c_commander.fastscore();
     const bool full = c_commander.full();
     const bool filter_info = c_commander.filter_info();
+    const bool filter_maf = c_commander.filter_base_maf();
     const double info_threshold = c_commander.info_score();
+    const double maf_base = c_commander.maf_base();
     std::vector<int> index =
         c_commander.index(); // more appropriate for commander
     // now coordinates obtained from target file instead. Coordinate information
@@ -297,6 +299,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t num_line_in_base = 0;
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
+    size_t num_maf_filter = 0;
 
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
@@ -389,6 +392,23 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
                     std::string error_message =
                         "ERROR: Non-numeric loci for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
+                }
+            }
+            double maf = 1;
+            if (filter_maf && index[+BASE_INDEX::MAF] >= 0) {
+                try
+                {
+                    maf = misc::convert<double>(
+                        token[index[+BASE_INDEX::MAF]].c_str());
+                }
+                catch (const std::runtime_error& error)
+                {
+                    num_maf_filter++;
+                    exclude = true;
+                }
+                if (maf < maf_base) {
+                    num_maf_filter++;
+                    exclude = true;
                 }
             }
             double info_score = 1;
@@ -544,6 +564,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         // cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
         cur_snp.set_flag(region);
     }
+    // Suggest that we want to release memory
+    // but this is only a suggest as this is non-binding request
+    // Proper way of releasing memory will be to do swarp. Yet that
+    // might lead to out of scrope or some other error here?
+    m_existed_snps.shrink_to_fit();
     m_region_size = region.size();
     fprintf(stderr, "%zu SNP(s) observed in base file, with:\n",
             num_line_in_base);
@@ -620,6 +645,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
         log_file_stream << num_info_filter
                         << " SNP filtered due to info threshold" << std::endl;
     }
+    if (num_maf_filter) {
+        fprintf(stderr, "%zu SNPs with MAF less than %f\n", num_maf_filter,
+                maf_base);
+        log_file_stream << num_maf_filter
+                        << " SNP filtered due to MAF threshold" << std::endl;
+    }
     fprintf(stderr, "%zu total SNPs included from base file\n\n",
             m_existed_snps.size());
     log_file_stream << m_existed_snps.size()
@@ -646,6 +677,7 @@ void Genotype::set_info(const Commander& c_commander)
     filter.maf = c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();
+    m_model = c_commander.model();
 }
 
 
@@ -777,7 +809,7 @@ int Genotype::process_block(int& start_index, int end_index,
     // note: only allow to invoke clean_clump in this function
     // first, remove any SNPs that is too far away from the first core index
     auto&& first_core = m_existed_snps[first_core_index];
-    for (size_t i_snp = start_index; i_snp < first_core_index; ++i_snp) {
+    for (int i_snp = start_index; i_snp < first_core_index; ++i_snp) {
         auto&& cur_snp = m_existed_snps[i_snp];
         if (cur_snp.chr() != first_core.chr()
             || cur_snp.loc() - first_core.loc() > clump_info.distance)
@@ -793,14 +825,14 @@ int Genotype::process_block(int& start_index, int end_index,
     // the last SNP in our range must be outside of the first core's range
     // due to how we did it
     // the only exception is when end_index == m_existed_snps.size()
-    size_t last_core_index = m_existed_snps.size() - 1;
+    int last_core_index = m_existed_snps.size() - 1;
     // if the end index equals to the size of the vector
     // then we know we should just finish the whole job
     // thus the last_core_index == m_existed_snps.size()
-    if (end_index < m_existed_snps.size()) {
+    if (end_index < (int) m_existed_snps.size()) {
         auto&& last_snp = m_existed_snps[end_index - 1];
         // -2 because the current SNP won't be in place
-        for (size_t i_snp = end_index - 2; i_snp > first_core_index; --i_snp) {
+        for (int i_snp = end_index - 2; i_snp > first_core_index; --i_snp) {
             auto&& cur_snp = m_existed_snps[i_snp];
             if ((cur_snp.chr() == last_snp.chr()
                  && last_snp.loc() - cur_snp.loc() > clump_info.distance)
@@ -844,7 +876,7 @@ int Genotype::process_block(int& start_index, int end_index,
         thread_store.clear();
     }
 
-    for (size_t i_snp = start_index; i_snp <= last_core_index; ++i_snp) {
+    for (int i_snp = start_index; i_snp <= last_core_index; ++i_snp) {
         m_existed_snps[i_snp].clean_clump();
     }
 
@@ -855,7 +887,7 @@ int Genotype::process_block(int& start_index, int end_index,
         start_index = last_core_index + 1;
         // find the next core snp
         first_core_index = -1;
-        for (size_t i_snp = start_index; i_snp < end_index; ++i_snp) {
+        for (int i_snp = start_index; i_snp < end_index; ++i_snp) {
             if (m_existed_snps[i_snp].p_value() <= clump_info.p_value) {
                 first_core_index = i_snp;
                 break;
@@ -928,8 +960,7 @@ void Genotype::efficient_clumping(Genotype& reference)
 
         if (cur_snp_index >= m_existed_snps.size()) {
             if (block_available) {
-                int remain =
-                    process_block(start_index, cur_snp_index, core_index);
+                process_block(start_index, cur_snp_index, core_index);
                 assert(remain == 0);
                 completed = true;
                 // just in case, clean everything from start to end
@@ -1077,6 +1108,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
 
     } while (!completed);
+
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     std::vector<int> remain_snps;
     std::unordered_set<double> used_thresholds;
@@ -1145,7 +1177,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         }
         m_existed_snps.erase(last, m_existed_snps.end());
     }
-
+    m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
     // no longer require the m_existed_snps_index
     std::ofstream log_file_stream;
@@ -1181,9 +1213,9 @@ bool Genotype::prepare_prsice()
     return true;
 }
 
-bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
+bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
                          int& cur_category, double& cur_threshold,
-                         std::vector<size_t>& num_snp_included)
+                         size_t& num_snp_included, const size_t region_index)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1204,9 +1236,8 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
             break;
         }
         //		// Use as part of the output
-        for (size_t i_region = 0; i_region < m_region_size; ++i_region) {
-            if (m_existed_snps[i].in(i_region)) num_snp_included[i_region]++;
-        }
+
+        if (m_existed_snps[i].in(region_index)) num_snp_included++;
     }
     if (!ended) {
         end_index = m_existed_snps.size();
@@ -1214,13 +1245,14 @@ bool Genotype::get_score(misc::vec2d<Sample_lite>& prs_score, int& cur_index,
     }
     else
         cur_category = m_existed_snps[end_index].category();
-    read_score(prs_score, cur_index, end_index);
+    read_score(prs_score, cur_index, end_index, region_index);
 
     cur_index = end_index;
     return true;
 }
 
-void Genotype::print_snp(std::string& output, double threshold)
+void Genotype::print_snp(std::string& output, double threshold,
+                         const size_t region_index)
 {
     std::ofstream snp_out;
     snp_out.open(output);
@@ -1230,7 +1262,7 @@ void Genotype::print_snp(std::string& output, double threshold)
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {
-        if (snp.get_threshold() <= threshold) {
+        if (snp.get_threshold() <= threshold && snp.in(region_index)) {
             snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
                     << "\t" << snp.p_value() << std::endl;
         }

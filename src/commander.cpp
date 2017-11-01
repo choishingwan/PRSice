@@ -25,7 +25,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string message = argv[0];
     std::string error_messages = "";
     std::string temp_string = "";
-    int temp_int = 0;
+    size_t temp_int = 0;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
@@ -55,6 +55,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("se") == 0)
                 set_string(optarg, message, base.standard_error,
                            base.provided_se, command);
+            else if (command.compare("model") == 0)
+                set_model(optarg, message, error_messages, error);
             else if (command.compare("cov-header")
                      == 0) // cerr for backward compatibility
                 load_string_vector(optarg, message, covariate.covariates,
@@ -79,6 +81,9 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                            target.remove_sample, command);
             else if (command.compare("ld-type") == 0)
                 set_string(optarg, message, clumping.type, clumping.use_type,
+                           command);
+            else if (command.compare("maf-base") == 0)
+                set_string(optarg, message, base.maf, base.provided_maf,
                            command);
             else if (command.compare("type") == 0)
                 set_string(optarg, message, target.type, target.use_type,
@@ -126,10 +131,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("memory") == 0)
                 set_numeric<int>(optarg, message, error_messages, misc.memory,
                                  misc.provided_memory, error, command);
-            else if (command.compare("info") == 0)
-                set_numeric<double>(optarg, message, error_messages,
-                                    base.info_score, dummy, error, command);
-            else if (command.compare("info-col") == 0)
+            else if (command.compare("info-base") == 0)
                 set_string(optarg, message, base.info_col, base.use_info,
                            command);
 
@@ -212,7 +214,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'o': set_string(optarg, message, misc.out, dummy, "out"); break;
         case 'p':
-            set_string(optarg, message, base.p_value, base.provided_p, "pvalue");
+            set_string(optarg, message, base.p_value, base.provided_p,
+                       "pvalue");
             break;
         case 's':
             set_numeric<int>(optarg, message, error_messages, misc.seed,
@@ -269,7 +272,14 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (prsice.full) message.append(" \\\n    --full");
     if (prsice.no_regress) message.append(" \\\n    --no-regression");
     if (target.nonfounders) message.append(" \\\n    --nonfounders");
-
+    if ((clumping.ld.empty() && target.type.compare("bgen") == 0)
+        || clumping.type.compare("bgen") == 0)
+    {
+        if (!filter.use_hard_thres) {
+            message.append(" \\\n    --hard-thres "
+                           + std::to_string(filter.hard_threshold));
+        }
+    }
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -285,10 +295,18 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     }
     logFile << "PRSice " << version << " (" << date << ") " << std::endl;
     logFile << "https://github.com/choishingwan/PRSice" << std::endl;
-    logFile << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. "
-               "O'Reilly, Sam Choi"
+    logFile << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. "
+               "Lewis, Paul F. "
+               "O'Reilly"
             << std::endl;
     logFile << "GNU General Public License v3" << std::endl << std::endl;
+    logFile << "If you use PRSice in any publised work, please cite:"
+            << std::endl;
+    logFile << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
+            << std::endl;
+    logFile << "PRSice: Polygenic Risk Score software." << std::endl;
+    logFile << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
+    ;
     logFile << std::ctime(&start_time) << std::endl << std::endl;
     logFile << message << std::endl;
     logFile << std::endl;
@@ -305,11 +323,17 @@ Commander::Commander()
     std::cerr << std::endl;
     std::cerr << "PRSice " << version << " (" << date << ") " << std::endl;
     std::cerr << "https://github.com/choishingwan/PRSice" << std::endl;
-    std::cerr << "(C) 2016-2017 Jack Euesden, Cathryn M. Lewis, Paul F. "
-                 "O'Reilly, Sam Choi"
+    std::cerr << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. "
+                 "Lewis, Paul F. "
+                 "O'Reilly"
               << std::endl;
     std::cerr << "GNU General Public License v3" << std::endl << std::endl;
-
+    std::cerr << "If you use PRSice in any publised work, please cite:"
+              << std::endl;
+    std::cerr << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
+              << std::endl;
+    std::cerr << "PRSice: Polygenic Risk Score software." << std::endl;
+    std::cerr << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
     base.beta = false;
     base.name = "";
     base.chr = "CHR";
@@ -320,12 +344,14 @@ Commander::Commander()
     base.bp = "BP";
     base.standard_error = "SE";
     base.p_value = "P";
-    base.info_col = "INFO";
+    base.info_col = "INFO,0.9";
+    base.maf = "";
     base.info_score = 0.9;
     base.index = false;
     base.provided_chr = false;
     base.provided_ref = false;
     base.provided_alt = false;
+    base.provided_maf = false;
     base.provided_stat = false;
     base.provided_snp = false;
     base.provided_bp = false;
@@ -385,6 +411,7 @@ Commander::Commander()
     prset.perform_prset = false;
 
     prsice.missing_score = "";
+    prsice.model = +MODEL::ADDITIVE;
     prsice.lower = 0.0001;
     prsice.upper = 0.5;
     prsice.inter = 0.00005;
@@ -475,13 +502,14 @@ bool Commander::init(int argc, char* argv[])
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
         {"hard-thres", required_argument, NULL, 0},
-        {"info", required_argument, NULL, 0},
-        {"info-col", required_argument, NULL, 0},
+        {"info-base", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
+        {"maf-base", required_argument, NULL, 0},
         {"memory", required_argument, NULL, 0},
+        {"model", required_argument, NULL, 0},
         {"num-auto", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
         {"pheno-col", required_argument, NULL, 0},
@@ -523,23 +551,35 @@ void Commander::info()
         "                            BETA or OR. If set, test statistic is "
         "assume\n"
         "                            to be in the form of BETA.\n"
-        "    --A1                    Column header containing the reference "
-        "allele\n"
+        "    --A1                    Column header containing allele 1 (effect "
+        "allele)\n"
         "                            Default: A1\n"
-        "    --A2                    Column header containing the alternative "
-        "allele\n"
+        "    --A2                    Column header containing allele 2 "
+        "(reference allele)\n"
         "                            Default: A2\n"
         "    --bp                    Column header containing the SNP "
         "coordinate\n"
         "                            Default: BP\n"
         "    --chr                   Column header containing the chromosome\n"
         "                            Default: CHR\n"
-        "    --index                 If set, assume the INDEX instead of NAME "
-        "of\n"
+        "    --index                 If set, assume the INDEX instead of NAME  "
+        "for\n"
         "                            the corresponding columns are provided. "
         "Index\n"
         "                            should be 0-based (start counting from "
         "0)\n"
+        "    --info-base             Base INFO score filtering. Format should "
+        "be\n"
+        "                            <Column name>,<Threshold>. SNPs with info "
+        "\n"
+        "                            score less than <Threshold> will be "
+        "ignored\n"
+        "                            Column name default: INFO\n"
+        "                            Threshold default: 0.9\n"
+        "    --maf-base              Base MAF filtering. Format should be\n"
+        "                            <Column name>,<Threshold>. SNPs with maf "
+        "\n"
+        "                            less than <Threshold> will be ignored\n"
         "    --pvalue        | -p    Column header containing the p-value\n"
         "                            Default: P\n"
         "    --se                    Column header containing the standard "
@@ -551,7 +591,7 @@ void Commander::info()
         "statistic\n"
         "                            If --beta is set, default as BETA. "
         "Otherwise,\n"
-        "                            try and search for OR or BETA from the "
+        "                            will search for OR or BETA from the "
         "header\n"
         "                            of the base file\n"
         "\nClumping:\n"
@@ -584,6 +624,7 @@ void Commander::info()
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
           "                            Mutually exclusive from --ld-remove\n"
+          "                            No effect if --ld was not provided\n"
           "    --ld-remove             File containing the sample(s) to be "
           "removed from\n"
           "                            the LD reference file. First column "
@@ -595,7 +636,7 @@ void Commander::info()
           "    --ld-type               File type of the LD file. Support bed "
           "(binary plink)\n"
           "                            and bgen format. Default: bed\n"
-          "    --no-clump              Avoid performing clumping\n"
+          "    --no-clump              Stop PRSice from performing clumping\n"
           "    --proxy                 Proxy threshold for index SNP to be "
           "considered\n"
           "                            as part of the region represented by "
@@ -615,14 +656,24 @@ void Commander::info()
           "                            is set, first column should be IID\n"
           "    --cov-col       | -c    Header of covariates. If not provided, "
           "will use\n"
-          "                            all variables in the covariate file\n"
+          "                            all variables in the covariate file. By "
+          "adding\n"
+          "                            @ in front of the string, any numbers "
+          "within [\n"
+          "                            and ] will be parsed. E.g. @PC[1-3] "
+          "will be\n"
+          "                            read as PC1,PC2,PC3. Discontinuous "
+          "input are also\n"
+          "                            supported: @cov[1.3-5] will be parsed "
+          "as \n"
+          "                            cov1,cov3,cov4,cov5\n"
           "\nDosage:\n"
           "    --hard-thres            Hard threshold for dosage data. Any "
           "call less than\n"
           "                            this will be treated as missing. Note "
           "that if dosage\n"
-          "                            data is used as a LD reference, it "
-          "will always be\n"
+          "                            data is used as a LD reference, it will "
+          "always be\n"
           "                            hard coded to calculate the LD\n"
           "                            Default: "
         + std::to_string(filter.hard_threshold)
@@ -666,6 +717,20 @@ void Commander::info()
           "Default: "
         + std::to_string(prsice.lower)
         + "\n"
+          "    --model                 Genetic model use for regression. The "
+          "genetic\n"
+          "                            encoding is based on the base data "
+          "where the\n"
+          "                            encoding represent number of the "
+          "effective allele\n"
+          "Available"
+          "                            models include:\n"
+          "                            add - Additive model, code as 0/1/2 "
+          "(default)\n"
+          "                            dom - Dominant model, code as 0/1/1\n"
+          "                            rec - Recessive model, code as 0/0/1\n"
+          "                            het - Heterozygous only model, code as "
+          "0/1/0\n"
           "    --no-regress            Do not perform the regression analysis "
           "and simply\n"
           "                            output all PRS.\n"
@@ -701,7 +766,8 @@ void Commander::info()
           "                            again to find the best bin "
           "combination.\n"
           "                            This cannot be performed together with "
-          "PRSet"
+          "PRSet\n"
+          "                            (Currently not implemented)\n"
           "\nTarget File:\n"
           "    --binary-target         Indicate whether the target phenotype\n"
           "                            is binary or not. Either T or F should "
@@ -710,8 +776,9 @@ void Commander::info()
           "phenotype.\n"
           "                            For multiple phenotypes, the input "
           "should be\n"
-          "                            separated by comma without space. "
-          "Default: T\n"
+          "                            separated by comma without space. \n"
+          "                            Default: T if --beta and F if --beta is "
+          "not\n"
           "    --keep                  File containing the sample(s) to be "
           "extracted from\n"
           "                            the target file. First column should be "
@@ -720,6 +787,14 @@ void Commander::info()
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
           "                            Mutually exclusive from --remove\n"
+          "    --remove                File containing the sample(s) to be "
+          "removed from\n"
+          "                            the target file. First column should be "
+          "FID and\n"
+          "                            the second column should be IID. If "
+          "--ignore-fid is\n"
+          "                            set, first column should be IID\n"
+          "                            Mutually exclusive from --keep\n"
           "    --pheno-file    | -f    Phenotype file containing the "
           "phenotype(s).\n"
           "                            First column must be FID of the samples "
@@ -737,16 +812,18 @@ void Commander::info()
           "                            phenotype file\n"
           "    --prevalence    | -k    Prevalence of all binary trait. If "
           "provided\n"
-          "    --nonfounders           Keep the nonfounders in the analysis\n"
-          "                            Note: They will still be excluded from "
-          "LD calculation\n"
-          "    --remove                will adjust the ascertainment bias of "
+          "                            will adjust the ascertainment bias of "
           "the R2.\n"
           "                            Note that when multiple binary trait is "
           "found,\n"
-          "                            you must provide prevalence information "
+          "                            prevalence information must be provided "
           "for\n"
-          "                            all of them.\n"
+          "                            all of them (Either adjust all binary "
+          "traits,\n"
+          "                            or don't adjust at all)\n"
+          "    --nonfounders           Keep the nonfounders in the analysis\n"
+          "                            Note: They will still be excluded from "
+          "LD calculation\n"
           "    --target        | -t    Target genotype file. Currently "
           "support\n"
           "                            both BGEN and binary PLINK format. For "
@@ -756,6 +833,10 @@ void Commander::info()
           "                            the chromosome number with #. PRSice "
           "will\n"
           "                            automatically replace # with 1-22\n"
+          "                            For binary plink format, you can also "
+          "specify\n"
+          "                            a seperate fam file by <prefix>,<fam "
+          "file>\n"
           "    --type                  File type of the target file. Support "
           "bed \n"
           "                            (binary plink) and bgen format. "
@@ -772,8 +853,8 @@ void Commander::info()
           "                            analysis\n"
           "    --ignore-fid            Ignore FID for all input. When this is "
           "set,\n"
-          "                            first column of most file will be "
-          "assume to\n"
+          "                            first column of all file will be assume "
+          "to\n"
           "                            be IID instead of FID\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
@@ -793,11 +874,13 @@ void Commander::info()
           "                            use value larger than 10,000\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
-          "    --print-snp             system time will be used as seed. When "
+          "                            system time will be used as seed. When "
           "same\n"
           "                            seed and same input is provided, same "
           "result\n"
-          "                            should be generated\n"
+          "                            can be generated\n"
+          "    --print-snp             Print all SNPs used to construct the "
+          "best PRS\n"
           "    --thread        | -n    Number of thread use\n"
           "    --help          | -h    Display this help message\n";
 }
@@ -922,13 +1005,80 @@ void Commander::base_check(std::string& message, bool& error,
                     index_check(base.p_value, token);
                 if (!base.provided_p && base.col_index[+BASE_INDEX::P] != -1)
                     message.append(" \\\n    --pvalue " + base.p_value);
-                base.col_index[+BASE_INDEX::INFO] =
-                    index_check(base.info_col, token);
+
+
+                std::vector<std::string> info = misc::split(base.info_col, ",");
+                base.col_index[+BASE_INDEX::INFO] = index_check(info[0], token);
+                if (info.size() != 2) {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid format of --info-base.\n");
+                    error_message.append(
+                        "       Should be ColName,Threshold.\n");
+                }
+                try
+                {
+                    base.info_score = misc::convert<double>(info[1]);
+                    if (base.info_score < 0 || base.info_score > 1) {
+                        error = true;
+                        error_message.append("ERROR: Base INFO threshold must "
+                                             "be within 0 and 1!\n");
+                    }
+                }
+                catch (const std::runtime_error& er)
+                {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Invalid argument passed to --info-base: "
+                        + base.info_col + "!\n");
+                    error_message.append(
+                        "       Second argument must be numeric\n");
+                }
+
+                // found info, will use default
                 if (!base.use_info && base.col_index[+BASE_INDEX::INFO] != -1) {
+                    // as default will always be of the correct format,
+                    // we don't need to worry about the error messages above
                     message.append(" \\\n    --info-col " + base.info_col);
                     message.append(" \\\n    --info "
                                    + std::to_string(base.info_score));
                 }
+                // comma separate
+                if (base.provided_maf) {
+                    // won't do it unless we have something provided
+                    // as no default, will cause problem
+                    std::vector<std::string> maf = misc::split(base.maf, ",");
+                    if (maf.size() != 2) {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid format of --maf-base.\n");
+                        error_message.append(
+                            "       Should be ColName,Threshold.\n");
+                    }
+                    base.col_index[+BASE_INDEX::MAF] =
+                        index_check(maf[0], token);
+                    try
+                    {
+                        base.maf_threshold = misc::convert<double>(maf[1]);
+                        if (base.maf_threshold < 0 || base.maf_threshold > 1) {
+                            error = true;
+                            error_message.append(
+                                "ERROR: Base MAF threshold must "
+                                "be within 0 and 1!\n");
+                        }
+                    }
+                    catch (const std::runtime_error& er)
+                    {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid argument passed to --maf-base: "
+                            + base.maf + "!\n");
+                        error_message.append(
+                            "       Second argument must be numeric\n");
+                    }
+                }
+                // no default for MAF as there can be many differenet maf
+                // headers
             }
             else
             { // only required for index, as the defaults are in string
@@ -954,8 +1104,65 @@ void Commander::base_check(std::string& message, bool& error,
                                     error_message, "SE");
                 }
                 if (base.use_info) {
+                    std::vector<std::string> info =
+                        misc::split(base.info_col, ",");
                     base.col_index[+BASE_INDEX::INFO] = index_check(
-                        base.info_col, max_size, error, error_message, "INFO");
+                        info[0], max_size, error, error_message, "INFO");
+                    if (info.size() != 2) {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid format of --info-base.\n");
+                        error_message.append(
+                            "       Should be ColName,Threshold.\n");
+                    }
+                    try
+                    {
+                        base.info_score = misc::convert<double>(info[1]);
+                        if (base.info_score < 0 || base.info_score > 1) {
+                            error = true;
+                            error_message.append("ERROR: Base INFO threshold "
+                                                 "must be within 0 and 1!\n");
+                        }
+                    }
+                    catch (const std::runtime_error& er)
+                    {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid argument passed to --info-base: "
+                            + base.info_col + "!\n");
+                        error_message.append(
+                            "       Second argument must be numeric\n");
+                    }
+                }
+                if (base.provided_maf) {
+                    std::vector<std::string> maf = misc::split(base.maf, ",");
+                    base.col_index[+BASE_INDEX::MAF] = index_check(
+                        maf[0], max_size, error, error_message, "MAF");
+                    if (maf.size() != 2) {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid format of --maf-base.\n");
+                        error_message.append(
+                            "       Should be ColName,Threshold.\n");
+                    }
+                    try
+                    {
+                        base.maf_threshold = misc::convert<double>(maf[1]);
+                        if (base.maf_threshold < 0 || base.maf_threshold > 1) {
+                            error = true;
+                            error_message.append("ERROR: Base MAF threshold "
+                                                 "must be within 0 and 1!\n");
+                        }
+                    }
+                    catch (const std::runtime_error& er)
+                    {
+                        error = true;
+                        error_message.append(
+                            "ERROR: Invalid argument passed to --maf-base: "
+                            + base.maf + "!\n");
+                        error_message.append(
+                            "       Second argument must be numeric\n");
+                    }
                 }
                 base.col_index[+BASE_INDEX::P] = index_check(
                     base.p_value, max_size, error, error_message, "P");
@@ -1125,8 +1332,10 @@ void Commander::covariate_check(bool& error, std::string& error_message)
                                 }
                                 try
                                 {
-                                    int start = misc::convert<int>(range[0]);
-                                    int end = misc::convert<int>(range[1]);
+                                    size_t start =
+                                        misc::convert<size_t>(range[0]);
+                                    size_t end =
+                                        misc::convert<size_t>(range[1]);
                                     if (start > end) {
                                         int temp = end;
                                         end = start;
@@ -1294,6 +1503,9 @@ void Commander::prset_check(std::string& message, bool& error,
 void Commander::prsice_check(std::string& message, bool& error,
                              std::string& error_message)
 {
+    if (!prsice.provided_model) {
+        message.append(" \\\n    --model add");
+    }
     if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
     {
         // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,

@@ -25,7 +25,6 @@ struct Sample
     std::string FID;
     std::string IID;
     std::string pheno;
-    double prs;
     int num_snp;
     bool included;
     bool has_pheno;
@@ -36,17 +35,6 @@ struct Sample_lite
     double prs;
     int num_snp;
     bool has_pheno;
-};
-
-struct prsice_result
-{
-    double threshold;
-    double r2;
-    double r2_adj;
-    double coefficient;
-    double p;
-    double emp_p;
-    int num_snp;
 };
 
 // Passkey idiom, allow safer access to
@@ -105,6 +93,7 @@ enum class BASE_INDEX
     SE,
     P,
     INFO,
+    MAF,
     MAX
 };
 enum class FAM
@@ -128,6 +117,14 @@ enum class GTF
     FRAME,
     ATTRIBUTE
 };
+
+enum class MODEL
+{
+    ADDITIVE,
+    DOMINANT,
+    RECESSIVE,
+    HETEROZYGOUS
+};
 // Mean imputed, no-mean imputed, centering is currently too complicated based
 // on our algorithm
 enum class SCORING
@@ -143,6 +140,10 @@ struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
 };
 template <>
 struct enumeration_traits<GTF> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<MODEL> : enumeration_trait_indexing
 {
 };
 template <>

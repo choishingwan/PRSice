@@ -95,19 +95,21 @@ int main(int argc, char* argv[])
     {
         target_file->set_info(commander);
         target_file->read_base(commander, region);
+        // we no longer need the region boundaries
+        // as we don't allow multiple base file input
+        region.clean();
         std::string region_out_name = commander.out() + ".region";
+        // output the number of SNPs observed in each sets
         region.print_file(region_out_name);
-
+        // perform clumping (Main problem with memory here)
         if (!commander.no_clump()) {
-            // target_file->clump((ld_file == nullptr) ? *target_file :
-            // *ld_file);
             target_file->efficient_clumping((ld_file == nullptr) ? *target_file
                                                                  : *ld_file);
         }
-        PRSice prsice =
-            PRSice(base_name, commander.target_name(), commander.is_binary(),
-                   commander.get_scoring(), region.size(),
-                   commander.ignore_fid(), commander.out());
+        // initialize PRSice class
+        PRSice prsice = PRSice(base_name, commander, region.size() > 1,
+                               target_file->num_sample());
+        // check the phenotype input columns
         prsice.pheno_check(commander);
         size_t num_pheno = prsice.num_phenotype();
         if (!perform_prslice) {
@@ -119,11 +121,31 @@ int main(int argc, char* argv[])
                 return -1;
             }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-                prsice.init_matrix(commander, i_pheno, *target_file, false);
-                prsice.prsice(commander, region.names(), i_pheno, *target_file);
-                if (!commander.no_regress())
-                    prsice.output(commander, region, i_pheno, *target_file);
+                // initialize the phenotype & independent variable matrix
+                prsice.init_matrix(commander, i_pheno, *target_file);
+                // go through each region separately
+                // this should reduce the memory usage
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
+                }
+                for (size_t i_region = 0; i_region < region.size(); ++i_region)
+                {
+                    prsice.run_prsice(commander, region.get_name(i_region),
+                                      i_pheno, i_region, *target_file);
+                    if (region.size() > 1) {
+                        fprintf(stderr, "\rProcessing %03.2f%% of sets",
+                                (double) i_region / (double) region.size()
+                                    * 100.0);
+                    }
+                    if (!commander.no_regress())
+                        prsice.output(commander, region, i_pheno, i_region,
+                                      *target_file);
+                }
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0);
+                }
             }
+            prsice.summarize(commander);
         }
     }
     catch (const std::out_of_range& error)

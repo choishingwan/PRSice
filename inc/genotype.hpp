@@ -57,11 +57,13 @@ public:
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
-    bool get_score(misc::vec2d<Sample_lite>& current_prs_score, int& cur_index,
+    size_t num_sample() const { return m_sample_names.size(); }
+    bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
                    int& cur_category, double& cur_threshold,
-                   std::vector<size_t>& num_snp_included);
+                   size_t& num_snp_included, const size_t region_index);
     bool prepare_prsice();
-    void print_snp(std::string& output, double threshold);
+    void print_snp(std::string& output, double threshold,
+                   const size_t region_index);
     size_t num_threshold() const { return m_num_threshold; };
     void read_base(const Commander& c_commander, Region& region);
     // void clump(Genotype& reference);
@@ -104,7 +106,6 @@ protected:
 
     // storage of sample information
     std::vector<Sample> m_sample_names;
-
     /** SNP/Sample selection **/
     // default is remove (if not provided, the list is empty,
     // thus nothing will be removed)
@@ -124,6 +125,7 @@ protected:
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
+    int m_model = +MODEL::ADDITIVE;
     SCORING m_scoring;
 
     struct
@@ -180,15 +182,15 @@ protected:
 
     uint32_t m_thread;
     virtual inline void read_genotype(uintptr_t* genotype, const SNP& snp,
-                                      const std::string& file_name)
-    {
-        genotype = nullptr;
-    };
-    virtual void read_score(misc::vec2d<Sample_lite>& current_prs_score,
-                            size_t start_index, size_t end_bound){};
+                                      const std::string& file_name){};
+    virtual void read_score(std::vector<Sample_lite>& current_prs_score,
+                            size_t start_index, size_t end_bound,
+                            const size_t region_index){};
+
 
     // hh_exists
-    inline bool ambiguous(std::string ref_allele, std::string alt_allele)
+    inline bool ambiguous(const std::string& ref_allele,
+                          const std::string& alt_allele) const
     {
         return (ref_allele == "A" && alt_allele == "T")
                || (ref_allele == "a" && alt_allele == "t")

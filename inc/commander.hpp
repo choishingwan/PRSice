@@ -31,8 +31,8 @@
 #include <unordered_set>
 #include <vector>
 
-const std::string version = "2.0.11.beta";
-const std::string date = "3 October 2017";
+const std::string version = "2.0.14.beta";
+const std::string date = "27 October 2017";
 class Commander
 {
 public:
@@ -46,7 +46,9 @@ public:
     bool has_index() const { return base.index; };
     bool beta() const { return base.beta; };
     bool filter_info() const { return base.use_info; };
+    bool filter_base_maf() const { return base.provided_maf; };
     double info_score() const { return base.info_score; };
+    double maf_base() const { return base.maf_threshold; };
     std::string base_name() const { return base.name; };
 
     // clump
@@ -93,10 +95,12 @@ public:
     bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
     bool seeded() const { return misc.provided_seed; };
+    bool provided_memory() const { return misc.provided_memory; };
     std::string out() const { return misc.out; };
     int num_permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
+    int memory() const { return misc.memory; };
 
 
     // prset
@@ -127,7 +131,7 @@ public:
     {
         return prsice.barlevel.back();
     }; // we have sorted it
-    double bar_lower() const { return prsice.barlevel.front(); };
+    int model() const { return prsice.model; };
 
     // prslice
     bool perform_prslice() const { return prslice.provided; };
@@ -201,9 +205,11 @@ private:
         std::string standard_error;
         std::string p_value;
         std::string info_col;
+        std::string maf;
         std::vector<int> col_index;
         int beta;
         int index;
+        bool provided_maf;
         bool provided_chr;
         bool provided_ref;
         bool provided_alt;
@@ -214,6 +220,7 @@ private:
         bool provided_p;
         bool use_info;
         double info_score;
+        double maf_threshold;
     } base;
 
     struct
@@ -302,6 +309,8 @@ private:
         bool provide_lower;
         bool provide_upper;
         bool provide_inter;
+        bool provided_model;
+        int model; // Use MODEL enum
         int fastscore;
         int no_regress;
         int full;
@@ -376,10 +385,11 @@ private:
         species.double_set = true;
     };
 
-    inline void load_binary_vector(std::string input, std::string& message,
+    inline void load_binary_vector(const std::string& input,
+                                   std::string& message,
                                    std::string& error_message,
                                    std::vector<bool>& target, bool& error,
-                                   std::string c)
+                                   const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         std::vector<std::string> token = misc::split(input, ",");
@@ -396,9 +406,10 @@ private:
         }
     }
 
-    inline void load_string_vector(std::string input, std::string& message,
+    inline void load_string_vector(const std::string& input,
+                                   std::string& message,
                                    std::vector<std::string>& target,
-                                   std::string c)
+                                   const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         std::vector<std::string> token = misc::split(input, ",");
@@ -406,10 +417,10 @@ private:
     }
 
     template <typename T>
-    inline void load_numeric_vector(std::string input, std::string& message,
-                                    std::string& error_message,
-                                    std::vector<T>& target, bool& error,
-                                    std::string c)
+    inline void
+    load_numeric_vector(const std::string& input, std::string& message,
+                        std::string& error_message, std::vector<T>& target,
+                        bool& error, const std::string& c)
     {
 
         message.append(" \\\n    --" + c + " " + input);
@@ -427,9 +438,10 @@ private:
     }
 
     template <typename Type>
-    inline void set_numeric(std::string input, std::string& message,
+    inline void set_numeric(const std::string& input, std::string& message,
                             std::string& error_message, Type& target,
-                            bool& target_boolean, bool& error, std::string c)
+                            bool& target_boolean, bool& error,
+                            const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         try
@@ -444,9 +456,44 @@ private:
         }
     }
 
-    inline void set_string(std::string input, std::string& message,
+    inline void set_model(const std::string& in, std::string& message,
+                          std::string& error_message, bool& error)
+    {
+        std::string input = in;
+        if (input.empty()) {
+            error_message.append("ERROR: Model cannot be empty!\n");
+            error = true;
+        }
+        prsice.provided_model = true;
+        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        if (input.at(0) == 'A') {
+            message.append(" \\\n    --model add");
+            prsice.model = +MODEL::ADDITIVE;
+        }
+        else if (input.at(0) == 'D')
+        {
+            message.append(" \\\n    --model dom");
+            prsice.model = +MODEL::DOMINANT;
+        }
+        else if (input.at(0) == 'R')
+        {
+            message.append(" \\\n    --model rec");
+            prsice.model = +MODEL::RECESSIVE;
+        }
+        else if (input.at(0) == 'H')
+        {
+            message.append(" \\\n    --model het");
+            prsice.model = +MODEL::HETEROZYGOUS;
+        }
+        else
+        {
+            error = true;
+            error_message.append("ERROR: Unrecognized model: " + input + "!\n");
+        }
+    }
+    inline void set_string(const std::string& input, std::string& message,
                            std::string& target, bool& target_boolean,
-                           std::string c)
+                           const std::string& c)
     {
         message.append(" \\\n    --" + c + " " + input);
         target = input;
@@ -454,7 +501,7 @@ private:
     }
 
     inline int index_check(const std::string& target,
-                           const std::vector<std::string> ref) const
+                           const std::vector<std::string>& ref) const
     {
         for (size_t i = 0; i < ref.size(); ++i) {
             if (target.compare(ref[i]) == 0) {
@@ -466,7 +513,7 @@ private:
 
     inline int index_check(const std::string& target, const int max,
                            bool& error, std::string& error_message,
-                           std::string name)
+                           const std::string& name)
     {
         try
         {

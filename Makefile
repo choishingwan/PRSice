@@ -7,7 +7,7 @@ SERVER := -L /usr/lib/x86_64-redhat-linux5E/lib64
 GCC := -Wl,--no-whole-archive  -static-libstdc++ -static-libgcc -static
 CSRC := src/*.c
 CPPSRC := src/*.cpp
-OBJ := bgen_lib.o binaryplink.o genotype.o misc.o plink_set.o prslice.o regression.o snp.o binarygen.o commander.o main.o plink_common.o prsice.o region.o SFMT.o
+OBJ := bgen_lib.o binaryplink.o genotype.o misc.o prslice.o regression.o snp.o binarygen.o commander.o main.o plink_common.o prsice.o region.o
 
 %.o: src/%.c
 		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
