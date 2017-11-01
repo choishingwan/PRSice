@@ -262,7 +262,7 @@ std::vector<SNP> BinaryGen::load_snps()
                 "ERROR: Cannot open log file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for (auto&& snp : m_existed_snps) {
+        for (auto&& snp : snp_res) {
             if (dup_list.find(snp.rs()) != dup_list.end()) continue;
             log_file_stream << snp.rs() << std::endl;
         }
