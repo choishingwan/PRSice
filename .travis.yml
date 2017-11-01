@@ -1,4 +1,10 @@
 language: cpp
+
+branches:
+  only:
+  - master
+  - beta_testing
+
 compiler:
   - gcc
 
