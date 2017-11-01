@@ -914,6 +914,8 @@ void Commander::base_check(std::string& message, bool& error,
             int max_size = token.size();
             if (!base.index) {
                 if (base.provided_stat) {
+                	// if statistics is provided, we can guess if it
+                	// is beta or not
                     if (base.statistic.length() == 2
                         && toupper(base.statistic[0]) == 'O'
                         && toupper(base.statistic[1]) == 'R')
@@ -963,10 +965,6 @@ void Commander::base_check(std::string& message, bool& error,
                             base.provided_stat = true;
                             base.beta = true;
                             base.statistic = token[i];
-                            /*
-                            fprintf(stderr, "Base statistic guessed to be %s
-                            (%s)\n", token[i].c_str(),"BETA");
-                             */
                             message.append(" \\\n    --stat BETA");
                             break;
                         }
@@ -1624,12 +1622,9 @@ void Commander::target_check(std::string& message, bool& error,
                 message.append(" \\\n    --binary-target T");
                 target.is_binary.push_back(true);
             }
-            // fprintf(stderr, "Phenotype assumed to be binary\n");
         }
         else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
-            // fprintf(stderr, "%s assumed to be binary\n",
-            // target.pheno_col.front().c_str());
             if (base.beta) {
                 message.append(" \\\n    --binary-target F");
                 target.is_binary.push_back(false);
