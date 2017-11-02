@@ -231,7 +231,8 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
 
 Genotype::~Genotype() {}
 
-void Genotype::read_base(const Commander& c_commander, Region& region)
+void Genotype::read_base(const Commander& c_commander, Region& region,
+                         Reporter& reporter)
 {
     // can assume region is of the same order as m_existed_snp
     m_scoring = c_commander.get_scoring();
@@ -256,15 +257,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
     if (!c_commander.has_index()) std::getline(snp_file, line);
-
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
-    log_file_stream << "Base file: " << input << std::endl;
+    std::string message = "Base file: " + input + "\n";
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
@@ -559,93 +552,62 @@ void Genotype::read_base(const Commander& c_commander, Region& region)
     // might lead to out of scrope or some other error here?
     m_existed_snps.shrink_to_fit();
     m_region_size = region.size();
-    fprintf(stderr, "%zu SNP(s) observed in base file, with:\n",
-            num_line_in_base);
-    log_file_stream << num_line_in_base
-                    << " SNP(s) observed in base file, with:" << std::endl;
+    message.append(std::to_string(num_line_in_base)
+                   + " SNP(s) observed in base file, with:\n");
     if (num_duplicated) {
-        fprintf(stderr, "%zu duplicated variant(s) in base file\n",
-                num_duplicated);
-        log_file_stream << num_duplicated << " duplicated variant(s)"
-                        << std::endl;
+        message.append(std::to_string(num_duplicated)
+                       + " duplicated variant(s)\n");
     }
     if (num_excluded) {
-        fprintf(stderr, "%zu variant(s) excluded due to p-value threshold\n",
-                num_excluded);
-        log_file_stream << num_excluded
-                        << " variant(s) excluded due to p-value threshold"
-                        << std::endl;
+        message.append(std::to_string(num_excluded)
+                       + " variant(s) excluded due to p-value threshold\n");
     }
     if (num_chr_filter) {
-        fprintf(
-            stderr,
-            "%zu variant(s) excluded as they are on unknown/sex chromosome\n",
-            num_chr_filter);
-        log_file_stream
-            << num_excluded
-            << " variant(s) excluded as they are on unknown/sex chromosome"
-            << std::endl;
+        message.append(
+            std::to_string(num_excluded)
+            + " variant(s) excluded as they are on unknown/sex chromosome\n");
     }
     if (num_ambiguous) {
-        fprintf(stderr, "%zu ambiguous variant(s)", num_ambiguous);
-        log_file_stream << num_ambiguous << " ambiguous variant(s)";
+        message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
         if (!filter.keep_ambig) {
-            log_file_stream << " excluded";
-            fprintf(stderr, " excluded");
+            message.append(" excluded");
         }
-        log_file_stream << std::endl;
-        fprintf(stderr, "\n");
+        message.append("\n");
     }
     if (num_haploid) {
-        fprintf(stderr, "%zu variant(s) located on haploid chromosome\n",
-                num_haploid);
-        log_file_stream << num_haploid
-                        << " variant(s) located on haploid chromosome"
-                        << std::endl;
+        message.append(std::to_string(num_haploid)
+                       + " variant(s) located on haploid chromosome\n");
     }
     if (num_not_found) {
-        fprintf(stderr, "%zu variant(s) not found in target file\n",
-                num_not_found);
-        log_file_stream << num_not_found
-                        << " variant(s) not found in target file" << std::endl;
+        message.append(std::to_string(num_not_found)
+                       + " variant(s) not found in target file\n");
     }
     if (num_mismatched) {
-        fprintf(stderr, "%zu mismatched variant(s) excluded\n", num_mismatched);
-        log_file_stream << num_mismatched << " mismatched variant(s) excluded"
-                        << std::endl;
+        message.append(std::to_string(num_mismatched)
+                       + " mismatched variant(s) excluded\n");
     }
     if (num_not_converted) {
-        fprintf(stderr, "%zu NA stat/p-value observed\n", num_not_converted);
-        log_file_stream << num_not_converted << " NA stat/p-value observed"
-                        << std::endl;
+        message.append(std::to_string(num_not_converted)
+                       + " NA stat/p-value observed\n");
     }
     if (num_negative_stat) {
-        fprintf(
-            stderr,
-            "%zu negative statistic observed. Please make sure it is really "
-            "OR\n",
-            num_negative_stat);
-        log_file_stream << num_negative_stat << " negative statistic observed"
-                        << std::endl;
+        message.append(std::to_string(num_negative_stat)
+                       + " negative statistic observed. Maybe you have "
+                         "forgotten the --beta flag?\n");
     }
     if (num_info_filter) {
-        fprintf(stderr, "%zu SNPs with INFO score less than %f\n",
-                num_info_filter, info_threshold);
-        log_file_stream << num_info_filter
-                        << " SNP filtered due to info threshold" << std::endl;
+        message.append(std::to_string(num_info_filter)
+                       + " SNPs with INFO score less than "
+                       + std::to_string(info_threshold) + "\n");
     }
     if (num_maf_filter) {
-        fprintf(stderr, "%zu SNPs with MAF less than %f\n", num_maf_filter,
-                maf_base);
-        log_file_stream << num_maf_filter
-                        << " SNP filtered due to MAF threshold" << std::endl;
+        message.append(std::to_string(num_maf_filter)
+                       + " SNPs with MAF less than " + std::to_string(maf_base)
+                       + "\n");
     }
-    fprintf(stderr, "%zu total SNPs included from base file\n\n",
-            m_existed_snps.size());
-    log_file_stream << m_existed_snps.size()
-                    << " total SNPs included for the analysis" << std::endl;
-    log_file_stream << std::endl;
-    log_file_stream.close();
+    message.append(std::to_string(m_existed_snps.size())
+                   + " total SNPs included from base file\n\n");
+    reporter.report(message);
 
     m_num_threshold = unique_thresholds.size();
 }
@@ -891,7 +853,7 @@ int Genotype::process_block(int& start_index, int end_index,
 }
 
 
-void Genotype::efficient_clumping(Genotype& reference)
+void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 {
 
 
@@ -950,7 +912,6 @@ void Genotype::efficient_clumping(Genotype& reference)
         if (cur_snp_index >= m_existed_snps.size()) {
             if (block_available) {
                 process_block(start_index, cur_snp_index, core_index);
-                assert(remain == 0);
                 completed = true;
                 // just in case, clean everything from start to end
                 for (size_t i_snp = start_index; i_snp < m_existed_snps.size();
@@ -983,31 +944,12 @@ void Genotype::efficient_clumping(Genotype& reference)
         {
             mismatch++;
             if (!mismatch_error) {
-                std::ofstream log_file_stream;
-                log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-                if (!log_file_stream.is_open()) {
-                    std::string error_message =
-                        "ERROR: Cannot open log file: " + m_log_file;
-                    throw std::runtime_error(error_message);
-                }
-                log_file_stream << "WARNING: Mismatched SNPs between LD "
-                                   "reference and target!"
-                                << std::endl;
-                log_file_stream
-                    << "         Will use information from target file"
-                    << std::endl;
-                log_file_stream
-                    << "         You should check the files are based on the "
-                    << std::endl;
-                log_file_stream << "         same genome build" << std::endl;
-                log_file_stream << std::endl;
-                log_file_stream.close();
-                fprintf(stderr, "WARNING: Mismatched SNPs between LD reference "
-                                "and target!\n");
-                fprintf(stderr,
-                        "         Will use information from target file\n");
-                fprintf(stderr, "         You should check the files are based "
-                                "on same genome build\n");
+                std::string message =
+                    "WARNING: Mismatched SNPs between LD reference and target!";
+                message.append("Will use information from target file");
+                message.append("You should check the files are based on the "
+                               "same genome build\n");
+                reporter.report(message);
                 mismatch_error = true;
             }
         }
@@ -1169,19 +1111,9 @@ void Genotype::efficient_clumping(Genotype& reference)
     m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
     // no longer require the m_existed_snps_index
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
-    log_file_stream << "Number of SNPs after clumping : "
-                    << m_existed_snps.size() << std::endl
-                    << std::endl;
-    log_file_stream.close();
-    fprintf(stderr, "Number of SNPs after clumping : %zu\n\n",
-            m_existed_snps.size());
+    std::string message = "Number of SNPs after clumping : "
+                          + std::to_string(m_existed_snps.size()) + "\n";
+    reporter.report(message);
 }
 
 bool Genotype::prepare_prsice()

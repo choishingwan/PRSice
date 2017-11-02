@@ -19,10 +19,11 @@
 std::mutex PRSice::score_mutex;
 
 
-void PRSice::pheno_check(const Commander& c_commander)
+void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 {
     std::vector<std::string> pheno_header = c_commander.pheno_col();
     std::string pheno_file = c_commander.pheno_file();
+    std::string message = "";
     if (pheno_file.empty()) {
         pheno_info.use_pheno = false;
         pheno_info.binary.push_back(c_commander.is_binary(0));
@@ -52,16 +53,8 @@ void PRSice::pheno_check(const Commander& c_commander)
         }
         std::string sample_id = col[0];
         if (!m_ignore_fid && col.size() > 1) sample_id.append("+" + col[1]);
-        std::ofstream log_file_stream;
-        log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-        if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + m_log_file;
-            throw std::runtime_error(error_message);
-        }
-        log_file_stream << "Check Phenotype file: " << pheno_file << std::endl;
-        log_file_stream << "Column Name of Sample ID: " << sample_id
-                        << std::endl;
+        message.append("Check Phenotype file: " + pheno_file + "\n");
+        message.append("Column Name of Sample ID: " + sample_id + "\n");
 
         bool found = false;
         std::unordered_map<std::string, bool> dup_col;
@@ -72,9 +65,8 @@ void PRSice::pheno_check(const Commander& c_commander)
             pheno_info.name.push_back("");
             pheno_info.order.push_back(0);
             pheno_info.binary.push_back(c_commander.is_binary(0));
-
-            log_file_stream << "Phenotype Name: " << col[pheno_info.col.back()]
-                            << std::endl;
+            message.append("Phenotype Name: " + col[pheno_info.col.back()]
+                           + "\n");
         }
         else
         {
@@ -98,24 +90,19 @@ void PRSice::pheno_check(const Commander& c_commander)
                         }
                     }
                     if (!found) {
-                        fprintf(
-                            stderr,
-                            "Phenotype: %s cannot be found in phenotype file\n",
-                            pheno_header[i_pheno].c_str());
-                        log_file_stream
-                            << "Phenotype: " << pheno_header[i_pheno]
-                            << " cannot be found in phenotype file"
-                            << std::endl;
+                        message.append(
+                            "Phenotype: " + pheno_header[i_pheno]
+                            + " cannot be found in phenotype file\n");
                     }
                 }
             }
         }
-        log_file_stream << std::endl;
-        log_file_stream.close();
     }
+
     size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
-    fprintf(stderr, "There are a total of %zu phenotype to process\n",
-            num_pheno);
+    message.append("There are a total of " + std::to_string(num_pheno)
+                   + " phenotype to process\n");
+    reporter.report(message);
 }
 
 void PRSice::update_sample_included()
@@ -143,13 +130,14 @@ void PRSice::update_sample_included()
         m_sample_index.push_back(i_sample);
     }
 }
+
 void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
-                         Genotype& target, const bool prslice)
+                         Genotype& target, Reporter& reporter,
+                         const bool prslice)
 {
     m_null_r2 = 0.0;
     m_phenotype = Eigen::VectorXd::Zero(0);
     m_independent_variables.resize(0, 0);
-    // m_sample_names.clear();
     m_sample_with_phenotypes.clear();
 
 
@@ -159,7 +147,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
 
     // this includes all samples
     if (m_sample_names.empty()) m_sample_names = target.sample_names();
-    gen_pheno_vec(pheno_file, pheno_index, !no_regress);
+    gen_pheno_vec(pheno_file, pheno_index, !no_regress, reporter);
     if (!no_regress) {
         std::vector<std::string> cov_header = c_commander.get_cov_header();
         gen_cov_matrix(c_commander.get_cov_file(), cov_header);
@@ -196,7 +184,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
 }
 
 void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
-                           const int pheno_index, bool regress)
+                           const int pheno_index, bool regress,
+                           Reporter& reporter)
 {
     std::vector<double> pheno_store;
     // reserve the maximum size (All samples)
@@ -237,7 +226,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
                     + std::to_string(pheno_index + 2 + !m_ignore_fid)
-                    + " columns\n"
+                    + " columns. "
                       "Have you use the --ignore-fid option?";
                 throw std::runtime_error(error_message);
             }
@@ -338,72 +327,43 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         }
     }
 
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
-
-
+    std::string message = "";
     if (num_not_found != 0) {
-        log_file_stream << num_not_found << " sample(s) without phenotype"
-                        << std::endl;
-        fprintf(stderr, "Number of missing samples: %zu\n", num_not_found);
+        message.append(std::to_string(num_not_found)
+                       + " sample(s) without phenotype\n");
     }
     if (invalid_pheno != 0) {
-        fprintf(stderr, "Number of invalid phenotyps: %zu\n", invalid_pheno);
-        log_file_stream << invalid_pheno << " sample(s) with invalid phenotype"
-                        << std::endl;
+        message.append(std::to_string(invalid_pheno)
+                       + " sample(s) with invalid phenotype\n");
     }
     if (num_not_found == num_included) {
-
-        log_file_stream
-            << "None of the target samples were found in the phenotype file"
-            << std::endl;
-        fprintf(
-            stderr,
-            "None of the target samples were found in the phenotype file\n");
+        message.append(
+            "None of the target samples were found in the phenotype file. ");
         if (m_ignore_fid) {
-            fprintf(
-                stderr,
-                "Maybe the first column of your phenotype file is the FID?\n");
-            log_file_stream
-                << "Maybe the first column of your phenotype file is the FID?"
-                << std::endl;
+            message.append(
+                "Maybe the first column of your phenotype file is the FID?");
         }
         else
         {
-            fprintf(stderr,
-                    "Maybe your phenotype file doesn not contain the FID?\n");
-            log_file_stream
-                << "Maybe your phenotype file doesn not contain the FID?"
-                << std::endl;
-            fprintf(stderr, "Might consider using --ignore-fid\n");
-            log_file_stream << "Might consider using --ignore-fid" << std::endl;
+            message.append(
+                "Maybe your phenotype file doesn not contain the FID?\n");
+            message.append("Might want to consider using --ignore-fid\n");
         }
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        reporter.report(message);
         throw std::runtime_error("ERROR: No sample left");
     }
     if (invalid_pheno == num_included) {
-        log_file_stream << "ERROR: No sample left" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        message.append("ERROR: All sample has invalid phenotypes!");
+        reporter.report(message);
         throw std::runtime_error("ERROR: No sample left");
     }
     if (input_sanity_check.size() < 2 && !binary) {
-        fprintf(stderr, "Only one phenotype value detected\n");
-        log_file_stream << "Only one phenotype value detected" << std::endl;
+        message.append("Only one phenotype value detected");
         auto itr = input_sanity_check.begin();
         if ((*itr) == -9) {
-            fprintf(stderr, "and they are all -9\n");
-            log_file_stream << "and they are all -9" << std::endl;
+            message.append(" and they are all -9");
         }
-        log_file_stream << "Not enough valid phenotype" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        reporter.report(message);
         throw std::runtime_error("Not enough valid phenotype");
     }
     bool error = false;
@@ -422,17 +382,12 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         }
     }
     if (error && regress) {
-        log_file_stream << "Mixed encoding! Both 0/1 and 1/2 encoding found!"
-                        << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        reporter.report(message);
         throw std::runtime_error(
             "Mixed encoding! Both 0/1 and 1/2 encoding found!");
     }
     if (pheno_store.size() == 0 && regress) {
-        log_file_stream << "No phenotype presented" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        reporter.report(message);
         throw std::runtime_error("No phenotype presented");
     }
     // now store the vector into the m_phenotype vector
@@ -441,10 +396,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
 
 
     if (binary) {
-        log_file_stream << num_control << " control(s)" << std::endl;
-        log_file_stream << num_case << " case(s)" << std::endl;
-        fprintf(stderr, "Number of controls : %i\n", num_control);
-        fprintf(stderr, "Number of cases : %i\n", num_case);
+        message.append(std::to_string(num_control) + " control(s)\n");
+        message.append(std::to_string(num_case) + " case(s)\n");
         if (regress) {
             if (num_control == 0)
                 throw std::runtime_error("There are no control samples");
@@ -453,13 +406,10 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     }
     else
     {
-        log_file_stream << m_phenotype.rows() << " sample(s) with phenotype"
-                        << std::endl;
-        fprintf(stderr, "Number of sample(s) with phenotype  : %zu\n",
-                m_phenotype.rows());
+        message.append(std::to_string(m_phenotype.rows())
+                       << " sample(s) with valid phenotype\n");
     }
-    log_file_stream << std::endl;
-    log_file_stream.close();
+    reporter.report(message);
 }
 
 
@@ -1300,17 +1250,6 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         m_significant_store[1]++;
     else
         m_significant_store[2]++;
-    /*
-    summary_out << "R2 of PRS only:   " << r2 << std::endl;
-    summary_out << "R2 of full model: " << full << std::endl;
-    summary_out << "Null R2:          " << null << std::endl;
-    summary_out << "P-value:          " << best_info.p << std::endl;
-    if (perm)
-        summary_out << "Empirical P:      " << best_info.emp_p << std::endl;
-    summary_out << "Coefficient:      " << best_info.coefficient << std::endl;
-    summary_out << "Number of SNPs:   " << best_info.num_snp << std::endl;
-    summary_out.close();
-    */
     best_out << "FID\tIID\tPRS\tHas_Phenotype" << std::endl;
     int best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
@@ -1340,45 +1279,42 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     }
 }
 
-void PRSice::summarize(const Commander& commander)
+void PRSice::summarize(const Commander& commander, Reporter& reporter)
 {
     bool prev_out;
 
     const bool perm = commander.permute();
-
-    fprintf(stderr, "There are ");
+    std::string message = "There are ";
     if (m_significant_store[0] != 0) {
-        fprintf(stderr,
-                "%zu region(s) with p-value > 0.1 (\033[1;31mnot "
-                "significant\033[0m);\n",
-                m_significant_store[0]);
+        message.append(std::to_string(m_significant_store[0])
+                       + "region(s) with p-value > 0.1 (\033[1;31mnot "
+                         "significant\033[0m);");
         prev_out = true;
     }
     if (m_significant_store[1] != 0) {
         if (m_significant_store[2] == 0 && prev_out) {
-            fprintf(stderr, "and ");
+            message.append(" and ");
         }
-        fprintf(stderr,
-                "%zu region(s) with p-value between \n"
-                "0.1 and 1e-5  (\033[1;31mmay not be significant\033[0m);\n ",
-                m_significant_store[1]);
+        message.append(
+            std::to_string(m_significant_store[1])
+            + " region(s) with p-value between "
+              "0.1 and 1e-5 (\033[1;31mmay not be significant\033[0m);");
         prev_out = true;
     }
     if (m_significant_store[2] != 0) {
-        if (prev_out) fprintf(stderr, " and ");
-        fprintf(stderr, "%zu region(s) with p-value less than 1e-5\n",
-                m_significant_store[2]);
+        if (prev_out) message.append(" and ");
+        message.append(std::to_string(m_significant_store[2])
+                       + "region(s) with p-value less than 1e-5");
     }
     if (!perm) {
-        fprintf(stderr,
-                "Please note that these results are inflated due to the\n");
-        fprintf(stderr, "overfitting inherent in finding the best-fit\n");
-        fprintf(stderr,
-                "PRS (but it's still best to find the best-fit PRS!).\n\n");
-        fprintf(stderr,
-                "You can use the --perm option (see manual) to calculate\n");
-        fprintf(stderr, "an empirical P-value.\n");
+        message.append(
+            "Please note that these results are inflated due to the "
+            "overfitting inherent in finding the best-fit "
+            "PRS (but it's still best to find the best-fit PRS!).\n"
+            "You can use the --perm option (see manual) to calculate "
+            "an empirical P-value.");
     }
+    reporter.report(message);
     std::string out_name = commander.out() + ".summary";
     std::ofstream out;
     out.open(out_name.c_str());

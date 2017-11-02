@@ -54,12 +54,12 @@ int main(int argc, char* argv[])
     }
     catch (const std::invalid_argument& ia)
     {
-        std::cerr << ia.what() << std::endl;
+        reporter.report(ia.what());
         return -1;
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << error.what() << std::endl;
+        reporter.report(error.what());
         return -1;
     }
     bool used_ld = false;
@@ -68,8 +68,9 @@ int main(int argc, char* argv[])
         && commander.ld_prefix().compare(commander.target_name()) != 0)
     {
         used_ld = true;
-        ld_file = factory.createGenotype(commander, commander.ld_prefix(),
-                                         commander.ld_type(), verbose);
+        ld_file =
+            factory.createGenotype(commander, commander.ld_prefix(),
+                                   commander.ld_type(), verbose, reporter);
     }
 
     Region region = Region(commander.feature(), target_file->get_chr_order());
@@ -80,8 +81,8 @@ int main(int argc, char* argv[])
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << error.what() << std::endl;
-        exit(-1);
+        reporter.report(error.what());
+        return -1;
     }
 
     // Might want to generate a log file?
@@ -92,12 +93,13 @@ int main(int argc, char* argv[])
     // Need to handle paths in the name
     std::string base_name = misc::remove_extension<std::string>(
         misc::base_name<std::string>(commander.base_name()));
-    fprintf(stderr, "\nStart processing: %s\n", base_name.c_str());
-    fprintf(stderr, "==============================\n");
+    std::string message = "Start processing " + base_name + "\n";
+    message.append("==============================\n");
+    reporter.report(message);
     try
     {
         target_file->set_info(commander);
-        target_file->read_base(commander, region);
+        target_file->read_base(commander, region, reporter);
         // we no longer need the region boundaries
         // as we don't allow multiple base file input
         region.clean();
@@ -106,18 +108,16 @@ int main(int argc, char* argv[])
         region.print_file(region_out_name);
         // perform clumping (Main problem with memory here)
         if (!commander.no_clump()) {
-            target_file->efficient_clumping((ld_file == nullptr) ? *target_file
-                                                                 : *ld_file);
+            target_file->efficient_clumping(
+                (ld_file == nullptr) ? *target_file : *ld_file, reporter);
         }
         // initialize PRSice class
         PRSice prsice = PRSice(base_name, commander, region.size() > 1,
-                               target_file->num_sample());
+                               target_file->num_sample(), reporter);
         // check the phenotype input columns
-        prsice.pheno_check(commander);
+        prsice.pheno_check(commander, reporter);
         size_t num_pheno = prsice.num_phenotype();
         if (!perform_prslice) {
-            fprintf(stderr, "\nPRSice Analysis\n");
-            fprintf(stderr, "==============================\n");
             if (!target_file->prepare_prsice()) {
                 // check if we can successfully sort the SNP vector by the
                 // category as required by PRSice
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
             }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 // initialize the phenotype & independent variable matrix
-                prsice.init_matrix(commander, i_pheno, *target_file);
+                prsice.init_matrix(commander, i_pheno, *target_file, reporter);
                 // go through each region separately
                 // this should reduce the memory usage
                 if (region.size() > 1) {
@@ -148,20 +148,19 @@ int main(int argc, char* argv[])
                     fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0);
                 }
             }
-            prsice.summarize(commander);
+            prsice.summarize(commander, reporter);
         }
     }
     catch (const std::out_of_range& error)
     {
-        std::cerr << error.what() << std::endl;
-        exit(-1);
+        reporter(error.what());
+        return -1;
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << error.what() << std::endl;
-        exit(-1);
+        reporter(error.what());
+        return -1;
     }
-    fprintf(stderr, "\n");
     delete target_file;
     if (used_ld) delete ld_file;
     return 0;
