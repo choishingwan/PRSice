@@ -26,16 +26,17 @@ public:
     BinaryPlink(std::string prefix, std::string remove_sample,
                 std::string keep_sample, std::string extract_snp,
                 std::string exclude_snp, std::string fam_name,
-                std::string log_file, bool ignore_fid, bool nonfounder,
-                int num_auto = 22, bool no_x = false, bool no_y = false,
-                bool no_xy = false, bool no_mt = false, bool keep_ambig = false,
+                const std::string& out_prefix, Reporter& reporter,
+                bool ignore_fid, bool nonfounder, int num_auto = 22,
+                bool no_x = false, bool no_y = false, bool no_xy = false,
+                bool no_mt = false, bool keep_ambig = false,
                 const size_t thread = 1, bool verbose = false);
     ~BinaryPlink();
 
 private:
     uintptr_t m_bed_offset = 3;
     std::vector<Sample> load_samples(bool ignore_fid);
-    std::vector<SNP> load_snps();
+    std::vector<SNP> load_snps(const std::string& out_prefix);
     std::vector<size_t> m_num_snp_per_file; // for bed file size check
     std::string m_fam_name = "";
 
