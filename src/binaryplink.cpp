@@ -20,15 +20,14 @@
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,
                          std::string exclude_snp, std::string fam_name,
-                         std::string log_file, bool ignore_fid, bool nonfounder,
-                         int num_auto, bool no_x, bool no_y, bool no_xy,
-                         bool no_mt, bool keep_ambig, const size_t thread,
-                         bool verbose)
+                         const std::string& out_prefix, Reporter& reporter,
+                         bool ignore_fid, bool nonfounder, int num_auto,
+                         bool no_x, bool no_y, bool no_xy, bool no_mt,
+                         bool keep_ambig, const size_t thread, bool verbose)
 {
     m_nonfounder = nonfounder;
     m_fam_name = fam_name;
     /** simple assignments **/
-    m_log_file = log_file;
     filter.keep_ambig = keep_ambig;
     m_thread = thread;
     // get the exclusion and extraction list
@@ -41,10 +40,10 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     }
     if (!extract_snp.empty()) {
         m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_snp);
+        m_snp_selection_list = load_snp_list(extract_snp, reporter);
     }
     if (!exclude_snp.empty()) {
-        m_snp_selection_list = load_snp_list(exclude_snp);
+        m_snp_selection_list = load_snp_list(exclude_snp, reporter);
     }
 
 
@@ -68,39 +67,26 @@ BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
     m_sample_names = load_samples(ignore_fid);
 
     /** now read the SNP information **/
-    m_existed_snps = load_snps();
+    m_existed_snps = load_snps(out_prefix);
     m_marker_ct = m_existed_snps.size();
 
     if (verbose) {
-        std::ofstream log_file_stream;
-        log_file_stream.open(log_file.c_str(), std::ofstream::app);
-        if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + log_file;
-            throw std::runtime_error(error_message);
-        }
-        fprintf(stderr, "%zu people (%zu males, %zu females) observed\n",
-                m_unfiltered_sample_ct, m_num_male, m_num_female);
-        fprintf(stderr, "%zu founder(s) included\n", m_founder_ct);
-        log_file_stream << m_unfiltered_sample_ct << " people (" << m_num_male
-                        << " male(s), " << m_num_female
-                        << " female(s)) observed" << std::endl;
-        log_file_stream << m_founder_ct << " founder(s) included" << std::endl;
+        std::string message = std::to_string(m_unfiltered_sample_ct)
+                              + " people (" + std::to_string(m_num_male)
+                              + " male(s), " + std::to_string(m_num_female)
+                              + " female(s)) observed\n";
+        message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
         if (m_num_ambig != 0 && !keep_ambig) {
-            fprintf(stderr, "%u ambiguous variant(s) excluded\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) excluded"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) excluded\n");
         }
         else if (m_num_ambig != 0)
         {
-            fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) kept"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) kept\n");
         }
-        fprintf(stderr, "%zu variants included\n", m_marker_ct);
-        log_file_stream << m_marker_ct << " variant(s) included" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+        reporter.report(message);
     }
 
     check_bed();
@@ -142,11 +128,11 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
         if (!line.empty()) {
             std::vector<std::string> token = misc::split(line);
             if (token.size() < 6) {
-                fprintf(stderr,
-                        "Error: Malformed fam file. Less than 6 column on "
-                        "line: %zu\n",
-                        m_unfiltered_sample_ct + 1);
-                throw std::runtime_error("");
+                std::string message =
+                    "Error: Malformed fam file. Less than 6 column on "
+                    "line: "
+                    + std::to_string(m_unfiltered_sample_ct + 1) + "\n";
+                throw std::runtime_error(message);
             }
             founder_info.insert(token[+FAM::FID] + "_" + token[+FAM::IID]);
             m_unfiltered_sample_ct++;
@@ -257,7 +243,7 @@ std::vector<Sample> BinaryPlink::load_samples(bool ignore_fid)
     return sample_name;
 }
 
-std::vector<SNP> BinaryPlink::load_snps()
+std::vector<SNP> BinaryPlink::load_snps(const std::string& out_prefix)
 {
     assert(m_genotype_files.size() > 0);
     m_unfiltered_marker_ct = 0;
@@ -286,11 +272,11 @@ std::vector<SNP> BinaryPlink::load_snps()
             if (line.empty()) continue;
             std::vector<std::string> token = misc::split(line);
             if (token.size() < 6) {
-                fprintf(stderr,
-                        "Error: Malformed bim file. Less than 6 column on "
-                        "line: %i\n",
-                        num_line);
-                throw std::runtime_error("");
+                std::string error_message =
+                    "Error: Malformed bim file. Less than 6 column on "
+                    "line: "
+                    + std::to_string(num_line) + "\n";
+                throw std::runtime_error(error_message);
             }
             // change them to upper case
             std::transform(token[+BIM::A1].begin(), token[+BIM::A1].end(),
@@ -334,11 +320,14 @@ std::vector<SNP> BinaryPlink::load_snps()
                 { // bigger than the maximum code, ignore it
                     if (!chr_error) {
                         // only print this if an error isn't previously given
-                        fprintf(stderr,
-                                "WARNING: SNPs with chromosome number larger "
-                                "than %d\n",
-                                m_max_code);
-                        fprintf(stderr, "         They will be ignored!\n");
+                        std::string error_message =
+                            "WARNING: SNPs with chromosome number larger "
+                            "than "
+                            + std::to_string(m_max_code) + "."
+                            + " They will be ignored!\n";
+                        std::cerr << error_message
+                                  << std::endl; // currently avoid passing in
+                                                // reporter here
                         chr_error = true;
                         m_unfiltered_marker_ct++;
                         m_num_snp_per_file[cur_file]++;
@@ -350,6 +339,7 @@ std::vector<SNP> BinaryPlink::load_snps()
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
                         // we ignore Sex chromosomes and haploid chromosome
+
                         fprintf(stderr, "WARNING: Currently not support "
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
@@ -404,12 +394,10 @@ std::vector<SNP> BinaryPlink::load_snps()
     }
     if (dup_list.size() != 0) {
         std::ofstream log_file_stream;
-        std::string dup_name =
-            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".valid";
+        std::string dup_name = out_prefix + ".valid";
         log_file_stream.open(dup_name.c_str());
         if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + dup_name;
+            std::string error_message = "ERROR: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
         for (auto&& snp : m_existed_snps) {

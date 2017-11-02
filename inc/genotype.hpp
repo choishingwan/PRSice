@@ -21,6 +21,7 @@
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "region.hpp"
+#include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
 #include <Eigen/Dense>
@@ -43,9 +44,10 @@ public:
     Genotype(){};
     Genotype(std::string prefix, std::string remove_sample,
              std::string keep_sample, std::string extract_snp,
-             std::string exclude_snp, std::string log_file, bool ignore_fid,
-             int num_auto = 22, bool no_x = false, bool no_y = false,
-             bool no_xy = false, bool no_mt = false, bool keep_ambig = false,
+             std::string exclude_snp, const std::string& out_prefix,
+             Reporter& reporter, bool ignore_fid, int num_auto = 22,
+             bool no_x = false, bool no_y = false, bool no_xy = false,
+             bool no_mt = false, bool keep_ambig = false,
              const size_t thread = 1, bool verbose = false);
 
     virtual ~Genotype();
@@ -73,12 +75,12 @@ public:
 protected:
     int process_block(int& start_index, int end_index, int& first_core_index);
     void clump_snp(const size_t start_index, const size_t end_index);
-    std::string m_log_file;
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
     // for loading the SNP inclusion / exclusion set
-    std::unordered_set<std::string> load_snp_list(std::string input);
+    std::unordered_set<std::string> load_snp_list(std::string input,
+                                                  Reporter& reporter);
 
     // for processing the genotype file (mainly for multiple chromosome input)
     void set_genotype_files(std::string prefix);
@@ -168,7 +170,10 @@ protected:
     size_t m_num_non_founder = 0;
     uintptr_t m_founder_ct = 0;
 
-    virtual std::vector<SNP> load_snps() { return std::vector<SNP>(0); };
+    virtual std::vector<SNP> load_snps(const std::string& out_prefix)
+    {
+        return std::vector<SNP>(0);
+    };
 
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_marker_ct = 0;

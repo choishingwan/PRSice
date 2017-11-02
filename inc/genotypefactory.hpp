@@ -21,6 +21,7 @@
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "misc.hpp"
+#include "reporter.hpp"
 #include <fstream>
 #include <string>
 #include <vector>
@@ -34,18 +35,9 @@ private:
 
 public:
     Genotype* createGenotype(Commander& commander, const std::string& prefix,
-                             const std::string& type, bool verbose)
+                             const std::string& type, bool verbose,
+                             Reporter& reporter)
     {
-        std::ofstream log_file;
-        std::string log_name = commander.out() + ".log";
-        log_file.open(log_name.c_str(), std::ofstream::app);
-        if (!log_file.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + log_name;
-            throw std::runtime_error(error_message);
-        }
-
-
         int code =
             (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
         switch (code)
@@ -60,20 +52,16 @@ public:
                 fam = token[1];
                 bfile_prefix = token[0];
             }
-            fprintf(stderr, "Loading Genotype file: %s ", bfile_prefix.c_str());
-            log_file << "Load Genotype file: " << bfile_prefix;
-            fprintf(stderr, "(bed)\n");
-            log_file << " (bed)" << std::endl;
+            std::string message =
+                "Loading Genotype file: " + bfile_prefix + " (bed)\n";
             if (!fam.empty()) {
-                fprintf(stderr, "With external fam file: %s\n", fam.c_str());
-                log_file << "With external fam file: " << fam << std::endl;
+                message.append("With external fam file: " + fam + "\n");
             }
-            log_file << std::endl;
-            log_file.close();
+            reporter.report(message);
             return new BinaryPlink(
                 bfile_prefix, commander.remove_sample_file(),
                 commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), fam, log_name,
+                commander.exclude_snp_file(), fam, commander.out(), reporter,
                 commander.ignore_fid(), commander.nonfounders(),
                 commander.num_auto(), commander.no_x(), commander.no_y(),
                 commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
@@ -81,30 +69,22 @@ public:
         }
         case 2:
         {
-            fprintf(stderr, "Loading Genotype file: %s ", prefix.c_str());
-            log_file << "Load Genotype file: " << prefix.c_str();
-            fprintf(stderr, "(bgen)\n");
-            log_file << " (bgen)" << std::endl;
-            log_file << std::endl;
-            log_file.close();
+            std::string message =
+                "Loading Genotype file: " + prefix + " (bgen)\n";
+            reporter.report(message);
             if (commander.pheno_file().empty() && !commander.no_regress()) {
                 throw std::runtime_error("ERROR: You must provide a phenotype "
                                          "file for bgen format!\n");
             }
-            if (!commander.filter_hard_threshold()) {
-                fprintf(stderr,
-                        "WARNING: Hard threshold was not given, will use "
-                        "default %f\n",
-                        commander.hard_threshold());
-            }
+
             return new BinaryGen(
                 prefix, commander.pheno_file(), commander.has_pheno_col(),
                 commander.remove_sample_file(), commander.keep_sample_file(),
                 commander.extract_snp_file(), commander.exclude_snp_file(),
-                log_name, commander.ignore_fid(), commander.num_auto(),
-                commander.no_x(), commander.no_y(), commander.no_xy(),
-                commander.no_mt(), commander.keep_ambig(), commander.thread(),
-                verbose);
+                commander.out(), reporter, commander.ignore_fid(),
+                commander.num_auto(), commander.no_x(), commander.no_y(),
+                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
+                commander.thread(), verbose);
         }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");

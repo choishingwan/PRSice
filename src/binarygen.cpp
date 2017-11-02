@@ -21,11 +21,11 @@ namespace bgenlib = genfile::bgen;
 BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
                      std::string remove_sample, std::string keep_sample,
                      std::string extract_snp, std::string exclude_snp,
-                     std::string log_file, bool ignore_fid, int num_auto,
-                     bool no_x, bool no_y, bool no_xy, bool no_mt,
-                     bool keep_ambig, const size_t thread, bool verbose)
+                     const std::string& out_prefix, Reporter& reporter,
+                     bool ignore_fid, int num_auto, bool no_x, bool no_y,
+                     bool no_xy, bool no_mt, bool keep_ambig,
+                     const size_t thread, bool verbose)
 {
-    m_log_file = log_file;
     m_thread = thread;
     filter.keep_ambig = keep_ambig;
     if (!remove_sample.empty()) {
@@ -37,10 +37,10 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     }
     if (!extract_snp.empty()) {
         m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_snp);
+        m_snp_selection_list = load_snp_list(extract_snp, reporter);
     }
     if (!exclude_snp.empty()) {
-        m_snp_selection_list = load_snp_list(exclude_snp);
+        m_snp_selection_list = load_snp_list(exclude_snp, reporter);
     }
 
     /** setting the chromosome information **/
@@ -55,7 +55,7 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
      * name **/
     set_genotype_files(prefix);
 
-    m_sample_names = preload_samples(pheno_file, header, ignore_fid);
+    m_sample_names = preload_samples(pheno_file, reporter, header, ignore_fid);
     // now we update the sample information accordingly
     // unlike binaryPlink, we don't actually want the return value
     // mainly because this is a QC step, checking consistency between
@@ -64,39 +64,26 @@ BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
     load_samples(ignore_fid);
 
     /** Load SNP information from the file **/
-    m_existed_snps = load_snps();
+    m_existed_snps = load_snps(out_prefix);
     m_marker_ct = m_existed_snps.size();
 
     if (verbose) {
-        std::ofstream log_file_stream;
-        log_file_stream.open(log_file.c_str(), std::ofstream::app);
-        if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + log_file;
-            throw std::runtime_error(error_message);
-        }
-        fprintf(stderr, "%zu people (%zu males, %zu females) observed\n",
-                m_unfiltered_sample_ct, m_num_male, m_num_female);
-        fprintf(stderr, "%zu founder(s) included\n", m_founder_ct);
-        log_file_stream << m_unfiltered_sample_ct << " people (" << m_num_male
-                        << " male(s), " << m_num_female
-                        << " female(s)) observed" << std::endl;
-        log_file_stream << m_founder_ct << " founder(s) included" << std::endl;
+        std::string message = std::to_string(m_unfiltered_sample_ct)
+                              + " people (" + std::to_string(m_num_male)
+                              + " male(s), " + std::to_string(m_num_female)
+                              + " female(s)) observed\n";
+        message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
         if (m_num_ambig != 0 && !keep_ambig) {
-            fprintf(stderr, "%u ambiguous variant(s) excluded\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) excluded"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) excluded\n");
         }
         else if (m_num_ambig != 0)
         {
-            fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) kept"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) kept\n");
         }
-        fprintf(stderr, "%zu variants included\n", m_marker_ct);
-        log_file_stream << m_marker_ct << " variant(s) included" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+        reporter.report(message);
     }
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -111,7 +98,7 @@ BinaryGen::~BinaryGen()
     if (m_bgen_file.is_open()) m_bgen_file.close();
 }
 
-std::vector<SNP> BinaryGen::load_snps()
+std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
 {
     std::vector<SNP> snp_res;
     bool chr_sex_error = false;
@@ -254,12 +241,10 @@ std::vector<SNP> BinaryGen::load_snps()
 
     if (dup_list.size() != 0) {
         std::ofstream log_file_stream;
-        std::string dup_name =
-            m_log_file.substr(0, m_log_file.find_last_of(".")) + ".valid";
+        std::string dup_name = out_prefix + ".valid";
         log_file_stream.open(dup_name.c_str());
         if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + dup_name;
+            std::string error_message = "ERROR: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
         for (auto&& snp : snp_res) {
@@ -315,11 +300,10 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
             auto&& prob = probability[i_sample];
             if (prob.size() != 3) {
                 // this is likely phased
-                fprintf(stderr, "ERROR: Currently don't support phased data\n");
-                fprintf(
-                    stderr,
-                    "       (It is because the lack of development time)\n");
-                throw std::runtime_error("");
+                std::string message = "ERROR: Currently don't support phased "
+                                      "data (It is because the lack of "
+                                      "development time)\n";
+                throw std::runtime_error(message);
             }
             double expected = 0.0;
             if (IS_SET(m_sample_include.data(),
@@ -607,6 +591,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
 }
 
 std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
+                                               Reporter& reporter,
                                                bool has_header, bool ignore_fid)
 {
     std::vector<Sample> sample_res;
@@ -649,7 +634,7 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
     std::vector<int> sex_info;
     if (bgen_sample) // then we know the first line is header
     {
-        fprintf(stderr, "Detected bgen sample format\n");
+        reporter.report("Detected bgen sample file format");
         for (size_t i = 3; i < possible_header.size(); ++i) {
             if (possible_header[i].compare("Sex") == 0
                 || possible_header[i].compare("sex") == 0

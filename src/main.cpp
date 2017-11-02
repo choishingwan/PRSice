@@ -26,21 +26,21 @@
 #include "genotypefactory.hpp"
 #include "prsice.hpp"
 #include "region.hpp"
+#include "reporter.hpp"
 
 int main(int argc, char* argv[])
 {
-    Commander commander = Commander();
+    Reporter reporter;
+    Commander commander;
     try
     {
-        if (!commander.init(argc, argv))
+        if (!commander.init(argc, argv, reporter))
             return 0; // only require the usage information
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << error.what() << std::endl;
-        exit(-1);
+        return -1; // all error messages should have printed
     }
-
     bool verbose = true;
     // this allow us to generate the appropriate object (i.e. binaryplink /
     // binarygen)
@@ -48,16 +48,19 @@ int main(int argc, char* argv[])
     Genotype* target_file;
     try
     {
-        target_file = factory.createGenotype(commander, commander.target_name(),
-                                             commander.target_type(), verbose);
+        target_file =
+            factory.createGenotype(commander, commander.target_name(),
+                                   commander.target_type(), verbose, reporter);
     }
     catch (const std::invalid_argument& ia)
     {
         std::cerr << ia.what() << std::endl;
+        return -1;
     }
     catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << std::endl;
+        return -1;
     }
     bool used_ld = false;
     Genotype* ld_file = nullptr;

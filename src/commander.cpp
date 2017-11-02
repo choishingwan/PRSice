@@ -17,12 +17,12 @@
 #include "commander.hpp"
 
 bool Commander::process(int argc, char* argv[], const char* optString,
-                        const struct option longOpts[])
+                        const struct option longOpts[], Reporter& reporter)
 {
     int longIndex = 0;
     int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string command;
-    std::string message = argv[0];
+    std::unordered_map<std::string, std::string> message_store;
     std::string error_messages = "";
     std::string temp_string = "";
     size_t temp_int = 0;
@@ -36,104 +36,110 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             if (longOpts[longIndex].flag != 0)
                 break;
             else if (command.compare("chr") == 0)
-                set_string(optarg, message, base.chr, base.provided_chr,
-                           command);
+                set_string(optarg, message_store, base.chr, base.provided_chr,
+                           command, error_messages);
             else if (command.compare("A1") == 0)
-                set_string(optarg, message, base.ref_allele, base.provided_ref,
-                           command);
+                set_string(optarg, message_store, base.ref_allele,
+                           base.provided_ref, command, error_messages);
             else if (command.compare("A2") == 0)
-                set_string(optarg, message, base.alt_allele, base.provided_alt,
-                           command);
+                set_string(optarg, message_store, base.alt_allele,
+                           base.provided_alt, command, error_messages);
             else if (command.compare("stat") == 0)
-                set_string(optarg, message, base.statistic, base.provided_stat,
-                           command);
+                set_string(optarg, message_store, base.statistic,
+                           base.provided_stat, command, error_messages);
             else if (command.compare("snp") == 0)
-                set_string(optarg, message, base.snp, base.provided_snp,
-                           command);
+                set_string(optarg, message_store, base.snp, base.provided_snp,
+                           command, error_messages);
             else if (command.compare("bp") == 0)
-                set_string(optarg, message, base.bp, base.provided_bp, command);
+                set_string(optarg, message_store, base.bp, base.provided_bp,
+                           command, error_messages);
             else if (command.compare("se") == 0)
-                set_string(optarg, message, base.standard_error,
-                           base.provided_se, command);
+                set_string(optarg, message_store, base.standard_error,
+                           base.provided_se, command, error_messages);
             else if (command.compare("model") == 0)
-                set_model(optarg, message, error_messages, error);
+                set_model(optarg, message_store, error_messages, error);
             else if (command.compare("cov-header")
                      == 0) // cerr for backward compatibility
-                load_string_vector(optarg, message, covariate.covariates,
-                                   "cov-col");
+                load_string_vector(optarg, message_store, covariate.covariates,
+                                   "cov-col", error_messages);
             else if (command.compare("keep") == 0)
-                set_string(optarg, message, target.keep_file,
-                           target.keep_sample, command);
+                set_string(optarg, message_store, target.keep_file,
+                           target.keep_sample, command, error_messages);
             else if (command.compare("exclude") == 0)
-                set_string(optarg, message, filter.exclude_file, filter.exclude,
-                           command);
+                set_string(optarg, message_store, filter.exclude_file,
+                           filter.exclude, command, error_messages);
             else if (command.compare("extract") == 0)
-                set_string(optarg, message, filter.extract_file, filter.extract,
-                           command);
+                set_string(optarg, message_store, filter.extract_file,
+                           filter.extract, command, error_messages);
             else if (command.compare("ld-keep") == 0)
-                set_string(optarg, message, clumping.keep_file,
-                           clumping.keep_sample, command);
+                set_string(optarg, message_store, clumping.keep_file,
+                           clumping.keep_sample, command, error_messages);
             else if (command.compare("ld-remove") == 0)
-                set_string(optarg, message, clumping.remove_file,
-                           clumping.remove_sample, command);
+                set_string(optarg, message_store, clumping.remove_file,
+                           clumping.remove_sample, command, error_messages);
             else if (command.compare("remove") == 0)
-                set_string(optarg, message, target.remove_file,
-                           target.remove_sample, command);
+                set_string(optarg, message_store, target.remove_file,
+                           target.remove_sample, command, error_messages);
             else if (command.compare("ld-type") == 0)
-                set_string(optarg, message, clumping.type, clumping.use_type,
-                           command);
+                set_string(optarg, message_store, clumping.type,
+                           clumping.use_type, command, error_messages);
             else if (command.compare("maf-base") == 0)
-                set_string(optarg, message, base.maf, base.provided_maf,
-                           command);
+                set_string(optarg, message_store, base.maf, base.provided_maf,
+                           command, error_messages);
             else if (command.compare("type") == 0)
-                set_string(optarg, message, target.type, target.use_type,
-                           command);
+                set_string(optarg, message_store, target.type, target.use_type,
+                           command, error_messages);
             else if (command.compare("score") == 0)
-                set_string(optarg, message, prsice.missing_score, dummy,
-                           command);
+                set_string(optarg, message_store, prsice.missing_score, dummy,
+                           command, error_messages);
             else if (command.compare("hard-thres") == 0)
-                set_numeric<double>(optarg, message, error_messages,
+                set_numeric<double>(optarg, message_store, error_messages,
                                     filter.hard_threshold,
                                     filter.use_hard_thres, error, command);
             else if (command.compare("clump-p") == 0)
-                set_numeric<double>(optarg, message, error_messages,
+                set_numeric<double>(optarg, message_store, error_messages,
                                     clumping.p_value, clumping.provide_p, error,
                                     command);
             else if (command.compare("clump-r2") == 0)
-                set_numeric<double>(optarg, message, error_messages,
+                set_numeric<double>(optarg, message_store, error_messages,
                                     clumping.r2, clumping.provide_r2, error,
                                     command);
             else if (command.compare("clump-kb") == 0)
-                set_numeric<int>(optarg, message, error_messages,
+                set_numeric<int>(optarg, message_store, error_messages,
                                  clumping.distance, clumping.provide_distance,
                                  error, command);
             else if (command.compare("prslice") == 0)
-                set_numeric<int>(optarg, message, error_messages, prslice.size,
-                                 prslice.provided, error, command);
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prslice.size, prslice.provided, error,
+                                 command);
             else if (command.compare("proxy") == 0)
-                set_numeric<double>(optarg, message, error_messages,
+                set_numeric<double>(optarg, message_store, error_messages,
                                     clumping.proxy, clumping.provide_proxy,
                                     error, command);
             else if (command.compare("perm") == 0)
-                set_numeric<int>(optarg, message, error_messages,
+                set_numeric<int>(optarg, message_store, error_messages,
                                  misc.permutation, misc.provided_permutation,
                                  error, command);
             else if (command.compare("binary-target") == 0)
-                load_binary_vector(optarg, message, error_messages,
+                load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
             else if (command.compare("pheno-col") == 0)
-                load_string_vector(optarg, message, target.pheno_col, command);
+                load_string_vector(optarg, message_store, target.pheno_col,
+                                   command, error_messages);
             else if (command.compare("feature") == 0)
-                load_string_vector(optarg, message, prset.feature, command);
+                load_string_vector(optarg, message_store, prset.feature,
+                                   command, error_messages);
             else if (command.compare("bar-levels") == 0)
-                load_numeric_vector<double>(optarg, message, error_messages,
-                                            prsice.barlevel, error, command);
+                load_numeric_vector<double>(optarg, message_store,
+                                            error_messages, prsice.barlevel,
+                                            error, command);
             else if (command.compare("memory") == 0)
-                set_numeric<int>(optarg, message, error_messages, misc.memory,
-                                 misc.provided_memory, error, command);
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 misc.memory, misc.provided_memory, error,
+                                 command);
             else if (command.compare("info-base") == 0)
-                set_string(optarg, message, base.info_col, base.use_info,
-                           command);
+                set_string(optarg, message_store, base.info_col, base.use_info,
+                           command, error_messages);
 
             else
             {
@@ -142,40 +148,52 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                 throw std::runtime_error(er);
             }
             break;
-        case 'b': set_string(optarg, message, base.name, dummy, "base"); break;
+        case 'b':
+            set_string(optarg, message_store, base.name, dummy, "base",
+                       error_messages);
+            break;
         case 'B':
-            load_string_vector(optarg, message, prset.bed, "bed");
+            load_string_vector(optarg, message_store, prset.bed, "bed",
+                               error_messages);
             prset.perform_prset = true;
             break;
         case 'c':
-            load_string_vector(optarg, message, covariate.covariates,
-                               "cov-col");
+            load_string_vector(optarg, message_store, covariate.covariates,
+                               "cov-col", error_messages);
             break;
         case 'C':
-            set_string(optarg, message, covariate.name, dummy, "cov-file");
+            set_string(optarg, message_store, covariate.name, dummy, "cov-file",
+                       error_messages);
             break;
         case 'f':
-            set_string(optarg, message, target.pheno_file, dummy, "pheno-file");
+            set_string(optarg, message_store, target.pheno_file, dummy,
+                       "pheno-file", error_messages);
             break;
         case 'g':
-            set_string(optarg, message, prset.gtf, prset.perform_prset, "gtf");
+            set_string(optarg, message_store, prset.gtf, prset.perform_prset,
+                       "gtf", error_messages);
             break;
         case 'i':
-            set_numeric<double>(optarg, message, error_messages, prsice.inter,
-                                prsice.provide_inter, error, "interval");
+            set_numeric<double>(optarg, message_store, error_messages,
+                                prsice.inter, prsice.provide_inter, error,
+                                "interval");
             break;
         case 'k':
-            load_numeric_vector<double>(optarg, message, error_messages,
+            load_numeric_vector<double>(optarg, message_store, error_messages,
                                         target.prevalence, error, "prevalence");
             break;
         case 'l':
-            set_numeric<double>(optarg, message, error_messages, prsice.lower,
-                                prsice.provide_lower, error, "lower");
+            set_numeric<double>(optarg, message_store, error_messages,
+                                prsice.lower, prsice.provide_lower, error,
+                                "lower");
             break;
-        case 'L': set_string(optarg, message, clumping.ld, dummy, "ld"); break;
+        case 'L':
+            set_string(optarg, message_store, clumping.ld, dummy, "ld",
+                       error_messages);
+            break;
         case 'm':
-            set_string(optarg, message, prset.msigdb, prset.perform_prset,
-                       "msigdb");
+            set_string(optarg, message_store, prset.msigdb, prset.perform_prset,
+                       "msigdb", error_messages);
             break;
         case 'n':
             temp_string = optarg;
@@ -183,8 +201,6 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             if (temp_string.compare("max") == 0) {
                 misc.thread = temp_int;
                 misc.provide_thread = true;
-                message.append("\\\n    --thread "
-                               + std::to_string(misc.thread));
             }
             else
             {
@@ -208,25 +224,34 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                     misc.thread = temp_int;
                     misc.provide_thread = true;
                 }
-                message.append("\\\n    --thread "
-                               + std::to_string(misc.thread));
             }
+
+            if (message_store.find("thread") != message_store.end()) {
+                error_messages.append(
+                    "Warning: Duplicated argument --thread\n");
+            }
+            message_store["thread"] = std::to_string(misc.thread);
             break;
-        case 'o': set_string(optarg, message, misc.out, dummy, "out"); break;
+        case 'o':
+            set_string(optarg, message_store, misc.out, misc.provided_output,
+                       "out", error_messages);
+            break;
         case 'p':
-            set_string(optarg, message, base.p_value, base.provided_p,
-                       "pvalue");
+            set_string(optarg, message_store, base.p_value, base.provided_p,
+                       "pvalue", error_messages);
             break;
         case 's':
-            set_numeric<int>(optarg, message, error_messages, misc.seed,
+            set_numeric<int>(optarg, message_store, error_messages, misc.seed,
                              misc.provided_seed, error, "seed");
             break;
         case 't':
-            set_string(optarg, message, target.name, dummy, "target");
+            set_string(optarg, message_store, target.name, dummy, "target",
+                       error_messages);
             break;
         case 'u':
-            set_numeric<double>(optarg, message, error_messages, prsice.upper,
-                                prsice.provide_upper, error, "upper");
+            set_numeric<double>(optarg, message_store, error_messages,
+                                prsice.upper, prsice.provide_upper, error,
+                                "upper");
             break;
         case 'h':
         case '?':
@@ -243,97 +268,80 @@ bool Commander::process(int argc, char* argv[], const char* optString,
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
 
-    base_check(message, error, error_messages);
-    clump_check(message, error, error_messages);
+    base_check(message_store, error, error_messages);
+    clump_check(message_store, error, error_messages);
     covariate_check(error, error_messages);
     filter_check(error, error_messages);
-    misc_check(message, error, error_messages);
-    prset_check(message, error, error_messages);
-    prsice_check(message, error, error_messages);
+    misc_check(message_store, error, error_messages);
+    prset_check(message_store, error, error_messages);
+    prsice_check(message_store, error, error_messages);
     prslice_check(error, error_messages);
-    target_check(message, error, error_messages);
+    target_check(message_store, error, error_messages);
     if (prset.perform_prset && prslice.provided) {
         error = true;
         error_messages.append(
             "ERROR: PRSet and PRSlice cannot be performed together!\n");
     }
     // check all flags
-    if (base.beta) message.append(" \\\n    --beta");
-    if (base.index) message.append(" \\\n    --index");
-    if (clumping.no_clump) message.append(" \\\n    --no-clump");
-    if (filter.hard_coding) message.append(" \\\n    --hard");
-    if (filter.keep_ambig) message.append(" \\\n    --keep-ambig");
-    if (misc.all) message.append(" \\\n    --all");
-    if (misc.ignore_fid) message.append(" \\\n    --ignore-fid");
-    if (misc.logit_perm) message.append(" \\\n    --logit-perm");
-    if (misc.print_all_samples) message.append(" \\\n    --print_all_samples");
-    if (misc.print_snp) message.append(" \\\n    --print-snp");
-    if (prsice.fastscore) message.append(" \\\n    --fastscore");
-    if (prsice.full) message.append(" \\\n    --full");
-    if (prsice.no_regress) message.append(" \\\n    --no-regression");
-    if (target.nonfounders) message.append(" \\\n    --nonfounders");
+    std::string log_name = misc.out + ".log";
+    reporter.initiailize(log_name);
+    if (base.beta) message_store["beta"] = "";
+    if (base.index) message_store["index"] = "";
+    if (clumping.no_clump) message_store["no-clump"] = "";
+    if (filter.hard_coding) message_store["hard"] = "";
+    if (filter.keep_ambig) message_store["keep-ambig"] = "";
+    if (misc.all) message_store["all"] = "";
+    if (misc.ignore_fid) message_store["ignore-fid"] = "";
+    if (misc.logit_perm) message_store["logit-perm"] = "";
+    if (misc.print_snp) message_store["print-snp"] = "";
+    if (prsice.fastscore) message_store["fastscore"] = "";
+    if (prsice.full) message_store["full"] = "";
+    if (prsice.no_regress) message_store["no-regress"] = "";
+    if (target.nonfounders) message_store["nonfounders"] = "";
     if ((clumping.ld.empty() && target.type.compare("bgen") == 0)
         || clumping.type.compare("bgen") == 0)
     {
         if (!filter.use_hard_thres) {
-            message.append(" \\\n    --hard-thres "
-                           + std::to_string(filter.hard_threshold));
+            message_store["hard-thres"] = std::to_string(filter.hard_threshold);
         }
     }
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
-    std::cerr << std::ctime(&start_time) << std::endl;
-    std::cerr << message << std::endl;
-    // fprintf(stderr, "%s\n", message.c_str());
-    std::ofstream logFile;
-    std::string logName = misc.out + ".log";
-    logFile.open(logName.c_str());
-    if (!logFile.is_open()) {
-        std::string file_error = "ERROR: Cannot open log file: " + logName;
-        throw std::runtime_error(file_error);
+    struct tm* timeinfo;
+    char buffer[80];
+    timeinfo = localtime(&start_time);
+
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+
+    std::string message = "\nPRSice " + version + " (" + date + ") \n";
+    message.append("https://github.com/choishingwan/PRSice\n");
+    message.append("(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn "
+                   "M. Lewis, Paul F. O'Reilly\n");
+    message.append("GNU General Public License v3\n\n");
+    message.append("If you use PRSice in any publised work, please cite:\n");
+    message.append("Jack Euesden Cathryn M. Lewis Paul F. O'Reilly (2015)\n");
+    message.append("PRSice: Polygenic Risk Score software.\n");
+    message.append("Bioinformatics 31 (9): 1466-1468\n\n");
+
+
+    std::string time_str(buffer);
+    std::string prog_name = argv[0];
+    message.append(time_str + "\n" + prog_name);
+    for (auto&& com : message_store) {
+        message.append(" \n    --" + com.first + " " + com.second);
     }
-    logFile << "PRSice " << version << " (" << date << ") " << std::endl;
-    logFile << "https://github.com/choishingwan/PRSice" << std::endl;
-    logFile << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. "
-               "Lewis, Paul F. "
-               "O'Reilly"
-            << std::endl;
-    logFile << "GNU General Public License v3" << std::endl << std::endl;
-    logFile << "If you use PRSice in any publised work, please cite:"
-            << std::endl;
-    logFile << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
-            << std::endl;
-    logFile << "PRSice: Polygenic Risk Score software." << std::endl;
-    logFile << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
-    ;
-    logFile << std::ctime(&start_time) << std::endl << std::endl;
-    logFile << message << std::endl;
-    logFile << std::endl;
-    logFile.close();
-    if (!error_messages.empty()) logFile << error_messages << std::endl;
+    message.append("\n");
+    reporter.report(message, false);
+    if (!error_messages.empty()) reporter.report(error_messages);
     if (error) throw std::runtime_error(error_messages);
-    fprintf(stderr, "\n");
     return true;
 }
 
 
 Commander::Commander()
 {
-    std::cerr << std::endl;
-    std::cerr << "PRSice " << version << " (" << date << ") " << std::endl;
-    std::cerr << "https://github.com/choishingwan/PRSice" << std::endl;
-    std::cerr << "(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn M. "
-                 "Lewis, Paul F. "
-                 "O'Reilly"
-              << std::endl;
-    std::cerr << "GNU General Public License v3" << std::endl << std::endl;
-    std::cerr << "If you use PRSice in any publised work, please cite:"
-              << std::endl;
-    std::cerr << "Jack Euesden Cathryn M. Lewis Paul F. O’Reilly (2015)"
-              << std::endl;
-    std::cerr << "PRSice: Polygenic Risk Score software." << std::endl;
-    std::cerr << "Bioinformatics 31 (9): 1466-1468" << std::endl << std::endl;
+
     base.beta = false;
     base.name = "";
     base.chr = "CHR";
@@ -401,6 +409,7 @@ Commander::Commander()
     misc.print_snp = false;
     misc.print_all_samples = false;
     misc.provided_permutation = false;
+    misc.provided_output = false;
     misc.provided_seed = false;
     misc.seed = 0;
     misc.thread = 1;
@@ -441,7 +450,7 @@ Commander::Commander()
     info();
 }
 
-bool Commander::init(int argc, char* argv[])
+bool Commander::init(int argc, char* argv[], Reporter& reporter)
 {
     if (argc <= 1) {
         usage();
@@ -531,7 +540,7 @@ bool Commander::init(int argc, char* argv[])
         {"help", no_argument, NULL, 'h'},
         {"version", no_argument, NULL, 'v'},
         {NULL, 0, 0, 0}};
-    return process(argc, argv, optString, longOpts);
+    return process(argc, argv, optString, longOpts, reporter);
 }
 
 
@@ -888,8 +897,9 @@ void Commander::info()
 void Commander::usage() { fprintf(stderr, "%s\n", help_message.c_str()); }
 
 
-void Commander::base_check(std::string& message, bool& error,
-                           std::string& error_message)
+void Commander::base_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (base.name.empty()) {
         error = true;
@@ -914,8 +924,8 @@ void Commander::base_check(std::string& message, bool& error,
             int max_size = token.size();
             if (!base.index) {
                 if (base.provided_stat) {
-                	// if statistics is provided, we can guess if it
-                	// is beta or not
+                    // if statistics is provided, we can guess if it
+                    // is beta or not
                     if (base.statistic.length() == 2
                         && toupper(base.statistic[0]) == 'O'
                         && toupper(base.statistic[1]) == 'R')
@@ -928,16 +938,18 @@ void Commander::base_check(std::string& message, bool& error,
                              && toupper(base.statistic[2]) == 'T'
                              && toupper(base.statistic[3]) == 'A')
                     {
+                        // although user cannot do --no-beta, it is a crazy
+                        // use case where BETA != beta, right?
+                        // TODO: add no-beta flag...
                         base.beta = true;
+                        message["beta"] = "";
                     }
                 }
                 else if (!base.provided_stat && base.beta)
                 {
                     base.provided_stat = true;
                     base.statistic = "BETA";
-                    message.append(" \\\n    --stat BETA");
-                    // fprintf(stderr, "Base statistic not provided, assumed to
-                    // be %s\n", base.statistic.c_str());
+                    message["stat"] = "BETA";
                 }
                 else if (!base.provided_stat)
                 {
@@ -949,11 +961,7 @@ void Commander::base_check(std::string& message, bool& error,
                             base.provided_stat = true;
                             base.beta = false;
                             base.statistic = token[i];
-                            /*
-                            fprintf(stderr, "Base statistic guessed to be %s
-                            (%s)\n", token[i].c_str(),"OR");
-                                    */
-                            message.append(" \\\n    --stat OR");
+                            message["stat"] = "OR";
                             break;
                         }
                         else if (token[i].length() == 4
@@ -965,7 +973,10 @@ void Commander::base_check(std::string& message, bool& error,
                             base.provided_stat = true;
                             base.beta = true;
                             base.statistic = token[i];
-                            message.append(" \\\n    --stat BETA");
+                            // Again, this will be problematic if the BETA
+                            // is actually OR... (Special crazy user)
+                            message["stat"] = "BETA";
+                            message["beta"] = "";
                             break;
                         }
                     }
@@ -973,36 +984,37 @@ void Commander::base_check(std::string& message, bool& error,
                 base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
                 if (!base.provided_chr
                     && base.col_index[+BASE_INDEX::CHR] != -1)
-                    message.append(" \\\n    --chr " + base.chr);
+                    message["chr"] = base.chr;
                 base.col_index[+BASE_INDEX::REF] =
                     index_check(base.ref_allele, token);
                 if (!base.provided_ref
                     && base.col_index[+BASE_INDEX::REF] != -1)
-                    message.append(" \\\n    --A1 " + base.ref_allele);
+                    message["A1"] =
+                        base.ref_allele; // actually the alternative allele
                 base.col_index[+BASE_INDEX::ALT] =
                     index_check(base.alt_allele, token);
                 if (!base.provided_alt
                     && base.col_index[+BASE_INDEX::ALT] != -1)
-                    message.append(" \\\n    --A2 " + base.alt_allele);
+                    message["A2"] = base.alt_allele; // the effective allele
                 base.col_index[+BASE_INDEX::STAT] =
                     index_check(base.statistic, token);
                 if (!base.provided_stat
                     && base.col_index[+BASE_INDEX::STAT] != -1)
-                    message.append(" \\\n    --stat " + base.statistic);
+                    message["stat"] = base.statistic;
                 base.col_index[+BASE_INDEX::RS] = index_check(base.snp, token);
                 if (!base.provided_snp && base.col_index[+BASE_INDEX::RS] != -1)
-                    message.append(" \\\n    --snp " + base.snp);
+                    message["snp"] = base.snp;
                 base.col_index[+BASE_INDEX::BP] = index_check(base.bp, token);
                 if (!base.provided_bp && base.col_index[+BASE_INDEX::BP] != -1)
-                    message.append(" \\\n    --bp " + base.bp);
+                    message["bp"] = base.bp;
                 base.col_index[+BASE_INDEX::SE] =
                     index_check(base.standard_error, token);
                 if (!base.provided_se && base.col_index[+BASE_INDEX::SE] != -1)
-                    message.append(" \\\n    --se " + base.standard_error);
+                    message["se"] = base.standard_error;
                 base.col_index[+BASE_INDEX::P] =
                     index_check(base.p_value, token);
                 if (!base.provided_p && base.col_index[+BASE_INDEX::P] != -1)
-                    message.append(" \\\n    --pvalue " + base.p_value);
+                    message["pvalue"] = base.p_value;
 
 
                 std::vector<std::string> info = misc::split(base.info_col, ",");
@@ -1021,6 +1033,7 @@ void Commander::base_check(std::string& message, bool& error,
                         error = true;
                         error_message.append("ERROR: Base INFO threshold must "
                                              "be within 0 and 1!\n");
+                        base.use_info = false;
                     }
                 }
                 catch (const std::runtime_error& er)
@@ -1033,14 +1046,13 @@ void Commander::base_check(std::string& message, bool& error,
                         "       Second argument must be numeric\n");
                 }
 
-                // found info, will use default
+                // Found INFO even if user didn't define INFO
                 if (!base.use_info && base.col_index[+BASE_INDEX::INFO] != -1) {
                     // as default will always be of the correct format,
                     // we don't need to worry about the error messages above
-                    message.append(" \\\n    --info-col " + base.info_col);
-                    message.append(" \\\n    --info "
-                                   + std::to_string(base.info_score));
+                    message["info-base"] = base.info_col;
                 }
+
                 // comma separate
                 if (base.provided_maf) {
                     // won't do it unless we have something provided
@@ -1064,6 +1076,7 @@ void Commander::base_check(std::string& message, bool& error,
                                 "ERROR: Base MAF threshold must "
                                 "be within 0 and 1!\n");
                         }
+                        message["maf-base"] = base.maf;
                     }
                     catch (const std::runtime_error& er)
                     {
@@ -1075,7 +1088,7 @@ void Commander::base_check(std::string& message, bool& error,
                             "       Second argument must be numeric\n");
                     }
                 }
-                // no default for MAF as there can be many differenet maf
+                // no default for MAF as there can be many different MAF
                 // headers
             }
             else
@@ -1205,8 +1218,9 @@ void Commander::base_check(std::string& message, bool& error,
     }
 }
 
-void Commander::clump_check(std::string& message, bool& error,
-                            std::string& error_message)
+void Commander::clump_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (!clumping.no_clump) {
         if (clumping.keep_sample && clumping.remove_sample) {
@@ -1245,15 +1259,12 @@ void Commander::clump_check(std::string& message, bool& error,
             }
         }
         if (!clumping.provide_r2)
-            message.append(" \\\n    --clump-r2 "
-                           + std::to_string(clumping.r2));
+            message["clump-r2"] = std::to_string(clumping.r2);
         if (!clumping.provide_p)
-            message.append(" \\\n    --clump-p "
-                           + std::to_string(clumping.p_value));
-        if (!clumping.provide_distance)
-            message.append(" \\\n    --clump-kb "
-                           + std::to_string(clumping.distance));
 
+            message["clump-p"] = std::to_string(clumping.p_value);
+        if (!clumping.provide_distance)
+            message["clump-kb"] = std::to_string(clumping.distance);
         if (clumping.distance < 0.0) {
             error = true;
             error_message.append(
@@ -1282,7 +1293,7 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         return;
     }
     cov_file.close();
-    // obtain the header informa
+    // obtain the header information
     std::unordered_set<std::string> included;
     for (auto cov : covariate.covariates) {
         if (cov.empty()) continue;
@@ -1455,8 +1466,9 @@ void Commander::filter_check(bool& error, std::string& error_message)
     }
 }
 
-void Commander::misc_check(std::string& message, bool& error,
-                           std::string& error_message)
+void Commander::misc_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (misc.provided_permutation && misc.permutation < 0) {
         error = true;
@@ -1465,6 +1477,11 @@ void Commander::misc_check(std::string& message, bool& error,
     if (misc.provided_seed && misc.seed < 0) {
         error = true;
         error_message.append("ERROR: Negative seed!\n");
+    }
+    else if (!misc.provided_seed)
+    {
+        misc.seed = std::random_device()();
+        message["seed"] = std::to_string(misc.seed);
     }
     if (misc.thread <= 0) {
         error = true;
@@ -1475,12 +1492,13 @@ void Commander::misc_check(std::string& message, bool& error,
             "WARNING: Permutation not required, --logit-perm has no effect\n");
     }
     if (prsice.no_regress) misc.all = true;
-    if (!misc.provide_thread)
-        message.append(" \\\n    --thread " + std::to_string(misc.thread));
+    if (!misc.provide_thread) message["thread"] = "1";
+    if (!misc.provided_output) message["out"] = misc.out;
 }
 
-void Commander::prset_check(std::string& message, bool& error,
-                            std::string& error_message)
+void Commander::prset_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (!prset.perform_prset) return;
     if (!prset.gtf.empty() && prset.msigdb.empty()) {
@@ -1493,22 +1511,21 @@ void Commander::prset_check(std::string& message, bool& error,
         prset.feature.push_back("gene");
         prset.feature.push_back("protein_coding");
         prset.feature.push_back("CDS");
-        message.append(" \\\n    --feature exon,gene,protein_coding,CDS");
+        message["feature"] = "exon,gene,protein_coding,CDS";
     }
 }
 
 
-void Commander::prsice_check(std::string& message, bool& error,
-                             std::string& error_message)
+void Commander::prsice_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (!prsice.provided_model) {
-        message.append(" \\\n    --model add");
+        message["model"] = "add";
     }
     if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
     {
-        // fprintf(stderr, "barlevel set to default: 0.001, 0.05, 0.1, 0.2, 0.3,
-        // 0.4, 0.5\n");
-        message.append(" \\\n    --bar-levels 0.001,0.05,0.1,0.2,0.3,0.4,0.5");
+        message["bar-levels"] = "0.001,0.05,0.1,0.2,0.3,0.4,0.5";
         prsice.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
     }
     std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
@@ -1519,11 +1536,10 @@ void Commander::prsice_check(std::string& message, bool& error,
         if (!prsice.provide_inter && !prsice.provide_upper
             && !prsice.provide_lower && !prsice.fastscore)
         {
-            message.append(" \\\n    --bar-levels 1");
+            message["bar-levels"] = 1;
             prsice.fastscore = true;
             prsice.barlevel = {1};
         }
-        // if any of those was included, use whatever, the user specify
     }
     else if (!prsice.fastscore)
     {
@@ -1546,12 +1562,11 @@ void Commander::prsice_check(std::string& message, bool& error,
             error_message.append("ERROR: CAnnot have negative bounds!\n");
         }
         if (!prsice.provide_inter)
-            message.append(" \\\n    --interval "
-                           + std::to_string(prsice.inter));
+            message["interval"] = std::to_string(prsice.inter);
         if (!prsice.provide_lower)
-            message.append(" \\\n    --lower " + std::to_string(prsice.lower));
+            message["lower"] = std::to_string(prsice.lower);
         if (!prsice.provide_upper)
-            message.append(" \\\n    --upper " + std::to_string(prsice.upper));
+            message["upper"] = std::to_string(prsice.upper);
     }
 }
 
@@ -1571,8 +1586,9 @@ void Commander::prslice_check(bool& error, std::string& error_message)
     }
 }
 
-void Commander::target_check(std::string& message, bool& error,
-                             std::string& error_message)
+void Commander::target_check(
+    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::string& error_message)
 {
     if (target.name.empty()) {
         error = true;
@@ -1595,15 +1611,18 @@ void Commander::target_check(std::string& message, bool& error,
         error_message.append("ERROR: Unsupported target format: " + target.type
                              + "\n");
     }
+    if (target.type.compare("bgen") == 0 && filter.hard_coding
+        && !filter.use_hard_thres)
+    {
+        message["hard-thres"] = std::to_string(filter.hard_threshold);
+    }
     if (target.pheno_col.size() != 0 && target.pheno_file.empty()) {
         error = true;
         error_message.append("ERROR: You must provide a phenotype file for "
                              "multiple phenotype analysis");
     }
     if (target.pheno_file.empty() && target.is_binary.empty()) {
-        message.append(" \\\n    --binary-target T");
-
-        // fprintf(stderr, "Target assumed to be binary\n");
+        message["binary-target"] = "T";
         target.is_binary.push_back(true);
     }
     else
@@ -1614,27 +1633,26 @@ void Commander::target_check(std::string& message, bool& error,
         else if (target.pheno_col.empty() && target.is_binary.empty())
         {
             if (base.beta) {
-                message.append(" \\\n    --binary-target F");
+                message["binary-target"] = "F";
                 target.is_binary.push_back(false);
             }
             else
             {
-                message.append(" \\\n    --binary-target T");
+                message["binary-target"] = "T";
                 target.is_binary.push_back(true);
             }
         }
         else if (target.pheno_col.size() <= 1 && target.is_binary.empty())
         {
             if (base.beta) {
-                message.append(" \\\n    --binary-target F");
+                message["binary-target"] = "F";
                 target.is_binary.push_back(false);
             }
             else
             {
-                message.append(" \\\n    --binary-target T");
+                message["binary-target"] = "T";
                 target.is_binary.push_back(true);
             }
-            target.is_binary.push_back(true);
         }
         else if (target.pheno_col.size() != target.is_binary.size())
         {

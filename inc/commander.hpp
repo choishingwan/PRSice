@@ -24,22 +24,23 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <random>
+#include <reporter.hpp>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <unistd.h>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
 const std::string version = "2.0.14.beta";
 const std::string date = "27 October 2017";
 class Commander
 {
 public:
-    // so that we don't need to include plink_common.hpp here
     Commander();
     virtual ~Commander();
-    bool init(int argc, char* argv[]);
+    bool init(int argc, char* argv[], Reporter& reporter);
 
     // base
     std::vector<int> index() const { return base.col_index; };
@@ -72,7 +73,7 @@ public:
     bool filter_maf() const { return filter.use_maf; };
     bool filter_geno() const { return filter.use_geno; };
     bool filter_mind() const { return filter.use_mind; };
-    bool filter_hard_threshold() const { return filter.hard_threshold; };
+    bool filter_hard_threshold() const { return filter.use_hard_thres; };
     bool hard_coding() const { return filter.hard_coding; };
     bool keep_ambig() const { return filter.keep_ambig; };
     std::string extract_snp_file() const
@@ -191,7 +192,7 @@ public:
 protected:
 private:
     bool process(int argc, char* argv[], const char* optString,
-                 const struct option longOpts[]);
+                 const struct option longOpts[], Reporter& reporter);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     struct
     {
@@ -285,6 +286,7 @@ private:
         bool provided_permutation;
         bool provide_thread;
         bool provided_memory;
+        bool provided_output;
         // I want to include cross-validation here
         // do it after writing up the paper. A useful resource is here
         // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
@@ -352,21 +354,21 @@ private:
     std::string help_message;
     void usage();
     void info();
-    void base_check(std::string& message, bool& error,
-                    std::string& error_message);
-    void clump_check(std::string& message, bool& error,
-                     std::string& error_message);
+    void base_check(std::unordered_map<std::string, std::string>& message,
+                    bool& error, std::string& error_message);
+    void clump_check(std::unordered_map<std::string, std::string>& message,
+                     bool& error, std::string& error_message);
     void covariate_check(bool& error, std::string& error_message);
     void filter_check(bool& error, std::string& error_message);
-    void misc_check(std::string& message, bool& error,
-                    std::string& error_message);
-    void prset_check(std::string& message, bool& error,
-                     std::string& error_message);
+    void misc_check(std::unordered_map<std::string, std::string>& message,
+                    bool& error, std::string& error_message);
+    void prset_check(std::unordered_map<std::string, std::string>& message,
+                     bool& error, std::string& error_message);
     void prslice_check(bool& error, std::string& error_message);
-    void prsice_check(std::string& message, bool& error,
-                      std::string& error_message);
-    void target_check(std::string& message, bool& error,
-                      std::string& error_message);
+    void prsice_check(std::unordered_map<std::string, std::string>& message,
+                      bool& error, std::string& error_message);
+    void target_check(std::unordered_map<std::string, std::string>& message,
+                      bool& error, std::string& error_message);
 
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
                             bool no_mt, bool& error, std::string& error_message,
@@ -385,13 +387,14 @@ private:
         species.double_set = true;
     };
 
-    inline void load_binary_vector(const std::string& input,
-                                   std::string& message,
-                                   std::string& error_message,
-                                   std::vector<bool>& target, bool& error,
-                                   const std::string& c)
+    inline void
+    load_binary_vector(const std::string& input,
+                       std::unordered_map<std::string, std::string>& message,
+                       std::string& error_message, std::vector<bool>& target,
+                       bool& error, const std::string& c)
     {
-        message.append(" \\\n    --" + c + " " + input);
+
+        message[c] = input;
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -406,24 +409,26 @@ private:
         }
     }
 
-    inline void load_string_vector(const std::string& input,
-                                   std::string& message,
-                                   std::vector<std::string>& target,
-                                   const std::string& c)
+    inline void
+    load_string_vector(const std::string& input,
+                       std::unordered_map<std::string, std::string>& message,
+                       std::vector<std::string>& target, const std::string& c,
+                       std::string& error_message)
     {
-        message.append(" \\\n    --" + c + " " + input);
+
+        message[c] = input;
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
 
     template <typename T>
     inline void
-    load_numeric_vector(const std::string& input, std::string& message,
+    load_numeric_vector(const std::string& input,
+                        std::unordered_map<std::string, std::string>& message,
                         std::string& error_message, std::vector<T>& target,
                         bool& error, const std::string& c)
     {
-
-        message.append(" \\\n    --" + c + " " + input);
+        message[c] = input;
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -438,12 +443,16 @@ private:
     }
 
     template <typename Type>
-    inline void set_numeric(const std::string& input, std::string& message,
-                            std::string& error_message, Type& target,
-                            bool& target_boolean, bool& error,
-                            const std::string& c)
+    inline void
+    set_numeric(const std::string& input,
+                std::unordered_map<std::string, std::string>& message,
+                std::string& error_message, Type& target, bool& target_boolean,
+                bool& error, const std::string& c)
     {
-        message.append(" \\\n    --" + c + " " + input);
+        if (message.find(c) != message.end()) {
+            error_message.append("Warning: Duplicated argument --" + c + "\n");
+        }
+        message[c] = input;
         try
         {
             target = misc::convert<Type>(input);
@@ -456,7 +465,8 @@ private:
         }
     }
 
-    inline void set_model(const std::string& in, std::string& message,
+    inline void set_model(const std::string& in,
+                          std::unordered_map<std::string, std::string>& message,
                           std::string& error_message, bool& error)
     {
         std::string input = in;
@@ -467,22 +477,22 @@ private:
         prsice.provided_model = true;
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
-            message.append(" \\\n    --model add");
+            input = "add";
             prsice.model = +MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
-            message.append(" \\\n    --model dom");
+            input = "dom";
             prsice.model = +MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
-            message.append(" \\\n    --model rec");
+            input = "rec";
             prsice.model = +MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
-            message.append(" \\\n    --model het");
+            input = "het";
             prsice.model = +MODEL::HETEROZYGOUS;
         }
         else
@@ -490,12 +500,22 @@ private:
             error = true;
             error_message.append("ERROR: Unrecognized model: " + input + "!\n");
         }
+        if (message.find("model") != message.end()) {
+            error_message.append("Warning: Duplicated argument --model\n");
+        }
+        message["model"] = input;
     }
-    inline void set_string(const std::string& input, std::string& message,
-                           std::string& target, bool& target_boolean,
-                           const std::string& c)
+    inline void
+    set_string(const std::string& input,
+               std::unordered_map<std::string, std::string>& message,
+               std::string& target, bool& target_boolean, const std::string& c,
+               std::string& error_message)
     {
-        message.append(" \\\n    --" + c + " " + input);
+
+        if (message.find(c) != message.end()) {
+            error_message.append("Warning: Duplicated argument --" + c + "\n");
+        }
+        message[c] = input;
         target = input;
         target_boolean = true;
     }

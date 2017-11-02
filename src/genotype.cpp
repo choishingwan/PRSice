@@ -102,7 +102,8 @@ void Genotype::set_genotype_files(std::string prefix)
 }
 
 
-std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
+std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
+                                                        Reporter& reporter)
 {
     std::ifstream in;
     in.open(input.c_str());
@@ -120,15 +121,16 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input)
         if (token[0].compare(".") == 0) {
             if (!error) {
                 error = true;
-                fprintf(stderr, "WARNING: Some SNPs from the "
-                                "extraction/exclusion list has rs-id of .\n");
-                fprintf(stderr, "         They will be excluded unless the "
-                                "file contains at least 3 columns\n");
-                fprintf(stderr, "         When 3 columns is provided, we will "
-                                "assume the second and third columns\n");
-                fprintf(stderr, "         are chromosome and coordinates "
-                                "respectively and will generate an rsid\n");
-                fprintf(stderr, "         as chr:loc\n");
+                std::string message =
+                    "WARNING: Some SNPs from the "
+                    "extraction/exclusion list has rs-id of . "
+                    "They will be excluded unless the file contains at least 3 "
+                    "columns."
+                    "When 3 columns is provided, we will assume the "
+                    "second and third columns are the chromosome and "
+                    "coordinates "
+                    "respectively and will generate an rsid as chr:loc\n";
+                reporter.report(message);
             }
             if (token.size() >= 3) {
                 token[0] = token[1] + ":" + token[2];
@@ -174,12 +176,12 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
 
 Genotype::Genotype(std::string prefix, std::string remove_sample,
                    std::string keep_sample, std::string extract_snp,
-                   std::string exclude_snp, std::string log_file,
-                   bool ignore_fid, int num_auto, bool no_x, bool no_y,
-                   bool no_xy, bool no_mt, bool keep_ambig, const size_t thread,
-                   bool verbose)
+                   std::string exclude_snp, const std::string& out_prefix,
+                   Reporter& reporter, bool ignore_fid, int num_auto, bool no_x,
+                   bool no_y, bool no_xy, bool no_mt, bool keep_ambig,
+                   const size_t thread, bool verbose)
 {
-    m_log_file = log_file;
+
     m_thread = thread;
     if (!remove_sample.empty()) {
         m_sample_selection_list = load_ref(remove_sample, ignore_fid);
@@ -190,10 +192,10 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
     }
     if (!extract_snp.empty()) {
         m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_snp);
+        m_snp_selection_list = load_snp_list(extract_snp, reporter);
     }
     if (!exclude_snp.empty()) {
-        m_snp_selection_list = load_snp_list(exclude_snp);
+        m_snp_selection_list = load_snp_list(exclude_snp, reporter);
     }
 
     /** setting the chromosome information **/
@@ -206,37 +208,24 @@ Genotype::Genotype(std::string prefix, std::string remove_sample,
 
     set_genotype_files(prefix);
     m_sample_names = load_samples(ignore_fid);
-    m_existed_snps = load_snps();
+    m_existed_snps = load_snps(out_prefix);
     if (verbose) {
-        std::ofstream log_file_stream;
-        log_file_stream.open(log_file.c_str(), std::ofstream::app);
-        if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + log_file;
-            throw std::runtime_error(error_message);
-        }
-        fprintf(stderr, "%zu people (%zu males, %zu females) included\n",
-                m_unfiltered_sample_ct, m_num_male, m_num_female);
-        fprintf(stderr, "%zu founder(s) included\n", m_founder_ct);
-        log_file_stream << m_unfiltered_sample_ct << " people (" << m_num_male
-                        << " male(s), " << m_num_female
-                        << " female(s)) observed" << std::endl;
-        log_file_stream << m_founder_ct << " founder(s) included" << std::endl;
+        std::string message = std::to_string(m_unfiltered_sample_ct)
+                              + " people (" + std::to_string(m_num_male)
+                              + " male(s), " + std::to_string(m_num_female)
+                              + " female(s)) observed\n";
+        message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
         if (m_num_ambig != 0 && !keep_ambig) {
-            fprintf(stderr, "%u ambiguous variant(s) excluded\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) excluded"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) excluded\n");
         }
         else if (m_num_ambig != 0)
         {
-            fprintf(stderr, "%u ambiguous variants kept\n", m_num_ambig);
-            log_file_stream << m_num_ambig << " ambiguous variant(s) kept"
-                            << std::endl;
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) kept\n");
         }
-        fprintf(stderr, "%zu variants included\n", m_marker_ct);
-        log_file_stream << m_marker_ct << " variant(s) included" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
+        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+        reporter.report(message);
     }
 }
 
