@@ -1,226 +1,152 @@
+// This file is part of PRSice2.0, copyright (C) 2016-2017
+// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "snp.hpp"
 
-
-SNP::SNP(const std::string rs_id, const std::string chr, const int loc,
-		const std::string ref_allele, const std::string alt_allele,
-		const double statistic, const double se, const double p_value)
-	: m_ref(ref_allele), m_alt(alt_allele),
-		m_rs(rs_id), m_chr(chr), m_loc(loc),  m_stat(statistic),
-		m_se(se), m_p_value(p_value)
+SNP::SNP()
 {
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
-    m_flipped = false;
-    m_clumped = false;
+    basic.chr = -1;
+    basic.loc = -1; // default is -1 to indicate that it is not provided
+    basic.valid = true;
+    statistic.flipped = false;
+    statistic.stat = 0.0;
+    statistic.se = 0.0;
+    statistic.p_value = 2.0; // set this to 2 such that only SNPs in base file
+                             // have valid P-value
+    threshold.p_threshold = 0.0;
+    threshold.category = 0;
+    clump_info.clumped = false;
+    clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
 }
 
-std::vector<size_t> SNP::sort_by_p(const boost::ptr_vector<SNP> &input)
+
+SNP::SNP(const std::string& rs_id, const int chr, const int loc,
+         const std::string& ref_allele, const std::string& alt_allele,
+         const std::string& file_name, const int num_line)
+{
+    basic.ref = ref_allele;
+    basic.alt = alt_allele;
+    basic.rs = rs_id;
+    basic.chr = chr;
+    basic.loc = loc;
+    basic.valid = true;
+    statistic.se = 0.0;
+    statistic.p_value = 0.0;
+    statistic.stat = 0.0;
+    statistic.flipped = false;
+    threshold.p_threshold = 0.0;
+    threshold.category = 0;
+    clump_info.clumped = false;
+    clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
+    file_info.file = file_name;
+    file_info.id = num_line;
+}
+
+
+SNP::SNP(const std::string& rs_id, const int chr, const int loc,
+         const std::string& ref_allele, const std::string& alt_allele,
+         const std::string& file_name, const std::streampos byte_pos)
+{
+    basic.ref = ref_allele;
+    basic.alt = alt_allele;
+    basic.rs = rs_id;
+    basic.chr = chr;
+    basic.loc = loc;
+    basic.valid = true;
+    statistic.se = 0.0;
+    statistic.p_value = 0.0;
+    statistic.stat = 0.0;
+    statistic.flipped = false;
+    threshold.p_threshold = 0.0;
+    threshold.category = 0;
+    clump_info.clumped = false;
+    clump_info.contain_missing = false;
+    clump_info.contain_geno = false;
+    file_info.file = file_name;
+    file_info.byte_pos = byte_pos;
+}
+SNP::~SNP() {}
+
+std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
 {
     std::vector<size_t> idx(input.size());
-    std::iota(idx.begin(), idx.end(),0);
-    std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2)
-    {
-    	// plink do it with respect to the location instead of statistic
-        if(input[i1].m_p_value==input[i2].m_p_value)
-        {
-        	if(input[i1].m_chr.compare(input[i2].m_chr)==0)
-        	{
-        		if(input[i1].m_loc == input[i2].m_loc)
-        		{
-        			if(fabs(input[i1].m_stat)==fabs(input[i2].m_stat))
-        			{
-        				return input[i1].m_se < input[i2].m_se;
-        			}
-        			else return fabs(input[i1].m_stat) > fabs(input[2].m_stat);
-        		}
-        		else return input[i1].m_loc < input[i2].m_loc;
-        	}
-			else return input[i1].m_chr.compare(input[i2].m_chr)<0;
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
+        // plink do it with respect to the location instead of statistic
+        if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
+            if (input[i1].basic.chr == input[i2].basic.chr) {
+                if (input[i1].basic.loc == input[i2].basic.loc) {
+                    if (fabs(input[i1].statistic.stat)
+                        == fabs(input[i2].statistic.stat))
+                    {
+                        return input[i1].statistic.se < input[i2].statistic.se;
+                    }
+                    else
+                        return fabs(input[i1].statistic.stat)
+                               > fabs(input[2].statistic.stat);
+                }
+                else
+                    return input[i1].basic.loc < input[i2].basic.loc;
+            }
+            else
+                return input[i1].basic.chr < input[i2].basic.chr;
         }
-        else return input[i1].m_p_value < input[i2].m_p_value;
+        else
+            return input[i1].statistic.p_value < input[i2].statistic.p_value;
     });
     return idx;
 }
 
-SNP::SNP()
-{
-    m_loc=-1; // default is -1 to indicate that it is not provided
-    m_stat=0.0;
-    m_se=0.0;
-    m_p_value=0.0;
-    m_flipped = false;
-    m_clumped = false;
-    m_bit_size = sizeof(long_type)*CHAR_BIT;
-}
 
-SNP::~SNP(){}
-
-size_t SNP::index_check(const std::string &c_in)
+void SNP::clump(std::vector<SNP>& snp_list, double proxy)
 {
-    int temp = atoi(c_in.c_str());
-    if(temp < 0) throw std::runtime_error("Index of column cannot be less than 0");
-    return temp;
-}
+    // when proxy = 2, we will not perform proxy
+    // That's because no SNP can have an R2 > 2
+    // go through each of the target
+    for (size_t i_target = 0; i_target < clump_info.target.size(); ++i_target) {
 
-size_t SNP::index_check(const std::string &c_in, const std::vector<std::string> &c_header, const std::string &typeOfError)
-{
-    for(size_t i = 0; i < c_header.size(); ++i)
-    {
-        if(c_in.compare(c_header[i])==0)
-        {
-            return i;
+        auto&& target_index = clump_info.target[i_target];
+        // don't bother with anyone who are already clumped
+        if (snp_list[target_index].clumped()) continue;
+        // check if we are going to proxy clump it or just normal clump it
+        bool completed = false;
+        // if we can perform proxy clump, we will always perform proxy
+        // clump instead of normal clump
+        if (clump_info.r2[i_target] > proxy) {
+            // proxy clump
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+                // two become one
+                m_flags[i_flag] |= snp_list[target_index].m_flags[i_flag];
+            }
+            completed = true;
         }
-    }
-    std::string error_message = typeOfError+": No "+c_in+" colume in input data";
-    if(typeOfError.compare("ERROR")==0) throw std::runtime_error(error_message);
-    else fprintf(stderr, "%s\n", error_message.c_str());
-    return -1; //Cannot find the index
-}
-
-std::vector<int> SNP::get_index(const Commander &c_commander, const std::string &c_input)
-{
-    // This function should return the index in the following order
-    // CHR, A1, A2, STAT, SNP, BP, SE, P
-    // Absent field = -1
-    // Here we will also check if the field are actually within the file
-    std::vector<int> result(9,-1);
-    if(c_commander.index())
-    {
-        //Index was provided, check if the index is correct, then return the vector
-        result[+SNP_Index::CHR] = index_check(c_commander.chr());
-        result[+SNP_Index::REF] = index_check(c_commander.ref());
-        result[+SNP_Index::ALT] = index_check(c_commander.alt());
-        result[+SNP_Index::STAT] = index_check(c_commander.statistic());
-        result[+SNP_Index::RS] = index_check(c_commander.snp());
-        result[+SNP_Index::BP] = index_check(c_commander.bp());
-        result[+SNP_Index::SE] = index_check(c_commander.se());
-        result[+SNP_Index::P] = index_check(c_commander.p());
-    }
-    else
-    {
-        std::ifstream in;
-        in.open(c_input.c_str());
-        if(!in.is_open())
+        else
         {
-            std::string error_message = "Cannot open file: "+ c_input;
-            throw std::runtime_error(error_message);
-        }
-        std::string header_line;
-        std::getline(in, header_line);
-        in.close();
-        if(header_line.empty())
-        {
-            std::string error_message = "Empty header line for "+c_input;
-            throw std::runtime_error(error_message);
-        }
-        std::vector<std::string> header = misc::split(header_line);
-        result[+SNP_Index::CHR] = index_check(c_commander.chr(), header, "WARNING");
-        result[+SNP_Index::REF] = index_check(c_commander.ref(), header, "ERROR");
-        result[+SNP_Index::ALT] = index_check(c_commander.alt(), header, "WARNING");
-        result[+SNP_Index::STAT] = index_check(c_commander.statistic(), header, "ERROR");
-        result[+SNP_Index::RS] = index_check(c_commander.snp(), header, "ERROR");
-        result[+SNP_Index::BP] = index_check(c_commander.bp(), header, "WARNING");
-        result[+SNP_Index::SE] = index_check(c_commander.se(), header, "WARNING");
-        result[+SNP_Index::P] = index_check(c_commander.p(), header, "ERROR");
-        sort( header.begin(), header.end() );
-        size_t before = header.size();
-        header.erase( unique( header.begin(), header.end() ), header.end() );
-        size_t after= header.size();
-        if(before!=after)
-        {
-            fprintf(stderr, "WARNING: Header contain duplicated elements\n");
-            fprintf(stderr, "         Only the first occurrence is used\n");
-            fprintf(stderr, "         Please do check your input file\n");
-        }
-    }
-    int max_index = -1;
-    for(size_t i = 0; i < 9; ++i) max_index = (result[i]> max_index)? result[i]:max_index; //get the maximum index
-    result[+SNP_Index::MAX] = max_index;
-    if(c_commander.index())
-    {
-        std::ifstream in;
-        in.open(c_input.c_str());
-        std::string line;
-        std::getline(in, line);
-        std::vector<std::string> col = misc::split(misc::trimmed(line));
-        if(col.size() < max_index)
-        {
-            throw std::runtime_error("ERROR: Number of column in file less than the specified index!");
-        }
-    }
-    return result;
-}
-
-
-void SNP::clump(boost::ptr_vector<SNP> &snp_list)
-{
-	for(auto &&target : m_clump_target){
-		if(!snp_list[target].clumped())
-		{
-			int sum_total = 0;
-			for(size_t i_flag = 0; i_flag < m_flags.size(); ++i_flag)
-			{
-				//TODO: ERROR IS HERE
-				// if there is any overlap this should set the snp_list to the new flag
-				snp_list[target].m_flags[i_flag] = snp_list[target].m_flags[i_flag] ^
-						(m_flags[i_flag] & snp_list[target].m_flags[i_flag]);
-				sum_total+=snp_list[target].m_flags[i_flag];
-			}
-			if(sum_total==0)  snp_list[target].set_clumped();
-		}
-	}
-	m_clumped=true; // protect from other SNPs tempering its flags
-}
-
-void SNP::proxy_clump(boost::ptr_vector<SNP> &snp_list, double r2_threshold)
-{
-    for(size_t i_target = 0; i_target < m_clump_target.size(); ++i_target)
-    {
-        if(!snp_list[m_clump_target[i_target]].clumped())
-        {
-            snp_list[m_clump_target[i_target]].set_clumped();
-            if(m_clump_r2[i_target] >= r2_threshold)
-            {
-                for(size_t j = 0; j < m_flags.size(); ++j)  m_flags[j] |= snp_list[m_clump_target[i_target]].m_flags[j];
+            // normal clumping
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+                snp_list[target_index].m_flags[i_flag] =
+                    snp_list[target_index].m_flags[i_flag]
+                    ^ (m_flags[i_flag]
+                       & snp_list[target_index].m_flags[i_flag]);
+                completed = (snp_list[target_index].m_flags[i_flag] == 0);
             }
         }
+        if (completed) snp_list[target_index].set_clumped();
     }
-	m_clumped=true; // protect from other SNPs tempering its flags
+    clump_info.clumped = true; // protect from other SNPs tempering its flags
 }
-
-
-bool SNP::check_loc(const std::string &chr, const int loc, const std::string &ref_allele,
-                    const std::string &alt_allele)
-{
-    if(chr.compare(m_chr)!=0) return false;
-    if(loc!= m_loc) return false;
-    //Check if allele is the same
-    if(ref_allele.compare(m_ref)!=0 && alt_allele.compare(m_ref)!=0 &&
-            ref_allele.compare(complement(m_ref))!=0 &&
-            alt_allele.compare(complement(m_ref))!=0 ) return false; // not possible even after flipping
-    if(m_alt.empty())
-    {
-        // can only use the reference allele to do things, more dangerous
-        if((ref_allele.compare(m_ref)!=0 && alt_allele.compare(m_ref)==0) ||
-                (ref_allele.compare(complement(m_ref))!=0 && alt_allele.compare(complement(m_ref))==0))
-        {
-            m_alt = ref_allele;
-            m_ref = alt_allele;
-            m_flipped=true;
-        }
-    }
-    else
-    {
-        // can use both
-        if((ref_allele.compare(m_alt)==0 && alt_allele.compare(m_ref)==0) ||
-                (ref_allele.compare(complement(m_alt))==0 &&
-                 alt_allele.compare(complement(m_ref))==0)	)
-        {
-            // need to flip
-        		m_alt = ref_allele;
-            m_ref = alt_allele;
-            m_flipped=true;
-        }
-    }
-    return true;
-}
-

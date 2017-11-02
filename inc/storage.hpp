@@ -1,75 +1,157 @@
-/*
- * storage.hpp
- *
- *  Created on: 14 Oct 2016
- *      Author: shingwanchoi
- */
+// This file is part of PRSice2.0, copyright (C) 2016-2017
+// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
-#include <memory>
 #include <cstdint>
-	// From http://stackoverflow.com/a/12927952/1441789
+#include <memory>
+#include <string>
+// From http://stackoverflow.com/a/12927952/1441789
+struct Sample
+{
+    std::string FID;
+    std::string IID;
+    std::string pheno;
+    int num_snp;
+    bool included;
+    bool has_pheno;
+};
 
-	template< typename e >
-	struct enumeration_traits;
+struct Sample_lite
+{
+    double prs;
+    int num_snp;
+    bool has_pheno;
+};
 
-	struct enumeration_trait_indexing {
-		static constexpr bool does_index = true;
-	};
+// Passkey idiom, allow safer access to
+// the raw pointer info in SNP
+template <typename T>
+class Passkey
+{
+private:
+    friend T;
+    Passkey() {}
+    Passkey(const Passkey&) {}
+    Passkey& operator=(const Passkey&) = delete;
+};
 
-	template< typename e >
-	constexpr
-	typename std::enable_if< enumeration_traits< e >::does_index,
-    		typename std::underlying_type< e >::type >::type
-	operator + ( e val )
-    		{ return static_cast< typename std::underlying_type< e >::type >( val ); }
+template <typename e>
+struct enumeration_traits;
 
-	template< typename e >
-	typename std::enable_if< enumeration_traits< e >::does_index, e & >::type
-	operator ++ ( e &val )
-    		{ return val = static_cast< e >( + val + 1 ); }
-	// END
+struct enumeration_trait_indexing
+{
+    static constexpr bool does_index = true;
+};
 
-	enum class SNP_Index {CHR, REF, ALT, STAT, RS, BP, SE, P, MAX };
-	enum class FAM {FID, IID, FATHER, MOTHER, SEX, PHENOTYPE};
-	enum class BIM{CHR, RS, CM, BP, A1, A2};
-    enum class FILE_INFO { FILE, LINE, INDEX, HAPLOID, X, Y  }; // This is for clumping in PLINK
-    enum class PRS{FID=0, IID, PRS, NNMISS, RS=0, LINE, CATEGORY, INDEX, FILENAME, P_THRES, THRESHOLD=0, R2,
-    	NSNP, COEFF, P, EMPIRICAL_P, R2ADJ};
-    enum class BOUNDARY{CHR, START, END};
-    enum class GTF{CHR, SOURCE, FEATURE, START, END, SCORE, STRAND, FRAME, ATTRIBUTE};
-    	// Mean imputed, no-mean imputed, centering is currently too complicated based on our algorithm
-    enum class SCORING{MEAN_IMPUTE, SET_ZERO, CENTER};
-    enum help_index{CATEGORY, SHORT, LONG, DESCRIPTION};
-    template<> struct enumeration_traits< BOUNDARY > : enumeration_trait_indexing {};
-	template<> struct enumeration_traits< GTF > : enumeration_trait_indexing {};
-	template<> struct enumeration_traits< SNP_Index > : enumeration_trait_indexing {};
-	template<> struct enumeration_traits< FAM > : enumeration_trait_indexing {};
-	template<> struct enumeration_traits< BIM > : enumeration_trait_indexing {};
-    template<> struct enumeration_traits< FILE_INFO > : enumeration_trait_indexing {};
-    template<> struct enumeration_traits< PRS > : enumeration_trait_indexing {};
-    template<> struct enumeration_traits< SCORING > : enumeration_trait_indexing {};
-	//List of const for use with the GET
-	// FID IID PRS Number of non-missing SNP
-	typedef std::tuple<std::string, std::string, double, size_t> prs_score;
-	// rsid, line number in bim, category, snp_list index
-	typedef std::tuple<std::string, size_t, int, size_t, std::string, double> p_partition;
-	// threshold, r2,  num_snps, p, coefficient r2 adjust, number of better
-	typedef std::tuple<double, double, size_t, double, double, size_t, double> PRSice_result;
-	//  threshold, r2, num_snps, coefficient, pvalue (The r2 is for determining if it is the best), number of better
-	typedef std::tuple<double, double, size_t, double, double, int> PRSice_best;
-    typedef std::tuple<std::string, char, std::string, std::string> help;
-    typedef std::tuple<std::string, size_t, size_t> boundary;
-    typedef std::tuple<std::string, int, size_t, bool, bool, bool> snp_link;
+template <typename e>
+constexpr typename std::enable_if<enumeration_traits<e>::does_index,
+                                  typename std::underlying_type<e>::type>::type
+operator+(e val)
+{
+    return static_cast<typename std::underlying_type<e>::type>(val);
+}
 
+template <typename e>
+typename std::enable_if<enumeration_traits<e>::does_index, e&>::type
+operator++(e& val)
+{
+    return val = static_cast<e>(+val + 1);
+}
+// END
 
-#if defined(__LP64__) || defined(_WIN64)
-    typedef std::uint64_t long_type;
-	#define ONE  0x1LLU
+enum class BIM
+{
+    CHR,
+    RS,
+    CM,
+    BP,
+    A1,
+    A2
+};
+enum class BASE_INDEX
+{
+    CHR,
+    REF,
+    ALT,
+    STAT,
+    RS,
+    BP,
+    SE,
+    P,
+    INFO,
+    MAF,
+    MAX
+};
+enum class FAM
+{
+    FID,
+    IID,
+    FATHER,
+    MOTHER,
+    SEX,
+    PHENOTYPE
+};
+enum class GTF
+{
+    CHR,
+    SOURCE,
+    FEATURE,
+    START,
+    END,
+    SCORE,
+    STRAND,
+    FRAME,
+    ATTRIBUTE
+};
 
-#else
-    typedef std::uint32_t long_type;
-	#define ONE  0x1LU
-#endif
+enum class MODEL
+{
+    ADDITIVE,
+    DOMINANT,
+    RECESSIVE,
+    HETEROZYGOUS
+};
+// Mean imputed, no-mean imputed, centering is currently too complicated based
+// on our algorithm
+enum class SCORING
+{
+    MEAN_IMPUTE,
+    SET_ZERO,
+    CENTER
+};
+
+template <>
+struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<GTF> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<MODEL> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<FAM> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<BIM> : enumeration_trait_indexing
+{
+};
 #endif /* PRSICE_INC_STORAGE_HPP_ */

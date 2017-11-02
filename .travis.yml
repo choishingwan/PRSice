@@ -1,0 +1,96 @@
+language: cpp
+
+branches:
+  only:
+  - master
+  - beta_testing
+
+compiler:
+  - gcc
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+matrix:
+  include:
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env:
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+
+    - os: osx
+      osx_image: xcode8
+      env:
+        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+
+    - os: osx
+      osx_image: xcode8
+      env:
+        - MATRIX_EVAL="brew update && brew install gcc5 && CC=gcc-5 && CXX=g++-5"
+
+    - os: osx
+      osx_image: xcode8
+      env:
+        - MATRIX_EVAL="brew update && brew install gcc6 && CC=gcc-6 && CXX=g++-6"
+
+    - os: osx
+      osx_image: xcode8
+      env:
+        - MATRIX_EVAL="brew update && brew install gcc && CC=gcc-7 && CXX=g++-7"
+
+before_install:
+    - eval "${MATRIX_EVAL}"
+
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports
+    packages:
+      - cmake-data
+      - cmake
+
+
+script:
+  - mkdir build && cd build && cmake ../ && make
