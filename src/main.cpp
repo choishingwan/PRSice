@@ -27,7 +27,6 @@
 #include "prsice.hpp"
 #include "region.hpp"
 #include "reporter.hpp"
-
 int main(int argc, char* argv[])
 {
     Reporter reporter;
@@ -153,12 +152,12 @@ int main(int argc, char* argv[])
     }
     catch (const std::out_of_range& error)
     {
-        reporter(error.what());
+        reporter.report(error.what());
         return -1;
     }
     catch (const std::runtime_error& error)
     {
-        reporter(error.what());
+        reporter.report(error.what());
         return -1;
     }
     delete target_file;

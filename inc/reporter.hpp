@@ -20,7 +20,7 @@ public:
     Reporter(){
 
     };
-    Reporter(const std::string& log_name, size_t width = 80) : m_width(width)
+    Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
     {
         m_log_file.open(log_name.c_str());
         if (!m_log_file.is_open()) {
@@ -29,7 +29,7 @@ public:
             throw std::runtime_error(error_message);
         }
     };
-    void initiailize(const std::string& log_name, size_t width = 80)
+    void initiailize(const std::string& log_name, size_t width = 60)
     {
         m_width = width;
         if (m_log_file.is_open()) m_log_file.close();
@@ -48,7 +48,7 @@ public:
 
 private:
     std::ofstream m_log_file;
-    size_t m_width = 80;
+    size_t m_width = 60;
 };
 
 #endif /* REPORTER_HPP_ */

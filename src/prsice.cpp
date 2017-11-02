@@ -150,7 +150,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     gen_pheno_vec(pheno_file, pheno_index, !no_regress, reporter);
     if (!no_regress) {
         std::vector<std::string> cov_header = c_commander.get_cov_header();
-        gen_cov_matrix(c_commander.get_cov_file(), cov_header);
+        gen_cov_matrix(c_commander.get_cov_file(), cov_header, reporter);
     }
     // now inform PRSice which samples should be included
     update_sample_included();
@@ -407,14 +407,14 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     else
     {
         message.append(std::to_string(m_phenotype.rows())
-                       << " sample(s) with valid phenotype\n");
+                       +" sample(s) with valid phenotype\n");
     }
     reporter.report(message);
 }
 
 
 std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
-                                          std::vector<std::string>& cov_header)
+                                          std::vector<std::string>& cov_header, Reporter &reporter)
 {
     std::vector<size_t> cov_index;
     std::ifstream cov;
@@ -448,7 +448,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
                 included.insert(cov);
             }
         }
-        // same, +1 when fid is include
+        //+1 when fid is include
         for (size_t i_header = 1 + !m_ignore_fid; i_header < token.size();
              ++i_header)
         {
@@ -457,35 +457,24 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
             }
         }
     }
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
 
+    // while the cov_index is sorted, this index corresponds to the header line
+    // so that is ok?
     std::sort(cov_index.begin(), cov_index.end());
     if (cov_index.size() == 0) {
-        log_file_stream << "ERROR: No valid covariates!" << std::endl;
-        log_file_stream << std::endl;
-        log_file_stream.close();
         throw std::runtime_error("ERROR: No valid covariates!");
     }
     else
     {
+    		std::string message ="";
         if (cov_index.size() == 1) {
-            log_file_stream << "1 valid covariate included" << std::endl;
-            fprintf(stderr, "1 valid covariate included\n");
+        		message.append("1 valid covariate included\n");
         }
         else
-            fprintf(stderr, "%zu valid covariates included\n",
-                    cov_index.size());
-        log_file_stream << cov_index.size() << " valid covariates included"
-                        << std::endl;
+        		message.append(std::to_string(cov_index.size())+" valid covariates included\n");
+
+        reporter.report(message);
     }
-    log_file_stream << std::endl;
-    log_file_stream.close();
     cov_header = token;
     return cov_index;
 }
@@ -575,7 +564,7 @@ void PRSice::check_factor_cov(
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
-                            std::vector<std::string>& cov_header)
+                            std::vector<std::string>& cov_header, Reporter &reporter)
 {
     // The size of the map should be informative of the number of sample
     size_t num_sample = m_sample_with_phenotypes.size();
@@ -586,20 +575,11 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     }
     // obtain the index of each covariate
 
-    std::vector<size_t> cov_index = get_cov_index(c_cov_file, cov_header);
+    std::vector<size_t> cov_index = get_cov_index(c_cov_file, cov_header, reporter);
 
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
-    log_file_stream << "Processing the covariate file: " << c_cov_file
-                    << std::endl;
-    // log_flie_stream.close(); // if check factor covariates
-    fprintf(stderr, "\nStart processing the covariates\n");
-    fprintf(stderr, "==============================\n");
+    std::string message = "Processing the covariate file: " +c_cov_file +"\n";
+    message.append("==============================\n");
+    reporter.report(message);
     std::vector<std::pair<std::string, size_t>> valid_sample_index;
     // Initialize the independent variables matrix with 1s
     // might be worth while to check the covariates
@@ -630,7 +610,6 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         valid = true;
         std::vector<std::string> token = misc::split(line);
         if (token.size() < max_index) {
-            log_file_stream.close();
             std::string error_message =
                 "ERROR: Malformed covariate file, should contain at least "
                 + std::to_string(max_index) + " column!";
@@ -673,14 +652,10 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     if (valid_sample_index.size() != num_sample && num_sample != 0) {
         // helpful to give the overview
         int removed = num_sample - valid_sample_index.size();
-        fprintf(stderr, "Number of samples with invalid covariate: %d\n",
-                removed);
-        log_file_stream << removed << " sample(s) with invalid covariate"
-                        << std::endl;
-        log_file_stream << "Covariate\tNumber of Missing Samples" << std::endl;
+        message = std::to_string(removed)+" sample(s) with invalid covariate:\n\n";
+        message.append("Covariate\tNumber of Missing Samples\n");
         for (size_t miss = 0; miss < missing_count.size(); ++miss) {
-            log_file_stream << cov_header[cov_index[miss]] << "\t"
-                            << missing_count[miss] << std::endl;
+        		message.append(cov_header[cov_index[miss]]+"\t"+std::to_string(missing_count[miss])+"\n");
         }
         double portion = (double) removed / (double) num_sample;
         if (valid_sample_index.size() == 0) {
@@ -690,36 +665,18 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     // we sorted the column index so we can't tell what the
                     // column name is useless we also store the head of the file
                     // (too troublesome)
-                    fprintf(stderr,
-                            "Column %zu is invalid, please check it is of the "
-                            "correct format\n",
-                            miss);
+                		message.append("Column "+std::to_string(miss)+" is invalid, please check it is of the correct format\n");
                 }
             }
-
-            log_file_stream
-                << "All samples removed due to missingness in covariate file!"
-                << std::endl;
-            log_file_stream << std::endl;
-            log_file_stream.close();
+            reporter.report(message);
             throw std::runtime_error(
                 "All samples removed due to missingness in covariate file!");
         }
         if (portion > 0.05) {
-            fprintf(
-                stderr,
-                "WARNING: More than %03.2f%% of the samples were removed!\n",
-                portion * 100);
-
-            fprintf(stderr,
-                    "         Do check if your covariate file is correct\n");
-            log_file_stream << "WARNING: More than " << portion * 100
-                            << "% of the samples were removed!" << std::endl;
-            log_file_stream
-                << "         Do check if your covariate file is correct"
-                << std::endl;
+        		message.append("Warning: More than "+std::to_string(portion*100)+"% of your samples were removed! "
+        				"You should check if your covariate file is correct\n");
         }
-
+        reporter.report(message);
         // sort the sample index
         std::sort(begin(valid_sample_index), end(valid_sample_index),
                   [](std::pair<std::string, size_t> const& t1,
@@ -750,20 +707,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             valid_sample_index.size(), m_independent_variables.cols());
         m_phenotype.conservativeResize(valid_sample_index.size(), 1);
 
-        fprintf(stderr, "\nFinal number of samples: %zu\n\n",
-                valid_sample_index.size());
     }
-    else
-    {
-        fprintf(stderr, "\nFinal number of samples: %zu\n\n",
-                valid_sample_index.size());
-    }
-
-    log_file_stream << "After reading covariate file:" << std::endl;
-    log_file_stream << valid_sample_index.size()
-                    << " sample(s) included in the analysis" << std::endl;
-    log_file_stream << std::endl;
-    log_file_stream.close();
+    message = "After reading the covariate file, "+std::to_string(valid_sample_index.size())+" sample(s) included in the analysis\n";
+    reporter.report(message);
 }
 
 
@@ -1287,7 +1233,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     std::string message = "There are ";
     if (m_significant_store[0] != 0) {
         message.append(std::to_string(m_significant_store[0])
-                       + "region(s) with p-value > 0.1 (\033[1;31mnot "
+                       + " region(s) with p-value > 0.1 (\033[1;31mnot "
                          "significant\033[0m);");
         prev_out = true;
     }
@@ -1304,11 +1250,11 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     if (m_significant_store[2] != 0) {
         if (prev_out) message.append(" and ");
         message.append(std::to_string(m_significant_store[2])
-                       + "region(s) with p-value less than 1e-5");
+                       + " region(s) with p-value less than 1e-5.");
     }
     if (!perm) {
         message.append(
-            "Please note that these results are inflated due to the "
+            " Please note that these results are inflated due to the "
             "overfitting inherent in finding the best-fit "
             "PRS (but it's still best to find the best-fit PRS!).\n"
             "You can use the --perm option (see manual) to calculate "
