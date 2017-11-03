@@ -33,24 +33,25 @@ public:
     BinaryGen(std::string prefix, std::string pheno_file, bool header,
               std::string remove_sample, std::string keep_sample,
               std::string extract_snp, std::string exclude_snp,
-              std::string log_file, bool ignore_fid, int num_auto = 22,
-              bool no_x = false, bool no_y = false, bool no_xy = false,
-              bool no_mt = false, bool keep_ambig = false,
-              const size_t thread = 1, bool verbose = false);
+              const std::string& out_prefix, Reporter& reporter,
+              bool ignore_fid, int num_auto = 22, bool no_x = false,
+              bool no_y = false, bool no_xy = false, bool no_mt = false,
+              bool keep_ambig = false, const size_t thread = 1,
+              bool verbose = false);
     ~BinaryGen();
 
 private:
     typedef std::vector<std::vector<double>> Data;
     Sample get_sample(std::vector<std::string>& token, bool ignore_fid,
                       bool has_sex, int sex_col, std::vector<int>& sex_info);
-    std::vector<Sample> preload_samples(std::string pheno, bool has_header,
-                                        bool ignore_fid);
+    std::vector<Sample> preload_samples(std::string pheno, Reporter& reporter,
+                                        bool has_header, bool ignore_fid);
     std::unordered_map<std::string, size_t> m_sample_index_check;
 
     std::vector<Sample> load_samples(bool ignore_fid);
 
 
-    std::vector<SNP> load_snps();
+    std::vector<SNP> load_snps(const std::string& out_prefix);
 
     std::string m_cur_file;
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
@@ -82,11 +83,10 @@ private:
             auto&& prob = probability[i_sample];
             if (prob.size() != 3) {
                 // this is likely phased
-                fprintf(stderr, "ERROR: Currently don't support phased data\n");
-                fprintf(
-                    stderr,
-                    "       (It is because the lack of development time)\n");
-                throw std::runtime_error("");
+                std::string message = "ERROR: Currently don't support phased "
+                                      "data (It is because the lack of "
+                                      "development time)\n";
+                throw std::runtime_error(message);
             }
             uintptr_t cur_geno = 1;
             for (size_t g = 0; g < prob.size(); ++g) {

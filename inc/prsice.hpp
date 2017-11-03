@@ -41,12 +41,13 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "reporter.hpp"
 // This should be the class to handle all the procedures
 class PRSice
 {
 public:
     PRSice(const std::string& base_name, const Commander& commander,
-           const bool prset, const size_t sample_ct)
+           const bool prset, const size_t sample_ct, Reporter& reporter)
         : m_ignore_fid(commander.ignore_fid())
         , m_prset(prset)
         , m_logit_perm(commander.logit_perm())
@@ -59,20 +60,7 @@ public:
     {
 
         bool perm = commander.permute();
-        m_seed = std::random_device()(); // cerr valgrind doesn't like this
-
-        m_log_file = m_out + ".log";
-        if (commander.seeded()) m_seed = commander.seed();
-        fprintf(stderr, "Seed: %u\n", m_seed);
-        std::ofstream log_file_stream;
-        log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-        if (!log_file_stream.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open log file: " + m_log_file;
-            throw std::runtime_error(error_message);
-        }
-        log_file_stream << "Seed: " << m_seed << std::endl;
-        log_file_stream.close();
+        m_seed = commander.seed();
         bool has_binary = false;
         for (auto&& b : m_target_binary) {
             if (b) {
@@ -100,43 +88,38 @@ public:
                 m_remain_slice = m_num_perm % m_perm_per_slice;
             }
             if (has_binary) {
-                fprintf(stderr,
-                        "\nWARNING: To speed up the permutation, we perform\n");
-                fprintf(stderr,
-                        "         linear regression instead of logistic\n");
-                fprintf(
-                    stderr,
-                    "         regression within the permutation and uses\n");
-                fprintf(stderr,
-                        "         the p-value to rank the thresholds. Our "
-                        "assumptions\n");
-                fprintf(stderr, "         are as follow:\n");
-                fprintf(stderr, "         1. Linear Regression & Logistic "
-                                "Regression produce\n");
-                fprintf(stderr, "            similar p-values\n");
                 if (!m_logit_perm) {
-                    fprintf(stderr,
-                            "         2. P-value is correlated with R2\n\n");
-                    fprintf(stderr,
-                            "         If you must, you can run logistic "
-                            "regression instead\n");
-                    fprintf(stderr,
-                            "         by setting the --logit-perm flag\n\n");
+                    std::string message =
+                        "Warning: To speed up the permutation, "
+                        "we perform  linear regression instead of logistic "
+                        "regression within the permutation and uses the "
+                        "p-value to rank the thresholds. Our assumptions "
+                        "are as follow:\n";
+                    message.append("         1. Linear Regression & Logistic "
+                                   "Regression produce similar p-values\n");
+                    message.append(
+                        "         2. P-value is correlated with R2\n\n");
+                    message.append("         If you must, you can run logistic "
+                                   "regression instead by setting the "
+                                   "--logit-perm flag\n\n");
+                    reporter.report(message);
                 }
                 else
                 {
-                    fprintf(stderr, "         Using --logit-perm can be "
-                                    "ridiculously slow\n");
+                    std::string message = "Warning: Using --logit-perm can be "
+                                          "ridiculously slow\n";
+                    reporter.report(message);
                 }
             }
         }
     };
 
     virtual ~PRSice();
-    void pheno_check(const Commander& c_commander);
+    void pheno_check(const Commander& c_commander, Reporter& reporter);
     // init_matrix whenever phenotype changes
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
-                     Genotype& target, const bool prslice = false);
+                     Genotype& target, Reporter& reporter,
+                     const bool prslice = false);
     size_t num_phenotype() const
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
@@ -154,7 +137,7 @@ public:
                 Genotype& target);
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
-    void summarize(const Commander& c_commander);
+    void summarize(const Commander& c_commander, Reporter& reporter);
 
 protected:
 private:
@@ -241,11 +224,11 @@ private:
     void permutation(const size_t n_thread, bool logit_perm);
     void update_sample_included();
     void gen_pheno_vec(const std::string& pheno_file_name,
-                       const int pheno_index, bool regress);
+                       const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
-                                      std::vector<std::string>& cov_header);
+                                      std::vector<std::string>& cov_header, Reporter &reporter);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string>& cov_header);
+                        std::vector<std::string>& cov_header, Reporter &reporter);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,
