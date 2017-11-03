@@ -329,7 +329,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string prog_name = argv[0];
     message.append(time_str + "\n" + prog_name);
     for (auto&& com : message_store) {
-        message.append(" \n    --" + com.first + " " + com.second);
+        message.append(" \\\n    --" + com.first + " " + com.second);
     }
     message.append("\n");
     reporter.report(message, false);
