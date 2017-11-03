@@ -545,6 +545,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
                              bool has_sex, int sex_col,
                              std::vector<int>& sex_info)
 {
+	assert(ignore_fid && token.size()>1);
     std::string id = (ignore_fid) ? token[0] : token[0] + "_" + token[1];
     // this will pose problem when there are duplicated IID names even if they
     // are from different family. However, we don't know how bgen store the
@@ -670,26 +671,36 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
             else
             {
                 // this isn't a header
+            	if(possible_header.size() < 2 && ignore_fid){
+            		std::string error_message = "Malformed phenotype file: line:1 only has 1 column.\n";
+            		throw std::runtime_error(error_message);
+            	}
                 sample_res.push_back(get_sample(possible_header, ignore_fid,
                                                 has_sex, sex_col, sex_info));
                 m_sample_index_check[sample_res.back().IID] =
                     sample_res.size() - 1;
             }
         }
+        if(token.size() < 2 && ignore_fid){
+        	std::string error_message = "Malformed phenotype file: line:2 only has 1 column.\n";
+        	throw std::runtime_error(error_message);
+        }
         sample_res.push_back(
             get_sample(token, ignore_fid, has_sex, sex_col, sex_info));
         m_sample_index_check[sample_res.back().IID] = sample_res.size() - 1;
     }
-
+    size_t line_id = 2;
     while (std::getline(pheno_file, line)) {
         misc::trim(line);
+        line_id++;
         if (line.empty()) continue;
         std::vector<std::string> token = misc::split(line);
-        if (token.size() < (has_sex) ? (sex_col) : (1 + !ignore_fid)) {
+        if (token.size() < ((has_sex) ? (sex_col) : (1 + !ignore_fid))) {
             std::string error_message =
-                "ERROR: Header line must contain at least "
+                "ERROR: Line "+std::to_string(line_id)+" must have at least "
                 + std::to_string((has_sex) ? (sex_col) : (1 + !ignore_fid))
-                + " columns!";
+                + " columns! Number of column="+std::to_string(token.size());
+            throw std::runtime_error(error_message);
         }
         sample_res.push_back(
             get_sample(token, ignore_fid, has_sex, sex_col, sex_info));
