@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # Here is the guide to this protentially long R code
 # To go to each section, just search for the corresponding header as stated here
 # The code structure are as follow
