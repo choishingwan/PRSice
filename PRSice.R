@@ -1235,11 +1235,9 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
     if(use.data.table){
       PRS <-
         fread(paste(prefix, ".prsice", sep = ""),
-              header = T,
               data.table = F)
       PRS.best <-
         fread(paste(prefix, ".best", sep = ""),
-              header = T,
               data.table = F)
     }else{
       
@@ -1498,7 +1496,6 @@ if (!is.null(phenos)) {
     pheno_file <- NULL
     if(use.data.table){
       pheno_file <- fread(argv$pheno_file,
-                       header = T,
                        data.table = F)
     }else{
       pheno_file <- read.table(argv$pheno_file,
