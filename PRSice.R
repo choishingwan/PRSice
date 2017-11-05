@@ -740,8 +740,15 @@ quantile_plot <-
         }
         num_quant = sum(!is.na(unique(quants)))
         if (!is.null(extract)) {
+          extract_ID <- NULL
+          best_ID <- NULL
+          if(provided("ignore_fid",argv)){
+            extract_ID <- extract$V1
+            best_ID <- pheno.merge$IID
+          }else{
             extract_ID <- paste(extract$V1, extract$V2, sep = "_")
             best_ID <- paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
+          }
             quants[best_ID %in% extract_ID] <-
                 num_quant + 1 # We only matched based on the IID here
             num_quant <- num_quant + 1
@@ -784,13 +791,18 @@ quantile_plot <-
                 family <- binomial
             }
             reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
-            coef.quantiles <- exp(reg$coefficients[1:num_quant, 1])
+            coef.quantiles <- (reg$coefficients[1:num_quant, 1])
             ci <- (1.96 * reg$coefficients[1:num_quant, 2])
             
             ci.quantiles.u <-
                 coef.quantiles + ci
             ci.quantiles.l <-
                 coef.quantiles - ci
+            if(binary){
+              ci.quantiles.u <- exp(ci.quantiles.u)
+              ci.quantiles.l <- exp(ci.quantiles.l)
+              coef.quantiles <- exp(coef.quantiles)
+            }
             coef.quantiles[1] <- ifelse(binary,1,0)
             ci.quantiles.u[1] <- ifelse(binary,1,0)
             ci.quantiles.l[1] <- ifelse(binary,1,0)
