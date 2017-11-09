@@ -150,7 +150,10 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                 [&alleles](std::size_t i, std::string const& allele) {
                     alleles.at(i) = allele;
                 });
-
+            for(auto &&a : alleles)
+            {
+            		std::transform(a.begin(), a.end(), a.begin(), ::toupper);
+            }
 
             std::streampos byte_pos = m_bgen_file.tellg();
             Data probability;
