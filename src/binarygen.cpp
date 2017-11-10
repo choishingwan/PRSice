@@ -132,7 +132,7 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
             if (m_unfiltered_marker_ct % 1000 == 0
                 && m_unfiltered_marker_ct > 0)
             {
-                fprintf(stderr, "\r %zuK SNPs processed\r",
+                fprintf(stderr, "\r%zuK SNPs processed\r",
                         m_unfiltered_marker_ct / 1000);
             }
 
@@ -252,7 +252,8 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
         }
         for (auto&& snp : snp_res) {
             if (dup_list.find(snp.rs()) != dup_list.end()) continue;
-            log_file_stream << snp.rs() << std::endl;
+            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc() << "\t"
+            		<< snp.ref() << "\t" << snp.alt() << std::endl;
         }
         log_file_stream.close();
         std::string error_message =
@@ -323,7 +324,7 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
                     }
                     else
                     {
-                        int geno = (snp.is_flipped()) ? std::abs(g - 2) : g;
+                        int geno = (!snp.is_flipped()) ? 2 - g : g;
                         if (m_model == +MODEL::HETEROZYGOUS && geno == 2)
                             geno = 0;
                         else if (m_model == +MODEL::DOMINANT && geno == 2)
@@ -380,6 +381,7 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
                                 size_t start_index, size_t end_bound,
                                 const size_t region_index)
 {
+
     m_cur_file = "";
     uint32_t uii;
     uint32_t ujj;
@@ -487,8 +489,6 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
         double maf = ((double) (aA + AA * 2)
                       / ((double) (num_included_samples - nmiss)
                          * 2.0)); // MAF does not count missing
-
-
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
@@ -521,7 +521,6 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
                 {
                     g = (g == 2) ? 1 : g;
                 }
-
 
                 current_prs_score[i_sample].prs += g * stat * 0.5;
                 current_prs_score[i_sample].num_snp++;

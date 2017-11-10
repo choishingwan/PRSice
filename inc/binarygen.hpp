@@ -57,6 +57,7 @@ private:
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
                          const std::string& file_name)
     {
+
         if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
             || !m_bgen_file.is_open())
         {

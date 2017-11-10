@@ -241,7 +241,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                        "pvalue", error_messages);
             break;
         case 's':
-            set_numeric<int>(optarg, message_store, error_messages, misc.seed,
+            set_numeric<size_t>(optarg, message_store, error_messages, misc.seed,
                              misc.provided_seed, error, "seed");
             break;
         case 't':
@@ -486,7 +486,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid", no_argument, &misc.ignore_fid, 1},
         {"index", no_argument, &base.index, 1},
-        {"keep-ambig", no_argument, &filter.keep_ambig, 1},
+        {"keep-ambig", no_argument, &filter.keep_ambig, 0},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
         {"no-regression", no_argument, &prsice.no_regress, 1},

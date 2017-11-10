@@ -281,7 +281,7 @@ private:
         int print_snp;
         int print_all_samples;
         int thread;
-        int seed;
+        size_t seed;
         bool provided_seed;
         bool provided_permutation;
         bool provide_thread;

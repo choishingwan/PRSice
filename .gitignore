@@ -28,3 +28,7 @@ TOY_TARGET_DATA\.bim
 TOY_TARGET_DATA\.fam
 
 TOY_TARGET_QUANTITATIVE\.pheno
+
+*.swp
+
+src/bk/

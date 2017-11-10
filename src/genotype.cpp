@@ -608,7 +608,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     message.append(std::to_string(m_existed_snps.size())
                    + " total SNPs included from base file\n\n");
     reporter.report(message);
-
+    if(m_existed_snps.size()==0){
+    		throw std::runtime_error("Error: No valid SNPs remaining");
+    }
     m_num_threshold = unique_thresholds.size();
 }
 
@@ -1157,7 +1159,6 @@ bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
             break;
         }
         //		// Use as part of the output
-
         if (m_existed_snps[i].in(region_index)) num_snp_included++;
     }
     if (!ended) {
