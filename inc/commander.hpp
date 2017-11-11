@@ -30,7 +30,7 @@
 #include <string>
 #include <thread>
 #include <unistd.h>
-#include <unordered_map>
+#include <map>
 #include <unordered_set>
 #include <vector>
 const std::string version = "2.0.14.beta";
@@ -354,20 +354,20 @@ private:
     std::string help_message;
     void usage();
     void info();
-    void base_check(std::unordered_map<std::string, std::string>& message,
+    void base_check(std::map<std::string, std::string>& message,
                     bool& error, std::string& error_message);
-    void clump_check(std::unordered_map<std::string, std::string>& message,
+    void clump_check(std::map<std::string, std::string>& message,
                      bool& error, std::string& error_message);
     void covariate_check(bool& error, std::string& error_message);
     void filter_check(bool& error, std::string& error_message);
-    void misc_check(std::unordered_map<std::string, std::string>& message,
+    void misc_check(std::map<std::string, std::string>& message,
                     bool& error, std::string& error_message);
-    void prset_check(std::unordered_map<std::string, std::string>& message,
+    void prset_check(std::map<std::string, std::string>& message,
                      bool& error, std::string& error_message);
     void prslice_check(bool& error, std::string& error_message);
-    void prsice_check(std::unordered_map<std::string, std::string>& message,
+    void prsice_check(std::map<std::string, std::string>& message,
                       bool& error, std::string& error_message);
-    void target_check(std::unordered_map<std::string, std::string>& message,
+    void target_check(std::map<std::string, std::string>& message,
                       bool& error, std::string& error_message);
 
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
@@ -389,7 +389,7 @@ private:
 
     inline void
     load_binary_vector(const std::string& input,
-                       std::unordered_map<std::string, std::string>& message,
+                       std::map<std::string, std::string>& message,
                        std::string& error_message, std::vector<bool>& target,
                        bool& error, const std::string& c)
     {
@@ -411,7 +411,7 @@ private:
 
     inline void
     load_string_vector(const std::string& input,
-                       std::unordered_map<std::string, std::string>& message,
+                       std::map<std::string, std::string>& message,
                        std::vector<std::string>& target, const std::string& c,
                        std::string& error_message)
     {
@@ -424,7 +424,7 @@ private:
     template <typename T>
     inline void
     load_numeric_vector(const std::string& input,
-                        std::unordered_map<std::string, std::string>& message,
+                        std::map<std::string, std::string>& message,
                         std::string& error_message, std::vector<T>& target,
                         bool& error, const std::string& c)
     {
@@ -445,7 +445,7 @@ private:
     template <typename Type>
     inline void
     set_numeric(const std::string& input,
-                std::unordered_map<std::string, std::string>& message,
+                std::map<std::string, std::string>& message,
                 std::string& error_message, Type& target, bool& target_boolean,
                 bool& error, const std::string& c)
     {
@@ -466,7 +466,7 @@ private:
     }
 
     inline void set_model(const std::string& in,
-                          std::unordered_map<std::string, std::string>& message,
+                          std::map<std::string, std::string>& message,
                           std::string& error_message, bool& error)
     {
         std::string input = in;
@@ -507,7 +507,7 @@ private:
     }
     inline void
     set_string(const std::string& input,
-               std::unordered_map<std::string, std::string>& message,
+               std::map<std::string, std::string>& message,
                std::string& target, bool& target_boolean, const std::string& c,
                std::string& error_message)
     {

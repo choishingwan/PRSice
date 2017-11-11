@@ -22,7 +22,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     int longIndex = 0;
     int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string command;
-    std::unordered_map<std::string, std::string> message_store;
+    std::map<std::string, std::string> message_store;
     std::string error_messages = "";
     std::string temp_string = "";
     size_t temp_int = 0;
@@ -898,7 +898,7 @@ void Commander::usage() { fprintf(stderr, "%s\n", help_message.c_str()); }
 
 
 void Commander::base_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (base.name.empty()) {
@@ -1219,7 +1219,7 @@ void Commander::base_check(
 }
 
 void Commander::clump_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (!clumping.no_clump) {
@@ -1467,7 +1467,7 @@ void Commander::filter_check(bool& error, std::string& error_message)
 }
 
 void Commander::misc_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (misc.provided_permutation && misc.permutation < 0) {
@@ -1497,7 +1497,7 @@ void Commander::misc_check(
 }
 
 void Commander::prset_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (!prset.perform_prset) return;
@@ -1517,7 +1517,7 @@ void Commander::prset_check(
 
 
 void Commander::prsice_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (!prsice.provided_model) {
@@ -1587,7 +1587,7 @@ void Commander::prslice_check(bool& error, std::string& error_message)
 }
 
 void Commander::target_check(
-    std::unordered_map<std::string, std::string>& message, bool& error,
+    std::map<std::string, std::string>& message, bool& error,
     std::string& error_message)
 {
     if (target.name.empty()) {

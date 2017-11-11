@@ -11,13 +11,9 @@ debug/
 
 \.DS_Store
 
-PRSice_linux
+PRSice_linux*
 
-PRSice_linux\.bugfix\.20171109\.zip
-
-PRSice_mac
-
-PRSice_mac\.bugfix\.20171109\.zip
+PRSice_mac*
 
 TOY_BASE_GWAS\.assoc
 
@@ -32,3 +28,5 @@ TOY_TARGET_QUANTITATIVE\.pheno
 *.swp
 
 src/bk/
+
+*.zip
