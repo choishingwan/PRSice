@@ -336,7 +336,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         message.append(std::to_string(invalid_pheno)
                        + " sample(s) with invalid phenotype\n");
     }
-    if (num_not_found == num_included) {
+    if (num_not_found == num_included && regress) {
         message.append(
             "None of the target samples were found in the phenotype file. ");
         if (m_ignore_fid) {
@@ -352,12 +352,12 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
         reporter.report(message);
         throw std::runtime_error("ERROR: No sample left");
     }
-    if (invalid_pheno == num_included) {
+    if (invalid_pheno == num_included && regress) {
         message.append("ERROR: All sample has invalid phenotypes!");
         reporter.report(message);
         throw std::runtime_error("ERROR: No sample left");
     }
-    if (input_sanity_check.size() < 2 && !binary) {
+    if (input_sanity_check.size() < 2 && !binary && regress) {
         message.append("Only one phenotype value detected");
         auto itr = input_sanity_check.begin();
         if ((*itr) == -9) {
