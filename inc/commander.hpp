@@ -33,7 +33,7 @@
 #include <map>
 #include <unordered_set>
 #include <vector>
-const std::string version = "2.0.14.beta";
+const std::string version = "2.0.15.beta";
 const std::string date = "27 October 2017";
 class Commander
 {
@@ -259,6 +259,7 @@ private:
         double hard_threshold;
         double maf;
         double mind;
+        double info_score;
         int hard_coding;
         int use_geno;
         int use_maf;
@@ -268,6 +269,7 @@ private:
         bool extract;
         bool exclude;
         bool use_hard_thres;
+        bool info_filtering;
     } filter;
 
     struct

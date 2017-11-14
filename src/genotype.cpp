@@ -608,8 +608,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     message.append(std::to_string(m_existed_snps.size())
                    + " total SNPs included from base file\n\n");
     reporter.report(message);
-    if(m_existed_snps.size()==0){
-    		throw std::runtime_error("Error: No valid SNPs remaining");
+    if (m_existed_snps.size() == 0) {
+        throw std::runtime_error("Error: No valid SNPs remaining");
     }
     m_num_threshold = unique_thresholds.size();
 }

@@ -407,14 +407,15 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
     else
     {
         message.append(std::to_string(m_phenotype.rows())
-                       +" sample(s) with valid phenotype\n");
+                       + " sample(s) with valid phenotype\n");
     }
     reporter.report(message);
 }
 
 
 std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
-                                          std::vector<std::string>& cov_header, Reporter &reporter)
+                                          std::vector<std::string>& cov_header,
+                                          Reporter& reporter)
 {
     std::vector<size_t> cov_index;
     std::ifstream cov;
@@ -466,12 +467,13 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
     }
     else
     {
-    		std::string message ="";
+        std::string message = "";
         if (cov_index.size() == 1) {
-        		message.append("1 valid covariate included\n");
+            message.append("1 valid covariate included\n");
         }
         else
-        		message.append(std::to_string(cov_index.size())+" valid covariates included\n");
+            message.append(std::to_string(cov_index.size())
+                           + " valid covariates included\n");
 
         reporter.report(message);
     }
@@ -564,7 +566,8 @@ void PRSice::check_factor_cov(
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
-                            std::vector<std::string>& cov_header, Reporter &reporter)
+                            std::vector<std::string>& cov_header,
+                            Reporter& reporter)
 {
     // The size of the map should be informative of the number of sample
     size_t num_sample = m_sample_with_phenotypes.size();
@@ -575,9 +578,10 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     }
     // obtain the index of each covariate
 
-    std::vector<size_t> cov_index = get_cov_index(c_cov_file, cov_header, reporter);
+    std::vector<size_t> cov_index =
+        get_cov_index(c_cov_file, cov_header, reporter);
 
-    std::string message = "Processing the covariate file: " +c_cov_file +"\n";
+    std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
     std::vector<std::pair<std::string, size_t>> valid_sample_index;
@@ -652,10 +656,12 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     if (valid_sample_index.size() != num_sample && num_sample != 0) {
         // helpful to give the overview
         int removed = num_sample - valid_sample_index.size();
-        message = std::to_string(removed)+" sample(s) with invalid covariate:\n\n";
+        message =
+            std::to_string(removed) + " sample(s) with invalid covariate:\n\n";
         message.append("Covariate\tNumber of Missing Samples\n");
         for (size_t miss = 0; miss < missing_count.size(); ++miss) {
-        		message.append(cov_header[cov_index[miss]]+"\t"+std::to_string(missing_count[miss])+"\n");
+            message.append(cov_header[cov_index[miss]] + "\t"
+                           + std::to_string(missing_count[miss]) + "\n");
         }
         double portion = (double) removed / (double) num_sample;
         if (valid_sample_index.size() == 0) {
@@ -665,7 +671,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     // we sorted the column index so we can't tell what the
                     // column name is useless we also store the head of the file
                     // (too troublesome)
-                		message.append("Column "+std::to_string(miss)+" is invalid, please check it is of the correct format\n");
+                    message.append("Column " + std::to_string(miss)
+                                   + " is invalid, please check it is of the "
+                                     "correct format\n");
                 }
             }
             reporter.report(message);
@@ -673,8 +681,10 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                 "All samples removed due to missingness in covariate file!");
         }
         if (portion > 0.05) {
-        		message.append("Warning: More than "+std::to_string(portion*100)+"% of your samples were removed! "
-        				"You should check if your covariate file is correct\n");
+            message.append(
+                "Warning: More than " + std::to_string(portion * 100)
+                + "% of your samples were removed! "
+                  "You should check if your covariate file is correct\n");
         }
         reporter.report(message);
         // sort the sample index
@@ -706,9 +716,10 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         m_independent_variables.conservativeResize(
             valid_sample_index.size(), m_independent_variables.cols());
         m_phenotype.conservativeResize(valid_sample_index.size(), 1);
-
     }
-    message = "After reading the covariate file, "+std::to_string(valid_sample_index.size())+" sample(s) included in the analysis\n";
+    message = "After reading the covariate file, "
+              + std::to_string(valid_sample_index.size())
+              + " sample(s) included in the analysis\n";
     reporter.report(message);
 }
 

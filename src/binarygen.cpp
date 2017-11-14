@@ -150,9 +150,8 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                 [&alleles](std::size_t i, std::string const& allele) {
                     alleles.at(i) = allele;
                 });
-            for(auto &&a : alleles)
-            {
-            		std::transform(a.begin(), a.end(), a.begin(), ::toupper);
+            for (auto&& a : alleles) {
+                std::transform(a.begin(), a.end(), a.begin(), ::toupper);
             }
 
             std::streampos byte_pos = m_bgen_file.tellg();
@@ -252,8 +251,9 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
         }
         for (auto&& snp : snp_res) {
             if (dup_list.find(snp.rs()) != dup_list.end()) continue;
-            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc() << "\t"
-            		<< snp.ref() << "\t" << snp.alt() << std::endl;
+            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
+                            << snp.loc() << "\t" << snp.ref() << "\t"
+                            << snp.alt() << std::endl;
         }
         log_file_stream.close();
         std::string error_message =
@@ -547,7 +547,7 @@ Sample BinaryGen::get_sample(std::vector<std::string>& token, bool ignore_fid,
                              bool has_sex, int sex_col,
                              std::vector<int>& sex_info)
 {
-	assert(ignore_fid && token.size()>1);
+    assert(ignore_fid && token.size() > 1);
     std::string id = (ignore_fid) ? token[0] : token[0] + "_" + token[1];
     // this will pose problem when there are duplicated IID names even if they
     // are from different family. However, we don't know how bgen store the
@@ -673,19 +673,21 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
             else
             {
                 // this isn't a header
-            	if(possible_header.size() < 2 && ignore_fid){
-            		std::string error_message = "Malformed phenotype file: line:1 only has 1 column.\n";
-            		throw std::runtime_error(error_message);
-            	}
+                if (possible_header.size() < 2 && ignore_fid) {
+                    std::string error_message =
+                        "Malformed phenotype file: line:1 only has 1 column.\n";
+                    throw std::runtime_error(error_message);
+                }
                 sample_res.push_back(get_sample(possible_header, ignore_fid,
                                                 has_sex, sex_col, sex_info));
                 m_sample_index_check[sample_res.back().IID] =
                     sample_res.size() - 1;
             }
         }
-        if(token.size() < 2 && ignore_fid){
-        	std::string error_message = "Malformed phenotype file: line:2 only has 1 column.\n";
-        	throw std::runtime_error(error_message);
+        if (token.size() < 2 && ignore_fid) {
+            std::string error_message =
+                "Malformed phenotype file: line:2 only has 1 column.\n";
+            throw std::runtime_error(error_message);
         }
         sample_res.push_back(
             get_sample(token, ignore_fid, has_sex, sex_col, sex_info));
@@ -699,9 +701,10 @@ std::vector<Sample> BinaryGen::preload_samples(std::string pheno,
         std::vector<std::string> token = misc::split(line);
         if (token.size() < ((has_sex) ? (sex_col) : (1 + !ignore_fid))) {
             std::string error_message =
-                "ERROR: Line "+std::to_string(line_id)+" must have at least "
+                "ERROR: Line " + std::to_string(line_id)
+                + " must have at least "
                 + std::to_string((has_sex) ? (sex_col) : (1 + !ignore_fid))
-                + " columns! Number of column="+std::to_string(token.size());
+                + " columns! Number of column=" + std::to_string(token.size());
             throw std::runtime_error(error_message);
         }
         sample_res.push_back(

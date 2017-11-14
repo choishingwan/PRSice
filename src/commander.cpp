@@ -96,6 +96,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                 set_numeric<double>(optarg, message_store, error_messages,
                                     filter.hard_threshold,
                                     filter.use_hard_thres, error, command);
+            else if (command.compare("info") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.info_score, filter.info_filtering,
+                                    error, command);
             else if (command.compare("clump-p") == 0)
                 set_numeric<double>(optarg, message_store, error_messages,
                                     clumping.p_value, clumping.provide_p, error,
@@ -241,8 +245,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                        "pvalue", error_messages);
             break;
         case 's':
-            set_numeric<size_t>(optarg, message_store, error_messages, misc.seed,
-                             misc.provided_seed, error, "seed");
+            set_numeric<size_t>(optarg, message_store, error_messages,
+                                misc.seed, misc.provided_seed, error, "seed");
             break;
         case 't':
             set_string(optarg, message_store, target.name, dummy, "target",
@@ -393,6 +397,8 @@ Commander::Commander()
     filter.maf = 0.01;
     filter.hard_coding = false;
     filter.hard_threshold = 0.9;
+    filter.info_filtering = false;
+    filter.info_score = 0.9;
     filter.keep_ambig = false;
     filter.use_prob = false;
     filter.use_maf = false;
@@ -512,6 +518,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"feature", required_argument, NULL, 0},
         {"hard-thres", required_argument, NULL, 0},
         {"info-base", required_argument, NULL, 0},
+        {"info", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
@@ -788,6 +795,9 @@ void Commander::info()
           "                            separated by comma without space. \n"
           "                            Default: T if --beta and F if --beta is "
           "not\n"
+          "    --info                  Filter SNPs based on info score. Only "
+          "used\n"
+          "                            for imputed target\n"
           "    --keep                  File containing the sample(s) to be "
           "extracted from\n"
           "                            the target file. First column should be "
@@ -897,9 +907,8 @@ void Commander::info()
 void Commander::usage() { fprintf(stderr, "%s\n", help_message.c_str()); }
 
 
-void Commander::base_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::base_check(std::map<std::string, std::string>& message,
+                           bool& error, std::string& error_message)
 {
     if (base.name.empty()) {
         error = true;
@@ -1218,9 +1227,8 @@ void Commander::base_check(
     }
 }
 
-void Commander::clump_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::clump_check(std::map<std::string, std::string>& message,
+                            bool& error, std::string& error_message)
 {
     if (!clumping.no_clump) {
         if (clumping.keep_sample && clumping.remove_sample) {
@@ -1464,11 +1472,19 @@ void Commander::filter_check(bool& error, std::string& error_message)
         error_message.append(
             "ERROR: Hard threshold should be between 0 and 1\n");
     }
+
+    if (filter.info_filtering
+        && (filter.info_score < 0 || filter.info_score > 1))
+    {
+        error = true;
+        error_message.append("ERROR: INFO score cannot be bigger than 1.0 "
+                             "or smaller than 0.0\n");
+        break;
+    }
 }
 
-void Commander::misc_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::misc_check(std::map<std::string, std::string>& message,
+                           bool& error, std::string& error_message)
 {
     if (misc.provided_permutation && misc.permutation < 0) {
         error = true;
@@ -1496,9 +1512,8 @@ void Commander::misc_check(
     if (!misc.provided_output) message["out"] = misc.out;
 }
 
-void Commander::prset_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::prset_check(std::map<std::string, std::string>& message,
+                            bool& error, std::string& error_message)
 {
     if (!prset.perform_prset) return;
     if (!prset.gtf.empty() && prset.msigdb.empty()) {
@@ -1516,9 +1531,8 @@ void Commander::prset_check(
 }
 
 
-void Commander::prsice_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::prsice_check(std::map<std::string, std::string>& message,
+                             bool& error, std::string& error_message)
 {
     if (!prsice.provided_model) {
         message["model"] = "add";
@@ -1586,9 +1600,8 @@ void Commander::prslice_check(bool& error, std::string& error_message)
     }
 }
 
-void Commander::target_check(
-    std::map<std::string, std::string>& message, bool& error,
-    std::string& error_message)
+void Commander::target_check(std::map<std::string, std::string>& message,
+                             bool& error, std::string& error_message)
 {
     if (target.name.empty()) {
         error = true;
