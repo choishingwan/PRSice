@@ -24,13 +24,13 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <map>
 #include <random>
 #include <reporter.hpp>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <unistd.h>
-#include <map>
 #include <unordered_set>
 #include <vector>
 const std::string version = "2.0.15.beta";
@@ -356,21 +356,21 @@ private:
     std::string help_message;
     void usage();
     void info();
-    void base_check(std::map<std::string, std::string>& message,
-                    bool& error, std::string& error_message);
-    void clump_check(std::map<std::string, std::string>& message,
-                     bool& error, std::string& error_message);
+    void base_check(std::map<std::string, std::string>& message, bool& error,
+                    std::string& error_message);
+    void clump_check(std::map<std::string, std::string>& message, bool& error,
+                     std::string& error_message);
     void covariate_check(bool& error, std::string& error_message);
     void filter_check(bool& error, std::string& error_message);
-    void misc_check(std::map<std::string, std::string>& message,
-                    bool& error, std::string& error_message);
-    void prset_check(std::map<std::string, std::string>& message,
-                     bool& error, std::string& error_message);
+    void misc_check(std::map<std::string, std::string>& message, bool& error,
+                    std::string& error_message);
+    void prset_check(std::map<std::string, std::string>& message, bool& error,
+                     std::string& error_message);
     void prslice_check(bool& error, std::string& error_message);
-    void prsice_check(std::map<std::string, std::string>& message,
-                      bool& error, std::string& error_message);
-    void target_check(std::map<std::string, std::string>& message,
-                      bool& error, std::string& error_message);
+    void prsice_check(std::map<std::string, std::string>& message, bool& error,
+                      std::string& error_message);
+    void target_check(std::map<std::string, std::string>& message, bool& error,
+                      std::string& error_message);
 
     inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
                             bool no_mt, bool& error, std::string& error_message,
@@ -389,11 +389,11 @@ private:
         species.double_set = true;
     };
 
-    inline void
-    load_binary_vector(const std::string& input,
-                       std::map<std::string, std::string>& message,
-                       std::string& error_message, std::vector<bool>& target,
-                       bool& error, const std::string& c)
+    inline void load_binary_vector(const std::string& input,
+                                   std::map<std::string, std::string>& message,
+                                   std::string& error_message,
+                                   std::vector<bool>& target, bool& error,
+                                   const std::string& c)
     {
 
         message[c] = input;
@@ -411,11 +411,11 @@ private:
         }
     }
 
-    inline void
-    load_string_vector(const std::string& input,
-                       std::map<std::string, std::string>& message,
-                       std::vector<std::string>& target, const std::string& c,
-                       std::string& error_message)
+    inline void load_string_vector(const std::string& input,
+                                   std::map<std::string, std::string>& message,
+                                   std::vector<std::string>& target,
+                                   const std::string& c,
+                                   std::string& error_message)
     {
 
         message[c] = input;
@@ -424,11 +424,11 @@ private:
     }
 
     template <typename T>
-    inline void
-    load_numeric_vector(const std::string& input,
-                        std::map<std::string, std::string>& message,
-                        std::string& error_message, std::vector<T>& target,
-                        bool& error, const std::string& c)
+    inline void load_numeric_vector(const std::string& input,
+                                    std::map<std::string, std::string>& message,
+                                    std::string& error_message,
+                                    std::vector<T>& target, bool& error,
+                                    const std::string& c)
     {
         message[c] = input;
         std::vector<std::string> token = misc::split(optarg, ",");
@@ -445,11 +445,11 @@ private:
     }
 
     template <typename Type>
-    inline void
-    set_numeric(const std::string& input,
-                std::map<std::string, std::string>& message,
-                std::string& error_message, Type& target, bool& target_boolean,
-                bool& error, const std::string& c)
+    inline void set_numeric(const std::string& input,
+                            std::map<std::string, std::string>& message,
+                            std::string& error_message, Type& target,
+                            bool& target_boolean, bool& error,
+                            const std::string& c)
     {
         if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
@@ -507,11 +507,10 @@ private:
         }
         message["model"] = input;
     }
-    inline void
-    set_string(const std::string& input,
-               std::map<std::string, std::string>& message,
-               std::string& target, bool& target_boolean, const std::string& c,
-               std::string& error_message)
+    inline void set_string(const std::string& input,
+                           std::map<std::string, std::string>& message,
+                           std::string& target, bool& target_boolean,
+                           const std::string& c, std::string& error_message)
     {
 
         if (message.find(c) != message.end()) {
