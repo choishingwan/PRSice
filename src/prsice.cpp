@@ -55,7 +55,8 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         if (!m_ignore_fid && col.size() > 1) sample_id.append("+" + col[1]);
         message.append("Check Phenotype file: " + pheno_file + "\n");
         message.append("Column Name of Sample ID: " + sample_id + "\n");
-
+        message.append("Note: If the phenotype file does not contain a header, "
+        		"the column name will be displayed as the Sample ID which is ok.\n");
         bool found = false;
         std::unordered_map<std::string, bool> dup_col;
         if (pheno_header.size() == 0) {
@@ -214,7 +215,7 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file_name,
 
         // Read in phenotype from phenotype file
         std::unordered_map<std::string, std::string> phenotype_info;
-        std::getline(pheno_file, line); // remove header line
+        // do not remove header line as that won't match anyway
         while (std::getline(pheno_file, line)) {
             misc::trim(line);
             if (line.empty()) continue;

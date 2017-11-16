@@ -1629,7 +1629,7 @@ if (!is.null(phenos)) {
         } else{
             colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
         }
-        #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
+        
     }
     # Give run_plot a ready to use matrix
     best <- NULL
