@@ -201,6 +201,7 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
+            // filter by INFO & MAF here?
             if ((!m_exclude_snp
                  && m_snp_selection_list.find(RSID)
                         == m_snp_selection_list.end())
