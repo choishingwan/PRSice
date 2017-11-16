@@ -1479,7 +1479,6 @@ void Commander::filter_check(bool& error, std::string& error_message)
         error = true;
         error_message.append("ERROR: INFO score cannot be bigger than 1.0 "
                              "or smaller than 0.0\n");
-        break;
     }
 }
 
