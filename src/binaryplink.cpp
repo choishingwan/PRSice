@@ -16,6 +16,112 @@
 
 #include "binaryplink.hpp"
 
+BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
+                         bool ld, bool verbose)
+{
+    set_info(commander);
+    const bool ignore_fid = commander.ignore_fid();
+    std::string out_prefix = commander.out();
+
+    std::string prefix = (ld)? commander.ld_prefix() : commander.target_name();
+    // check if there is an external fam file
+    std::vector<std::string> token;
+    token = misc::split(prefix, ",");
+    std::string fam = "";
+    std::string bfile_prefix = prefix;
+    if (token.size() == 2) {
+        fam = token[1];
+        bfile_prefix = token[0];
+    }
+    std::string message = "Loading Genotype file: " + bfile_prefix + " (bed)\n";
+    if (!fam.empty()) {
+        message.append("With external fam file: " + fam + "\n");
+    }
+    reporter.report(message);
+
+
+    m_nonfounder = commander.nonfounders();
+    m_fam_name = fam;
+    /** simple assignments **/
+    filter.keep_ambig = commander.keep_ambig();
+    m_thread = commander.thread();
+    // get the exclusion and extraction list
+    if (!commander.remove_sample_file().empty()) {
+        m_sample_selection_list =
+            load_ref(commander.remove_sample_file(), ignore_fid);
+    }
+    if (!commander.keep_sample_file().empty()) {
+        m_remove_sample = false;
+        m_sample_selection_list =
+            load_ref(commander.keep_sample_file(), ignore_fid);
+    }
+    if (!commander.extract_snp_file().empty()) {
+        m_exclude_snp = false;
+        m_snp_selection_list =
+            load_snp_list(commander.extract_snp_file(), reporter);
+    }
+    if (!commander.exclude_snp_file().empty()) {
+        m_snp_selection_list =
+            load_snp_list(commander.exclude_snp_file(), reporter);
+    }
+
+
+    /** setting the chromosome information **/
+    m_xymt_codes.resize(XYMT_OFFSET_CT);
+    // we are not using the following script for now as we only support human
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
+    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+
+    // now initialize the chromosome
+    init_chr(commander.num_auto(), commander.no_x(), commander.no_y(),
+             commander.no_xy(), commander.no_mt());
+
+
+    /** now get the chromosome information we've got by replacing the # in the
+     * name **/
+    // if there are multiple #, they will all be replaced by the same number
+    set_genotype_files(bfile_prefix);
+
+
+    /** now read the sample information **/
+    if(ld){
+    		load_samples(ignore_fid);
+    }else{
+    		m_sample_names = load_samples(ignore_fid);
+    }
+    /** now read the SNP information **/
+    m_existed_snps = load_snps(out_prefix);
+    m_marker_ct = m_existed_snps.size();
+
+    if (verbose) {
+        std::string message = std::to_string(m_unfiltered_sample_ct)
+                              + " people (" + std::to_string(m_num_male)
+                              + " male(s), " + std::to_string(m_num_female)
+                              + " female(s)) observed\n";
+        message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
+        if (m_num_ambig != 0 && !filter.keep_ambig) {
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) excluded\n");
+        }
+        else if (m_num_ambig != 0)
+        {
+            message.append(std::to_string(m_num_ambig)
+                           + " ambiguous variant(s) kept\n");
+        }
+        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+        reporter.report(message);
+    }
+
+    check_bed();
+    // MAF filtering should be performed here
+    m_cur_file = "";
+
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    m_sample_selection_list.clear();
+    m_snp_selection_list.clear();
+}
+
 
 BinaryPlink::BinaryPlink(std::string prefix, std::string remove_sample,
                          std::string keep_sample, std::string extract_snp,

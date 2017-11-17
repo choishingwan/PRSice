@@ -18,7 +18,9 @@
 #ifndef BINARYPLINK
 #define BINARYPLINK
 
+#include "commander.hpp"
 #include "genotype.hpp"
+#include "misc.hpp"
 
 class BinaryPlink : public Genotype
 {
@@ -31,6 +33,9 @@ public:
                 bool no_x = false, bool no_y = false, bool no_xy = false,
                 bool no_mt = false, bool keep_ambig = false,
                 const size_t thread = 1, bool verbose = false);
+
+    BinaryPlink(const Commander& commander, Reporter& reporter, bool ld = false,
+                bool verbose = false);
     ~BinaryPlink();
 
 private:
@@ -42,6 +47,7 @@ private:
 
     void check_bed();
 
+    // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)
     {
