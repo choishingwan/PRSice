@@ -47,6 +47,8 @@ private:
 
     void check_bed();
 
+    void snp_filtering();
+
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)

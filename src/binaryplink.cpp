@@ -19,11 +19,13 @@
 BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
                          bool ld, bool verbose)
 {
+    // currently filtering is univerisal (same filter apply to
+    // target and ld reference)
     set_info(commander);
     const bool ignore_fid = commander.ignore_fid();
     std::string out_prefix = commander.out();
 
-    std::string prefix = (ld)? commander.ld_prefix() : commander.target_name();
+    std::string prefix = (ld) ? commander.ld_prefix() : commander.target_name();
     // check if there is an external fam file
     std::vector<std::string> token;
     token = misc::split(prefix, ",");
@@ -84,10 +86,15 @@ BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
 
 
     /** now read the sample information **/
-    if(ld){
-    		load_samples(ignore_fid);
-    }else{
-    		m_sample_names = load_samples(ignore_fid);
+    if (ld) {
+        // we don't need sample information when this is the
+        // ld file, only need the binary arrays which is
+        // initialized and set by the load_sample function
+        load_samples(ignore_fid);
+    }
+    else
+    {
+        m_sample_names = load_samples(ignore_fid);
     }
     /** now read the SNP information **/
     m_existed_snps = load_snps(out_prefix);
@@ -114,6 +121,8 @@ BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
 
     check_bed();
     // MAF filtering should be performed here
+    // don't bother doing this if user doesn't want to
+    if (filter.filter_geno || filter.filter_maf) snp_filtering();
     m_cur_file = "";
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -794,4 +803,150 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             }
         }
     }
+}
+
+void BinaryPlink::snp_filtering()
+{
+    uintptr_t final_mask = get_final_mask(m_sample_ct);
+    // for array size
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    size_t num_included_samples = m_sample_ct;
+
+    m_cur_file = ""; // just close it
+    if (m_bed_file.is_open()) {
+        m_bed_file.close();
+    }
+    // index is w.r.t. partition, which contain all the information
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    std::vector<size_t> valid_index;
+    valid_index.reserve(m_existed_snps.size());
+    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
+        auto&& snp = m_existed_snps[i_snp];
+        if (m_cur_file.empty() || m_cur_file.compare(snp.file_name()) != 0) {
+            // If we are processing a new file
+            if (m_bed_file.is_open()) {
+                m_bed_file.close();
+            }
+            m_cur_file = snp.file_name();
+            std::string bedname = m_cur_file + ".bed";
+            m_bed_file.open(bedname.c_str(), std::ios::binary);
+            if (!m_bed_file.is_open()) {
+                std::string error_message =
+                    "ERROR: Cannot open bed file: " + bedname;
+                throw std::runtime_error(error_message);
+            }
+        }
+        size_t cur_line = snp.snp_id();
+        if (!m_bed_file.seekg(
+                m_bed_offset + (cur_line * ((uint64_t) unfiltered_sample_ct4)),
+                std::ios_base::beg))
+        {
+            throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+        if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
+                                   m_sample_include.data(), final_mask, false,
+                                   m_bed_file, m_tmp_genotype.data(),
+                                   genotype.data()))
+        {
+            throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+        uintptr_t* lbptr = genotype.data();
+        uint32_t uii = 0;
+        uintptr_t ulii = 0;
+        uint32_t ujj;
+        uint32_t ukk;
+        uint32_t sample_idx = 0;
+        int aA = 0, AA = 0;
+        size_t nmiss = 0;
+        do
+        {
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            while (ulii) {
+                ujj = CTZLU(ulii) & (BITCT - 2);
+                ukk = (ulii >> ujj) & 3;
+                sample_idx = uii + (ujj / 2);
+                if (ukk == 1 || ukk == 3) // Because 01 is coded as missing
+                {
+                    // 3 is homo alternative
+                    // int flipped_geno = snp_list[snp_index].geno(ukk);
+                    if (sample_idx < num_included_samples) {
+                        int g = (ukk == 3) ? 2 : ukk;
+                        switch (g)
+                        {
+                        case 1: aA++; break;
+                        case 2: AA++; break;
+                        }
+                    }
+                }
+                else // this should be 2
+                {
+                    nmiss++;
+                }
+                ulii &= ~((3 * ONELU) << ujj);
+            }
+            uii += BITCT2;
+        } while (uii < num_included_samples);
+
+        if (num_included_samples - nmiss == 0) {
+            continue;
+        }
+        double maf = ((double) (aA + AA * 2)
+                      / ((double) (num_included_samples - nmiss)
+                         * 2.0)); // MAF does not count missing
+        maf = (maf > 0.5) ? 1 - maf : maf;
+        double geno = (double) nmiss / (double) num_included_samples;
+        if (filter.filter_maf && maf > filter.maf) {
+            continue;
+        }
+        else if (filter.filter_geno && geno > filter.geno)
+        {
+            continue;
+        }
+        valid_index.push_back(i_snp);
+    }
+    if (valid_index.size() != m_existed_snps.size())
+    { // only do this if we need to remove some SNPs
+        // we assume exist_index doesn't have any duplicated index
+
+        int start = (valid_index.empty()) ? -1 : valid_index.front();
+        int end = start;
+        std::vector<SNP>::iterator last = m_existed_snps.begin();
+        ;
+        for (auto&& ind : valid_index) {
+            if (ind == start || ind - end == 1)
+                end = ind; // try to perform the copy as a block
+            else
+            {
+                std::copy(m_existed_snps.begin() + start,
+                          m_existed_snps.begin() + end + 1, last);
+                last += end + 1 - start;
+                start = ind;
+                end = ind;
+            }
+        }
+        if (!valid_index.empty()) {
+            std::copy(m_existed_snps.begin() + start,
+                      m_existed_snps.begin() + end + 1, last);
+            last += end + 1 - start;
+        }
+        m_existed_snps.erase(last, m_existed_snps.end());
+    }
+    m_existed_snps_index.clear();
+    // now m_existed_snps is ok and can be used directly
+    size_t vector_index = 0;
+    // we do it here such that the m_existed_snps is sorted correctly
+    for (auto&& cur_snp : m_existed_snps) // should be in the correct order
+    {
+        m_existed_snps_index[cur_snp.rs()] = vector_index++;
+    }
+    // Suggest that we want to release memory
+    // but this is only a suggest as this is non-binding request
+    // Proper way of releasing memory will be to do swarp. Yet that
+    // might lead to out of scrope or some other error here?
+    m_existed_snps.shrink_to_fit();
 }
