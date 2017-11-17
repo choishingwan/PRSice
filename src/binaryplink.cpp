@@ -97,6 +97,9 @@ BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
         m_sample_names = load_samples(ignore_fid);
     }
     /** now read the SNP information **/
+    // to save memory, we would like to reduce the
+    // number of SNP information stored for the ld reference
+    // as all we need is only the snp id and location
     m_existed_snps = load_snps(out_prefix);
     m_marker_ct = m_existed_snps.size();
 
@@ -122,7 +125,7 @@ BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
     check_bed();
     // MAF filtering should be performed here
     // don't bother doing this if user doesn't want to
-    if (filter.filter_geno || filter.filter_maf) snp_filtering();
+    if (filter.filter_geno || filter.filter_maf) snp_filtering(reporter);
     m_cur_file = "";
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -805,14 +808,15 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
     }
 }
 
-void BinaryPlink::snp_filtering()
+void BinaryPlink::snp_filtering(Reporter& reporter)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     size_t num_included_samples = m_sample_ct;
-
+    size_t num_maf_filter = 0;
+    size_t num_geno_filter = 0;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
@@ -900,11 +904,13 @@ void BinaryPlink::snp_filtering()
                          * 2.0)); // MAF does not count missing
         maf = (maf > 0.5) ? 1 - maf : maf;
         double geno = (double) nmiss / (double) num_included_samples;
-        if (filter.filter_maf && maf > filter.maf) {
+        if (filter.filter_geno && geno > filter.geno) {
+            num_geno_filter++;
             continue;
         }
-        else if (filter.filter_geno && geno > filter.geno)
+        else if (filter.filter_maf && maf > filter.maf)
         {
+            num_maf_filter++;
             continue;
         }
         valid_index.push_back(i_snp);
@@ -949,4 +955,16 @@ void BinaryPlink::snp_filtering()
     // Proper way of releasing memory will be to do swarp. Yet that
     // might lead to out of scrope or some other error here?
     m_existed_snps.shrink_to_fit();
+    std::string message = "";
+    if (num_geno_filter > 0) {
+        message.append(std::to_string(num_geno_filter)
+                       + " SNP(s) filtered based on genotype missingness\n");
+    }
+    if (num_maf_filter > 0) {
+        message.append(std::to_string(num_maf_filter)
+                       + " SNP(s) filtered based on MAF filtering\n");
+    }
+    message.append(std::to_string(m_existed_snps.size())
+                   + " total SNPs remained after filtering\n\n");
+    reporter.report(message);
 }
