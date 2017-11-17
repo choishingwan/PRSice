@@ -1489,12 +1489,7 @@ void Commander::misc_check(std::map<std::string, std::string>& message,
         error = true;
         error_message.append("ERROR: Negative number of permutation!\n");
     }
-    if (misc.provided_seed && misc.seed < 0) {
-        error = true;
-        error_message.append("ERROR: Negative seed!\n");
-    }
-    else if (!misc.provided_seed)
-    {
+    if (!misc.provided_seed) {
         misc.seed = std::random_device()();
         message["seed"] = std::to_string(misc.seed);
     }

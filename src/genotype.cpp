@@ -240,9 +240,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     const bool beta = c_commander.beta();
     const bool fastscore = c_commander.fastscore();
     const bool full = c_commander.full();
-    const bool filter_info = c_commander.filter_info();
+    const bool filter_info = c_commander.filter_base_info();
     const bool filter_maf = c_commander.filter_base_maf();
-    const double info_threshold = c_commander.info_score();
+    const double info_threshold = c_commander.base_info_score();
     const double maf_base = c_commander.maf_base();
     std::vector<int> index =
         c_commander.index(); // more appropriate for commander
@@ -626,7 +626,7 @@ void Genotype::set_info(const Commander& c_commander)
     filter.filter_info = c_commander.filter_info();
     filter.filter_hard_threshold = c_commander.filter_hard_threshold();
     filter.geno = c_commander.geno();
-    filter.info_score = c_commander.info_score();
+    filter.info_score = c_commander.info();
     filter.maf = c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();

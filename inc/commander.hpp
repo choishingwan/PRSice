@@ -46,9 +46,9 @@ public:
     std::vector<int> index() const { return base.col_index; };
     bool has_index() const { return base.index; };
     bool beta() const { return base.beta; };
-    bool filter_info() const { return base.use_info; };
+    bool filter_base_info() const { return base.use_info; };
     bool filter_base_maf() const { return base.provided_maf; };
-    double info_score() const { return base.info_score; };
+    double base_info_score() const { return base.info_score; };
     double maf_base() const { return base.maf_threshold; };
     std::string base_name() const { return base.name; };
 
@@ -74,6 +74,7 @@ public:
     bool filter_geno() const { return filter.use_geno; };
     bool filter_mind() const { return filter.use_mind; };
     bool filter_hard_threshold() const { return filter.use_hard_thres; };
+    bool filter_info() const { return filter.info_filtering; };
     bool hard_coding() const { return filter.hard_coding; };
     bool keep_ambig() const { return filter.keep_ambig; };
     std::string extract_snp_file() const
@@ -87,6 +88,7 @@ public:
     double maf() const { return filter.maf; };
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
+    double info() const { return filter.info_score; };
     double hard_threshold() const { return filter.hard_threshold; };
 
     // misc
