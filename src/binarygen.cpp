@@ -155,12 +155,7 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
             }
 
             std::streampos byte_pos = m_bgen_file.tellg();
-            Data probability;
-            ProbSetter setter(&probability);
-            std::vector<genfile::byte_t> buffer1, buffer2;
-
-            genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-                m_bgen_file, context, setter, &buffer1, &buffer2, true);
+            bool exclude_snp = false;
             // but we will not process anything
             if (chromosome.compare(prev_chr) != 0) {
                 prev_chr = chromosome;
@@ -180,7 +175,7 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
                         chr_error = true;
-                        continue;
+                        exclude_snp = true;
                     }
                     else if (!chr_sex_error
                              && (is_set(m_haploid_mask.data(), chr_code)
@@ -191,17 +186,17 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
-                        continue;
+                        exclude_snp = true;
                     }
                 }
             }
+
             if (RSID.compare(".") == 0) // when the rs id isn't available,
                                         // change it to chr:loc coding
             {
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
-            // filter by INFO & MAF here?
             if ((!m_exclude_snp
                  && m_snp_selection_list.find(RSID)
                         == m_snp_selection_list.end())
@@ -210,7 +205,7 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
                            != m_snp_selection_list.end()))
             {
                 m_unfiltered_marker_ct++;
-                continue;
+                exclude_snp = true;
             }
 
             if (m_existed_snps_index.find(RSID) != m_existed_snps_index.end()) {
@@ -219,16 +214,19 @@ std::vector<SNP> BinaryGen::load_snps(const std::string& out_prefix)
             else if (ambiguous(alleles.front(), alleles.back()))
             {
                 m_num_ambig++;
-                if (filter.keep_ambig) {
-                    m_existed_snps_index[RSID] = snp_res.size();
-                    snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
-                                             alleles.front(), alleles.back(),
-                                             prefix, byte_pos));
-                    m_unfiltered_marker_ct++;
-                }
+                if (!filter.keep_ambig) exclude_snp = true;
             }
-            else
-            {
+
+
+            Data probability;
+            ProbSetter setter(&probability);
+            std::vector<genfile::byte_t> buffer1, buffer2;
+            // if we want to exclude this SNP, we will not perform decompression
+            genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
+                m_bgen_file, context, setter, &buffer1, &buffer2, exclude_snp);
+            if (!exclude_snp) {
+                // if not exclude SNP, then we need to calculate the INFO score
+                // and also the MAF
                 m_existed_snps_index[RSID] = snp_res.size();
                 snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                          alleles.front(), alleles.back(),
