@@ -73,8 +73,11 @@ public:
     bool filter_maf() const { return filter.use_maf; };
     bool filter_geno() const { return filter.use_geno; };
     bool filter_mind() const { return filter.use_mind; };
-    bool filter_hard_threshold() const { return filter.use_hard_thres; };
     bool filter_info() const { return filter.info_filtering; };
+    bool filter_ld_maf() const { return filter.use_ld_maf; };
+    bool filter_ld_geno() const { return filter.use_ld_geno; };
+    bool filter_ld_info() const { return filter.use_ld_info; };
+    bool filter_hard_threshold() const { return filter.use_hard_thres; };
     bool hard_coding() const { return filter.hard_coding; };
     bool keep_ambig() const { return filter.keep_ambig; };
     std::string extract_snp_file() const
@@ -89,6 +92,9 @@ public:
     double geno() const { return filter.geno; };
     double mind() const { return filter.mind; };
     double info() const { return filter.info_score; };
+    double ld_maf() const { return filter.ld_maf; };
+    double ld_geno() const { return filter.ld_geno; };
+    double ld_info() const { return filter.ld_info; };
     double hard_threshold() const { return filter.hard_threshold; };
 
     // misc
@@ -262,16 +268,22 @@ private:
         double maf;
         double mind;
         double info_score;
+        double ld_maf;
+        double ld_geno;
+        double ld_info;
         int hard_coding;
-        int use_geno;
-        int use_maf;
-        int use_mind;
         int use_prob;
         int keep_ambig;
         bool extract;
         bool exclude;
         bool use_hard_thres;
         bool info_filtering;
+        bool use_geno;
+        bool use_maf;
+        bool use_ld_maf;
+        bool use_ld_geno;
+        bool use_ld_info;
+        bool use_mind;
     } filter;
 
     struct

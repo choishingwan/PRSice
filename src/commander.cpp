@@ -68,6 +68,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("exclude") == 0)
                 set_string(optarg, message_store, filter.exclude_file,
                            filter.exclude, command, error_messages);
+            else if (command.compare("info") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.info_score, filter.info_filtering,
+                                    error, command);
             else if (command.compare("extract") == 0)
                 set_string(optarg, message_store, filter.extract_file,
                            filter.extract, command, error_messages);
@@ -86,6 +90,25 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("maf-base") == 0)
                 set_string(optarg, message_store, base.maf, base.provided_maf,
                            command, error_messages);
+            else if (command.compare("maf") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.maf, filter.use_maf, error, command);
+            else if (command.compare("geno") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.geno, filter.use_geno, error,
+                                    command);
+            else if (command.compare("ld-maf") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.ld_maf, filter.use_ld_maf, error,
+                                    command);
+            else if (command.compare("ld-geno") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.ld_geno, filter.use_ld_geno, error,
+                                    command);
+            else if (command.compare("ld-info") == 0)
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    filter.ld_info, filter.use_ld_info, error,
+                                    command);
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, target.use_type,
                            command, error_messages);
@@ -395,6 +418,9 @@ Commander::Commander()
     filter.geno = 0.0;
     filter.mind = 0.0;
     filter.maf = 0.01;
+    filter.ld_geno = 0.0;
+    filter.ld_maf = 0.01;
+    filter.ld_info = 0.9;
     filter.hard_coding = false;
     filter.hard_threshold = 0.9;
     filter.info_filtering = false;
@@ -405,6 +431,9 @@ Commander::Commander()
     filter.use_mind = false;
     filter.use_hard_thres = false;
     filter.use_geno = false;
+    filter.use_ld_geno = false;
+    filter.use_ld_maf = false;
+    filter.use_ld_info = false;
 
     misc.all = false;
     misc.ignore_fid = false;
@@ -516,6 +545,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"exclude", required_argument, NULL, 0},
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
+        {"geno", required_argument, NULL, 0},
         {"hard-thres", required_argument, NULL, 0},
         {"info-base", required_argument, NULL, 0},
         {"info", required_argument, NULL, 0},
@@ -523,7 +553,11 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-keep", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
+        {"ld-maf", required_argument, NULL, 0},
+        {"ld-geno", required_argument, NULL, 0},
+        {"ld-info", required_argument, NULL, 0},
         {"maf-base", required_argument, NULL, 0},
+        {"maf", required_argument, NULL, 0},
         {"memory", required_argument, NULL, 0},
         {"model", required_argument, NULL, 0},
         {"num-auto", required_argument, NULL, 0},
