@@ -424,7 +424,7 @@ option_list <- list(
         c("--bar-levels"),
         type = "character",
         dest = "bar_levels",
-        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
+        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5,1"
     ),
     make_option(c("--binary-target"), type = "character", dest = "binary_target"),
     make_option(c("--bp"), type = "character"),

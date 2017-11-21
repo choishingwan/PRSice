@@ -1446,8 +1446,8 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
     }
     if (prsice.fastscore && prsice.barlevel.size() == 0 && !prset.perform_prset)
     {
-        message["bar-levels"] = "0.001,0.05,0.1,0.2,0.3,0.4,0.5";
-        prsice.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+        message["bar-levels"] = "0.001,0.05,0.1,0.2,0.3,0.4,0.5,1";
+        prsice.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5,1};
     }
     std::sort(prsice.barlevel.begin(), prsice.barlevel.end());
     prsice.barlevel.erase(
