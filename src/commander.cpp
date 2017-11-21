@@ -461,7 +461,7 @@ Commander::Commander()
     prsice.inter = 0.00005;
     prsice.fastscore = false;
     prsice.no_regress = false;
-    prsice.full = false;
+    prsice.full = true;
     prsice.provide_lower = false;
     prsice.provide_upper = false;
     prsice.provide_inter = false;
