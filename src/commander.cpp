@@ -491,7 +491,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    const char* optString = "a:b:B:c:C:f:g:i:l:L:m:n:o:p:t:u:h?";
+    const char* optString = "a:b:B:c:C:f:g:i:l:L:m:k:n:o:p:t:u:h?";
     const struct option longOpts[] = {
         // parameters with short flags
         {"ancestry", required_argument, NULL, 'a'},
