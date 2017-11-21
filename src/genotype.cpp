@@ -614,20 +614,20 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     m_num_threshold = unique_thresholds.size();
 }
 
-void Genotype::set_info(const Commander& c_commander)
+void Genotype::set_info(const Commander& c_commander, const bool ld)
 {
     clump_info.p_value = c_commander.clump_p();
     clump_info.r2 = c_commander.clump_r2();
     clump_info.proxy = c_commander.proxy();
     clump_info.use_proxy = c_commander.use_proxy();
     clump_info.distance = c_commander.clump_dist();
-    filter.filter_geno = c_commander.filter_geno();
-    filter.filter_maf = c_commander.filter_maf();
-    filter.filter_info = c_commander.filter_info();
+    filter.filter_geno = ld? c_commander.filter_ld_geno():c_commander.filter_geno();
+    filter.filter_maf = ld?c_commander.filter_ld_maf() : c_commander.filter_maf();
+    filter.filter_info = ld? c_commander.filter_ld_info() : c_commander.filter_info();
     filter.filter_hard_threshold = c_commander.filter_hard_threshold();
-    filter.geno = c_commander.geno();
-    filter.info_score = c_commander.info();
-    filter.maf = c_commander.maf();
+    filter.geno = ld? c_commander.ld_geno() : c_commander.geno();
+    filter.info_score =  ld? c_commander.ld_info() : c_commander.info();
+    filter.maf = ld? c_commander.ld_maf() : c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();
     m_model = c_commander.model();

@@ -21,7 +21,7 @@ BinaryPlink::BinaryPlink(const Commander& commander, Reporter& reporter,
 {
     // currently filtering is univerisal (same filter apply to
     // target and ld reference)
-    set_info(commander);
+    set_info(commander, ld);
     const bool ignore_fid = commander.ignore_fid();
     std::string out_prefix = commander.out();
 

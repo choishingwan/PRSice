@@ -1295,8 +1295,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             full = sum.top * full / (1 + sum.bottom * full);
             null = sum.top * null / (1 + sum.bottom * null);
             out << "\t" << full - null << "\t" << full << "\t" << null << "\t"
-                << sum.prevalence << "\t" << sum.result.coefficient << "\t"
-                << sum.result.p << "\t" << sum.result.num_snp << std::endl;
+                << sum.prevalence;
         }
         else
         {
