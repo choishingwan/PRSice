@@ -51,6 +51,7 @@ public:
     double base_info_score() const { return base.info_score; };
     double maf_base() const { return base.maf_threshold; };
     std::string base_name() const { return base.name; };
+    double maf_base_case() const { return base.maf_case; };
 
     // clump
     std::string ld_prefix() const { return clumping.ld; };
@@ -230,6 +231,7 @@ private:
         bool use_info;
         double info_score;
         double maf_threshold;
+        double maf_case;
     } base;
 
     struct

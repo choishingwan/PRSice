@@ -71,7 +71,7 @@ public:
                    Reporter& reporter);
     // void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference, Reporter& reporter);
-    void set_info(const Commander& c_commander, const bool ld=false);
+    void set_info(const Commander& c_commander, const bool ld = false);
 
 protected:
     int process_block(int& start_index, int end_index, int& first_core_index);

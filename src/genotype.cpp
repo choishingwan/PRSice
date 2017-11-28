@@ -244,6 +244,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     const bool filter_maf = c_commander.filter_base_maf();
     const double info_threshold = c_commander.base_info_score();
     const double maf_base = c_commander.maf_base();
+    const double maf_case = c_commander.maf_base_case();
     std::vector<int> index =
         c_commander.index(); // more appropriate for commander
     // now coordinates obtained from target file instead. Coordinate information
@@ -377,6 +378,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 }
             }
             double maf = 1;
+            bool maf_filtered = false;
             if (filter_maf && index[+BASE_INDEX::MAF] >= 0) {
                 try
                 {
@@ -387,9 +389,27 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 {
                     num_maf_filter++;
                     exclude = true;
+                    maf_filtered = true;
                 }
                 if (maf < maf_base) {
                     num_maf_filter++;
+                    exclude = true;
+                    maf_filtered = true;
+                }
+            }
+            if (index[+BASE_INDEX::MAF_CASE] >= 0) {
+                try
+                {
+                    maf = misc::convert<double>(
+                        token[index[+BASE_INDEX::MAF_CASE]].c_str());
+                }
+                catch (const std::runtime_error& error)
+                {
+                    num_maf_filter += !maf_filtered;
+                    exclude = true;
+                }
+                if (maf < maf_case) {
+                    num_maf_filter += !maf_filtered;
                     exclude = true;
                 }
             }
@@ -621,13 +641,16 @@ void Genotype::set_info(const Commander& c_commander, const bool ld)
     clump_info.proxy = c_commander.proxy();
     clump_info.use_proxy = c_commander.use_proxy();
     clump_info.distance = c_commander.clump_dist();
-    filter.filter_geno = ld? c_commander.filter_ld_geno():c_commander.filter_geno();
-    filter.filter_maf = ld?c_commander.filter_ld_maf() : c_commander.filter_maf();
-    filter.filter_info = ld? c_commander.filter_ld_info() : c_commander.filter_info();
+    filter.filter_geno =
+        ld ? c_commander.filter_ld_geno() : c_commander.filter_geno();
+    filter.filter_maf =
+        ld ? c_commander.filter_ld_maf() : c_commander.filter_maf();
+    filter.filter_info =
+        ld ? c_commander.filter_ld_info() : c_commander.filter_info();
     filter.filter_hard_threshold = c_commander.filter_hard_threshold();
-    filter.geno = ld? c_commander.ld_geno() : c_commander.geno();
-    filter.info_score =  ld? c_commander.ld_info() : c_commander.info();
-    filter.maf = ld? c_commander.ld_maf() : c_commander.maf();
+    filter.geno = ld ? c_commander.ld_geno() : c_commander.geno();
+    filter.info_score = ld ? c_commander.ld_info() : c_commander.info();
+    filter.maf = ld ? c_commander.ld_maf() : c_commander.maf();
     filter.hard_threshold = c_commander.hard_threshold();
     filter.use_hard = c_commander.hard_coding();
     m_model = c_commander.model();
