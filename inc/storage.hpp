@@ -127,13 +127,19 @@ enum class MODEL
     HETEROZYGOUS
 };
 
-enum class SCORING
+enum class MISSING_SCORE
 {
     MEAN_IMPUTE,
     SET_ZERO,
     CENTER
 };
 
+enum class SCORING
+{
+    AVERAGE,
+    STANDARD,
+    SUM
+};
 template <>
 struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
 {

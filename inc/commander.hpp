@@ -44,74 +44,116 @@ public:
 
     // base
     std::vector<int> index() const { return base.col_index; };
-    bool has_index() const { return base.index; };
-    bool beta() const { return base.beta; };
-    bool filter_base_info() const { return base.use_info; };
-    bool filter_base_maf() const { return base.provided_maf; };
-    double base_info_score() const { return base.info_score; };
-    double maf_base() const { return base.maf_threshold; };
+    bool has_index() const { return base.is_index; };
+    bool beta() const { return base.is_beta; };
+    double base_info_score() const { return base.info_score_threshold; };
+    double maf_base() const { return base.maf_control_threshold; };
     std::string base_name() const { return base.name; };
-    double maf_base_case() const { return base.maf_case; };
+    double maf_base_case() const { return base.maf_case_threshold; };
 
     // clump
-    std::string ld_prefix() const { return clumping.ld; };
-    std::string ld_type() const { return clumping.type; };
     bool no_clump() const { return clumping.no_clump; };
-    bool use_proxy() const { return clumping.provide_proxy; };
+    bool use_proxy() const { return clumping.provided_proxy; };
     double proxy() const { return clumping.proxy; };
     double clump_p() const { return clumping.p_value; };
     double clump_r2() const { return clumping.r2; };
     double clump_dist() const { return clumping.distance * 1000; };
 
     // covariate
-    std::string get_cov_file() const { return covariate.name; };
+    std::string get_cov_file() const { return covariate.file_name; };
     std::vector<std::string> get_cov_header() const
     {
         return covariate.covariates;
     };
-
-    // filtering
-    bool filter_maf() const { return filter.use_maf; };
-    bool filter_geno() const { return filter.use_geno; };
-    bool filter_mind() const { return filter.use_mind; };
-    bool filter_info() const { return filter.info_filtering; };
-    bool filter_ld_maf() const { return filter.use_ld_maf; };
-    bool filter_ld_geno() const { return filter.use_ld_geno; };
-    bool filter_ld_info() const { return filter.use_ld_info; };
-    bool filter_hard_threshold() const { return filter.use_hard_thres; };
-    bool hard_coding() const { return filter.hard_coding; };
-    bool keep_ambig() const { return filter.keep_ambig; };
-    std::string extract_snp_file() const
+    // reference panel
+    std::string ref_name() const { return reference_panel.file_name; };
+    std::string ref_type() const { return reference_panel.type; };
+    std::string ld_keep_file() const { return reference_panel.keep_file; };
+    std::string ld_remove_file() const { return reference_panel.remove_file; };
+    // reference filtering
+    double ld_geno() const { return reference_snp_filtering.geno; };
+    double ld_hard_threshold() const
     {
-        return filter.extract ? filter.extract_file : "";
+        return reference_snp_filtering.hard_threshold;
     };
-    std::string exclude_snp_file() const
-    {
-        return filter.exclude ? filter.exclude_file : "";
-    };
-    double maf() const { return filter.maf; };
-    double geno() const { return filter.geno; };
-    double mind() const { return filter.mind; };
-    double info() const { return filter.info_score; };
-    double ld_maf() const { return filter.ld_maf; };
-    double ld_geno() const { return filter.ld_geno; };
-    double ld_info() const { return filter.ld_info; };
-    double hard_threshold() const { return filter.hard_threshold; };
+    double ld_maf() const { return reference_snp_filtering.maf; };
+    double ld_info() const { return reference_snp_filtering.info_score; };
 
     // misc
-    bool all() const { return misc.all; };
+    std::string out() const { return misc.out; };
+    bool all_scores() const { return misc.print_all_scores; };
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
-    bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
-    bool seeded() const { return misc.provided_seed; };
-    bool provided_memory() const { return misc.provided_memory; };
-    std::string out() const { return misc.out; };
-    int num_permutation() const { return misc.permutation; };
+    int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-    int memory() const { return misc.memory; };
 
+    // p_thresholds
+    double bar_upper() const { return p_thresholds.barlevel.back(); };
+    double get_threshold(int i) const
+    {
+        return (i < 0) ? p_thresholds.barlevel.at(0)
+                       : ((i >= (int) p_thresholds.barlevel.size())
+                              ? 1.0
+                              : p_thresholds.barlevel.at(i));
+    };
+    double lower() const { return p_thresholds.lower; };
+    double upper() const { return p_thresholds.upper; };
+    double inter() const { return p_thresholds.inter; };
+
+    int get_category(double p) const
+    {
+        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i) {
+            if (p <= p_thresholds.barlevel[i]) {
+                return i;
+            }
+        }
+        if (p > p_thresholds.barlevel.back())
+            return p_thresholds.barlevel.size();
+        return -2; // this is impossible because something will always either be
+                   // bigger than the end or smaller than the front
+    };
+    bool full() const { return p_thresholds.no_full; };
+    bool fastscore() const { return p_thresholds.fastscore; };
+
+    // prs_calculation
+    MISSING_SCORE get_missing_score() const
+    {
+        std::string s = prs_calculation.missing_score;
+        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+        if (s == "NO_MEAN_IMPUTATION")
+            return MISSING_SCORE::SET_ZERO;
+        else if (s == "CENTER")
+            return MISSING_SCORE::CENTER;
+        else
+            return MISSING_SCORE::MEAN_IMPUTE;
+    }
+
+    SCORING get_score() const
+    {
+        std::string s = prs_calculation.score_calculation;
+        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+        if (s == "STD")
+            return SCORING::STANDARD;
+        else if (s == "SUM")
+            return SCORING::SUM;
+        else
+            return SCORING::AVERAGE;
+    }
+
+    int model() const { return prs_calculation.model; };
+    bool no_regress() const { return prs_calculation.no_regress; };
+
+    // prs_snp_filtering
+    std::string exclude_file() const { return prs_snp_filtering.exclude_file; };
+    std::string extract_file() const { return prs_snp_filtering.extract_file; };
+    double geno() const { return prs_snp_filtering.geno; };
+    double hard_threshold() const { return prs_snp_filtering.hard_threshold; };
+    double maf() const { return prs_snp_filtering.maf; };
+    double info() const { return prs_snp_filtering.info_score; };
+    bool hard_coded() const { return prs_snp_filtering.is_hard_coded; };
+    bool keep_ambig() const { return prs_snp_filtering.keep_ambig; };
 
     // prset
     std::vector<std::string> bed() const { return prset.bed; };
@@ -119,40 +161,9 @@ public:
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
 
-    // prsice
-    std::string missing_score() const { return prsice.missing_score; };
-    SCORING get_scoring() const
-    {
-        if (prsice.missing_score == "no_mean_imputation")
-            return SCORING::SET_ZERO;
-        else if (prsice.missing_score == "center")
-            return SCORING::CENTER;
-        else
-            return SCORING::MEAN_IMPUTE;
-    }
-
-    double lower() const { return prsice.lower; };
-    double upper() const { return prsice.upper; };
-    double inter() const { return prsice.inter; };
-    bool no_regress() const { return prsice.no_regress; };
-    bool full() const { return prsice.full; };
-    bool fastscore() const { return prsice.fastscore; };
-    double bar_upper() const
-    {
-        return prsice.barlevel.back();
-    }; // we have sorted it
-    int model() const { return prsice.model; };
-
     // prslice
     bool perform_prslice() const { return prslice.provided; };
     int prslice_size() const { return prslice.size; };
-
-    // species
-    int num_auto() const { return species.num_auto; };
-    bool no_x() const { return species.no_x; };
-    bool no_y() const { return species.no_y; };
-    bool no_xy() const { return species.no_xy; };
-    bool no_mt() const { return species.no_mt; };
 
     // target
     std::string target_name() const { return target.name; };
@@ -162,41 +173,15 @@ public:
     {
         return target.pheno_col.at(index);
     };
-    std::string keep_sample_file() const
-    {
-        return target.keep_sample ? target.keep_file : "";
-    };
-    std::string remove_sample_file() const
-    {
-        return target.remove_sample ? target.remove_file : "";
-    };
+    std::string keep_sample_file() const { return target.keep_file; };
+    std::string remove_sample_file() const { return target.remove_file; };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
     std::vector<double> prevalence() const { return target.prevalence; };
     bool has_pheno_col() const { return !target.pheno_col.empty(); };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
-    bool nonfounders() const { return target.nonfounders; };
-    bool keep_sample() const { return target.keep_sample; };
-    bool remove_sample() const { return target.remove_sample; };
+    bool nonfounders() const { return target.include_nonfounders; };
 
-    int get_category(double p) const
-    {
-        for (size_t i = 0; i < prsice.barlevel.size(); ++i) {
-            if (p <= prsice.barlevel[i]) {
-                return i;
-            }
-        }
-        if (p > prsice.barlevel.back()) return prsice.barlevel.size();
-        return -2; // this is impossible because something will always either be
-                   // bigger than the end or smaller than the front
-    };
-    double get_threshold(int i) const
-    {
-        return (i < 0) ? prsice.barlevel.at(0)
-                       : ((i >= (int) prsice.barlevel.size())
-                              ? 1.0
-                              : prsice.barlevel.at(i));
-    };
 
 protected:
 private:
@@ -229,7 +214,7 @@ private:
         bool provided_non_effect_allele;
         bool provided_statistic;
         bool provided_snp;
-        bool proivided_bp;
+        bool provided_bp;
         bool provided_standard_error;
         bool provided_p_value;
         bool provided_info;
@@ -262,6 +247,7 @@ private:
         int print_snp;
         int thread;
         size_t seed;
+        bool provided_seed;
     } misc;
 
     struct
@@ -291,6 +277,7 @@ private:
         double upper;
         int fastscore;
         int no_full;
+        bool set_thresholds;
     } p_thresholds;
 
     struct
@@ -368,24 +355,24 @@ private:
                       std::string& error_message);
     void target_check(std::map<std::string, std::string>& message, bool& error,
                       std::string& error_message);
-
-    inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
-                            bool no_mt, bool& error, std::string& error_message,
-                            bool& species_error)
-    {
-        if (species.double_set && !species_error) {
-            species_error = true;
-            error = true;
-            error_message.append("ERROR: Can only specify one species\n");
-        }
-        species.num_auto = num_auto;
-        species.no_x = no_x;
-        species.no_y = no_y;
-        species.no_xy = no_xy;
-        species.no_mt = no_mt;
-        species.double_set = true;
-    };
-
+    /*
+        inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
+                                bool no_mt, bool& error, std::string&
+       error_message, bool& species_error)
+        {
+            if (species.double_set && !species_error) {
+                species_error = true;
+                error = true;
+                error_message.append("ERROR: Can only specify one species\n");
+            }
+            species.num_auto = num_auto;
+            species.no_x = no_x;
+            species.no_y = no_y;
+            species.no_xy = no_xy;
+            species.no_mt = no_mt;
+            species.double_set = true;
+        };
+    */
     inline void load_binary_vector(const std::string& input,
                                    std::map<std::string, std::string>& message,
                                    std::string& error_message,
@@ -473,26 +460,25 @@ private:
             error_message.append("ERROR: Model cannot be empty!\n");
             error = true;
         }
-        prsice.provided_model = true;
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
             input = "add";
-            prsice.model = +MODEL::ADDITIVE;
+            prs_calculation.model = +MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prsice.model = +MODEL::DOMINANT;
+            prs_calculation.model = +MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prsice.model = +MODEL::RECESSIVE;
+            prs_calculation.model = +MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prsice.model = +MODEL::HETEROZYGOUS;
+            prs_calculation.model = +MODEL::HETEROZYGOUS;
         }
         else
         {
