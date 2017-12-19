@@ -126,8 +126,7 @@ enum class MODEL
     RECESSIVE,
     HETEROZYGOUS
 };
-// Mean imputed, no-mean imputed, centering is currently too complicated based
-// on our algorithm
+
 enum class SCORING
 {
     MEAN_IMPUTE,

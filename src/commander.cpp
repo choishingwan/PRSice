@@ -368,12 +368,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
 
 Commander::Commander()
 {
-
-    base.beta = false;
     base.name = "";
     base.chr = "CHR";
-    base.ref_allele = "A1";
-    base.alt_allele = "A2";
+    base.effect_allele = "A1";
+    base.non_effect_allele = "A2";
     base.statistic = "OR";
     base.snp = "SNP";
     base.bp = "BP";
@@ -381,19 +379,32 @@ Commander::Commander()
     base.p_value = "P";
     base.info_col = "INFO,0.9";
     base.maf = "";
-    base.info_score = 0.9;
-    base.index = false;
+    base.is_beta = false;
+    base.is_index = false;
+    base.no_default = false;
+    base.info_score_threshold = 0;
+    base.maf_control_threshold = 0;
+    base.maf_case_threshold = 0;
     base.provided_chr = false;
-    base.provided_ref = false;
-    base.provided_alt = false;
-    base.provided_maf = false;
-    base.provided_stat = false;
+    base.provided_effect_allele = false;
+    base.provided_non_effect_allele = false;
+    base.provided_statistic = false;
     base.provided_snp = false;
-    base.provided_bp = false;
-    base.provided_se = false;
-    base.provided_p = false;
-    base.use_info = false;
+    base.proivided_bp = false;
+    base.provided_standard_error = false;
+    base.provided_p_value = false;
+    base.provided_info = false;
     base.col_index.resize(+BASE_INDEX::MAX + 1, -1);
+
+
+    clumping.no_clump = false;
+    clumping.proxy = -1;
+    clumping.p_value = 1;
+    clumping.r2 = 0.1;
+    clumping.distance = 250;
+    clumping.provided_proxy = false;
+
+    covariate.file_name = "";
 
 
     clumping.distance = 250;
@@ -410,79 +421,60 @@ Commander::Commander()
     clumping.provide_r2 = false;
     clumping.provide_distance = false;
 
-    covariate.name = "";
-    covariate.ancestry_dim = "MDS";
-
-    filter.exclude = false;
-    filter.extract = false;
-    filter.geno = 0.0;
-    filter.mind = 0.0;
-    filter.maf = 0.01;
-    filter.ld_geno = 0.0;
-    filter.ld_maf = 0.01;
-    filter.ld_info = 0.9;
-    filter.hard_coding = false;
-    filter.hard_threshold = 0.9;
-    filter.info_filtering = false;
-    filter.info_score = 0.9;
-    filter.keep_ambig = false;
-    filter.use_prob = false;
-    filter.use_maf = false;
-    filter.use_mind = false;
-    filter.use_hard_thres = false;
-    filter.use_geno = false;
-    filter.use_ld_geno = false;
-    filter.use_ld_maf = false;
-    filter.use_ld_info = false;
-
-    misc.all = false;
+    misc.out = "PRSice";
+    misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
-    misc.memory = 10000;
-    misc.out = "PRSice";
-    misc.permutation = 10000;
+    misc.permutation = 0;
     misc.print_snp = false;
-    misc.print_all_samples = false;
-    misc.provided_permutation = false;
-    misc.provided_output = false;
-    misc.provided_seed = false;
-    misc.seed = 0;
     misc.thread = 1;
-    misc.provide_thread = false;
+    size_t seed = 0;
+
+    reference_panel.file_name= "";
+    reference_panel.type="bed";
+    reference_panel.keep_file = "";
+    reference_panel.remove_file = "";
+
+    reference_snp_filtering.geno = 0;
+    reference_snp_filtering.hard_threshold = 0.0;
+    reference_snp_filtering.maf = 0.0;
+    reference_snp_filtering.info_score = 0.0;
+
+    p_thresholds.lower = 0.0001;
+    p_thresholds.inter = 0.00005;
+    p_thresholds.upper = 0.5;
+    p_thresholds.fastscore = false;
+    p_thresholds.no_full = false;
+
+    prs_calculation.missing_score = "MEAN_IMPUTE";
+    prs_calculation.score_calculation = "average";
+    prs_calculation.model = +MODEL::ADDITIVE;
+    prs_calculation.no_regress = false;
+
+    prs_snp_filtering.exclude_file="";
+    prs_snp_filtering.extract_file="";
+    prs_snp_filtering.geno = 0;
+    prs_snp_filtering.hard_threshold = 0;
+    prs_snp_filtering.maf = 0;
+    prs_snp_filtering.info_score = 0;
+    prs_snp_filtering.is_hard_coded = false;
+    prs_snp_filtering.keep_ambig = false;
+    prs_snp_filtering.predict_ambig = false;
 
     prset.gtf = "";
     prset.msigdb = "";
     prset.perform_prset = false;
 
-    prsice.missing_score = "";
-    prsice.model = +MODEL::ADDITIVE;
-    prsice.lower = 0.0001;
-    prsice.upper = 0.5;
-    prsice.inter = 0.00005;
-    prsice.fastscore = false;
-    prsice.no_regress = false;
-    prsice.full = true;
-    prsice.provide_lower = false;
-    prsice.provide_upper = false;
-    prsice.provide_inter = false;
-
     prslice.size = -1;
     prslice.provided = false;
 
-    species.num_auto = 22;
-    species.no_x = false;
-    species.no_y = false;
-    species.no_xy = false;
-    species.no_mt = false;
-    species.double_set = false;
-
     target.remove_sample = false;
     target.keep_sample = false;
-    target.nonfounders = false;
+    target.include_nonfounders = false;
     target.name = "";
     target.pheno_file = "";
     target.type = "bed";
-    info();
+    set_help_message();
 }
 
 bool Commander::init(int argc, char* argv[], Reporter& reporter)
@@ -491,18 +483,19 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         usage();
         throw std::runtime_error("Please provide the required parameters");
     }
-    const char* optString = "a:b:B:c:C:f:g:i:l:L:m:k:n:o:p:t:u:h?";
+    const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
     const struct option longOpts[] = {
         // parameters with short flags
-        {"ancestry", required_argument, NULL, 'a'},
         {"base", required_argument, NULL, 'b'},
         {"bed", required_argument, NULL, 'B'},
         {"cov-col", required_argument, NULL, 'c'},
-        {"cov-header", required_argument, NULL,
-         0}, // retain here for backward compatibility
+        // cov-header retain here for backward compatibility
+        {"cov-header", required_argument, NULL, 'c'},
         {"cov-file", required_argument, NULL, 'C'},
         {"pheno-file", required_argument, NULL, 'f'},
+        {"pheno-col", required_argument, NULL, 'F'},
         {"gtf", required_argument, NULL, 'g'},
+        {"help", no_argument, NULL, 'h'},
         {"interval", required_argument, NULL, 'i'},
         {"prevalence", required_argument, NULL, 'k'},
         {"lower", required_argument, NULL, 'l'},
@@ -514,21 +507,19 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"seed", required_argument, NULL, 's'},
         {"target", required_argument, NULL, 't'},
         {"upper", required_argument, NULL, 'u'},
+        {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
-        {"all", no_argument, &misc.all, 1},
-        {"beta", no_argument, &base.beta, 1},
-        {"full", no_argument, &prsice.full, 1},
+        {"all-score", no_argument, &misc.all, 1},
+        {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &filter.hard_coding, 1},
         {"ignore-fid", no_argument, &misc.ignore_fid, 1},
-        {"index", no_argument, &base.index, 1},
+        {"index", no_argument, &base.is_index, 1},
         {"keep-ambig", no_argument, &filter.keep_ambig, 1},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
+        {"no-default", no_argument, &base.no_default, 1},
+        {"no-full", no_argument, &prsice.full, 1},
         {"no-regression", no_argument, &prsice.no_regress, 1},
-        {"no-x", no_argument, &species.no_x, 1},
-        {"no-y", no_argument, &species.no_y, 1},
-        {"no-xy", no_argument, &species.no_xy, 1},
-        {"no-mt", no_argument, &species.no_mt, 1},
         {"nonfounders", no_argument, &target.nonfounders, 1},
         {"fastscore", no_argument, &prsice.fastscore, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
@@ -558,11 +549,9 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-info", required_argument, NULL, 0},
         {"maf-base", required_argument, NULL, 0},
         {"maf", required_argument, NULL, 0},
-        {"memory", required_argument, NULL, 0},
+        {"missing", required_argument, NULL, 0},
         {"model", required_argument, NULL, 0},
-        {"num-auto", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
-        {"pheno-col", required_argument, NULL, 0},
         {"proxy", required_argument, NULL, 0},
         {"prslice", required_argument, NULL, 0},
         {"remove", required_argument, NULL, 0},
@@ -571,15 +560,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"snp", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
-        // species flag
-        {"cow", no_argument, NULL, 0},
-        {"dog", no_argument, NULL, 0},
-        {"horse", no_argument, NULL, 0},
-        {"mouse", no_argument, NULL, 0},
-        {"rice", no_argument, NULL, 0},
-        {"sheep", no_argument, NULL, 0},
-        {"help", no_argument, NULL, 'h'},
-        {"version", no_argument, NULL, 'v'},
         {NULL, 0, 0, 0}};
     return process(argc, argv, optString, longOpts, reporter);
 }
@@ -590,7 +570,7 @@ Commander::~Commander()
     // dtor
 }
 
-void Commander::info()
+void Commander::set_help_message()
 {
     help_message =
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"

@@ -207,59 +207,99 @@ private:
     {
         std::string name;
         std::string chr;
-        std::string ref_allele;
-        std::string alt_allele;
+        std::string effect_allele;
+        std::string non_effect_allele;
         std::string statistic;
         std::string snp;
         std::string bp;
         std::string standard_error;
         std::string p_value;
         std::string info_col;
-        std::string maf;
+        std::string maf_col;
         std::vector<int> col_index;
-        int beta;
-        int index;
-        bool provided_maf;
+        int is_beta;
+        int is_index;
+        int no_default;
+        double info_score_threshold;
+        double maf_control_threshold;
+        double maf_case_threshold;
+        // determine if we are going to use default
         bool provided_chr;
-        bool provided_ref;
-        bool provided_alt;
-        bool provided_stat;
+        bool provided_effect_allele;
+        bool provided_non_effect_allele;
+        bool provided_statistic;
         bool provided_snp;
-        bool provided_bp;
-        bool provided_se;
-        bool provided_p;
-        bool use_info;
-        double info_score;
-        double maf_threshold;
-        double maf_case;
+        bool proivided_bp;
+        bool provided_standard_error;
+        bool provided_p_value;
+        bool provided_info;
     } base;
 
     struct
     {
-        std::string ld;
-        std::string type;
-        std::string keep_file;
-        std::string remove_file;
         int no_clump;
         double proxy;
         double p_value;
         double r2;
         int distance;
-        bool provide_r2;
-        bool provide_p;
-        bool provide_distance;
-        bool provide_proxy;
-        bool keep_sample;
-        bool remove_sample;
-        bool use_type;
+        bool provided_proxy;
     } clumping;
 
     struct
     {
-        std::string name;
-        std::string ancestry_dim;
+        std::string file_name;
         std::vector<std::string> covariates;
+        // Numeric factors should be defined with ""
     } covariate;
+
+    struct
+    {
+        std::string out;
+        int print_all_scores;
+        int ignore_fid;
+        int logit_perm;
+        int permutation;
+        int print_snp;
+        int thread;
+        size_t seed;
+    } misc;
+
+    struct
+    {
+        std::string file_name;
+        std::string type;
+        std::string keep_file;
+        std::string remove_file;
+    } reference_panel;
+
+    struct
+    {
+        double geno;
+        double hard_threshold;
+        double maf;
+        double info_score;
+        // Need to have the same snp as the target
+        // so not necessary to have another set of exclude/extract files
+        // must be hard coded for reference
+    } reference_snp_filtering;
+
+    struct
+    {
+        std::vector<double> barlevel;
+        double lower;
+        double inter;
+        double upper;
+        int fastscore;
+        int no_full;
+    } p_thresholds;
+
+    struct
+    {
+        std::string missing_score;
+        std::string score_calculation;
+        int model; // use model enum
+        int no_regress;
+    } prs_calculation;
 
     struct
     {
@@ -268,47 +308,11 @@ private:
         double geno;
         double hard_threshold;
         double maf;
-        double mind;
         double info_score;
-        double ld_maf;
-        double ld_geno;
-        double ld_info;
-        int hard_coding;
-        int use_prob;
+        int is_hard_coded;
         int keep_ambig;
-        bool extract;
-        bool exclude;
-        bool use_hard_thres;
-        bool info_filtering;
-        bool use_geno;
-        bool use_maf;
-        bool use_ld_maf;
-        bool use_ld_geno;
-        bool use_ld_info;
-        bool use_mind;
-    } filter;
-
-    struct
-    {
-        std::string out;
-        int all;
-        int ignore_fid;
-        int logit_perm;
-        int memory;
-        int permutation;
-        int print_snp;
-        int print_all_samples;
-        int thread;
-        size_t seed;
-        bool provided_seed;
-        bool provided_permutation;
-        bool provide_thread;
-        bool provided_memory;
-        bool provided_output;
-        // I want to include cross-validation here
-        // do it after writing up the paper. A useful resource is here
-        // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
-    } misc;
+        int predict_ambig; // PRSoS stuff?
+    } prs_snp_filtering;
 
     struct
     {
@@ -321,36 +325,9 @@ private:
 
     struct
     {
-        std::string missing_score;
-        std::vector<double> barlevel;
-        double lower;
-        double upper;
-        double inter;
-        bool provide_lower;
-        bool provide_upper;
-        bool provide_inter;
-        bool provided_model;
-        int model; // Use MODEL enum
-        int fastscore;
-        int no_regress;
-        int full;
-    } prsice;
-
-    struct
-    {
         int size;
         bool provided;
     } prslice;
-
-    struct
-    {
-        int num_auto;
-        int no_x;
-        int no_y;
-        int no_xy;
-        int no_mt;
-        bool double_set;
-    } species;
 
     struct
     {
@@ -360,18 +337,22 @@ private:
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
-        std::vector<double>
-            prevalence; // should equal to number of binary target
-        int nonfounders;
-        bool keep_sample;
-        bool remove_sample;
-        bool use_type;
+        // should equal to number of binary target
+        std::vector<double> prevalence;
         std::vector<bool> is_binary;
+        int include_nonfounders;
     } target;
+
+    ////////////////////////////////////////////
+    //
+    // end of struct definition
+    //
+    ////////////////////////////////////////////
+
 
     std::string help_message;
     void usage();
-    void info();
+    void set_help_message();
     void base_check(std::map<std::string, std::string>& message, bool& error,
                     std::string& error_message);
     void clump_check(std::map<std::string, std::string>& message, bool& error,
