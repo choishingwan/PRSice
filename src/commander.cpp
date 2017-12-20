@@ -67,8 +67,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, base.info_col,
                            base.provided_info, command, error_messages);
             else if (command.compare("maf-base") == 0)
-                set_string(optarg, message_store, base.maf_col,
-                           dummy, command, error_messages);
+                set_string(optarg, message_store, base.maf_col, dummy, command,
+                           error_messages);
             // Long opts for clumping
             else if (command.compare("clump-p") == 0)
                 set_numeric<double>(optarg, message_store, error_messages,
@@ -108,8 +108,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                     command);
             else if (command.compare("ld-info") == 0)
                 set_numeric<double>(optarg, message_store, error_messages,
-                                    reference_snp_filtering.info_score, dummy, error,
-                                    command);
+                                    reference_snp_filtering.info_score, dummy,
+                                    error, command);
             else if (command.compare("ld-hard-thres") == 0)
                 set_numeric<double>(optarg, message_store, error_messages,
                                     reference_snp_filtering.hard_threshold,
@@ -197,8 +197,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                "cov-col", error_messages);
             break;
         case 'C':
-            set_string(optarg, message_store, covariate.file_name, dummy, "cov-file",
-                       error_messages);
+            set_string(optarg, message_store, covariate.file_name, dummy,
+                       "cov-file", error_messages);
             break;
         case 'f':
             set_string(optarg, message_store, target.pheno_file, dummy,
@@ -214,7 +214,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'i':
             set_numeric<double>(optarg, message_store, error_messages,
-                                p_thresholds.inter, p_thresholds.set_thresholds, error, "interval");
+                                p_thresholds.inter, p_thresholds.set_thresholds,
+                                error, "interval");
             break;
         case 'k':
             load_numeric_vector<double>(optarg, message_store, error_messages,
@@ -222,7 +223,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'l':
             set_numeric<double>(optarg, message_store, error_messages,
-            		p_thresholds.lower, p_thresholds.set_thresholds, error, "lower");
+                                p_thresholds.lower, p_thresholds.set_thresholds,
+                                error, "lower");
             break;
         case 'L':
             set_string(optarg, message_store, reference_panel.file_name, dummy,
@@ -271,8 +273,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                        error_messages);
             break;
         case 'p':
-            set_string(optarg, message_store, base.p_value, base.provided_p_value,
-                       "pvalue", error_messages);
+            set_string(optarg, message_store, base.p_value,
+                       base.provided_p_value, "pvalue", error_messages);
             break;
         case 's':
             set_numeric<size_t>(optarg, message_store, error_messages,
@@ -284,7 +286,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'u':
             set_numeric<double>(optarg, message_store, error_messages,
-            		p_thresholds.upper, p_thresholds.set_thresholds, error, "upper");
+                                p_thresholds.upper, p_thresholds.set_thresholds,
+                                error, "upper");
             break;
         case 'h':
         case '?':
@@ -985,20 +988,39 @@ void Commander::base_check(std::map<std::string, std::string>& message,
         if (!base_test.is_open()) {
             error = true;
             error_message.append("ERROR: Cannot open base file to read!\n");
+            return;
         }
         else
         {
-            // check the base file header is correct
             std::string line;
-            std::getline(base_test, line);
-            base_test.close();
+            if (base.name.substr(base.name.find_last_of(".") + 1).compare("gz")
+                == 0)
+            {
+                base_test.close();
+                igzstream in(base.name.c_str());
+                if (!in.good()) {
+                    error = true;
+                    error_message.append(
+                        "ERROR: Cannot open base file (gz) to read!\n");
+                    return;
+                }
+                std::getline(in, line);
+                in.close();
+            }
+            else
+            {
+                std::getline(base_test, line);
+                base_test.close();
+            }
+            // check the base file header is correct
             std::vector<std::string> token = misc::split(line);
             int max_size = token.size();
             if (base.no_default) {
                 // remove all the default
                 if (!base.provided_chr) base.chr = "";
                 if (!base.provided_effect_allele) base.effect_allele = "";
-                if (!base.provided_non_effect_allele) base.non_effect_allele = "";
+                if (!base.provided_non_effect_allele)
+                    base.non_effect_allele = "";
                 if (!base.provided_statistic) base.statistic = "";
                 if (!base.provided_snp) base.snp = "";
                 if (!base.provided_bp) base.bp = "";
@@ -1298,8 +1320,11 @@ void Commander::base_check(std::map<std::string, std::string>& message,
                     }
                     try
                     {
-                        base.maf_control_threshold = misc::convert<double>(maf[1]);
-                        if (base.maf_control_threshold < 0 || base.maf_control_threshold > 1) {
+                        base.maf_control_threshold =
+                            misc::convert<double>(maf[1]);
+                        if (base.maf_control_threshold < 0
+                            || base.maf_control_threshold > 1)
+                        {
                             error = true;
                             error_message.append("ERROR: Base MAF threshold "
                                                  "must be within 0 and 1!\n");
@@ -1640,7 +1665,7 @@ void Commander::filter_check(bool& error, std::string& error_message)
 {
     if (target.type.compare("bgen") == 0
         && (prs_snp_filtering.hard_threshold < 0
-              || prs_snp_filtering.hard_threshold > 1))
+            || prs_snp_filtering.hard_threshold > 1))
     {
         error = true;
         error_message.append(
@@ -1721,13 +1746,13 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
                              bool& error, std::string& error_message)
 {
 
-	message["model"] = prs_calculation.model;
+    message["model"] = prs_calculation.model;
     if (p_thresholds.fastscore && p_thresholds.barlevel.size() == 0
         && !prset.perform_prset)
     {
-    		std::string bar_message ="0.001,0.05,0.1,0.2,0.3,0.4,0.5";
-    		if(!p_thresholds.no_full) bar_message.append(",1");
-        message["bar-levels"] =bar_message;
+        std::string bar_message = "0.001,0.05,0.1,0.2,0.3,0.4,0.5";
+        if (!p_thresholds.no_full) bar_message.append(",1");
+        message["bar-levels"] = bar_message;
         p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
         if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     }
@@ -1736,8 +1761,7 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
         p_thresholds.barlevel.end());
     if (prset.perform_prset) {
-        if (!p_thresholds.set_thresholds && !p_thresholds.fastscore)
-        {
+        if (!p_thresholds.set_thresholds && !p_thresholds.fastscore) {
             message["bar-levels"] = 1;
             p_thresholds.fastscore = true;
             p_thresholds.barlevel = {1};

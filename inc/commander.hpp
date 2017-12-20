@@ -17,6 +17,7 @@
 #ifndef COMMANDER_H
 #define COMMANDER_H
 
+#include "gzstream.h"
 #include "misc.hpp"
 #include "storage.hpp"
 #include <chrono>
