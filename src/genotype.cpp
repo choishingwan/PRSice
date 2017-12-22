@@ -195,8 +195,9 @@ void Genotype::load_samples(const std::string& keep_file,
                           + " female(s)) observed\n";
     message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
     reporter.report(message);
+    m_sample_selection_list.clear();
 }
-}
+
 
 void Genotype::load_snps(const std::string out_prefix,
                          const std::string& extract_file,
@@ -229,6 +230,7 @@ void Genotype::load_snps(const std::string out_prefix,
     }
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
     reporter.report(message);
+    m_snp_selection_list.clear();
 }
 
 Genotype::~Genotype() {}

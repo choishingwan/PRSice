@@ -210,6 +210,7 @@ namespace bgen
         std::string magic;
         std::string free_data;
         uint32_t flags;
+        uint32_t offset;
     };
 
     // Read the offset from the start of the stream.

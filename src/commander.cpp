@@ -436,7 +436,7 @@ Commander::Commander()
     misc.permutation = 0;
     misc.print_snp = false;
     misc.thread = 1;
-    size_t seed = 0;
+    misc.seed = 0;
 
     reference_panel.file_name = "";
     reference_panel.type = "bed";

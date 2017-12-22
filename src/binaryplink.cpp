@@ -83,6 +83,8 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
     std::vector<Sample> sample_name;
+    std::unordered_set<std::string> duplicated_samples;
+    std::vector<std::string> duplicated_sample_id;
     uintptr_t sample_index = 0; // this is just for error message
     while (std::getline(famfile, line)) {
         misc::trim(line);
@@ -152,8 +154,21 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             m_num_ambig_sex++;
         }
         sample_index++;
+        if (duplicated_samples.find(id) != duplicated_samples.end())
+            duplicated_sample_id.push_back(id);
+        duplicated_samples.insert(id);
         sample_name.push_back(cur_sample);
     }
+    if (!duplicated_sample_id.empty()) {
+        // TODO: Produce a file containing id of all valid samples
+        std::string error_message =
+            "ERROR: A total of " + std::to_string(duplicated_sample_id.size())
+            + " duplicated samples detected!\n";
+        error_message.append(
+            "Please ensure all samples have an unique identifier");
+        throw std::runtime_error(error_message);
+    }
+
     famfile.close();
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
     return sample_name;

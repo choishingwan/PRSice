@@ -45,8 +45,8 @@ public:
     Genotype(const size_t thread, const bool ignore_fid,
              const bool keep_nonfounder, const bool keep_ambig)
         : m_thread(thread)
+    		, m_keep_nonfounder(keep_nonfounder)
         , m_ignore_fid(ignore_fid)
-        , m_keep_nonfounder(keep_nonfounder)
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 

@@ -20,6 +20,7 @@
 #include "genotype.hpp"
 #include <stdexcept>
 
+namespace bgenlib = genfile::bgen;
 /**
  * Potential problem:
  * Where multi-allelic variants exist in these data, they have been
@@ -30,15 +31,6 @@
 class BinaryGen : public Genotype
 {
 public:
-    BinaryGen(std::string prefix, std::string pheno_file, bool header,
-              std::string remove_sample, std::string keep_sample,
-              std::string extract_snp, std::string exclude_snp,
-              const std::string& out_prefix, Reporter& reporter,
-              bool ignore_fid, int num_auto = 22, bool no_x = false,
-              bool no_y = false, bool no_xy = false, bool no_mt = false,
-              bool keep_ambig = false, const size_t thread = 1,
-              bool verbose = false);
-
     BinaryGen(const std::string& prefix, const std::string& sample_file,
               const size_t thread = 1, const bool ignore_fid = false,
               const bool keep_nonfounder = false,
@@ -49,23 +41,18 @@ private:
     std::vector<Sample> gen_sample_vector();
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
-    bool is_sample_format();
+    bool check_is_sample_format();
     std::vector<SNP> gen_snp_vector(const double geno, const double maf,
                                     const double info,
                                     const double hard_threshold,
                                     const bool hard_coded,
                                     const std::string& out_prefix);
+    bgenlib::Context get_context(std::string& bgen_name);
+    bool check_sample_consistent(const std::string& bgen_name,
+                                            const bgenlib::Context& context);
 
     typedef std::vector<std::vector<double>> Data;
-    Sample get_sample(std::vector<std::string>& token, bool ignore_fid,
-                      bool has_sex, int sex_col, std::vector<int>& sex_info);
 
-    std::unordered_map<std::string, size_t> m_sample_index_check;
-
-    std::vector<Sample> load_samples(bool ignore_fid);
-
-
-    std::vector<SNP> load_snps(const std::string& out_prefix);
 
     std::string m_cur_file;
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
@@ -185,8 +172,8 @@ private:
     void dosage_score(std::vector<Sample_lite>& current_prs_score,
                       size_t start_index, size_t end_bound,
                       const size_t region_index);
+
     std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
-    std::unordered_map<std::string, uint32_t> m_offset_map;
     std::ifstream m_bgen_file;
     /** DON'T TOUCH      */
     struct ProbSetter
