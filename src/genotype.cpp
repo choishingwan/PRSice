@@ -17,6 +17,25 @@
 #include "genotype.hpp"
 
 
+std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
+{
+    std::vector<std::string> genotype_files;
+    if (prefix.find("#") != std::string::npos) {
+        // auto read will only include the autosomes unless otherwise?
+        for (size_t chr = 1; chr < m_autosome_ct; ++chr) {
+            std::string name = prefix;
+            misc::replace_substring(name, "#", std::to_string(chr));
+            genotype_files.push_back(name);
+        }
+    }
+    else
+    {
+        genotype_files.push_back(prefix);
+    }
+    return genotype_files;
+}
+
+
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
@@ -84,23 +103,6 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
     }
     m_chrom_start.resize(m_max_code); // 1 extra for the info
 }
-
-void Genotype::set_genotype_files(std::string prefix)
-{
-    if (prefix.find("#") != std::string::npos) {
-        // auto read will only include the autosomes unless otherwise?
-        for (size_t chr = 1; chr < m_autosome_ct; ++chr) {
-            std::string name = prefix;
-            misc::replace_substring(name, "#", std::to_string(chr));
-            m_genotype_files.push_back(name);
-        }
-    }
-    else
-    {
-        m_genotype_files.push_back(prefix);
-    }
-}
-
 
 std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
                                                         Reporter& reporter)
@@ -174,59 +176,59 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
     return result;
 }
 
-Genotype::Genotype(std::string prefix, std::string remove_sample,
-                   std::string keep_sample, std::string extract_snp,
-                   std::string exclude_snp, const std::string& out_prefix,
-                   Reporter& reporter, bool ignore_fid, int num_auto, bool no_x,
-                   bool no_y, bool no_xy, bool no_mt, bool keep_ambig,
-                   const size_t thread, bool verbose)
+void Genotype::load_samples(const std::string& keep_file,
+                            const std::string& remove_file, Reporter& reporter)
 {
-
-    m_thread = thread;
-    if (!remove_sample.empty()) {
-        m_sample_selection_list = load_ref(remove_sample, ignore_fid);
+    if (!commander.remove_sample_file().empty()) {
+        m_sample_selection_list =
+            load_ref(commander.remove_sample_file(), ignore_fid);
     }
-    if (!keep_sample.empty()) {
+    if (!commander.keep_sample_file().empty()) {
         m_remove_sample = false;
-        m_sample_selection_list = load_ref(keep_sample, ignore_fid);
+        m_sample_selection_list =
+            load_ref(commander.keep_sample_file(), ignore_fid);
     }
-    if (!extract_snp.empty()) {
+    m_sample_names = gen_sample_vector();
+    std::string message = std::to_string(m_unfiltered_sample_ct) + " people ("
+                          + std::to_string(m_num_male) + " male(s), "
+                          + std::to_string(m_num_female)
+                          + " female(s)) observed\n";
+    message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
+    reporter.report(message);
+}
+}
+
+void Genotype::load_snps(const std::string out_prefix,
+                         const std::string& extract_file,
+                         const std::string& exclude_file, const double geno,
+                         const double maf, const double info,
+                         const double hard_threshold, const bool hard_coded,
+                         Reporter& reporter)
+{
+    if (!commander.extract_snp_file().empty()) {
         m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_snp, reporter);
+        m_snp_selection_list =
+            load_snp_list(commander.extract_snp_file(), reporter);
     }
-    if (!exclude_snp.empty()) {
-        m_snp_selection_list = load_snp_list(exclude_snp, reporter);
+    if (!commander.exclude_snp_file().empty()) {
+        m_snp_selection_list =
+            load_snp_list(commander.exclude_snp_file(), reporter);
     }
 
-    /** setting the chromosome information **/
-    m_xymt_codes.resize(XYMT_OFFSET_CT);
-    // we are not using the following script for now as we only support human
-    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
-    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
-    // now initialize the chromosome
-    init_chr(num_auto, no_x, no_y, no_xy, no_mt);
-
-    set_genotype_files(prefix);
-    m_sample_names = load_samples(ignore_fid);
-    m_existed_snps = load_snps(out_prefix);
-    if (verbose) {
-        std::string message = std::to_string(m_unfiltered_sample_ct)
-                              + " people (" + std::to_string(m_num_male)
-                              + " male(s), " + std::to_string(m_num_female)
-                              + " female(s)) observed\n";
-        message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
-        if (m_num_ambig != 0 && !keep_ambig) {
-            message.append(std::to_string(m_num_ambig)
-                           + " ambiguous variant(s) excluded\n");
-        }
-        else if (m_num_ambig != 0)
-        {
-            message.append(std::to_string(m_num_ambig)
-                           + " ambiguous variant(s) kept\n");
-        }
-        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-        reporter.report(message);
+    m_existed_snps =
+        gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
+    std::string message = "";
+    if (m_num_ambig != 0 && !filter.keep_ambig) {
+        message.append(std::to_string(m_num_ambig)
+                       + " ambiguous variant(s) excluded\n");
     }
+    else if (m_num_ambig != 0)
+    {
+        message.append(std::to_string(m_num_ambig)
+                       + " ambiguous variant(s) kept\n");
+    }
+    message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+    reporter.report(message);
 }
 
 Genotype::~Genotype() {}

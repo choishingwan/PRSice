@@ -25,29 +25,23 @@
 class BinaryPlink : public Genotype
 {
 public:
-    BinaryPlink(std::string prefix, std::string remove_sample,
-                std::string keep_sample, std::string extract_snp,
-                std::string exclude_snp, std::string fam_name,
-                const std::string& out_prefix, Reporter& reporter,
-                bool ignore_fid, bool nonfounder, int num_auto = 22,
-                bool no_x = false, bool no_y = false, bool no_xy = false,
-                bool no_mt = false, bool keep_ambig = false,
-                const size_t thread = 1, bool verbose = false);
-
-    BinaryPlink(const Commander& commander, Reporter& reporter, bool ld = false,
-                bool verbose = false);
+    BinaryPlink(const std::string& prefix, const std::string& sample_file,
+                const size_t thread = 1, const bool ignore_fid = false,
+                const bool keep_nonfounder = false,
+                const bool keep_ambig = false);
     ~BinaryPlink();
 
 private:
     uintptr_t m_bed_offset = 3;
-    std::vector<Sample> load_samples(bool ignore_fid);
-    std::vector<SNP> load_snps(const std::string& out_prefix);
-    std::vector<size_t> m_num_snp_per_file; // for bed file size check
-    std::string m_fam_name = "";
+    std::vector<Sample> gen_sample_vector();
 
-    void check_bed();
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info,
+                                    const double hard_threshold,
+                                    const bool hard_coded,
+                                    const std::string& out_prefix);
 
-    void snp_filtering(Reporter& reporter);
+    void check_bed(const std::string& bed_name, size_t num_marker);
 
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,

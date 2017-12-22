@@ -47,9 +47,16 @@ int main(int argc, char* argv[])
     Genotype* target_file;
     try
     {
-        target_file =
-            factory.createGenotype(commander, commander.target_name(),
-                                   commander.target_type(), verbose, reporter);
+        target_file = factory.createGenotype(
+            commander.target_name(), commander.target_type(),
+            commander.thread(), commander.ignore_fid(), commander.nonfounders(),
+            commander.keep_ambig(), reporter, commander);
+        target_file->load_samples(commander.keep_sample_file(),
+                                  commander.remove_sample_file(), reporter);
+        target_file->load_snps(
+            commander.extract_file(), commander.exclude_file(),
+            commander.geno(), commander.maf(), commander.info(),
+            commander.hard_threshold(), commander.hard_coded(), reporter);
     }
     catch (const std::invalid_argument& ia)
     {

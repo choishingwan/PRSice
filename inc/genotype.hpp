@@ -42,15 +42,25 @@ class Genotype
 {
 public:
     Genotype(){};
-    Genotype(std::string prefix, std::string remove_sample,
-             std::string keep_sample, std::string extract_snp,
-             std::string exclude_snp, const std::string& out_prefix,
-             Reporter& reporter, bool ignore_fid, int num_auto = 22,
-             bool no_x = false, bool no_y = false, bool no_xy = false,
-             bool no_mt = false, bool keep_ambig = false,
-             const size_t thread = 1, bool verbose = false);
-
+    Genotype(const size_t thread, const bool ignore_fid,
+             const bool keep_nonfounder, const bool keep_ambig)
+        : m_thread(thread)
+        , m_ignore_fid(ignore_fid)
+        , m_keep_nonfounder(keep_nonfounder)
+        , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
+
+
+    void load_samples(const std::string& keep_file,
+                      const std::string& remove_file, Reporter& reporter);
+    void load_snps(const std::string out_prefix,
+                   const std::string& extract_file,
+                   const std::string& exclude_file, const double geno,
+                   const double maf, const double info,
+                   const double hard_threshold, const bool hard_coded,
+                   Reporter& reporter);
+
+
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -73,9 +83,70 @@ public:
     void efficient_clumping(Genotype& reference, Reporter& reporter);
     void set_info(const Commander& c_commander, const bool ld = false);
 
+
 protected:
-    int process_block(int& start_index, int end_index, int& first_core_index);
-    void clump_snp(const size_t start_index, const size_t end_index);
+    // variable storages
+    // vector storing all the genotype files
+    std::vector<std::string> m_genotype_files;
+    // sample file name. Fam for plink
+    std::string m_sample_file;
+    /** chromosome information **/
+    // here such that we can extend PRSice to other organism if we have time
+    // also use for handling sex chromosome (which is something that require
+    // further research)
+    std::vector<int32_t> m_xymt_codes;
+    std::vector<int32_t> m_chrom_start;
+    uint32_t m_autosome_ct;
+    uint32_t m_max_code;
+    std::vector<uintptr_t> m_haploid_mask;
+    std::vector<uintptr_t> m_chrom_mask;
+    // misc variables
+    uint32_t m_thread = 1;
+    bool m_keep_nonfounder = false;
+    bool m_ignore_fid = false;
+    bool m_keep_ambig = false;
+    // sample information
+    std::vector<Sample> m_sample_names;
+    bool m_remove_sample = true;
+    std::unordered_set<std::string> m_sample_selection_list;
+    uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
+    uintptr_t m_sample_ct = 0;            // number of final samples
+    std::vector<uintptr_t> m_founder_info;
+    std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_sex_male;
+    size_t m_num_male = 0;
+    size_t m_num_female = 0;
+    size_t m_num_ambig_sex = 0;
+    size_t m_num_non_founder = 0;
+    uintptr_t m_founder_ct = 0;
+    // snp information
+    bool m_exclude_snp = true;
+    std::unordered_set<std::string> m_snp_selection_list;
+    uintptr_t m_marker_ct = 0;
+    uint32_t m_num_ambig = 0;
+    std::unordered_map<std::string, size_t> m_existed_snps_index;
+    std::vector<SNP> m_existed_snps;
+    std::unordered_map<std::string, int> m_chr_order;
+    std::vector<uintptr_t> m_tmp_genotype;
+
+    // functions
+    // function to substitute the # in the sample name
+    std::vector<std::string> set_genotype_files(const std::string& prefix);
+    void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
+                  bool no_xy = false, bool no_mt = false);
+    // responsible for reading in the sample
+    virtual std::vector<Sample> gen_sample_vector()
+    {
+        return std::vector<Sample>(0);
+    };
+    virtual std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                            const double info,
+                                            const double hard_threshold,
+                                            const bool hard_coded,
+                                            const std::string& out_prefix)
+    {
+        return std::vector<SNP>(0);
+    };
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
@@ -83,44 +154,10 @@ protected:
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
 
-    // for processing the genotype file (mainly for multiple chromosome input)
-    void set_genotype_files(std::string prefix);
-    // storage of genotype file names
-    std::vector<std::string> m_genotype_files;
+    // un processed leftovers
+    int process_block(int& start_index, int end_index, int& first_core_index);
+    void clump_snp(const size_t start_index, const size_t end_index);
 
-
-    /** chromosome information **/
-
-    void init_chr(int num_auto, bool no_x, bool no_y, bool no_xy, bool no_mt);
-    std::vector<int32_t> m_xymt_codes;
-    std::vector<int32_t> m_chrom_start;
-    uint32_t m_autosome_ct;
-    uint32_t m_max_code;
-    std::vector<uintptr_t> m_haploid_mask;
-    std::vector<uintptr_t> m_chrom_mask;
-
-    /** sample information **/
-    virtual std::vector<Sample> load_samples(bool ignore_fid)
-    {
-        return std::vector<Sample>(0);
-    };
-    uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
-    uintptr_t m_sample_ct = 0;            // number of final samples
-
-    // storage of sample information
-    std::vector<Sample> m_sample_names;
-    /** SNP/Sample selection **/
-    // default is remove (if not provided, the list is empty,
-    // thus nothing will be removed)
-    bool m_remove_sample = true;
-    std::unordered_set<std::string> m_sample_selection_list;
-
-    bool m_exclude_snp = true;
-    std::unordered_set<std::string> m_snp_selection_list;
-
-    // tempory storage for genotype information
-    // use for plink read
-    std::vector<uintptr_t> m_tmp_genotype;
 
     static std::mutex clump_mtx;
 
@@ -129,7 +166,7 @@ protected:
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     int m_model = +MODEL::ADDITIVE;
-    SCORING m_scoring;
+    MISSING_SCORE m_missing_score;
 
     struct
     {
@@ -158,35 +195,10 @@ protected:
     std::vector<double> m_thresholds;
 
 
-    // founder_info stores the samples that are included from
-    // the genotype file. All non-founder and removed samples
-    // will have bit set to 0
-    bool m_nonfounder = false;
-    std::vector<uintptr_t> m_founder_info;
-    std::vector<uintptr_t> m_sample_include;
-    std::vector<uintptr_t> m_sex_male;
-    size_t m_num_male = 0;
-    size_t m_num_female = 0;
-    size_t m_num_ambig_sex = 0;
-    size_t m_num_non_founder = 0;
-    uintptr_t m_founder_ct = 0;
-
-    virtual std::vector<SNP> load_snps(const std::string& out_prefix)
-    {
-        return std::vector<SNP>(0);
-    };
-
     uintptr_t m_unfiltered_marker_ct = 0;
-    uintptr_t m_marker_ct = 0;
-    uint32_t m_num_ambig = 0;
-
-    std::unordered_map<std::string, size_t> m_existed_snps_index;
-    std::vector<SNP> m_existed_snps;
-    std::unordered_map<std::string, int> m_chr_order;
     // uint32_t m_hh_exists;
 
 
-    uint32_t m_thread;
     virtual inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                                       const std::string& file_name){};
     virtual void read_score(std::vector<Sample_lite>& current_prs_score,

@@ -462,7 +462,7 @@ Commander::Commander()
 
     prs_snp_filtering.exclude_file = "";
     prs_snp_filtering.extract_file = "";
-    prs_snp_filtering.geno = 0;
+    prs_snp_filtering.geno = 1;
     prs_snp_filtering.hard_threshold = 0.9;
     prs_snp_filtering.maf = 0;
     prs_snp_filtering.info_score = 0;

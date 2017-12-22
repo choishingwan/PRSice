@@ -38,14 +38,28 @@ public:
               bool no_y = false, bool no_xy = false, bool no_mt = false,
               bool keep_ambig = false, const size_t thread = 1,
               bool verbose = false);
+
+    BinaryGen(const std::string& prefix, const std::string& sample_file,
+              const size_t thread = 1, const bool ignore_fid = false,
+              const bool keep_nonfounder = false,
+              const bool keep_ambig = false);
     ~BinaryGen();
 
 private:
+    std::vector<Sample> gen_sample_vector();
+    // check if the sample file is of the sample format specified by bgen
+    // or just a simple text file
+    bool is_sample_format();
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info,
+                                    const double hard_threshold,
+                                    const bool hard_coded,
+                                    const std::string& out_prefix);
+
     typedef std::vector<std::vector<double>> Data;
     Sample get_sample(std::vector<std::string>& token, bool ignore_fid,
                       bool has_sex, int sex_col, std::vector<int>& sex_info);
-    std::vector<Sample> preload_samples(std::string pheno, Reporter& reporter,
-                                        bool has_header, bool ignore_fid);
+
     std::unordered_map<std::string, size_t> m_sample_index_check;
 
     std::vector<Sample> load_samples(bool ignore_fid);

@@ -18,6 +18,190 @@
 
 namespace bgenlib = genfile::bgen;
 
+BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
+                     const size_t thread, const bool ignore_fid,
+                     const bool keep_nonfounder, const bool keep_ambig)
+    : m_thread = thread
+, m_ignore_fid = ignore_fid
+, m_keep_nonfounder = keep_nonfounder
+, m_keep_ambig = keep_ambig
+{
+    /** setting the chromosome information **/
+    m_xymt_codes.resize(XYMT_OFFSET_CT);
+    // we are not using the following script for now as we only support human
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
+    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+    // place holder. Currently set default to human.
+    init_chr();
+    // get the bed file names
+    m_genotype_files = set_genotype_files(prefix);
+    m_sample_file =
+        sample_file.empty() ? m_genotype_files.front() : sample_file;
+}
+
+std::vector<Sample> BinaryGen::gen_sample_vector(Reporter& reporter)
+{
+    bool is_sample_format = is_sample_format();
+    std::ifstream sample_file(m_sample_file.c_str());
+    if (!sample_file.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open sample file: " + m_sample_file;
+        throw std::runtime_error(error_message)
+    }
+    std::string line;
+    int sex_col = -1;
+    if (is_sample_format) {
+        std::getline(sample_file, line);
+        std::vector<std::string> header_names = misc::split(line);
+        std::getline(sample_file, line);
+        reporter.report("Detected bgen sample file format");
+        for (size_t i = 3; i < header_names.size(); ++i) {
+            std::transform(header_names[i].begin(), header_names[i].end(),
+                           header_names[i].begin(), ::toupper);
+            if (header_names[i].compare("SEX") == 0) {
+                sex_col = i;
+                break;
+            }
+        }
+        if (sex_col != -1) {
+            // double check if the format is alright
+            std::vector<std::string> header_format = misc::split(line);
+            if (header_format[sex_col].compare("D") != 0) {
+                std::string error_message =
+                    "ERROR: Sex must be coded as \"D\" in bgen sample file!";
+                throw std::runtime_error(error_message);
+            }
+        }
+    }
+
+    int line_id = 0;
+    std::vector<Sample> sample_name;
+    std::vector<int> sex;
+    while (std::getline(sample_file, line)) {
+        misc::trim(line);
+        if (!line.empty()) {
+            std::vector<std::string> token = misc::split(line);
+            if (token.size()
+                < ((sex_col != -1) ? (sex_col) : (1 + !ignore_fid)))
+            {
+                std::string error_message =
+                    "ERROR: Line " + std::to_string(line_id)
+                    + " must have at least "
+                    + std::to_string((has_sex) ? (sex_col) : (1 + !ignore_fid))
+                    + " columns! Number of column="
+                    + std::to_string(token.size());
+                throw std::runtime_error(error_message);
+            }
+            m_unfiltered_sample_ct++;
+            Sample cur_sample;
+            if (is_sample_format || !m_ignore_fid) {
+                cur_sample.FID = token[0];
+                cur_sample.IID = token[1];
+            }
+            else
+            {
+                cur_sample.FID = "";
+                cur_sample.IID = token[1];
+            }
+            std::string id = (m_ignore_fid)
+                                 ? cur_sample.IID
+                                 : cur_sample.FID + "_" + cur_sample.IID;
+            cur_sample.pheno = "";
+            cur_sample.has_pheno = false;
+            if (!m_remove_sample) {
+                cur_sample.included = (m_sample_selection_list.find(id)
+                                       != m_sample_selection_list.end());
+            }
+            else
+            {
+                cur_sample.included = (m_sample_selection_list.find(id)
+                                       == m_sample_selection_list.end());
+            }
+            if (sex_col != -1) {
+                try
+                {
+                    sex.push_back(misc::convert<int>(token[sex_col]));
+                }
+                catch (const std::runtime_error& er)
+                {
+                    throw std::runtime_error("ERROR: Invalid sex coding!\n");
+                }
+            }
+            sample_name.push_back(cur_sample);
+        }
+    }
+
+
+    m_unfiltered_sample_ct = sample_name.size();
+    m_founder_ct = m_unfiltered_sample_ct;
+    // now set all those vectors
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    // don't bother with founder info here as we don't have this information
+    m_sample_include.resize(unfiltered_sample_ctl, 0);
+
+    m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
+    m_num_non_founder = 0;
+    for (size_t i = 0; i < sample_name; i++) {
+        if (sample_name[i].included) SET_BIT(i, m_sample_include.data());
+        if (sex_col != -1) {
+            m_num_male += (sex[i] == 1);
+            m_num_female += (sex[i] == 2);
+            m_num_ambig_sex += (sex[i] != 1 && sex[i] != 2);
+        }
+        else
+        {
+            m_num_ambig_sex++;
+        }
+    }
+    sample_file.close();
+    return sample_name;
+}
+
+bool BinaryGen::is_sample_format()
+{
+    std::ifstream sample_file(m_sample_file.c_str());
+    if (!sample_file.is_open()) {
+        std::string error_message =
+            "ERROR: Cannot open sample file: " + m_sample_file;
+        throw std::runtime_error(error_message)
+    }
+    std::string first_line, second_line;
+    std::getline(sample_file, first_line);
+    std::getline(sample_file, second_line);
+    sample_file.close();
+    std::vector<std::string> first_row = misc::split(first_line);
+    std::vector<std::string> second_row = misc::split(second_line);
+    if (first_row.size() != second_row.size() || first_row.size() < 3) {
+        return false;
+    }
+    // first 3 must be 0
+    for (size_t i = 0; i < 3; ++i) {
+        if (second_row[i].compare("0") != 0) return false;
+    }
+    // DCPB
+    for (size_t i = 4; i < second_row.size(); ++i) {
+        if (second_row[i].length() > 1) return false;
+        switch (second_row[i].at(0))
+        {
+        case 'D':
+        case 'C':
+        case 'P':
+        case 'B': break;
+        default: return false;
+        }
+    }
+    return true;
+}
+
+
+std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
+                                           const double info,
+                                           const double hard_threshold,
+                                           const bool hard_coded,
+                                           const std::string& out_prefix)
+{
+}
+
 BinaryGen::BinaryGen(std::string prefix, std::string pheno_file, bool header,
                      std::string remove_sample, std::string keep_sample,
                      std::string extract_snp, std::string exclude_snp,
