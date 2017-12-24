@@ -16,8 +16,6 @@
 
 #include "binarygen.hpp"
 
-namespace bgenlib = genfile::bgen;
-
 BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
                      const size_t thread, const bool ignore_fid,
                      const bool keep_nonfounder, const bool keep_ambig)
@@ -87,7 +85,8 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 std::string error_message =
                     "ERROR: Line " + std::to_string(line_id)
                     + " must have at least "
-                    + std::to_string((sex_col!=-1) ? (sex_col) : (1 + !m_ignore_fid))
+                    + std::to_string((sex_col != -1) ? (sex_col)
+                                                     : (1 + !m_ignore_fid))
                     + " columns! Number of column="
                     + std::to_string(token.size());
                 throw std::runtime_error(error_message);
@@ -205,29 +204,29 @@ bool BinaryGen::check_is_sample_format()
     return true;
 }
 
-bgenlib::Context BinaryGen::get_context(std::string& bgen_name)
+BinaryGen::Context BinaryGen::get_context(std::string& bgen_name)
 {
     std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
     if (!bgen_file.is_open()) {
         std::string error_message = "ERROR: Cannot open bgen file " + bgen_name;
         throw std::runtime_error(error_message);
     }
-    bgenlib::Context context;
+    Context context;
     uint32_t offset;
-    bgenlib::read_little_endian_integer(bgen_file, &offset);
+    read_little_endian_integer(bgen_file, &offset);
     uint32_t header_size = 0, number_of_snp_blocks = 0, number_of_samples = 0,
              flags = 0;
     char magic[4];
     std::size_t fixed_data_size = 20;
     std::vector<char> free_data;
-    bgenlib::read_little_endian_integer(bgen_file, &header_size);
+    read_little_endian_integer(bgen_file, &header_size);
     assert(header_size >= fixed_data_size);
-    bgenlib::read_little_endian_integer(bgen_file, &number_of_snp_blocks);
-    bgenlib::read_little_endian_integer(bgen_file, &number_of_samples);
-    m_bgen_file.read(&magic[0], 4);
+    read_little_endian_integer(bgen_file, &number_of_snp_blocks);
+    read_little_endian_integer(bgen_file, &number_of_samples);
+    bgen_file.read(&magic[0], 4);
     free_data.resize(header_size - fixed_data_size);
-    m_bgen_file.read(&free_data[0], free_data.size());
-    bgenlib::read_little_endian_integer(bgen_file, &flags);
+    bgen_file.read(&free_data[0], free_data.size());
+    read_little_endian_integer(bgen_file, &flags);
     if ((magic[0] != 'b' || magic[1] != 'g' || magic[2] != 'e'
          || magic[3] != 'n')
         && (magic[0] != 0 || magic[1] != 0 || magic[2] != 0 || magic[3] != 0))
@@ -244,9 +243,7 @@ bgenlib::Context BinaryGen::get_context(std::string& bgen_name)
         // current_context.free_data.assign( free_data.begin(),
         // free_data.end() ) ;
         context.flags = flags;
-        if ((flags & bgenlib::e_CompressedSNPBlocks)
-            == bgenlib::e_ZstdCompression)
-        {
+        if ((flags & e_CompressedSNPBlocks) == e_ZstdCompression) {
             throw std::runtime_error(
                 "ERROR: zstd compression currently not supported");
         }
@@ -259,24 +256,23 @@ bgenlib::Context BinaryGen::get_context(std::string& bgen_name)
 }
 
 bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
-                                        const bgenlib::Context& context)
+                                        const Context& context)
 {
-    if (context.flags & bgenlib::e_SampleIdentifiers) {
+    if (context.flags & e_SampleIdentifiers) {
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
-            uint32_t sample_block_size = 0;
+        uint32_t sample_block_size = 0;
         uint32_t actual_number_of_samples = 0;
         uint16_t identifier_size;
         std::string identifier;
         std::size_t bytes_read = 0;
         std::unordered_set<std::string> dup_check;
-        bgenlib::read_little_endian_integer(bgen_file, &sample_block_size);
-        bgenlib::read_little_endian_integer(bgen_file,
-                                            &actual_number_of_samples);
+        read_little_endian_integer(bgen_file, &sample_block_size);
+        read_little_endian_integer(bgen_file, &actual_number_of_samples);
         bytes_read += 8;
         assert(actual_number_of_samples == context.number_of_samples);
         for (size_t i = 0; i < actual_number_of_samples; ++i) {
-            bgenlib::read_length_followed_by_data(bgen_file, &identifier_size,
-                                                  &identifier);
+            read_length_followed_by_data(bgen_file, &identifier_size,
+                                         &identifier);
             if (!bgen_file)
                 throw std::runtime_error("ERROR: Problem reading bgen file!");
             bytes_read += sizeof(identifier_size) + identifier_size;
@@ -293,7 +289,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
 }
 
 std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
-                                           const double info,
+                                           const double info_score,
                                            const double hard_threshold,
                                            const bool hard_coded,
                                            const std::string& out_prefix)
@@ -305,42 +301,40 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     bool first_bgen_file = true;
     size_t chr_index = 0;
     size_t total_unfiltered_snps = 0;
-    std::unordered_map<std::string, bgenlib::Context> context_map;
     for (auto prefix : m_genotype_files) {
         std::string bgen_name = prefix + ".bgen";
-        bgenlib::Context context = get_context(bgen_name);
+        Context context = get_context(bgen_name);
         if (first_bgen_file) {
             first_bgen_file = false;
             check_sample_consistent(bgen_name, context);
         }
         total_unfiltered_snps += context.number_of_variants;
-        context_map[prefix] = context;
+        m_context_map[prefix] = context;
     }
-    // first pass to get the total SNP number such that we can speed up the push back
+    // first pass to get the total SNP number such that we can speed up the push
+    // back
     snp_res.reserve(total_unfiltered_snps);
-    for(auto prefix : m_genotype_files){
+    // to allow multiple file for one chromosome, we put these variable outside
+    // the for loop
+    std::string prev_chr = "";
+    int chr_code = 0;
+    for (auto prefix : m_genotype_files) {
         std::string bgen_name = prefix + ".bgen";
-        fprintf(stderr, "Loading %s: ",
-                               bgen_name.c_str());
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
         if (!bgen_file.is_open()) {
             std::string error_message =
                 "ERROR: Cannot open bgen file " + bgen_name;
             throw std::runtime_error(error_message);
         }
-        uint32_t offset = context_map[prefix].offset;
+        uint32_t offset = m_context_map[prefix].offset;
         bgen_file.seekg(offset + 4);
-        uint32_t num_snp = context_map[prefix].number_of_variants;
-        std::string prev_chr = "";
-        int chr_code = 0;
+        uint32_t num_snp = m_context_map[prefix].number_of_variants;
         size_t number_current_snp = 0;
-        auto&& context = context_map[prefix];
+        auto&& context = m_context_map[prefix];
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
-            if (number_current_snp % 1000 == 0
-                && number_current_snp > 0)
-            {
+            if (number_current_snp % 1000 == 0 && number_current_snp > 0) {
                 fprintf(stderr, "\r%zuK SNPs processed in %s\r",
-                		number_current_snp / 1000, bgen_name.c_str());
+                        number_current_snp / 1000, bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
             std::string allele;
@@ -350,15 +344,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             uint32_t SNP_position;
             std::vector<std::string> alleles;
             // directly use the library
-            genfile::bgen::read_snp_identifying_data(
-                bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
-                [&alleles](std::size_t n) { alleles.resize(n); },
-                [&alleles](std::size_t i, std::string const& allele) {
-                    alleles.at(i) = allele;
-                });
-            for (auto&& a : alleles) {
-                std::transform(a.begin(), a.end(), a.begin(), ::toupper);
-            }
+            read_snp_identifying_data(bgen_file, context, &SNPID, &RSID,
+                                      &chromosome, &SNP_position, alleles);
 
             std::streampos byte_pos = bgen_file.tellg();
             bool exclude_snp = false;
@@ -366,6 +353,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             if (chromosome.compare(prev_chr) != 0) {
                 prev_chr = chromosome;
                 if (m_chr_order.find(chromosome) != m_chr_order.end()) {
+
                     throw std::runtime_error("ERROR: SNPs on the same "
                                              "chromosome must be clustered "
                                              "together!");
@@ -423,15 +411,14 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             }
 
 
-            Data probability;
-            ProbSetter setter(&probability);
-            std::vector<genfile::byte_t> buffer1, buffer2;
+            std::vector<byte_t> buffer1;
+            read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
-            genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-                m_bgen_file, context, setter, &buffer1, &buffer2, exclude_snp);
             if (!exclude_snp) {
-            		// calculate the relevant information here and check if we want to keep it
-
+                // now filter
+                if (filter_snp(buffer1, context, geno, maf, info_score,
+                               hard_threshold, hard_coded))
+                    continue;
                 m_existed_snps_index[RSID] = snp_res.size();
                 snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                          alleles.front(), alleles.back(),
@@ -450,7 +437,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             throw std::runtime_error(error_message);
         }
         for (auto&& snp : snp_res) {
-            if (duplicated_snps.find(snp.rs()) != duplicated_snps.end()) continue;
+            if (duplicated_snps.find(snp.rs()) != duplicated_snps.end())
+                continue;
             log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                             << snp.loc() << "\t" << snp.ref() << "\t"
                             << snp.alt() << std::endl;
@@ -464,6 +452,65 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     }
 
     return snp_res;
+}
+
+bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
+                               Context context, const double geno,
+                               const double maf, const double info,
+                               const double hard_threshold,
+                               const bool hard_coded)
+{
+    if (end != buffer + 6 * context.number_of_samples) {
+        throw std::runtime_error("ERROR: Invalid bgen format!");
+    }
+    uint32_t const ploidy = 2;
+    double const probability_conversion_factor =
+        get_probability_conversion_factor(context.flags);
+
+    misc::RunningStat running_stat;
+    for (uint32_t i = 0; i < context.number_of_samples; ++i) {
+        assert(end >= buffer + 6);
+        double sum = 0.0;
+        int hard = -1;
+        double hard_prob = 0.0;
+        double exp=0, inv_exp=0;
+        for (std::size_t g = 0; g < 3; ++g) {
+            uint16_t prob;
+            buffer = read_little_endian_integer(buffer, end, &prob);
+            prob_vec.push_back(prob);
+            sum += prob;
+            exp=prob*g;
+            inv_exp = prob*(2-g);
+            if(prob >= hard_threshold && prob > hard_prob){
+            		hard = g;
+            		hard_prob = prob;
+            }
+        }
+
+    }
+    call_finalise(setter);
+}
+}
+bool BinaryGen::filter_snp(std::vector<byte_t> buffer, Context context,
+                           const double geno, const double maf,
+                           const double info, const double hard_threshold,
+                           const bool hard_coded)
+{
+    // no filtering (Note: hard_threshold only use for geno and MAF)
+    if (maf <= 0.0 && geno >= 1.0 && info <= 0.0) return false;
+    std::vector<byte_t> buffer2;
+    uncompress_probability_data(context, buffer, &buffer2);
+
+    if ((context.flags & e_Layout) == e_Layout0
+        || (context.flags & e_Layout) == e_Layout1)
+    {
+        return filter_snp_v11(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                              context, geno, maf, hard_threshold, hard_coded);
+    }
+    else
+    {
+        v12::parse_probability_data(buffer, end, context, setter);
+    }
 }
 
 BinaryGen::~BinaryGen()
@@ -746,4 +793,3 @@ void BinaryGen::read_score(std::vector<Sample_lite>& current_prs_score,
     else
         dosage_score(current_prs_score, start_index, end_bound, region_index);
 }
-

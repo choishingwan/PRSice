@@ -16,11 +16,10 @@
 #ifndef BinaryGEN_H
 #define BinaryGEN_H
 
-#include "bgen_lib.hpp"
 #include "genotype.hpp"
 #include <stdexcept>
+#include <zlib.h>
 
-namespace bgenlib = genfile::bgen;
 /**
  * Potential problem:
  * Where multi-allelic variants exist in these data, they have been
@@ -38,18 +37,80 @@ public:
     ~BinaryGen();
 
 private:
+    enum FlagMask
+    {
+        e_NoFlags = 0,
+        e_CompressedSNPBlocks = 0x3,
+        e_Layout = 0x3C
+    };
+    enum Layout
+    {
+        e_Layout0 = 0x0,
+        e_Layout1 = 0x4,
+        e_Layout2 = 0x8
+    };
+    enum Structure
+    {
+        e_SampleIdentifiers = 0x80000000
+    };
+    enum Compression
+    {
+        e_NoCompression = 0,
+        e_ZlibCompression = 1,
+        e_ZstdCompression = 2
+    };
+    enum OrderType
+    {
+        eUnknownOrderType = 0,
+        eUnorderedList = 1, // a list, treated as unordered
+        eOrderedList = 2,   // a list, treated as ordered
+        ePerUnorderedGenotype =
+            3, // E.g. genotype probabilities; GEN, BGEN v1.1, etc.
+        ePerOrderedHaplotype =
+            4, // E.g. Phased GT, SHAPEIT or IMPUTE haplotypes
+        ePerUnorderedHaplotype = 5, // E.g. Unphased GT, binary PED file.
+        ePerPhasedHaplotypePerAllele =
+            6,          // E.g. BGEN v1.2-style haplotype probabilities.
+        ePerAllele = 7, // E.g. assay intensities.
+        ePerSample = 8  // 'B' allele dosage, one value per sample.
+    };
+    enum ValueType
+    {
+        eUnknownValueType = 0,
+        eProbability = 1,
+        eAlleleIndex = 2,
+        eDosage = 3
+    };
+    struct Context
+    {
+        Context();
+        Context(Context const& other);
+        Context& operator=(Context const& other);
+        uint32_t header_size() const;
+
+    public:
+        uint32_t number_of_samples;
+        uint32_t number_of_variants;
+        std::string magic;
+        std::string free_data;
+        uint32_t flags;
+        uint32_t offset;
+    };
+    typedef uint8_t byte_t;
+
+    std::unordered_map<std::string, Context> m_context_map;
     std::vector<Sample> gen_sample_vector();
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
     bool check_is_sample_format();
     std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info,
+                                    const double info_score,
                                     const double hard_threshold,
                                     const bool hard_coded,
                                     const std::string& out_prefix);
-    bgenlib::Context get_context(std::string& bgen_name);
+    Context get_context(std::string& bgen_name);
     bool check_sample_consistent(const std::string& bgen_name,
-                                            const bgenlib::Context& context);
+                                 const Context& context);
 
     typedef std::vector<std::vector<double>> Data;
 
@@ -72,10 +133,10 @@ private:
             }
             m_cur_file = file_name;
         }
-        auto&& context = m_bgen_info[file_name];
+        auto&& context = m_context_map[file_name];
         Data probability;
         ProbSetter setter(&probability);
-        std::vector<genfile::byte_t> buffer1, buffer2;
+        std::vector<byte_t> buffer1, buffer2;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
         genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
@@ -173,90 +234,157 @@ private:
                       size_t start_index, size_t end_bound,
                       const size_t region_index);
 
-    std::unordered_map<std::string, genfile::bgen::Context> m_bgen_info;
+
     std::ifstream m_bgen_file;
     /** DON'T TOUCH      */
-    struct ProbSetter
+    // For our use case, we might be able to directly get the PRS
+    // or the expected value without getting the whole vector
+    // which I imagine can speed up the bgen read rather quickly
+    // however, that'd = rewriting my own parsing
+    bool filter_snp(std::vector<byte_t> buffer, Context context,
+                    const double geno, const double maf,
+                    const double info_score, const double hard_threshold,
+                    const bool hard_coded);
+    bool filter_snp_v11(byte_t const* buffer, byte_t const* const end,
+                        Context context, const double geno, const double maf,
+                        const double info_score,
+                        const double hard_code_threshold,
+                        const bool hard_coded);
+    double get_probability_conversion_factor(uint32_t flags)
     {
-        ProbSetter(Data* result) : m_result(result), m_sample_i(0) {}
-
-        // Called once allowing us to set storage.
-        void initialise(std::size_t number_of_samples,
-                        std::size_t number_of_alleles)
-        {
-            m_result->clear();
-            m_result->resize(number_of_samples);
+        uint32_t layout = flags & e_Layout;
+        if (layout == e_Layout0) {
+            // v1.0-style blocks, deprecated
+            return 10000.0;
         }
-
-        // If present with this signature, called once after initialise()
-        // to set the minimum and maximum ploidy and numbers of probabilities
-        // among samples in the data. This enables us to set up storage for the
-        // data ahead of time.
-        void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
-                                uint32_t min_entries, uint32_t max_entries)
+        else if (layout == e_Layout1)
         {
-            for (std::size_t i = 0; i < m_result->size(); ++i) {
-                m_result->at(i).reserve(max_entries);
+            // v1.1-style blocks
+            return 32768.0;
+        }
+        else
+        {
+            // v1.2 style (or other) blocks, these are treated
+            // differently and this function does not apply.
+            assert(0);
+        }
+        return -1;
+    }
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context context,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2,
+                                            bool quick)
+    {
+        read_genotype_data_block(aStream, context, buffer1);
+        if (quick) return;
+        uncompress_probability_data(context, *buffer1, buffer2);
+        parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                               context, setter);
+    }
+
+
+    template <typename IntegerType>
+    void read_little_endian_integer(std::istream& in_stream,
+                                    IntegerType* integer_ptr)
+    {
+        byte_t buffer[sizeof(IntegerType)];
+        in_stream.read(reinterpret_cast<char*>(buffer), sizeof(IntegerType));
+        if (!in_stream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
+        read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
+                                   integer_ptr);
+    }
+
+    template <typename IntegerType>
+    byte_t const* read_little_endian_integer(byte_t const* buffer,
+                                             byte_t const* const end,
+                                             IntegerType* integer_ptr)
+    {
+        assert(end >= buffer + sizeof(IntegerType));
+        *integer_ptr = 0;
+        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i) {
+            (*integer_ptr) |=
+                IntegerType(*reinterpret_cast<byte_t const*>(buffer++))
+                << (8 * byte_i);
+        }
+        return buffer;
+    }
+
+    template <typename T>
+    void zlib_uncompress(byte_t const* begin, byte_t const* const end,
+                         std::vector<T>* dest)
+    {
+        uLongf const source_size = (end - begin);
+        uLongf dest_size = dest->size() * sizeof(T);
+        uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
+                   reinterpret_cast<Bytef const*>(begin), source_size);
+        assert(result == Z_OK);
+        assert(dest_size % sizeof(T) == 0);
+        dest->resize(dest_size / sizeof(T));
+    }
+
+    // Uncompress the given data, symmetric with zlib_compress.
+    // The destination must be large enough to fit the uncompressed data,
+    // and it will be resized to exactly fit the uncompressed data.
+    template <typename T>
+    void zlib_uncompress(std::vector<byte_t> const& source,
+                         std::vector<T>* dest)
+    {
+        byte_t const* begin = &source[0];
+        byte_t const* const end = &source[0] + source.size();
+        zlib_uncompress(begin, end, dest);
+    }
+
+    void uncompress_probability_data(Context const& context,
+                                     std::vector<byte_t> const& compressed_data,
+                                     std::vector<byte_t>* buffer)
+    {
+        // compressed_data contains the (compressed or uncompressed) probability
+        // data.
+        uint32_t const compressionType =
+            (context.flags & e_CompressedSNPBlocks);
+        if (compressionType != e_NoCompression) {
+            byte_t const* begin = &compressed_data[0];
+            byte_t const* const end =
+                &compressed_data[0] + compressed_data.size();
+            uint32_t uncompressed_data_size = 0;
+            if ((context.flags & e_Layout) == e_Layout1) {
+                uncompressed_data_size = 6 * context.number_of_samples;
             }
+            else
+            {
+                begin = read_little_endian_integer(begin, end,
+                                                   &uncompressed_data_size);
+            }
+            buffer->resize(uncompressed_data_size);
+            if (compressionType == e_ZlibCompression) {
+                zlib_uncompress(begin, end, buffer);
+            }
+            else if (compressionType == e_ZstdCompression)
+            {
+                throw std::runtime_error(
+                    "ERROR: zstd compression currently not supported");
+                // zstd_uncompress( begin, end, buffer ) ;
+            }
+            assert(buffer->size() == uncompressed_data_size);
         }
-
-        // Called once per sample to determine whether we want data for this
-        // sample
-        bool set_sample(std::size_t i)
+        else
         {
-            m_sample_i = i;
-            // Yes, here we want info for all samples.
-            return true;
+            // copy the data between buffers.
+            buffer->assign(compressed_data.begin(), compressed_data.end());
         }
+    }
 
-        // Called once per sample to set the number of probabilities that are
-        // present.
-        void set_number_of_entries(std::size_t ploidy,
-                                   std::size_t number_of_entries,
-                                   genfile::OrderType order_type,
-                                   genfile::ValueType value_type)
-        {
-            assert(value_type == genfile::eProbability);
-            m_result->at(m_sample_i).resize(number_of_entries);
-            m_entry_i = 0;
-        }
-
-        // Called once for each genotype (or haplotype) probability per sample.
-        void set_value(uint32_t, double value)
-        {
-            m_result->at(m_sample_i).at(m_entry_i++) = value;
-        }
-
-        // Ditto, but called if data is missing for this sample.
-        void set_value(uint32_t, genfile::MissingValue value)
-        {
-            // Here we encode missing probabilities with -1
-            m_result->at(m_sample_i).at(m_entry_i++) = -1;
-        }
-
-        // If present with this signature, called once after all data has been
-        // set.
-        void finalise()
-        {
-            // nothing to do in this implementation.
-        }
-
-    private:
-        Data* m_result;
-        std::size_t m_sample_i;
-        std::size_t m_entry_i = 0;
-    };
-    void read_genotype_data_block(std::istream& aStream,
-                                  genfile::bgen::Context const& context,
-                                  std::vector<genfile::byte_t>* buffer)
+    void read_genotype_data_block(std::istream& aStream, Context const& context,
+                                  std::vector<byte_t>* buffer)
     {
         uint32_t payload_size = 0;
-        if ((context.flags & genfile::bgen::e_Layout)
-                == genfile::bgen::e_Layout2
-            || ((context.flags & genfile::bgen::e_CompressedSNPBlocks)
-                != genfile::bgen::e_NoCompression))
+        if ((context.flags & e_Layout) == e_Layout2
+            || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
         {
-            genfile::bgen::read_little_endian_integer(aStream, &payload_size);
+            read_little_endian_integer(aStream, &payload_size);
         }
         else
         {
@@ -264,6 +392,80 @@ private:
         }
         buffer->resize(payload_size);
         aStream.read(reinterpret_cast<char*>(&(*buffer)[0]), payload_size);
+    }
+
+    bool read_snp_identifying_data(std::istream& aStream,
+                                   Context const& context, std::string* SNPID,
+                                   std::string* RSID, std::string* chromosome,
+                                   uint32_t* SNP_position,
+                                   std::vector<std::string>& alleles)
+    {
+        uint16_t SNPID_size = 0;
+        uint16_t RSID_size = 0;
+        uint16_t numberOfAlleles = 0;
+        uint16_t chromosome_size = 0;
+        uint32_t allele_size = 0;
+        std::string allele;
+        uint32_t const layout = context.flags & e_Layout;
+
+        // If we can't read a valid first field we return false; this will
+        // indicate EOF. Any other fail to read is an error and an exception
+        // will be thrown.
+        if (layout == e_Layout1 || layout == e_Layout0) {
+            uint32_t number_of_samples;
+            read_little_endian_integer(aStream, &number_of_samples);
+            if (number_of_samples != context.number_of_samples) {
+                throw std::runtime_error(
+                    "ERROR: Mismatched number of samples!");
+            }
+            read_length_followed_by_data(aStream, &SNPID_size, SNPID);
+        }
+        else if (layout == e_Layout2)
+        {
+            read_length_followed_by_data(aStream, &SNPID_size, SNPID);
+        }
+        else
+        {
+            assert(0);
+        }
+
+        read_length_followed_by_data(aStream, &RSID_size, RSID);
+        read_length_followed_by_data(aStream, &chromosome_size, chromosome);
+        read_little_endian_integer(aStream, SNP_position);
+        if (layout == e_Layout2) {
+            read_little_endian_integer(aStream, &numberOfAlleles);
+        }
+        else
+        {
+            numberOfAlleles = 2;
+        }
+        alleles.reserve(numberOfAlleles);
+        for (uint16_t i = 0; i < numberOfAlleles; ++i) {
+            read_length_followed_by_data(aStream, &allele_size, &allele);
+            std::transform(allele.begin(), allele.end(), allele.begin(),
+                           ::toupper);
+            alleles.push_back(allele);
+        }
+        if (!aStream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
+        return true;
+    }
+
+
+    template <typename IntegerType>
+    void read_length_followed_by_data(std::istream& in_stream,
+                                      IntegerType* length_ptr,
+                                      std::string* string_ptr)
+    {
+        IntegerType& length = *length_ptr;
+        read_little_endian_integer(in_stream, length_ptr);
+        std::vector<char> buffer(length);
+        in_stream.read(&buffer[0], length);
+        if (!in_stream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
+        string_ptr->assign(buffer.begin(), buffer.end());
     }
 };
 

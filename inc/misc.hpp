@@ -95,6 +95,47 @@ inline bool to_bool(const std::string& input)
     }
 }
 
+// function from John D.Cook
+// https://www.johndcook.com/blog/standard_deviation/
+class RunningStat
+{
+public:
+    RunningStat() {}
+    void clear() {
+    		n = 0;
+    		M1=M2=M3=M4=0.0;
+    }
+    void push(double x)
+    {
+    		double delta, delta_n, delta_n2, term1;
+
+    	    size_t n1 = n;
+    	    n++;
+    	    delta = x - M1;
+    	    assert(n > 0);
+    	    delta_n = delta / n;
+    	    delta_n2 = delta_n * delta_n;
+    	    term1 = delta * delta_n * n1;
+    	    M1 += delta_n;
+    	    M4 += term1 * delta_n2 * (n*n - 3*n + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;
+    	    M3 += term1 * delta_n * (n - 2) - 3 * delta_n * M2;
+    	    M2 += term1;
+    }
+    size_t n() const { return n; }
+
+    double mean() const { return M1 }
+
+    double var() const { return M2/((double)n-1.0); }
+
+    double sd() const { return sqrt(var()); }
+
+private:
+
+    size_t n;
+    double M1, M2, M3, M4;
+};
+
+
 // Functions from R
 double dnorm(double x, double mu = 0.0, double sigma = 1.0, bool log = false);
 double qnorm(double p, double mu = 0.0, double sigma = 1.0,
