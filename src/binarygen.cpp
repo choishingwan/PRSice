@@ -454,6 +454,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     return snp_res;
 }
 
+// return true if the SNP require filtering
 bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
                                Context context, const double geno,
                                const double maf, const double info,
@@ -468,29 +469,62 @@ bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
         get_probability_conversion_factor(context.flags);
 
     misc::RunningStat running_stat;
+    // based on PLINK, the code is translated as:
+    // g = 0 = 3 (11)
+    // g = 1 = 2 (10)
+    // g = 2 = 0 (00)
+    // missing = 1 (01)
+    // we will calculate the expectation according to the above encoding (not perfect)
+
+    int maf_sum=0;
+    int nmiss = 0, nmiss_maf=0;
+    int num_included_sample = 0;
     for (uint32_t i = 0; i < context.number_of_samples; ++i) {
+    		if(!m_sample_names[i].included) continue;
+    		num_included_sample++;
         assert(end >= buffer + 6);
-        double sum = 0.0;
+        double exp=0;
         int hard = -1;
         double hard_prob = 0.0;
-        double exp=0, inv_exp=0;
+        double sum = 0.0;
         for (std::size_t g = 0; g < 3; ++g) {
             uint16_t prob;
             buffer = read_little_endian_integer(buffer, end, &prob);
             prob_vec.push_back(prob);
             sum += prob;
-            exp=prob*g;
-            inv_exp = prob*(2-g);
+            exp += prob*(2-g);
             if(prob >= hard_threshold && prob > hard_prob){
             		hard = g;
             		hard_prob = prob;
             }
         }
-
+        if(sum<=0.0 || (hard_coded&&hard == -1)){
+        		nmiss++;
+        		nmiss_maf++;
+        }else{
+        		running_stat.push(exp);
+        		if(hard==-1) nmiss_maf++;
+        		else maf_sum+=hard;
+        }
     }
-    call_finalise(setter);
+    if(geno<1.0 && (double)nmiss/(double)num_included_sample > geno) return true;
+    // all missing is bad in all situation
+    if(maf>0.0 || (hard_coded &&  num_included_sample==nmiss_maf)) return true;
+    // can't do maf filtering if nmiss_maf ==num_included_sample
+    // because of divided by 0
+    // TODO: Find a way to fix this?
+    if(num_included_sample!=nmiss_maf){
+    		double cur_maf = (double)maf_sum/(((double)num_included_sample-(double)nmiss_maf)*2.0);
+    		if(cur_maf < maf ) return true;
+    }
+    // calculate INFO Score
+    double p = running_stat.mean() / 2.0;
+    double p_all = 2.0*p * (1.0-p);
+    	double cur_info = running_stat.var() / p_all;
+    	if(cur_info < info_score) return true;
+    	return false;
 }
-}
+
 bool BinaryGen::filter_snp(std::vector<byte_t> buffer, Context context,
                            const double geno, const double maf,
                            const double info, const double hard_threshold,
