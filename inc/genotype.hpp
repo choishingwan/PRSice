@@ -52,19 +52,29 @@ public:
 
 
     void load_samples(const std::string& keep_file,
-                      const std::string& remove_file, Reporter& reporter);
+                      const std::string& remove_file, bool verbose,
+                      Reporter& reporter);
     void load_snps(const std::string out_prefix,
                    const std::string& extract_file,
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   Reporter& reporter);
+                   bool verbose, Reporter& reporter);
+
+    void load_snps(const std::string out_prefix,
+                   const std::unordered_map<std::string, size_t>& existed_snps,
+                   const double geno, const double maf, const double info,
+                   const double hard_threshold, const bool hard_coded,
+                   bool verbose, Reporter& reporter);
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
     };
 
-
+    std::unordered_map<std::string, size_t> index() const
+    {
+        return m_existed_snps_index;
+    };
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };

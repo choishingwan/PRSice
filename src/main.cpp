@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     // this allow us to generate the appropriate object (i.e. binaryplink /
     // binarygen)
     GenomeFactory factory;
-    Genotype* target_file;
+    Genotype *target_file, *reference_file;
     try
     {
         target_file = factory.createGenotype(
@@ -52,11 +52,12 @@ int main(int argc, char* argv[])
             commander.thread(), commander.ignore_fid(), commander.nonfounders(),
             commander.keep_ambig(), reporter, commander);
         target_file->load_samples(commander.keep_sample_file(),
-                                  commander.remove_sample_file(), reporter);
+                                  commander.remove_sample_file(), true,
+                                  reporter);
         target_file->load_snps(
             commander.out(), commander.extract_file(), commander.exclude_file(),
             commander.geno(), commander.maf(), commander.info(),
-            commander.hard_threshold(), commander.hard_coded(), reporter);
+            commander.hard_threshold(), commander.hard_coded(), true, reporter);
     }
     catch (const std::invalid_argument& ia)
     {
@@ -68,8 +69,22 @@ int main(int argc, char* argv[])
         reporter.report(error.what());
         return -1;
     }
-
-    // TODO: Revamp Region?
+    if (!commander.ref_name().empty())
+    {
+        reference_file = factory.createGenotype(
+            commander.ref_name(), commander.ref_type(), commander.thread(),
+            commander.ignore_fid(), commander.nonfounders(),
+            commander.keep_ambig(), reporter, commander);
+        reference_file->load_samples(commander.ld_keep_file(),
+                                     commander.ld_remove_file(), true,
+                                     reporter);
+        // only load SNPs that can be found in the target file index
+        reference_file->load_snps(commander.out(), target_file->index(),
+                                  commander.geno(), commander.maf(),
+                                  commander.info(), commander.hard_threshold(),
+                                  commander.hard_coded(), true, reporter);
+    }
+    // TODO: Revamp Region to make it suitable for prslice too
     Region region = Region(commander.feature(), target_file->get_chr_order());
     try
     {
@@ -107,7 +122,9 @@ int main(int argc, char* argv[])
         if (!commander.no_clump())
         {
             target_file->efficient_clumping(
-                (ld_file == nullptr) ? *target_file : *ld_file, reporter);
+                (commander.ref_name().empty()) ? *target_file : *reference_file, reporter);
+            // immediately free the memory if needed
+            if(!commander.ref_name().empty()) delete reference_file;
         }
         // initialize PRSice class
         PRSice prsice = PRSice(base_name, commander, region.size() > 1,
@@ -161,6 +178,5 @@ int main(int argc, char* argv[])
         return -1;
     }
     delete target_file;
-    if (used_ld) delete ld_file;
     return 0;
 }

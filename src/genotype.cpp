@@ -175,7 +175,8 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
 }
 
 void Genotype::load_samples(const std::string& keep_file,
-                            const std::string& remove_file, Reporter& reporter)
+                            const std::string& remove_file, bool verbose,
+                            Reporter& reporter)
 {
     if (!remove_file.empty())
     { m_sample_selection_list = load_ref(remove_file, m_ignore_fid); }
@@ -190,17 +191,61 @@ void Genotype::load_samples(const std::string& keep_file,
                           + std::to_string(m_num_female)
                           + " female(s)) observed\n";
     message.append(std::to_string(m_founder_ct) + " founder(s) included\n");
-    reporter.report(message);
+    if (verbose) reporter.report(message);
     m_sample_selection_list.clear();
 }
 
+
+void Genotype::load_snps(
+    const std::string out_prefix,
+    const std::unordered_map<std::string, size_t>& existed_snps,
+    const double geno, const double maf, const double info,
+    const double hard_threshold, const bool hard_coded, bool verbose,
+    Reporter& reporter)
+{
+    // only include the valid SNPs
+    for (auto&& snp : existed_snps) { m_snp_selection_list.insert(snp.first); }
+    m_exclude_snp = false;
+    m_existed_snps =
+        gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
+    std::string message = "";
+    if (m_num_ambig != 0 && !m_keep_ambig)
+    {
+        message.append(std::to_string(m_num_ambig)
+                       + " ambiguous variant(s) excluded\n");
+    }
+    else if (m_num_ambig != 0)
+    {
+        message.append(std::to_string(m_num_ambig)
+                       + " ambiguous variant(s) kept\n");
+    }
+    if (m_num_geno_filter != 0)
+    {
+        message.append(
+            std::to_string(m_num_geno_filter)
+            + " variant(s) excluded based on genotype missingness threshold");
+    }
+    if (m_num_maf_filter != 0)
+    {
+        message.append(std::to_string(m_num_maf_filter)
+                       + " variant(s) excluded based on MAF threshold");
+    }
+    if (m_num_info_filter != 0)
+    {
+        message.append(std::to_string(m_num_maf_filter)
+                       + " variant(s) excluded based on INFO score threshold");
+    }
+    message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+    if (verbose) reporter.report(message);
+    m_snp_selection_list.clear();
+}
 
 void Genotype::load_snps(const std::string out_prefix,
                          const std::string& extract_file,
                          const std::string& exclude_file, const double geno,
                          const double maf, const double info,
                          const double hard_threshold, const bool hard_coded,
-                         Reporter& reporter)
+                         bool verbose, Reporter& reporter)
 {
     if (!extract_file.empty())
     {
@@ -240,7 +285,7 @@ void Genotype::load_snps(const std::string out_prefix,
                        + " variant(s) excluded based on INFO score threshold");
     }
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-    reporter.report(message);
+    if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
 }
 
