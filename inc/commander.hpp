@@ -48,7 +48,7 @@ public:
     bool has_index() const { return base.is_index; };
     bool beta() const { return base.is_beta; };
     double base_info_score() const { return base.info_score_threshold; };
-    double maf_base() const { return base.maf_control_threshold; };
+    double maf_base_control() const { return base.maf_control_threshold; };
     std::string base_name() const { return base.name; };
     double maf_base_case() const { return base.maf_case_threshold; };
 
@@ -114,7 +114,7 @@ public:
         return -2; // this is impossible because something will always either be
                    // bigger than the end or smaller than the front
     };
-    bool full() const { return p_thresholds.no_full; };
+    bool no_full() const { return p_thresholds.no_full; };
     bool fastscore() const { return p_thresholds.fastscore; };
 
     // prs_calculation

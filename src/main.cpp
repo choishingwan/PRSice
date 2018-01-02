@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         target_file->load_samples(commander.keep_sample_file(),
                                   commander.remove_sample_file(), reporter);
         target_file->load_snps(
-            commander.extract_file(), commander.exclude_file(),
+            commander.out(), commander.extract_file(), commander.exclude_file(),
             commander.geno(), commander.maf(), commander.info(),
             commander.hard_threshold(), commander.hard_coded(), reporter);
     }
@@ -68,17 +68,8 @@ int main(int argc, char* argv[])
         reporter.report(error.what());
         return -1;
     }
-    bool used_ld = false;
-    Genotype* ld_file = nullptr;
-    if (!commander.ld_prefix().empty()
-        && commander.ld_prefix().compare(commander.target_name()) != 0)
-    {
-        used_ld = true;
-        ld_file =
-            factory.createGenotype(commander, commander.ld_prefix(),
-                                   commander.ld_type(), verbose, reporter);
-    }
 
+    // TODO: Revamp Region?
     Region region = Region(commander.feature(), target_file->get_chr_order());
     try
     {
@@ -92,7 +83,7 @@ int main(int argc, char* argv[])
     }
 
     // Might want to generate a log file?
-    region.info();
+    region.info(reporter);
 
     bool perform_prslice = commander.perform_prslice();
 

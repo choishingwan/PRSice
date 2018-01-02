@@ -446,7 +446,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                hard_threshold, hard_coded))
                     continue;
                 m_existed_snps_index[RSID] = snp_res.size();
-                //TODO: Update SNP constructor
+                // TODO: Update SNP constructor
                 snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                          alleles.front(), alleles.back(),
                                          prefix, byte_pos));

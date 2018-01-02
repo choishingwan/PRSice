@@ -178,15 +178,11 @@ void Genotype::load_samples(const std::string& keep_file,
                             const std::string& remove_file, Reporter& reporter)
 {
     if (!remove_file.empty())
-    {
-        m_sample_selection_list =
-            load_ref(remove_file, m_ignore_fid);
-    }
+    { m_sample_selection_list = load_ref(remove_file, m_ignore_fid); }
     if (!keep_file.empty())
     {
         m_remove_sample = false;
-        m_sample_selection_list =
-            load_ref(keep_file, m_ignore_fid);
+        m_sample_selection_list = load_ref(keep_file, m_ignore_fid);
     }
     m_sample_names = gen_sample_vector();
     std::string message = std::to_string(m_unfiltered_sample_ct) + " people ("
@@ -209,19 +205,15 @@ void Genotype::load_snps(const std::string out_prefix,
     if (!extract_file.empty())
     {
         m_exclude_snp = false;
-        m_snp_selection_list =
-            load_snp_list(extract_file, reporter);
+        m_snp_selection_list = load_snp_list(extract_file, reporter);
     }
     if (!exclude_file.empty())
-    {
-        m_snp_selection_list =
-            load_snp_list(exclude_file, reporter);
-    }
+    { m_snp_selection_list = load_snp_list(exclude_file, reporter); }
 
     m_existed_snps =
         gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
     std::string message = "";
-    if (m_num_ambig != 0 && !filter.keep_ambig)
+    if (m_num_ambig != 0 && !m_keep_ambig)
     {
         message.append(std::to_string(m_num_ambig)
                        + " ambiguous variant(s) excluded\n");
@@ -231,14 +223,21 @@ void Genotype::load_snps(const std::string out_prefix,
         message.append(std::to_string(m_num_ambig)
                        + " ambiguous variant(s) kept\n");
     }
-    if(m_num_geno_filter!=0){
-    		message.append(std::to_string(m_num_geno_filter)+" variant(s) excluded based on genotype missingness threshold");
+    if (m_num_geno_filter != 0)
+    {
+        message.append(
+            std::to_string(m_num_geno_filter)
+            + " variant(s) excluded based on genotype missingness threshold");
     }
-    if(m_num_maf_filter!=0){
-    		message.append(std::to_string(m_num_maf_filter)+" variant(s) excluded based on MAF threshold");
+    if (m_num_maf_filter != 0)
+    {
+        message.append(std::to_string(m_num_maf_filter)
+                       + " variant(s) excluded based on MAF threshold");
     }
-    if(m_num_info_filter!=0){
-    		message.append(std::to_string(m_num_maf_filter)+" variant(s) excluded based on INFO score threshold");
+    if (m_num_info_filter != 0)
+    {
+        message.append(std::to_string(m_num_maf_filter)
+                       + " variant(s) excluded based on INFO score threshold");
     }
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
     reporter.report(message);
@@ -251,18 +250,15 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                          Reporter& reporter)
 {
     // can assume region is of the same order as m_existed_snp
-    m_scoring = c_commander.get_scoring();
+
     const std::string input = c_commander.base_name();
     const bool beta = c_commander.beta();
     const bool fastscore = c_commander.fastscore();
-    const bool full = c_commander.full();
-    const bool filter_info = c_commander.filter_base_info();
-    const bool filter_maf = c_commander.filter_base_maf();
+    const bool no_full = c_commander.no_full();
     const double info_threshold = c_commander.base_info_score();
-    const double maf_base = c_commander.maf_base();
+    const double maf_control = c_commander.maf_base_control();
     const double maf_case = c_commander.maf_base_case();
-    std::vector<int> index =
-        c_commander.index(); // more appropriate for commander
+    std::vector<int> index = c_commander.index();
     // now coordinates obtained from target file instead. Coordinate information
     // in base file only use for validation
     std::ifstream snp_file;
@@ -283,11 +279,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     const double bound_end = c_commander.upper();
     const double bound_inter = c_commander.inter();
 
-    threshold = (full) ? 1.0 : threshold;
+    threshold = (!no_full) ? 1.0 : threshold;
     std::vector<std::string> token;
 
+    // exclude indicates we don't want this SNP
     bool exclude = false;
-    // Some QC countss
+    // Some QC counts
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
     size_t num_ambiguous = 0;
@@ -326,8 +323,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
 
         if (token.size() <= max_index)
         {
-            std::cerr << line << std::endl;
-            throw std::runtime_error("More index than column in data");
+            std::string error_message = line;
+            error_message.append("\nMore index than column in data");
+            throw std::runtime_error(error_message);
         }
 
         std::string rs_id = token[index[+BASE_INDEX::RS]];
@@ -405,7 +403,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             }
             double maf = 1;
             bool maf_filtered = false;
-            if (filter_maf && index[+BASE_INDEX::MAF] >= 0)
+            if (index[+BASE_INDEX::MAF] >= 0)
             {
                 try
                 {
@@ -418,7 +416,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     exclude = true;
                     maf_filtered = true;
                 }
-                if (maf < maf_base)
+                if (maf < maf_control)
                 {
                     num_maf_filter++;
                     exclude = true;
@@ -444,7 +442,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 }
             }
             double info_score = 1;
-            if (filter_info && index[+BASE_INDEX::INFO] >= 0)
+            if (index[+BASE_INDEX::INFO] >= 0)
             {
                 // obtain the INFO score
                 try
@@ -514,7 +512,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
             {
                 num_ambiguous++;
-                exclude = !filter.keep_ambig;
+                exclude = !m_keep_ambig;
             }
             if (!exclude)
             {
@@ -528,7 +526,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 else
                 {
                     // calculate the threshold instead
-                    if (pvalue > bound_end && full)
+                    if (pvalue > bound_end && !no_full)
                     {
                         category = std::ceil((bound_end + 0.1 - bound_start)
                                              / bound_inter);
@@ -609,11 +607,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     // Suggest that we want to release memory
     // but this is only a suggest as this is non-binding request
     // Proper way of releasing memory will be to do swarp. Yet that
-    // might lead to out of scrope or some other error here?
+    // might lead to out of scope or some other error here?
     m_existed_snps.shrink_to_fit();
     m_region_size = region.size();
     message.append(std::to_string(num_line_in_base)
-                   + " SNP(s) observed in base file, with:\n");
+                   + " variant(s) observed in base file, with:\n");
     if (num_duplicated)
     {
         message.append(std::to_string(num_duplicated)
@@ -633,7 +631,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     if (num_ambiguous)
     {
         message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
-        if (!filter.keep_ambig) { message.append(" excluded"); }
+        if (!m_keep_ambig) { message.append(" excluded"); }
         message.append("\n");
     }
     if (num_haploid)
@@ -665,20 +663,19 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     if (num_info_filter)
     {
         message.append(std::to_string(num_info_filter)
-                       + " SNPs with INFO score less than "
+                       + " variant(s) with INFO score less than "
                        + std::to_string(info_threshold) + "\n");
     }
     if (num_maf_filter)
     {
         message.append(std::to_string(num_maf_filter)
-                       + " SNPs with MAF less than " + std::to_string(maf_base)
-                       + "\n");
+                       + " variant(s) excluded due to MAF threshold \n");
     }
     message.append(std::to_string(m_existed_snps.size())
-                   + " total SNPs included from base file\n\n");
+                   + " total variant(s) included from base file\n\n");
     reporter.report(message);
     if (m_existed_snps.size() == 0)
-    { throw std::runtime_error("Error: No valid SNPs remaining"); }
+    { throw std::runtime_error("Error: No valid variant remaining"); }
     m_num_threshold = unique_thresholds.size();
 }
 
@@ -689,19 +686,9 @@ void Genotype::set_info(const Commander& c_commander, const bool ld)
     clump_info.proxy = c_commander.proxy();
     clump_info.use_proxy = c_commander.use_proxy();
     clump_info.distance = c_commander.clump_dist();
-    filter.filter_geno =
-        ld ? c_commander.filter_ld_geno() : c_commander.filter_geno();
-    filter.filter_maf =
-        ld ? c_commander.filter_ld_maf() : c_commander.filter_maf();
-    filter.filter_info =
-        ld ? c_commander.filter_ld_info() : c_commander.filter_info();
-    filter.filter_hard_threshold = c_commander.filter_hard_threshold();
-    filter.geno = ld ? c_commander.ld_geno() : c_commander.geno();
-    filter.info_score = ld ? c_commander.ld_info() : c_commander.info();
-    filter.maf = ld ? c_commander.ld_maf() : c_commander.maf();
-    filter.hard_threshold = c_commander.hard_threshold();
-    filter.use_hard = c_commander.hard_coding();
     m_model = c_commander.model();
+    m_missing_score = c_commander.get_missing_score();
+    m_scoring = c_commander.get_score();
 }
 
 

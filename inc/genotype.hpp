@@ -59,12 +59,11 @@ public:
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
                    Reporter& reporter);
-
-
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
     };
+
 
     std::vector<double> get_thresholds() const { return m_thresholds; };
     std::vector<Sample> sample_names() const { return m_sample_names; };
@@ -157,20 +156,13 @@ protected:
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
 
-    // un processed leftovers
-    int process_block(int& start_index, int end_index, int& first_core_index);
-    void clump_snp(const size_t start_index, const size_t end_index);
-
-
-    static std::mutex clump_mtx;
-
     /** Misc information **/
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     int m_model = +MODEL::ADDITIVE;
-    MISSING_SCORE m_missing_score= +MISSING_SCORE::MEAN_IMPUTE;
-
+    MISSING_SCORE m_missing_score = +MISSING_SCORE::MEAN_IMPUTE;
+    SCORING m_scoring = +SCORING::AVERAGE;
     struct
     {
         double r2;
@@ -180,19 +172,12 @@ protected:
         bool use_proxy;
     } clump_info;
 
-    struct
-    {
-        double maf;
-        double geno;
-        double info_score;
-        double hard_threshold;
-        bool filter_hard_threshold;
-        bool filter_maf;
-        bool filter_geno;
-        bool filter_info;
-        bool keep_ambig;
-        bool use_hard;
-    } filter;
+    // processed leftovers
+    int process_block(int& start_index, int end_index, int& first_core_index);
+    void clump_snp(const size_t start_index, const size_t end_index);
+
+
+    static std::mutex clump_mtx;
 
 
     std::vector<double> m_thresholds;
