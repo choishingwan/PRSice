@@ -30,3 +30,9 @@ TOY_TARGET_QUANTITATIVE\.pheno
 src/bk/
 
 *.zip
+
+*.assoc
+
+\.settings/
+
+\.cproject
