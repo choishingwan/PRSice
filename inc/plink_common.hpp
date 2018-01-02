@@ -978,9 +978,7 @@ HEADER_INLINE uint32_t is_set(const uintptr_t* bitarr, uint32_t loc)
 HEADER_INLINE void fill_vvec_zero(size_t size, VECITYPE* vvec)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *vvec++ = _mm_setzero_si128();
-    }
+    for (ulii = 0; ulii < size; ulii++) { *vvec++ = _mm_setzero_si128(); }
 }
 #else
 
@@ -989,18 +987,14 @@ HEADER_INLINE void fill_vvec_zero(size_t size, VECITYPE* vvec)
 HEADER_INLINE void fill_ulong_one(size_t size, uintptr_t* ularr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *ularr++ = ~ZEROLU;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *ularr++ = ~ZEROLU; }
 }
 
 
 HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *uiarr++ = 0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *uiarr++ = 0; }
 }
 
 
@@ -1144,9 +1138,7 @@ HEADER_INLINE uint32_t load_raw(uintptr_t unfiltered_sample_ct4, FILE* bedfile,
 HEADER_INLINE uintptr_t get_final_mask(uint32_t sample_ct)
 {
     uint32_t uii = sample_ct % BITCT2;
-    if (uii) {
-        return (ONELU << (2 * uii)) - ONELU;
-    }
+    if (uii) { return (ONELU << (2 * uii)) - ONELU; }
     else
     {
         return ~ZEROLU;

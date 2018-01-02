@@ -424,7 +424,7 @@ option_list <- list(
         c("--bar-levels"),
         type = "character",
         dest = "bar_levels",
-        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
+        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5,1"
     ),
     make_option(c("--binary-target"), type = "character", dest = "binary_target"),
     make_option(c("--bp"), type = "character"),
@@ -1629,7 +1629,7 @@ if (!is.null(phenos)) {
         } else{
             colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
         }
-        #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
+        
     }
     # Give run_plot a ready to use matrix
     best <- NULL

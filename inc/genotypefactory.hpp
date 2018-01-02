@@ -34,57 +34,52 @@ private:
                                                    {"bgen", 2}};
 
 public:
-    Genotype* createGenotype(Commander& commander, const std::string& prefix,
-                             const std::string& type, bool verbose,
-                             Reporter& reporter)
+    Genotype* createGenotype(const std::string& prefix, const std::string& type,
+                             const int thread, const bool ignore_fid,
+                             const bool keep_nonfounder, const bool keep_ambig,
+                             Reporter& reporter, const Commander& commander)
     {
+        std::vector<std::string> external_sample = misc::split(prefix, ",");
+        std::string sample_file = "";
+        std::string binary_file = prefix;
+        if (external_sample.size() > 1)
+        {
+            sample_file = external_sample[1];
+            binary_file = external_sample[0];
+        }
         int code =
             (file_type.find(type) != file_type.end()) ? file_type[type] : 0;
         switch (code)
         {
         case 0:
         {
-            std::vector<std::string> token;
-            token = misc::split(prefix, ",");
-            std::string fam = "";
-            std::string bfile_prefix = prefix;
-            if (token.size() == 2) {
-                fam = token[1];
-                bfile_prefix = token[0];
-            }
             std::string message =
-                "Loading Genotype file: " + bfile_prefix + " (bed)\n";
-            if (!fam.empty()) {
-                message.append("With external fam file: " + fam + "\n");
+                "Loading Genotype file: " + binary_file + " (bed)\n";
+            if (!sample_file.empty())
+            {
+                message.append("With external fam file: " + sample_file + "\n");
             }
             reporter.report(message);
-            return new BinaryPlink(
-                bfile_prefix, commander.remove_sample_file(),
-                commander.keep_sample_file(), commander.extract_snp_file(),
-                commander.exclude_snp_file(), fam, commander.out(), reporter,
-                commander.ignore_fid(), commander.nonfounders(),
-                commander.num_auto(), commander.no_x(), commander.no_y(),
-                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
-                commander.thread(), verbose);
+
+            return new BinaryPlink(binary_file, sample_file, thread, ignore_fid,
+                                   keep_nonfounder, keep_ambig);
         }
         case 2:
         {
             std::string message =
-                "Loading Genotype file: " + prefix + " (bgen)\n";
+                "Loading Genotype file: " + binary_file + " (bgen)\n";
+            if (!sample_file.empty())
+            { message.append("With sample file: " + sample_file + "\n"); }
             reporter.report(message);
-            if (commander.pheno_file().empty() && !commander.no_regress()) {
+            if (commander.pheno_file().empty() && !commander.no_regress()
+                && sample_file.empty())
+            {
                 throw std::runtime_error("ERROR: You must provide a phenotype "
                                          "file for bgen format!\n");
             }
-
-            return new BinaryGen(
-                prefix, commander.pheno_file(), commander.has_pheno_col(),
-                commander.remove_sample_file(), commander.keep_sample_file(),
-                commander.extract_snp_file(), commander.exclude_snp_file(),
-                commander.out(), reporter, commander.ignore_fid(),
-                commander.num_auto(), commander.no_x(), commander.no_y(),
-                commander.no_xy(), commander.no_mt(), commander.keep_ambig(),
-                commander.thread(), verbose);
+            if (sample_file.empty()) sample_file = commander.pheno_file();
+            return new BinaryGen(binary_file, sample_file, thread, ignore_fid,
+                                 keep_nonfounder, keep_ambig);
         }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");

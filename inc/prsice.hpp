@@ -23,6 +23,7 @@
 #include "plink_common.hpp"
 #include "region.hpp"
 #include "regression.hpp"
+#include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
 #include <Eigen/Dense>
@@ -41,7 +42,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "reporter.hpp"
 // This should be the class to handle all the procedures
 class PRSice
 {
@@ -62,18 +62,19 @@ public:
         bool perm = commander.permute();
         m_seed = commander.seed();
         bool has_binary = false;
-        for (auto&& b : m_target_binary) {
-            if (b) {
+        for (auto&& b : m_target_binary)
+        {
+            if (b)
+            {
                 has_binary = true;
                 break;
             }
         }
-        if (perm) {
+        if (perm)
+        {
             // first check for ridiculously large sample size
             // allow 10 GB here
-            if (CHAR_BIT * sample_ct > 1000000000) {
-                m_perm_per_slice = 1;
-            }
+            if (CHAR_BIT * sample_ct > 1000000000) { m_perm_per_slice = 1; }
             else
             {
                 // in theory, most of the time, perm_per_slice should be
@@ -87,8 +88,10 @@ public:
                 // Additional slice to keep
                 m_remain_slice = m_num_perm % m_perm_per_slice;
             }
-            if (has_binary) {
-                if (!m_logit_perm) {
+            if (has_binary)
+            {
+                if (!m_logit_perm)
+                {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform  linear regression instead of logistic "
@@ -226,9 +229,11 @@ private:
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
-                                      std::vector<std::string>& cov_header, Reporter &reporter);
+                                      std::vector<std::string>& cov_header,
+                                      Reporter& reporter);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string>& cov_header, Reporter &reporter);
+                        std::vector<std::string>& cov_header,
+                        Reporter& reporter);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,

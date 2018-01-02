@@ -94,6 +94,7 @@ enum class BASE_INDEX
     P,
     INFO,
     MAF,
+    MAF_CASE,
     MAX
 };
 enum class FAM
@@ -125,15 +126,20 @@ enum class MODEL
     RECESSIVE,
     HETEROZYGOUS
 };
-// Mean imputed, no-mean imputed, centering is currently too complicated based
-// on our algorithm
-enum class SCORING
+
+enum class MISSING_SCORE
 {
     MEAN_IMPUTE,
     SET_ZERO,
     CENTER
 };
 
+enum class SCORING
+{
+    AVERAGE,
+    STANDARD,
+    SUM
+};
 template <>
 struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
 {

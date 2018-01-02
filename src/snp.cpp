@@ -88,9 +88,12 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
     std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
         // plink do it with respect to the location instead of statistic
-        if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
-            if (input[i1].basic.chr == input[i2].basic.chr) {
-                if (input[i1].basic.loc == input[i2].basic.loc) {
+        if (input[i1].statistic.p_value == input[i2].statistic.p_value)
+        {
+            if (input[i1].basic.chr == input[i2].basic.chr)
+            {
+                if (input[i1].basic.loc == input[i2].basic.loc)
+                {
                     if (fabs(input[i1].statistic.stat)
                         == fabs(input[i2].statistic.stat))
                     {
@@ -118,7 +121,8 @@ void SNP::clump(std::vector<SNP>& snp_list, double proxy)
     // when proxy = 2, we will not perform proxy
     // That's because no SNP can have an R2 > 2
     // go through each of the target
-    for (size_t i_target = 0; i_target < clump_info.target.size(); ++i_target) {
+    for (size_t i_target = 0; i_target < clump_info.target.size(); ++i_target)
+    {
 
         auto&& target_index = clump_info.target[i_target];
         // don't bother with anyone who are already clumped
@@ -127,9 +131,11 @@ void SNP::clump(std::vector<SNP>& snp_list, double proxy)
         bool completed = false;
         // if we can perform proxy clump, we will always perform proxy
         // clump instead of normal clump
-        if (clump_info.r2[i_target] > proxy) {
+        if (clump_info.r2[i_target] > proxy)
+        {
             // proxy clump
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            {
                 // two become one
                 m_flags[i_flag] |= snp_list[target_index].m_flags[i_flag];
             }
@@ -138,7 +144,8 @@ void SNP::clump(std::vector<SNP>& snp_list, double proxy)
         else
         {
             // normal clumping
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            {
                 snp_list[target_index].m_flags[i_flag] =
                     snp_list[target_index].m_flags[i_flag]
                     ^ (m_flags[i_flag]
