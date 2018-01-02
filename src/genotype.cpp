@@ -306,12 +306,30 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     std::vector<int> index = c_commander.index();
     // now coordinates obtained from target file instead. Coordinate information
     // in base file only use for validation
-    std::ifstream snp_file;
-    snp_file.open(input.c_str());
-    if (!snp_file.is_open())
+    bool gz_input = false;
+    igzstream gz_snp_file;
+    if (input.substr(input.find_last_of(".") + 1).compare("gz") == 0)
     {
-        std::string error_message = "ERROR: Cannot open base file: " + input;
-        throw std::runtime_error(error_message);
+        gz_snp_file.open(input.c_str());
+        if (!gz_snp_file.good())
+        {
+            std::string error_message =
+                "ERROR: Cannot open base file (gz) to read!\n";
+            throw std::runtime_error(error_message);
+        }
+        gz_input = true;
+    }
+
+    std::ifstream snp_file;
+    if (!gz_input)
+    {
+        snp_file.open(input.c_str());
+        if (!snp_file.is_open())
+        {
+            std::string error_message =
+                "ERROR: Cannot open base file: " + input;
+            throw std::runtime_error(error_message);
+        }
     }
     size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
@@ -346,12 +364,28 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     std::unordered_set<std::string> dup_index;
     std::vector<int> exist_index; // try to use this as quick search
     // Actual reading the file, will do a bunch of QC
-    snp_file.seekg(0, snp_file.end);
-    size_t file_length = snp_file.tellg();
-    snp_file.seekg(0, snp_file.beg);
+    size_t file_length = 0;
+    if (gz_input)
+    {
+        gz_snp_file.seekg(0, gz_snp_file.end);
+        file_length = gz_snp_file.tellg();
+        gz_snp_file.clear();
+        gz_snp_file.seekg(0, gz_snp_file.beg);
+    }
+    else
+    {
+        snp_file.seekg(0, snp_file.end);
+        file_length = snp_file.tellg();
+        snp_file.clear();
+        snp_file.seekg(0, snp_file.beg);
+    }
     std::unordered_set<int> unique_thresholds;
     double prev_progress = 0.0;
-    while (std::getline(snp_file, line))
+
+    // very ugly, might want to use polymorphism (is this the right word) as an
+    // alternative solution
+    while ((!gz_input && std::getline(snp_file, line))
+           || (gz_input && std::getline(gz_snp_file, line)))
     {
         double progress =
             (double) snp_file.tellg() / (double) (file_length) *100;
@@ -607,7 +641,10 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             num_not_found++;
         }
     }
-    snp_file.close();
+    if (gz_input)
+        gz_snp_file.close();
+    else
+        snp_file.close();
 
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     if (exist_index.size() != m_existed_snps.size())

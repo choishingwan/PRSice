@@ -122,9 +122,10 @@ int main(int argc, char* argv[])
         if (!commander.no_clump())
         {
             target_file->efficient_clumping(
-                (commander.ref_name().empty()) ? *target_file : *reference_file, reporter);
+                (commander.ref_name().empty()) ? *target_file : *reference_file,
+                reporter);
             // immediately free the memory if needed
-            if(!commander.ref_name().empty()) delete reference_file;
+            if (!commander.ref_name().empty()) delete reference_file;
         }
         // initialize PRSice class
         PRSice prsice = PRSice(base_name, commander, region.size() > 1,
