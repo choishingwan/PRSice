@@ -112,6 +112,13 @@ int main(int argc, char* argv[])
     {
         target_file->set_info(commander);
         target_file->read_base(commander, region, reporter);
+        // get the sort by p inex vector for target
+        // so that we can still find out the relative coordinates of each SNPs
+        if(!target_file->sort_by_p()){
+        		std::string error_message = "No SNPs left for PRSice processing";
+        		reporter.report(error_message);
+        		return -1;
+        }
         // we no longer need the region boundaries
         // as we don't allow multiple base file input
         region.clean();
@@ -135,12 +142,6 @@ int main(int argc, char* argv[])
         size_t num_pheno = prsice.num_phenotype();
         if (!perform_prslice)
         {
-            if (!target_file->prepare_prsice())
-            {
-                // check if we can successfully sort the SNP vector by the
-                // category as required by PRSice
-                return -1;
-            }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
                 // initialize the phenotype & independent variable matrix
@@ -166,6 +167,15 @@ int main(int argc, char* argv[])
                 if (region.size() > 1)
                 { fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0); } }
             prsice.summarize(commander, reporter);
+        }
+        else
+        {
+            std::string error_message =
+                "ERROR: We currently have not implemented PRSlice. We will "
+                "implement PRSlice once the implementation of PRSice is "
+                "stabalized";
+            reporter.report(error_message);
+            return -1;
         }
     }
     catch (const std::out_of_range& error)

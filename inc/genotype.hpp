@@ -82,7 +82,7 @@ public:
     bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
                    int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index);
-    bool prepare_prsice();
+    bool sort_by_p();
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
     size_t num_threshold() const { return m_num_threshold; };
@@ -137,6 +137,7 @@ protected:
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
+    std::vector<size_t> m_sort_by_p_index;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
     std::vector<uintptr_t> m_tmp_genotype;

@@ -1008,19 +1008,24 @@ int Genotype::process_block(int& start_index, int end_index,
 
 void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 {
-
-
-    /*
-     * Each SNP will use (3 * founder_ctsplit + founder_ctv3)*sizeof(uintptr_t)
-     * On my virtual machine, that's 2560 byte.
-     * So we can actually store 1562500 SNP with 4gb of ram
-     * which is double the size of UKBB (unimputed).
-     * So the ideal procedure should be
-     * 1. Read in as many SNPs as possible (forget about blocks)
-     * 2. Identify the bound of valid SNPs (i.e. SNPs with full block included)
-     * 3. Divide all SNPs into N blocks, calculate 1mb from left to right
-     * 4. mutex lock and then update the SNP info
-     */
+	/*
+	 *	Threading doesn't speed things up too much
+	 *	but will increase the memory usage, leading to the malloc
+	 *	error users experiencing. So we will now use only 1 thread.
+	 *	Also, we will go through each SNP one by one, reading
+	 *	the binary from the SNPs one at a time. Then remove it
+	 *	right after. This should be the fastest for PRSice. The
+	 *	problem with this method is that the clumping might take
+	 *	longer for PRSet due to I/O burden in the worst case
+	 *	scenario (repeatingly reading and discarding the same SNP)
+	 */
+	/*
+	 * we now starts with
+	 * m_existed_snps -> SNPs in target
+	 * reference.m_existed_snps -> SNPs in reference
+	 * reference.m_existed_snps_index -> For quick finding the index of SNPs in reference
+	 * m_sort_by_p_index -> vector containing order of SNPs to process
+	 */
     // sample related constants
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -1274,20 +1279,10 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     reporter.report(message);
 }
 
-bool Genotype::prepare_prsice()
+bool Genotype::sort_by_p()
 {
     if (m_existed_snps.size() == 0) return false;
-    std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [](SNP const& t1, SNP const& t2) {
-                  if (t1.category() == t2.category())
-                  {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
-                      { return t1.snp_id() < t2.snp_id(); } else
-                          return t1.file_name().compare(t2.file_name()) < 0;
-                  }
-                  else
-                      return t1.category() < t2.category();
-              });
+    m_sort_by_p_index = SNP::sort_by_p(m_existed_snps);
     return true;
 }
 
