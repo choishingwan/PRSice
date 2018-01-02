@@ -333,7 +333,6 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     }
     size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
-    if (!c_commander.has_index()) std::getline(snp_file, line);
     std::string message = "Base file: " + input + "\n";
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
@@ -371,6 +370,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         file_length = gz_snp_file.tellg();
         gz_snp_file.clear();
         gz_snp_file.seekg(0, gz_snp_file.beg);
+        if (!c_commander.is_index())
+        {
+            std::getline(gz_snp_file, line);
+            message.append("GZ file detected. Header of file is:\n");
+            message.append(line);
+        }
     }
     else
     {
@@ -378,6 +383,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         file_length = snp_file.tellg();
         snp_file.clear();
         snp_file.seekg(0, snp_file.beg);
+        if (!c_commander.is_index()) std::getline(snp_file, line);
     }
     std::unordered_set<int> unique_thresholds;
     double prev_progress = 0.0;

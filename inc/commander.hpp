@@ -45,7 +45,7 @@ public:
 
     // base
     std::vector<int> index() const { return base.col_index; };
-    bool has_index() const { return base.is_index; };
+    bool is_index() const { return base.is_index; };
     bool beta() const { return base.is_beta; };
     double base_info_score() const { return base.info_score_threshold; };
     double maf_base_control() const { return base.maf_control_threshold; };
