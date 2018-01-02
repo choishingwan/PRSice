@@ -42,7 +42,8 @@ public:
         std::vector<std::string> external_sample = misc::split(prefix, ",");
         std::string sample_file = "";
         std::string binary_file = prefix;
-        if (external_sample.size() > 1) {
+        if (external_sample.size() > 1)
+        {
             sample_file = external_sample[1];
             binary_file = external_sample[0];
         }
@@ -54,7 +55,8 @@ public:
         {
             std::string message =
                 "Loading Genotype file: " + binary_file + " (bed)\n";
-            if (!sample_file.empty()) {
+            if (!sample_file.empty())
+            {
                 message.append("With external fam file: " + sample_file + "\n");
             }
             reporter.report(message);
@@ -66,9 +68,8 @@ public:
         {
             std::string message =
                 "Loading Genotype file: " + binary_file + " (bgen)\n";
-            if (!sample_file.empty()) {
-                message.append("With sample file: " + sample_file + "\n");
-            }
+            if (!sample_file.empty())
+            { message.append("With sample file: " + sample_file + "\n"); }
             reporter.report(message);
             if (commander.pheno_file().empty() && !commander.no_regress()
                 && sample_file.empty())

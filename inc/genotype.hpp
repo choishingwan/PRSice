@@ -124,6 +124,9 @@ protected:
     std::unordered_set<std::string> m_snp_selection_list;
     uintptr_t m_marker_ct = 0;
     uint32_t m_num_ambig = 0;
+    uint32_t m_num_maf_filter = 0;
+    uint32_t m_num_geno_filter = 0;
+    uint32_t m_num_info_filter = 0;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
@@ -166,7 +169,7 @@ protected:
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     int m_model = +MODEL::ADDITIVE;
-    MISSING_SCORE m_missing_score;
+    MISSING_SCORE m_missing_score= +MISSING_SCORE::MEAN_IMPUTE;
 
     struct
     {
@@ -285,7 +288,8 @@ protected:
         __univec acc11;
         __univec acc10;
         uint32_t ct2;
-        while (sample_ctv6 >= 30) {
+        while (sample_ctv6 >= 30)
+        {
             sample_ctv6 -= 30;
             vend = &(veca0[30]);
             acc00.vi = _mm_setzero_si128();
@@ -403,7 +407,8 @@ protected:
             counts_3x3[3] +=
                 ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (sample_ctv6) {
+        if (sample_ctv6)
+        {
             vend = &(veca0[sample_ctv6]);
             ct2 = sample_ctv6 % 2;
             sample_ctv6 = 0;
@@ -411,7 +416,8 @@ protected:
             acc01.vi = _mm_setzero_si128();
             acc11.vi = _mm_setzero_si128();
             acc10.vi = _mm_setzero_si128();
-            if (ct2) {
+            if (ct2)
+            {
                 countx00 = _mm_setzero_si128();
                 countx01 = _mm_setzero_si128();
                 countx11 = _mm_setzero_si128();

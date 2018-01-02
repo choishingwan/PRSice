@@ -113,7 +113,8 @@ int main(int argc, char* argv[])
         // output the number of SNPs observed in each sets
         region.print_file(region_out_name);
         // perform clumping (Main problem with memory here)
-        if (!commander.no_clump()) {
+        if (!commander.no_clump())
+        {
             target_file->efficient_clumping(
                 (ld_file == nullptr) ? *target_file : *ld_file, reporter);
         }
@@ -123,25 +124,28 @@ int main(int argc, char* argv[])
         // check the phenotype input columns
         prsice.pheno_check(commander, reporter);
         size_t num_pheno = prsice.num_phenotype();
-        if (!perform_prslice) {
-            if (!target_file->prepare_prsice()) {
+        if (!perform_prslice)
+        {
+            if (!target_file->prepare_prsice())
+            {
                 // check if we can successfully sort the SNP vector by the
                 // category as required by PRSice
                 return -1;
             }
-            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
+            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
+            {
                 // initialize the phenotype & independent variable matrix
                 prsice.init_matrix(commander, i_pheno, *target_file, reporter);
                 // go through each region separately
                 // this should reduce the memory usage
-                if (region.size() > 1) {
-                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
-                }
+                if (region.size() > 1)
+                { fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0); }
                 for (size_t i_region = 0; i_region < region.size(); ++i_region)
                 {
                     prsice.run_prsice(commander, region.get_name(i_region),
                                       i_pheno, i_region, *target_file);
-                    if (region.size() > 1) {
+                    if (region.size() > 1)
+                    {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets",
                                 (double) i_region / (double) region.size()
                                     * 100.0);
@@ -150,10 +154,8 @@ int main(int argc, char* argv[])
                         prsice.output(commander, region, i_pheno, i_region,
                                       *target_file);
                 }
-                if (region.size() > 1) {
-                    fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0);
-                }
-            }
+                if (region.size() > 1)
+                { fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0); } }
             prsice.summarize(commander, reporter);
         }
     }

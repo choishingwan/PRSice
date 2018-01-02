@@ -41,18 +41,16 @@ public:
     vec2d() {}
     vec2d(size_t row, size_t col, T def)
     {
-        if (row == 0 || col == 0) {
-            throw std::invalid_argument("Dimension of 2d vector must be >0");
-        }
+        if (row == 0 || col == 0)
+        { throw std::invalid_argument("Dimension of 2d vector must be >0"); }
         m_storage.resize(row * col, def);
         m_row = row;
         m_col = col;
     };
     vec2d(size_t row, size_t col)
     {
-        if (row == 0 || col == 0) {
-            throw std::invalid_argument("Dimension of 2d vector must be >0");
-        }
+        if (row == 0 || col == 0)
+        { throw std::invalid_argument("Dimension of 2d vector must be >0"); }
         m_storage.resize(row * col);
         m_row = row;
         m_col = col;
@@ -133,8 +131,8 @@ public:
     double sd() const { return sqrt(var()); }
 
 private:
-    size_t n;
-    double M1, M2, M3, M4;
+    size_t n = 0;
+    double M1 = 0, M2 = 0, M3 = 0, M4 = 0;
 };
 
 
@@ -213,7 +211,8 @@ inline T remove_extension(T const& filename)
 inline void replace_substring(std::string& s, const std::string& search,
                               const std::string& replace)
 {
-    for (size_t pos = 0;; pos += replace.length()) {
+    for (size_t pos = 0;; pos += replace.length())
+    {
         // Locate the substring to replace
         pos = s.find(search, pos);
         if (pos == std::string::npos) break;
