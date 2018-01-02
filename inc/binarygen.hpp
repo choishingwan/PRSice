@@ -250,6 +250,11 @@ private:
                         const double info_score,
                         const double hard_code_threshold,
                         const bool hard_coded);
+    bool filter_snp_v12(byte_t const* buffer, byte_t const* const end,
+                        Context context, const double geno, const double maf,
+                        const double info_score,
+                        const double hard_code_threshold,
+                        const bool hard_coded);
     double get_probability_conversion_factor(uint32_t flags)
     {
         uint32_t layout = flags & e_Layout;
