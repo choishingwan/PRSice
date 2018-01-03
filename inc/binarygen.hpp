@@ -117,6 +117,28 @@ private:
 
 
     std::string m_cur_file;
+    void prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
+                           byte_t const* const end, Context context,
+                           const double hard_threshold);
+    void prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
+                           byte_t const* const end, Context context);
+    inline void prob_to_plink(uintptr_t* genotype, std::vector<byte_t> buffer,
+                              Context context)
+    {
+        if ((context.flags & e_Layout) == e_Layout0
+            || (context.flags & e_Layout) == e_Layout1)
+        {
+            prob_to_plink_v11(genotype, &(*buffer)[0],
+                              &(*buffer)[0] + buffer->size(), context,
+                              m_hard_threshold);
+        }
+        else
+        {
+            prob_to_plink_v12(genotype, &(*buffer)[0],
+                              &(*buffer)[0] + buffer->size(), context,
+                              m_hard_threshold);
+        }
+    }
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
                          const std::string& file_name)
     {
@@ -135,41 +157,11 @@ private:
             m_cur_file = file_name;
         }
         auto&& context = m_context_map[file_name];
-        Data probability;
-        ProbSetter setter(&probability);
         std::vector<byte_t> buffer1, buffer2;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-            m_bgen_file, context, setter, &buffer1, &buffer2, false);
-        int shift = 0;
-        int index = 0;
-        for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample) {
-            auto&& prob = probability[i_sample];
-            if (prob.size() != 3) {
-                // this is likely phased
-                std::string message = "ERROR: Currently don't support phased "
-                                      "data (It is because the lack of "
-                                      "development time)\n";
-                throw std::runtime_error(message);
-            }
-            uintptr_t cur_geno = 1;
-            for (size_t g = 0; g < prob.size(); ++g) {
-                if (prob[g] >= filter.hard_threshold) {
-                    cur_geno = (g == 0) ? 0 : g + 1; // binary code for plink
-                    break;
-                }
-            }
-            // now genotype contain the genotype of this sample after filtering
-            // need to bit shift here
-            if (shift == 0)
-                genotype[index] = 0; // match behaviour of binaryplink
-            genotype[index] |= cur_geno << shift;
-            shift += 2;
-            if (shift == BITCT) {
-                index++;
-                shift = 0;
-            }
-        }
+        read_genotype_data_block(m_bgen_file, context, buffer1);
+        uncompress_probability_data(context, buffer1, buffer2);
+        prob_to_plink(genotype, buffer2, context);
     };
 
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,
@@ -187,7 +179,7 @@ private:
                                    m_founder_info.data(), final_mask, false,
                                    m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("ERROR: Cannot read the bgen file!");
         }
     };
 
@@ -330,18 +322,6 @@ private:
             assert(0);
         }
         return -1;
-    }
-    void read_and_parse_genotype_data_block(std::istream& aStream,
-                                            Context context,
-                                            std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2,
-                                            bool quick)
-    {
-        read_genotype_data_block(aStream, context, buffer1);
-        if (quick) return;
-        uncompress_probability_data(context, *buffer1, buffer2);
-        parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
-                               context, setter);
     }
 
 
@@ -527,6 +507,19 @@ private:
             throw std::runtime_error("ERROR: Unable to read bgen file!");
         }
         string_ptr->assign(buffer.begin(), buffer.end());
+    }
+    //////////////////////
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context context,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2,
+                                            bool quick)
+    {
+        read_genotype_data_block(aStream, context, buffer1);
+        if (quick) return;
+        uncompress_probability_data(context, *buffer1, buffer2);
+        parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                               context, setter);
     }
 };
 
