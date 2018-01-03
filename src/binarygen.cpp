@@ -184,22 +184,23 @@ bool BinaryGen::check_is_sample_format()
     std::vector<std::string> second_row = misc::split(second_line);
     if (first_row.size() != second_row.size() || first_row.size() < 3) {
         return false;
-    } // first 3 must be 0 for (size_t i = 0; i < 3; ++i) {
-    if (second_row[i].compare("0") != 0) return false;
-}
-// DCPB
-for (size_t i = 4; i < second_row.size(); ++i) {
-    if (second_row[i].length() > 1) return false;
-    switch (second_row[i].at(0))
-    {
-    case 'D':
-    case 'C':
-    case 'P':
-    case 'B': break;
-    default: return false;
+    } // first 3 must be 0
+    for (size_t i = 0; i < 3; ++i) {
+        if (second_row[i].compare("0") != 0) return false;
     }
-}
-return true;
+    // DCPB
+    for (size_t i = 4; i < second_row.size(); ++i) {
+        if (second_row[i].length() > 1) return false;
+        switch (second_row[i].at(0))
+        {
+        case 'D':
+        case 'C':
+        case 'P':
+        case 'B': break;
+        default: return false;
+        }
+    }
+    return true;
 }
 
 BinaryGen::Context BinaryGen::get_context(std::string& bgen_name)
@@ -294,6 +295,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
     m_hard_threshold = hard_threshold;
+    m_hard_coded = hard_coded;
     bool chr_sex_error = false;
     bool chr_error = false;
     bool first_bgen_file = true;
@@ -503,13 +505,6 @@ bool BinaryGen::filter_snp_v12(byte_t const* buffer, byte_t const* const end,
     assert(end == pack.end);
     // all we do is filtering here, so we don't need a storage of the genotypes
 
-
-    uint32_t max_count =
-        pack.phased ? (uint32_t(pack.ploidyExtent[1]) * pack.numberOfAlleles)
-                    : n_choose_k(uint32_t(pack.ploidyExtent[1])
-                                     + pack.numberOfAlleles - 1,
-                                 pack.numberOfAlleles - 1);
-
     uint64_t data = 0;
     int size = 0;
     misc::RunningStat running_stat;
@@ -537,7 +532,7 @@ bool BinaryGen::filter_snp_v12(byte_t const* buffer, byte_t const* const end,
             num_included_sample++;
             if (missing) {
                 nmiss++;
-                // Consume dummy zero values, emit missing values.
+                // Consume dummy zero values
                 for (uint32_t h = 0; h < storedValueCount; ++h) {
                     buffer =
                         read_bits_from_buffer(buffer, end, &data, &size, bits);
@@ -548,16 +543,14 @@ bool BinaryGen::filter_snp_v12(byte_t const* buffer, byte_t const* const end,
             {
                 // Consume values and interpret them.
                 double sum = 0.0;
-                uint32_t reportedValueCount = 0;
                 double exp = 0;
                 int hard = -1;
                 double hard_prob = 0.0;
                 for (uint32_t h = 0; h < storedValueCount; ++h) {
                     buffer =
                         read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    double const value =
+                    double value =
                         parse_bit_representation(&data, &size, bits);
-                    reportedValueCount++;
                     // value is the probability for the h item
                     // we only want 3 item e.g. h < 3
                     assert(h < 3);
@@ -572,9 +565,7 @@ bool BinaryGen::filter_snp_v12(byte_t const* buffer, byte_t const* const end,
                         || ((!pack.phased) && (h + 1) == storedValueCount))
                     {
                         assert(sum <= 1.00000001);
-                        reportedValueCount++;
-                        // last value is not recorded, so need to calculate
-                        // directly though we currently do not support phasing
+                        // last value is not recorded, but represent as 1-sum
                         value = 1.0 - sum;
                         if (value >= hard_threshold && value > hard_prob) {
                             hard = h + 1;
@@ -650,7 +641,6 @@ bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
     if (end != buffer + 6 * context.number_of_samples) {
         throw std::runtime_error("ERROR: Invalid bgen format!");
     }
-    uint32_t const ploidy = 2;
     double const probability_conversion_factor =
         get_probability_conversion_factor(context.flags);
 
@@ -684,6 +674,7 @@ bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
         for (std::size_t g = 0; g < 3; ++g) {
             uint16_t prob;
             buffer = read_little_endian_integer(buffer, end, &prob);
+            prob = convert_from_integer_representation(prob, probability_conversion_factor);
             sum += prob;
             exp += prob * (2 - g);
             if (prob >= hard_threshold && prob > hard_prob) {
@@ -765,13 +756,11 @@ bool BinaryGen::filter_snp(std::vector<byte_t> buffer, Context context,
 // Read in the v11 bgen data and convert it into the plink binary vector
 // in genotype
 void BinaryGen::prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
-                                  byte_t const* const end, Context context,
-                                  const double hard_threshold)
+                                  byte_t const* const end, Context context)
 {
     if (end != buffer + 6 * context.number_of_samples) {
         throw std::runtime_error("ERROR: Invalid bgen format!");
     }
-    uint32_t const ploidy = 2;
     double const probability_conversion_factor =
         get_probability_conversion_factor(context.flags);
 
@@ -795,8 +784,9 @@ void BinaryGen::prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
             for (std::size_t g = 0; g < 3; ++g) {
                 uint16_t prob;
                 buffer = read_little_endian_integer(buffer, end, &prob);
+                prob = convert_from_integer_representation(prob, probability_conversion_factor);
                 sum += prob;
-                if (prob >= hard_threshold && prob > hard_prob) {
+                if (prob >= m_hard_threshold && prob > hard_prob) {
                     cur_geno = (g == 0) ? 0 : g + 1;
                     hard_prob = prob;
                 }
@@ -816,8 +806,7 @@ void BinaryGen::prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
 }
 
 void BinaryGen::prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
-                                  byte_t const* const end, Context context,
-                                  const double hard_threshold)
+                                  byte_t const* const end, Context context)
 {
     GenotypeDataBlock pack = init_genoData(context, buffer, end);
 
@@ -857,7 +846,6 @@ void BinaryGen::prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
             valueCount - (pack.phased ? ploidy : 1);
 
         if (m_sample_names[i].included) {
-            num_included_sample++;
             if (missing) {
                 // Consume dummy zero values, emit missing values.
                 for (uint32_t h = 0; h < storedValueCount; ++h) {
@@ -869,20 +857,18 @@ void BinaryGen::prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
             else
             {
                 // Consume values and interpret them.
-                uint32_t reportedValueCount = 0;
                 double hard_prob = 0.0;
                 double sum = 0.0;
                 for (uint32_t h = 0; h < storedValueCount; ++h) {
                     buffer =
                         read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    double const value =
+                    double value =
                         parse_bit_representation(&data, &size, bits);
-                    reportedValueCount++;
                     // value is the probability for the h item
                     // we only want 3 item e.g. h < 3
                     assert(h < 3);
                     sum += value;
-                    if (value >= hard_threshold && value > hard_prob) {
+                    if (value >= m_hard_threshold && value > hard_prob) {
                         cur_geno = (h == 0) ? 0 : h + 1;
                         hard_prob = value;
                     }
@@ -891,12 +877,11 @@ void BinaryGen::prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
                         || ((!pack.phased) && (h + 1) == storedValueCount))
                     {
                         assert(sum <= 1.00000001);
-                        reportedValueCount++;
                         // last value is not recorded, so need to calculate
                         // directly though we currently do not support phasin
                         value = 1.0 - sum;
                         uint32_t g = h + 1;
-                        if (value >= hard_threshold && value > hard_prob) {
+                        if (value >= m_hard_threshold && value > hard_prob) {
                             cur_geno = (g == 0) ? 0 : g + 1;
                             hard_prob = value;
                         }
@@ -1197,7 +1182,7 @@ void BinaryGen::read_score(std::vector<Sample_lite>& current_prs_score,
                            size_t start_index, size_t end_bound,
                            const size_t region_index)
 {
-    if (filter.use_hard) {
+    if (m_hard_coded) {
         hard_code_score(current_prs_score, start_index, end_bound,
                         region_index);
         return;

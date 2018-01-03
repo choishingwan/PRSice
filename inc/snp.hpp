@@ -167,17 +167,6 @@ public:
         region.check(std::to_string(basic.chr), basic.loc, m_flags);
     };
 
-
-    void add_clump(std::vector<size_t>& i)
-    {
-        clump_info.target.insert(clump_info.target.end(), i.begin(), i.end());
-    };
-
-    void add_clump(size_t index, double r2)
-    {
-        clump_info.target.push_back(index);
-        clump_info.r2.push_back(r2);
-    }
     void set_clumped() { clump_info.clumped = true; };
     void clump(std::vector<SNP>& snp_list, double proxy = 2);
     void clump(std::vector<SNP>& snp_list, size_t target_index, double r2,

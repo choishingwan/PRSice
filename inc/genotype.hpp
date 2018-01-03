@@ -137,6 +137,7 @@ protected:
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
     double m_hard_threshold;
+    bool m_hard_coded=false;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<SNP> m_existed_snps;
@@ -177,8 +178,8 @@ protected:
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
     int m_model = +MODEL::ADDITIVE;
-    MISSING_SCORE m_missing_score = +MISSING_SCORE::MEAN_IMPUTE;
-    SCORING m_scoring = +SCORING::AVERAGE;
+    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    SCORING m_scoring = SCORING::AVERAGE;
     struct
     {
         double r2;

@@ -118,25 +118,25 @@ private:
 
     std::string m_cur_file;
     void prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
-                           byte_t const* const end, Context context,
-                           const double hard_threshold);
+                           byte_t const* const end, Context context);
     void prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
                            byte_t const* const end, Context context);
     inline void prob_to_plink(uintptr_t* genotype, std::vector<byte_t> buffer,
                               Context context)
     {
+        std::vector<byte_t>* buffer2;
+        uncompress_probability_data(context, buffer, buffer2);
+
         if ((context.flags & e_Layout) == e_Layout0
             || (context.flags & e_Layout) == e_Layout1)
         {
-            prob_to_plink_v11(genotype, &(*buffer)[0],
-                              &(*buffer)[0] + buffer->size(), context,
-                              m_hard_threshold);
+            prob_to_plink_v11(genotype, &(*buffer2)[0],
+                              &(*buffer2)[0] + buffer2->size(), context);
         }
         else
         {
-            prob_to_plink_v12(genotype, &(*buffer)[0],
-                              &(*buffer)[0] + buffer->size(), context,
-                              m_hard_threshold);
+            prob_to_plink_v12(genotype, &(*buffer2)[0],
+                              &(*buffer2)[0] + buffer2->size(), context);
         }
     }
     inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
@@ -157,11 +157,10 @@ private:
             m_cur_file = file_name;
         }
         auto&& context = m_context_map[file_name];
-        std::vector<byte_t> buffer1, buffer2;
+        std::vector<byte_t> buffer1;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        read_genotype_data_block(m_bgen_file, context, buffer1);
-        uncompress_probability_data(context, buffer1, buffer2);
-        prob_to_plink(genotype, buffer2, context);
+        read_genotype_data_block(m_bgen_file, context, &buffer1);
+        prob_to_plink(genotype, buffer1, context);
     };
 
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,
@@ -230,13 +229,6 @@ private:
 
     std::ifstream m_bgen_file;
 
-
-    /** DON'T TOUCH      */
-    // For our use case, we might be able to directly get the PRS
-    // or the expected value without getting the whole vector
-    // which I imagine can speed up the bgen read rather quickly
-    // however, that'd = rewriting my own parsing
-
     struct GenotypeDataBlock
     {
         uint32_t numberOfSamples;
@@ -248,10 +240,19 @@ private:
         byte_t const* buffer;
         byte_t const* end;
     };
+
     GenotypeDataBlock init_genoData(Context const& context,
                                     byte_t const* buffer,
                                     byte_t const* const end);
 
+    template <typename FloatType>
+    FloatType convert_from_integer_representation(uint16_t number,
+                                                  FloatType factor)
+    {
+        FloatType result = number;
+        result /= factor;
+        return result;
+    }
     uint32_t n_choose_k(uint32_t n, uint32_t k)
     {
         if (k == 0) {
