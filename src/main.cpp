@@ -69,8 +69,7 @@ int main(int argc, char* argv[])
         reporter.report(error.what());
         return -1;
     }
-    if (!commander.ref_name().empty())
-    {
+    if (!commander.ref_name().empty()) {
         reference_file = factory.createGenotype(
             commander.ref_name(), commander.ref_type(), commander.thread(),
             commander.ignore_fid(), commander.nonfounders(),
@@ -114,10 +113,10 @@ int main(int argc, char* argv[])
         target_file->read_base(commander, region, reporter);
         // get the sort by p inex vector for target
         // so that we can still find out the relative coordinates of each SNPs
-        if(!target_file->sort_by_p()){
-        		std::string error_message = "No SNPs left for PRSice processing";
-        		reporter.report(error_message);
-        		return -1;
+        if (!target_file->sort_by_p()) {
+            std::string error_message = "No SNPs left for PRSice processing";
+            reporter.report(error_message);
+            return -1;
         }
         // we no longer need the region boundaries
         // as we don't allow multiple base file input
@@ -126,8 +125,7 @@ int main(int argc, char* argv[])
         // output the number of SNPs observed in each sets
         region.print_file(region_out_name);
         // perform clumping (Main problem with memory here)
-        if (!commander.no_clump())
-        {
+        if (!commander.no_clump()) {
             target_file->efficient_clumping(
                 (commander.ref_name().empty()) ? *target_file : *reference_file,
                 reporter);
@@ -140,22 +138,20 @@ int main(int argc, char* argv[])
         // check the phenotype input columns
         prsice.pheno_check(commander, reporter);
         size_t num_pheno = prsice.num_phenotype();
-        if (!perform_prslice)
-        {
-            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
-            {
+        if (!perform_prslice) {
+            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 // initialize the phenotype & independent variable matrix
                 prsice.init_matrix(commander, i_pheno, *target_file, reporter);
                 // go through each region separately
                 // this should reduce the memory usage
-                if (region.size() > 1)
-                { fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0); }
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
+                }
                 for (size_t i_region = 0; i_region < region.size(); ++i_region)
                 {
                     prsice.run_prsice(commander, region.get_name(i_region),
                                       i_pheno, i_region, *target_file);
-                    if (region.size() > 1)
-                    {
+                    if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets",
                                 (double) i_region / (double) region.size()
                                     * 100.0);
@@ -164,8 +160,10 @@ int main(int argc, char* argv[])
                         prsice.output(commander, region, i_pheno, i_region,
                                       *target_file);
                 }
-                if (region.size() > 1)
-                { fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0); } }
+                if (region.size() > 1) {
+                    fprintf(stderr, "\rProcessing %03.2f%% of sets\n", 100.0);
+                }
+            }
             prsice.summarize(commander, reporter);
         }
         else

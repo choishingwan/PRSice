@@ -127,8 +127,7 @@ private:
             if (m_bgen_file.is_open()) m_bgen_file.close();
             std::string bgen_name = file_name + ".bgen";
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-            if (!m_bgen_file.is_open())
-            {
+            if (!m_bgen_file.is_open()) {
                 std::string error_message =
                     "ERROR: Cannot open bgen file: " + file_name;
                 throw std::runtime_error(error_message);
@@ -144,11 +143,9 @@ private:
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
         int shift = 0;
         int index = 0;
-        for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample)
-        {
+        for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample) {
             auto&& prob = probability[i_sample];
-            if (prob.size() != 3)
-            {
+            if (prob.size() != 3) {
                 // this is likely phased
                 std::string message = "ERROR: Currently don't support phased "
                                       "data (It is because the lack of "
@@ -156,10 +153,8 @@ private:
                 throw std::runtime_error(message);
             }
             uintptr_t cur_geno = 1;
-            for (size_t g = 0; g < prob.size(); ++g)
-            {
-                if (prob[g] >= filter.hard_threshold)
-                {
+            for (size_t g = 0; g < prob.size(); ++g) {
+                if (prob[g] >= filter.hard_threshold) {
                     cur_geno = (g == 0) ? 0 : g + 1; // binary code for plink
                     break;
                 }
@@ -170,8 +165,7 @@ private:
                 genotype[index] = 0; // match behaviour of binaryplink
             genotype[index] |= cur_geno << shift;
             shift += 2;
-            if (shift == BITCT)
-            {
+            if (shift == BITCT) {
                 index++;
                 shift = 0;
             }
@@ -192,7 +186,10 @@ private:
                                    m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
                                    m_tmp_genotype.data(), genotype))
-        { throw std::runtime_error("ERROR: Cannot read the bed file!"); } };
+        {
+            throw std::runtime_error("ERROR: Cannot read the bed file!");
+        }
+    };
 
     // borrowed from plink
     uint32_t load_and_collapse_incl(const std::streampos byte_pos,
@@ -205,11 +202,12 @@ private:
                                     uintptr_t* __restrict mainbuf)
     {
         assert(unfiltered_sample_ct);
-        if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
+        if (unfiltered_sample_ct == sample_ct) {
+            rawbuf = mainbuf;
+        }
         load_raw(rawbuf, byte_pos, file_name);
 
-        if (unfiltered_sample_ct != sample_ct)
-        {
+        if (unfiltered_sample_ct != sample_ct) {
             copy_quaterarr_nonempty_subset(rawbuf, sample_include,
                                            unfiltered_sample_ct, sample_ct,
                                            mainbuf);
@@ -218,8 +216,9 @@ private:
         {
             mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
-        if (do_reverse)
-        { reverse_loadbuf(sample_ct, (unsigned char*) mainbuf); }
+        if (do_reverse) {
+            reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+        }
 
         // mainbuf should contains the information
         return 0;
@@ -263,7 +262,9 @@ private:
 
     uint32_t n_choose_k(uint32_t n, uint32_t k)
     {
-        if (k == 0) { return 1; }
+        if (k == 0) {
+            return 1;
+        }
         else if (k == 1)
         {
             return n;
@@ -275,14 +276,12 @@ private:
                                         int* size, uint8_t const bits)
     {
         assert(bits <= 64 - 8);
-        while ((*size) < bits && buffer < end)
-        {
+        while ((*size) < bits && buffer < end) {
             (*data) |= uint64_t(*(reinterpret_cast<byte_t const*>(buffer++)))
                        << (*size);
             (*size) += 8;
         }
-        if ((*size) < bits)
-        {
+        if ((*size) < bits) {
             throw std::runtime_error(
                 "ERROR: BGEN format error! Invalid block size");
         }
@@ -315,8 +314,7 @@ private:
     double get_probability_conversion_factor(uint32_t flags)
     {
         uint32_t layout = flags & e_Layout;
-        if (layout == e_Layout0)
-        {
+        if (layout == e_Layout0) {
             // v1.0-style blocks, deprecated
             return 10000.0;
         }
@@ -353,8 +351,9 @@ private:
     {
         byte_t buffer[sizeof(IntegerType)];
         in_stream.read(reinterpret_cast<char*>(buffer), sizeof(IntegerType));
-        if (!in_stream)
-        { throw std::runtime_error("ERROR: Unable to read bgen file!"); }
+        if (!in_stream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
         read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
                                    integer_ptr);
     }
@@ -366,8 +365,7 @@ private:
     {
         assert(end >= buffer + sizeof(IntegerType));
         *integer_ptr = 0;
-        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i)
-        {
+        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i) {
             (*integer_ptr) |=
                 IntegerType(*reinterpret_cast<byte_t const*>(buffer++))
                 << (8 * byte_i);
@@ -408,21 +406,23 @@ private:
         // data.
         uint32_t const compressionType =
             (context.flags & e_CompressedSNPBlocks);
-        if (compressionType != e_NoCompression)
-        {
+        if (compressionType != e_NoCompression) {
             byte_t const* begin = &compressed_data[0];
             byte_t const* const end =
                 &compressed_data[0] + compressed_data.size();
             uint32_t uncompressed_data_size = 0;
-            if ((context.flags & e_Layout) == e_Layout1)
-            { uncompressed_data_size = 6 * context.number_of_samples; } else
+            if ((context.flags & e_Layout) == e_Layout1) {
+                uncompressed_data_size = 6 * context.number_of_samples;
+            }
+            else
             {
                 begin = read_little_endian_integer(begin, end,
                                                    &uncompressed_data_size);
             }
             buffer->resize(uncompressed_data_size);
-            if (compressionType == e_ZlibCompression)
-            { zlib_uncompress(begin, end, buffer); }
+            if (compressionType == e_ZlibCompression) {
+                zlib_uncompress(begin, end, buffer);
+            }
             else if (compressionType == e_ZstdCompression)
             {
                 throw std::runtime_error(
@@ -444,7 +444,10 @@ private:
         uint32_t payload_size = 0;
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
-        { read_little_endian_integer(aStream, &payload_size); } else
+        {
+            read_little_endian_integer(aStream, &payload_size);
+        }
+        else
         {
             payload_size = 6 * context.number_of_samples;
         }
@@ -469,12 +472,10 @@ private:
         // If we can't read a valid first field we return false; this will
         // indicate EOF. Any other fail to read is an error and an exception
         // will be thrown.
-        if (layout == e_Layout1 || layout == e_Layout0)
-        {
+        if (layout == e_Layout1 || layout == e_Layout0) {
             uint32_t number_of_samples;
             read_little_endian_integer(aStream, &number_of_samples);
-            if (number_of_samples != context.number_of_samples)
-            {
+            if (number_of_samples != context.number_of_samples) {
                 throw std::runtime_error(
                     "ERROR: Mismatched number of samples!");
             }
@@ -492,21 +493,23 @@ private:
         read_length_followed_by_data(aStream, &RSID_size, RSID);
         read_length_followed_by_data(aStream, &chromosome_size, chromosome);
         read_little_endian_integer(aStream, SNP_position);
-        if (layout == e_Layout2)
-        { read_little_endian_integer(aStream, &numberOfAlleles); } else
+        if (layout == e_Layout2) {
+            read_little_endian_integer(aStream, &numberOfAlleles);
+        }
+        else
         {
             numberOfAlleles = 2;
         }
         alleles.reserve(numberOfAlleles);
-        for (uint16_t i = 0; i < numberOfAlleles; ++i)
-        {
+        for (uint16_t i = 0; i < numberOfAlleles; ++i) {
             read_length_followed_by_data(aStream, &allele_size, &allele);
             std::transform(allele.begin(), allele.end(), allele.begin(),
                            ::toupper);
             alleles.push_back(allele);
         }
-        if (!aStream)
-        { throw std::runtime_error("ERROR: Unable to read bgen file!"); }
+        if (!aStream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
         return true;
     }
 
@@ -520,8 +523,9 @@ private:
         read_little_endian_integer(in_stream, length_ptr);
         std::vector<char> buffer(length);
         in_stream.read(&buffer[0], length);
-        if (!in_stream)
-        { throw std::runtime_error("ERROR: Unable to read bgen file!"); }
+        if (!in_stream) {
+            throw std::runtime_error("ERROR: Unable to read bgen file!");
+        }
         string_ptr->assign(buffer.begin(), buffer.end());
     }
 };

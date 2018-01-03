@@ -99,15 +99,12 @@ void magic_num(uint32_t divisor, uint64_t* multp,
     uint32_t ceil_log_2_d;
     uint32_t exponent;
     uint32_t uii;
-    if (divisor & (divisor - 1))
-    {
+    if (divisor & (divisor - 1)) {
         quotient = 0x80000000U / divisor;
         remainder = 0x80000000U - (quotient * divisor);
         ceil_log_2_d = 32 - __builtin_clz(divisor);
-        for (exponent = 0;; exponent++)
-        {
-            if (remainder >= divisor - remainder)
-            {
+        for (exponent = 0;; exponent++) {
+            if (remainder >= divisor - remainder) {
                 quotient = quotient * 2 + 1;
                 remainder = remainder * 2 - divisor;
             }
@@ -118,15 +115,16 @@ void magic_num(uint32_t divisor, uint64_t* multp,
             }
             if ((exponent >= ceil_log_2_d)
                 || (divisor - remainder) <= (1U << exponent))
-            { break; } if ((!has_magic_down) && (remainder <= (1U << exponent)))
             {
+                break;
+            }
+            if ((!has_magic_down) && (remainder <= (1U << exponent))) {
                 has_magic_down = 1;
                 down_multiplier = quotient;
                 down_exponent = exponent;
             }
         }
-        if (exponent < ceil_log_2_d)
-        {
+        if (exponent < ceil_log_2_d) {
             *multp = quotient + 1;
             *pre_shiftp = 0;
             *post_shiftp = 32 + exponent;
@@ -178,7 +176,9 @@ const char* g_species_plural = nullptr;
 static inline int32_t single_letter_chrom(uint32_t letter)
 {
     letter &= 0xdf;
-    if (letter == 'X') { return CHROM_X; }
+    if (letter == 'X') {
+        return CHROM_X;
+    }
     else if (letter == 'Y')
     {
         return CHROM_Y;
@@ -201,8 +201,7 @@ int32_t get_chrom_code_raw(const char* sptr)
     // assumes MAX_CHROM_TEXTNUM_SLEN == 2
     uint32_t first_char_code = (unsigned char) sptr[0];
     uint32_t second_char_code = (unsigned char) sptr[1];
-    if ((first_char_code & 0xdf) == 'C')
-    {
+    if ((first_char_code & 0xdf) == 'C') {
         if (((second_char_code & 0xdf) == 'H')
             && ((((unsigned char) sptr[2]) & 0xdf) == 'R'))
         {
@@ -215,15 +214,16 @@ int32_t get_chrom_code_raw(const char* sptr)
             return -1;
         }
     }
-    if (second_char_code > ' ')
-    {
-        if (sptr[2] > ' ') { return -1; }
+    if (second_char_code > ' ') {
+        if (sptr[2] > ' ') {
+            return -1;
+        }
         const uint32_t first_char_toi = first_char_code - '0';
-        if (first_char_toi < 10)
-        {
+        if (first_char_toi < 10) {
             const uint32_t second_char_toi = second_char_code - '0';
-            if (second_char_toi < 10)
-            { return first_char_toi * 10 + second_char_toi; }
+            if (second_char_toi < 10) {
+                return first_char_toi * 10 + second_char_toi;
+            }
             else if (!first_char_toi)
             {
                 // accept '0X', '0Y', '0M' emitted by Oxford software
@@ -233,20 +233,25 @@ int32_t get_chrom_code_raw(const char* sptr)
         else
         {
             first_char_code &= 0xdf;
-            if (first_char_code == 'X')
-            {
-                if ((second_char_code == 'Y') || (second_char_code == 'y'))
-                { return CHROM_XY; } }
+            if (first_char_code == 'X') {
+                if ((second_char_code == 'Y') || (second_char_code == 'y')) {
+                    return CHROM_XY;
+                }
+            }
             else if (first_char_code == 'M')
             {
-                if ((second_char_code == 'T') || (second_char_code == 't'))
-                { return CHROM_MT; } }
+                if ((second_char_code == 'T') || (second_char_code == 't')) {
+                    return CHROM_MT;
+                }
+            }
         }
     }
     else
     {
         const uint32_t first_char_toi = first_char_code - '0';
-        if (first_char_toi < 10) { return first_char_toi; }
+        if (first_char_toi < 10) {
+            return first_char_toi;
+        }
         else
         {
             return single_letter_chrom(first_char_code);
@@ -260,7 +265,9 @@ int32_t get_chrom_code_raw(const char* sptr)
 int32_t llcmp(const void* aa, const void* bb)
 {
     int64_t diff = *((const int64_t*) aa) - *((const int64_t*) bb);
-    if (diff > 0) { return 1; }
+    if (diff > 0) {
+        return 1;
+    }
     else if (diff < 0)
     {
         return -1;
@@ -290,8 +297,7 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
     __m128i half2;
     __univec acc;
 
-    while (ct >= 30)
-    {
+    while (ct >= 30) {
         ct -= 30;
         vend = &(vptr[30]);
     popcount_vecs_main_loop:
@@ -331,8 +337,7 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct)
-    {
+    if (ct) {
         vend = &(vptr[ct]);
         ct = 0;
         goto popcount_vecs_main_loop;
@@ -355,8 +360,7 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
     __m128i count1, count2, half1, half2;
     __univec acc;
 
-    while (ct >= 30)
-    {
+    while (ct >= 30) {
         ct -= 30;
         vend1 = &(vptr1[30]);
     popcount_vecs_intersect_main_loop:
@@ -390,8 +394,7 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct)
-    {
+    if (ct) {
         vend1 = &(vptr1[ct]);
         ct = 0;
         goto popcount_vecs_intersect_main_loop;
@@ -427,8 +430,7 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
     uintptr_t ulii;
     uintptr_t uljj;
     lptr_six_end = &(lptr[word_ct - (word_ct % 6)]);
-    while (lptr < lptr_six_end)
-    {
+    while (lptr < lptr_six_end) {
         loader = *lptr++;
         ulii = loader - ((loader >> 1) & FIVEMASK);
         loader = *lptr++;
@@ -457,7 +459,9 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
         tot += (tmp_stor * 0x01010101) >> 24;
     }
 #endif
-    while (lptr < lptr_end) { tot += popcount_long(*lptr++); }
+    while (lptr < lptr_end) {
+        tot += popcount_long(*lptr++);
+    }
     return tot;
 }
 
@@ -481,8 +485,7 @@ uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
     uintptr_t ulii;
     uintptr_t uljj;
     lptr1_six_end = &(lptr1[word_ct - (word_ct % 6)]);
-    while (lptr1 < lptr1_six_end)
-    {
+    while (lptr1 < lptr1_six_end) {
         loader = (*lptr1++) & (*lptr2++);
         ulii = loader - ((loader >> 1) & FIVEMASK);
         loader = (*lptr1++) & (*lptr2++);
@@ -511,7 +514,9 @@ uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
         tot += (tmp_stor * 0x01010101) >> 24;
     }
 #endif
-    while (lptr1 < lptr1_end) { tot += popcount_long((*lptr1++) & (*lptr2++)); }
+    while (lptr1 < lptr1_end) {
+        tot += popcount_long((*lptr1++) & (*lptr2++));
+    }
     return tot;
 }
 
@@ -523,7 +528,9 @@ void fill_all_bits(uintptr_t ct, uintptr_t* bitarr)
     uintptr_t quotient = ct / BITCT;
     uintptr_t remainder = ct % BITCT;
     fill_ulong_one(quotient, bitarr);
-    if (remainder) { bitarr[quotient] = (ONELU << remainder) - ONELU; }
+    if (remainder) {
+        bitarr[quotient] = (ONELU << remainder) - ONELU;
+    }
 }
 
 void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
@@ -544,12 +551,10 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     __m128i vjj;
     // todo: use this vector loop even when loadbuf is unaligned, so stuff like
     // recode_load_to() is faster
-    if (!(((uintptr_t) loadbuf) & 15))
-    {
+    if (!(((uintptr_t) loadbuf) & 15)) {
         loadbuf_alias = (__m128i*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             vii = *loadbuf_alias;
             // we want to exchange 00 and 11, and leave 01/10 untouched.  So
             // make vjj := 11 iff vii is 00/11, and vjj := 00 otherwise; then
@@ -565,8 +570,7 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = 0x55555555 & (~(uii ^ (uii >> 1)));
             ujj *= 3;
@@ -575,12 +579,10 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
         loadbuf = (unsigned char*) loadbuf_alias32;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3))
-    {
+    if (!(((uintptr_t) loadbuf) & 3)) {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = 0x55555555 & (~(uii ^ (uii >> 1)));
             ujj *= 3;
@@ -589,15 +591,16 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
         loadbuf = (unsigned char*) loadbuf_alias32;
     }
 #endif
-    for (; loadbuf < loadbuf_end;)
-    {
+    for (; loadbuf < loadbuf_end;) {
         ucc = *loadbuf;
         ucc2 = 0x55 & (~(ucc ^ (ucc >> 1)));
         ucc2 *= 3;
         *loadbuf++ = ucc ^ ucc2;
     }
     uii = unfiltered_sample_ct & 3;
-    if (uii) { loadbuf[-1] &= (0xff >> (8 - 2 * uii)); }
+    if (uii) {
+        loadbuf[-1] &= (0xff >> (8 - 2 * uii));
+    }
 }
 
 void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
@@ -617,24 +620,19 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
     const uint32_t word_write_halfshift_end = subset_size % BITCT2;
     uint32_t word_write_halfshift = 0;
     // if < 2/3-filled, use sparse copy algorithm
-    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU))
-    {
+    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU)) {
         uint32_t subset_mask_widx = 0;
-        while (1)
-        {
+        while (1) {
             const uintptr_t cur_include_word = subset_mask[subset_mask_widx];
-            if (cur_include_word)
-            {
+            if (cur_include_word) {
                 uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
                 uint32_t cur_include_halfword = (uint32_t) cur_include_word;
 #else
                 uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-                while (1)
-                {
-                    if (cur_include_halfword)
-                    {
+                while (1) {
+                    if (cur_include_halfword) {
                         uintptr_t raw_quaterarr_word =
                             raw_quaterarr[subset_mask_widx * 2 + wordhalf_idx];
                         do
@@ -645,8 +643,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                                 ((raw_quaterarr_word >> (rqa_idx_lowbits * 2))
                                  & 3)
                                 << (word_write_halfshift * 2);
-                            if (++word_write_halfshift == BITCT2)
-                            {
+                            if (++word_write_halfshift == BITCT2) {
                                 *output_quaterarr++ = cur_output_word;
                                 word_write_halfshift = 0;
                                 cur_output_word = 0;
@@ -654,7 +651,9 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                             cur_include_halfword &= cur_include_halfword - 1;
                         } while (cur_include_halfword);
                     }
-                    if (wordhalf_idx) { break; }
+                    if (wordhalf_idx) {
+                        break;
+                    }
                     wordhalf_idx++;
 #ifdef __LP64__
                     cur_include_halfword = cur_include_word >> 32;
@@ -662,12 +661,12 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                     cur_include_halfword = cur_include_word >> 16;
 #endif
                 }
-                if (output_quaterarr == output_quaterarr_last)
-                {
-                    if (word_write_halfshift == word_write_halfshift_end)
-                    {
-                        if (word_write_halfshift_end)
-                        { *output_quaterarr_last = cur_output_word; } return;
+                if (output_quaterarr == output_quaterarr_last) {
+                    if (word_write_halfshift == word_write_halfshift_end) {
+                        if (word_write_halfshift_end) {
+                            *output_quaterarr_last = cur_output_word;
+                        }
+                        return;
                     }
                 }
             }
@@ -675,8 +674,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
         }
     }
     // blocked copy
-    while (1)
-    {
+    while (1) {
         const uintptr_t cur_include_word = *subset_mask++;
         uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
@@ -684,11 +682,9 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
 #else
         uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-        while (1)
-        {
+        while (1) {
             uintptr_t raw_quaterarr_word = *raw_quaterarr++;
-            while (cur_include_halfword)
-            {
+            while (cur_include_halfword) {
                 uint32_t rqa_idx_lowbits = CTZLU(cur_include_halfword);
                 uintptr_t halfword_invshifted =
                     (~cur_include_halfword) >> rqa_idx_lowbits;
@@ -698,8 +694,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                 uint32_t block_len_limit = BITCT2 - word_write_halfshift;
                 cur_output_word |= raw_quaterarr_curblock_unmasked
                                    << (2 * word_write_halfshift);
-                if (rqa_block_len < block_len_limit)
-                {
+                if (rqa_block_len < block_len_limit) {
                     word_write_halfshift += rqa_block_len;
                     cur_output_word &=
                         (ONELU << (word_write_halfshift * 2)) - ONELU;
@@ -709,8 +704,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                     // no need to mask, extra bits vanish off the high end
                     *output_quaterarr++ = cur_output_word;
                     word_write_halfshift = rqa_block_len - block_len_limit;
-                    if (word_write_halfshift)
-                    {
+                    if (word_write_halfshift) {
                         cur_output_word =
                             (raw_quaterarr_curblock_unmasked
                              >> (2 * block_len_limit))
@@ -725,7 +719,9 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                 cur_include_halfword &=
                     (~(ONELU << (rqa_block_len + rqa_idx_lowbits))) + ONELU;
             }
-            if (wordhalf_idx) { break; }
+            if (wordhalf_idx) {
+                break;
+            }
             wordhalf_idx++;
 #ifdef __LP64__
             cur_include_halfword = cur_include_word >> 32;
@@ -733,12 +729,12 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
             cur_include_halfword = cur_include_word >> 16;
 #endif
         }
-        if (output_quaterarr == output_quaterarr_last)
-        {
-            if (word_write_halfshift == word_write_halfshift_end)
-            {
-                if (word_write_halfshift_end)
-                { *output_quaterarr_last = cur_output_word; } return;
+        if (output_quaterarr == output_quaterarr_last) {
+            if (word_write_halfshift == word_write_halfshift_end) {
+                if (word_write_halfshift_end) {
+                    *output_quaterarr_last = cur_output_word;
+                }
+                return;
             }
         }
     }
@@ -880,10 +876,13 @@ uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
 {
     assert(unfiltered_sample_ct);
     uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-    if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
-    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf))
-    { return RET_READ_FAIL; } if (unfiltered_sample_ct != sample_ct)
-    {
+    if (unfiltered_sample_ct == sample_ct) {
+        rawbuf = mainbuf;
+    }
+    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
+        return RET_READ_FAIL;
+    }
+    if (unfiltered_sample_ct != sample_ct) {
         copy_quaterarr_nonempty_subset(
             rawbuf, sample_include, unfiltered_sample_ct, sample_ct, mainbuf);
     }
@@ -891,7 +890,9 @@ uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
     {
         mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
     }
-    if (do_reverse) { reverse_loadbuf(sample_ct, (unsigned char*) mainbuf); }
+    if (do_reverse) {
+        reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+    }
     // mainbuf should contains the information
     return 0;
 }
@@ -915,13 +916,11 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     __m128i* iivp;
     __m128i vii;
     __m128i vjj;
-    if (!(((uintptr_t) loadbuf) & 15))
-    {
+    if (!(((uintptr_t) loadbuf) & 15)) {
         loadbuf_alias = (__m128i*) loadbuf;
         iivp = (__m128i*) sample_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             vii = *loadbuf_alias;
             vjj = _mm_and_si128(_mm_andnot_si128(vii, _mm_srli_epi64(vii, 1)),
                                 *iivp++);
@@ -935,8 +934,7 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         loadbuf_alias32 = (uint32_t*) loadbuf;
         sample_include_quaterarr_alias32 = (uint32_t*) sample_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = ((uii >> 1) & (~uii)) & (*sample_include_quaterarr_alias32++);
             *loadbuf_alias32++ = uii - ujj;
@@ -949,12 +947,10 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         iicp = (unsigned char*) sample_include_quaterarr;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3))
-    {
+    if (!(((uintptr_t) loadbuf) & 3)) {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *loadbuf_alias32;
             ujj = ((uii >> 1) & (~uii)) & (*sample_include_quaterarr++);
             *loadbuf_alias32++ = uii - ujj;
@@ -963,8 +959,7 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     }
     iicp = (unsigned char*) sample_include_quaterarr;
 #endif
-    for (; loadbuf < loadbuf_end;)
-    {
+    for (; loadbuf < loadbuf_end;) {
         ucc = *loadbuf;
         ucc2 = ((ucc >> 1) & (~ucc)) & (*iicp++);
         *loadbuf++ = ucc - ucc2;
@@ -997,14 +992,12 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     __m128i vii;
     __m128i vjj;
     __m128i vkk;
-    if (!(((uintptr_t) loadbuf) & 15))
-    {
+    if (!(((uintptr_t) loadbuf) & 15)) {
         loadbuf_alias = (__m128i*) loadbuf;
         iivp = (__m128i*) sample_include_quaterarr;
         imivp = (__m128i*) sample_male_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             // sample_include_quaterarr & ~sample_male_include_quaterarr: force
             // to 01 sample_male_include_quaterarr: convert 10 to 01, keep
             // everything else
@@ -1030,8 +1023,7 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         sample_male_include_quaterarr_alias32 =
             (uint32_t*) sample_male_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 16;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *sample_male_include_quaterarr_alias32++;
             ujj = *sample_include_quaterarr_alias32++;
             ukk = (*loadbuf_alias32) & (uii * 3);
@@ -1048,12 +1040,10 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         imicp = (unsigned char*) sample_male_include_quaterarr;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3))
-    {
+    if (!(((uintptr_t) loadbuf) & 3)) {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / 16;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
-        {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
             uii = *sample_male_include_quaterarr++;
             ujj = *sample_include_quaterarr++;
             ukk = (*loadbuf_alias32) & (uii * 3);
@@ -1065,8 +1055,7 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     iicp = (unsigned char*) sample_include_quaterarr;
     imicp = (unsigned char*) sample_male_include_quaterarr;
 #endif
-    for (; loadbuf < loadbuf_end;)
-    {
+    for (; loadbuf < loadbuf_end;) {
         ucc = *imicp++;
         ucc2 = *iicp++;
         ucc3 = (*loadbuf) & (ucc * 3);
@@ -1090,8 +1079,7 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     double adiv3 = coef_a * (1.0 / 3.0);
     double sq;
     double dxx;
-    if (r2 < q3)
-    {
+    if (r2 < q3) {
         // three real roots
         sq = sqrt(qq);
         dxx = acos(rr / (qq * sq)) * (1.0 / 3.0);
@@ -1100,12 +1088,10 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
         solutions[1] = sq * cos(dxx + (2.0 * PI / 3.0)) - adiv3;
         solutions[2] = sq * cos(dxx - (2.0 * PI / 3.0)) - adiv3;
         // now sort and check for within-epsilon equality
-        if (solutions[0] > solutions[1])
-        {
+        if (solutions[0] > solutions[1]) {
             dxx = solutions[0];
             solutions[0] = solutions[1];
-            if (dxx > solutions[2])
-            {
+            if (dxx > solutions[2]) {
                 solutions[1] = solutions[2];
                 solutions[2] = dxx;
             }
@@ -1113,8 +1099,7 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
             {
                 solutions[1] = dxx;
             }
-            if (solutions[0] > solutions[1])
-            {
+            if (solutions[0] > solutions[1]) {
                 dxx = solutions[0];
                 solutions[0] = solutions[1];
                 solutions[1] = dxx;
@@ -1126,26 +1111,27 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
             solutions[1] = solutions[2];
             solutions[2] = dxx;
         }
-        if (solutions[1] - solutions[0] < EPSILON)
-        {
+        if (solutions[1] - solutions[0] < EPSILON) {
             solutions[1] = solutions[2];
             return (solutions[1] - solutions[0] < EPSILON) ? 1 : 2;
         }
         return (solutions[2] - solutions[1] < EPSILON) ? 2 : 3;
     }
     dxx = -pow(fabs(rr) + sqrt(r2 - q3), 1.0 / 3.0);
-    if (dxx == 0.0)
-    {
+    if (dxx == 0.0) {
         solutions[0] = -adiv3;
         return 1;
     }
-    if (rr < 0.0) { dxx = -dxx; }
+    if (rr < 0.0) {
+        dxx = -dxx;
+    }
     sq = qq / dxx;
     solutions[0] = dxx + sq - adiv3;
     // use of regular epsilon here has actually burned us
-    if (fabs(dxx - sq) >= (EPSILON * 8)) { return 1; }
-    if (dxx >= 0.0)
-    {
+    if (fabs(dxx - sq) >= (EPSILON * 8)) {
+        return 1;
+    }
+    if (dxx >= 0.0) {
         solutions[1] = solutions[0];
         solutions[0] = -dxx - adiv3;
     }

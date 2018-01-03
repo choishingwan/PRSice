@@ -105,9 +105,10 @@ public:
 
     int get_category(double p) const
     {
-        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i)
-        {
-            if (p <= p_thresholds.barlevel[i]) { return i; }
+        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i) {
+            if (p <= p_thresholds.barlevel[i]) {
+                return i;
+            }
         }
         if (p > p_thresholds.barlevel.back())
             return p_thresholds.barlevel.size();
@@ -435,8 +436,7 @@ private:
                             bool& target_boolean, bool& error,
                             const std::string& c)
     {
-        if (message.find(c) != message.end())
-        {
+        if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -457,14 +457,12 @@ private:
                           std::string& error_message, bool& error)
     {
         std::string input = in;
-        if (input.empty())
-        {
+        if (input.empty()) {
             error_message.append("ERROR: Model cannot be empty!\n");
             error = true;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'A')
-        {
+        if (input.at(0) == 'A') {
             input = "add";
             prs_calculation.model = +MODEL::ADDITIVE;
         }
@@ -488,8 +486,9 @@ private:
             error = true;
             error_message.append("ERROR: Unrecognized model: " + input + "!\n");
         }
-        if (message.find("model") != message.end())
-        { error_message.append("Warning: Duplicated argument --model\n"); }
+        if (message.find("model") != message.end()) {
+            error_message.append("Warning: Duplicated argument --model\n");
+        }
         message["model"] = input;
     }
     inline void set_string(const std::string& input,
@@ -498,8 +497,7 @@ private:
                            const std::string& c, std::string& error_message)
     {
 
-        if (message.find(c) != message.end())
-        {
+        if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -510,9 +508,10 @@ private:
     inline int index_check(const std::string& target,
                            const std::vector<std::string>& ref) const
     {
-        for (size_t i = 0; i < ref.size(); ++i)
-        {
-            if (target.compare(ref[i]) == 0) { return i; }
+        for (size_t i = 0; i < ref.size(); ++i) {
+            if (target.compare(ref[i]) == 0) {
+                return i;
+            }
         }
         return -1;
     };
@@ -524,15 +523,13 @@ private:
         try
         {
             int index = misc::convert<int>(optarg);
-            if (index >= max)
-            {
+            if (index >= max) {
                 error = true;
                 error_message.append("ERROR: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
-            if (index < 0)
-            {
+            if (index < 0) {
                 error = true;
                 error_message.append("ERROR: Negative " + name + " index!\n");
                 return -1;

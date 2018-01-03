@@ -62,19 +62,18 @@ public:
         bool perm = commander.permute();
         m_seed = commander.seed();
         bool has_binary = false;
-        for (auto&& b : m_target_binary)
-        {
-            if (b)
-            {
+        for (auto&& b : m_target_binary) {
+            if (b) {
                 has_binary = true;
                 break;
             }
         }
-        if (perm)
-        {
+        if (perm) {
             // first check for ridiculously large sample size
             // allow 10 GB here
-            if (CHAR_BIT * sample_ct > 1000000000) { m_perm_per_slice = 1; }
+            if (CHAR_BIT * sample_ct > 1000000000) {
+                m_perm_per_slice = 1;
+            }
             else
             {
                 // in theory, most of the time, perm_per_slice should be
@@ -88,10 +87,8 @@ public:
                 // Additional slice to keep
                 m_remain_slice = m_num_perm % m_perm_per_slice;
             }
-            if (has_binary)
-            {
-                if (!m_logit_perm)
-                {
+            if (has_binary) {
+                if (!m_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform  linear regression instead of logistic "

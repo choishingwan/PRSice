@@ -25,22 +25,18 @@ void Reporter::report(const std::string& input, bool wrap)
     // split by new line
     std::vector<std::string> paragraph;
     split(paragraph, input.c_str(), '\n');
-    for (auto&& message : paragraph)
-    {
+    for (auto&& message : paragraph) {
         std::vector<std::string> line;
         split(line, message.c_str(), ' ');
-        if (!wrap)
-        {
+        if (!wrap) {
             std::cerr << message << '\n';
             m_log_file << message << '\n';
         }
         else
         {
             size_t cur_length = 0;
-            for (auto&& word : line)
-            {
-                if (word.length() + cur_length >= m_width)
-                {
+            for (auto&& word : line) {
+                if (word.length() + cur_length >= m_width) {
                     cur_length = word.length() + 1;
                     std::cerr << '\n';
                     m_log_file << '\n';

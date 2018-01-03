@@ -61,16 +61,18 @@ public:
         if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
             && basic.rs.compare(Ref.basic.rs) == 0)
         {
-            if (basic.ref.compare(Ref.basic.ref) == 0)
-            {
-                if (!basic.alt.empty() && !Ref.basic.alt.empty())
-                { return basic.alt.compare(Ref.basic.alt) == 0; } else
+            if (basic.ref.compare(Ref.basic.ref) == 0) {
+                if (!basic.alt.empty() && !Ref.basic.alt.empty()) {
+                    return basic.alt.compare(Ref.basic.alt) == 0;
+                }
+                else
                     return true;
             }
             else if (complement(basic.ref).compare(Ref.basic.ref) == 0)
             {
-                if (!basic.alt.empty() && !Ref.basic.alt.empty())
-                { return complement(basic.alt).compare(Ref.basic.alt) == 0; }
+                if (!basic.alt.empty() && !Ref.basic.alt.empty()) {
+                    return complement(basic.alt).compare(Ref.basic.alt) == 0;
+                }
                 else
                     return true;
             }
@@ -78,10 +80,15 @@ public:
             {
                 if (basic.ref.compare(Ref.basic.alt) == 0
                     && basic.alt.compare(Ref.basic.ref) == 0)
-                { return true; }
+                {
+                    return true;
+                }
                 if (complement(basic.ref).compare(Ref.basic.alt) == 0
                     && complement(basic.alt).compare(Ref.basic.alt) == 0)
-                { return true; } return false;
+                {
+                    return true;
+                }
+                return false;
             }
             else
                 return false; // cannot flip nor match
@@ -103,22 +110,24 @@ public:
         misc::trim(basic.alt);
         if (chr != -1 && basic.chr != -1 && chr != basic.chr) return false;
         if (loc != -1 && basic.loc != -1 && loc != basic.loc) return false;
-        if (basic.ref.compare(ref) == 0)
-        {
-            if (!basic.alt.empty() && !alt.empty())
-            { return basic.alt.compare(alt) == 0; } else
+        if (basic.ref.compare(ref) == 0) {
+            if (!basic.alt.empty() && !alt.empty()) {
+                return basic.alt.compare(alt) == 0;
+            }
+            else
                 return true;
         }
         else if (complement(basic.ref).compare(ref) == 0)
         {
-            if (!basic.alt.empty() && !alt.empty())
-            { return complement(basic.alt).compare(alt) == 0; } else
+            if (!basic.alt.empty() && !alt.empty()) {
+                return complement(basic.alt).compare(alt) == 0;
+            }
+            else
                 return true;
         }
         else if (!basic.alt.empty() && !alt.empty())
         {
-            if (basic.ref.compare(alt) == 0 && basic.alt.compare(ref) == 0)
-            {
+            if (basic.ref.compare(alt) == 0 && basic.alt.compare(ref) == 0) {
                 flipped = true;
                 return true;
             }

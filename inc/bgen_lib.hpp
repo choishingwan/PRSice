@@ -135,8 +135,7 @@ namespace bgen
         std::string to_hex(I i, I2 end_i)
         {
             std::ostringstream o;
-            for (std::size_t count = 0; i < end_i; ++i, ++count)
-            {
+            for (std::size_t count = 0; i < end_i; ++i, ++count) {
                 if (count % 4 == 0) o << "|";
                 o << std::hex << std::setw(2) << std::setfill('0')
                   << static_cast<int>(static_cast<unsigned char>(*i));
@@ -154,7 +153,9 @@ namespace bgen
         template <typename Integer>
         Integer n_choose_k(Integer n, Integer k)
         {
-            if (k == 0) { return 1; }
+            if (k == 0) {
+                return 1;
+            }
             else if (k == 1)
             {
                 return n;
@@ -403,8 +404,7 @@ namespace bgen
     {
         assert(end >= buffer + sizeof(IntegerType));
         *integer_ptr = 0;
-        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i)
-        {
+        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i) {
             (*integer_ptr) |=
                 IntegerType(*reinterpret_cast<byte_t const*>(buffer++))
                 << (8 * byte_i);
@@ -421,7 +421,9 @@ namespace bgen
     {
         byte_t buffer[sizeof(IntegerType)];
         in_stream.read(reinterpret_cast<char*>(buffer), sizeof(IntegerType));
-        if (!in_stream) { throw BGenError(); }
+        if (!in_stream) {
+            throw BGenError();
+        }
         read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
                                    integer_ptr);
     }
@@ -435,7 +437,9 @@ namespace bgen
         read_little_endian_integer(in_stream, length_ptr);
         std::vector<char> buffer(length);
         in_stream.read(&buffer[0], length);
-        if (!in_stream) { throw BGenError(); }
+        if (!in_stream) {
+            throw BGenError();
+        }
         string_ptr->assign(buffer.begin(), buffer.end());
     }
 
@@ -445,8 +449,10 @@ namespace bgen
                                         IntegerType const integer)
     {
         assert(end >= buffer + sizeof(IntegerType));
-        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i)
-        { *buffer++ = (integer >> (8 * byte_i)) & 0xff; } return buffer;
+        for (std::size_t byte_i = 0; byte_i < sizeof(IntegerType); ++byte_i) {
+            *buffer++ = (integer >> (8 * byte_i)) & 0xff;
+        }
+        return buffer;
     }
 
     // Write data contained in a std::string to the buffer, preceded
@@ -506,12 +512,10 @@ namespace bgen
         bytes_read += 8;
         assert(number_of_samples == context.number_of_samples);
 
-        for (uint32_t i = 0; i < number_of_samples; ++i)
-        {
+        for (uint32_t i = 0; i < number_of_samples; ++i) {
             read_length_followed_by_data(aStream, &identifier_size,
                                          &identifier);
-            if (aStream)
-            {
+            if (aStream) {
                 bytes_read += sizeof(identifier_size) + identifier_size;
                 setter(identifier);
             }
@@ -543,8 +547,7 @@ namespace bgen
         // If we can't read a valid first field we return false; this will
         // indicate EOF. Any other fail to read is an error and an exception
         // will be thrown.
-        if (layout == e_Layout1 || layout == e_Layout0)
-        {
+        if (layout == e_Layout1 || layout == e_Layout0) {
             uint32_t number_of_samples;
             try
             {
@@ -554,8 +557,9 @@ namespace bgen
             {
                 return false;
             }
-            if (number_of_samples != context.number_of_samples)
-            { throw BGenError(); }
+            if (number_of_samples != context.number_of_samples) {
+                throw BGenError();
+            }
             read_length_followed_by_data(aStream, &SNPID_size, SNPID);
         }
         else if (layout == e_Layout2)
@@ -577,19 +581,19 @@ namespace bgen
         read_length_followed_by_data(aStream, &RSID_size, RSID);
         read_length_followed_by_data(aStream, &chromosome_size, chromosome);
         read_little_endian_integer(aStream, SNP_position);
-        if (layout == e_Layout2)
-        { read_little_endian_integer(aStream, &numberOfAlleles); } else
+        if (layout == e_Layout2) {
+            read_little_endian_integer(aStream, &numberOfAlleles);
+        }
+        else
         {
             numberOfAlleles = 2;
         }
         set_number_of_alleles(numberOfAlleles);
-        for (uint16_t i = 0; i < numberOfAlleles; ++i)
-        {
+        for (uint16_t i = 0; i < numberOfAlleles; ++i) {
             read_length_followed_by_data(aStream, &allele_size, &allele);
             set_allele(i, allele);
         }
-        if (!aStream)
-        {
+        if (!aStream) {
 #if DEBUG_BGEN_FORMAT
             std::cerr << "bgen: layout = " << layout
                       << ", alleles = " << numberOfAlleles << ".\n"
@@ -797,7 +801,9 @@ namespace bgen
                                        ValueType const value_type)
             {
                 assert(m_state == eSampleSet);
-                if (ploidy != uint32_t(2)) { throw BGenError(); }
+                if (ploidy != uint32_t(2)) {
+                    throw BGenError();
+                }
                 assert(number_of_entries == uint32_t(3));
                 assert(order_type == ePerUnorderedGenotype);
                 m_entry_i = 0;
@@ -812,8 +818,7 @@ namespace bgen
                 assert(m_entry_i == 0 || m_missing == eMissing);
                 m_values[m_entry_i++] = 0.0;
                 m_missing = eMissing;
-                if (m_entry_i == 3)
-                {
+                if (m_entry_i == 3) {
                     bake(&m_values[0]);
                     m_state = eBaked;
                 }
@@ -829,9 +834,10 @@ namespace bgen
                 assert(m_missing == eNotSet || m_missing == eNotMissing);
                 assert(m_entry_i < 3);
                 m_values[m_entry_i++] = value;
-                if (value != 0.0) { m_missing = eNotMissing; }
-                if (m_entry_i == 3)
-                {
+                if (value != 0.0) {
+                    m_missing = eNotMissing;
+                }
+                if (m_entry_i == 3) {
                     bake(&m_values[0]);
                     m_state = eBaked;
                 }
@@ -888,32 +894,32 @@ namespace bgen
                                     byte_t const* const end,
                                     Context const& context, Setter& setter)
         {
-            if (end != buffer + 6 * context.number_of_samples)
-            { throw BGenError(); }
+            if (end != buffer + 6 * context.number_of_samples) {
+                throw BGenError();
+            }
             setter.initialise(context.number_of_samples, 2);
             uint32_t const ploidy = 2;
             call_set_min_max_ploidy(setter, 2ul, 2ul, 2ul, false);
             double const probability_conversion_factor =
                 impl::get_probability_conversion_factor(context.flags);
-            for (uint32_t i = 0; i < context.number_of_samples; ++i)
-            {
+            for (uint32_t i = 0; i < context.number_of_samples; ++i) {
                 setter.set_sample(i);
                 setter.set_number_of_entries(ploidy, 3, ePerUnorderedGenotype,
                                              eProbability);
                 assert(end >= buffer + 6);
                 std::vector<uint16_t> prob_vec;
                 double sum = 0.0;
-                for (std::size_t g = 0; g < 3; ++g)
-                {
+                for (std::size_t g = 0; g < 3; ++g) {
                     uint16_t prob;
                     buffer = read_little_endian_integer(buffer, end, &prob);
                     prob_vec.push_back(prob);
                     sum += prob;
                 }
-                for (std::size_t g = 0; g < 3; ++g)
-                {
-                    if (sum == 0.0)
-                    { setter.set_value(g, genfile::MissingValue()); } else
+                for (std::size_t g = 0; g < 3; ++g) {
+                    if (sum == 0.0) {
+                        setter.set_value(g, genfile::MissingValue());
+                    }
+                    else
                     {
                         setter.set_value(
                             g, impl::convert_from_integer_representation(
@@ -1013,11 +1019,17 @@ namespace bgen
                                                   byte_t const* buffer,
                                                   byte_t const* const end)
         {
-            if (end < buffer + 8) { throw BGenError(); }
+            if (end < buffer + 8) {
+                throw BGenError();
+            }
             uint32_t N = 0;
             buffer = read_little_endian_integer(buffer, end, &N);
-            if (N != context.number_of_samples) { throw BGenError(); }
-            if (end < buffer + N + 2) { throw BGenError(); }
+            if (N != context.number_of_samples) {
+                throw BGenError();
+            }
+            if (end < buffer + N + 2) {
+                throw BGenError();
+            }
 
             numberOfSamples = N;
             buffer = read_little_endian_integer(buffer, end, &numberOfAlleles);
@@ -1086,32 +1098,30 @@ namespace bgen
                               << ", data = " << bgen::impl::to_hex(buffer, end)
                               << ".\n";
 #endif
-                    if (setter.set_sample(i))
-                    {
+                    if (setter.set_sample(i)) {
                         setter.set_number_of_entries(
                             ploidy, valueCount,
                             pack.phased ? ePerPhasedHaplotypePerAllele
                                         : ePerUnorderedGenotype,
                             eProbability);
-                        if (missing)
-                        {
+                        if (missing) {
                             // Consume dummy zero values, emit missing values.
-                            for (uint32_t h = 0; h < storedValueCount; ++h)
-                            {
+                            for (uint32_t h = 0; h < storedValueCount; ++h) {
                                 buffer = impl::read_bits_from_buffer(
                                     buffer, end, &data, &size, bits);
                                 (void) impl::parse_bit_representation(
                                     &data, &size, bits);
                             }
-                            for (uint32_t h = 0; h < valueCount; ++h)
-                            { setter.set_value(h, genfile::MissingValue()); } }
+                            for (uint32_t h = 0; h < valueCount; ++h) {
+                                setter.set_value(h, genfile::MissingValue());
+                            }
+                        }
                         else
                         {
                             // Consume values and interpret them.
                             double sum = 0.0;
                             uint32_t reportedValueCount = 0;
-                            for (uint32_t h = 0; h < storedValueCount; ++h)
-                            {
+                            for (uint32_t h = 0; h < storedValueCount; ++h) {
                                 buffer = impl::read_bits_from_buffer(
                                     buffer, end, &data, &size, bits);
                                 double const value =
@@ -1145,8 +1155,7 @@ namespace bgen
                     else
                     {
                         // just consume data, don't set anything.
-                        for (uint32_t h = 0; h < storedValueCount; ++h)
-                        {
+                        for (uint32_t h = 0; h < storedValueCount; ++h) {
                             buffer = impl::read_bits_from_buffer(
                                 buffer, end, &data, &size, bits);
                             impl::parse_bit_representation(&data, &size, bits);
@@ -1223,8 +1232,7 @@ namespace bgen
                 m_p += nSamples + 4;
                 m_data = 0;
                 m_offset = 0;
-                if (m_number_of_samples == 0)
-                {
+                if (m_number_of_samples == 0) {
                     m_ploidyExtent[0] = 0;
                     m_order_type = ePerPhasedHaplotypePerAllele;
                 }
@@ -1263,15 +1271,20 @@ namespace bgen
 
                 assert(order_type == ePerUnorderedGenotype
                        || order_type == ePerPhasedHaplotypePerAllele);
-                if (ploidy > 1)
-                {
-                    if (m_order_type == eUnknownOrderType)
-                    { m_order_type = order_type; } else
+                if (ploidy > 1) {
+                    if (m_order_type == eUnknownOrderType) {
+                        m_order_type = order_type;
+                    }
+                    else
                     {
-                        if (m_order_type != order_type) { throw BGenError(); }
+                        if (m_order_type != order_type) {
+                            throw BGenError();
+                        }
                     }
                 }
-                if (value_type != eProbability) { throw BGenError(); }
+                if (value_type != eProbability) {
+                    throw BGenError();
+                }
                 m_number_of_entries = number_of_entries;
                 m_entries_per_bake =
                     (m_order_type == ePerUnorderedGenotype || m_ploidy == 0)
@@ -1292,8 +1305,7 @@ namespace bgen
                 assert(m_entry_i == (entry_i % m_entries_per_bake));
                 m_values[m_entry_i++] = 0.0;
                 m_missing = eMissing;
-                if (m_entry_i == m_entries_per_bake)
-                {
+                if (m_entry_i == m_entries_per_bake) {
                     bake(&m_values[0], m_entry_i, m_sum);
                     m_entry_i = 0;
                     m_sum = 0.0;
@@ -1321,8 +1333,7 @@ namespace bgen
 #endif
                 // Any sane input values will sum to 1 ± somerounding error,
                 // which should be small.
-                if ((m_sum != m_sum) || (m_sum > m_tolerance))
-                {
+                if ((m_sum != m_sum) || (m_sum > m_tolerance)) {
 #if DEBUG_BGEN_FORMAT
                     std::cerr << "First " << entry_i << " input values sum to "
                               << m_sum << ".\n";
@@ -1330,9 +1341,10 @@ namespace bgen
                     throw BGenError();
                 }
 
-                if (value != 0.0) { m_missing = eNotMissing; }
-                if (m_entry_i == m_entries_per_bake)
-                {
+                if (value != 0.0) {
+                    m_missing = eNotMissing;
+                }
+                if (m_entry_i == m_entries_per_bake) {
                     bake(&m_values[0], m_entry_i, m_sum);
                     m_entry_i = 0;
                     m_sum = 0.0;
@@ -1346,8 +1358,9 @@ namespace bgen
 
             void finalise()
             {
-                if (m_order_type == eUnknownOrderType)
-                { m_order_type = ePerPhasedHaplotypePerAllele; }
+                if (m_order_type == eUnknownOrderType) {
+                    m_order_type = ePerPhasedHaplotypePerAllele;
+                }
                 m_buffer[8 + m_number_of_samples] =
                     (m_order_type == ePerPhasedHaplotypePerAllele) ? 1 : 0;
                 m_buffer[9 + m_number_of_samples] = m_number_of_bits;
@@ -1369,8 +1382,7 @@ namespace bgen
                     throw BGenError();
                 }
                 // Write any remaining data
-                if (m_offset > 0)
-                {
+                if (m_offset > 0) {
                     int const nBytes = (m_offset + 7) / 8;
 #if DEBUG_BGEN_FORMAT
                     std::cerr
@@ -1424,8 +1436,7 @@ namespace bgen
         private:
             void bake(double* values, std::size_t count, double const sum)
             {
-                if (m_missing == eMissing || m_missing == eNotSet)
-                {
+                if (m_missing == eMissing || m_missing == eNotSet) {
                     // Have never seen a non-missing value.
                     m_p = impl::write_scaled_probs(&m_data, &m_offset, values,
                                                    count, m_number_of_bits, m_p,
@@ -1451,8 +1462,9 @@ namespace bgen
                     }
                     // We project onto the unit simplex before computing the
                     // approximation.
-                    for (std::size_t i = 0; i < count; ++i)
-                    { values[i] /= sum; }
+                    for (std::size_t i = 0; i < count; ++i) {
+                        values[i] /= sum;
+                    }
                     impl::compute_approximate_probabilities(
                         values, &index[0], count, m_number_of_bits);
                     m_p = impl::write_scaled_probs(&m_data, &m_offset, values,
@@ -1469,7 +1481,10 @@ namespace bgen
     {
         if ((context.flags & e_Layout) == e_Layout0
             || (context.flags & e_Layout) == e_Layout1)
-        { v11::parse_probability_data(buffer, end, context, setter); } else
+        {
+            v11::parse_probability_data(buffer, end, context, setter);
+        }
+        else
         {
             v12::parse_probability_data(buffer, end, context, setter);
         }
@@ -1500,15 +1515,16 @@ namespace bgen
         // Make sure we have space
         std::size_t size = 10 + RSID.size() + SNPID.size() + chromosome.size()
                            + ((layout == e_Layout1) ? 4 : 2);
-        for (uint16_t allele_i = 0; allele_i < number_of_alleles; ++allele_i)
-        { size += 4 + get_allele(allele_i).size(); } buffer->resize(size);
+        for (uint16_t allele_i = 0; allele_i < number_of_alleles; ++allele_i) {
+            size += 4 + get_allele(allele_i).size();
+        }
+        buffer->resize(size);
 
         // Write the data to the buffer
         byte_t* p = &(buffer->operator[](0));
         byte_t* const end = p + size;
 
-        if (layout == e_Layout1)
-        {
+        if (layout == e_Layout1) {
             p = write_little_endian_integer(p, end, context.number_of_samples);
             // otherwise number of samples appears in the probability data block
             // below.
@@ -1526,8 +1542,7 @@ namespace bgen
                                           chromosome);
         p = write_little_endian_integer(p, end, position);
 
-        if (layout == e_Layout2)
-        {
+        if (layout == e_Layout2) {
             // v12 has an explicit allele count
             p = write_little_endian_integer(p, end, number_of_alleles);
         }
@@ -1538,11 +1553,11 @@ namespace bgen
 
         std::size_t const max_allele_length =
             std::numeric_limits<uint32_t>::max();
-        for (uint16_t allele_i = 0; allele_i < number_of_alleles; ++allele_i)
-        {
+        for (uint16_t allele_i = 0; allele_i < number_of_alleles; ++allele_i) {
             std::string const& allele = get_allele(allele_i);
-            if (allele.size() > static_cast<std::size_t>(max_allele_length))
-            { throw BGenError(); }
+            if (allele.size() > static_cast<std::size_t>(max_allele_length)) {
+                throw BGenError();
+            }
             p = write_length_followed_by_data(p, end, uint32_t(allele.size()),
                                               allele.data());
         }
@@ -1567,7 +1582,9 @@ namespace bgen
         {
             assert(m_buffer1 != 0 && m_buffer2 != 0);
             assert(m_layout == e_Layout1 || m_layout == e_Layout2);
-            if (m_layout == e_Layout1) { m_writer = &m_layout1_writer; }
+            if (m_layout == e_Layout1) {
+                m_writer = &m_layout1_writer;
+            }
             else if (m_layout == e_Layout2)
             {
                 m_writer = &m_layout2_writer;
@@ -1640,12 +1657,10 @@ namespace bgen
 #endif
             uint32_t const compressionType =
                 (m_context.flags & e_CompressedSNPBlocks);
-            if (compressionType != e_NoCompression)
-            {
+            if (compressionType != e_NoCompression) {
 #if HAVE_ZLIB
                 std::size_t offset = (m_layout == e_Layout2) ? 8 : 4;
-                if (compressionType == e_ZlibCompression)
-                {
+                if (compressionType == e_ZlibCompression) {
                     zlib_compress(&(*m_buffer1)[0],
                                   &(*m_buffer1)[0] + uncompressed_data_size,
                                   m_buffer2, offset,
@@ -1671,8 +1686,7 @@ namespace bgen
                 // data. Now write total compressed data size to the start of
                 // the buffer, including the uncompressed data size if we are in
                 // layout 1.2.
-                if (m_layout == e_Layout2)
-                {
+                if (m_layout == e_Layout2) {
                     write_little_endian_integer(
                         &(*m_buffer2)[0], &(*m_buffer2)[0] + 4,
                         uint32_t(m_buffer2->size()) - 4);
@@ -1700,8 +1714,7 @@ namespace bgen
                 // not important.
                 std::size_t offset = (m_layout == e_Layout2) ? 4 : 0;
                 m_buffer2->resize(m_buffer1->size() + offset);
-                if (m_layout == e_Layout2)
-                {
+                if (m_layout == e_Layout2) {
                     write_little_endian_integer(
                         &(*m_buffer2)[0], &(*m_buffer2)[0] + 4,
                         uint32_t(uncompressed_data_size));
