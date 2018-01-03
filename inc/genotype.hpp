@@ -136,6 +136,7 @@ protected:
     uint32_t m_num_maf_filter = 0;
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
+    double m_hard_threshold;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<SNP> m_existed_snps;
@@ -166,7 +167,11 @@ protected:
     // for loading the SNP inclusion / exclusion set
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
-
+    double get_r2(bool core_missing, bool pair_missing,
+                  std::vector<uint32_t>& core_tot,
+                  std::vector<uint32_t>& pair_tot,
+                  std::vector<uintptr_t>& genotype_vector,
+                  std::vector<uintptr_t>& pair_genotype_vector);
     /** Misc information **/
     size_t m_max_category = 0;
     size_t m_region_size = 1;
@@ -182,13 +187,6 @@ protected:
         int distance;
         bool use_proxy;
     } clump_info;
-
-    // processed leftovers
-    int process_block(int& start_index, int end_index, int& first_core_index);
-    void clump_snp(const size_t start_index, const size_t end_index);
-
-
-    static std::mutex clump_mtx;
 
 
     std::vector<double> m_thresholds;
