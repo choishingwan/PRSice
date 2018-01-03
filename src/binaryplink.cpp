@@ -574,11 +574,8 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         // allow for quick jumping
         // very useful for read score as most SNPs might not
         // be next to each other
-        size_t cur_line = m_existed_snps[i_snp].snp_id();
-        if (!m_bed_file.seekg(
-                m_bed_offset + (cur_line * ((uint64_t) unfiltered_sample_ct4)),
-                std::ios_base::beg))
-        {
+        std::streampos cur_line = m_existed_snps[i_snp].byte_pos();
+        if (!m_bed_file.seekg(cur_line, std::ios_base::beg)) {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
         // loadbuf_raw is the temporary
