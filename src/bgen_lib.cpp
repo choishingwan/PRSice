@@ -98,7 +98,6 @@ namespace bgen
         {
             throw BGenError();
         }
-
         if (aStream) {
             context->number_of_samples = number_of_samples;
             context->number_of_variants = number_of_snp_blocks;

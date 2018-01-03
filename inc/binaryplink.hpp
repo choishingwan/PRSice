@@ -18,64 +18,48 @@
 #ifndef BINARYPLINK
 #define BINARYPLINK
 
+#include "commander.hpp"
 #include "genotype.hpp"
+#include "misc.hpp"
 
 class BinaryPlink : public Genotype
 {
 public:
-    BinaryPlink(std::string prefix, std::string remove_sample,
-                std::string keep_sample, std::string extract_snp,
-                std::string exclude_snp, std::string fam_name,
-                const std::string& out_prefix, Reporter& reporter,
-                bool ignore_fid, bool nonfounder, int num_auto = 22,
-                bool no_x = false, bool no_y = false, bool no_xy = false,
-                bool no_mt = false, bool keep_ambig = false,
-                const size_t thread = 1, bool verbose = false);
+    BinaryPlink(const std::string& prefix, const std::string& sample_file,
+                const size_t thread = 1, const bool ignore_fid = false,
+                const bool keep_nonfounder = false,
+                const bool keep_ambig = false);
     ~BinaryPlink();
 
 private:
     uintptr_t m_bed_offset = 3;
-    std::vector<Sample> load_samples(bool ignore_fid);
-    std::vector<SNP> load_snps(const std::string& out_prefix);
-    std::vector<size_t> m_num_snp_per_file; // for bed file size check
-    std::string m_fam_name = "";
+    std::vector<Sample> gen_sample_vector();
 
-    void check_bed();
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info,
+                                    const double hard_threshold,
+                                    const bool hard_coded,
+                                    const std::string& out_prefix);
 
+    void check_bed(const std::string& bed_name, size_t num_marker);
+
+    // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-        size_t snp_index = snp.snp_id();
-        bool jump = !(snp_index - m_prev_index == 1);
+        std::streampos snp_index = snp.byte_pos();
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
             }
             std::string bedname = file_name + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
-            jump = true;
         }
-        // don't do jumping unless we have to
-        if (jump) {
-            if (!m_bed_file.seekg(
-                    m_bed_offset
-                        + (snp_index * ((uint64_t) unfiltered_sample_ct4)),
-                    std::ios_base::beg))
-            {
-                throw std::runtime_error("ERROR: Cannot read the bed file!");
-            }
+        if (!m_bed_file.seekg(snp_index, std::ios_base::beg)) {
+            throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        m_prev_index = snp_index;
-        // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
-        // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
-        // sizeof(uintptr_t));
-        // this is for LD calculation, thus doesn't really need to worry about
-        // the founder_count otherwise we need to use the sample_ct instead This
-        // is also ok for the LD reference file as the only way that will affect
-        // the sample inclusion / exclusion is already handled during file
-        // loading
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))

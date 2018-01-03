@@ -461,26 +461,16 @@ void Region::check(std::string chr, size_t loc, std::vector<uintptr_t>& flag)
     }
 }
 
-void Region::info() const
+void Region::info(Reporter& reporter) const
 {
-    std::ofstream log_file;
-    std::string log_name = m_out_prefix + ".log";
-    log_file.open(log_name.c_str(), std::ofstream::app);
-    if (!log_file.is_open()) {
-        std::string error_message = "ERROR: Cannot open log file: " + log_name;
-        throw std::runtime_error(error_message);
-    }
+    std::string message = "";
     if (m_region_name.size() == 1) {
-        fprintf(stderr, "\n1 region included\n");
-        log_file << "1 region included" << std::endl;
+        message = "1 region included";
     }
     else if (m_region_name.size() > 1)
     {
-        fprintf(stderr, "A total of %zu regions are included\n",
-                m_region_name.size());
-        log_file << "\nA total of " << m_region_name.size()
-                 << " regions are included" << std::endl;
+        message = "A total of " + std::to_string(m_region_name.size())
+                  + " regions are included";
     }
-    log_file << std::endl;
-    log_file.close();
+    reporter.report(message);
 }

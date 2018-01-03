@@ -23,6 +23,7 @@
 #include "plink_common.hpp"
 #include "region.hpp"
 #include "regression.hpp"
+#include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
 #include <Eigen/Dense>
@@ -41,7 +42,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "reporter.hpp"
 // This should be the class to handle all the procedures
 class PRSice
 {
@@ -226,9 +226,11 @@ private:
     void gen_pheno_vec(const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
-                                      std::vector<std::string>& cov_header, Reporter &reporter);
+                                      std::vector<std::string>& cov_header,
+                                      Reporter& reporter);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string>& cov_header, Reporter &reporter);
+                        std::vector<std::string>& cov_header,
+                        Reporter& reporter);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,

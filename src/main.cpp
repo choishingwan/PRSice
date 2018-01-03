@@ -44,12 +44,20 @@ int main(int argc, char* argv[])
     // this allow us to generate the appropriate object (i.e. binaryplink /
     // binarygen)
     GenomeFactory factory;
-    Genotype* target_file;
+    Genotype *target_file, *reference_file;
     try
     {
-        target_file =
-            factory.createGenotype(commander, commander.target_name(),
-                                   commander.target_type(), verbose, reporter);
+        target_file = factory.createGenotype(
+            commander.target_name(), commander.target_type(),
+            commander.thread(), commander.ignore_fid(), commander.nonfounders(),
+            commander.keep_ambig(), reporter, commander);
+        target_file->load_samples(commander.keep_sample_file(),
+                                  commander.remove_sample_file(), true,
+                                  reporter);
+        target_file->load_snps(
+            commander.out(), commander.extract_file(), commander.exclude_file(),
+            commander.geno(), commander.maf(), commander.info(),
+            commander.hard_threshold(), commander.hard_coded(), true, reporter);
     }
     catch (const std::invalid_argument& ia)
     {
@@ -61,17 +69,21 @@ int main(int argc, char* argv[])
         reporter.report(error.what());
         return -1;
     }
-    bool used_ld = false;
-    Genotype* ld_file = nullptr;
-    if (!commander.ld_prefix().empty()
-        && commander.ld_prefix().compare(commander.target_name()) != 0)
-    {
-        used_ld = true;
-        ld_file =
-            factory.createGenotype(commander, commander.ld_prefix(),
-                                   commander.ld_type(), verbose, reporter);
+    if (!commander.ref_name().empty()) {
+        reference_file = factory.createGenotype(
+            commander.ref_name(), commander.ref_type(), commander.thread(),
+            commander.ignore_fid(), commander.nonfounders(),
+            commander.keep_ambig(), reporter, commander);
+        reference_file->load_samples(commander.ld_keep_file(),
+                                     commander.ld_remove_file(), true,
+                                     reporter);
+        // only load SNPs that can be found in the target file index
+        reference_file->load_snps(commander.out(), target_file->index(),
+                                  commander.geno(), commander.maf(),
+                                  commander.info(), commander.hard_threshold(),
+                                  commander.hard_coded(), true, reporter);
     }
-
+    // TODO: Revamp Region to make it suitable for prslice too
     Region region = Region(commander.feature(), target_file->get_chr_order());
     try
     {
@@ -85,7 +97,7 @@ int main(int argc, char* argv[])
     }
 
     // Might want to generate a log file?
-    region.info();
+    region.info(reporter);
 
     bool perform_prslice = commander.perform_prslice();
 
@@ -99,6 +111,13 @@ int main(int argc, char* argv[])
     {
         target_file->set_info(commander);
         target_file->read_base(commander, region, reporter);
+        // get the sort by p inex vector for target
+        // so that we can still find out the relative coordinates of each SNPs
+        if (!target_file->sort_by_p()) {
+            std::string error_message = "No SNPs left for PRSice processing";
+            reporter.report(error_message);
+            return -1;
+        }
         // we no longer need the region boundaries
         // as we don't allow multiple base file input
         region.clean();
@@ -108,7 +127,10 @@ int main(int argc, char* argv[])
         // perform clumping (Main problem with memory here)
         if (!commander.no_clump()) {
             target_file->efficient_clumping(
-                (ld_file == nullptr) ? *target_file : *ld_file, reporter);
+                (commander.ref_name().empty()) ? *target_file : *reference_file,
+                reporter);
+            // immediately free the memory if needed
+            if (!commander.ref_name().empty()) delete reference_file;
         }
         // initialize PRSice class
         PRSice prsice = PRSice(base_name, commander, region.size() > 1,
@@ -117,11 +139,6 @@ int main(int argc, char* argv[])
         prsice.pheno_check(commander, reporter);
         size_t num_pheno = prsice.num_phenotype();
         if (!perform_prslice) {
-            if (!target_file->prepare_prsice()) {
-                // check if we can successfully sort the SNP vector by the
-                // category as required by PRSice
-                return -1;
-            }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 // initialize the phenotype & independent variable matrix
                 prsice.init_matrix(commander, i_pheno, *target_file, reporter);
@@ -149,6 +166,15 @@ int main(int argc, char* argv[])
             }
             prsice.summarize(commander, reporter);
         }
+        else
+        {
+            std::string error_message =
+                "ERROR: We currently have not implemented PRSlice. We will "
+                "implement PRSlice once the implementation of PRSice is "
+                "stabalized";
+            reporter.report(error_message);
+            return -1;
+        }
     }
     catch (const std::out_of_range& error)
     {
@@ -161,6 +187,5 @@ int main(int argc, char* argv[])
         return -1;
     }
     delete target_file;
-    if (used_ld) delete ld_file;
     return 0;
 }
