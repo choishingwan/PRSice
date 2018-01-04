@@ -28,6 +28,7 @@ struct Sample
     int num_snp;
     bool included;
     bool has_pheno;
+    double prs;
 };
 
 struct Sample_lite
