@@ -534,14 +534,13 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker)
 
 BinaryPlink::~BinaryPlink() {}
 
-void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
-                             size_t start_index, size_t end_bound,
+void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    size_t num_included_samples = current_prs_score.size();
+    size_t num_included_samples = m_sample_names.size();
 
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -677,9 +676,9 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             if (i_missing < num_miss && i_sample == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    current_prs_score[i_sample].prs += center_score;
+                		m_sample_names[i_sample].prs += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    current_prs_score[i_sample].num_snp++;
+                		m_sample_names[i_sample].num_snp++;
 
                 i_missing++;
             }
@@ -687,7 +686,7 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                    current_prs_score[i_sample].prs -= center_score;
+                	m_sample_names[i_sample].prs -= center_score;
                 }
                 int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
                                   : sample_genotype[i_sample];
@@ -702,8 +701,8 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
                 {
                     g = (g == 2) ? 1 : g;
                 }
-                current_prs_score[i_sample].prs += g * stat * 0.5;
-                current_prs_score[i_sample].num_snp++;
+                m_sample_names[i_sample].prs += g * stat * 0.5;
+                m_sample_names[i_sample].num_snp++;
             }
         }
     }

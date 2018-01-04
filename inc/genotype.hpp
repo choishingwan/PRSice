@@ -199,8 +199,7 @@ protected:
 
     virtual inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                                       const std::string& file_name){};
-    virtual void read_score(std::vector<Sample_lite>& current_prs_score,
-                            size_t start_index, size_t end_bound,
+    virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};
 
 
