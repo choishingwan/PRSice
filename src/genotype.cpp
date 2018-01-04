@@ -786,12 +786,12 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
                                      pair_genotype_vector.data(), counts,
                                      founder_ctv3, pair_missing);
         if (pair_missing) {
-            counts[2] = core_tot(0) - counts[0] - counts[1];
-            counts[5] = core_tot(1) - counts[3] - counts[4];
+            counts[2] = core_tot[0] - counts[0] - counts[1];
+            counts[5] = core_tot[1] - counts[3] - counts[4];
         }
-        counts[6] = pair_tot(0) - counts[0] - counts[3];
-        counts[7] = pair_tot(1) - counts[1] - counts[4];
-        counts[8] = pair_tot(2) - counts[2] - counts[5];
+        counts[6] = pair_tot[0] - counts[0] - counts[3];
+        counts[7] = pair_tot[1] - counts[1] - counts[4];
+        counts[8] = pair_tot[2] - counts[2] - counts[5];
     }
     else
     {
@@ -799,9 +799,9 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
                               pair_genotype_vector.data(), counts, founder_ctv3,
                               pair_missing);
         if (pair_missing) {
-            counts[2] = core_tot(0) - counts[0] - counts[1];
-            counts[5] = core_tot(1) - counts[3] - counts[4];
-            counts[8] = core_tot(2) - counts[6] - counts[7];
+            counts[2] = core_tot[0] - counts[0] - counts[1];
+            counts[5] = core_tot[1] - counts[3] - counts[4];
+            counts[8] = core_tot[2] - counts[6] - counts[7];
         }
     }
     // below, the false are basically is_x1 is_x2
@@ -865,12 +865,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
 
-    uint32_t counts[18];
     bool mismatch_error = false;
     bool flipped = false;
-
+    int mismatch = 0;
     std::vector<uintptr_t> core_geno(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uintptr_t> pair_core_geno(3 * founder_ctsplit + founder_ctv3);
+    std::vector<uintptr_t> pair_geno(3 * founder_ctsplit + founder_ctv3);
     std::vector<uint32_t> core_tot;
     std::vector<uint32_t> pair_tot;
     double prev_progress = 0.0;
@@ -1006,8 +1005,14 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
     // no longer require the m_existed_snps_index
-    std::string message = "Number of SNPs after clumping : "
-                          + std::to_string(m_existed_snps.size()) + "\n";
+    std::string message = "";
+    if (mismatch != 0) {
+        message.append("There are a total of " + std::to_string(mismatch)
+                       + " mismatched variant(s) between the reference panel "
+                         "and the target genotype\n");
+    }
+    message.append("Number of variant(s) after clumping : "
+                          + std::to_string(m_existed_snps.size()) + "\n");
     reporter.report(message);
 }
 

@@ -143,7 +143,7 @@ public:
             return SCORING::AVERAGE;
     }
 
-    int model() const { return prs_calculation.model; };
+    MODEL model() const { return prs_calculation.model; };
     bool no_regress() const { return prs_calculation.no_regress; };
 
     // prs_snp_filtering
@@ -284,8 +284,9 @@ private:
     struct
     {
         std::string missing_score;
+        std::string model_name;
         std::string score_calculation;
-        int model; // use model enum
+        MODEL model; // use model enum
         int no_regress;
     } prs_calculation;
 
@@ -464,22 +465,22 @@ private:
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
             input = "add";
-            prs_calculation.model = +MODEL::ADDITIVE;
+            prs_calculation.model = MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prs_calculation.model = +MODEL::DOMINANT;
+            prs_calculation.model = MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prs_calculation.model = +MODEL::RECESSIVE;
+            prs_calculation.model = MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prs_calculation.model = +MODEL::HETEROZYGOUS;
+            prs_calculation.model = MODEL::HETEROZYGOUS;
         }
         else
         {

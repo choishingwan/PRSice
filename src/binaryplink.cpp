@@ -541,7 +541,6 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     size_t num_included_samples = current_prs_score.size();
 
     m_cur_file = ""; // just close it
@@ -650,18 +649,18 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             aa = AA;
             AA = temp;
         }
-        if (m_model == +MODEL::HETEROZYGOUS) {
+        if (m_model == MODEL::HETEROZYGOUS) {
             // 010
             aa += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::DOMINANT)
+        else if (m_model == MODEL::DOMINANT)
         {
             // 011;
             aA += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::RECESSIVE)
+        else if (m_model == MODEL::RECESSIVE)
         {
             // 001
             aa += aA;
@@ -692,14 +691,14 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
                 }
                 int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
                                   : sample_genotype[i_sample];
-                if (m_model == +MODEL::HETEROZYGOUS) {
+                if (m_model == MODEL::HETEROZYGOUS) {
                     g = (g == 2) ? 0 : g;
                 }
-                else if (m_model == +MODEL::RECESSIVE)
+                else if (m_model == MODEL::RECESSIVE)
                 {
                     g = std::max(0, g - 1);
                 }
-                else if (m_model == +MODEL::DOMINANT)
+                else if (m_model == MODEL::DOMINANT)
                 {
                     g = (g == 2) ? 1 : g;
                 }

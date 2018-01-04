@@ -206,7 +206,7 @@ public:
     bool valid() const { return basic.valid; };
     void invalidate() { basic.valid = false; };
     void set_low_bound(size_t low) { clump_info.low_bound = low; };
-    void set_up_bounud(size_t up) { clump_info.up_bound = up; };
+    void set_up_bound(size_t up) { clump_info.up_bound = up; };
     size_t up_bound() const { return clump_info.up_bound; };
     size_t low_bound() const { return clump_info.low_bound; };
 

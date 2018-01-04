@@ -192,7 +192,8 @@ private:
     size_t m_all_thresholds = 0;
     size_t m_max_fid_length = 3;
     size_t m_max_iid_length = 3;
-    SCORING m_score = SCORING::MEAN_IMPUTE;
+    SCORING m_score = SCORING::AVERAGE;
+    MISSING m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
     std::string m_base_name;
     std::string m_target;

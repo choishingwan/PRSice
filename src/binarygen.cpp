@@ -499,89 +499,88 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
         }
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
-        Data probability;
-        ProbSetter setter(&probability);
-        genfile::bgen::read_and_parse_genotype_data_block<ProbSetter>(
-            m_bgen_file, m_bgen_info[snp.file_name()], setter, &buffer1,
-            &buffer2, false);
-        std::vector<size_t> missing_samples;
-        double total = 0.0;
-        std::vector<double> score(num_included_samples);
-        size_t cur_sample = 0;
-        for (size_t i_sample = 0; i_sample < probability.size(); ++i_sample) {
-            auto&& prob = probability[i_sample];
-            if (prob.size() != 3) {
-                // this is likely phased
-                std::string message = "ERROR: Currently don't support phased "
-                                      "data (It is because the lack of "
-                                      "development time)\n";
-                throw std::runtime_error(message);
-            }
-            double expected = 0.0;
-            if (IS_SET(m_sample_include.data(),
-                       i_sample)) // to ignore unwanted samples
-            {
-                // we want g to be signed so that when -2, it will not cause
-                // us troubles
-                for (int g = 0; g < (int) prob.size(); ++g) {
-                    if (*max_element(prob.begin(), prob.end())
-                        < filter.hard_threshold)
+        auto&& context = m_context_map[m_cur_file];
+        PRS_Interpreter setter(&m_sample_names, m_model, m_missing_score,
+                               snp.stat(), snp.is_flipped());
+        read_and_parse_genotype_data_block<PRS_Interpreter>(
+            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+        /*
+                std::vector<size_t> missing_samples;
+                double total = 0.0;
+                std::vector<double> score(num_included_samples);
+                size_t cur_sample = 0;
+                for (size_t i_sample = 0; i_sample < probability.size();
+           ++i_sample) { auto&& prob = probability[i_sample]; if (prob.size() !=
+           3) {
+                        // this is likely phased
+                        std::string message = "ERROR: Currently don't support
+           phased " "data (It is because the lack of " "development time)\n";
+                        throw std::runtime_error(message);
+                    }
+                    double expected = 0.0;
+                    if (IS_SET(m_sample_include.data(),
+                               i_sample)) // to ignore unwanted samples
                     {
-                        missing_samples.push_back(i_sample);
-                        break;
+                        // we want g to be signed so that when -2, it will not
+           cause
+                        // us troubles
+                        for (int g = 0; g < (int) prob.size(); ++g) {
+                            if (*max_element(prob.begin(), prob.end())
+                                < filter.hard_threshold)
+                            {
+                                missing_samples.push_back(i_sample);
+                                break;
+                            }
+                            else
+                            {
+                                int geno = (!snp.is_flipped()) ? 2 - g : g;
+                                if (m_model == +MODEL::HETEROZYGOUS && geno ==
+           2) geno = 0; else if (m_model == +MODEL::DOMINANT && geno == 2) geno
+           = 1; else if (m_model == +MODEL::RECESSIVE) geno = std::max(geno - 1,
+           0); expected += prob[g] * geno;
+                            }
+                        }
+                        score[cur_sample++] = expected;
+                        total += expected;
+                    }
+                }
+                // now process the missing and clean stuff
+                // we divide the mean by 2 so that in situation where there is
+           no
+                // dosage, it will behave the same as the genotype data.
+
+                size_t num_miss = missing_samples.size();
+                if (num_included_samples - num_miss == 0) {
+                    m_existed_snps[i_snp].invalidate();
+                    continue;
+                }
+                double mean =
+                    total / (((double) num_included_samples - (double) num_miss)
+           * 2); size_t i_missing = 0; double stat = snp.stat(); for (size_t
+           i_sample = 0; i_sample < num_included_samples; ++i_sample) { if
+           (i_missing < num_miss && i_sample == missing_samples[i_missing])
+                    {
+                        if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
+                            current_prs_score[i_sample].prs += stat * mean;
+                        if (m_missing_score != MISSING_SCORE::SET_ZERO)
+                            current_prs_score[i_sample].num_snp++;
+
+                        i_missing++;
                     }
                     else
-                    {
-                        int geno = (!snp.is_flipped()) ? 2 - g : g;
-                        if (m_model == +MODEL::HETEROZYGOUS && geno == 2)
-                            geno = 0;
-                        else if (m_model == +MODEL::DOMINANT && geno == 2)
-                            geno = 1;
-                        else if (m_model == +MODEL::RECESSIVE)
-                            geno = std::max(geno - 1, 0);
-                        expected += prob[g] * geno;
+                    { // not missing sample
+                        if (m_missing_score == MISSING_SCORE::CENTER) {
+                            // if centering, we want to keep missing at 0
+                            current_prs_score[i_sample].prs -= stat * mean;
+                        }
+                        // again, so that it will generate the same result as
+                        // genotype file format when we are 100% certain of the
+                        // genotypes
+                        current_prs_score[i_sample].prs += score[i_sample] *
+           stat * 0.5; current_prs_score[i_sample].num_snp++;
                     }
                 }
-                score[cur_sample++] = expected;
-                total += expected;
-            }
-        }
-        // now process the missing and clean stuff
-        // we divide the mean by 2 so that in situation where there is no
-        // dosage, it will behave the same as the genotype data.
-
-        size_t num_miss = missing_samples.size();
-        if (num_included_samples - num_miss == 0) {
-            m_existed_snps[i_snp].invalidate();
-            continue;
-        }
-        double mean =
-            total / (((double) num_included_samples - (double) num_miss) * 2);
-        size_t i_missing = 0;
-        double stat = snp.stat();
-        for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (i_missing < num_miss && i_sample == missing_samples[i_missing])
-            {
-                if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    current_prs_score[i_sample].prs += stat * mean;
-                if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    current_prs_score[i_sample].num_snp++;
-
-                i_missing++;
-            }
-            else
-            { // not missing sample
-                if (m_missing_score == MISSING_SCORE::CENTER) {
-                    // if centering, we want to keep missing at 0
-                    current_prs_score[i_sample].prs -= stat * mean;
-                }
-                // again, so that it will generate the same result as
-                // genotype file format when we are 100% certain of the
-                // genotypes
-                current_prs_score[i_sample].prs += score[i_sample] * stat * 0.5;
-                current_prs_score[i_sample].num_snp++;
-            }
-        }
+                */
     }
 }
 
@@ -675,18 +674,18 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
             aa = AA;
             AA = temp;
         }
-        if (m_model == +MODEL::HETEROZYGOUS) {
+        if (m_model == MODEL::HETEROZYGOUS) {
             // 010
             aa += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::DOMINANT)
+        else if (m_model == MODEL::DOMINANT)
         {
             // 011;
             aA += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::RECESSIVE)
+        else if (m_model == MODEL::RECESSIVE)
         {
             // 001
             aa += aA;
@@ -718,14 +717,14 @@ void BinaryGen::hard_code_score(std::vector<Sample_lite>& current_prs_score,
 
                 int g = (flipped) ? fabs(genotypes[i_sample] - 2)
                                   : genotypes[i_sample];
-                if (m_model == +MODEL::HETEROZYGOUS) {
+                if (m_model == MODEL::HETEROZYGOUS) {
                     g = (g == 2) ? 0 : g;
                 }
-                else if (m_model == +MODEL::RECESSIVE)
+                else if (m_model == MODEL::RECESSIVE)
                 {
                     g = std::max(0, g - 1);
                 }
-                else if (m_model == +MODEL::DOMINANT)
+                else if (m_model == MODEL::DOMINANT)
                 {
                     g = (g == 2) ? 1 : g;
                 }

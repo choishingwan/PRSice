@@ -457,7 +457,7 @@ Commander::Commander()
 
     prs_calculation.missing_score = "MEAN_IMPUTE";
     prs_calculation.score_calculation = "average";
-    prs_calculation.model = +MODEL::ADDITIVE;
+    prs_calculation.model = MODEL::ADDITIVE;
     prs_calculation.no_regress = false;
 
     prs_snp_filtering.exclude_file = "";
@@ -1746,7 +1746,15 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
                              bool& error, std::string& error_message)
 {
 
-    message["model"] = prs_calculation.model;
+    switch (prs_calculation.model)
+    {
+    case MODEL::ADDITIVE: message["model"] = "add"; break;
+    case MODEL::DOMINANT: message["model"] = "dom"; break;
+    case MODEL::RECESSIVE: message["model"] = "rec"; break;
+    case MODEL::HETEROZYGOUS: message["model"] = "het"; break;
+    default: error = true; error_message.append("ERROR: Unrecognized model!");
+    }
+
     if (p_thresholds.fastscore && p_thresholds.barlevel.size() == 0
         && !prset.perform_prset)
     {

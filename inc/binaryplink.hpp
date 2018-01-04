@@ -48,7 +48,6 @@ private:
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
-        uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
         std::streampos snp_index = snp.byte_pos();
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {
@@ -74,7 +73,6 @@ private:
 
     std::ifstream m_bed_file;
     std::string m_cur_file;
-    int m_prev_index = -2;
 
 
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,

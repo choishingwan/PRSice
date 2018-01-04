@@ -294,6 +294,80 @@ private:
         double info_score = 0.0;
     };
 
+    struct PRS_Interpreter
+    {
+        PRS_Interpreter(std::vector<Sample>* sample, MODEL model,
+                        MISSING_SCORE missing, double stat, bool flipped)
+            : m_sample(sample)
+            , m_model(model)
+            , m_missing(missing)
+            , m_stat(stat)
+            , m_flipped(flipped)
+        {
+        }
+        void initialise(std::size_t number_of_samples,
+                        std::size_t number_of_alleles)
+        {
+        }
+        void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
+                                uint32_t min_entries, uint32_t max_entries)
+        {
+        }
+
+        bool set_sample(std::size_t i)
+        {
+            m_sample_i = i;
+            exclude = !m_sample->at(m_sample_i).included;
+            return true;
+        }
+
+        void set_number_of_entries(std::size_t ploidy,
+                                   std::size_t number_of_entries,
+                                   genfile::OrderType order_type,
+                                   genfile::ValueType value_type)
+        {
+            assert(value_type == eProbability);
+            if (!first && !exclude) {
+                // summarize the previous sample's info
+            }
+            first = false;
+            exclude = false;
+            m_geno = 1;
+            m_entry_i = 0;
+        }
+
+        // Called once for each genotype (or haplotype) probability per sample.
+        void set_value(uint32_t, double value)
+        {
+            // if (value > hard_prob && value >= m_hard_threshold) {
+            m_geno = 2 - m_entry_i;
+            //}
+            m_entry_i++;
+        }
+        // call if sample is missing
+        void set_value(uint32_t, MissingValue value) {}
+
+        void finalise()
+        {
+            // summarize the last sample's info
+            if (!exclude) {
+            }
+        }
+
+    private:
+        size_t m_sample_i = 0;
+        size_t m_entry_i = 0;
+        bool first = true;
+        bool exclude = false;
+        int m_geno = -1;
+        std::vector<Sample>* m_sample;
+        MODEL m_model;
+        MISSING_SCORE m_missing;
+        double m_stat;
+        bool m_flipped;
+    };
+
+
     struct PLINK_generator
     {
         PLINK_generator(std::vector<Sample>* sample, uintptr_t* genotype,
