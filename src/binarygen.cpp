@@ -30,8 +30,7 @@ BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
     init_chr();
     // get the bed file names
     m_genotype_files = set_genotype_files(prefix);
-    m_sample_file =
-        sample_file.empty() ? m_genotype_files.front() : sample_file;
+    m_sample_file = sample_file;
 }
 
 std::vector<Sample> BinaryGen::gen_sample_vector()

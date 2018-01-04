@@ -29,8 +29,6 @@ SNP::SNP()
     threshold.p_threshold = 0.0;
     threshold.category = 0;
     clump_info.clumped = false;
-    clump_info.contain_missing = false;
-    clump_info.contain_geno = false;
 }
 
 
@@ -51,8 +49,6 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
     threshold.p_threshold = 0.0;
     threshold.category = 0;
     clump_info.clumped = false;
-    clump_info.contain_missing = false;
-    clump_info.contain_geno = false;
     file_info.file = file_name;
     file_info.byte_pos = byte_pos;
 }

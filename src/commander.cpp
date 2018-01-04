@@ -443,9 +443,9 @@ Commander::Commander()
     reference_panel.keep_file = "";
     reference_panel.remove_file = "";
 
-    reference_snp_filtering.geno = 0;
+    reference_snp_filtering.geno = 1.0;
     reference_snp_filtering.hard_threshold = 0.9;
-    reference_snp_filtering.maf = 0.0;
+    reference_snp_filtering.maf = 0;
     reference_snp_filtering.info_score = 0.0;
 
     p_thresholds.lower = 0.0001;
@@ -1431,48 +1431,31 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
         // now check the snp filtering
         // we automatically ignore any geno that are larger than 1
         // also output an error message
-        if (reference_snp_filtering.geno > 0
-            && reference_snp_filtering.geno < 1)
-        {
-            message["ld-geno"] = std::to_string(reference_snp_filtering.geno);
-        }
-        else if (reference_snp_filtering.geno != 0)
+
+        if (reference_snp_filtering.geno != 0 && (reference_snp_filtering.geno < 0 || reference_snp_filtering.geno > 1))
         {
             error = true;
             error_message.append("ERROR: LD genotype missingness threshold "
                                  "must be larger than 0 and smaller than 1!\n");
         }
-        if (reference_panel.type.compare("bgen") == 0) {
-            if (reference_snp_filtering.hard_threshold > 0
-                && reference_snp_filtering.hard_threshold < 1)
-            {
-                message["ld-hard-threshold"] =
-                    std::to_string(reference_snp_filtering.hard_threshold);
-            }
-            else
-            {
-                error = true;
-                error_message.append("ERROR: LD hard threshold must be larger "
-                                     "than 0 and smaller than 1!\n");
-            }
+        if (reference_panel.type.compare("bgen") == 0 || (reference_panel.file_name.empty() && target.type.compare("bgen")==0)) {
+        		if(reference_snp_filtering.hard_threshold > 1 || reference_snp_filtering.hard_threshold < 0){
+        			error= true;
+        			   error_message.append("ERROR: LD hard threshold must be larger "
+        			                                     "than 0 and smaller than 1!\n");
+        		}else{
+        			message["ld-hard-threshold"] =
+        			                    std::to_string(reference_snp_filtering.hard_threshold);
+        		}
         }
-        if (reference_snp_filtering.maf > 0 && reference_snp_filtering.maf < 1)
-        {
-            message["ld-maf"] = std::to_string(reference_snp_filtering.maf);
-        }
-        else if (reference_snp_filtering.maf != 0)
+        if (reference_snp_filtering.maf != 0 && (reference_snp_filtering.maf > 1 || reference_snp_filtering.maf < 0))
         {
             error = true;
             error_message.append("ERROR: LD MAF threshold must be larger than "
                                  "0 and smaller than 1!\n");
         }
-        if (reference_snp_filtering.info_score > 0
-            && reference_snp_filtering.info_score < 1)
-        {
-            message["ld-info"] =
-                std::to_string(reference_snp_filtering.info_score);
-        }
-        else
+        if (reference_snp_filtering.info_score < 0 ||
+             reference_snp_filtering.info_score > 1)
         {
             error = true;
             error_message.append("ERROR: LD INFO score threshold must be "
@@ -1664,8 +1647,8 @@ void Commander::covariate_check(bool& error, std::string& error_message)
 void Commander::filter_check(bool& error, std::string& error_message)
 {
     if (target.type.compare("bgen") == 0
-        && (prs_snp_filtering.hard_threshold < 0
-            || prs_snp_filtering.hard_threshold > 1))
+        && (prs_snp_filtering.hard_threshold <= 0
+            || prs_snp_filtering.hard_threshold >= 1))
     {
         error = true;
         error_message.append(

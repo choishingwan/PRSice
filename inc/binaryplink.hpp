@@ -87,7 +87,7 @@ private:
         if (unfiltered_sample_ct == sample_ct) {
             rawbuf = mainbuf;
         }
-        if (!m_bed_file.read((char*) rawbuf, unfiltered_sample_ct4)) {
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
             return RET_READ_FAIL;
         }
         if (unfiltered_sample_ct != sample_ct) {

@@ -105,6 +105,7 @@ public:
     			sample.prs=0.0;
     		}
     };
+    bool prepare_prsice();
     std::string sample_id(size_t i) const {
 		if(i > m_sample_names.size()) throw std::out_of_range("Sample name vector out of range");
     		if(m_ignore_fid) return m_sample_names[i].IID;

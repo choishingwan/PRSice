@@ -136,7 +136,7 @@ public:
         std::string s = prs_calculation.score_calculation;
         std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         if (s == "STD")
-            return SCORING::STANDARD;
+            return SCORING::STANDARDIZE;
         else if (s == "SUM")
             return SCORING::SUM;
         else

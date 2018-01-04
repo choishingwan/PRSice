@@ -212,6 +212,7 @@ void Genotype::load_snps(
     m_exclude_snp = false;
     m_existed_snps =
         gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
+    m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
         message.append(std::to_string(m_num_ambig)
@@ -235,6 +236,7 @@ void Genotype::load_snps(
         message.append(std::to_string(m_num_maf_filter)
                        + " variant(s) excluded based on INFO score threshold");
     }
+
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
@@ -257,6 +259,7 @@ void Genotype::load_snps(const std::string out_prefix,
 
     m_existed_snps =
         gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
+    m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
         message.append(std::to_string(m_num_ambig)
@@ -1020,6 +1023,24 @@ bool Genotype::sort_by_p()
 {
     if (m_existed_snps.size() == 0) return false;
     m_sort_by_p_index = SNP::sort_by_p(m_existed_snps);
+    return true;
+}
+
+bool Genotype::prepare_prsice()
+{
+    if (m_existed_snps.size() == 0) return false;
+    std::sort(begin(m_existed_snps), end(m_existed_snps),
+              [](SNP const& t1, SNP const& t2) {
+                  if (t1.category() == t2.category()) {
+                      if (t1.file_name().compare(t2.file_name()) == 0) {
+                          return t1.byte_pos() < t2.byte_pos();
+                      }
+                      else
+                          return t1.file_name().compare(t2.file_name()) < 0;
+                  }
+                  else
+                      return t1.category() < t2.category();
+              });
     return true;
 }
 

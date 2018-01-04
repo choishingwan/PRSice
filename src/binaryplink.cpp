@@ -32,7 +32,7 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
     // get the bed file names
     m_genotype_files = set_genotype_files(prefix);
     m_sample_file =
-        sample_file.empty() ? m_genotype_files.front() : sample_file;
+        sample_file.empty() ? m_genotype_files.front()+".fam" : sample_file;
 }
 
 
@@ -195,15 +195,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         std::string bim_name = prefix + ".bim";
         std::string bed_name = prefix + ".bed";
         std::ifstream bim(bim_name.c_str());
-        std::ifstream bed(bed_name.c_str());
         if (!bim.is_open()) {
             std::string error_message =
                 "ERROR: Cannot open bim file: " + bim_name;
-            throw std::runtime_error(error_message);
-        }
-        if (!bed.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open bed file: " + bed_name;
             throw std::runtime_error(error_message);
         }
         // First pass, get the number of marker in bed & bim
@@ -226,6 +220,13 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         bim.clear();
         bim.seekg(0, bim.beg);
         check_bed(bed_name, num_snp_read);
+
+        std::ifstream bed(bed_name.c_str());
+        if (!bed.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open bed file: " + bed_name;
+            throw std::runtime_error(error_message);
+        }
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
         int prev_snp_processed = 0;
@@ -329,7 +330,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 // throw std::runtime_error(
                 //    "ERROR: Duplicated SNP ID detected!\n");
             }
-            else if (ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
+            else if (!ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
                      || m_keep_ambig)
             {
 
@@ -338,15 +339,16 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 if (num_snp_read - prev_snp_processed > 1) {
                     // skip unread lines
                     if (!bed.seekg(m_bed_offset
-                                       + (num_snp_read
+                                       + ((num_snp_read-1)
                                           * ((uint64_t) unfiltered_sample_ct4)),
                                    std::ios_base::beg))
                     {
                         std::string error_message =
-                            "ERROR: Cannot read the bed file: " + bed_name;
+                            "ERROR: Cannot read the bed file(seek): " + bed_name;
                         throw std::runtime_error(error_message);
                     }
                 }
+                prev_snp_processed = (num_snp_read-1);
                 // get the location of the SNP in the binary file
                 std::streampos byte_pos = bed.tellg();
                 if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
@@ -355,7 +357,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                                            genotype.data()))
                 {
                     std::string error_message =
-                        "ERROR: Cannot read the bed file: " + bed_name;
+                        "ERROR: Cannot read the bed file(read): " + bed_name;
                     throw std::runtime_error(error_message);
                 }
                 // Now genotype contain the genotype binary vector
@@ -425,6 +427,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 snp_info.emplace_back(
                     SNP(bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos));
+            }
+            else if(!m_keep_ambig){
+            		m_num_ambig++;
             }
         }
     }
@@ -548,6 +553,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     }
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
         if (m_cur_file.empty()
