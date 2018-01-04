@@ -51,16 +51,19 @@ public:
         : m_ignore_fid(commander.ignore_fid())
         , m_prset(prset)
         , m_logit_perm(commander.logit_perm())
-        , m_num_perm(commander.num_permutation())
-        , m_score(commander.get_scoring())
+        , m_num_perm(commander.permutation())
+        , m_score(commander.get_score())
+		, m_missing_score(commander.get_missing_score())
         , m_base_name(base_name)
         , m_target(commander.target_name())
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
 
-        bool perm = commander.permute();
+    		// we calculate the number of permutation we can run at one time
+        bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
+        // check if there's any binary phenotype
         bool has_binary = false;
         for (auto&& b : m_target_binary) {
             if (b) {
@@ -127,7 +130,7 @@ public:
     void run_prsice(const Commander& c_commander,
                     const std::string& region_name, const size_t pheno_index,
                     const size_t region_index, Genotype& target);
-    void regress_score(const double threshold, size_t thread,
+    void regress_score(Genotype &target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
 
     void prsice(const Commander& c_commander, const Region& c_region,
@@ -178,7 +181,6 @@ private:
     bool m_ignore_fid = false;
     bool m_prset = false;
     bool m_logit_perm = false;
-    bool m_average_score = true;
     Eigen::VectorXd m_phenotype;
     Eigen::MatrixXd m_independent_variables;
     double m_null_r2 = 0.0;
@@ -193,7 +195,7 @@ private:
     size_t m_max_fid_length = 3;
     size_t m_max_iid_length = 3;
     SCORING m_score = SCORING::AVERAGE;
-    MISSING m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
     std::string m_base_name;
     std::string m_target;
@@ -202,15 +204,13 @@ private:
     std::vector<double> m_perm_result;
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
-    std::vector<Sample_lite> m_current_sample_score;
-    std::vector<Sample_lite> m_best_sample_score;
-    std::vector<std::string> m_sample_included;
+    std::vector<double> m_best_sample_score;
     std::vector<size_t> m_sample_index;
     std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
                                                       // phenotype
-    std::vector<Sample> m_sample_names; // might want to not storing it here
+
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
 
@@ -222,9 +222,9 @@ private:
                      size_t end, int rank, const Eigen::VectorXd& pre_se,
                      size_t processed, bool logit_perm);
 
-    void permutation(const size_t n_thread, bool logit_perm);
-    void update_sample_included();
-    void gen_pheno_vec(const std::string& pheno_file_name,
+    void permutation(Genotype &target, const size_t n_thread, bool logit_perm);
+    void update_sample_included(Genotype &target);
+    void gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
                                       std::vector<std::string>& cov_header,

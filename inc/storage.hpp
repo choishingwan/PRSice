@@ -138,7 +138,7 @@ enum class MISSING_SCORE
 enum class SCORING
 {
     AVERAGE,
-    STANDARD,
+    STANDARDIZE,
     SUM
 };
 template <>

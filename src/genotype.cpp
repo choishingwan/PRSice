@@ -1023,9 +1023,10 @@ bool Genotype::sort_by_p()
     return true;
 }
 
-bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
+bool Genotype::get_score(int& cur_index,
                          int& cur_category, double& cur_threshold,
-                         size_t& num_snp_included, const size_t region_index)
+                         size_t& num_snp_included, const size_t region_index,
+						 const bool require_statistic)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1054,9 +1055,20 @@ bool Genotype::get_score(std::vector<Sample_lite>& prs_score, int& cur_index,
     }
     else
         cur_category = m_existed_snps[end_index].category();
-    read_score(prs_score, cur_index, end_index, region_index);
-
+    read_score(cur_index, end_index, region_index);
     cur_index = end_index;
+    if(require_statistic){
+    		misc::RunningStat rs;
+    		for(auto &&sample: m_sample_names){
+    			if(sample.num_snp==0){
+    				rs.push(0.0);
+    			}else{
+    				rs.push(sample.prs/(double)sample.num_snp);
+    			}
+    		}
+    		m_mean_score = rs.mean();
+    		m_score_sd = rs.sd();
+    }
     return true;
 }
 
