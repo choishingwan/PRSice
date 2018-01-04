@@ -203,7 +203,7 @@ bool BinaryGen::check_is_sample_format()
     return true;
 }
 
-BinaryGen::Context BinaryGen::get_context(std::string& bgen_name)
+Context BinaryGen::get_context(std::string& bgen_name)
 {
     std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
     if (!bgen_file.is_open()) {
@@ -343,10 +343,16 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             std::string chromosome;
             uint32_t SNP_position;
             std::vector<std::string> alleles;
-            // directly use the library
-            read_snp_identifying_data(bgen_file, context, &SNPID, &RSID,
-                                      &chromosome, &SNP_position, alleles);
-
+            // directly use the libraryread_snp_identifying_data(
+            read_snp_identifying_data(
+                m_bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
+                [&alleles](std::size_t n) { alleles.resize(n); },
+                [&alleles](std::size_t i, std::string const& allele) {
+                    alleles.at(i) = allele;
+                });
+            for (auto&& a : alleles) {
+                std::transform(a.begin(), a.end(), a.begin(), ::toupper);
+            }
             std::streampos byte_pos = bgen_file.tellg();
             bool exclude_snp = false;
             // but we will not process anything
@@ -412,13 +418,21 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
 
 
             std::vector<byte_t> buffer1;
+            std::vector<byte_t>* buffer2 = nullptr;
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
             if (!exclude_snp) {
                 // now filter
-                if (filter_snp(buffer1, context, geno, maf, info_score,
-                               hard_threshold, hard_coded))
-                    continue;
+                //
+                if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
+                    QC_Checker setter(&m_sample_names, hard_threshold,
+                                      hard_coded);
+                    uncompress_probability_data(context, buffer1, buffer2);
+                    parse_probability_data<QC_Checker>(
+                        &(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                        context, setter);
+                    if (setter.filter_snp(maf, geno, info_score)) continue;
+                }
                 m_existed_snps_index[RSID] = snp_res.size();
                 // TODO: Update SNP constructor
                 snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
@@ -453,461 +467,6 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     }
 
     return snp_res;
-}
-
-
-BinaryGen::GenotypeDataBlock BinaryGen::init_genoData(Context const& context,
-                                                      byte_t const* buffer,
-                                                      byte_t const* const end)
-{
-    GenotypeDataBlock pack;
-    if (end < buffer + 8) {
-        throw std::runtime_error("ERROR: BGEN format error");
-    }
-    uint32_t N = 0;
-    buffer = read_little_endian_integer(buffer, end, &N);
-    if (N != context.number_of_samples) {
-        throw std::runtime_error(
-            "ERROR: BGEN format error! Number of sample mismatched");
-    }
-    if (end < buffer + N + 2) {
-        throw std::runtime_error(
-            "ERROR: BGEN format error! Invalid block size");
-    }
-
-    pack.numberOfSamples = N;
-    buffer = read_little_endian_integer(buffer, end, &pack.numberOfAlleles);
-    buffer = read_little_endian_integer(buffer, end, &pack.ploidyExtent[0]);
-    buffer = read_little_endian_integer(buffer, end, &pack.ploidyExtent[1]);
-    // Keep a pointer to the ploidy and move buffer past the ploidy
-    // information
-    pack.ploidy = buffer;
-    buffer += N;
-    // Get the phased flag and number of bits
-    pack.phased = ((*buffer++) & 0x1);
-    pack.bits = *reinterpret_cast<byte_t const*>(buffer++);
-    pack.buffer = buffer;
-    pack.end = end;
-    return pack;
-}
-// return true if snp require filtering
-bool BinaryGen::filter_snp_v12(byte_t const* buffer, byte_t const* const end,
-                               Context context, const double geno,
-                               const double maf, const double info_score,
-                               const double hard_threshold,
-                               const bool hard_coded)
-{
-    GenotypeDataBlock pack = init_genoData(context, buffer, end);
-
-    int const bits = int(pack.bits);
-    byte_t const* ploidy_p = pack.ploidy;
-    buffer = pack.buffer;
-    assert(end == pack.end);
-    // all we do is filtering here, so we don't need a storage of the genotypes
-
-    uint64_t data = 0;
-    int size = 0;
-    misc::RunningStat running_stat;
-    if (pack.phased) {
-        throw std::runtime_error(
-            "ERROR: Currently we do not support phased data");
-    }
-    int maf_sum = 0;
-    int nmiss = 0, nmiss_maf = 0;
-    int num_included_sample = 0;
-
-    for (uint32_t i = 0; i < pack.numberOfSamples; ++i, ++ploidy_p) {
-        uint32_t const ploidy = uint32_t(*ploidy_p & 0x3F);
-        bool const missing = (*ploidy_p & 0x80);
-        uint32_t const valueCount =
-            pack.phased
-                ? (ploidy * pack.numberOfAlleles)
-                : n_choose_k(uint32_t(ploidy + pack.numberOfAlleles - 1),
-                             uint32_t(pack.numberOfAlleles - 1));
-
-        uint32_t const storedValueCount =
-            valueCount - (pack.phased ? ploidy : 1);
-
-        if (m_sample_names[i].included) {
-            num_included_sample++;
-            if (missing) {
-                nmiss++;
-                // Consume dummy zero values
-                for (uint32_t h = 0; h < storedValueCount; ++h) {
-                    buffer =
-                        read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    (void) parse_bit_representation(&data, &size, bits);
-                }
-            }
-            else
-            {
-                // Consume values and interpret them.
-                double sum = 0.0;
-                double exp = 0;
-                int hard = -1;
-                double hard_prob = 0.0;
-                for (uint32_t h = 0; h < storedValueCount; ++h) {
-                    buffer =
-                        read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    double value =
-                        parse_bit_representation(&data, &size, bits);
-                    // value is the probability for the h item
-                    // we only want 3 item e.g. h < 3
-                    assert(h < 3);
-                    exp += value * (2 - h);
-                    sum += value;
-                    if (value >= hard_threshold && value > hard_prob) {
-                        hard = h;
-                        hard_prob = value;
-                    }
-                    if ((pack.phased
-                         && ((h + 1) % (pack.numberOfAlleles - 1)) == 0)
-                        || ((!pack.phased) && (h + 1) == storedValueCount))
-                    {
-                        assert(sum <= 1.00000001);
-                        // last value is not recorded, but represent as 1-sum
-                        value = 1.0 - sum;
-                        if (value >= hard_threshold && value > hard_prob) {
-                            hard = h + 1;
-                            hard_prob = value;
-                        }
-                        exp += value * (2 - (h + 1));
-                        sum = 0.0;
-                        // setter.set_value(reportedValueCount++, 1.0 - sum);
-                    }
-                }
-                if (hard_coded && hard == -1) {
-                    nmiss++;
-                    nmiss_maf++;
-                }
-                else
-                {
-                    running_stat.push(exp);
-                    if (hard == -1)
-                        nmiss_maf++;
-                    else
-                        maf_sum += hard;
-                }
-            }
-        }
-        else
-        {
-            // just consume data, don't set anything.
-            for (uint32_t h = 0; h < storedValueCount; ++h) {
-                buffer = read_bits_from_buffer(buffer, end, &data, &size, bits);
-                parse_bit_representation(&data, &size, bits);
-            }
-        }
-    }
-    if (geno < 1.0 && (double) nmiss / (double) num_included_sample > geno) {
-        m_num_geno_filter++;
-        return true;
-    }
-    // all missing is bad in all situation
-    if (maf > 0.0 && (hard_coded && num_included_sample == nmiss_maf)) {
-        // need maf filtering but all are missing
-        m_num_maf_filter++;
-        return true;
-    }
-    // can't do maf filtering if nmiss_maf ==num_included_sample
-    // because of divided by 0
-    // TODO: BGEN INFO score was calculated with first allele as effective
-    if (num_included_sample != nmiss_maf) {
-        double cur_maf =
-            (double) maf_sum
-            / (((double) num_included_sample - (double) nmiss_maf) * 2.0);
-        if (cur_maf < maf) {
-            m_num_maf_filter++;
-            return true;
-        }
-    }
-    // calculate INFO Score
-    double p = running_stat.mean() / 2.0;
-    double p_all = 2.0 * p * (1.0 - p);
-    double cur_info = running_stat.var() / p_all;
-    if (cur_info < info_score) {
-        m_num_info_filter++;
-        return true;
-    }
-    return false;
-}
-// return true if the SNP require filtering
-bool BinaryGen::filter_snp_v11(byte_t const* buffer, byte_t const* const end,
-                               Context context, const double geno,
-                               const double maf, const double info_score,
-                               const double hard_threshold,
-                               const bool hard_coded)
-{
-    if (end != buffer + 6 * context.number_of_samples) {
-        throw std::runtime_error("ERROR: Invalid bgen format!");
-    }
-    double const probability_conversion_factor =
-        get_probability_conversion_factor(context.flags);
-
-    misc::RunningStat running_stat;
-    // based on PLINK, the code is translated as:
-    // g = 0 = 3 (11)
-    // g = 1 = 2 (10)
-    // g = 2 = 0 (00)
-    // missing = 1 (01)
-    // we will calculate the expectation according to the above encoding (not
-    // perfect)
-
-    int maf_sum = 0;
-    int nmiss = 0, nmiss_maf = 0;
-    int num_included_sample = 0;
-    for (uint32_t i = 0; i < context.number_of_samples; ++i) {
-        if (!m_sample_names[i].included) {
-            // need to consume the data
-            for (size_t g = 0; g < 3; ++g) {
-                uint16_t prob;
-                buffer = read_little_endian_integer(buffer, end, &prob);
-            }
-            continue;
-        }
-        num_included_sample++;
-        assert(end >= buffer + 6);
-        double exp = 0;
-        int hard = -1;
-        double hard_prob = 0.0;
-        double sum = 0.0;
-        for (std::size_t g = 0; g < 3; ++g) {
-            uint16_t prob;
-            buffer = read_little_endian_integer(buffer, end, &prob);
-            prob = convert_from_integer_representation(prob, probability_conversion_factor);
-            sum += prob;
-            exp += prob * (2 - g);
-            if (prob >= hard_threshold && prob > hard_prob) {
-                hard = g;
-                hard_prob = prob;
-            }
-        }
-        if (sum <= 0.0 || (hard_coded && hard == -1)) {
-            nmiss++;
-            nmiss_maf++;
-        }
-        else
-        {
-            running_stat.push(exp);
-            if (hard == -1)
-                nmiss_maf++;
-            else
-                maf_sum += hard;
-        }
-    }
-    if (geno < 1.0 && (double) nmiss / (double) num_included_sample > geno) {
-        m_num_geno_filter++;
-        return true;
-    }
-    // all missing is bad in all situation
-    if (maf > 0.0 && (hard_coded && num_included_sample == nmiss_maf)) {
-        // need maf filtering but all are missing
-        m_num_maf_filter++;
-        return true;
-    }
-    // can't do maf filtering if nmiss_maf ==num_included_sample
-    // because of divided by 0
-    // TODO: BGEN INFO score was calculated with first allele as effective
-    if (num_included_sample != nmiss_maf) {
-        double cur_maf =
-            (double) maf_sum
-            / (((double) num_included_sample - (double) nmiss_maf) * 2.0);
-        if (cur_maf < maf) {
-            m_num_maf_filter++;
-            return true;
-        }
-    }
-    // calculate INFO Score
-    double p = running_stat.mean() / 2.0;
-    double p_all = 2.0 * p * (1.0 - p);
-    double cur_info = running_stat.var() / p_all;
-    if (cur_info < info_score) {
-        m_num_info_filter++;
-        return true;
-    }
-    return false;
-}
-
-bool BinaryGen::filter_snp(std::vector<byte_t> buffer, Context context,
-                           const double geno, const double maf,
-                           const double info_score, const double hard_threshold,
-                           const bool hard_coded)
-{
-    // no filtering (Note: hard_threshold only use for geno and MAF)
-    if (maf <= 0.0 && geno >= 1.0 && info_score <= 0.0) return false;
-    std::vector<byte_t>* buffer2;
-    uncompress_probability_data(context, buffer, buffer2);
-
-    if ((context.flags & e_Layout) == e_Layout0
-        || (context.flags & e_Layout) == e_Layout1)
-    {
-        return filter_snp_v11(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
-                              context, geno, maf, info_score, hard_threshold,
-                              hard_coded);
-    }
-    else
-    {
-        return filter_snp_v12(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
-                              context, geno, maf, info_score, hard_threshold,
-                              hard_coded);
-    }
-}
-
-// Read in the v11 bgen data and convert it into the plink binary vector
-// in genotype
-void BinaryGen::prob_to_plink_v11(uintptr_t* genotype, byte_t const* buffer,
-                                  byte_t const* const end, Context context)
-{
-    if (end != buffer + 6 * context.number_of_samples) {
-        throw std::runtime_error("ERROR: Invalid bgen format!");
-    }
-    double const probability_conversion_factor =
-        get_probability_conversion_factor(context.flags);
-
-
-    int shift = 0;
-    int index = 0;
-    for (uint32_t i = 0; i < context.number_of_samples; ++i) {
-        uintptr_t cur_geno = 1;
-        if (!m_sample_names[i].included) {
-            // need to consume the data
-            for (size_t g = 0; g < 3; ++g) {
-                uint16_t prob;
-                buffer = read_little_endian_integer(buffer, end, &prob);
-            }
-        }
-        else
-        {
-            assert(end >= buffer + 6);
-            double hard_prob = 0.0;
-            double sum = 0.0;
-            for (std::size_t g = 0; g < 3; ++g) {
-                uint16_t prob;
-                buffer = read_little_endian_integer(buffer, end, &prob);
-                prob = convert_from_integer_representation(prob, probability_conversion_factor);
-                sum += prob;
-                if (prob >= m_hard_threshold && prob > hard_prob) {
-                    cur_geno = (g == 0) ? 0 : g + 1;
-                    hard_prob = prob;
-                }
-            }
-            if (sum <= 0.0) {
-                cur_geno = 1;
-            }
-        }
-        if (shift == 0) genotype[index] = 0; // match behaviour of binaryplink
-        genotype[index] |= cur_geno << shift;
-        shift += 2;
-        if (shift == BITCT) {
-            index++;
-            shift = 0;
-        }
-    }
-}
-
-void BinaryGen::prob_to_plink_v12(uintptr_t* genotype, byte_t const* buffer,
-                                  byte_t const* const end, Context context)
-{
-    GenotypeDataBlock pack = init_genoData(context, buffer, end);
-
-    int const bits = int(pack.bits);
-    byte_t const* ploidy_p = pack.ploidy;
-    buffer = pack.buffer;
-    assert(end == pack.end);
-    // all we do is filtering here, so we don't need a storage of the genotypes
-
-
-    uint32_t max_count =
-        pack.phased ? (uint32_t(pack.ploidyExtent[1]) * pack.numberOfAlleles)
-                    : n_choose_k(uint32_t(pack.ploidyExtent[1])
-                                     + pack.numberOfAlleles - 1,
-                                 pack.numberOfAlleles - 1);
-
-    uint64_t data = 0;
-    int size = 0;
-    if (pack.phased) {
-        throw std::runtime_error(
-            "ERROR: Currently we do not support phased data");
-    }
-
-    int shift = 0;
-    int index = 0;
-    for (uint32_t i = 0; i < pack.numberOfSamples; ++i, ++ploidy_p) {
-        uintptr_t cur_geno = 1;
-        uint32_t const ploidy = uint32_t(*ploidy_p & 0x3F);
-        bool const missing = (*ploidy_p & 0x80);
-        uint32_t const valueCount =
-            pack.phased
-                ? (ploidy * pack.numberOfAlleles)
-                : n_choose_k(uint32_t(ploidy + pack.numberOfAlleles - 1),
-                             uint32_t(pack.numberOfAlleles - 1));
-
-        uint32_t const storedValueCount =
-            valueCount - (pack.phased ? ploidy : 1);
-
-        if (m_sample_names[i].included) {
-            if (missing) {
-                // Consume dummy zero values, emit missing values.
-                for (uint32_t h = 0; h < storedValueCount; ++h) {
-                    buffer =
-                        read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    (void) parse_bit_representation(&data, &size, bits);
-                }
-            }
-            else
-            {
-                // Consume values and interpret them.
-                double hard_prob = 0.0;
-                double sum = 0.0;
-                for (uint32_t h = 0; h < storedValueCount; ++h) {
-                    buffer =
-                        read_bits_from_buffer(buffer, end, &data, &size, bits);
-                    double value =
-                        parse_bit_representation(&data, &size, bits);
-                    // value is the probability for the h item
-                    // we only want 3 item e.g. h < 3
-                    assert(h < 3);
-                    sum += value;
-                    if (value >= m_hard_threshold && value > hard_prob) {
-                        cur_geno = (h == 0) ? 0 : h + 1;
-                        hard_prob = value;
-                    }
-                    if ((pack.phased
-                         && ((h + 1) % (pack.numberOfAlleles - 1)) == 0)
-                        || ((!pack.phased) && (h + 1) == storedValueCount))
-                    {
-                        assert(sum <= 1.00000001);
-                        // last value is not recorded, so need to calculate
-                        // directly though we currently do not support phasin
-                        value = 1.0 - sum;
-                        uint32_t g = h + 1;
-                        if (value >= m_hard_threshold && value > hard_prob) {
-                            cur_geno = (g == 0) ? 0 : g + 1;
-                            hard_prob = value;
-                        }
-                        sum = 0.0;
-                        // setter.set_value(reportedValueCount++, 1.0 - sum);
-                    }
-                }
-            }
-        }
-        else
-        {
-            // just consume data, don't set anything.
-            for (uint32_t h = 0; h < storedValueCount; ++h) {
-                buffer = read_bits_from_buffer(buffer, end, &data, &size, bits);
-                parse_bit_representation(&data, &size, bits);
-            }
-        }
-
-        if (shift == 0) genotype[index] = 0; // match behaviour of binaryplink
-        genotype[index] |= cur_geno << shift;
-        shift += 2;
-        if (shift == BITCT) {
-            index++;
-            shift = 0;
-        }
-    }
 }
 
 BinaryGen::~BinaryGen()
@@ -962,8 +521,8 @@ void BinaryGen::dosage_score(std::vector<Sample_lite>& current_prs_score,
             if (IS_SET(m_sample_include.data(),
                        i_sample)) // to ignore unwanted samples
             {
-                // we want g to be signed so that when -2, it will not cause us
-                // troubles
+                // we want g to be signed so that when -2, it will not cause
+                // us troubles
                 for (int g = 0; g < (int) prob.size(); ++g) {
                     if (*max_element(prob.begin(), prob.end())
                         < filter.hard_threshold)

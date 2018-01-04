@@ -137,7 +137,7 @@ protected:
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
     double m_hard_threshold;
-    bool m_hard_coded=false;
+    bool m_hard_coded = false;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<SNP> m_existed_snps;
