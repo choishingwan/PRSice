@@ -48,6 +48,7 @@ public:
         threshold.category = category;
         threshold.p_threshold = p_threshold;
     };
+
     inline void set_flipped() { statistic.flipped = true; };
     std::string get_rs() const { return basic.rs; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
@@ -168,7 +169,6 @@ public:
     };
 
     void set_clumped() { clump_info.clumped = true; };
-    void clump(std::vector<SNP>& snp_list, double proxy = 2);
     void clump(std::vector<SNP>& snp_list, size_t target_index, double r2,
                double proxy = 2)
     {
