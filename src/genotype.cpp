@@ -879,7 +879,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> core_tot;
     std::vector<uint32_t> pair_tot;
     double prev_progress = 0.0;
-
+    uintptr_t contain_miss_init = founder_ctsplit * sizeof(intptr_t)
+    + 2 * sizeof(int32_t)
+    + (m_marker_ct - 1) * 2 * sizeof(double);;
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
@@ -889,16 +891,16 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
-        auto cur_snp_index = m_sort_by_p_index[i_snp];
+        auto &&cur_snp_index = m_sort_by_p_index[i_snp];
         // skip any SNPs that are clumped
-        if (m_existed_snps[cur_snp_index].clumped()) continue;
         auto&& cur_snp = m_existed_snps[cur_snp_index];
+        if (cur_snp.p_value() > clump_info.p_value) continue;
+        if (cur_snp.clumped()) continue;
         auto&& target_pair = reference.m_existed_snps_index.find(cur_snp.rs());
         if (target_pair == reference.m_existed_snps_index.end()) continue;
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
-        if (cur_snp.p_value() > clump_info.p_value) continue;
         auto&& ref_snp = reference.m_existed_snps[target_pair->second];
         if (!cur_snp.matching(ref_snp.chr(), ref_snp.loc(), ref_snp.ref(),
                               ref_snp.alt(), flipped))
@@ -922,9 +924,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         reference.read_genotype(genotype_vector.data(), cur_snp,
                                 cur_snp.file_name());
 
-        uintptr_t contain_missing = founder_ctsplit * sizeof(intptr_t)
-                                    + 2 * sizeof(int32_t)
-                                    + (m_marker_ct - 1) * 2 * sizeof(double);
+        uintptr_t contain_missing = contain_miss_init;
         // resize the geno1 vector in SNP
         // the Passkey ensure only this class can modify the size
 
@@ -940,14 +940,18 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
-        for (size_t pair_snp = start; pair_snp < end; ++pair_snp) {
+        for (size_t i_pair = start; i_pair < end; ++i_pair) {
+        		auto &&pair_snp = m_existed_snps[i_pair];
+        		if(pair_snp.clumped()) continue;
+        		if (pair_snp.p_value() > clump_info.p_value) continue;
+        		auto&& pair_pair = reference.m_existed_snps_index.find(pair_snp.rs());
+        		if (pair_pair == reference.m_existed_snps_index.end()) continue;
+        		auto &&ref_pair = reference.m_existed_snps[pair_pair->second];
             reference.read_genotype(pair_genotype_vector.data(),
-                                    m_existed_snps[pair_snp],
-                                    m_existed_snps[pair_snp].file_name());
+            			ref_pair,
+					ref_pair.file_name());
 
-            uintptr_t pair_contain_missing =
-                founder_ctsplit * sizeof(intptr_t) + 2 * sizeof(int32_t)
-                + (m_marker_ct - 1) * 2 * sizeof(double);
+            uintptr_t pair_contain_missing = contain_miss_init;
             // resize the geno1 vector in SNP
             // the Passkey ensure only this class can modify the size
             load_and_split3(pair_genotype_vector.data(), m_founder_ct,
@@ -963,7 +967,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                (pair_contain_missing == 3), core_tot, pair_tot,
                                core_geno, pair_geno);
             if (r2 >= min_r2) {
-                cur_snp.clump(m_existed_snps, pair_snp, r2, clump_info.proxy);
+                cur_snp.clump(m_existed_snps, i_pair, r2, clump_info.proxy);
             }
         }
         remain_core_snps.push_back(cur_snp_index);
