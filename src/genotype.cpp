@@ -927,7 +927,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
-        uintptr_t contain_missingg= contain_miss_init;;
+        uintptr_t contain_missing= contain_miss_init;;
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
         		auto &&pair_snp = m_existed_snps[i_pair];
         		if(pair_snp.clumped()) continue;
@@ -1117,10 +1117,15 @@ void Genotype::print_snp(std::string& output, double threshold,
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {
+    	snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
+    	                    << "\t" << snp.p_value();
         if (snp.get_threshold() <= threshold && snp.in(region_index)) {
-            snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
-                    << "\t" << snp.p_value() << std::endl;
+             snp_out << "\tY";
         }
+        else{
+                     snp_out << "\tN";
+                }
+        snp_out << std::endl;
     }
     snp_out.close();
 }
