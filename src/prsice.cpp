@@ -1198,7 +1198,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                 target.has_pheno(sample_index) ? "Yes" : "No";
             best_out << target.fid(sample_index)<< "\t"
                      << target.iid(sample_index) << "\t"
-                     << m_best_sample_score[sample]
+                     << m_best_sample_score[sample_index]
                      << "\t" << has_pheno << std::endl;
         }
     }
