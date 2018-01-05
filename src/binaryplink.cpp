@@ -360,7 +360,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 // get the location of the SNP in the binary file
                 std::streampos byte_pos = bed.tellg();
 
-            	if(maf > 0 && geno < 1){
+            	//if(maf > 0 && geno < 1){
                 if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                            m_sample_include.data(), final_mask,
                                            false, bed, m_tmp_genotype.data(),
@@ -428,7 +428,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                     m_num_maf_filter++;
                     continue;
                 }
-            }
+            //}
 
                 m_num_ambig +=
                     ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2]);

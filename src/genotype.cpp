@@ -667,7 +667,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         }
         else if (cur_snp.loc() - prev_loc > clump_info.distance)
         {
-            while (cur_snp.loc() - prev_loc > clump_info.distance) {
+            while (cur_snp.loc() - prev_loc > clump_info.distance && low_bound < vector_index) {
                 prev_loc = m_existed_snps[low_bound++].loc();
             }
         }
@@ -773,6 +773,7 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
                         std::vector<uintptr_t>& genotype_vector,
                         std::vector<uintptr_t>& pair_genotype_vector)
 {
+
     uint32_t counts[18];
     const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
     double freq11;
@@ -816,6 +817,7 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
     }
     else
     {
+
         freq11_expected = freqx1 * freq1x;
         dxx = freq11 - freq11_expected;
         // also want to avoid divide by 0
@@ -826,6 +828,7 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
         }
         else
         {
+
             r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
         }
     }
@@ -935,8 +938,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             popcount_longs(&(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
         // set the missing information
         // contain_missing == 3 = has missing
-        size_t start = cur_snp.up_bound();
-        size_t end = cur_snp.low_bound();
+        size_t start = cur_snp.low_bound();
+        size_t end = cur_snp.up_bound();
         for (size_t pair_snp = start; pair_snp < end; ++pair_snp) {
             reference.read_genotype(pair_genotype_vector.data(),
                                     m_existed_snps[pair_snp],
@@ -958,7 +961,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                          founder_ctv3);
             double r2 = get_r2((contain_missing == 3),
                                (pair_contain_missing == 3), core_tot, pair_tot,
-                               genotype_vector, pair_genotype_vector);
+                               core_geno, pair_geno);
             if (r2 >= min_r2) {
                 cur_snp.clump(m_existed_snps, pair_snp, r2, clump_info.proxy);
             }
