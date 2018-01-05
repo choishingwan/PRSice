@@ -344,7 +344,6 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 // to keep this SNP
             	// only do the filtering if we need to as my current implementation
             	// isn't as efficient as PLINK
-            	if(maf > 0 && geno < 1){
                 if (num_snp_read - prev_snp_processed > 1) {
                     // skip unread lines
                     if (!bed.seekg(m_bed_offset
@@ -360,6 +359,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 prev_snp_processed = (num_snp_read-1);
                 // get the location of the SNP in the binary file
                 std::streampos byte_pos = bed.tellg();
+
+            	if(maf > 0 && geno < 1){
                 if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
                                            m_sample_include.data(), final_mask,
                                            false, bed, m_tmp_genotype.data(),
