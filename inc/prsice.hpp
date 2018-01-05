@@ -152,6 +152,7 @@ private:
         double coefficient;
         double p;
         double emp_p;
+        double se;
         int num_snp;
     };
 
@@ -184,6 +185,9 @@ private:
     Eigen::VectorXd m_phenotype;
     Eigen::MatrixXd m_independent_variables;
     double m_null_r2 = 0.0;
+    double m_null_p = 1.0;
+    double m_null_se = 0.0;
+    double m_null_coeff = 0.0;
     int m_best_index = -1;
     int m_perm_per_slice = 0;
     int m_remain_slice = 0;

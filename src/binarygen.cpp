@@ -142,7 +142,6 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
         throw std::runtime_error(error_message);
     }
 
-    m_unfiltered_sample_ct = sample_name.size();
     m_founder_ct = m_unfiltered_sample_ct;
     // now set all those vectors
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);

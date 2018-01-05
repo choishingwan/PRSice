@@ -134,7 +134,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     update_sample_included(target);
 
     // get the null r2
-    double null_r2_adjust = 0.0, null_p = 0.0, null_coeff = 0.0;
+    double null_r2_adjust = 0.0;
     int n_thread = c_commander.thread();
     if (m_independent_variables.cols() > 2 && !no_regress) {
         assert(m_independent_variables.rows() == m_phenotype.rows());
@@ -146,7 +146,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                             m_independent_variables.topRightCorner(
                                 m_independent_variables.rows(),
                                 m_independent_variables.cols() - 1),
-                            null_p, m_null_r2, null_coeff, 25, n_thread, true);
+                            m_null_p, m_null_r2, m_null_coeff, m_null_se,  25, n_thread, true);
         }
         else
         {
@@ -156,7 +156,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                 m_independent_variables.topRightCorner(
                     m_independent_variables.rows(),
                     m_independent_variables.cols() - 1),
-                null_p, m_null_r2, null_r2_adjust, null_coeff, n_thread, true);
+                m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se, n_thread, true);
         }
     }
 }
@@ -809,6 +809,7 @@ void PRSice::run_prsice(const Commander& c_commander,
     while (target.get_score(cur_index, cur_category,
                             cur_threshold, m_num_snp_included, region_index, require_standardize))
     {
+
         double progress =
             (double) cur_category / (double) (max_category) *100.0;
         if (progress - prev_progress > 0.01 && !m_prset) {
@@ -848,7 +849,7 @@ void PRSice::regress_score(Genotype &target, const double threshold, size_t thre
                            const size_t pheno_index,
                            const size_t iter_threshold)
 {
-    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0;
+    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0, se=0.0;
     size_t num_include_samples = target.num_sample();
     if (m_num_snp_included == 0
         || (m_num_snp_included == m_prs_results[iter_threshold].num_snp))
@@ -870,7 +871,7 @@ void PRSice::regress_score(Genotype &target, const double threshold, size_t thre
         try
         {
             Regression::glm(m_phenotype, m_independent_variables, p_value, r2,
-                            coefficient, 25, thread, true);
+                            coefficient, se, 25, thread, true);
         }
         catch (const std::runtime_error& error)
         {
@@ -891,7 +892,7 @@ void PRSice::regress_score(Genotype &target, const double threshold, size_t thre
     else
     {
         Regression::linear_regression(m_phenotype, m_independent_variables,
-                                      p_value, r2, r2_adjust, coefficient,
+                                      p_value, r2, r2_adjust, coefficient, se,
                                       thread, true);
     }
 
@@ -917,6 +918,7 @@ void PRSice::regress_score(Genotype &target, const double threshold, size_t thre
     cur_result.p = p_value;
     cur_result.emp_p = -1.0;
     cur_result.num_snp = m_num_snp_included;
+    cur_result.se = se;
     m_prs_results[iter_threshold] = cur_result;
 }
 
@@ -1015,9 +1017,9 @@ void PRSice::thread_perm(
         double ori_p = m_perm_result[processed + i];
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (logit_perm) {
-            double r2, coefficient;
+            double r2, coefficient, se;
             Regression::glm(pheno_perm[i], m_independent_variables, obs_p, r2,
-                            coefficient, 25, 1, true);
+                            coefficient, se, 25, 1, true);
         }
         else
         {
@@ -1122,7 +1124,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
             "ERROR: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
     }
-    prsice_out << "Threshold\tR2\tP\tCoefficient\tNum_SNP";
+    prsice_out << "Threshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
     if (perm) prsice_out << "\tEmpirical_P";
     prsice_out << std::endl;
     for (size_t i = 0; i < m_prs_results.size(); ++i) {
@@ -1136,7 +1138,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         double r2 = full - null;
         prsice_out << m_prs_results[i].threshold << "\t" << r2 << "\t"
                    << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
-                   << "\t" << m_prs_results[i].num_snp;
+                   << "\t" << m_prs_results[i].se << "\t" << m_prs_results[i].num_snp;
         if (perm)
             prsice_out << "\t"
                        << ((m_prs_results[i].emp_p >= 0.0)
@@ -1255,7 +1257,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
         throw std::runtime_error(error_message);
     }
     out << "Phenotype\tSet\tThreshold\tPRS.R2\tFull.R2\tNull."
-           "R2\tPrevalence\tCoefficient\tP\tNum_SNP";
+           "R2\tPrevalence\tCoefficient\tStandard.Error\tP\tNum_SNP";
     if (perm) out << "\tEmpirical-P";
     out << std::endl;
     for (auto&& sum : m_prs_summary) {
@@ -1274,7 +1276,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             out << "\t" << sum.result.r2 - sum.r2_null << "\t" << sum.result.r2
                 << "\t" << sum.r2_null << "\t-";
         }
-        out << "\t" << sum.result.coefficient << "\t" << sum.result.p << "\t"
+        out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t" << sum.result.p << "\t"
             << sum.result.num_snp;
         if (perm) out << "\t" << sum.result.emp_p;
         out << std::endl;
