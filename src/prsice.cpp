@@ -628,21 +628,28 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             // sample is found in the phenotype vector
             int index = m_sample_with_phenotypes[id]; // index on vector
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                try
-                {
-                    double temp =
-                        misc::convert<double>(token[cov_index[i_cov]]);
-                    m_independent_variables(index, i_cov + 2) =
-                        temp; // + 2 because first line = intercept, second line
-                              // = PRS
-                }
-                catch (const std::runtime_error& error)
-                {
-                    valid = false;
-                    // place holder as 0, will remove it later
-                    m_independent_variables(index, i_cov + 2) = 0;
-                    missing_count[i_cov]++;
-                }
+            		if(token[cov_index[i_cov]].compare("NA")==0){
+            			valid= false;
+            			m_independent_variables(index, i_cov+2) =  0;
+            			missing_count[i_cov]++;
+            		}
+            		else{
+					try
+					{
+						double temp =
+							misc::convert<double>(token[cov_index[i_cov]]);
+						m_independent_variables(index, i_cov + 2) =
+							temp; // + 2 because first line = intercept, second line
+								  // = PRS
+					}
+					catch (const std::runtime_error& error)
+					{
+						valid = false;
+						// place holder as 0, will remove it later
+						m_independent_variables(index, i_cov + 2) = 0;
+						missing_count[i_cov]++;
+					}
+            		}
             }
             if (valid) {
                 valid_sample_index.push_back(
