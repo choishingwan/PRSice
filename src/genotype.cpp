@@ -927,6 +927,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
+        uintptr_t contain_missingg= contain_miss_init;;
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
         		auto &&pair_snp = m_existed_snps[i_pair];
         		if(pair_snp.clumped()) continue;
@@ -939,7 +940,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         			reference.read_genotype(genotype_vector.data(), cur_snp,
         			                                cur_snp.file_name());
 
-        			        uintptr_t contain_missing = contain_miss_init;
         			        // resize the geno1 vector in SNP
         			        // the Passkey ensure only this class can modify the size
 
