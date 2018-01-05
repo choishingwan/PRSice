@@ -382,7 +382,7 @@ private:
                                    const std::string& c)
     {
 
-        message[c] = input;
+        message[c] = message[c]+input;
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -404,7 +404,7 @@ private:
                                    std::string& error_message)
     {
 
-        message[c] = input;
+        message[c] = message[c]+input;
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
@@ -416,7 +416,7 @@ private:
                                     std::vector<T>& target, bool& error,
                                     const std::string& c)
     {
-        message[c] = input;
+        message[c] = message[c]+input;
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
