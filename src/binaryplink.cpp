@@ -342,6 +342,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
 
                 // now read in the binary information and determine if we want
                 // to keep this SNP
+            	// only do the filtering if we need to as my current implementation
+            	// isn't as efficient as PLINK
+            	if(maf > 0 && geno < 1){
                 if (num_snp_read - prev_snp_processed > 1) {
                     // skip unread lines
                     if (!bed.seekg(m_bed_offset
@@ -424,6 +427,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                     m_num_maf_filter++;
                     continue;
                 }
+            }
 
                 m_num_ambig +=
                     ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2]);
