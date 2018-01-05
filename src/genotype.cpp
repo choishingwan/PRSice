@@ -885,6 +885,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
+
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
         if (progress - prev_progress > 0.01) {
@@ -920,22 +921,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // if this become a problem, we can also put it forward
         // and skip it just like SNPs with large p-values
         assert(cur_snp.loc() >= 0);
+        bool first = true;
 
-        reference.read_genotype(genotype_vector.data(), cur_snp,
-                                cur_snp.file_name());
-
-        uintptr_t contain_missing = contain_miss_init;
-        // resize the geno1 vector in SNP
-        // the Passkey ensure only this class can modify the size
-
-        load_and_split3(genotype_vector.data(), m_founder_ct, core_geno.data(),
-                        founder_ctv3, 0, 0, 1, &contain_missing);
-        core_tot.resize(6, 0);
-        core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
-        core_tot[1] =
-            popcount_longs(&(core_geno.data()[founder_ctv3]), founder_ctv3);
-        core_tot[2] =
-            popcount_longs(&(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
         // set the missing information
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
@@ -944,12 +931,31 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         		auto &&pair_snp = m_existed_snps[i_pair];
         		if(pair_snp.clumped()) continue;
         		if (pair_snp.p_value() > clump_info.p_value) continue;
-        		auto&& pair_pair = reference.m_existed_snps_index.find(pair_snp.rs());
-        		if (pair_pair == reference.m_existed_snps_index.end()) continue;
-        		auto &&ref_pair = reference.m_existed_snps[pair_pair->second];
+        		auto&& pair_index = reference.m_existed_snps_index.find(pair_snp.rs());
+        		if (pair_index == reference.m_existed_snps_index.end()) continue;
+        		auto &&ref_pair_snp = reference.m_existed_snps[pair_index->second];
+        		if(first){
+        			// only read it if we really need to clump a SNP
+        			reference.read_genotype(genotype_vector.data(), cur_snp,
+        			                                cur_snp.file_name());
+
+        			        uintptr_t contain_missing = contain_miss_init;
+        			        // resize the geno1 vector in SNP
+        			        // the Passkey ensure only this class can modify the size
+
+        			        load_and_split3(genotype_vector.data(), m_founder_ct, core_geno.data(),
+        			                        founder_ctv3, 0, 0, 1, &contain_missing);
+        			        core_tot.resize(6, 0);
+        			        core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
+        			        core_tot[1] =
+        			            popcount_longs(&(core_geno.data()[founder_ctv3]), founder_ctv3);
+        			        core_tot[2] =
+        			            popcount_longs(&(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
+        			        first =false;
+        		}
             reference.read_genotype(pair_genotype_vector.data(),
-            			ref_pair,
-					ref_pair.file_name());
+            		ref_pair_snp,
+					ref_pair_snp.file_name());
 
             uintptr_t pair_contain_missing = contain_miss_init;
             // resize the geno1 vector in SNP
