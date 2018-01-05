@@ -1094,6 +1094,7 @@ bool Genotype::get_score(int& cur_index,
     if(require_statistic){
     		misc::RunningStat rs;
     		for(auto &&sample: m_sample_names){
+    			if(!sample.included || !sample.has_pheno) continue;
     			if(sample.num_snp==0){
     				rs.push(0.0);
     			}else{
