@@ -152,6 +152,11 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     m_num_non_founder = 0;
     for (size_t i = 0; i < sample_name.size(); i++) {
         if (sample_name[i].included) SET_BIT(i, m_sample_include.data());
+        else{
+        		sample_name[i].FID="";
+        		sample_name[i].IID="";
+        		sample_name[i].pheno="";
+        }
         if (sex_col != -1) {
             m_num_male += (sex[i] == 1);
             m_num_female += (sex[i] == 2);
@@ -617,10 +622,11 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                          * 2.0)); // MAF does not count missing
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
+        size_t actual_index = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (i_missing < num_miss && i_sample == missing_samples[i_missing])
+        		if(!m_sample_names[i_sample].included) continue;
+            if (i_missing < num_miss && actual_index == missing_samples[i_missing])
             {
-
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
                 		m_sample_names[i_sample].prs += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
@@ -634,8 +640,8 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                 		m_sample_names[i_sample].prs -= center_score;
                 }
 
-                int g = (flipped) ? fabs(genotypes[i_sample] - 2)
-                                  : genotypes[i_sample];
+                int g = (flipped) ? fabs(genotypes[actual_index] - 2)
+                                  : genotypes[actual_index];
                 if (m_model == MODEL::HETEROZYGOUS) {
                     g = (g == 2) ? 0 : g;
                 }
@@ -651,6 +657,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                 m_sample_names[i_sample].prs += g * stat * 0.5;
                 m_sample_names[i_sample].num_snp++;
             }
+            actual_index++;
         }
     }
 }
