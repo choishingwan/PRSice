@@ -931,8 +931,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t end = cur_snp.up_bound();
         uintptr_t contain_missing = contain_miss_init;
         core_tot.resize(6, 0);
-        //Follow plink's way, that is
-        for (size_t i_pair = i_pair; i_pair < end; ++i_pair) {
+        for (size_t i_pair = start; i_pair < end; ++i_pair) {
             if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
             if (pair_snp.clumped()) continue;
