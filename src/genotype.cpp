@@ -892,7 +892,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
         if (progress - prev_progress > 0.01) {
-            //fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
