@@ -670,7 +670,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             while (cur_snp.loc() - prev_loc > clump_info.distance
                    && low_bound < vector_index)
             {
-                prev_loc = m_existed_snps[low_bound++].loc();
+            		low_bound++;
+                prev_loc = m_existed_snps[low_bound].loc();
+
             }
         }
         // now low_bound should be the first SNP where the core index SNP need
@@ -890,7 +892,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
         if (progress - prev_progress > 0.01) {
-            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+            //fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
@@ -972,9 +974,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 popcount_longs(&(pair_geno.data()[founder_ctv3]), founder_ctv3);
             pair_tot[2] = popcount_longs(&(pair_geno.data()[2 * founder_ctv3]),
                                          founder_ctv3);
+
             double r2 =
                 get_r2((contain_missing == 3), (pair_contain_missing == 3),
                        core_tot, pair_tot, core_geno, pair_geno);
+
             if (r2 >= min_r2) {
                 cur_snp.clump(m_existed_snps, i_pair, r2, clump_info.proxy);
             }
@@ -1034,6 +1038,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     message.append("Number of variant(s) after clumping : "
                    + std::to_string(m_existed_snps.size()) + "\n");
     reporter.report(message);
+
 
 }
 
