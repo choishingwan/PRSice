@@ -931,7 +931,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         uintptr_t contain_missing = contain_miss_init;
         core_tot.resize(6, 0);
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
-            if (i_pair == i_snp) continue;
+            if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
             if (pair_snp.clumped()) continue;
             if (pair_snp.p_value() > clump_info.p_value) continue;
@@ -1034,12 +1034,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     message.append("Number of variant(s) after clumping : "
                    + std::to_string(m_existed_snps.size()) + "\n");
     reporter.report(message);
+
 }
 
 bool Genotype::sort_by_p()
 {
     if (m_existed_snps.size() == 0) return false;
-    m_sort_by_p_index = SNP::sort_by_p(m_existed_snps);
+    m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
     return true;
 }
 

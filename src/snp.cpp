@@ -83,3 +83,36 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
     });
     return idx;
 }
+
+std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
+{
+    std::vector<size_t> idx(input.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
+        // plink do it with respect to the location instead of statistic
+    		// chr first such that SNPs within the same chromosome will
+    		// be processed together
+        if (input[i1].basic.chr == input[i2].basic.chr) {
+            if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
+                if (input[i1].basic.loc == input[i2].basic.loc) {
+                    if (fabs(input[i1].statistic.stat)
+                        == fabs(input[i2].statistic.stat))
+                    {
+                        return input[i1].statistic.se < input[i2].statistic.se;
+                    }
+                    else
+                        return fabs(input[i1].statistic.stat)
+                               > fabs(input[2].statistic.stat);
+                }
+                else
+                    return input[i1].basic.loc < input[i2].basic.loc;
+            }
+            else
+                return input[i1].statistic.p_value
+                       < input[i2].statistic.p_value;
+        }
+        else
+            return input[i1].basic.chr < input[i2].basic.chr;
+    });
+    return idx;
+}
