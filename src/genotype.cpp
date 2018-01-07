@@ -670,9 +670,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             while (cur_snp.loc() - prev_loc > clump_info.distance
                    && low_bound < vector_index)
             {
-            		low_bound++;
+                low_bound++;
                 prev_loc = m_existed_snps[low_bound].loc();
-
             }
         }
         // now low_bound should be the first SNP where the core index SNP need
@@ -1038,8 +1037,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     message.append("Number of variant(s) after clumping : "
                    + std::to_string(m_existed_snps.size()) + "\n");
     reporter.report(message);
-
-
 }
 
 bool Genotype::sort_by_p()
