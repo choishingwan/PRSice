@@ -54,10 +54,11 @@ int main(int argc, char* argv[])
         target_file->load_samples(commander.keep_sample_file(),
                                   commander.remove_sample_file(), verbose,
                                   reporter);
-        target_file->load_snps(
-            commander.out(), commander.extract_file(), commander.exclude_file(),
-            commander.geno(), commander.maf(), commander.info(),
-            commander.hard_threshold(), commander.hard_coded(), verbose, reporter);
+        target_file->load_snps(commander.out(), commander.extract_file(),
+                               commander.exclude_file(), commander.geno(),
+                               commander.maf(), commander.info(),
+                               commander.hard_threshold(),
+                               commander.hard_coded(), verbose, reporter);
     }
     catch (const std::invalid_argument& ia)
     {
@@ -70,7 +71,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     if (!commander.ref_name().empty()) {
-    		reporter.report("Loading reference panel\n");
+        reporter.report("Loading reference panel\n");
         reference_file = factory.createGenotype(
             commander.ref_name(), commander.ref_type(), commander.thread(),
             commander.ignore_fid(), commander.nonfounders(),
@@ -133,7 +134,7 @@ int main(int argc, char* argv[])
             // immediately free the memory if needed
             if (!commander.ref_name().empty()) delete reference_file;
         }
-        if(!target_file->prepare_prsice()){
+        if (!target_file->prepare_prsice()) {
             std::string error_message = "No SNPs left for PRSice processing";
             reporter.report(error_message);
             return -1;

@@ -301,7 +301,7 @@ private:
             , m_stat(stat)
             , m_flipped(flipped)
         {
-        		m_score.resize(m_sample->size(),-1);
+            m_score.resize(m_sample->size(), -1);
         }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
@@ -316,7 +316,7 @@ private:
         {
             m_sample_i = i;
             exclude = !m_sample->at(m_sample_i).included;
-            m_num_included_samples+=!exclude;
+            m_num_included_samples += !exclude;
             return true;
         }
 
@@ -328,11 +328,11 @@ private:
             assert(value_type == eProbability);
             if (!first && !exclude) {
                 // summarize the previous sample's info
-            		// sum = 0 is for v11, otherwise, it should be missing
-            		if(missing || m_sum ==0){
-            			// this is missing
-            			m_missing_samples.push_back(m_sample_i);
-            		}
+                // sum = 0 is for v11, otherwise, it should be missing
+                if (missing || m_sum == 0) {
+                    // this is missing
+                    m_missing_samples.push_back(m_sample_i);
+                }
             }
             first = false;
             exclude = false;
@@ -347,60 +347,64 @@ private:
 
             int geno = (!m_flipped) ? 2 - m_entry_i : m_entry_i;
             if (m_model == MODEL::HETEROZYGOUS && geno == 2)
-            		geno = 0;
+                geno = 0;
             else if (m_model == MODEL::DOMINANT && geno == 2)
-            		geno = 1;
-            else if (m_model == MODEL::RECESSIVE) geno = std::max(geno - 1, 0);
-            	m_score[m_sample_i] += value * geno;
-            	if(!exclude) m_total_prob += value * geno;
+                geno = 1;
+            else if (m_model == MODEL::RECESSIVE)
+                geno = std::max(geno - 1, 0);
+            m_score[m_sample_i] += value * geno;
+            if (!exclude) m_total_prob += value * geno;
             m_entry_i++;
         }
         // call if sample is missing
-        void set_value(uint32_t, MissingValue value) {
-        		missing = true;
-        }
+        void set_value(uint32_t, MissingValue value) { missing = true; }
 
         void finalise()
         {
             // summarize the last sample's info
             if (!exclude) {
-            		if(missing || m_sum ==0){
-            			// this is missing
-            			m_missing_samples.push_back(m_sample_i);
-            		}
+                if (missing || m_sum == 0) {
+                    // this is missing
+                    m_missing_samples.push_back(m_sample_i);
+                }
             }
             // now update the PRS score
 
 
             if (m_num_included_samples == m_missing_samples.size()) {
-            		valid = false;
+                valid = false;
             }
             size_t num_miss = m_missing_samples.size();
             double mean =
-            		m_total_prob / (((double) m_num_included_samples - (double) num_miss)* 2);
+                m_total_prob
+                / (((double) m_num_included_samples - (double) num_miss) * 2);
             size_t i_missing = 0;
 
-            for (size_t i_sample = 0; i_sample < m_num_included_samples; ++i_sample) {
-            		if (i_missing <num_miss && i_sample == m_missing_samples[i_missing])
-            		{
-            			if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
-            				m_sample->at(i_sample).prs += m_stat * mean;
-            			if (m_missing != MISSING_SCORE::SET_ZERO)
-            				m_sample->at(i_sample).num_snp++;
-            			i_missing++;
-            		}
-            		else
-            		{ // not missing sample
-            			if (m_missing == MISSING_SCORE::CENTER) {
-            				// if centering, we want to keep missing at 0
-            				m_sample->at(i_sample).prs -= m_stat * mean;
-            			}
-            			// again, so that it will generate the same result as
-            			// genotype file format when we are 100% certain of the
-            			// genotypes
-            			m_sample->at(i_sample).prs += m_score[i_sample] * m_stat * 0.5;
-            			m_sample->at(i_sample).num_snp++;
-            		}
+            for (size_t i_sample = 0; i_sample < m_num_included_samples;
+                 ++i_sample)
+            {
+                if (i_missing < num_miss
+                    && i_sample == m_missing_samples[i_missing])
+                {
+                    if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
+                        m_sample->at(i_sample).prs += m_stat * mean;
+                    if (m_missing != MISSING_SCORE::SET_ZERO)
+                        m_sample->at(i_sample).num_snp++;
+                    i_missing++;
+                }
+                else
+                { // not missing sample
+                    if (m_missing == MISSING_SCORE::CENTER) {
+                        // if centering, we want to keep missing at 0
+                        m_sample->at(i_sample).prs -= m_stat * mean;
+                    }
+                    // again, so that it will generate the same result as
+                    // genotype file format when we are 100% certain of the
+                    // genotypes
+                    m_sample->at(i_sample).prs +=
+                        m_score[i_sample] * m_stat * 0.5;
+                    m_sample->at(i_sample).num_snp++;
+                }
             }
         }
 
@@ -408,7 +412,7 @@ private:
         size_t m_sample_i = 0;
         size_t m_entry_i = 0;
         size_t m_num_included_samples = 0;
-        double m_sum=0.0;
+        double m_sum = 0.0;
         bool missing = false;
         bool first = true;
         bool exclude = false;
@@ -418,8 +422,8 @@ private:
         std::vector<size_t> m_missing_samples;
         MODEL m_model;
         MISSING_SCORE m_missing;
-        double m_stat=0.0;
-        double m_total_prob =0.0;
+        double m_stat = 0.0;
+        double m_total_prob = 0.0;
         bool m_flipped;
     };
 

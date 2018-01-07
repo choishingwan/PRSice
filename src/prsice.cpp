@@ -128,7 +128,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
         std::vector<std::string> cov_header = c_commander.get_cov_header();
         gen_cov_matrix(c_commander.get_cov_file(), cov_header, reporter);
     }
-    // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no longer correct
+    // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no
+    // longer correct
 
     // now inform PRSice which samples should be included
     update_sample_included(target);
@@ -146,7 +147,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                             m_independent_variables.topRightCorner(
                                 m_independent_variables.rows(),
                                 m_independent_variables.cols() - 1),
-                            m_null_p, m_null_r2, m_null_coeff, m_null_se,  25, n_thread, true);
+                            m_null_p, m_null_r2, m_null_coeff, m_null_se, 25,
+                            n_thread, true);
         }
         else
         {
@@ -156,12 +158,13 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                 m_independent_variables.topRightCorner(
                     m_independent_variables.rows(),
                     m_independent_variables.cols() - 1),
-                m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se, n_thread, true);
+                m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se,
+                n_thread, true);
         }
     }
 }
 
-void PRSice::update_sample_included(Genotype &target)
+void PRSice::update_sample_included(Genotype& target)
 {
     m_max_fid_length = 3;
     m_max_iid_length = 3;
@@ -179,15 +182,18 @@ void PRSice::update_sample_included(Genotype &target)
                                ? m_max_iid_length
                                : target.iid(i_sample).length();
 
-        if(m_sample_with_phenotypes.find(target.sample_id(i_sample))==m_sample_with_phenotypes.end()){
-        		target.invalid_pheno(i_sample);
+        if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
+            == m_sample_with_phenotypes.end())
+        {
+            target.invalid_pheno(i_sample);
         }
-        // sample index store the index of samples that we need on from the m_sample_names of target
+        // sample index store the index of samples that we need on from the
+        // m_sample_names of target
         m_sample_index.push_back(i_sample);
     }
 }
 
-void PRSice::gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
+void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                            const int pheno_index, bool regress,
                            Reporter& reporter)
 {
@@ -239,12 +245,12 @@ void PRSice::gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
-        for(size_t i_sample=0; i_sample < target.num_sample(); ++i_sample){
-        		std::string id = target.sample_id(i_sample);
-        		bool included = target.sample_included(i_sample);
-        		if(included) num_included++;
-            if (phenotype_info.find(id) != phenotype_info.end()
-                && included && phenotype_info[id].compare("NA") != 0)
+        for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
+            std::string id = target.sample_id(i_sample);
+            bool included = target.sample_included(i_sample);
+            if (included) num_included++;
+            if (phenotype_info.find(id) != phenotype_info.end() && included
+                && phenotype_info[id].compare("NA") != 0)
             {
                 try
                 {
@@ -288,8 +294,8 @@ void PRSice::gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
     {
         // No phenotype file is provided
         // Use information from the fam file directly
-    		for(size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample){
-    			bool included = target.sample_included(i_sample);
+        for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
+            bool included = target.sample_included(i_sample);
             if (included) num_included++;
             if (target.pheno_is_na(i_sample) || !included) {
                 // it is ok to skip NA as default = sample.has_pheno = false
@@ -312,7 +318,8 @@ void PRSice::gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
                 }
                 else
                 {
-                    pheno_store.push_back(misc::convert<double>(target.pheno(i_sample)));
+                    pheno_store.push_back(
+                        misc::convert<double>(target.pheno(i_sample)));
                     if (input_sanity_check.size() < 2) {
                         input_sanity_check.insert(pheno_store.back());
                     }
@@ -484,7 +491,8 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
 
 // Funcion to get the factors from the covariate file
 // This function won't go live until we have good way to handle the factors
-// e.g. determining the base factor & detecting if covariate is actually a factor
+// e.g. determining the base factor & detecting if covariate is actually a
+// factor
 void PRSice::check_factor_cov(
     const std::string& c_cov_file, const std::vector<std::string>& c_cov_header,
     const std::vector<size_t>& cov_index,
@@ -628,28 +636,29 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             // sample is found in the phenotype vector
             int index = m_sample_with_phenotypes[id]; // index on vector
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-            		if(token[cov_index[i_cov]].compare("NA")==0){
-            			valid= false;
-            			m_independent_variables(index, i_cov+2) =  0;
-            			missing_count[i_cov]++;
-            		}
-            		else{
-					try
-					{
-						double temp =
-							misc::convert<double>(token[cov_index[i_cov]]);
-						m_independent_variables(index, i_cov + 2) =
-							temp; // + 2 because first line = intercept, second line
-								  // = PRS
-					}
-					catch (const std::runtime_error& error)
-					{
-						valid = false;
-						// place holder as 0, will remove it later
-						m_independent_variables(index, i_cov + 2) = 0;
-						missing_count[i_cov]++;
-					}
-            		}
+                if (token[cov_index[i_cov]].compare("NA") == 0) {
+                    valid = false;
+                    m_independent_variables(index, i_cov + 2) = 0;
+                    missing_count[i_cov]++;
+                }
+                else
+                {
+                    try
+                    {
+                        double temp =
+                            misc::convert<double>(token[cov_index[i_cov]]);
+                        m_independent_variables(index, i_cov + 2) =
+                            temp; // + 2 because first line = intercept, second
+                                  // line = PRS
+                    }
+                    catch (const std::runtime_error& error)
+                    {
+                        valid = false;
+                        // place holder as 0, will remove it later
+                        m_independent_variables(index, i_cov + 2) = 0;
+                        missing_count[i_cov]++;
+                    }
+                }
             }
             if (valid) {
                 valid_sample_index.push_back(
@@ -797,8 +806,7 @@ void PRSice::run_prsice(const Commander& c_commander,
         all_out << header << std::endl;
 
         for (auto&& sample : m_sample_index) {
-            std::string name =
-            		target.fid(sample) + " " + target.iid(sample);
+            std::string name = target.fid(sample) + " " + target.iid(sample);
             all_out << std::setfill(' ') << std::setw(width_of_line)
                     << std::left << name << std::endl;
         }
@@ -812,9 +820,10 @@ void PRSice::run_prsice(const Commander& c_commander,
     size_t max_category = target.max_category() + 1;
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
-    bool require_standardize = (m_score==SCORING::STANDARDIZE);
-    while (target.get_score(cur_index, cur_category,
-                            cur_threshold, m_num_snp_included, region_index, require_standardize))
+    bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    while (target.get_score(cur_index, cur_category, cur_threshold,
+                            m_num_snp_included, region_index,
+                            require_standardize))
     {
 
         double progress =
@@ -825,9 +834,9 @@ void PRSice::run_prsice(const Commander& c_commander,
         }
 
         if (print_all_scores) {
-            for (size_t sample = 0; sample < m_sample_index.size(); ++sample)
-            {
-            		double score = target.calculate_score(m_score, m_sample_index[sample]);
+            for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
+                double score =
+                    target.calculate_score(m_score, m_sample_index[sample]);
                 size_t loc = header_length + sample * width_of_line
                              + m_max_fid_length + 1 + m_max_iid_length + 1
                              + iter_threshold + iter_threshold * 12;
@@ -839,11 +848,13 @@ void PRSice::run_prsice(const Commander& c_commander,
             iter_threshold++;
             continue;
         }
-        regress_score(target, cur_threshold, num_thread, pheno_index, iter_threshold);
+        regress_score(target, cur_threshold, num_thread, pheno_index,
+                      iter_threshold);
 
-        if (c_commander.permutation()!=0) {
-            permutation(target, num_thread, c_commander.logit_perm()
-                                        && m_target_binary[pheno_index]);
+        if (c_commander.permutation() != 0) {
+            permutation(target, num_thread,
+                        c_commander.logit_perm()
+                            && m_target_binary[pheno_index]);
         }
         iter_threshold++;
     }
@@ -852,11 +863,12 @@ void PRSice::run_prsice(const Commander& c_commander,
     process_permutations();
 }
 
-void PRSice::regress_score(Genotype &target, const double threshold, size_t thread,
-                           const size_t pheno_index,
+void PRSice::regress_score(Genotype& target, const double threshold,
+                           size_t thread, const size_t pheno_index,
                            const size_t iter_threshold)
 {
-    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0, se=0.0;
+    double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
+           se = 0.0;
     size_t num_include_samples = target.num_sample();
     if (m_num_snp_included == 0
         || (m_num_snp_included == m_prs_results[iter_threshold].num_snp))
@@ -869,7 +881,8 @@ void PRSice::regress_score(Genotype &target, const double threshold, size_t thre
         if (m_sample_with_phenotypes.find(sample)
             != m_sample_with_phenotypes.end())
         {
-            m_independent_variables(m_sample_with_phenotypes.at(sample), 1) = target.calculate_score(m_score, sample_id);
+            m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+                target.calculate_score(m_score, sample_id);
         }
     }
 
@@ -941,7 +954,8 @@ void PRSice::process_permutations()
         (double) (num_better + 1.0) / (double) (m_num_perm + 1.0);
 }
 
-void PRSice::permutation(Genotype &target, const size_t n_thread, bool logit_perm)
+void PRSice::permutation(Genotype& target, const size_t n_thread,
+                         bool logit_perm)
 {
     int num_iter = m_num_perm / m_perm_per_slice;
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm(
@@ -954,8 +968,8 @@ void PRSice::permutation(Genotype &target, const size_t n_thread, bool logit_per
         if (m_sample_with_phenotypes.find(sample)
             != m_sample_with_phenotypes.end())
         {
-            m_independent_variables(m_sample_with_phenotypes[sample], 1)
-            		= target.calculate_score(m_score, sample_id);
+            m_independent_variables(m_sample_with_phenotypes[sample], 1) =
+                target.calculate_score(m_score, sample_id);
         }
     }
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed;
@@ -1101,7 +1115,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
 
-    const bool perm = (c_commander.permutation()!=0);
+    const bool perm = (c_commander.permutation() != 0);
     std::string output_name = output_prefix;
 
     bool valid = m_best_index != -1;
@@ -1145,7 +1159,8 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         double r2 = full - null;
         prsice_out << m_prs_results[i].threshold << "\t" << r2 << "\t"
                    << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
-                   << "\t" << m_prs_results[i].se << "\t" << m_prs_results[i].num_snp;
+                   << "\t" << m_prs_results[i].se << "\t"
+                   << m_prs_results[i].num_snp;
         if (perm)
             prsice_out << "\t"
                        << ((m_prs_results[i].emp_p >= 0.0)
@@ -1201,14 +1216,14 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
             // samples that are extracted are ignored
             // sample excluded will not be output here
-        		auto sample_index = m_sample_index[sample];
+            auto sample_index = m_sample_index[sample];
             if (!target.sample_included(sample_index)) continue;
             std::string has_pheno =
                 target.has_pheno(sample_index) ? "Yes" : "No";
-            best_out << target.fid(sample_index)<< "\t"
+            best_out << target.fid(sample_index) << "\t"
                      << target.iid(sample_index) << "\t"
-                     << m_best_sample_score[sample_index]
-                     << "\t" << has_pheno << std::endl;
+                     << m_best_sample_score[sample_index] << "\t" << has_pheno
+                     << std::endl;
         }
     }
     best_out.close();
@@ -1223,7 +1238,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
 {
     bool prev_out;
 
-    const bool perm = (commander.permutation()!=0);
+    const bool perm = (commander.permutation() != 0);
     std::string message = "There are ";
     if (m_significant_store[0] != 0) {
         message.append(std::to_string(m_significant_store[0])
@@ -1283,8 +1298,8 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             out << "\t" << sum.result.r2 - sum.r2_null << "\t" << sum.result.r2
                 << "\t" << sum.r2_null << "\t-";
         }
-        out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t" << sum.result.p << "\t"
-            << sum.result.num_snp;
+        out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t"
+            << sum.result.p << "\t" << sum.result.num_snp;
         if (perm) out << "\t" << sum.result.emp_p;
         out << std::endl;
     }

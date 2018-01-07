@@ -22,7 +22,8 @@ namespace Regression
 // on purposely perform the copying of x
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
                        double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double &standard_error, size_t thread, bool intercept)
+                       double& coeff, double& standard_error, size_t thread,
+                       bool intercept)
 {
     Eigen::setNbThreads(thread);
     // in more general cases, the following is needed (adding the intercept)
@@ -210,8 +211,8 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
-         double& r2, double& coeff, double &standard_error, size_t max_iter, size_t thread,
-         bool intercept)
+         double& r2, double& coeff, double& standard_error, size_t max_iter,
+         size_t thread, bool intercept)
 {
     Eigen::setNbThreads(thread);
     /*

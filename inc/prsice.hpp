@@ -53,14 +53,14 @@ public:
         , m_logit_perm(commander.logit_perm())
         , m_num_perm(commander.permutation())
         , m_score(commander.get_score())
-		, m_missing_score(commander.get_missing_score())
+        , m_missing_score(commander.get_missing_score())
         , m_base_name(base_name)
         , m_target(commander.target_name())
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
 
-    		// we calculate the number of permutation we can run at one time
+        // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
         // check if there's any binary phenotype
@@ -130,7 +130,7 @@ public:
     void run_prsice(const Commander& c_commander,
                     const std::string& region_name, const size_t pheno_index,
                     const size_t region_index, Genotype& target);
-    void regress_score(Genotype &target, const double threshold, size_t thread,
+    void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
 
     void prsice(const Commander& c_commander, const Region& c_region,
@@ -226,9 +226,9 @@ private:
                      size_t end, int rank, const Eigen::VectorXd& pre_se,
                      size_t processed, bool logit_perm);
 
-    void permutation(Genotype &target, const size_t n_thread, bool logit_perm);
-    void update_sample_included(Genotype &target);
-    void gen_pheno_vec(Genotype &target, const std::string& pheno_file_name,
+    void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
+    void update_sample_included(Genotype& target);
+    void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
                                       std::vector<std::string>& cov_header,

@@ -151,11 +151,13 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
     for (size_t i = 0; i < sample_name.size(); i++) {
-        if (sample_name[i].included) SET_BIT(i, m_sample_include.data());
-        else{
-        		sample_name[i].FID="";
-        		sample_name[i].IID="";
-        		sample_name[i].pheno="";
+        if (sample_name[i].included)
+            SET_BIT(i, m_sample_include.data());
+        else
+        {
+            sample_name[i].FID = "";
+            sample_name[i].IID = "";
+            sample_name[i].pheno = "";
         }
         if (sex_col != -1) {
             m_num_male += (sex[i] == 1);
@@ -624,20 +626,21 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         size_t num_miss = missing_samples.size();
         size_t actual_index = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-        		if(!m_sample_names[i_sample].included) continue;
-            if (i_missing < num_miss && actual_index == missing_samples[i_missing])
+            if (!m_sample_names[i_sample].included) continue;
+            if (i_missing < num_miss
+                && actual_index == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                		m_sample_names[i_sample].prs += center_score;
+                    m_sample_names[i_sample].prs += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                		m_sample_names[i_sample].num_snp++;
+                    m_sample_names[i_sample].num_snp++;
                 i_missing++;
             }
             else
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                		m_sample_names[i_sample].prs -= center_score;
+                    m_sample_names[i_sample].prs -= center_score;
                 }
 
                 int g = (flipped) ? fabs(genotypes[actual_index] - 2)
@@ -666,8 +669,7 @@ void BinaryGen::read_score(size_t start_index, size_t end_bound,
                            const size_t region_index)
 {
     if (m_hard_coded) {
-        hard_code_score(start_index, end_bound,
-                        region_index);
+        hard_code_score(start_index, end_bound, region_index);
         return;
     }
     else

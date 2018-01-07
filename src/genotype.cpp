@@ -667,7 +667,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         }
         else if (cur_snp.loc() - prev_loc > clump_info.distance)
         {
-            while (cur_snp.loc() - prev_loc > clump_info.distance && low_bound < vector_index) {
+            while (cur_snp.loc() - prev_loc > clump_info.distance
+                   && low_bound < vector_index)
+            {
                 prev_loc = m_existed_snps[low_bound++].loc();
             }
         }
@@ -809,7 +811,6 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
         }
     }
     // below, the false are basically is_x1 is_x2
-
     if (em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1,
                                &freqx2, &freq11))
     {
@@ -828,7 +829,6 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
         }
         else
         {
-
             r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
         }
     }
@@ -880,8 +880,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> pair_tot;
     double prev_progress = 0.0;
     uintptr_t contain_miss_init = founder_ctsplit * sizeof(intptr_t)
-    + 2 * sizeof(int32_t)
-    + (m_marker_ct - 1) * 2 * sizeof(double);;
+                                  + 2 * sizeof(int32_t)
+                                  + (m_marker_ct - 1) * 2 * sizeof(double);
+
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
@@ -892,7 +893,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
-        auto &&cur_snp_index = m_sort_by_p_index[i_snp];
+        auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // skip any SNPs that are clumped
         auto&& cur_snp = m_existed_snps[cur_snp_index];
         if (cur_snp.p_value() > clump_info.p_value) continue;
@@ -927,39 +928,41 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
-        uintptr_t contain_missing= contain_miss_init;;
+        uintptr_t contain_missing = contain_miss_init;
+        core_tot.resize(6, 0);
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
-        		auto &&pair_snp = m_existed_snps[i_pair];
-        		if(pair_snp.clumped()) continue;
-        		if (pair_snp.p_value() > clump_info.p_value) continue;
-        		auto&& pair_index = reference.m_existed_snps_index.find(pair_snp.rs());
-        		if (pair_index == reference.m_existed_snps_index.end()) continue;
-        		auto &&ref_pair_snp = reference.m_existed_snps[pair_index->second];
-        		if(first){
-        			// only read it if we really need to clump a SNP
-        			reference.read_genotype(genotype_vector.data(), cur_snp,
-        			                                cur_snp.file_name());
-
-        			        // resize the geno1 vector in SNP
-        			        // the Passkey ensure only this class can modify the size
-
-        			        load_and_split3(genotype_vector.data(), m_founder_ct, core_geno.data(),
-        			                        founder_ctv3, 0, 0, 1, &contain_missing);
-        			        core_tot.resize(6, 0);
-        			        core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
-        			        core_tot[1] =
-        			            popcount_longs(&(core_geno.data()[founder_ctv3]), founder_ctv3);
-        			        core_tot[2] =
-        			            popcount_longs(&(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
-        			        first =false;
-        		}
-            reference.read_genotype(pair_genotype_vector.data(),
-            		ref_pair_snp,
-					ref_pair_snp.file_name());
+            if (i_pair == i_snp) continue;
+            auto&& pair_snp = m_existed_snps[i_pair];
+            if (pair_snp.clumped()) continue;
+            if (pair_snp.p_value() > clump_info.p_value) continue;
+            auto&& pair_index =
+                reference.m_existed_snps_index.find(pair_snp.rs());
+            if (pair_index == reference.m_existed_snps_index.end()) continue;
+            auto&& ref_pair_snp = reference.m_existed_snps[pair_index->second];
+            if (first) {
+                // only read it if we really need to clump a SNP
+                reference.read_genotype(genotype_vector.data(), cur_snp,
+                                        cur_snp.file_name());
+                // resize the geno1 vector in SNP
+                // the Passkey ensure only this class can modify the size
+                core_geno.resize(3 * founder_ctsplit + founder_ctv3);
+                load_and_split3(genotype_vector.data(), m_founder_ct,
+                                core_geno.data(), founder_ctv3, 0, 0, 1,
+                                &contain_missing);
+                core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
+                core_tot[1] = popcount_longs(&(core_geno.data()[founder_ctv3]),
+                                             founder_ctv3);
+                core_tot[2] = popcount_longs(
+                    &(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
+                first = false;
+            }
+            reference.read_genotype(pair_genotype_vector.data(), ref_pair_snp,
+                                    ref_pair_snp.file_name());
 
             uintptr_t pair_contain_missing = contain_miss_init;
             // resize the geno1 vector in SNP
             // the Passkey ensure only this class can modify the size
+            pair_geno.resize(3 * founder_ctsplit + founder_ctv3);
             load_and_split3(pair_genotype_vector.data(), m_founder_ct,
                             pair_geno.data(), founder_ctv3, 0, 0, 1,
                             &pair_contain_missing);
@@ -969,13 +972,14 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 popcount_longs(&(pair_geno.data()[founder_ctv3]), founder_ctv3);
             pair_tot[2] = popcount_longs(&(pair_geno.data()[2 * founder_ctv3]),
                                          founder_ctv3);
-            double r2 = get_r2((contain_missing == 3),
-                               (pair_contain_missing == 3), core_tot, pair_tot,
-                               core_geno, pair_geno);
+            double r2 =
+                get_r2((contain_missing == 3), (pair_contain_missing == 3),
+                       core_tot, pair_tot, core_geno, pair_geno);
             if (r2 >= min_r2) {
                 cur_snp.clump(m_existed_snps, i_pair, r2, clump_info.proxy);
             }
         }
+        cur_snp.set_clumped();
         remain_core_snps.push_back(cur_snp_index);
         double thres = cur_snp.get_threshold();
         if (used_thresholds.find(thres) == used_thresholds.end()) {
@@ -1028,7 +1032,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                          "and the target genotype\n");
     }
     message.append("Number of variant(s) after clumping : "
-                          + std::to_string(m_existed_snps.size()) + "\n");
+                   + std::to_string(m_existed_snps.size()) + "\n");
     reporter.report(message);
 }
 
@@ -1057,10 +1061,10 @@ bool Genotype::prepare_prsice()
     return true;
 }
 
-bool Genotype::get_score(int& cur_index,
-                         int& cur_category, double& cur_threshold,
-                         size_t& num_snp_included, const size_t region_index,
-						 const bool require_statistic)
+bool Genotype::get_score(int& cur_index, int& cur_category,
+                         double& cur_threshold, size_t& num_snp_included,
+                         const size_t region_index,
+                         const bool require_statistic)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1091,18 +1095,20 @@ bool Genotype::get_score(int& cur_index,
         cur_category = m_existed_snps[end_index].category();
     read_score(cur_index, end_index, region_index);
     cur_index = end_index;
-    if(require_statistic){
-    		misc::RunningStat rs;
-    		for(auto &&sample: m_sample_names){
-    			if(!sample.included || !sample.has_pheno) continue;
-    			if(sample.num_snp==0){
-    				rs.push(0.0);
-    			}else{
-    				rs.push(sample.prs/(double)sample.num_snp);
-    			}
-    		}
-    		m_mean_score = rs.mean();
-    		m_score_sd = rs.sd();
+    if (require_statistic) {
+        misc::RunningStat rs;
+        for (auto&& sample : m_sample_names) {
+            if (!sample.included || !sample.has_pheno) continue;
+            if (sample.num_snp == 0) {
+                rs.push(0.0);
+            }
+            else
+            {
+                rs.push(sample.prs / (double) sample.num_snp);
+            }
+        }
+        m_mean_score = rs.mean();
+        m_score_sd = rs.sd();
     }
     return true;
 }
@@ -1118,14 +1124,15 @@ void Genotype::print_snp(std::string& output, double threshold,
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {
-    	snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
-    	                    << "\t" << snp.p_value();
+        snp_out << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc() << "\t"
+                << snp.p_value();
         if (snp.get_threshold() <= threshold && snp.in(region_index)) {
-             snp_out << "\tY";
+            snp_out << "\tY";
         }
-        else{
-                     snp_out << "\tN";
-                }
+        else
+        {
+            snp_out << "\tN";
+        }
         snp_out << std::endl;
     }
     snp_out.close();

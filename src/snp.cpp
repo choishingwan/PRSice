@@ -83,4 +83,3 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
     });
     return idx;
 }
-

@@ -387,7 +387,7 @@ Commander::Commander()
     base.chr = "CHR";
     base.effect_allele = "A1";
     base.non_effect_allele = "A2";
-    base.statistic = "OR";
+    base.statistic = "";
     base.snp = "SNP";
     base.bp = "BP";
     base.standard_error = "SE";
@@ -1029,58 +1029,60 @@ void Commander::base_check(std::map<std::string, std::string>& message,
                 if (!base.provided_info) base.info_col = "";
             }
             if (!base.is_index) {
-                if (!base.statistic.empty()) {
-                    // if statistics is provided, we can guess if it
-                    // is beta or not
-                    if (base.statistic.length() == 2
-                        && toupper(base.statistic[0]) == 'O'
-                        && toupper(base.statistic[1]) == 'R')
-                    {
-                        base.is_beta = false;
-                    }
-                    else if (base.statistic.length() == 4
-                             && toupper(base.statistic[0]) == 'B'
-                             && toupper(base.statistic[1]) == 'E'
-                             && toupper(base.statistic[2]) == 'T'
-                             && toupper(base.statistic[3]) == 'A')
-                    {
-                        // although user cannot do --no-beta, it is a crazy
-                        // use case where BETA != beta, right?
-                        // TODO: add no-beta flag...
-                        base.is_beta = true;
-                        message["beta"] = "";
-                    }
-                }
-                else if (base.statistic.empty() && base.is_beta)
-                {
-                    base.statistic = "BETA";
-                    message["stat"] = "BETA";
-                }
-                else if (base.statistic.empty())
-                {
-                    for (size_t i = 0; i < token.size(); ++i) {
-                        if (token[i].length() == 2
-                            && toupper(token[i][0]) == 'O'
-                            && toupper(token[i][1] == 'R'))
+                if (!base.no_default) {
+                    if (!base.statistic.empty()) {
+                        // if statistics is provided, we can guess if it
+                        // is beta or not
+                        if (base.statistic.length() == 2
+                            && toupper(base.statistic[0]) == 'O'
+                            && toupper(base.statistic[1]) == 'R')
                         {
                             base.is_beta = false;
-                            base.statistic = token[i];
-                            message["stat"] = token[i];
-                            break;
                         }
-                        else if (token[i].length() == 4
-                                 && toupper(token[i][0]) == 'B'
-                                 && toupper(token[i][1]) == 'E'
-                                 && toupper(token[i][2]) == 'T'
-                                 && toupper(token[i][3]) == 'A')
+                        else if (base.statistic.length() == 4
+                                 && toupper(base.statistic[0]) == 'B'
+                                 && toupper(base.statistic[1]) == 'E'
+                                 && toupper(base.statistic[2]) == 'T'
+                                 && toupper(base.statistic[3]) == 'A')
                         {
+                            // although user cannot do --no-beta, it is a crazy
+                            // use case where BETA != beta, right?
+                            // TODO: add no-beta flag...
                             base.is_beta = true;
-                            base.statistic = token[i];
-                            // Again, this will be problematic if the BETA
-                            // is actually OR...
-                            message["stat"] = token[i];
                             message["beta"] = "";
-                            break;
+                        }
+                    }
+                    else if (base.statistic.empty() && base.is_beta)
+                    {
+                        base.statistic = "BETA";
+                        message["stat"] = "BETA";
+                    }
+                    else if (base.statistic.empty())
+                    {
+                        for (size_t i = 0; i < token.size(); ++i) {
+                            if (token[i].length() == 2
+                                && toupper(token[i][0]) == 'O'
+                                && toupper(token[i][1] == 'R'))
+                            {
+                                base.is_beta = false;
+                                base.statistic = token[i];
+                                message["stat"] = token[i];
+                                break;
+                            }
+                            else if (token[i].length() == 4
+                                     && toupper(token[i][0]) == 'B'
+                                     && toupper(token[i][1]) == 'E'
+                                     && toupper(token[i][2]) == 'T'
+                                     && toupper(token[i][3]) == 'A')
+                            {
+                                base.is_beta = true;
+                                base.statistic = token[i];
+                                // Again, this will be problematic if the BETA
+                                // is actually OR...
+                                message["stat"] = token[i];
+                                message["beta"] = "";
+                                break;
+                            }
                         }
                     }
                 }
@@ -1432,30 +1434,41 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
         // we automatically ignore any geno that are larger than 1
         // also output an error message
 
-        if (reference_snp_filtering.geno != 0 && (reference_snp_filtering.geno < 0 || reference_snp_filtering.geno > 1))
+        if (reference_snp_filtering.geno != 0
+            && (reference_snp_filtering.geno < 0
+                || reference_snp_filtering.geno > 1))
         {
             error = true;
             error_message.append("ERROR: LD genotype missingness threshold "
                                  "must be larger than 0 and smaller than 1!\n");
         }
-        if (reference_panel.type.compare("bgen") == 0 || (reference_panel.file_name.empty() && target.type.compare("bgen")==0)) {
-        		if(reference_snp_filtering.hard_threshold > 1 || reference_snp_filtering.hard_threshold < 0){
-        			error= true;
-        			   error_message.append("ERROR: LD hard threshold must be larger "
-        			                                     "than 0 and smaller than 1!\n");
-        		}else{
-        			message["ld-hard-threshold"] =
-        			                    std::to_string(reference_snp_filtering.hard_threshold);
-        		}
+        if (reference_panel.type.compare("bgen") == 0
+            || (reference_panel.file_name.empty()
+                && target.type.compare("bgen") == 0))
+        {
+            if (reference_snp_filtering.hard_threshold > 1
+                || reference_snp_filtering.hard_threshold < 0)
+            {
+                error = true;
+                error_message.append("ERROR: LD hard threshold must be larger "
+                                     "than 0 and smaller than 1!\n");
+            }
+            else
+            {
+                message["ld-hard-threshold"] =
+                    std::to_string(reference_snp_filtering.hard_threshold);
+            }
         }
-        if (reference_snp_filtering.maf != 0 && (reference_snp_filtering.maf > 1 || reference_snp_filtering.maf < 0))
+        if (reference_snp_filtering.maf != 0
+            && (reference_snp_filtering.maf > 1
+                || reference_snp_filtering.maf < 0))
         {
             error = true;
             error_message.append("ERROR: LD MAF threshold must be larger than "
                                  "0 and smaller than 1!\n");
         }
-        if (reference_snp_filtering.info_score < 0 ||
-             reference_snp_filtering.info_score > 1)
+        if (reference_snp_filtering.info_score < 0
+            || reference_snp_filtering.info_score > 1)
         {
             error = true;
             error_message.append("ERROR: LD INFO score threshold must be "
