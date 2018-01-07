@@ -923,7 +923,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // if this become a problem, we can also put it forward
         // and skip it just like SNPs with large p-values
         assert(cur_snp.loc() >= 0);
-
+        bool first = true;
 
         // set the missing information
         // contain_missing == 3 = has missing
@@ -931,17 +931,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t end = cur_snp.up_bound();
         uintptr_t contain_missing = contain_miss_init;
         core_tot.resize(6, 0);
-        /*
-         * Follow plink's way, that is:
-         * 1. Read in the genotype of all SNPs appeared before index SNP
-         * 2. Compute the pairwise R2
-         * 3. Then perform stepwise for anything after
-         */
-        std::vector<std::vector<uintptr_t>> pair_store;
-        std::vector<std::vector<uint32_t>> pair_tot_store;
-        std::vector<uintptr_t> miss;
-        std::vector<size_t> index;
-        for (size_t i_pair = start; i_pair < cur_snp_index; ++i_pair) {
+        //Follow plink's way, that is
+        for (size_t i_pair = i_pair; i_pair < end; ++i_pair) {
+            if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
             if (pair_snp.clumped()) continue;
             if (pair_snp.p_value() > clump_info.p_value) continue;
@@ -949,63 +941,23 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 reference.m_existed_snps_index.find(pair_snp.rs());
             if (pair_index == reference.m_existed_snps_index.end()) continue;
             auto&& ref_pair_snp = reference.m_existed_snps[pair_index->second];
-            reference.read_genotype(pair_genotype_vector.data(), ref_pair_snp,
-                                    ref_pair_snp.file_name());
-            uintptr_t pair_contain_missing = contain_miss_init;
-            // resize the geno1 vector in SNP
-            // the Passkey ensure only this class can modify the size
-            pair_geno.resize(3 * founder_ctsplit + founder_ctv3);
-            load_and_split3(pair_genotype_vector.data(), m_founder_ct,
-                            pair_geno.data(), founder_ctv3, 0, 0, 1,
-                            &pair_contain_missing);
-            pair_tot.resize(6, 0);
-            pair_tot[0] = popcount_longs(pair_geno.data(), founder_ctv3);
-            pair_tot[1] =
-                popcount_longs(&(pair_geno.data()[founder_ctv3]), founder_ctv3);
-            pair_tot[2] = popcount_longs(&(pair_geno.data()[2 * founder_ctv3]),
-                                         founder_ctv3);
-            pair_store.push_back(pair_geno);
-            pair_tot_store.push_back(pair_tot);
-            miss.push_back(pair_contain_missing);
-            index.push_back(i_pair);
-        }
-        // only read it if we really need to clump a SNP
-        reference.read_genotype(genotype_vector.data(), cur_snp,
-                                cur_snp.file_name());
-        // resize the geno1 vector in SNP
-        // the Passkey ensure only this class can modify the size
-        core_geno.resize(3 * founder_ctsplit + founder_ctv3);
-        load_and_split3(genotype_vector.data(), m_founder_ct, core_geno.data(),
-                        founder_ctv3, 0, 0, 1, &contain_missing);
-        core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
-        core_tot[1] =
-            popcount_longs(&(core_geno.data()[founder_ctv3]), founder_ctv3);
-        core_tot[2] =
-            popcount_longs(&(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
-        for (size_t i = 0; i < pair_store.size(); ++i) {
-            double r2 = get_r2((contain_missing == 3), (miss[i] == 3), core_tot,
-                               pair_tot_store[i], core_geno, pair_store[i]);
-
-            if (r2 >= min_r2) {
-                cur_snp.clump(m_existed_snps, index[i], r2, clump_info.proxy);
+            if (first) {
+                // only read it if we really need to clump a SNP
+                reference.read_genotype(genotype_vector.data(), cur_snp,
+                                        cur_snp.file_name());
+                // resize the geno1 vector in SNP
+                // the Passkey ensure only this class can modify the size
+                core_geno.resize(3 * founder_ctsplit + founder_ctv3);
+                load_and_split3(genotype_vector.data(), m_founder_ct,
+                                core_geno.data(), founder_ctv3, 0, 0, 1,
+                                &contain_missing);
+                core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
+                core_tot[1] = popcount_longs(&(core_geno.data()[founder_ctv3]),
+                                             founder_ctv3);
+                core_tot[2] = popcount_longs(
+                    &(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
+                first = false;
             }
-        }
-        {
-            // new scope to remove vector from memory
-            // fill the vector up
-            std::vector<std::vector<uintptr_t>>().swap(pair_store);
-            std::vector<std::vector<uint32_t>>().swap(pair_tot_store);
-            std::vector<uintptr_t>().swap(miss);
-            std::vector<size_t>().swap(index);
-        }
-        for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
-            auto&& pair_snp = m_existed_snps[i_pair];
-            if (pair_snp.clumped()) continue;
-            if (pair_snp.p_value() > clump_info.p_value) continue;
-            auto&& pair_index =
-                reference.m_existed_snps_index.find(pair_snp.rs());
-            if (pair_index == reference.m_existed_snps_index.end()) continue;
-            auto&& ref_pair_snp = reference.m_existed_snps[pair_index->second];
             reference.read_genotype(pair_genotype_vector.data(), ref_pair_snp,
                                     ref_pair_snp.file_name());
 
