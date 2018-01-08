@@ -1210,5 +1210,35 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
 uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
                           double* solutions);
 
+void genovec_3freq(const uintptr_t* __restrict geno_vec,
+                   const uintptr_t* __restrict include_quatervec,
+                   uintptr_t sample_ctl2, uint32_t* __restrict missing_ctp,
+                   uint32_t* __restrict het_ctp,
+                   uint32_t* __restrict homset_ctp);
 
+#ifdef __LP64__
+void count_2freq_dbl_960b(
+    const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
+    const VECITYPE* __restrict mask1vp, const VECITYPE* __restrict mask2vp,
+    uint32_t* __restrict ct1abp, uint32_t* __restrict ct1cp,
+    uint32_t* __restrict ct2abp, uint32_t* __restrict ct2cp);
+
+void count_3freq_1920b(const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
+                       const VECITYPE* __restrict maskvp,
+                       uint32_t* __restrict ctap, uint32_t* __restrict ctbp,
+                       uint32_t* __restrict ctcp);
+#else
+void count_2freq_dbl_24b(const uintptr_t* __restrict geno_vec,
+                         const uintptr_t* __restrict mask1p,
+                         const uintptr_t* __restrict mask2p,
+                         uint32_t* __restrict ct1abp,
+                         uint32_t* __restrict ct1cp,
+                         uint32_t* __restrict ct2abp,
+                         uint32_t* __restrict ct2cp);
+
+void count_3freq_48b(const uintptr_t* __restrict geno_vec,
+                     const uintptr_t* __restrict maskp,
+                     uint32_t* __restrict ctap, uint32_t* __restrict ctbp,
+                     uint32_t* __restrict ctcp);
+#endif
 #endif // __PLINK_COMMON_H__

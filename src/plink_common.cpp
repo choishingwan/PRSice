@@ -1141,3 +1141,528 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     }
     return 2;
 }
+
+
+void genovec_3freq(const uintptr_t* __restrict geno_vec,
+                   const uintptr_t* __restrict include_quatervec,
+                   uintptr_t sample_ctl2, uint32_t* __restrict missing_ctp,
+                   uint32_t* __restrict het_ctp,
+                   uint32_t* __restrict homset_ctp)
+{
+    // generic routine for getting all counts.
+    const uintptr_t* geno_vec_end = &(geno_vec[sample_ctl2]);
+    uintptr_t loader;
+    uintptr_t loader2;
+    uintptr_t loader3;
+    uint32_t acc_even = 0;
+    uint32_t acc_odd = 0;
+    uint32_t acc_and = 0;
+#ifdef __LP64__
+    uintptr_t cur_decr = 120;
+    const uintptr_t* geno_vec_12x_end;
+    sample_ctl2 -= sample_ctl2 % 12;
+    while (sample_ctl2 >= 120) {
+    genovec_3freq_loop:
+        geno_vec_12x_end = &(geno_vec[cur_decr]);
+        count_3freq_1920b(
+            (const __m128i*) geno_vec, (const __m128i*) geno_vec_12x_end,
+            (const __m128i*) include_quatervec, &acc_even, &acc_odd, &acc_and);
+        geno_vec = geno_vec_12x_end;
+        include_quatervec = &(include_quatervec[cur_decr]);
+        sample_ctl2 -= cur_decr;
+    }
+    if (sample_ctl2) {
+        cur_decr = sample_ctl2;
+        goto genovec_3freq_loop;
+    }
+#else
+    const uintptr_t* geno_vec_twelve_end =
+        &(geno_vec[sample_ctl2 - (sample_ctl2 % 12)]);
+    while (geno_vec < geno_vec_twelve_end) {
+        count_3freq_48b(geno_vec, include_quatervec, &acc_even, &acc_odd,
+                        &acc_and);
+        geno_vec = &(geno_vec[12]);
+        include_quatervec = &(include_quatervec[12]);
+    }
+#endif
+    while (geno_vec < geno_vec_end) {
+        loader = *geno_vec++;
+        loader2 = *include_quatervec++;
+        loader3 = loader2 & (loader >> 1);
+        acc_even += popcount2_long(loader & loader2);
+        acc_odd += popcount2_long(loader3);
+        acc_and += popcount2_long(loader & loader3);
+    }
+    *missing_ctp = acc_even - acc_and;
+    *het_ctp = acc_odd - acc_and;
+    *homset_ctp = acc_and;
+}
+
+
+#ifdef __LP64__
+void count_2freq_dbl_960b(
+    const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
+    const VECITYPE* __restrict mask1vp, const VECITYPE* __restrict mask2vp,
+    uint32_t* __restrict ct1abp, uint32_t* __restrict ct1cp,
+    uint32_t* __restrict ct2abp, uint32_t* __restrict ct2cp)
+{
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i to_ct1_ab;
+    __m128i to_ct_abtmp;
+    __m128i to_ct1_c;
+    __m128i to_ct2_ab;
+    __m128i to_ct2_c;
+    __univec acc1_ab;
+    __univec acc1_c;
+    __univec acc2_ab;
+    __univec acc2_c;
+
+    acc1_ab.vi = _mm_setzero_si128();
+    acc1_c.vi = _mm_setzero_si128();
+    acc2_ab.vi = _mm_setzero_si128();
+    acc2_c.vi = _mm_setzero_si128();
+    do
+    {
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct1_ab = _mm_add_epi64(loader3, loader2);
+        to_ct1_c = _mm_andnot_si128(loader3, loader2);
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct2_ab = _mm_add_epi64(loader3, loader2);
+        to_ct2_c = _mm_andnot_si128(loader3, loader2);
+        to_ct1_ab =
+            _mm_add_epi64(_mm_and_si128(to_ct1_ab, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct1_ab, 2), m2));
+        to_ct2_ab =
+            _mm_add_epi64(_mm_and_si128(to_ct2_ab, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct2_ab, 2), m2));
+
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct_abtmp = _mm_add_epi64(loader3, loader2);
+        to_ct1_c = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
+        to_ct1_ab = _mm_add_epi64(
+            to_ct1_ab,
+            _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct_abtmp = _mm_add_epi64(loader3, loader2);
+        to_ct2_c = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
+        to_ct2_ab = _mm_add_epi64(
+            to_ct2_ab,
+            _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
+
+        loader = *geno_vvec++;
+        loader2 = *mask1vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct_abtmp = _mm_add_epi64(loader3, loader2);
+        to_ct1_c = _mm_add_epi64(to_ct1_c, _mm_andnot_si128(loader3, loader2));
+        to_ct1_ab = _mm_add_epi64(
+            to_ct1_ab,
+            _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
+        loader2 = *mask2vp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        loader2 = _mm_and_si128(loader2, loader);
+        to_ct_abtmp = _mm_add_epi64(loader3, loader2);
+        to_ct2_c = _mm_add_epi64(to_ct2_c, _mm_andnot_si128(loader3, loader2));
+        to_ct2_ab = _mm_add_epi64(
+            to_ct2_ab,
+            _mm_add_epi64(_mm_and_si128(to_ct_abtmp, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct_abtmp, 2), m2)));
+
+        to_ct1_c =
+            _mm_add_epi64(_mm_and_si128(to_ct1_c, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct1_c, 2), m2));
+        to_ct2_c =
+            _mm_add_epi64(_mm_and_si128(to_ct2_c, m2),
+                          _mm_and_si128(_mm_srli_epi64(to_ct2_c, 2), m2));
+
+        acc1_ab.vi = _mm_add_epi64(
+            acc1_ab.vi,
+            _mm_add_epi64(_mm_and_si128(to_ct1_ab, m4),
+                          _mm_and_si128(_mm_srli_epi64(to_ct1_ab, 4), m4)));
+        acc1_c.vi = _mm_add_epi64(
+            acc1_c.vi,
+            _mm_add_epi64(_mm_and_si128(to_ct1_c, m4),
+                          _mm_and_si128(_mm_srli_epi64(to_ct1_c, 4), m4)));
+        acc2_ab.vi = _mm_add_epi64(
+            acc2_ab.vi,
+            _mm_add_epi64(_mm_and_si128(to_ct2_ab, m4),
+                          _mm_and_si128(_mm_srli_epi64(to_ct2_ab, 4), m4)));
+        acc2_c.vi = _mm_add_epi64(
+            acc2_c.vi,
+            _mm_add_epi64(_mm_and_si128(to_ct2_c, m4),
+                          _mm_and_si128(_mm_srli_epi64(to_ct2_c, 4), m4)));
+    } while (geno_vvec < geno_vvec_end);
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    acc1_ab.vi =
+        _mm_add_epi64(_mm_and_si128(acc1_ab.vi, m8),
+                      _mm_and_si128(_mm_srli_epi64(acc1_ab.vi, 8), m8));
+    acc1_c.vi = _mm_and_si128(
+        _mm_add_epi64(acc1_c.vi, _mm_srli_epi64(acc1_c.vi, 8)), m8);
+    acc2_ab.vi =
+        _mm_add_epi64(_mm_and_si128(acc2_ab.vi, m8),
+                      _mm_and_si128(_mm_srli_epi64(acc2_ab.vi, 8), m8));
+    acc2_c.vi = _mm_and_si128(
+        _mm_add_epi64(acc2_c.vi, _mm_srli_epi64(acc2_c.vi, 8)), m8);
+    *ct1abp += ((acc1_ab.u8[0] + acc1_ab.u8[1]) * 0x1000100010001LLU) >> 48;
+    *ct1cp += ((acc1_c.u8[0] + acc1_c.u8[1]) * 0x1000100010001LLU) >> 48;
+    *ct2abp += ((acc2_ab.u8[0] + acc2_ab.u8[1]) * 0x1000100010001LLU) >> 48;
+    *ct2cp += ((acc2_c.u8[0] + acc2_c.u8[1]) * 0x1000100010001LLU) >> 48;
+}
+
+void count_3freq_1920b(const VECITYPE* geno_vvec, const VECITYPE* geno_vvec_end,
+                       const VECITYPE* __restrict maskvp,
+                       uint32_t* __restrict even_ctp,
+                       uint32_t* __restrict odd_ctp,
+                       uint32_t* __restrict homset_ctp)
+{
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    __m128i loader;
+    __m128i loader2;
+    __m128i loader3;
+    __m128i even1;
+    __m128i odd1;
+    __m128i homset1;
+    __m128i even2;
+    __m128i odd2;
+    __m128i homset2;
+    __univec acc_even;
+    __univec acc_odd;
+    __univec acc_homset;
+
+    acc_even.vi = _mm_setzero_si128();
+    acc_odd.vi = _mm_setzero_si128();
+    acc_homset.vi = _mm_setzero_si128();
+    do
+    {
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        odd1 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even1 = _mm_and_si128(loader2, loader);
+        homset1 = _mm_and_si128(odd1, loader);
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even1 = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
+        odd1 = _mm_add_epi64(odd1, loader3);
+        homset1 = _mm_add_epi64(homset1, _mm_and_si128(loader3, loader));
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even1 = _mm_add_epi64(even1, _mm_and_si128(loader2, loader));
+        odd1 = _mm_add_epi64(odd1, loader3);
+        homset1 = _mm_add_epi64(homset1, _mm_and_si128(loader3, loader));
+
+        even1 = _mm_add_epi64(_mm_and_si128(even1, m2),
+                              _mm_and_si128(_mm_srli_epi64(even1, 2), m2));
+        odd1 = _mm_add_epi64(_mm_and_si128(odd1, m2),
+                             _mm_and_si128(_mm_srli_epi64(odd1, 2), m2));
+        homset1 = _mm_add_epi64(_mm_and_si128(homset1, m2),
+                                _mm_and_si128(_mm_srli_epi64(homset1, 2), m2));
+
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        odd2 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even2 = _mm_and_si128(loader2, loader);
+        homset2 = _mm_and_si128(odd2, loader);
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even2 = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
+        odd2 = _mm_add_epi64(odd2, loader3);
+        homset2 = _mm_add_epi64(homset2, _mm_and_si128(loader3, loader));
+        loader = *geno_vvec++;
+        loader2 = *maskvp++;
+        loader3 = _mm_and_si128(loader2, _mm_srli_epi64(loader, 1));
+        even2 = _mm_add_epi64(even2, _mm_and_si128(loader2, loader));
+        odd2 = _mm_add_epi64(odd2, loader3);
+        homset2 = _mm_add_epi64(homset2, _mm_and_si128(loader3, loader));
+
+        even1 = _mm_add_epi64(
+            even1, _mm_add_epi64(_mm_and_si128(even2, m2),
+                                 _mm_and_si128(_mm_srli_epi64(even2, 2), m2)));
+        odd1 = _mm_add_epi64(
+            odd1, _mm_add_epi64(_mm_and_si128(odd2, m2),
+                                _mm_and_si128(_mm_srli_epi64(odd2, 2), m2)));
+        homset1 = _mm_add_epi64(
+            homset1,
+            _mm_add_epi64(_mm_and_si128(homset2, m2),
+                          _mm_and_si128(_mm_srli_epi64(homset2, 2), m2)));
+
+        acc_even.vi = _mm_add_epi64(
+            acc_even.vi,
+            _mm_add_epi64(_mm_and_si128(even1, m4),
+                          _mm_and_si128(_mm_srli_epi64(even1, 4), m4)));
+        acc_odd.vi = _mm_add_epi64(
+            acc_odd.vi,
+            _mm_add_epi64(_mm_and_si128(odd1, m4),
+                          _mm_and_si128(_mm_srli_epi64(odd1, 4), m4)));
+        acc_homset.vi = _mm_add_epi64(
+            acc_homset.vi,
+            _mm_add_epi64(_mm_and_si128(homset1, m4),
+                          _mm_and_si128(_mm_srli_epi64(homset1, 4), m4)));
+    } while (geno_vvec < geno_vvec_end);
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    acc_even.vi =
+        _mm_add_epi64(_mm_and_si128(acc_even.vi, m8),
+                      _mm_and_si128(_mm_srli_epi64(acc_even.vi, 8), m8));
+    acc_odd.vi =
+        _mm_add_epi64(_mm_and_si128(acc_odd.vi, m8),
+                      _mm_and_si128(_mm_srli_epi64(acc_odd.vi, 8), m8));
+    acc_homset.vi =
+        _mm_add_epi64(_mm_and_si128(acc_homset.vi, m8),
+                      _mm_and_si128(_mm_srli_epi64(acc_homset.vi, 8), m8));
+    *even_ctp += ((acc_even.u8[0] + acc_even.u8[1]) * 0x1000100010001LLU) >> 48;
+    *odd_ctp += ((acc_odd.u8[0] + acc_odd.u8[1]) * 0x1000100010001LLU) >> 48;
+    *homset_ctp +=
+        ((acc_homset.u8[0] + acc_homset.u8[1]) * 0x1000100010001LLU) >> 48;
+}
+#else
+void count_2freq_dbl_24b(const uintptr_t* __restrict geno_vec,
+                         const uintptr_t* __restrict mask1p,
+                         const uintptr_t* __restrict mask2p,
+                         uint32_t* __restrict ct1abp,
+                         uint32_t* __restrict ct1cp,
+                         uint32_t* __restrict ct2abp,
+                         uint32_t* __restrict ct2cp)
+{
+    uintptr_t loader = *geno_vec++;
+    uintptr_t loader2 = *mask1p++;
+    uintptr_t loader3 = (loader >> 1) & loader2;
+    uintptr_t to_ct1_ab;
+    uintptr_t to_ct1_c;
+    uintptr_t to_ct2_ab;
+    uintptr_t to_ct2_c;
+    uintptr_t to_ct_abtmp;
+    uintptr_t partial1_ab;
+    uintptr_t partial1_c;
+    uintptr_t partial2_ab;
+    uintptr_t partial2_c;
+    loader2 &= loader;
+    to_ct1_ab = loader2 + loader3;
+    to_ct1_c = loader2 & (~loader3);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct2_ab = loader2 + loader3;
+    to_ct2_c = loader2 & (~loader3);
+
+    to_ct1_ab = (to_ct1_ab & 0x33333333) + ((to_ct1_ab >> 2) & 0x33333333);
+    to_ct2_ab = (to_ct2_ab & 0x33333333) + ((to_ct2_ab >> 2) & 0x33333333);
+
+    loader = *geno_vec++;
+    loader2 = *mask1p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct1_c += loader2 & (~loader3);
+    to_ct1_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct2_c += loader2 & (~loader3);
+    to_ct2_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+
+    loader = *geno_vec++;
+    loader2 = *mask1p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct1_c += loader2 & (~loader3);
+    to_ct1_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct2_c += loader2 & (~loader3);
+    to_ct2_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+
+    partial1_ab = (to_ct1_ab & 0x0f0f0f0f) + ((to_ct1_ab >> 4) & 0x0f0f0f0f);
+    partial1_c = (to_ct1_c & 0x33333333) + ((to_ct1_c >> 2) & 0x33333333);
+    partial2_ab = (to_ct2_ab & 0x0f0f0f0f) + ((to_ct2_ab >> 4) & 0x0f0f0f0f);
+    partial2_c = (to_ct2_c & 0x33333333) + ((to_ct2_c >> 2) & 0x33333333);
+
+    loader = *geno_vec++;
+    loader2 = *mask1p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct1_ab = loader2 + loader3;
+    to_ct1_c = loader2 & (~loader3);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct2_ab = loader2 + loader3;
+    to_ct2_c = loader2 & (~loader3);
+
+    to_ct1_ab = (to_ct1_ab & 0x33333333) + ((to_ct1_ab >> 2) & 0x33333333);
+    to_ct2_ab = (to_ct2_ab & 0x33333333) + ((to_ct2_ab >> 2) & 0x33333333);
+
+    loader = *geno_vec++;
+    loader2 = *mask1p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct1_c += loader2 & (~loader3);
+    to_ct1_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct2_c += loader2 & (~loader3);
+    to_ct2_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+
+    loader = *geno_vec++;
+    loader2 = *mask1p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct1_c += loader2 & (~loader3);
+    to_ct1_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+    loader2 = *mask2p++;
+    loader3 = (loader >> 1) & loader2;
+    loader2 &= loader;
+    to_ct_abtmp = loader2 + loader3;
+    to_ct2_c += loader2 & (~loader3);
+    to_ct2_ab += (to_ct_abtmp & 0x33333333) + ((to_ct_abtmp >> 2) & 0x33333333);
+
+    partial1_ab += (to_ct1_ab & 0x0f0f0f0f) + ((to_ct1_ab >> 4) & 0x0f0f0f0f);
+    partial1_c += (to_ct1_c & 0x33333333) + ((to_ct1_c >> 2) & 0x33333333);
+    partial2_ab += (to_ct2_ab & 0x0f0f0f0f) + ((to_ct2_ab >> 4) & 0x0f0f0f0f);
+    partial2_c += (to_ct2_c & 0x33333333) + ((to_ct2_c >> 2) & 0x33333333);
+
+    partial1_c = (partial1_c & 0x0f0f0f0f) + ((partial1_c >> 4) & 0x0f0f0f0f);
+    partial2_c = (partial2_c & 0x0f0f0f0f) + ((partial2_c >> 4) & 0x0f0f0f0f);
+
+    *ct1abp += (partial1_ab * 0x01010101) >> 24;
+    *ct1cp += (partial1_c * 0x01010101) >> 24;
+    *ct2abp += (partial2_ab * 0x01010101) >> 24;
+    *ct2cp += (partial2_c * 0x01010101) >> 24;
+}
+
+void count_3freq_48b(const uintptr_t* __restrict geno_vec,
+                     const uintptr_t* __restrict maskp,
+                     uint32_t* __restrict ctap, uint32_t* __restrict ctbp,
+                     uint32_t* __restrict ctcp)
+{
+    uintptr_t loader = *geno_vec++;
+    uintptr_t loader2 = *maskp++;
+    uint32_t to_ct_a1 = loader & loader2;
+    uint32_t to_ct_b1 = (loader >> 1) & loader2;
+    uint32_t to_ct_c1 = loader & to_ct_b1;
+    uintptr_t loader3;
+    uint32_t to_ct_a2;
+    uint32_t to_ct_b2;
+    uint32_t to_ct_c2;
+    uintptr_t partial_a;
+    uintptr_t partial_b;
+    uintptr_t partial_c;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a1 += loader & loader2;
+    to_ct_b1 += loader3;
+    to_ct_c1 += loader & loader3;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a1 += loader & loader2;
+    to_ct_b1 += loader3;
+    to_ct_c1 += loader & loader3;
+
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    to_ct_a2 = loader & loader2;
+    to_ct_b2 = (loader >> 1) & loader2;
+    to_ct_c2 = loader & to_ct_b2;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a2 += loader & loader2;
+    to_ct_b2 += loader3;
+    to_ct_c2 += loader & loader3;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a2 += loader & loader2;
+    to_ct_b2 += loader3;
+    to_ct_c2 += loader & loader3;
+
+    to_ct_a1 = (to_ct_a1 & 0x33333333) + ((to_ct_a1 >> 2) & 0x33333333);
+    to_ct_a1 += (to_ct_a2 & 0x33333333) + ((to_ct_a2 >> 2) & 0x33333333);
+    partial_a = (to_ct_a1 & 0x0f0f0f0f) + ((to_ct_a1 >> 4) & 0x0f0f0f0f);
+    to_ct_b1 = (to_ct_b1 & 0x33333333) + ((to_ct_b1 >> 2) & 0x33333333);
+    to_ct_b1 += (to_ct_b2 & 0x33333333) + ((to_ct_b2 >> 2) & 0x33333333);
+    partial_b = (to_ct_b1 & 0x0f0f0f0f) + ((to_ct_b1 >> 4) & 0x0f0f0f0f);
+    to_ct_c1 = (to_ct_c1 & 0x33333333) + ((to_ct_c1 >> 2) & 0x33333333);
+    to_ct_c1 += (to_ct_c2 & 0x33333333) + ((to_ct_c2 >> 2) & 0x33333333);
+    partial_c = (to_ct_c1 & 0x0f0f0f0f) + ((to_ct_c1 >> 4) & 0x0f0f0f0f);
+
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    to_ct_a1 = loader & loader2;
+    to_ct_b1 = (loader >> 1) & loader2;
+    to_ct_c1 = loader & to_ct_b1;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a1 += loader & loader2;
+    to_ct_b1 += loader3;
+    to_ct_c1 += loader & loader3;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a1 += loader & loader2;
+    to_ct_b1 += loader3;
+    to_ct_c1 += loader & loader3;
+
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    to_ct_a2 = loader & loader2;
+    to_ct_b2 = (loader >> 1) & loader2;
+    to_ct_c2 = loader & to_ct_b2;
+    loader = *geno_vec++;
+    loader2 = *maskp++;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a2 += loader & loader2;
+    to_ct_b2 += loader3;
+    to_ct_c2 += loader & loader3;
+    loader = *geno_vec;
+    loader2 = *maskp;
+    loader3 = (loader >> 1) & loader2;
+    to_ct_a2 += loader & loader2;
+    to_ct_b2 += loader3;
+    to_ct_c2 += loader & loader3;
+
+    to_ct_a1 = (to_ct_a1 & 0x33333333) + ((to_ct_a1 >> 2) & 0x33333333);
+    to_ct_a1 += (to_ct_a2 & 0x33333333) + ((to_ct_a2 >> 2) & 0x33333333);
+    partial_a += (to_ct_a1 & 0x0f0f0f0f) + ((to_ct_a1 >> 4) & 0x0f0f0f0f);
+    to_ct_b1 = (to_ct_b1 & 0x33333333) + ((to_ct_b1 >> 2) & 0x33333333);
+    to_ct_b1 += (to_ct_b2 & 0x33333333) + ((to_ct_b2 >> 2) & 0x33333333);
+    partial_b += (to_ct_b1 & 0x0f0f0f0f) + ((to_ct_b1 >> 4) & 0x0f0f0f0f);
+    to_ct_c1 = (to_ct_c1 & 0x33333333) + ((to_ct_c1 >> 2) & 0x33333333);
+    to_ct_c1 += (to_ct_c2 & 0x33333333) + ((to_ct_c2 >> 2) & 0x33333333);
+    partial_c += (to_ct_c1 & 0x0f0f0f0f) + ((to_ct_c1 >> 4) & 0x0f0f0f0f);
+
+    *ctap += (partial_a * 0x01010101) >> 24;
+    *ctbp += (partial_b * 0x01010101) >> 24;
+    *ctcp += (partial_c * 0x01010101) >> 24;
+}
+#endif

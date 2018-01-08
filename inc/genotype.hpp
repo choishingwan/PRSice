@@ -268,6 +268,9 @@ protected:
                   std::vector<uint32_t>& pair_tot,
                   std::vector<uintptr_t>& genotype_vector,
                   std::vector<uintptr_t>& pair_genotype_vector);
+    double get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
+                  std::vector<uintptr_t>& index_data,
+                  std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
     size_t m_max_category = 0;
     size_t m_region_size = 1;

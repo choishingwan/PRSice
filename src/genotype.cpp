@@ -769,6 +769,53 @@ void Genotype::set_info(const Commander& c_commander, const bool ld)
     m_scoring = c_commander.get_score();
 }
 
+double Genotype::get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
+                        std::vector<uintptr_t>& index_data,
+                        std::vector<uintptr_t>& genotype_vector)
+{
+    bool is_x = false;
+    double freq11;
+    double freq11_expected;
+    double freq1x;
+    double freq2x;
+    double freqx1;
+    double freqx2;
+    double dxx;
+    double r2 = -1.0;
+    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(m_founder_ct);
+    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    uint32_t counts[18];
+    genovec_3freq(genotype_vector.data(), index_data.data(), founder_ctl2,
+                  &(counts[0]), &(counts[1]), &(counts[2]));
+    counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+    genovec_3freq(genotype_vector.data(), &(index_data[founder_ctv2]),
+                  founder_ctl2, &(counts[3]), &(counts[4]), &(counts[5]));
+    counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+    genovec_3freq(genotype_vector.data(), &(index_data[2 * founder_ctv2]),
+                  founder_ctl2, &(counts[6]), &(counts[7]), &(counts[8]));
+    counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+
+    if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x, &freqx1,
+                                &freqx2, &freq11))
+    {
+        freq11_expected = freqx1 * freq1x;
+        dxx = freq11 - freq11_expected;
+        // if r^2 threshold is 0, let everything else through but
+        // exclude the apparent zeroes.  Zeroes *are* included if
+        // r2_thresh is negative,
+        // though (only nans are rejected then).
+        if (fabs(dxx) < SMALL_EPSILON
+            || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
+        {
+            r2 = 0.0;
+        }
+        else
+        {
+            r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+        }
+    }
+    return r2;
+}
 
 double Genotype::get_r2(bool core_missing, bool pair_missing,
                         std::vector<uint32_t>& core_tot,
@@ -866,7 +913,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     const uint32_t founder_ctsplit = 3 * founder_ctv3;
     const int num_snp = m_existed_snps.size();
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
-    std::vector<uintptr_t> pair_genotype_vector(unfiltered_sample_ctl * 2);
     std::vector<int> remain_core_snps;
     const double min_r2 = (clump_info.use_proxy)
                               ? std::min(clump_info.proxy, clump_info.r2)
@@ -887,6 +933,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
+    // reference must have sorted
 
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
@@ -897,7 +944,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // skip any SNPs that are clumped
         auto&& cur_snp = m_existed_snps[cur_snp_index];
-        if (cur_snp.clumped() || cur_snp.p_value() > clump_info.p_value) continue;
+        if (cur_snp.clumped() || cur_snp.p_value() > clump_info.p_value)
+            continue;
         auto&& target_pair = reference.m_existed_snps_index.find(cur_snp.rs());
         if (target_pair == reference.m_existed_snps_index.end()) continue;
         // Any SNP with p-value less than clump-p will be ignored
@@ -933,7 +981,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
             if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
-            if (pair_snp.clumped() || pair_snp.p_value() > clump_info.p_value) continue;
+            if (pair_snp.clumped() || pair_snp.p_value() > clump_info.p_value)
+                continue;
             auto&& pair_index =
                 reference.m_existed_snps_index.find(pair_snp.rs());
             if (pair_index == reference.m_existed_snps_index.end()) continue;
@@ -943,7 +992,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 reference.read_genotype(genotype_vector.data(), cur_snp,
                                         cur_snp.file_name());
                 std::fill(core_geno.begin(), core_geno.end(), 0);
-                //core_geno.resize(3 * founder_ctsplit + founder_ctv3);
+                // core_geno.resize(3 * founder_ctsplit + founder_ctv3);
                 load_and_split3(genotype_vector.data(), m_founder_ct,
                                 core_geno.data(), founder_ctv3, 0, 0, 1,
                                 &contain_missing);
@@ -954,14 +1003,14 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                     &(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
                 first = false;
             }
-            reference.read_genotype(pair_genotype_vector.data(), ref_pair_snp,
+            reference.read_genotype(genotype_vector.data(), ref_pair_snp,
                                     ref_pair_snp.file_name());
-
+            /*
             uintptr_t pair_contain_missing = contain_miss_init;
             // resize the geno1 vector in SNP
             // the Passkey ensure only this class can modify the size
             std::fill(pair_geno.begin(), pair_geno.end(), 0);
-            load_and_split3(pair_genotype_vector.data(), m_founder_ct,
+            load_and_split3(genotype_vector.data(), m_founder_ct,
                             pair_geno.data(), founder_ctv3, 0, 0, 1,
                             &pair_contain_missing);
             std::fill(pair_tot.begin(), pair_tot.end(), 0);
@@ -974,7 +1023,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             double r2 =
                 get_r2((contain_missing == 3), (pair_contain_missing == 3),
                        core_tot, pair_tot, core_geno, pair_geno);
-
+            */
+            double r2 = 0.0;
             if (r2 >= min_r2) {
                 cur_snp.clump(ref_pair_snp, r2, clump_info.proxy);
             }

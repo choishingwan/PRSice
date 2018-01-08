@@ -169,8 +169,7 @@ public:
     };
 
     void set_clumped() { clump_info.clumped = true; };
-    void clump(SNP &target, double r2,
-               double proxy = 2)
+    void clump(SNP& target, double r2, double proxy = 2)
     {
         // when proxy = 2, we will not perform proxy
         // That's because no SNP can have an R2 > 2
