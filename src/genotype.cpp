@@ -917,12 +917,22 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     const double min_r2 = (clump_info.use_proxy)
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
-
+    bool is_x = false;
+    double freq11;
+    double freq11_expected;
+    double freq1x;
+    double freq2x;
+    double freqx1;
+    double freqx2;
+    double dxx;
+    double r2 = -1.0;
+    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(m_founder_ct);
+    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_founder_ct);
     bool mismatch_error = false;
     bool flipped = false;
     int mismatch = 0;
-    std::vector<uintptr_t> core_geno(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uint32_t> core_tot(6);
+    std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
+    std::vector<uint32_t> index_tots(6);
     double prev_progress = 0.0;
     uintptr_t contain_miss_init = founder_ctsplit * sizeof(intptr_t)
                                   + 2 * sizeof(int32_t)
@@ -975,7 +985,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
         uintptr_t contain_missing = contain_miss_init;
-        std::fill(core_tot.begin(), core_tot.end(), 0);
+        std::fill(index_tots.begin(), index_tots.end(), 0);
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
             if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
@@ -989,16 +999,16 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 // only read it if we really need to clump a SNP
                 reference.read_genotype(genotype_vector.data(), cur_snp,
                                         cur_snp.file_name());
-                std::fill(core_geno.begin(), core_geno.end(), 0);
+                std::fill(index_data.begin(), index_data.end(), 0);
                 // core_geno.resize(3 * founder_ctsplit + founder_ctv3);
                 load_and_split3(genotype_vector.data(), m_founder_ct,
-                                core_geno.data(), founder_ctv3, 0, 0, 1,
+                                index_data.data(), founder_ctv3, 0, 0, 1,
                                 &contain_missing);
-                core_tot[0] = popcount_longs(core_geno.data(), founder_ctv3);
-                core_tot[1] = popcount_longs(&(core_geno.data()[founder_ctv3]),
-                                             founder_ctv3);
-                core_tot[2] = popcount_longs(
-                    &(core_geno.data()[2 * founder_ctv3]), founder_ctv3);
+                index_tots[0] = popcount_longs(index_data.data(), founder_ctv3);
+                index_tots[1] = popcount_longs(
+                    &(index_data.data()[founder_ctv3]), founder_ctv3);
+                index_tots[2] = popcount_longs(
+                    &(index_data.data()[2 * founder_ctv3]), founder_ctv3);
                 first = false;
             }
             reference.read_genotype(genotype_vector.data(), ref_pair_snp,
@@ -1022,8 +1032,39 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 get_r2((contain_missing == 3), (pair_contain_missing == 3),
                        core_tot, pair_tot, core_geno, pair_geno);
             */
-            double r2 = get_r2((contain_missing == 3), core_tot, core_geno,
-                               genotype_vector);
+            uint32_t counts[18];
+            genovec_3freq(genotype_vector.data(), index_data.data(),
+                          founder_ctl2, &(counts[0]), &(counts[1]),
+                          &(counts[2]));
+            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+            genovec_3freq(genotype_vector.data(), &(index_data[founder_ctv2]),
+                          founder_ctl2, &(counts[3]), &(counts[4]),
+                          &(counts[5]));
+            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+            genovec_3freq(genotype_vector.data(),
+                          &(index_data[2 * founder_ctv2]), founder_ctl2,
+                          &(counts[6]), &(counts[7]), &(counts[8]));
+            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+            r2 = -1;
+            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
+                                        &freqx1, &freqx2, &freq11))
+            {
+                freq11_expected = freqx1 * freq1x;
+                dxx = freq11 - freq11_expected;
+                // if r^2 threshold is 0, let everything else through but
+                // exclude the apparent zeroes.  Zeroes *are* included if
+                // r2_thresh is negative,
+                // though (only nans are rejected then).
+                if (fabs(dxx) < SMALL_EPSILON
+                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
+                {
+                    r2 = 0.0;
+                }
+                else
+                {
+                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+                }
+            }
             if (r2 >= min_r2) {
                 cur_snp.clump(ref_pair_snp, r2, clump_info.proxy);
             }
