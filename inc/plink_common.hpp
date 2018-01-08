@@ -1241,4 +1241,14 @@ void count_3freq_48b(const uintptr_t* __restrict geno_vec,
                      uint32_t* __restrict ctap, uint32_t* __restrict ctbp,
                      uint32_t* __restrict ctcp);
 #endif
+
+void fill_quatervec_55(uint32_t ct, uintptr_t* quatervec);
+
+void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
+                  uintptr_t* data_ptr, uintptr_t* mask_ptr,
+                  uintptr_t* result_ptr);
+uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct);
+
+#define popcount01_longs popcount2_longs
+
 #endif // __PLINK_COMMON_H__

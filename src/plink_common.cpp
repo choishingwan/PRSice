@@ -1666,3 +1666,245 @@ void count_3freq_48b(const uintptr_t* __restrict geno_vec,
     *ctcp += (partial_c * 0x01010101) >> 24;
 }
 #endif
+
+void fill_quatervec_55(uint32_t ct, uintptr_t* quatervec)
+{
+    uint32_t rem = ct & (BITCT - 1);
+#ifdef __LP64__
+    const __m128i m1 = {FIVEMASK, FIVEMASK};
+    __m128i* vecp = (__m128i*) quatervec;
+    __m128i* vec_end = (__m128i*) (&(quatervec[2 * (ct / BITCT)]));
+    uintptr_t* second_to_last;
+    while (vecp < vec_end) {
+        *vecp++ = m1;
+    }
+    if (rem) {
+        second_to_last = (uintptr_t*) vecp;
+        if (rem > BITCT2) {
+            second_to_last[0] = FIVEMASK;
+            second_to_last[1] = FIVEMASK >> ((BITCT - rem) * 2);
+        }
+        else
+        {
+            second_to_last[0] = FIVEMASK >> ((BITCT2 - rem) * 2);
+            second_to_last[1] = 0;
+        }
+    }
+#else
+    uintptr_t* vec_end = &(quatervec[2 * (ct / BITCT)]);
+    while (quatervec < vec_end) {
+        *quatervec++ = FIVEMASK;
+    }
+    if (rem) {
+        if (rem > BITCT2) {
+            quatervec[0] = FIVEMASK;
+            quatervec[1] = FIVEMASK >> ((BITCT - rem) * 2);
+        }
+        else
+        {
+            quatervec[0] = FIVEMASK >> ((BITCT2 - rem) * 2);
+            quatervec[1] = 0;
+        }
+    }
+#endif
+}
+
+
+void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
+                  uintptr_t* data_ptr, uintptr_t* mask_ptr,
+                  uintptr_t* result_ptr)
+{
+    // vec_ptr assumed to be standard 00/01 bit vector
+    // sets result_vec bits to 01 iff data_ptr bits are equal to matchval and
+    // vec_ptr bit is set, 00 otherwise.
+    // currently assumes matchval is not 1.
+    assert(unfiltered_sample_ct);
+#ifdef __LP64__
+    __m128i* data_read = (__m128i*) data_ptr;
+    __m128i* mask_read = (__m128i*) mask_ptr;
+    __m128i* data_read_end =
+        &(data_read[QUATERCT_TO_VECCT(unfiltered_sample_ct)]);
+    __m128i* writer = (__m128i*) result_ptr;
+    __m128i loader;
+#else
+    uintptr_t* data_read_end =
+        &(data_ptr[QUATERCT_TO_ALIGNED_WORDCT(unfiltered_sample_ct)]);
+    uintptr_t loader;
+#endif
+    if (matchval) {
+        if (matchval == 2) {
+#ifdef __LP64__
+            do
+            {
+                loader = *data_read++;
+                *writer++ = _mm_and_si128(
+                    _mm_andnot_si128(loader, _mm_srli_epi64(loader, 1)),
+                    *mask_read++);
+            } while (data_read < data_read_end);
+#else
+            do
+            {
+                loader = *data_ptr++;
+                *result_ptr++ = (~loader) & (loader >> 1) & (*mask_ptr++);
+            } while (data_ptr < data_read_end);
+#endif
+        }
+        else
+        {
+#ifdef __LP64__
+            do
+            {
+                loader = *data_read++;
+                *writer++ = _mm_and_si128(
+                    _mm_and_si128(loader, _mm_srli_epi64(loader, 1)),
+                    *mask_read++);
+            } while (data_read < data_read_end);
+#else
+            do
+            {
+                loader = *data_ptr++;
+                *result_ptr++ = loader & (loader >> 1) & (*mask_ptr++);
+            } while (data_ptr < data_read_end);
+#endif
+        }
+    }
+    else
+    {
+#ifdef __LP64__
+        do
+        {
+            loader = *data_read++;
+            *writer++ = _mm_andnot_si128(
+                _mm_or_si128(loader, _mm_srli_epi64(loader, 1)), *mask_read++);
+        } while (data_read < data_read_end);
+#else
+        do
+        {
+            loader = *data_ptr++;
+            *result_ptr++ = (~(loader | (loader >> 1))) & (*mask_ptr++);
+        } while (data_ptr < data_read_end);
+#endif
+    }
+}
+
+
+static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
+{
+    // assumes ct is a multiple of 6.
+    const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+    const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+    const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+    uintptr_t tot = 0;
+    const __m128i* vend;
+    __m128i loader1;
+    __m128i loader2;
+    __m128i count1;
+    __m128i count2;
+    __univec acc;
+
+    while (ct >= 30) {
+        ct -= 30;
+        vend = &(vptr[30]);
+    popcount2_vecs_main_loop:
+        acc.vi = _mm_setzero_si128();
+        do
+        {
+            loader1 = *vptr++;
+            loader2 = *vptr++;
+            count1 =
+                _mm_add_epi64(_mm_and_si128(loader1, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader1, 2), m2));
+            count2 =
+                _mm_add_epi64(_mm_and_si128(loader2, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader2, 2), m2));
+
+            loader1 = *vptr++;
+            loader2 = *vptr++;
+            count1 = _mm_add_epi64(
+                count1,
+                _mm_add_epi64(_mm_and_si128(loader1, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader1, 2), m2)));
+            count2 = _mm_add_epi64(
+                count2,
+                _mm_add_epi64(_mm_and_si128(loader2, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader2, 2), m2)));
+
+            loader1 = *vptr++;
+            loader2 = *vptr++;
+            count1 = _mm_add_epi64(
+                count1,
+                _mm_add_epi64(_mm_and_si128(loader1, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader1, 2), m2)));
+            count2 = _mm_add_epi64(
+                count2,
+                _mm_add_epi64(_mm_and_si128(loader2, m2),
+                              _mm_and_si128(_mm_srli_epi64(loader2, 2), m2)));
+
+            acc.vi = _mm_add_epi64(
+                acc.vi,
+                _mm_add_epi64(_mm_and_si128(count1, m4),
+                              _mm_and_si128(_mm_srli_epi64(count1, 4), m4)));
+            acc.vi = _mm_add_epi64(
+                acc.vi,
+                _mm_add_epi64(_mm_and_si128(count2, m4),
+                              _mm_and_si128(_mm_srli_epi64(count2, 4), m4)));
+        } while (vptr < vend);
+        acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
+        tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
+    }
+    if (ct) {
+        vend = &(vptr[ct]);
+        ct = 0;
+        goto popcount2_vecs_main_loop;
+    }
+    return tot;
+}
+
+uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
+{
+    // treats lptr[] as an array of two-bit instead of one-bit numbers
+    uintptr_t tot = 0;
+    const uintptr_t* lptr_end = &(lptr[word_ct]);
+#ifdef __LP64__
+    uintptr_t twelve_ct;
+    const __m128i* vptr;
+    vptr = (const __m128i*) lptr;
+    twelve_ct = word_ct / 12;
+    tot += popcount2_vecs(vptr, twelve_ct * 6);
+    lptr = &(lptr[twelve_ct * 12]);
+#else
+    const uintptr_t* lptr_six_end;
+    uintptr_t loader1;
+    uintptr_t loader2;
+    uintptr_t ulii;
+    uintptr_t uljj;
+    lptr_six_end = &(lptr[word_ct - (word_ct % 6)]);
+    while (lptr < lptr_six_end) {
+        loader1 = *lptr++;
+        loader2 = *lptr++;
+        ulii = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
+        uljj = (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
+        loader1 = *lptr++;
+        loader2 = *lptr++;
+        ulii += (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
+        uljj += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
+        loader1 = *lptr++;
+        loader2 = *lptr++;
+        ulii += (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
+        uljj += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
+        ulii = (ulii & 0x0f0f0f0f) + ((ulii >> 4) & 0x0f0f0f0f);
+        ulii += (uljj & 0x0f0f0f0f) + ((uljj >> 4) & 0x0f0f0f0f);
+
+        // Each 8-bit slot stores a number in 0..48.  Multiplying by 0x01010101
+        // is equivalent to the left-shifts and adds we need to sum those four
+        // 8-bit numbers in the high-order slot.
+        tot += (ulii * 0x01010101) >> 24;
+    }
+#endif
+    while (lptr < lptr_end) {
+        tot += popcount2_long(*lptr++);
+    }
+    return tot;
+}
+

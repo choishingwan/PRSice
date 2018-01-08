@@ -938,6 +938,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                   + 2 * sizeof(int32_t)
                                   + (m_marker_ct - 1) * 2 * sizeof(double);
 
+    std::vector<uintptr_t> founder_include2(founder_ctv2,0);
+    fill_quatervec_55(m_founder_ct, founder_include2.data());
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
@@ -1000,15 +1002,32 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 reference.read_genotype(genotype_vector.data(), cur_snp,
                                         cur_snp.file_name());
                 std::fill(index_data.begin(), index_data.end(), 0);
+                vec_datamask(m_founder_ct, 0, genotype_vector.data(),
+                             founder_include2.data(), index_data.data());
+                index_tots[0] =
+                    popcount2_longs(index_data.data(), founder_ctl2);
+                vec_datamask(m_founder_ct, 2, genotype_vector.data(),
+                             founder_include2.data(),
+                             &(index_data[founder_ctv2]));
+                index_tots[1] =
+                    popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
+                vec_datamask(m_founder_ct, 3, genotype_vector.data(),
+                             founder_include2.data(),
+                             &(index_data[2 * founder_ctv2]));
+                index_tots[2] = popcount2_longs(&(index_data[2 * founder_ctv2]),
+                                                founder_ctl2);
+
                 // core_geno.resize(3 * founder_ctsplit + founder_ctv3);
-                load_and_split3(genotype_vector.data(), m_founder_ct,
-                                index_data.data(), founder_ctv3, 0, 0, 1,
-                                &contain_missing);
-                index_tots[0] = popcount_longs(index_data.data(), founder_ctv3);
-                index_tots[1] = popcount_longs(
-                    &(index_data.data()[founder_ctv3]), founder_ctv3);
-                index_tots[2] = popcount_longs(
-                    &(index_data.data()[2 * founder_ctv3]), founder_ctv3);
+                /*
+        load_and_split3(genotype_vector.data(), m_founder_ct,
+                        index_data.data(), founder_ctv3, 0, 0, 1,
+                        &contain_missing);
+        index_tots[0] = popcount_longs(index_data.data(), founder_ctv3);
+        index_tots[1] = popcount_longs(
+            &(index_data.data()[founder_ctv3]), founder_ctv3);
+        index_tots[2] = popcount_longs(
+            &(index_data.data()[2 * founder_ctv3]), founder_ctv3);
+            */
                 first = false;
             }
             reference.read_genotype(genotype_vector.data(), ref_pair_snp,
