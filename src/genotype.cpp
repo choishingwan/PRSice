@@ -922,9 +922,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     bool flipped = false;
     int mismatch = 0;
     std::vector<uintptr_t> core_geno(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uintptr_t> pair_geno(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uint32_t> core_tot;
-    std::vector<uint32_t> pair_tot;
+    std::vector<uint32_t> core_tot(6);
     double prev_progress = 0.0;
     uintptr_t contain_miss_init = founder_ctsplit * sizeof(intptr_t)
                                   + 2 * sizeof(int32_t)
