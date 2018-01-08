@@ -1024,7 +1024,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 get_r2((contain_missing == 3), (pair_contain_missing == 3),
                        core_tot, pair_tot, core_geno, pair_geno);
             */
-            double r2 = 0.0;
+            double r2 = get_r2((contain_missing == 3), core_tot, core_geno,
+                               genotype_vector);
             if (r2 >= min_r2) {
                 cur_snp.clump(ref_pair_snp, r2, clump_info.proxy);
             }
