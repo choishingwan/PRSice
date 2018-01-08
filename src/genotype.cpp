@@ -938,7 +938,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                   + 2 * sizeof(int32_t)
                                   + (m_marker_ct - 1) * 2 * sizeof(double);
 
-    std::vector<uintptr_t> founder_include2(founder_ctv2,0);
+    std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(m_founder_ct, founder_include2.data());
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;

@@ -1907,4 +1907,3 @@ uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
     }
     return tot;
 }
-
