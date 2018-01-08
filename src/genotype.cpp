@@ -897,8 +897,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // skip any SNPs that are clumped
         auto&& cur_snp = m_existed_snps[cur_snp_index];
-        if (cur_snp.p_value() > clump_info.p_value) continue;
-        if (cur_snp.clumped()) continue;
+        if (cur_snp.clumped() || cur_snp.p_value() > clump_info.p_value) continue;
         auto&& target_pair = reference.m_existed_snps_index.find(cur_snp.rs());
         if (target_pair == reference.m_existed_snps_index.end()) continue;
         // Any SNP with p-value less than clump-p will be ignored
@@ -930,12 +929,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
         uintptr_t contain_missing = contain_miss_init;
-        core_tot.resize(6, 0);
+        std::fill(core_tot.begin(), core_tot.end(), 0);
         for (size_t i_pair = start; i_pair < end; ++i_pair) {
             if (i_pair == cur_snp_index) continue;
             auto&& pair_snp = m_existed_snps[i_pair];
-            if (pair_snp.clumped()) continue;
-            if (pair_snp.p_value() > clump_info.p_value) continue;
+            if (pair_snp.clumped() || pair_snp.p_value() > clump_info.p_value) continue;
             auto&& pair_index =
                 reference.m_existed_snps_index.find(pair_snp.rs());
             if (pair_index == reference.m_existed_snps_index.end()) continue;
@@ -944,9 +942,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 // only read it if we really need to clump a SNP
                 reference.read_genotype(genotype_vector.data(), cur_snp,
                                         cur_snp.file_name());
-                // resize the geno1 vector in SNP
-                // the Passkey ensure only this class can modify the size
-                core_geno.resize(3 * founder_ctsplit + founder_ctv3);
+                std::fill(core_geno.begin(), core_geno.end(), 0);
+                //core_geno.resize(3 * founder_ctsplit + founder_ctv3);
                 load_and_split3(genotype_vector.data(), m_founder_ct,
                                 core_geno.data(), founder_ctv3, 0, 0, 1,
                                 &contain_missing);
@@ -963,11 +960,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             uintptr_t pair_contain_missing = contain_miss_init;
             // resize the geno1 vector in SNP
             // the Passkey ensure only this class can modify the size
-            pair_geno.resize(3 * founder_ctsplit + founder_ctv3);
+            std::fill(pair_geno.begin(), pair_geno.end(), 0);
             load_and_split3(pair_genotype_vector.data(), m_founder_ct,
                             pair_geno.data(), founder_ctv3, 0, 0, 1,
                             &pair_contain_missing);
-            pair_tot.resize(6, 0);
+            std::fill(pair_tot.begin(), pair_tot.end(), 0);
             pair_tot[0] = popcount_longs(pair_geno.data(), founder_ctv3);
             pair_tot[1] =
                 popcount_longs(&(pair_geno.data()[founder_ctv3]), founder_ctv3);
@@ -979,7 +976,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                        core_tot, pair_tot, core_geno, pair_geno);
 
             if (r2 >= min_r2) {
-                cur_snp.clump(m_existed_snps, i_pair, r2, clump_info.proxy);
+                cur_snp.clump(ref_pair_snp, r2, clump_info.proxy);
             }
         }
         cur_snp.set_clumped();

@@ -169,12 +169,11 @@ public:
     };
 
     void set_clumped() { clump_info.clumped = true; };
-    void clump(std::vector<SNP>& snp_list, size_t target_index, double r2,
+    void clump(SNP &target, double r2,
                double proxy = 2)
     {
         // when proxy = 2, we will not perform proxy
         // That's because no SNP can have an R2 > 2
-        auto& target = snp_list[target_index];
         if (target.clumped()) return;
         bool completed = false;
         if (r2 > proxy) {
