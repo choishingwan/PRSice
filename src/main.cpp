@@ -70,21 +70,6 @@ int main(int argc, char* argv[])
         reporter.report(error.what());
         return -1;
     }
-    if (!commander.ref_name().empty()) {
-        reporter.report("Loading reference panel\n");
-        reference_file = factory.createGenotype(
-            commander.ref_name(), commander.ref_type(), commander.thread(),
-            commander.ignore_fid(), commander.nonfounders(),
-            commander.keep_ambig(), reporter, commander);
-        reference_file->load_samples(commander.ld_keep_file(),
-                                     commander.ld_remove_file(), true,
-                                     reporter);
-        // only load SNPs that can be found in the target file index
-        reference_file->load_snps(commander.out(), target_file->index(),
-                                  commander.geno(), commander.maf(),
-                                  commander.info(), commander.hard_threshold(),
-                                  commander.hard_coded(), true, reporter);
-    }
     // TODO: Revamp Region to make it suitable for prslice too
     Region region = Region(commander.feature(), target_file->get_chr_order());
     try
@@ -113,9 +98,32 @@ int main(int argc, char* argv[])
     {
         target_file->set_info(commander);
         target_file->read_base(commander, region, reporter);
+
+        if (!commander.ref_name().empty()) {
+            reporter.report("Loading reference panel\n");
+            reference_file = factory.createGenotype(
+                commander.ref_name(), commander.ref_type(), commander.thread(),
+                commander.ignore_fid(), commander.nonfounders(),
+                commander.keep_ambig(), reporter, commander);
+            reference_file->load_samples(commander.ld_keep_file(),
+                                         commander.ld_remove_file(), true,
+                                         reporter);
+            // only load SNPs that can be found in the target file index
+            reference_file->load_snps(commander.out(), target_file->index(),
+                                      commander.geno(), commander.maf(),
+                                      commander.info(), commander.hard_threshold(),
+                                      commander.hard_coded(), true, reporter);
+        }
         // get the sort by p inex vector for target
         // so that we can still find out the relative coordinates of each SNPs
-        if (!target_file->sort_by_p()) {
+        if(!commander.ref_name().empty()){
+        		if (!reference_file->sort_by_p()) {
+        			std::string error_message = "No SNPs left for PRSice processing";
+        			reporter.report(error_message);
+        			return -1;
+        		}
+        }
+        else if (!target_file->sort_by_p()) {
             std::string error_message = "No SNPs left for PRSice processing";
             reporter.report(error_message);
             return -1;
