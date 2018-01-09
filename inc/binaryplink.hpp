@@ -48,6 +48,7 @@ private:
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
+        uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
         std::streampos snp_index = snp.byte_pos();
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {
@@ -55,10 +56,14 @@ private:
             }
             std::string bedname = file_name + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
+            m_prev_loc = 0;
         }
-        if (!m_bed_file.seekg(snp_index, std::ios_base::beg)) {
+
+        if ((m_prev_loc!=snp_index) && !m_bed_file.seekg(snp_index, std::ios_base::beg)) {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+        // so that we don't jump if we don't need to
+        m_prev_loc = snp_index+((uint64_t) unfiltered_sample_ct4);
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))
@@ -72,7 +77,7 @@ private:
 
     std::ifstream m_bed_file;
     std::string m_cur_file;
-
+    std::streampos m_prev_loc=0;
 
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,

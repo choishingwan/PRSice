@@ -560,6 +560,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     size_t num_included_samples = m_sample_names.size();
 
     m_cur_file = ""; // just close it
@@ -586,6 +587,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                     "ERROR: Cannot open bed file: " + bedname;
                 throw std::runtime_error(error_message);
             }
+            m_prev_loc = 0;
         }
         // only read this SNP if it falls within our region of interest
         if (!m_existed_snps[i_snp].in(region_index)) continue;
@@ -594,9 +596,10 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         // very useful for read score as most SNPs might not
         // be next to each other
         std::streampos cur_line = m_existed_snps[i_snp].byte_pos();
-        if (!m_bed_file.seekg(cur_line, std::ios_base::beg)) {
+        if (m_prev_loc!=cur_line && !m_bed_file.seekg(cur_line, std::ios_base::beg)) {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+        m_prev_loc = cur_line+((uint64_t) unfiltered_sample_ct4);
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
