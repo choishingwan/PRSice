@@ -983,95 +983,93 @@ void Commander::base_check(std::map<std::string, std::string>& message,
     else
     {
         // check the base file and get the corresponding index
-        std::ifstream base_test;
-        base_test.open(base.name.c_str());
-        if (!base_test.is_open()) {
-            error = true;
-            error_message.append("ERROR: Cannot open base file to read!\n");
-            return;
+
+        std::string line;
+        if (base.name.substr(base.name.find_last_of(".") + 1).compare("gz")== 0)
+        {
+        		igzstream in(base.name.c_str());
+        		if (!in.good()) {
+        			error = true;
+        			error_message.append(
+        					"ERROR: Cannot open base file (gz) to read!\n");
+        			return;
+        		}
+        		std::getline(in, line);
+        		in.close();
         }
         else
         {
-            std::string line;
-            if (base.name.substr(base.name.find_last_of(".") + 1).compare("gz")
-                == 0)
-            {
-                base_test.close();
-                igzstream in(base.name.c_str());
-                if (!in.good()) {
-                    error = true;
-                    error_message.append(
-                        "ERROR: Cannot open base file (gz) to read!\n");
-                    return;
-                }
-                std::getline(in, line);
-                in.close();
+        		std::ifstream base_test;
+            base_test.open(base.name.c_str());
+            if (!base_test.is_open()) {
+                error = true;
+                error_message.append("ERROR: Cannot open base file to read!\n");
+                return;
             }
-            else
-            {
-                std::getline(base_test, line);
-                base_test.close();
-            }
-            // check the base file header is correct
-            std::vector<std::string> token = misc::split(line);
-            int max_size = token.size();
-            if (base.no_default) {
-                // remove all the default
-                if (!base.provided_chr) base.chr = "";
-                if (!base.provided_effect_allele) base.effect_allele = "";
-                if (!base.provided_non_effect_allele)
-                    base.non_effect_allele = "";
-                if (!base.provided_statistic) base.statistic = "";
-                if (!base.provided_snp) base.snp = "";
-                if (!base.provided_bp) base.bp = "";
-                if (!base.provided_standard_error) base.standard_error = "";
-                if (!base.provided_p_value) base.p_value = "";
-                if (!base.provided_info) base.info_col = "";
-            }
-            if (!base.is_index) {
-                if (!base.no_default) {
-                    if (!base.statistic.empty()) {
-                        // if statistics is provided, we can guess if it
-                        // is beta or not
-                        if (base.statistic.length() == 2
-                            && toupper(base.statistic[0]) == 'O'
-                            && toupper(base.statistic[1]) == 'R')
-                        {
-                            base.is_beta = false;
-                        }
-                        else if (base.statistic.length() == 4
-                                 && toupper(base.statistic[0]) == 'B'
-                                 && toupper(base.statistic[1]) == 'E'
-                                 && toupper(base.statistic[2]) == 'T'
-                                 && toupper(base.statistic[3]) == 'A')
-                        {
-                            // although user cannot do --no-beta, it is a crazy
-                            // use case where BETA != beta, right?
-                            // TODO: add no-beta flag...
-                            base.is_beta = true;
-                            message["beta"] = "";
-                        }
-                    }
-                    else if (base.statistic.empty() && base.is_beta)
-                    {
-                        base.statistic = "BETA";
-                        message["stat"] = "BETA";
-                    }
-                    else if (base.statistic.empty())
-                    {
-                        for (size_t i = 0; i < token.size(); ++i) {
-                            if (token[i].length() == 2
-                                && toupper(token[i][0]) == 'O'
-                                && toupper(token[i][1] == 'R'))
-                            {
-                                base.is_beta = false;
-                                base.statistic = token[i];
-                                message["stat"] = token[i];
-                                break;
-                            }
-                            else if (token[i].length() == 4
-                                     && toupper(token[i][0]) == 'B'
-                                     && toupper(token[i][1]) == 'E'
+        		std::getline(base_test, line);
+        		base_test.close();
+        }
+        std::cerr << "Line is: " << line << std::endl;
+        // check the base file header is correct
+        std::vector<std::string> token = misc::split(line);
+        int max_size = token.size();
+        if (base.no_default) {
+        		// remove all the default
+        		if (!base.provided_chr) base.chr = "";
+        		if (!base.provided_effect_allele) base.effect_allele = "";
+        		if (!base.provided_non_effect_allele)
+        			base.non_effect_allele = "";
+        		if (!base.provided_statistic) base.statistic = "";
+        		if (!base.provided_snp) base.snp = "";
+        		if (!base.provided_bp) base.bp = "";
+        		if (!base.provided_standard_error) base.standard_error = "";
+        		if (!base.provided_p_value) base.p_value = "";
+        		if (!base.provided_info) base.info_col = "";
+        }
+        if (!base.is_index) {
+        		if (!base.no_default) {
+        			if (!base.statistic.empty()) {
+        				// if statistics is provided, we can guess if it
+        				// is beta or not
+        				if (base.statistic.length() == 2
+        						&& toupper(base.statistic[0]) == 'O'
+        						&& toupper(base.statistic[1]) == 'R')
+        				{
+        					base.is_beta = false;
+        				}
+        				else if (base.statistic.length() == 4
+        						&& toupper(base.statistic[0]) == 'B'
+        						&& toupper(base.statistic[1]) == 'E'
+        						&& toupper(base.statistic[2]) == 'T'
+        						&& toupper(base.statistic[3]) == 'A')
+        				{
+        					// although user cannot do --no-beta, it is a crazy
+        					// use case where BETA != beta, right?
+        					// TODO: add no-beta flag...
+        					base.is_beta = true;
+        					message["beta"] = "";
+        				}
+        			}
+        			else if (base.statistic.empty() && base.is_beta)
+        			{
+        				base.statistic = "BETA";
+        				message["stat"] = "BETA";
+        			}
+        			else if (base.statistic.empty())
+        			{
+        				for (size_t i = 0; i < token.size(); ++i) {
+        					if (token[i].length() == 2
+        							&& toupper(token[i][0]) == 'O'
+        							&& toupper(token[i][1] == 'R'))
+        					{
+        						base.is_beta = false;
+        						base.statistic = token[i];
+        						message["stat"] = token[i];
+        						break;
+        					}
+        					else if (token[i].length() == 4
+        							&& toupper(token[i][0]) == 'B'
+        							&& toupper(token[i][1]) == 'E'
                                      && toupper(token[i][2]) == 'T'
                                      && toupper(token[i][3]) == 'A')
                             {
@@ -1374,7 +1372,7 @@ void Commander::base_check(std::map<std::string, std::string>& message,
                 *max_element(base.col_index.begin(), base.col_index.end());
             base.col_index[+BASE_INDEX::MAX] = max_index;
         }
-    }
+
 }
 
 void Commander::clump_check(std::map<std::string, std::string>& message,
