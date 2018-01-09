@@ -599,7 +599,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         if (m_prev_loc!=cur_line && !m_bed_file.seekg(cur_line, std::ios_base::beg)) {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
-        m_prev_loc = cur_line+((uint64_t) unfiltered_sample_ct4);
+        m_prev_loc = cur_line+(std::streampos) unfiltered_sample_ct4;
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,

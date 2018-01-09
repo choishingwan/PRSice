@@ -57,13 +57,13 @@ private:
             std::string bedname = file_name + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
             m_prev_loc = 0;
+            m_cur_file = file_name;
         }
-
         if ((m_prev_loc!=snp_index) && !m_bed_file.seekg(snp_index, std::ios_base::beg)) {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
         // so that we don't jump if we don't need to
-        m_prev_loc = snp_index+((uint64_t) unfiltered_sample_ct4);
+        m_prev_loc = snp_index+(std::streampos) unfiltered_sample_ct4;
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))
