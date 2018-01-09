@@ -1036,6 +1036,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     }
     bigstack_ua =
         (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    // if fail, return nullptr which will then get into the while loop
     while (!bigstack_ua)
     {
         malloc_size_mb = (malloc_size_mb * 3) / 4;
@@ -1066,6 +1067,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                                - bigstack_ua))
                                 & (~(CACHELINE - ONELU))]);
     uintptr_t max_window_size = ( ((uintptr_t)g_bigstack_end) - ((uintptr_t)bigstack_initial_base)) / (founder_ctv2 * sizeof(intptr_t));
+    g_bigstack_end = nullptr;
     uintptr_t cur_window_size = 0;
     if(!max_window_size){
     		throw std::runtime_error("ERROR: Not enough memory for clumping!");
@@ -1139,6 +1141,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
         std::fill(index_data.begin(), index_data.end(), 0);
+
         reference.read_genotype(window_data_ptr, cur_snp, cur_snp.file_name());
         vec_datamask(m_founder_ct, 0, window_data_ptr, founder_include2.data(),
                      index_data.data());
@@ -1215,7 +1218,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
-            window_data_ptr = &(window_data_ptr[founder_ctv2]);
             uint32_t counts[18];
             genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
                           &(counts[0]), &(counts[1]), &(counts[2]));
