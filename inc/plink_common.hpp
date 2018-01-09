@@ -712,7 +712,14 @@ typedef union {
 #define CACHELINE_WORD (CACHELINE / BYTECT)
 #define CACHELINE_DBL (CACHELINE / 8)
 
+
 // alignment must be a power of 2
+HEADER_INLINE uintptr_t round_up_pow2(uintptr_t val, uintptr_t alignment)
+{
+    uintptr_t alignment_m1 = alignment - 1;
+    assert(!(alignment & alignment_m1));
+    return (val + alignment_m1) & (~alignment_m1);
+}
 
 
 #define BITCT_TO_VECCT(val) (((val) + (VEC_BITS - 1)) / VEC_BITS)
@@ -978,9 +985,7 @@ HEADER_INLINE uint32_t is_set(const uintptr_t* bitarr, uint32_t loc)
 HEADER_INLINE void fill_vvec_zero(size_t size, VECITYPE* vvec)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *vvec++ = _mm_setzero_si128();
-    }
+    for (ulii = 0; ulii < size; ulii++) { *vvec++ = _mm_setzero_si128(); }
 }
 #else
 
@@ -989,18 +994,14 @@ HEADER_INLINE void fill_vvec_zero(size_t size, VECITYPE* vvec)
 HEADER_INLINE void fill_ulong_one(size_t size, uintptr_t* ularr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *ularr++ = ~ZEROLU;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *ularr++ = ~ZEROLU; }
 }
 
 
 HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *uiarr++ = 0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *uiarr++ = 0; }
 }
 
 
@@ -1144,9 +1145,7 @@ HEADER_INLINE uint32_t load_raw(uintptr_t unfiltered_sample_ct4, FILE* bedfile,
 HEADER_INLINE uintptr_t get_final_mask(uint32_t sample_ct)
 {
     uint32_t uii = sample_ct % BITCT2;
-    if (uii) {
-        return (ONELU << (2 * uii)) - ONELU;
-    }
+    if (uii) { return (ONELU << (2 * uii)) - ONELU; }
     else
     {
         return ~ZEROLU;
