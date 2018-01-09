@@ -987,7 +987,7 @@ void Commander::base_check(std::map<std::string, std::string>& message,
         std::string line;
         if (base.name.substr(base.name.find_last_of(".") + 1).compare("gz")== 0)
         {
-        		igzstream in(base.name.c_str());
+        		GZSTREAM_NAMESPACE::igzstream in(base.name.c_str());
         		if (!in.good()) {
         			error = true;
         			error_message.append(

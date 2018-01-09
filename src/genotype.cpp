@@ -224,17 +224,17 @@ void Genotype::load_snps(
     {
         message.append(
             std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold");
+            + " variant(s) excluded based on genotype missingness threshold\n");
     }
     if (m_num_maf_filter != 0)
     {
         message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold");
+                       + " variant(s) excluded based on MAF threshold\n");
     }
     if (m_num_info_filter != 0)
     {
         message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on INFO score threshold");
+                       + " variant(s) excluded based on INFO score threshold\n");
     }
 
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
@@ -310,7 +310,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     // now coordinates obtained from target file instead. Coordinate information
     // in base file only use for validation
     bool gz_input = false;
-    igzstream gz_snp_file;
+    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     if (input.substr(input.find_last_of(".") + 1).compare("gz") == 0)
     {
         gz_snp_file.open(input.c_str());
@@ -369,16 +369,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     size_t file_length = 0;
     if (gz_input)
     {
-        gz_snp_file.seekg(0, gz_snp_file.end);
-        file_length = gz_snp_file.tellg();
-        gz_snp_file.clear();
-        gz_snp_file.seekg(0, gz_snp_file.beg);
+    	// gzstream does not support seek, so we can't display progress bar
         if (!c_commander.is_index())
         {
             std::getline(gz_snp_file, line);
             message.append("GZ file detected. Header of file is:\n");
-            message.append(line);
+            message.append(line+"\n\n");
         }
+        reporter.report("Due to library restrictions, we cannot display progress bar for gz");
     }
     else
     {
@@ -396,13 +394,15 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     while ((!gz_input && std::getline(snp_file, line))
            || (gz_input && std::getline(gz_snp_file, line)))
     {
-        double progress =
-            (double) snp_file.tellg() / (double) (file_length) *100;
-        if (progress - prev_progress > 0.01)
-        {
-            fprintf(stderr, "\rReading %03.2f%%", progress);
-            prev_progress = progress;
-        }
+    		if(!gz_input){
+			double progress =
+				(double) snp_file.tellg() / (double) (file_length) *100;
+			if (progress - prev_progress > 0.01)
+			{
+				fprintf(stderr, "\rReading %03.2f%%", progress);
+				prev_progress = progress;
+			}
+    		}
         misc::trim(line);
         if (line.empty()) continue;
         num_line_in_base++;
@@ -787,7 +787,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     if (num_maf_filter)
     {
         message.append(std::to_string(num_maf_filter)
-                       + " variant(s) excluded due to MAF threshold \n");
+                       + " variant(s) excluded due to MAF threshold\n");
     }
     message.append(std::to_string(m_existed_snps.size())
                    + " total variant(s) included from base file\n\n");
@@ -968,9 +968,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
     std::vector<uint32_t> index_tots(6);
     double prev_progress = 0.0;
-    uintptr_t contain_miss_init = founder_ctsplit * sizeof(intptr_t)
-                                  + 2 * sizeof(int32_t)
-                                  + (m_marker_ct - 1) * 2 * sizeof(double);
 
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(m_founder_ct, founder_include2.data());
@@ -1116,7 +1113,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // contain_missing == 3 = has missing
         size_t start = cur_snp.low_bound();
         size_t end = cur_snp.up_bound();
-        uintptr_t contain_missing = contain_miss_init;
         window_data_ptr = window_data;
         cur_window_size = 0;
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++)
