@@ -1259,6 +1259,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         { unique_threshold.insert(cur_snp.category()); } }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     delete window_data;
+    window_data=nullptr;
     window_data_ptr = nullptr;
     bigstack_ua = nullptr;
     bigstack_initial_base = nullptr;
