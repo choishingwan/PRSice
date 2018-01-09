@@ -361,7 +361,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 prev_snp_processed = (num_snp_read - 1);
                 // get the location of the SNP in the binary file
                 std::streampos byte_pos = bed.tellg();
-                if (maf > 0 && geno < 1) {
+                if (maf > 0 || geno < 1) {
                     if (load_and_collapse_incl(
                             m_unfiltered_sample_ct, m_sample_ct,
                             m_sample_include.data(), final_mask, false, bed,
