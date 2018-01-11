@@ -23,7 +23,7 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     if (prefix.find("#") != std::string::npos)
     {
         // auto read will only include the autosomes unless otherwise?
-        for (size_t chr = 1; chr < m_autosome_ct; ++chr)
+        for (size_t chr = 1; chr <= m_autosome_ct; ++chr)
         {
             std::string name = prefix;
             misc::replace_substring(name, "#", std::to_string(chr));
