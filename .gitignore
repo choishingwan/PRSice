@@ -37,3 +37,7 @@ src/bk/
 \.settings/
 
 \.cproject
+
+*.png
+
+PRSice\.*
