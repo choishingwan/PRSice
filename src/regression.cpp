@@ -65,9 +65,8 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     double tval = beta(intercept)
                   / se(se_index); // only interested in the one coefficient
     coeff = beta(intercept);
-    boost::math::students_t dist(rdf);
     standard_error = se(se_index);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+    p_value = misc::calc_tprob(tval, n);
 }
 
 Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta)
@@ -335,8 +334,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
-    boost::math::normal_distribution<> dist(0, 1);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
+    p_value = misc::chiprob_p(tvalue * tvalue, 1);
+    // p_value = chiprob_p(coeff*coeff,1);
     standard_error = se(se_index);
 }
 }

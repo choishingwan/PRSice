@@ -16,8 +16,6 @@
 
 #include "prsice.hpp"
 
-std::mutex PRSice::score_mutex;
-
 
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 {
@@ -1034,8 +1032,9 @@ void PRSice::thread_perm(
 
     bool intercept = true;
     size_t n = m_independent_variables.rows();
+    std::vector<double> temp_store;
+    temp_store.reserve(end - start, 1);
     for (size_t i = start; i < end; ++i) {
-        double ori_p = m_perm_result[processed + i];
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (logit_perm) {
             double r2, coefficient, se;
@@ -1062,11 +1061,19 @@ void PRSice::thread_perm(
             double resvar = rss / (double) rdf;
             Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
             double tval = beta(intercept) / se(se_index);
-            boost::math::students_t dist(rdf);
-            obs_p =
-                2 * boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+            obs_p = misc::calc_tprob(tval, n);
         }
         // store the best p_value for the processed+i permutaiton
+        // this is thread safe as we will never actually touch any overlapped
+        // area
+        temp_store.push_back(obs_p);
+    }
+    int index = 0;
+    // this might seems odd, but we put it here to minimize false sharing (best
+    // if mutex)
+    for (size_t i = start; i < end; ++i) {
+        double obs_p = temp_store[index++];
+        double ori_p = m_perm_result[processed + i];
         m_perm_result[processed + i] = (ori_p > obs_p) ? obs_p : ori_p;
     }
 }

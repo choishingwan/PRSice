@@ -22,7 +22,6 @@
 #include "storage.hpp"
 #include <chrono>
 #include <ctime>
-#include <zlib.h>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -35,10 +34,13 @@
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
-
-#define GZLENGTH 0x1000
+#include <zlib.h>
+#ifdef _WIN32
+#include <windows.h>
+SYSTEM_INFO sysinfo;
+#endif
 const std::string version = "2.0.15.beta";
-const std::string date = "27 October 2017";
+const std::string date = "14 Jan 2018";
 class Commander
 {
 public:

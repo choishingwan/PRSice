@@ -176,8 +176,6 @@ private:
         bool use_pheno;
     } pheno_info;
 
-    static std::mutex score_mutex;
-
 
     bool m_ignore_fid = false;
     bool m_prset = false;

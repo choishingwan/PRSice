@@ -405,7 +405,7 @@ option_list <- list(
     make_option(c("--all"), action = "store_true"),
     make_option(c("--beta"), action = "store_true"),
     make_option(c("--fastscore"), action = "store_true"),
-    make_option(c("--full"), action = "store_true"),
+    make_option(c("--no-full"), action = "store_true"),
     make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
     make_option(c("--index"), action = "store_true"),
     make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
@@ -570,7 +570,7 @@ flags <-
     c(
         "all",
         "beta",
-        "full",
+        "no-full",
         "ignore-fid",
         "index",
         "keep-ambig",
@@ -585,7 +585,7 @@ flags <-
         "print-snp"
     )
 
-if(provided("full", argv)){
+if(!provided("no-full", argv)){
     argv$bar_levels <- paste(argv$bar_levels, "1",sep="")
 }
 if (!provided("plot", argv)) {

@@ -97,8 +97,7 @@ public:
     void set_info(const Commander& c_commander, const bool ld = false);
     void reset_sample()
     {
-        for (auto&& sample : m_sample_names)
-        {
+        for (auto&& sample : m_sample_names) {
             sample.num_snp = 0;
             sample.prs = 0.0;
             sample.has_pheno = false;
@@ -106,8 +105,7 @@ public:
     };
     void reset_prs()
     {
-        for (auto&& sample : m_sample_names)
-        {
+        for (auto&& sample : m_sample_names) {
             sample.num_snp = 0;
             sample.prs = 0.0;
         }
@@ -388,8 +386,7 @@ protected:
         __univec acc11;
         __univec acc10;
         uint32_t ct2;
-        while (sample_ctv6 >= 30)
-        {
+        while (sample_ctv6 >= 30) {
             sample_ctv6 -= 30;
             vend = &(veca0[30]);
             acc00.vi = _mm_setzero_si128();
@@ -507,8 +504,7 @@ protected:
             counts_3x3[3] +=
                 ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (sample_ctv6)
-        {
+        if (sample_ctv6) {
             vend = &(veca0[sample_ctv6]);
             ct2 = sample_ctv6 % 2;
             sample_ctv6 = 0;
@@ -516,8 +512,7 @@ protected:
             acc01.vi = _mm_setzero_si128();
             acc11.vi = _mm_setzero_si128();
             acc10.vi = _mm_setzero_si128();
-            if (ct2)
-            {
+            if (ct2) {
                 countx00 = _mm_setzero_si128();
                 countx01 = _mm_setzero_si128();
                 countx11 = _mm_setzero_si128();
