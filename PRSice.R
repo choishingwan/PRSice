@@ -40,21 +40,37 @@ help_message <-
     --dir                   Location to install ggplot. Only require if ggplot\n
                             is not installed\n
 \nBase File:\n
+    --A1                    Column header containing allele 1 (effective allele)\n
+                            Default: A1\n
+    --A2                    Column header containing allele 2 (non-effective allele)\n
+                            Default: A2\n
     --base          | -b    Base association file\n
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
                             to be in the form of BETA.\n
-    --A1                    Column header containing allele 1 (effect allele)\n
-                            Default: A1\n
-    --A2                    Column header containing allele 2 (reference allele)\n
-                            Default: A2\n
     --bp                    Column header containing the SNP coordinate\n
                             Default: BP\n
     --chr                   Column header containing the chromosome\n
                             Default: CHR\n
-    --index                 If set, assume the INDEX instead of NAME of\n
+    --index                 If set, assume the INDEX instead of NAME  for\n
                             the corresponding columns are provided. Index\n
                             should be 0-based (start counting from 0)\n
+    --info-base             Base INFO score filtering. Format should be\n
+                            <Column name>,<Threshold>. SNPs with info \n
+                            score less than <Threshold> will be ignored\n
+                            Column name default: INFO\n
+                            Threshold default: 0.9\n
+    --maf-base              Base MAF filtering. Format should be\n
+                            <Column name>,<Threshold>. SNPs with maf\n
+                            less than <Threshold> will be ignored. An\n
+                            additional column can also be added (e.g.\n
+                            also filter MAF for cases), using the\n
+                            following format:\n
+                            <Column name>,<Threshold>:<Column name>,<Threshold>\n
+    --no-default            Remove all default options. If set, PRSice\n
+                            will not set any default column name and you\n
+                            will have to ensure all required columns are\n
+                            provided. (--snp, --stat, --A1, --pvalue)\n
     --pvalue        | -p    Column header containing the p-value\n
                             Default: P\n
     --se                    Column header containing the standard error\n
@@ -63,32 +79,86 @@ help_message <-
                             Default: SNP\n
     --stat                  Column header containing the summary statistic\n
                             If --beta is set, default as BETA. Otherwise,\n
-                            try and search for OR or BETA from the header\n
+                            will search for OR or BETA from the header\n
                             of the base file\n
-    --info-base             Base INFO score filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with info\n
-                            score less than <Threshold> will be ignored\n
-                            Column name default: INFO\n
-                            Threshold default: 0.9\n
-    --maf-base              Base MAF filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with maf 
-                            less than <Threshold> will be ignored\n
+\nTarget File:\n
+    --binary-target         Indicate whether the target phenotype\n
+                            is binary or not. Either T or F should be\n
+                            provided where T represent a binary phenotype.\n
+                            For multiple phenotypes, the input should be\n
+                            separated by comma without space. \n
+                            Default: T if --beta and F if --beta is not\n
+    --geno                  Filter SNPs based on gentype missingness\n
+    --info                  Filter SNPs based on info score. Only used\n
+                            for imputed target\n
+    --keep                  File containing the sample(s) to be extracted from\n
+                            the target file. First column should be FID and\n
+                            the second column should be IID. If --ignore-fid is\n
+                            set, first column should be IID\n
+                            Mutually exclusive from --remove\n
+    --maf                   Filter SNPs based on minor allele frequency (MAF)\n
+    --nonfounders           Keep the nonfounders in the analysis\n
+                            Note: They will still be excluded from LD calculation\n
+    --pheno-col     | -F    Headers of phenotypes to be included from the\n
+                            phenotype file\n
+    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
+                            First column must be FID of the samples and\n
+                            the second column must be IID of the samples.\n
+                            When --ignore-fid is set, first column must\n
+                            be the IID of the samples.\n
+                            Must contain a header if --pheno-col is\n
+                            specified\n
+    --prevalence    | -k    Prevalence of all binary trait. If provided\n
+                            will adjust the ascertainment bias of the R2.\n
+                            Note that when multiple binary trait is found,\n
+                            prevalence information must be provided for\n
+                            all of them (Either adjust all binary traits,\n
+                            or don't adjust at all)\n
+    --remove                File containing the sample(s) to be removed from\n
+                            the target file. First column should be FID and\n
+                            the second column should be IID. If --ignore-fid is\n
+                            set, first column should be IID\n
+                            Mutually exclusive from --keep\n
+    --target        | -t    Target genotype file. Currently support\n
+                            both BGEN and binary PLINK format. For \n
+                            multiple chromosome input, simply substitute\n
+                            the chromosome number with #. PRSice will\n
+                            automatically replace # with 1-22\n
+                            For binary plink format, you can also specify\n
+                            a seperate fam file by <prefix>,<fam file>\n
+    --type                  File type of the target file. Support bed \n
+                            (binary plink) and bgen format. Default: bed\n
+\nDosage:\n
+    --hard-thres            Hard threshold for dosage data. Any call less than\n
+                            this will be treated as missing. Note that if dosage\n
+                            data is used as a LD reference, it will always be\n
+                            hard coded to calculate the LD\n
+    --hard                  Use hard coding instead of dosage for PRS construction.\n
+                            Default is to use dosage instead of hard coding\n
 \nClumping:\n
     --clump-kb              The distance for clumping in kb\n
-                            Default: 250\n
+                            Default: 250 \n
     --clump-r2              The R2 threshold for clumping\n
-                            Default: 0.1\n
+                            Default: 0.1 \n
     --clump-p               The p-value threshold use for clumping.\n
-                            Default: 1\n
+                            Default: 1.0 \n
     --ld            | -L    LD reference file. Use for LD calculation. If not\n
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
                             Please see --target for more information\n
+    --ld-geno               Filter SNPs based on genotype missingness\n
+    --ld-info               Filter SNPs based on info score. Only used\n
+                            for imputed LD reference\n
+    --ld-hard-thres         Hard threshold for dosage data. Any call less than\n
+                            this will be treated as missing.\n
+                            Default: 0.9\n
     --ld-keep               File containing the sample(s) to be extracted from\n
                             the LD reference file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
                             set, first column should be IID\n
                             Mutually exclusive from --ld-remove\n
+                            No effect if --ld was not provided\n
+    --ld-maf                Filter SNPs based on minor allele frequency\n
     --ld-remove             File containing the sample(s) to be removed from\n
                             the LD reference file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
@@ -96,7 +166,7 @@ help_message <-
                             Mutually exclusive from --ld-keep\n
     --ld-type               File type of the LD file. Support bed (binary plink)\n
                             and bgen format. Default: bed\n
-    --no-clump              Avoid performing clumping\n
+    --no-clump              Stop PRSice from performing clumping\n
     --proxy                 Proxy threshold for index SNP to be considered\n
                             as part of the region represented by the clumped\n
                             SNP(s). e.g. --proxy 0.8 means the index SNP will\n
@@ -104,9 +174,6 @@ help_message <-
                             R2>=0.8 even if the index SNP does not physically\n
                             locate within the region\n
 \nCovariate:\n
-    --cov-file      | -C    Covariate file. First column should be FID and \n
-                            the second column should be IID. If --ignore-fid\n
-                            is set, first column should be IID\n
     --cov-col       | -c    Header of covariates. If not provided, will use\n
                             all variables in the covariate file. By adding\n
                             @ in front of the string, any numbers within [\n
@@ -114,14 +181,63 @@ help_message <-
                             read as PC1,PC2,PC3. Discontinuous input are also\n
                             supported: @cov[1.3-5] will be parsed as \n
                             cov1,cov3,cov4,cov5\n
-\nDosage:\n
-    --hard-thres            Hard threshold for dosage data. Any call less than\n
-                            this will be treated as missing. Note that if dosage\n
-                            data, is used as a LD reference, it will always be\n
-                            hard coded to calculate the LD\n
-                            Default: 0.9\n
-    --hard                  Use hard coding instead of dosage for PRS construction.\n
-                            Default is to use dosage instead of hard coding\n
+    --cov-file      | -C    Covariate file. First column should be FID and \n
+                            the second column should be IID. If --ignore-fid\n
+                            is set, first column should be IID\n
+\nP-value Thresholding:\n
+    --bar-levels            Level of barchart to be plotted. When --fastscore\n
+                            is set, PRSice will only calculate the PRS for \n
+                            threshold within the bar level. Levels should be\n
+                            comma separated without space\n
+    --fastscore             Only calculate threshold stated in --bar-levels\n
+    --no-full               By default, PRSice will include the full model, \n
+                            i.e. p-value threshold = 1. Setting this flag will\n
+                            disable that behaviour\n
+    --interval      | -i    The step size of the threshold. Default: 0.00005 \n
+    --lower         | -l    The starting p-value threshold. Default: 0.0001 \n
+    --model                 Genetic model use for regression. The genetic\n
+                            encoding is based on the base data where the\n
+                            encoding represent number of the coding allele\n
+                            Available models include:\n
+                            add - Additive model, code as 0/1/2 (default)\n
+                            dom - Dominant model, code as 0/1/1\n
+                            rec - Recessive model, code as 0/0/1\n
+                            het - Heterozygous only model, code as 0/1/0\n
+    --no-regress            Do not perform the regression analysis and simply\n
+                            output all PRS.\n
+    --missing               Method to handle missing genotypes. By default, \n
+                            final scores are averages of valid per-allele \n
+                            scores with missing genotypes contribute an amount\n
+                            proportional to imputed allele frequency. To throw\n
+                            out missing observations instead (decreasing the\n
+                            denominator in the final average when this happens),\n
+                            use the 'no_mean_imputation' modifier. Alternatively,\n
+                            you can use the 'center' modifier to shift all scores\n
+                            to mean zero. \n
+    --score                 Method to calculate the polygenic score.\n
+                            Available methods include:\n
+                            avg - Take the average effect size (default)\n
+                            std - Standardize the effect size \n
+                            sum - Direct summation of the effect size \n
+    --upper         | -u    The final p-value threshold. Default: 0.5 \n
+\nPRSet:\n
+    --bed           | -B    Bed file containing the selected regions.\n
+                            Name of bed file will be used as the region\n
+                            identifier. WARNING: Bed file is 0-based\n
+    --feature               Feature(s) to be included from the gtf file.\n
+                            Default: exon,CDS,gene,protein_coding.\n
+    --gtf           | -g    GTF file containing gene boundaries. Required\n
+                            when --msigdb is used\n
+    --msigdb        | -m    MSIGDB file containing the pathway information.\n
+                            Require the gtf file\n
+\nPRSlice:\n
+    --prslice               Perform PRSlice where the whole genome is first cut\n
+                            into bin size specified by this option. PRSice will\n
+                            then be performed on each bin. Bins are then sorted\n
+                            according to the their R2. PRSice is then performed\n
+                            again to find the best bin combination.\n
+                            This cannot be performed together with PRSet\n
+                            (Currently not implemented)\n
 \nPlotting:\n
     --bar-col-high          Colour of the most predicting threshold\n
                             Default: firebrick\n
@@ -143,119 +259,36 @@ help_message <-
                             contain FID if --ignore-fid isn't set.\n
     --quant-ref             Reference quantile for quantile plot\n
     --scatter-r2            y-axis of the high resolution scatter plot should be R2\n
-\nPRSet:\n
-    --bed           | -B    Bed file containing the selected regions.\n
-                            Name of bed file will be used as the region\n
-                            identifier. WARNING: Bed file is 0-based\n
-    --feature               Feature(s) to be included from the gtf file.\n
-                            Default: exon,CDS,gene,protein_coding.\n
-    --gtf           | -g    GTF file containing gene boundaries. Required\n
-                            when --msigdb is used\n
-    --msigdb        | -m    MSIGDB file containing the pathway information.\n
-                            Require the gtf file\n
-\nPRSice:\n
-    --bar-levels            Level of barchart to be plotted. When --fastscore\n
-                            is set, PRSice will only calculate the PRS for \n
-                            threshold within the bar level. Levels should be\n
-                            comma separated without space\n
-    --fastscore             Only calculate threshold stated in --bar-levels\n
-    --full                  Include the full model in the analysis\n
-    --interval      | -i    The step size of the threshold. Default: 0.00005\n
-    --lower         | -l    The starting p-value threshold. Default: 0.0001\n
-    --model                 Genetic model use for regression. The genetic\n
-                            encoding is based on the base data where the\n
-                            encoding represent number of the effective allele\n
-                            Available models include:\n
-                            add - Additive model, code as 0/1/2 (default)\n
-                            dom - Dominant model, code as 0/1/1\n
-                            rec - Recessive model, code as 0/0/1\n
-                            het - Heterozygous only model, code as 0/1/0\n
-    --no-regress            Do not perform the regression analysis and simply\n
-                            output all PRS.\n
-    --score                 Method to handle missing genotypes. By default, \n
-                            final scores are averages of valid per-allele \n
-                            scores with missing genotypes contribute an amount\n
-                            proportional to imputed allele frequency. To throw\n
-                            out missing observations instead (decreasing the\n
-                            denominator in the final average when this happens),\n
-                            use the 'no_mean_imputation' modifier. Alternatively,\n
-                            you can use the 'center' modifier to shift all scores\n
-                            to mean zero. \n
-    --upper         | -u    The final p-value threshold. Default: 0.5\n
-\nPRSlice:\n
-    --prslice               Perform PRSlice where the whole genome is first cut\n
-                            into bin size specified by this option. PRSice will\n
-                            then be performed on each bin. Bins are then sorted\n
-                            according to the their R2. PRSice is then performed\n
-                            again to find the best bin combination.\n
-                            This cannot be performed together with PRSet
-\nTarget File:\n
-    --binary-target         Indicate whether the target phenotype\n
-                            is binary or not. Either T or F should be\n
-                            provided where T represent a binary phenotype.\n
-                            For multiple phenotypes, the input should be\n
-                            separated by comma without space. Default: T\n
-    --keep                  File containing the sample(s) to be extracted from\n
-                            the target file. First column should be FID and\n
-                            the second column should be IID. If --ignore-fid is\n
-                            set, first column should be IID\n
-                            Mutually exclusive from --remove\n
-    --remove                File containing the sample(s) to be removed from\n
-                            the target file. First column should be FID and\n
-                            the second column should be IID. If --ignore-fid is\n
-                            set, first column should be IID\n
-                            Mutually exclusive from --keep\n
-    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
-                            First column must be FID of the samples and\n
-                            the second column must be IID of the samples.\n
-                            When --ignore-fid is set, first column must\n
-                            be the IID of the samples.\n
-                            Must contain a header if --pheno-col is\n
-                            specified\n
-    --pheno-col             Headers of phenotypes to be included from the\n
-                            phenotype file\n
-    --prevalence    | -k    Prevalence of all binary trait. If provided\n
-                            will adjust the ascertainment bias of the R2.\n
-                            Note that when multiple binary trait is found,\n
-                            prevalence information must be provided for\n
-                            all of them (Either adjust all binary traits,\n
-                            or don't adjust at all)\n
-    --nonfounders           Keep the nonfounders in the analysis\n
-                            Note: They will still be excluded from LD calculation\n
-    --target        | -t    Target genotype file. Currently support\n
-                            both BGEN and binary PLINK format. For \n
-                            multiple chromosome input, simply substitute\n
-                            the chromosome number with #. PRSice will\n
-                            automatically replace # with 1-22\n
-    --type                  File type of the target file. Support bed \n
-                            (binary plink) and bgen format. Default: bed\n
+
 \nMisc:\n
-    --all                   Output PRS for ALL threshold. WARNING: This\n
+    --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
-    --exclude               File contains SNPs to be excluded from \n
+    --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
-                            first column of most file will be assume to\n
+                            first column of all file will be assume to\n
                             be IID instead of FID\n
-    --logit_perm            When performing permutation, still use logistic\n
+    --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
     --out           | -o    Prefix for all file output\n
-    --perm                  Number of permutation to perform. This will\n
-                            generate the empirical p-value for the BEST\n
-                            threshold\n
+    --perm                  Number of permutation to perform. This swill\n
+                            generate the empirical p-value. Recommend to\n
+                            use value larger than 10,000\n
     --seed          | -s    Seed used for permutation. If not provided,\n
                             system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
-                            should be generated\n
+                            can be generated\n
     --print-snp             Print all SNPs used to construct the best PRS\n
     --thread        | -n    Number of thread use\n
     --help          | -h    Display this help message\n"
+
+
 
 
 # Library handling --------------------------------------------------------
@@ -424,7 +457,7 @@ option_list <- list(
         c("--bar-levels"),
         type = "character",
         dest = "bar_levels",
-        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5,1"
+        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
     ),
     make_option(c("--binary-target"), type = "character", dest = "binary_target"),
     make_option(c("--bp"), type = "character"),
@@ -535,15 +568,30 @@ provided <- function(name, argv) {
     return(name %in% names(argv))
 }
 
-
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+            os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+            os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+            os <- "linux"
+    }
+    tolower(os)
+}
 
 # CALL_PRSICE: Call the cpp PRSice if required
 # To ensure the excutable is set correctly
 # This is also one of the reason why window doesn't work. I don't know if we can handle the \
 # WINDOW PEOPLE
+os <- get_os()
 if (provided("prsice", argv)) {
     if (!startsWith(argv$prsice, "/") &&
-        !startsWith(argv$prsice, ".")) {
+        !startsWith(argv$prsice, ".") && os!="windows") {
         argv$prsice = paste("./", argv$prsice, sep = "")
     }
 }
