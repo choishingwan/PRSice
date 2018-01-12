@@ -77,49 +77,49 @@
 #endif
 
 #ifdef _WIN32
-#define PRId64 "I64d"
-#define PRIu64 "I64u"
-#define fseeko fseeko64
-#define ftello ftello64
-#include <process.h>
-#include <windows.h>
-#define pthread_t HANDLE
-#define THREAD_RET_TYPE unsigned __stdcall
-#define THREAD_RETURN return 0
-#define EOLN_STR "\r\n"
-#define FOPEN_RB "rb"
-#define FOPEN_WB "wb"
-#ifdef _WIN64
-#define getc_unlocked _fgetc_nolock
-#define putc_unlocked _fputc_nolock
+	#define PRId64 "I64d"
+	#define PRIu64 "I64u"
+	#define fseeko fseeko64
+	#define ftello ftello64
+	#include <process.h>
+	#include <windows.h>
+	#define pthread_t HANDLE
+	#define THREAD_RET_TYPE unsigned __stdcall
+	#define THREAD_RETURN return 0
+	#define EOLN_STR "\r\n"
+	#define FOPEN_RB "rb"
+	#define FOPEN_WB "wb"
+	#ifdef _WIN64
+		#define getc_unlocked _fgetc_nolock
+		#define putc_unlocked _fputc_nolock
+	#else
+		#define getc_unlocked getc
+		#define putc_unlocked putc
+	#endif
+	#define uint64_t unsigned long long
+	#define int64_t long long
 #else
-#define getc_unlocked getc
-#define putc_unlocked putc
-#endif
-#define uint64_t unsigned long long
-#define int64_t long long
-#else
-#include <pthread.h>
-#define THREAD_RET_TYPE void*
-#define THREAD_RETURN return nullptr
-#ifdef __cplusplus
-#ifndef PRId64
-#define PRId64 "lld"
-#endif
-#endif
-#define EOLN_STR "\n"
-#define FOPEN_RB "r"
-#define FOPEN_WB "w"
-#ifndef __APPLE__
+	#include <pthread.h>
+	#define THREAD_RET_TYPE void*
+	#define THREAD_RETURN return nullptr
+	#ifdef __cplusplus
+		#ifndef PRId64
+			#define PRId64 "lld"
+		#endif
+	#endif
+	#define EOLN_STR "\n"
+	#define FOPEN_RB "r"
+	#define FOPEN_WB "w"
+	#ifndef __APPLE__
 // argh
 // not sure what the right threshold actually is, but this works for now
 // (may break on gcc <3.0?  but that shouldn't matter anymore)
 // tried defining GCC_VERSION, but that didn't always work
-#if (__GNUC__ <= 4) && (__GNUC_MINOR__ < 8)
-#define uint64_t unsigned long long
-#define int64_t long long
-#endif
-#endif
+		#if (__GNUC__ <= 4) && (__GNUC_MINOR__ < 8)
+			#define uint64_t unsigned long long
+			#define int64_t long long
+		#endif
+	#endif
 #endif
 
 #ifdef _WIN64

@@ -30,14 +30,12 @@
 #include <reporter.hpp>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
 #include <zlib.h>
 #ifdef _WIN32
 #include <windows.h>
-SYSTEM_INFO sysinfo;
 #endif
 const std::string version = "2.0.15.beta";
 const std::string date = "14 Jan 2018";

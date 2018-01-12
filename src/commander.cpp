@@ -237,6 +237,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             break;
         case 'n': temp_string = optarg;
 #ifdef _WIN32
+        	SYSTEM_INFO sysinfo;
             GetSystemInfo(&sysinfo);
             max_thread = sysinfo.dwNumberOfProcessors;
 #else
