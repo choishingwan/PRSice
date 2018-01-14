@@ -43,16 +43,16 @@
 #include <vector>
 
 #ifdef _WIN32
-	#include <process.h>
-	#include <windows.h>
-	#define pthread_t HANDLE
-	#define THREAD_RET_TYPE unsigned __stdcall
-	#define THREAD_RETURN return 0
-	#define EOLN_STR "\r\n"
+#include <process.h>
+#include <windows.h>
+#define pthread_t HANDLE
+#define THREAD_RET_TYPE unsigned __stdcall
+#define THREAD_RETURN return 0
+#define EOLN_STR "\r\n"
 #else
-	#include <pthread.h>
-	#define THREAD_RET_TYPE void*
-	#define THREAD_RETURN return nullptr
+#include <pthread.h>
+#define THREAD_RET_TYPE void*
+#define THREAD_RETURN return nullptr
 #endif
 
 // This should be the class to handle all the procedures
@@ -71,7 +71,7 @@ public:
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
-    	g_logit_perm=commander.logit_perm();
+        g_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
@@ -226,16 +226,17 @@ private:
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
     // pthread mutli_thread require stuff?
-    struct perm_info{
-    		size_t start;
-    		size_t end;
-    		size_t processed;
-    		size_t rank;
+    struct perm_info
+    {
+        size_t start;
+        size_t end;
+        size_t processed;
+        size_t rank;
     };
 
     static Eigen::MatrixXd m_independent_variables;
     static std::vector<double> g_perm_result;
-    static std::unordered_map<uintptr_t, perm_info > g_perm_range;
+    static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
     static std::vector<Eigen::MatrixXd> g_permuted_pheno;
     static Eigen::VectorXd g_pre_se_calulated;
@@ -244,7 +245,7 @@ private:
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
-    static THREAD_RET_TYPE thread_perm(void * id);
+    static THREAD_RET_TYPE thread_perm(void* id);
 
     void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
     void update_sample_included(Genotype& target);
