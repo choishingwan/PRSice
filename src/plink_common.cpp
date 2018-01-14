@@ -279,18 +279,6 @@ int32_t fwrite_checked(const void* buf, size_t len, FILE* outfile)
     return ferror(outfile);
 }
 
-int32_t gzopen_read_checked(const char* fname, gzFile* gzf_ptr)
-{
-    *gzf_ptr = gzopen(fname, FOPEN_RB);
-    if (!(*gzf_ptr)) {
-        LOGERRPRINTFWW(g_errstr_fopen, fname);
-        return RET_OPEN_FAIL;
-    }
-    if (gzbuffer(*gzf_ptr, 131072)) {
-        return RET_NOMEM;
-    }
-    return 0;
-}
 
 // manually managed, very large stack
 unsigned char* g_bigstack_base;

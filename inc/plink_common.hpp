@@ -231,7 +231,7 @@
 
 
 #include <zlib.h>
-#if !defined(ZLIB_VERNUM) || ZLIB_VERNUM < 0x1240
+#if !defined(ZLIB_VERNUM) || ZLIB_VERNUM < 0x1210
 #error "zlib version 1.2.4 or later required."
 #endif
 
@@ -1052,7 +1052,6 @@ HEADER_INLINE int32_t fclose_null(FILE** fptr_ptr)
 }
 
 // Also sets 128k read buffer.  Can return RET_OPEN_FAIL or RET_NOMEM.
-int32_t gzopen_read_checked(const char* fname, gzFile* gzf_ptr);
 
 // pigz interface should be used for writing .gz files.
 
