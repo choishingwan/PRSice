@@ -785,18 +785,16 @@ quantile_plot <-
             
         }
         quants <- NULL
-        if (!pheno.as.quant) {
-          if(num_cov > 0){
-            reg <- pheno.merge[,c("PRS", paste("Cov", 1:num_cov))]
-            family <- gaussian
-            if(binary){
-              family <- binomial
-            }
-            residual <- rstandard(glm(PRS~., family=family,data=reg))
-            pheno.merge <- data.farame(PRS=residual, Pheno=pheno.merge$Pheno)
-          }else{
-            pheno.merge <- data.frame(PRS=pheno.merge$PRS, Pheno=pheno.merge$Pheno)
+        if(num_cov > 0){
+          reg <- pheno.merge[,c("Pheno", paste("Cov", 1:num_cov))]
+          family <- gaussian
+          if(binary){
+            family <- binomial 
           }
+          residual <- rstandard(glm(Pheno~., family=family, data=reg))
+          pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
+        }
+        if (!pheno.as.quant) {
           quants <- as.numeric(cut(
             pheno.merge$PRS,
             breaks = unique(quantile(
@@ -806,22 +804,6 @@ quantile_plot <-
           ))
           
         } else{
-          
-          if (num_cov > 0) {
-            reg <-
-              pheno.merge[, c("Pheno", paste("Cov", 1:num_cov))]
-            
-            family <- gaussian
-            if (binary) {
-              family <- binomial
-            }
-            residual <- rstandard(glm(Pheno~., family=family,data=reg))
-            pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
-            
-          } else{
-            pheno.merge <- pheno.merge[, c("Pheno", "PRS")]
-          }
-          
           quants <- as.numeric(cut(
             pheno.merge$Pheno,
             breaks = unique(quantile(
@@ -854,51 +836,72 @@ quantile_plot <-
             num_quant + 1 # We only matched based on the IID here
           num_quant <- num_quant + 1
         }
-        if (!pheno.as.quant) {
+        quant.ref <- ceiling(argv$quantile / 2)
+        if (provided("quant_ref", argv)) {
+          quant.ref <- argv$quant_ref
+          if (quant.ref > argv$quantile) {
             quant.ref <- ceiling(argv$quantile / 2)
-            if (provided("quant_ref", argv)) {
-                quant.ref <- argv$quant_ref
-                if (quant.ref > argv$quantile) {
-                    quant.ref <- ceiling(argv$quantile / 2)
-                    writeLines(
-                        paste(
-                            "WARNING: reference quantile",
-                            quant.ref,
-                            "is greater than number of quantiles",
-                            argv$quantile,
-                            "\n Using middle quantile by default"
-                        )
-                    )
-                }
-            }
-            
-            quants <-
-                factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
-        } else{
-            quants <- factor(quants)
+            writeLines(
+              paste(
+                "WARNING: reference quantile",
+                quant.ref,
+                "is greater than number of quantiles",
+                argv$quantile,
+                "\n Using middle quantile by default"
+              )
+            )
+          }
         }
+        
+        quants <-
+          factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
         pheno.merge$quantile <- quants
         if (!pheno.as.quant) {
-            pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
-            for(i in 1:num_quant){
-              cur.pheno <- pheno.merge$Pheno[as.numeric(as.character(pheno.merge$quantile))%in%i]
-              pheno.sum$mean[i] <-mean(cur.pheno,na.rm=T)
-              pheno.sum$UCI[i] <- pheno.sum$mean[i]+sd(cur.pheno,na.rm=T)
-              pheno.sum$LCI[i] <- pheno.sum$mean[i]-sd(cur.pheno,na.rm=T)
+            family <- gaussian
+            if (binary & num_cov ==0 ) {
+                family <- binomial
             }
-            pheno.sum$Group = 0
+            reg <- summary(glm(Pheno ~ quantile, family, data = pheno.merge))
+            coef.quantiles <- (reg$coefficients[1:num_quant, 1])
+            ci <- (1.96 * reg$coefficients[1:num_quant, 2])
+            
+            ci.quantiles.u <-
+                coef.quantiles + ci
+            ci.quantiles.l <-
+                coef.quantiles - ci
+            if(binary & num_cov==0){
+              ci.quantiles.u <- exp(ci.quantiles.u)
+              ci.quantiles.l <- exp(ci.quantiles.l)
+              coef.quantiles <- exp(coef.quantiles)
+            }
+            coef.quantiles[1] <- ifelse(binary,1,0)
+            ci.quantiles.u[1] <- ifelse(binary,1,0)
+            ci.quantiles.l[1] <- ifelse(binary,1,0)
+            quantiles.for.table <-
+                c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
+            quantiles.df <-
+                data.frame(
+                    Coef = coef.quantiles,
+                    CI.U = ci.quantiles.u,
+                    CI.L = ci.quantiles.l,
+                    DEC = quantiles.for.table
+                )
+            quantiles.df$Group = 0
             if (!is.null(extract)) {
-              pheno.sum$Group[num_quant] = 1
+                # Because the last quantile is set to be cases
+                quantiles.df$Group[max(quantiles.df$DEC)] = 1
             }
-            pheno.sum$Group <-
-              factor(pheno.sum$Group, levels = c(0, 1))
+            quantiles.df$Group <-
+                factor(quantiles.df$Group, levels = c(0, 1))
+            quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
             
             if(use.ggplot){
-              plot.quant(pheno.sum, num_cov, num_quant, extract, prefix)
+              plot.quant(quantiles.df, num_quant, binary, extract, prefix, num_cov)
             }else{
-              plot.quant.no.g(pheno.sum, num_cov, num_quant, extract, prefix)
+              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix, num_cov)
             }
         }else{
+            # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
             pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
             for(i in 1:num_quant){
                 cur.prs <- pheno.merge$PRS[as.numeric(as.character(pheno.merge$quantile))%in%i]
@@ -987,67 +990,32 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
       scale_colour_manual(values = c("#D55E00","#0072B2"))
   }
   ggsave(
-    paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
+    paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
     quantiles.plot,
     height=10,width=10
   )
 }
 
-plot.quant.no.g <- function(pheno.sum, num_cov, num_quant, extract, prefix){
-  png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
-      height=10, width=10, res=300, unit="in")
-  par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
-  pheno.sum$color <- "royalblue2"
-  xlab <- NULL
-  if(num_cov>0){
-    xlab <-"Quantiles for Residualized PRS"
-  }else{
-    xlab <-"Quantiles for PRS"
-  }
-  
-  
-  if(!is.null(extract)){
-    pheno.sum$color <- "#0072B2"
-    pheno.sum$color[quantiles.df$Group==1] <- "#D55E00"
-  }
-  ylab <- "Mean Phenotype given PRS in quantiles"
-  with(pheno.sum, 
-       plot(x=quantile, y=mean, 
-            col=color, pch=19, 
-            axes=F, cex=1.5,
-            ann=F,
-            ylim=c(min(LCI),max(UCI))
-       ))
-  box(bty='L', lwd=2)
-  axis(2,las=2, lwd=2)
-  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
-  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
-  with(pheno.sum, arrows(quantile,mean, quantile,LCI,length=0, col=color, lwd=1.5))
-  with(pheno.sum, arrows(quantile,mean, quantile,UCI,length=0, col=color, lwd=1.5))
-  title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
-  title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
-  g<-dev.off()
-}
-
-plot.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
   quantiles.plot <-
-    ggplot(pheno.sum, aes(
-      x = quantile,
-      y = mean,
-      ymin = LCI,
-      ymax = UCI
-    ))+ 
+    ggplot(quantiles.df, aes(
+      x = DEC,
+      y = Coef,
+      ymin = CI.L,
+      ymax = CI.U
+    )) + 
     theme_sam+
     scale_x_continuous(breaks = seq(0, num_quant, 1))+
-    ylab("Mean Phenotype given PRS in quantiles")
-  if(num_cov>0){
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for Residualized PRS")
+    quantiles.plot <- quantiles.plot+xlab("Quantiles for Polygenic Score")
+  if (binary && num_cov==0) {
+    quantiles.plot <-
+      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+  } else if(num_cov!=0){
+    quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
   }else{
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for PRS")
+    quantiles.plot <- quantiles.plot +
+      ylab("Change in Phenotype \ngiven score in quantiles")
   }
-  
   if (is.null(extract)) {
     quantiles.plot <-
       quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
@@ -1059,12 +1027,49 @@ plot.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
       scale_colour_manual(values = c("#0072B2", "#D55E00"))
   }
   ggsave(
-    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = "_"),
+    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
     quantiles.plot,
-    height=10,width=10
+    height=10, width=10
   )
 }
 
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
+  png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
+      height=10, width=10, res=300, unit="in")
+  par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
+  quantiles.df$color <- "royalblue2"
+  if(!is.null(extract)){
+    quantiles.df$color <- "#0072B2"
+    quantiles.df$color[quantiles.df$Group==1] <- "#D55E00"
+  }
+  ylab <- NULL
+  if (binary && num_cov==0) {
+    quantiles.plot <-
+      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+  } else if(num_cov!=0){
+    quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+  }else{
+    quantiles.plot <- quantiles.plot +
+      ylab("Change in Phenotype \ngiven score in quantiles")
+  }
+  xlab <- "Quantiles for Polygenic Score"
+  with(quantiles.df, 
+       plot(x=DEC, y=Coef, 
+            col=color, pch=19, 
+            axes=F, cex=1.5, ann=F,
+            ylim=c(min(CI.L),max(CI.U))
+            ))
+
+  axis(2,las=2,lwd=2)
+  box(bty='L', lwd=2)
+  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
+  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
+  with(quantiles.df, arrows(DEC,Coef, DEC,CI.L,length=0, col=color, lwd=1.5))
+  with(quantiles.df, arrows(DEC,Coef, DEC,CI.U,length=0, col=color, lwd=1.5))
+  title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
+  title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
+  g<-dev.off()
+}
 
 high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # we will always include the best threshold
