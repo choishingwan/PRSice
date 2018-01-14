@@ -997,13 +997,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     }
 #endif
     if (llxx) {
-       // message = std::to_string(llxx) + " MB RAM detected; reserving "
+        // message = std::to_string(llxx) + " MB RAM detected; reserving "
         //          + std::to_string(malloc_size_mb) + " MB for clumping\n";
     }
     else
     {
-        //message = "Failed to calculate system memory. Attemping to reserve"
-       //           + std::to_string(malloc_size_mb) + " MB for clumping\n";
+        // message = "Failed to calculate system memory. Attemping to reserve"
+        //           + std::to_string(malloc_size_mb) + " MB for clumping\n";
     }
     bigstack_ua =
         (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
@@ -1016,8 +1016,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         bigstack_ua =
             (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
         if (bigstack_ua) {
-            //message.append(
-             //   "Allocated " + std::to_string(malloc_size_mb)
+            // message.append(
+            //   "Allocated " + std::to_string(malloc_size_mb)
             //    + " MB successfully, after larger attempt(s) failed\n");
         }
         else if (malloc_size_mb == BIGSTACK_MIN_MB)
@@ -1026,7 +1026,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         }
     }
     // force 64-byte align to make cache line sensitivity work
-    //reporter.report(message);
+    // reporter.report(message);
     bigstack_initial_base =
         (unsigned char*) round_up_pow2((uintptr_t) bigstack_ua, CACHELINE);
     uintptr_t* window_data = (uintptr_t*) bigstack_initial_base;

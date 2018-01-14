@@ -20,10 +20,10 @@
 // ARG!! THIS IS UGLY!!
 // But I don't want to pass a void package to the function containing all this
 // that'd be a nigtmare to backware convert them back...
-bool PRSice::g_logit_perm=false;
+bool PRSice::g_logit_perm = false;
 Eigen::MatrixXd PRSice::m_independent_variables;
 std::vector<double> PRSice::g_perm_result;
-std::unordered_map<uintptr_t, PRSice::perm_info > PRSice::g_perm_range;
+std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
 Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
 std::vector<Eigen::MatrixXd> PRSice::g_permuted_pheno;
 Eigen::VectorXd PRSice::g_pre_se_calulated;
@@ -983,7 +983,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     }
     int rank = 0;
     if (!logit_perm) {
-    	g_perm_pre_decomposed.compute(m_independent_variables);
+        g_perm_pre_decomposed.compute(m_independent_variables);
         rank = g_perm_pre_decomposed.rank();
         Eigen::MatrixXd R = g_perm_pre_decomposed.matrixR()
                                 .topLeftCorner(rank, rank)
@@ -1024,35 +1024,37 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
 
         uintptr_t ulii;
         for (ulii = 0; ulii < n_thread; ulii++) {
-        	size_t ending = start + job_size + (remain > 0);
-        	ending = (ending > cur_perm) ? cur_perm : ending;
-        	perm_info cur_info;
-        	cur_info.start = start;
-        	cur_info.end = ending;
-        	cur_info.rank = rank;
-        	cur_info.processed = processed;
-        	g_perm_range[ulii] = cur_info;
+            size_t ending = start + job_size + (remain > 0);
+            ending = (ending > cur_perm) ? cur_perm : ending;
+            perm_info cur_info;
+            cur_info.start = start;
+            cur_info.end = ending;
+            cur_info.rank = rank;
+            cur_info.processed = processed;
+            g_perm_range[ulii] = cur_info;
             start = ending;
             remain--;
-    #ifdef _WIN32
-        	pthread_store[ulii ] = (HANDLE) _beginthreadex(
+#ifdef _WIN32
+            pthread_store[ulii] = (HANDLE) _beginthreadex(
                 nullptr, 4096, thread_perm, (void*) ulii, 0, nullptr);
             if (!pthread_store[ulii]) {
                 join_threads(pthread_store.data(), ulii);
-                throw std::runtime_error("ERROR: Cannot create thread for permutation!");
+                throw std::runtime_error(
+                    "ERROR: Cannot create thread for permutation!");
             }
-    #else
-            if (pthread_create(&(pthread_store[ulii ]), nullptr, &PRSice::thread_perm,
-                               (void*) ulii))
+#else
+            if (pthread_create(&(pthread_store[ulii]), nullptr,
+                               &PRSice::thread_perm, (void*) ulii))
             {
                 join_threads(pthread_store.data(), ulii);
-                throw std::runtime_error("ERROR: Cannot create thread for permutation!");
+                throw std::runtime_error(
+                    "ERROR: Cannot create thread for permutation!");
             }
-    #endif
+#endif
         }
         join_threads(pthread_store.data(), n_thread);
 
-        //spawn_threads(pthread_store.data(), &thread_perm, n_thread);
+        // spawn_threads(pthread_store.data(), &thread_perm, n_thread);
         /*
         for (size_t i_thread = 0; i_thread < n_thread; ++i_thread) {
             size_t ending = start + job_size + (remain > 0);
@@ -1074,14 +1076,14 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     }
 }
 
-THREAD_RET_TYPE PRSice::thread_perm(void * id)
+THREAD_RET_TYPE PRSice::thread_perm(void* id)
 {
-	size_t i_thread = (size_t)id;
-	perm_info pi = g_perm_range[i_thread];
-	size_t start = pi.start;
-	size_t end = pi.end;
-	size_t processed = pi.processed;
-	size_t rank = pi.rank;
+    size_t i_thread = (size_t) id;
+    perm_info pi = g_perm_range[i_thread];
+    size_t start = pi.start;
+    size_t end = pi.end;
+    size_t processed = pi.processed;
+    size_t rank = pi.rank;
     bool intercept = true;
     size_t n = m_independent_variables.rows();
     std::vector<double> temp_store;
@@ -1090,12 +1092,13 @@ THREAD_RET_TYPE PRSice::thread_perm(void * id)
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (g_logit_perm) {
             double r2, coefficient, se;
-            Regression::glm(g_permuted_pheno[i], m_independent_variables, obs_p, r2,
-                            coefficient, se, 25, 1, true);
+            Regression::glm(g_permuted_pheno[i], m_independent_variables, obs_p,
+                            r2, coefficient, se, 25, 1, true);
         }
         else
         {
-            Eigen::VectorXd beta = g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
+            Eigen::VectorXd beta =
+                g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
             Eigen::MatrixXd fitted = m_independent_variables * beta;
             Eigen::VectorXd residual = g_permuted_pheno[i] - fitted;
             int rdf = n - rank;
@@ -1105,7 +1108,9 @@ THREAD_RET_TYPE PRSice::thread_perm(void * id)
             }
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
-                if (g_perm_pre_decomposed.colsPermutation().indices()(ind) == intercept) {
+                if (g_perm_pre_decomposed.colsPermutation().indices()(ind)
+                    == intercept)
+                {
                     se_index = ind;
                     break;
                 }
