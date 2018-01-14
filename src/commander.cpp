@@ -1454,7 +1454,7 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
             }
             else
             {
-                message["ld-hard-threshold"] =
+                message["ld-hard-thres"] =
                     std::to_string(reference_snp_filtering.hard_threshold);
             }
         }
@@ -1758,7 +1758,7 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
     p_thresholds.barlevel.erase(
         std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
         p_thresholds.barlevel.end());
-    if (!p_threshold.no_full) p_thresholds.barlevel.push_back(1);
+    if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     if (prset.perform_prset) {
         if (!p_thresholds.set_thresholds && !p_thresholds.fastscore) {
             message["bar-levels"] = 1;
@@ -1792,11 +1792,11 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         message["upper"] = std::to_string(p_thresholds.upper);
     }
     std::string bar_message = "";
-    for (auto&& b : p_threshold.barlevel) {
+    for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
             bar_message.append(std::to_string(b));
         else
-            bar_message.append(",", std::to_string(b));
+            bar_message.append("," + std::to_string(b));
     }
 }
 
