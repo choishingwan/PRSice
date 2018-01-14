@@ -21,8 +21,6 @@
 #include <stdexcept>
 #include <zlib.h>
 
-using namespace genfile::bgen;
-using namespace genfile;
 /**
  * Potential problem:
  * Where multi-allelic variants exist in these data, they have been
@@ -40,7 +38,7 @@ public:
     ~BinaryGen();
 
 private:
-    std::unordered_map<std::string, Context> m_context_map;
+    std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
     std::vector<Sample> gen_sample_vector();
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
@@ -50,9 +48,9 @@ private:
                                     const double hard_threshold,
                                     const bool hard_coded,
                                     const std::string& out_prefix);
-    Context get_context(std::string& bgen_name);
+    void get_context(std::string& prefix);
     bool check_sample_consistent(const std::string& bgen_name,
-                                 const Context& context);
+                                 const genfile::bgen::Context& context);
 
 
     typedef std::vector<std::vector<double>> Data;
@@ -77,10 +75,10 @@ private:
             m_cur_file = file_name;
         }
         auto&& context = m_context_map[file_name];
-        std::vector<byte_t> buffer1, buffer2;
+        std::vector<genfile::byte_t> buffer1, buffer2;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
         PLINK_generator setter(&m_sample_names, genotype, m_hard_threshold);
-        read_and_parse_genotype_data_block<PLINK_generator>(
+        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
     };
 
@@ -357,7 +355,10 @@ private:
             m_entry_i++;
         }
         // call if sample is missing
-        void set_value(uint32_t, MissingValue value) { missing = true; }
+        void set_value(uint32_t, genfile::MissingValue value)
+        {
+            missing = true;
+        }
 
         void finalise()
         {
@@ -486,7 +487,7 @@ private:
             m_entry_i++;
         }
         // call if sample is missing
-        void set_value(uint32_t, MissingValue value) {}
+        void set_value(uint32_t, genfile::MissingValue value) {}
 
         void finalise()
         {
