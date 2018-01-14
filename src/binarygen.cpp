@@ -356,6 +356,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                     alleles.at(i) = allele;
                 });
             for (auto&& a : alleles) {
+            		std::cerr << "Allele is: " << a << std::endl;
                 std::transform(a.begin(), a.end(), a.begin(), ::toupper);
             }
             std::streampos byte_pos = bgen_file.tellg();
