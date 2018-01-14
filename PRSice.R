@@ -416,74 +416,93 @@ for (library in libraries)
 # We don't type the help message here. Will just directly use the usage information from c++
 # See the Help Messages section for more information
 option_list <- list(
-    make_option(c("-b", "--base"), type = "character"),
-    make_option(c("-B", "--bed"), type = "character"),
-    make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
-    make_option(c("--cov-header"), type = "character", dest = "cov_header"),
-    #For backward compatibility
-    make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
-    make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
-    make_option(c("-g", "--gtf"), type = "character"),
-    make_option(c("-i", "--interval"), type = "numeric"),
-    make_option(c("-k", "--prevalence"), type = "numeric"),
-    make_option(c("-l", "--lower"), type = "numeric"),
-    make_option(c("-L", "--ld"), type = "character"),
-    make_option(c("-m", "--msigdb"), type = "character"),
-    make_option(c("-n", "--thread"), type = "numeric"),
-    make_option(c("-o", "--out"), type = "character", default = "PRSice"),
-    make_option(c("-p", "--pvalue"), type = "character"),
-    make_option(c("-s", "--seed"), type = "numeric"),
-    make_option(c("-t", "--target"), type = "character"),
-    make_option(c("-u", "--upper"), type = "numeric"),
-    make_option(c("--all"), action = "store_true"),
-    make_option(c("--beta"), action = "store_true"),
-    make_option(c("--fastscore"), action = "store_true"),
-    make_option(c("--no-full"), action = "store_true"),
-    make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
-    make_option(c("--index"), action = "store_true"),
-    make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
-    make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
-    make_option(c("--no-clump"), action = "store_true", dest = "no_clump"),
-    make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
-    make_option(c("--no-regress"), action = "store_true", dest = "no_regress"),
-    make_option(c("--no-x"), action = "store_true", dest = "no_x"),
-    make_option(c("--no-y"), action = "store_true", dest = "no_y"),
-    make_option(c("--no-xy"), action = "store_true", dest = "no_xy"),
-    make_option(c("--no-mt"), action = "store_true", dest = "no_mt"),
-    make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
-    make_option(c("--A1"), type = "character"),
-    make_option(c("--A2"), type = "character"),
-    make_option(
-        c("--bar-levels"),
-        type = "character",
-        dest = "bar_levels",
-        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
-    ),
-    make_option(c("--binary-target"), type = "character", dest = "binary_target"),
-    make_option(c("--bp"), type = "character"),
-    make_option(c("--chr"), type = "character"),
-    make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
-    make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
-    make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
-    make_option(c("--exclude"), type = "character"),
-    make_option(c("--extract"), type = "character"),
-    make_option(c("--feature"), type = "character"),
-    make_option(c("--info-base"), type = "character", dest = "info_base"),
-    make_option(c("--maf-base"), type = "character", dest="maf_base"),
-    make_option(c("--keep"), type = "character"),
-    make_option(c("--ld-type"), type = "character", dest = "ld_type"),
-    make_option(c("--model"), type = "character", default="add"),
-    make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
-    make_option(c("--perm"), type = "numeric"),
-    make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
-    make_option(c("--proxy"), type = "numeric"),
-    make_option(c("--prslice"), type = "numeric"),
-    make_option(c("--remove"), type = "character"),
-    make_option(c("--score"), type = "character"),
-    make_option(c("--se"), type = "character"),
-    make_option(c("--snp"), type = "character"),
-    make_option(c("--stat"), type = "character"),
-    make_option(c("--type"), type = "character"),
+  # Base file
+  make_option(c("--A1"), type = "character"),
+  make_option(c("--A2"), type = "character"),
+  make_option(c("-b", "--base"), type = "character"),
+  make_option(c("--beta"), action = "store_true"),
+  make_option(c("--bp"), type = "character"),
+  make_option(c("--chr"), type = "character"),
+  make_option(c("--index"), action = "store_true"),
+  make_option(c("--info-base"), type = "character", dest = "info_base"),
+  make_option(c("--maf-base"), type = "character", dest="maf_base"),
+  make_option(c("--no-default"), action = "store_true", dest="no_default"),
+  make_option(c("-p", "--pvalue"), type = "character"),
+  make_option(c("--se"), type = "character"),
+  make_option(c("--snp"), type = "character"),
+  make_option(c("--stat"), type = "character"),
+  # Target file
+  make_option(c("--binary-target"), type = "character", dest = "binary_target"),
+  make_option(c("--geno"), type = "numeric"),
+  make_option(c("--info"), type = "numeric"),
+  make_option(c("--keep"), type = "character"),
+  make_option(c("--maf"), type = "numeric"),
+  make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
+  make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
+  make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
+  make_option(c("-k", "--prevalence"), type = "numeric"),
+  make_option(c("--remove"), type = "character"),
+  make_option(c("-t", "--target"), type = "character"),
+  make_option(c("--type"), type = "character"),
+  # Dosage
+  make_option(c("--hard-thres"), type = "numeric"),
+  make_option(c("--hard"), action = "store_true"),
+  # Clumping
+  make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
+  make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
+  make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
+  make_option(c("-L", "--ld"), type = "character"),
+  make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
+  make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
+  make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
+  make_option(c("--ld-keep"), type = "character", dest="ld_keep"),
+  make_option(c("--ld-maf"), type = "numeric", dest="ld_maf"),
+  make_option(c("--ld-remove"), type = "character", dest="ld_remove"),
+  make_option(c("--ld-type"), type = "character", dest="ld_type"),
+  make_option(c("--no-clump"), action = "store_true", dest = "no_clump"),
+  make_option(c("--proxy"), type = "numeric"),
+  # Covariates
+  make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
+  make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
+  # P-thresholding
+  make_option(
+    c("--bar-levels"),
+    type = "character",
+    dest = "bar_levels"
+  ),
+  make_option(c("--fastscore"), action = "store_true"),
+  make_option(c("--no-full"), action = "store_true"),
+  make_option(c("-i", "--interval"), type = "numeric"),
+  make_option(c("-l", "--lower"), type = "numeric"),
+  make_option(c("--model"), type = "character"),
+  make_option(c("--missing"), type = "character"),
+  make_option(c("--no-regress"), action = "store_true", dest = "no_regress"),
+  make_option(c("--score"), type = "character"),
+  make_option(c("-u", "--upper"), type = "numeric"),
+  # PRSet
+  make_option(c("-B", "--bed"), type = "character"),
+  make_option(c("--feature"), type = "character"),
+  make_option(c("-g", "--gtf"), type = "character"),
+  make_option(c("-m", "--msigdb"), type = "character"),
+  # PRSlice 
+  make_option(c("--prslice"), type = "numeric"),
+  # Misc
+  make_option(c("--all-score"), action = "store_true", dest="all_score"),
+  make_option(c("--exclude"), type = "character"),
+  make_option(c("--extract"), type = "character"),
+  make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
+  make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
+  make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
+  make_option(c("-o", "--out"), type = "character"),
+  make_option(c("--perm"), type = "numeric"),
+  make_option(c("-s", "--seed"), type = "numeric"),
+  make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
+  make_option(c("-n", "--thread"), type = "numeric"),
+    #make_option(c("--no-x"), action = "store_true", dest = "no_x"),
+    #make_option(c("--no-y"), action = "store_true", dest = "no_y"),
+    #make_option(c("--no-xy"), action = "store_true", dest = "no_xy"),
+    #make_option(c("--no-mt"), action = "store_true", dest = "no_mt"),
+    #make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
     #R Specified options
     make_option(c("--plot"), action = "store_true"),
     make_option(c("--quantile", "-q"), type = "numeric"),
@@ -616,9 +635,10 @@ argv_c <- argv
 names(argv_c) <- gsub("_", "-", names(argv))
 flags <-
     c(
-        "all",
+        "all-score",
         "beta",
         "no-full",
+        "no-default",
         "ignore-fid",
         "index",
         "keep-ambig",
@@ -633,9 +653,6 @@ flags <-
         "print-snp"
     )
 
-if(!provided("no-full", argv)){
-    argv$bar_levels <- paste(argv$bar_levels, "1",sep="")
-}
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
@@ -666,7 +683,31 @@ if (!provided("plot", argv)) {
     }
 }
 
+# Read in the commands ----------------------------------------------------
+logFile <- paste(argv$out,"log",sep=".")
+con  <- file(logFile, open = "r")
 
+# Only need to know the information of binary target
+while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
+  line <- (trimws(oneLine))
+  if(startsWith(line, "--")){
+    commands <- strsplit(line, split=" ")[[1]]
+    commands <- commands[commands!="" & commands!="\\"]
+    if(length(commands) == 1){
+      # Flag
+    }else{
+      # With input
+      c <- gsub("--", "", commands[1])
+      i <- commands[2]
+      if(c=="binary-target"){
+        argv$binary_target <- commands[2]
+      }else if(c=="bar-levels"){
+        argv$bar_levels <- commands[2]
+      }
+    }
+  }
+} 
+close(con)
 # Plottings ---------------------------------------------------------------
 
 # Standard Theme for all plots
@@ -745,37 +786,49 @@ quantile_plot <-
         }
         quants <- NULL
         if (!pheno.as.quant) {
-            quants <- as.numeric(cut(
-                pheno.merge$PRS,
-                breaks = unique(quantile(
-                    pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
-                )),
-                include.lowest = T
-            ))
-        } else{
-            
-            if (num_cov > 0) {
-                reg <-
-                    pheno.merge[, c("Pheno", paste("Cov", 1:num_cov))]
-                
-                family <- gaussian
-                if (binary) {
-                    family <- binomial
-                }
-                residual <- rstandard(glm(Pheno~., family=family))
-                pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
-                
-            } else{
-                pheno.merge <- pheno.merge[, c("Pheno", "PRS")]
+          if(num_cov > 0){
+            reg <- pheno.merge[,c("PRS", paste("Cov", 1:num_cov))]
+            family <- gaussian
+            if(binary){
+              family <- binomial
             }
+            residual <- rstandard(glm(PRS~., family=family,data=reg))
+            pheno.merge <- data.farame(PRS=residual, Pheno=pheno.merge$Pheno)
+          }else{
+            pheno.merge <- data.frame(PRS=pheno.merge$PRS, Pheno=pheno.merge$Pheno)
+          }
+          quants <- as.numeric(cut(
+            pheno.merge$PRS,
+            breaks = unique(quantile(
+              pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+          ))
+          
+        } else{
+          
+          if (num_cov > 0) {
+            reg <-
+              pheno.merge[, c("Pheno", paste("Cov", 1:num_cov))]
             
-            quants <- as.numeric(cut(
-                pheno.merge$Pheno,
-                breaks = unique(quantile(
-                    pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
-                )),
-                include.lowest = T
-            ))
+            family <- gaussian
+            if (binary) {
+              family <- binomial
+            }
+            residual <- rstandard(glm(Pheno~., family=family,data=reg))
+            pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
+            
+          } else{
+            pheno.merge <- pheno.merge[, c("Pheno", "PRS")]
+          }
+          
+          quants <- as.numeric(cut(
+            pheno.merge$Pheno,
+            breaks = unique(quantile(
+              pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+          ))
         }
         
         if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
@@ -797,9 +850,9 @@ quantile_plot <-
             extract_ID <- paste(extract$V1, extract$V2, sep = "_")
             best_ID <- paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
           }
-            quants[best_ID %in% extract_ID] <-
-                num_quant + 1 # We only matched based on the IID here
-            num_quant <- num_quant + 1
+          quants[best_ID %in% extract_ID] <-
+            num_quant + 1 # We only matched based on the IID here
+          num_quant <- num_quant + 1
         }
         if (!pheno.as.quant) {
             quant.ref <- ceiling(argv$quantile / 2)
@@ -826,57 +879,24 @@ quantile_plot <-
         }
         pheno.merge$quantile <- quants
         if (!pheno.as.quant) {
-            if (num_cov > 0) {
-                pheno.merge <-
-                    pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
-            } else{
-                pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
+            pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
+            for(i in 1:num_quant){
+              cur.pheno <- pheno.merge$Pheno[as.numeric(as.character(pheno.merge$quantile))%in%i]
+              pheno.sum$mean[i] <-mean(cur.pheno,na.rm=T)
+              pheno.sum$UCI[i] <- pheno.sum$mean[i]+sd(cur.pheno,na.rm=T)
+              pheno.sum$LCI[i] <- pheno.sum$mean[i]-sd(cur.pheno,na.rm=T)
             }
-            
-            
-            family <- gaussian
-            if (binary) {
-                family <- binomial
-            }
-            reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
-            coef.quantiles <- (reg$coefficients[1:num_quant, 1])
-            ci <- (1.96 * reg$coefficients[1:num_quant, 2])
-            
-            ci.quantiles.u <-
-                coef.quantiles + ci
-            ci.quantiles.l <-
-                coef.quantiles - ci
-            if(binary){
-              ci.quantiles.u <- exp(ci.quantiles.u)
-              ci.quantiles.l <- exp(ci.quantiles.l)
-              coef.quantiles <- exp(coef.quantiles)
-            }
-            coef.quantiles[1] <- ifelse(binary,1,0)
-            ci.quantiles.u[1] <- ifelse(binary,1,0)
-            ci.quantiles.l[1] <- ifelse(binary,1,0)
-            quantiles.for.table <-
-                c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
-            quantiles.df <-
-                data.frame(
-                    Coef = coef.quantiles,
-                    CI.U = ci.quantiles.u,
-                    CI.L = ci.quantiles.l,
-                    DEC = quantiles.for.table
-                )
-            quantiles.df$Group = 0
+            pheno.sum$Group = 0
             if (!is.null(extract)) {
-                # Because the last quantile is set to be cases
-                quantiles.df$Group[max(quantiles.df$DEC)] = 1
+              pheno.sum$Group[num_quant] = 1
             }
-            quantiles.df$Group <-
-                factor(quantiles.df$Group, levels = c(0, 1))
-            quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
-            
+            pheno.sum$Group <-
+              factor(pheno.sum$Group, levels = c(0, 1))
             
             if(use.ggplot){
-              plot.quant(quantiles.df, num_quant, binary, extract, prefix)
+              plot.quant(pheno.sum, num_cov, num_quant, extract, prefix)
             }else{
-              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix)
+              plot.quant.no.g(pheno.sum, num_cov, num_quant, extract, prefix)
             }
         }else{
             pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
@@ -973,24 +993,61 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix){
-  quantiles.plot <-
-    ggplot(quantiles.df, aes(
-      x = DEC,
-      y = Coef,
-      ymin = CI.L,
-      ymax = CI.U
-    )) + 
-    theme_sam+
-    xlab("Quantiles for Polygenic Score") +
-    scale_x_continuous(breaks = seq(0, num_quant, 1))
-  if (binary) {
-    quantiles.plot <-
-      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-  } else{
-    quantiles.plot <- quantiles.plot +
-      ylab("Change in Phenotype \ngiven score in quantiles")
+plot.quant.no.g <- function(pheno.sum, num_cov, num_quant, extract, prefix){
+  png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
+      height=10, width=10, res=300, unit="in")
+  par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
+  pheno.sum$color <- "royalblue2"
+  xlab <- NULL
+  if(num_cov>0){
+    xlab <-"Quantiles for Residualized PRS"
+  }else{
+    xlab <-"Quantiles for PRS"
   }
+  
+  
+  if(!is.null(extract)){
+    pheno.sum$color <- "#0072B2"
+    pheno.sum$color[quantiles.df$Group==1] <- "#D55E00"
+  }
+  ylab <- "Mean Phenotype given PRS in quantiles"
+  with(pheno.sum, 
+       plot(x=quantile, y=mean, 
+            col=color, pch=19, 
+            axes=F, cex=1.5,
+            ann=F,
+            ylim=c(min(LCI),max(UCI))
+       ))
+  box(bty='L', lwd=2)
+  axis(2,las=2, lwd=2)
+  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
+  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
+  with(pheno.sum, arrows(quantile,mean, quantile,LCI,length=0, col=color, lwd=1.5))
+  with(pheno.sum, arrows(quantile,mean, quantile,UCI,length=0, col=color, lwd=1.5))
+  title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
+  title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
+  g<-dev.off()
+}
+
+plot.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
+  quantiles.plot <-
+    ggplot(pheno.sum, aes(
+      x = quantile,
+      y = mean,
+      ymin = LCI,
+      ymax = UCI
+    ))+ 
+    theme_sam+
+    scale_x_continuous(breaks = seq(0, num_quant, 1))+
+    ylab("Mean Phenotype given PRS in quantiles")
+  if(num_cov>0){
+    quantiles.plot <- quantiles.plot+
+      xlab("Quantiles for Residualized PRS")
+  }else{
+    quantiles.plot <- quantiles.plot+
+      xlab("Quantiles for PRS")
+  }
+  
   if (is.null(extract)) {
     quantiles.plot <-
       quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
@@ -1002,52 +1059,18 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix){
       scale_colour_manual(values = c("#0072B2", "#D55E00"))
   }
   ggsave(
-    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
+    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = "_"),
     quantiles.plot,
-    height=10, width=10
+    height=10,width=10
   )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
-  png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
-      height=10, width=10, res=300, unit="in")
-  par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
-  quantiles.df$color <- "royalblue2"
-  if(!is.null(extract)){
-    quantiles.df$color <- "#0072B2"
-    quantiles.df$color[quantiles.df$Group==1] <- "#D55E00"
-  }
-  ylab <- NULL
-  if (binary) {
-    ylab <- "Odds Ratio for Score on Phenotype"
-  } else{
-      ylab <-"Change in Phenotype \ngiven score in quantiles"
-  }
-  xlab <- "Quantiles for Polygenic Score"
-  with(quantiles.df, 
-       plot(x=DEC, y=Coef, 
-            col=color, pch=19, 
-            axes=F, cex=1.5, ann=F,
-            ylim=c(min(CI.L),max(CI.U))
-            ))
-
-  axis(2,las=2,lwd=2)
-  box(bty='L', lwd=2)
-  axis(1, label=seq(1,num_quant,2), at=seq(1,num_quant,2),lwd=2)
-  axis(1, label=seq(2,num_quant,2), at=seq(2,num_quant,2),lwd=2)
-  with(quantiles.df, arrows(DEC,Coef, DEC,CI.L,length=0, col=color, lwd=1.5))
-  with(quantiles.df, arrows(DEC,Coef, DEC,CI.U,length=0, col=color, lwd=1.5))
-  title(ylab=ylab, line=4, cex.lab=1.5, font=2 )
-  title(xlab=xlab, line=2.5, cex.lab=1.5, font=2 )
-  g<-dev.off()
-}
 
 high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # we will always include the best threshold
     writeLines("Plotting the high resolution plot")
-    
     barchart.levels <-
-        c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+        c(strsplit(argv$bar_levels, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
     barchart.levels <-
         as.numeric(as.character(sort(
             unique(barchart.levels), decreasing = F
@@ -1127,6 +1150,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
       ggfig.points + geom_point(aes(y = -log10(P))) + geom_line(aes(y = -log10(P)), colour = "green",
                                                                 data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
       ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
+    
   }
   ggsave(
     paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
@@ -1138,7 +1162,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
 bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     writeLines("Plotting Bar Plot")
     barchart.levels <-
-        c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+        c(strsplit(argv$bar_levels, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
     barchart.levels <-
         as.numeric(as.character(sort(
             unique(barchart.levels), decreasing = F
@@ -1424,7 +1448,6 @@ if (provided("pheno_col", argv)) {
 
 update_cov_header <- function(c) {
     res <- NULL
-    
     for (i in c) {
         if (substr(i, 0, 1) == "@") {
             i <- substr(i, 2, nchar(i))
