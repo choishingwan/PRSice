@@ -345,9 +345,9 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
 
 
-            if (m_unfiltered_marker_ct % 1000 == 0) {
+            if (i_snp % 1000 == 0) {
                 fprintf(stderr, "\r%zuK SNPs processed in %s\r",
-                        m_unfiltered_marker_ct / 1000, bgen_name.c_str());
+                		i_snp / 1000, bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
             std::string allele;
@@ -437,6 +437,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             std::vector<genfile::byte_t>* buffer2 = nullptr;
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
+
             if (!exclude_snp) {
                 // now filter
                 //
