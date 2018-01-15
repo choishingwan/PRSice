@@ -858,8 +858,10 @@ quantile_plot <-
         pheno.merge$quantile <- quants
         if (!pheno.as.quant) {
             family <- gaussian
-            if (binary & num_cov ==0 ) {
-                family <- binomial
+            if (binary) {
+                if( num_cov ==0 ){
+                    family <- binomial
+                }
             }
             reg <- summary(glm(Pheno ~ quantile, family, data = pheno.merge))
             coef.quantiles <- (reg$coefficients[1:num_quant, 1])
@@ -869,10 +871,12 @@ quantile_plot <-
                 coef.quantiles + ci
             ci.quantiles.l <-
                 coef.quantiles - ci
-            if(binary & num_cov==0){
-              ci.quantiles.u <- exp(ci.quantiles.u)
-              ci.quantiles.l <- exp(ci.quantiles.l)
-              coef.quantiles <- exp(coef.quantiles)
+            if(binary){
+                if(num_cov==0){
+                    ci.quantiles.u <- exp(ci.quantiles.u)
+                    ci.quantiles.l <- exp(ci.quantiles.l)
+                    coef.quantiles <- exp(coef.quantiles)
+                }
             }
             coef.quantiles[1] <- ifelse(binary,1,0)
             ci.quantiles.u[1] <- ifelse(binary,1,0)
@@ -997,40 +1001,42 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
 }
 
 plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
-  quantiles.plot <-
-    ggplot(quantiles.df, aes(
-      x = DEC,
-      y = Coef,
-      ymin = CI.L,
-      ymax = CI.U
-    )) + 
-    theme_sam+
-    scale_x_continuous(breaks = seq(0, num_quant, 1))+
-    quantiles.plot <- quantiles.plot+xlab("Quantiles for Polygenic Score")
-  if (binary && num_cov==0) {
     quantiles.plot <-
-      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-  } else if(num_cov!=0){
-    quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-  }else{
-    quantiles.plot <- quantiles.plot +
-      ylab("Change in Phenotype \ngiven score in quantiles")
-  }
-  if (is.null(extract)) {
-    quantiles.plot <-
-      quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
-      geom_pointrange(colour = "royalblue2", size = 0.9)
-  } else{
-    quantiles.plot <-
-      quantiles.plot + geom_point(aes(color = Group), size = 4) +
-      geom_pointrange(aes(color = Group), size = 0.9) +
-      scale_colour_manual(values = c("#0072B2", "#D55E00"))
-  }
-  ggsave(
-    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
-    quantiles.plot,
-    height=10, width=10
-  )
+        ggplot(quantiles.df, aes(
+            x = DEC,
+            y = Coef,
+            ymin = CI.L,
+            ymax = CI.U
+        )) + 
+        theme_sam+
+        scale_x_continuous(breaks = seq(0, num_quant, 1))+
+        xlab("Quantiles for Polygenic Score")
+    if (binary){
+        if(num_cov==0) {
+            quantiles.plot <-
+                quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+        }
+    } else if(num_cov!=0){
+        quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+    }else{
+        quantiles.plot <- quantiles.plot +
+            ylab("Change in Phenotype \ngiven score in quantiles")
+    }
+    if (is.null(extract)) {
+        quantiles.plot <-
+            quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
+            geom_pointrange(colour = "royalblue2", size = 0.9)
+    } else{
+        quantiles.plot <-
+            quantiles.plot + geom_point(aes(color = Group), size = 4) +
+            geom_pointrange(aes(color = Group), size = 0.9) +
+            scale_colour_manual(values = c("#0072B2", "#D55E00"))
+    }
+    ggsave(
+        paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
+        quantiles.plot,
+        height=10, width=10
+    )
 }
 
 plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
@@ -1043,14 +1049,16 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
     quantiles.df$color[quantiles.df$Group==1] <- "#D55E00"
   }
   ylab <- NULL
-  if (binary && num_cov==0) {
-    quantiles.plot <-
-      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+  if (binary){
+      if(num_cov==0) {
+          quantiles.plot <-
+              quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+      }
   } else if(num_cov!=0){
-    quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+      quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
   }else{
-    quantiles.plot <- quantiles.plot +
-      ylab("Change in Phenotype \ngiven score in quantiles")
+      quantiles.plot <- quantiles.plot +
+          ylab("Change in Phenotype \ngiven score in quantiles")
   }
   xlab <- "Quantiles for Polygenic Score"
   with(quantiles.df, 
