@@ -1798,6 +1798,7 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         else
             bar_message.append("," + std::to_string(b));
     }
+    message["bar-levels"] = bar_message;
 }
 
 void Commander::prslice_check(bool& error, std::string& error_message)
