@@ -493,7 +493,7 @@ option_list <- list(
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
-  make_option(c("-o", "--out"), type = "character"),
+  make_option(c("-o", "--out"), type = "character", default = "PRSice"),
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
   make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
@@ -687,6 +687,7 @@ if (!provided("plot", argv)) {
 logFile <- paste(argv$out,"log",sep=".")
 con  <- file(logFile, open = "r")
 
+c<- NULL
 # Only need to know the information of binary target
 while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
   line <- (trimws(oneLine))
@@ -1039,7 +1040,7 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov
     )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -1346,7 +1347,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
               header = T)
     }
     
-    PRS.best <- subset(PRS.best, Has_Phenotype == "Yes")
+    PRS.best <- subset(PRS.best, PRS.best$Has_Phenotype == "Yes")
     colnames(PRS.best)[3] <- "PRS"
     # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
     # Good thing is, only quantile plot really needs the cov and phenotype information
