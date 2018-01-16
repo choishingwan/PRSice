@@ -323,7 +323,7 @@ private:
                                    genfile::OrderType order_type,
                                    genfile::ValueType value_type)
         {
-            assert(value_type == eProbability);
+            assert(value_type == genfile::eProbability);
             if (!first && !exclude) {
                 // summarize the previous sample's info
                 // sum = 0 is for v11, otherwise, it should be missing
@@ -407,6 +407,13 @@ private:
                     m_sample->at(i_sample).num_snp++;
                 }
             }
+
+            std::ofstream debug("Check");
+            for(auto &&p : m_sample){
+            	debug << p->IID << "\t" << p->prs << "\t" << p->num_snp << std::endl;
+            }
+            debug.close();
+            exit(-1);
         }
 
     private:
