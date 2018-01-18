@@ -78,6 +78,14 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
         misc::trim(line);
         if (!line.empty()) {
             std::vector<std::string> token = misc::split(line);
+            // if it is not the sample file, check if this has a header
+            // not the best way, but will do it
+            std::string header_test =token[0];
+            std::transform(header_test.begin(), header_test.end(), header_test.begin(), ::toupper);
+            if(header_test.compare("FID")==0 || (header_test.compare("IID")==0 && m_ignore_fid)){
+            	// this is the header, skip
+            	continue;
+            }
             if (token.size()
                 < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
             {
@@ -99,13 +107,15 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             else
             {
                 cur_sample.FID = "";
-                cur_sample.IID = token[1];
+                cur_sample.IID = token[0];
             }
             std::string id = (m_ignore_fid)
                                  ? cur_sample.IID
                                  : cur_sample.FID + "_" + cur_sample.IID;
             cur_sample.pheno = "";
             cur_sample.has_pheno = false;
+            cur_sample.prs = 0.0;
+            cur_sample.num_snp = 0.0;
             if (!m_remove_sample) {
                 cur_sample.included = (m_sample_selection_list.find(id)
                                        != m_sample_selection_list.end());
@@ -304,6 +314,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                            const bool hard_coded,
                                            const std::string& out_prefix)
 {
+
+
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
     m_hard_threshold = hard_threshold;
