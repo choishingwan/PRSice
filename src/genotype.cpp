@@ -1111,6 +1111,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         std::fill(index_data.begin(), index_data.end(), 0);
 
         reference.read_genotype(window_data_ptr, cur_snp, cur_snp.file_name());
+
         vec_datamask(m_founder_ct, 0, window_data_ptr, founder_include2.data(),
                      index_data.data());
         index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);

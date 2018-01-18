@@ -345,14 +345,6 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (p_thresholds.no_full) message_store["no-full"] = "";
     if (prs_calculation.no_regress) message_store["no-regress"] = "";
     if (target.include_nonfounders) message_store["nonfounders"] = "";
-    if ((reference_panel.file_name.empty() && target.type.compare("bgen") == 0)
-        || reference_panel.type.compare("bgen") == 0)
-    {
-        if (message_store.find("ld-hard-thres") == message_store.end()) {
-            message_store["ld-hard-thres"] =
-                std::to_string(reference_snp_filtering.hard_threshold);
-        }
-    }
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);

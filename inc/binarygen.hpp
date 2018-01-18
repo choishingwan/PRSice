@@ -485,7 +485,8 @@ private:
         void set_value(uint32_t, double value)
         {
             if (value > hard_prob && value >= m_hard_threshold) {
-                geno = 2 - m_entry_i;
+                //geno = 2 - m_entry_i;
+            	geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
             }
             m_entry_i++;
         }
@@ -512,7 +513,7 @@ private:
         size_t m_entry_i = 0;
         bool first = true;
         bool exclude = false;
-        int geno = -1;
+        uintptr_t geno = 1;
         int shift = 0;
         int index = 0;
         double hard_prob = 0;

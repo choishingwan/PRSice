@@ -318,11 +318,14 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
 
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
+    // should only apply to SNPs that are not removed due to extract/exclude
+    std::unordered_set<std::string> duplicate_check_list;
     m_hard_threshold = hard_threshold;
     m_hard_coded = hard_coded;
     bool chr_sex_error = false;
     bool chr_error = false;
     bool first_bgen_file = true;
+    bool user_exclude = false;
     size_t chr_index = 0;
     size_t total_unfiltered_snps = 0;
 
@@ -425,6 +428,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
+            user_exclude = false;
             if ((!m_exclude_snp
                  && m_snp_selection_list.find(RSID)
                         == m_snp_selection_list.end())
@@ -432,10 +436,11 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                     && m_snp_selection_list.find(RSID)
                            != m_snp_selection_list.end()))
             {
+            	user_exclude=true;
                 exclude_snp = true;
             }
 
-            if (m_existed_snps_index.find(RSID) != m_existed_snps_index.end()) {
+            if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
             }
             else if (ambiguous(alleles.front(), alleles.back()))
@@ -443,13 +448,13 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 m_num_ambig++;
                 if (!m_keep_ambig) exclude_snp = true;
             }
-
-
+            if(!user_exclude){
+            	duplicate_check_list.insert(RSID);
+            }
             std::vector<genfile::byte_t> buffer1;
             std::vector<genfile::byte_t>* buffer2 = nullptr;
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
-
             if (!exclude_snp) {
                 // now filter
                 //
