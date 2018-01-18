@@ -1458,7 +1458,7 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
                     std::to_string(reference_snp_filtering.hard_threshold);
             }else{
                 message["hard-thres"] =
-                    std::to_string(reference_snp_filtering.hard_threshold);
+                    std::to_string(prs_snp_filtering.hard_threshold);
             }
         }
         if (reference_snp_filtering.maf != 0
