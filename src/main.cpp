@@ -111,8 +111,8 @@ int main(int argc, char* argv[])
                                          reporter);
             // only load SNPs that can be found in the target file index
             reference_file->load_snps(
-                commander.out(), target_file->index(), commander.geno(),
-                commander.maf(), commander.info(), commander.hard_threshold(),
+                commander.out(), target_file->index(), commander.ld_geno(),
+                commander.ld_maf(), commander.ld_info(), commander.ld_hard_threshold(),
                 commander.hard_coded(), true, reporter);
             if (!reference_file->sort_by_p()) {
                 std::string error_message =
