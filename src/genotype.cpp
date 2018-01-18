@@ -909,6 +909,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
      * Index of the SNP to start process from and the up bound is the SNP to end
      */
     // sample related constants
+	reporter.report("Start performing clumping");
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
