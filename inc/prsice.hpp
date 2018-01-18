@@ -179,7 +179,7 @@ private:
         double prevalence;
     };
 
-    struct
+    struct Pheno_Info
     {
         std::vector<int> col;
         std::vector<std::string> name;

@@ -299,7 +299,7 @@ private:
             , m_stat(stat)
             , m_flipped(flipped)
         {
-            m_score.resize(m_sample->size(), -1);
+            m_score.resize(m_sample->size(), 0);
         }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
@@ -329,7 +329,8 @@ private:
                 // sum = 0 is for v11, otherwise, it should be missing
                 if (missing || m_sum == 0) {
                     // this is missing
-                    m_missing_samples.push_back(m_sample_i);
+                	// should use m_sample_i -1 as this is for the previous sample
+                    m_missing_samples.push_back(m_sample_i-1);
                 }
             }
             first = false;
@@ -353,6 +354,7 @@ private:
             m_score[m_sample_i] += value * geno;
             if (!exclude) m_total_prob += value * geno;
             m_entry_i++;
+            m_sum+= value;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
@@ -375,12 +377,13 @@ private:
             if (m_num_included_samples == m_missing_samples.size()) {
                 valid = false;
             }
+            size_t i_missing = 0;
+            std::sort( m_missing_samples.begin(), m_missing_samples.end() );
+            m_missing_samples.erase( std::unique( m_missing_samples.begin(), m_missing_samples.end() ), m_missing_samples.end() );
             size_t num_miss = m_missing_samples.size();
             double mean =
                 m_total_prob
                 / (((double) m_num_included_samples - (double) num_miss) * 2);
-            size_t i_missing = 0;
-
             for (size_t i_sample = 0; i_sample < m_num_included_samples;
                  ++i_sample)
             {
@@ -407,13 +410,6 @@ private:
                     m_sample->at(i_sample).num_snp++;
                 }
             }
-
-            std::ofstream debug("Check");
-            for(auto &&p : m_sample){
-            	debug << p->IID << "\t" << p->prs << "\t" << p->num_snp << std::endl;
-            }
-            debug.close();
-            exit(-1);
         }
 
     private:
@@ -466,7 +462,7 @@ private:
                                    genfile::OrderType order_type,
                                    genfile::ValueType value_type)
         {
-            assert(value_type == eProbability);
+            assert(value_type == genfile::eProbability);
             if (!first && !exclude) {
                 // summarize the previous sample's info
                 if (shift == 0)

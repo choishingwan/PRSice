@@ -1754,10 +1754,6 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
         if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     }
-    std::sort(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end());
-    p_thresholds.barlevel.erase(
-        std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
-        p_thresholds.barlevel.end());
     if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     if (prset.perform_prset) {
         if (!p_thresholds.set_thresholds && !p_thresholds.fastscore) {
@@ -1791,6 +1787,10 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         message["lower"] = std::to_string(p_thresholds.lower);
         message["upper"] = std::to_string(p_thresholds.upper);
     }
+    std::sort(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end());
+        p_thresholds.barlevel.erase(
+            std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
+            p_thresholds.barlevel.end());
     std::string bar_message = "";
     for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
