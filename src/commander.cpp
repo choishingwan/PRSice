@@ -1452,9 +1452,12 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
                 error_message.append("ERROR: LD hard threshold must be larger "
                                      "than 0 and smaller than 1!\n");
             }
-            else
+            else if(!reference_panel.file_name.empty())
             {
                 message["ld-hard-thres"] =
+                    std::to_string(reference_snp_filtering.hard_threshold);
+            }else{
+                message["hard-thres"] =
                     std::to_string(reference_snp_filtering.hard_threshold);
             }
         }
