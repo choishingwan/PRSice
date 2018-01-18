@@ -30,10 +30,10 @@
 #include <iostream>
 #include <string.h> // for memcpy
 
-#ifdef GZSTREAM_NAMESPACE
+
 namespace GZSTREAM_NAMESPACE
 {
-#endif
+
 
 // ----------------------------------------------------------------------------
 // Internal classes to implement gzstream. See header file for user classes.
@@ -67,8 +67,7 @@ gzstreambuf* gzstreambuf::open(const char* name, int open_mode)
 
 gzstreambuf* gzstreambuf::close()
 {
-    if (is_open())
-    {
+    if (is_open()) {
         sync();
         opened = 0;
         if (gzclose(file) == Z_OK) return this;
@@ -113,8 +112,7 @@ int gzstreambuf::flush_buffer()
 int gzstreambuf::overflow(int c)
 { // used for output buffer only
     if (!(mode & std::ios::out) || !opened) return EOF;
-    if (c != EOF)
-    {
+    if (c != EOF) {
         *pptr() = c;
         pbump(1);
     }
@@ -127,8 +125,7 @@ int gzstreambuf::sync()
     // Changed to use flush_buffer() instead of overflow( EOF)
     // which caused improper behavior with std::endl and flush(),
     // bug reported by Vincent Ricard.
-    if (pptr() && pptr() > pbase())
-    {
+    if (pptr() && pptr() > pbase()) {
         if (flush_buffer() == EOF) return -1;
     }
     return 0;
@@ -157,9 +154,9 @@ void gzstreambase::close()
         if (!buf.close()) clear(rdstate() | std::ios::badbit);
 }
 
-#ifdef GZSTREAM_NAMESPACE
+
 } // namespace GZSTREAM_NAMESPACE
-#endif
+
 
 // ============================================================================
 // EOF //

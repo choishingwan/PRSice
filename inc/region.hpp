@@ -98,8 +98,7 @@ private:
 
     bool in_feature(std::string in) const
     {
-        for (auto& feature : m_gtf_feature)
-        {
+        for (auto& feature : m_gtf_feature) {
             if (in.compare(feature) == 0) return true;
         }
         return false;

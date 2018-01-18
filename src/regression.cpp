@@ -22,7 +22,8 @@ namespace Regression
 // on purposely perform the copying of x
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
                        double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, size_t thread, bool intercept)
+                       double& coeff, double& standard_error, size_t thread,
+                       bool intercept)
 {
     Eigen::setNbThreads(thread);
     // in more general cases, the following is needed (adding the intercept)
@@ -35,8 +36,7 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     double mss = 0.0;
     double rss = 0.0;
     double fitted_mean = fitted.mean();
-    for (size_t i = 0; i < A.rows(); ++i)
-    {
+    for (size_t i = 0; i < A.rows(); ++i) {
         mss += pow(fitted(i) - fitted_mean, 2);
         rss += residual(i) * residual(i);
     }
@@ -47,10 +47,8 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     int df_int = intercept; // 0 false 1 true
 
     size_t se_index = intercept;
-    for (size_t ind = 0; ind < beta.rows(); ++ind)
-    {
-        if (z.colsPermutation().indices()(ind) == intercept)
-        {
+    for (size_t ind = 0; ind < beta.rows(); ++ind) {
+        if (z.colsPermutation().indices()(ind) == intercept) {
             se_index = ind;
             break;
         }
@@ -67,8 +65,8 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     double tval = beta(intercept)
                   / se(se_index); // only interested in the one coefficient
     coeff = beta(intercept);
-    boost::math::students_t dist(rdf);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+    standard_error = se(se_index);
+    p_value = misc::calc_tprob(tval, n);
 }
 
 Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta)
@@ -82,8 +80,7 @@ Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta)
 {
     Eigen::VectorXd ans = eta;
     int n = eta.rows();
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         double etai = eta(i);
         double opexp = 1 + exp(etai);
         ans(i) = (etai > 30 || etai < -30)
@@ -97,8 +94,7 @@ Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta)
 {
     Eigen::VectorXd ans = eta;
     int n = eta.rows();
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         double etai = eta(i);
         double temp =
             (etai < -30)
@@ -116,8 +112,7 @@ void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
     int n = eta.rows();
     g = eta;
     gprime = eta;
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         double etai = eta(i);
         double temp =
             (etai < -30)
@@ -139,25 +134,21 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     int n = y.rows();
     int lmu = mu.rows(), lwt = wt.rows();
     Eigen::VectorXd ans = y;
-    if (lmu != n && lmu != 1)
-    {
+    if (lmu != n && lmu != 1) {
         std::string error_message =
             "Argument mu must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
-    if (lwt != n && lwt != 1)
-    {
+    if (lwt != n && lwt != 1) {
         std::string error_message =
             "Argument wt must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
     double mui, yi;
-    if (lmu > 1)
-    {
-        for (size_t i = 0; i < n; ++i)
-        {
+    if (lmu > 1) {
+        for (size_t i = 0; i < n; ++i) {
             mui = mu(i);
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
@@ -167,8 +158,7 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (size_t i = 0; i < n; ++i)
-        {
+        for (size_t i = 0; i < n; ++i) {
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
                      * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -184,25 +174,21 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     int n = y.rows();
     int lmu = mu.rows(), lwt = wt.rows();
     double ans = 0.0;
-    if (lmu != n && lmu != 1)
-    {
+    if (lmu != n && lmu != 1) {
         std::string error_message =
             "Argument mu must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
-    if (lwt != n && lwt != 1)
-    {
+    if (lwt != n && lwt != 1) {
         std::string error_message =
             "Argument wt must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
     double mui, yi;
-    if (lmu > 1)
-    {
-        for (size_t i = 0; i < n; ++i)
-        {
+    if (lmu > 1) {
+        for (size_t i = 0; i < n; ++i) {
             mui = mu(i);
             yi = y(i);
             ans += 2 * wt((lwt > 1) ? i : 0)
@@ -212,8 +198,7 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (size_t i = 0; i < n; ++i)
-        {
+        for (size_t i = 0; i < n; ++i) {
             yi = y(i);
             ans += 2 * wt((lwt > 1) ? i : 0)
                    * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -225,8 +210,8 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
-         double& r2, double& coeff, size_t max_iter, size_t thread,
-         bool intercept)
+         double& r2, double& coeff, double& standard_error, size_t max_iter,
+         size_t thread, bool intercept)
 {
     Eigen::setNbThreads(thread);
     /*
@@ -260,8 +245,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
     qr.setThreshold(
         std::min(1e-7, std::numeric_limits<double>::epsilon() / 1000));
-    for (size_t iter = 0; iter < max_iter; ++iter)
-    {
+    for (size_t iter = 0; iter < max_iter; ++iter) {
         // varmu = (weights.array()>0).select(mu.array()*(1-mu.array()),0);
         mu_eta_val = logit_mu_eta(eta);
         //			good = (weights.array()>0 && mu_eta_val.array() !=
@@ -272,10 +256,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         size_t i_good = 0;
         //			for(size_t i_weights=0; i_weights < weights.rows();
         //++i_weights){
-        for (size_t i_weights = 0; i_weights < good.rows(); ++i_weights)
-        {
-            if (good(i_weights) > 0)
-            {
+        for (size_t i_weights = 0; i_weights < good.rows(); ++i_weights) {
+            if (good(i_weights) > 0) {
                 // because offset is 0, we ignore it
                 z(i_good) =
                     eta(i_weights)
@@ -291,11 +273,12 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         w.conservativeResize(i_good);
         A.conservativeResize(i_good, nvars);
         A_tmp = A;
-        for (size_t i = 0; i < nvars; ++i)
-        { A_tmp.col(i) = A.col(i).array() * w.array(); } qr.compute(A_tmp);
+        for (size_t i = 0; i < nvars; ++i) {
+            A_tmp.col(i) = A.col(i).array() * w.array();
+        }
+        qr.compute(A_tmp);
         start = qr.solve(Eigen::MatrixXd(z.array() * w.array()));
-        if (nobs < qr.rank())
-        {
+        if (nobs < qr.rank()) {
             std::string error_message =
                 "X matrix has rank " + std::to_string(qr.rank()) + "but only "
                 + std::to_string(nobs) + " observations";
@@ -306,8 +289,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         mu = logit_linkinv(eta);
         dev = binomial_dev_resids_sum(y, mu, weights);
         // R only use 1e-8 here
-        if (fabs(dev - devold) / (0.1 + fabs(dev)) < 1e-8)
-        {
+        if (fabs(dev - devold) / (0.1 + fabs(dev)) < 1e-8) {
             converge = true;
             break;
         }
@@ -324,8 +306,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         (y.array() - mu.array()) / (logit_mu_eta(eta).array());
     int sum_good = 0;
     int weight_bad = 0;
-    for (size_t i = 0; i < good.rows(); ++i)
-    {
+    for (size_t i = 0; i < good.rows(); ++i) {
         if (good(i) != 0) sum_good++;
         if (weights(i) == 0) weight_bad++;
     }
@@ -344,10 +325,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     r2 = (1.0 - std::exp((dev - nulldev) / (double) nobs))
          / (1 - std::exp(-nulldev / (double) nobs));
     size_t se_index = intercept;
-    for (size_t ind = 0; ind < start.rows(); ++ind)
-    {
-        if (qr.colsPermutation().indices()(ind) == intercept)
-        {
+    for (size_t ind = 0; ind < start.rows(); ++ind) {
+        if (qr.colsPermutation().indices()(ind) == intercept) {
             se_index = ind;
             break;
         }
@@ -355,7 +334,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
-    boost::math::normal_distribution<> dist(0, 1);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
+    p_value = misc::chiprob_p(tvalue * tvalue, 1);
+    // p_value = chiprob_p(coeff*coeff,1);
+    standard_error = se(se_index);
 }
 }

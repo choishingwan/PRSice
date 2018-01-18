@@ -1,5 +1,5 @@
 reference/
-
+window
 *.o
 
 bin/
@@ -37,3 +37,7 @@ src/bk/
 \.settings/
 
 \.cproject
+
+*.png
+
+PRSice\.*

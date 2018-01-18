@@ -22,8 +22,7 @@ namespace bgen
         std::string to_hex(std::string const& str)
         {
             std::ostringstream o;
-            for (std::size_t i = 0; i < str.size(); ++i)
-            {
+            for (std::size_t i = 0; i < str.size(); ++i) {
                 if (i % 4 == 0) o << "|";
                 o << std::hex << std::setw(2) << std::setfill('0')
                   << static_cast<int>(static_cast<unsigned char>(str[i]));
@@ -96,8 +95,10 @@ namespace bgen
              || magic[3] != 'n')
             && (magic[0] != 0 || magic[1] != 0 || magic[2] != 0
                 || magic[3] != 0))
-        { throw BGenError(); } if (aStream)
         {
+            throw BGenError();
+        }
+        if (aStream) {
             context->number_of_samples = number_of_samples;
             context->number_of_variants = number_of_snp_blocks;
             context->magic.assign(&magic[0], &magic[0] + 4);
@@ -129,16 +130,16 @@ namespace bgen
     {
         assert(sample_ids.size() == context.number_of_samples);
         uint32_t block_size = 8;
-        for (uint32_t i = 0; i < sample_ids.size(); ++i)
-        { block_size += 2 + sample_ids[i].size(); }
+        for (uint32_t i = 0; i < sample_ids.size(); ++i) {
+            block_size += 2 + sample_ids[i].size();
+        }
         write_little_endian_integer(aStream, block_size);
         write_little_endian_integer(aStream, context.number_of_samples);
 #if DEBUG_BGEN_FORMAT
         std::cerr << "genfile::bgen::write_sample_identifier_block(): writing "
                   << sample_ids.size() << " samples...\n";
 #endif
-        for (uint32_t i = 0; i < sample_ids.size(); ++i)
-        {
+        for (uint32_t i = 0; i < sample_ids.size(); ++i) {
 #if DEBUG_BGEN_FORMAT
             std::cerr << "genfile::bgen::write_sample_identifier_block(): "
                          "writing sample "
@@ -158,8 +159,7 @@ namespace bgen
     {
         void check_for_two_alleles(uint16_t numberOfAlleles)
         {
-            if (numberOfAlleles != 2)
-            {
+            if (numberOfAlleles != 2) {
                 std::cerr << "genfile::bgen::impl::check_for_two_alleles: only "
                              "biallelic variants are currently supported.\n";
                 assert(0);
@@ -177,7 +177,9 @@ namespace bgen
 
             void operator()(uint16_t i, std::string const& value)
             {
-                if (i == 0) { *m_allele1 = value; }
+                if (i == 0) {
+                    *m_allele1 = value;
+                }
                 else if (i == 1)
                 {
                     *m_allele2 = value;
@@ -204,27 +206,29 @@ namespace bgen
             unsigned char max_id_size = 0;
             unsigned char SNPID_size = 0;
             unsigned char RSID_size = 0;
-            if (aStream)
-            {
+            if (aStream) {
                 read_little_endian_integer(aStream, &number_of_samples);
-                if (!aStream) { return false; }
-                if (number_of_samples != context.number_of_samples)
-                { throw BGenError(); } }
-            if (aStream) { read_little_endian_integer(aStream, &max_id_size); }
-            if (aStream)
-            {
+                if (!aStream) {
+                    return false;
+                }
+                if (number_of_samples != context.number_of_samples) {
+                    throw BGenError();
+                }
+            }
+            if (aStream) {
+                read_little_endian_integer(aStream, &max_id_size);
+            }
+            if (aStream) {
                 read_length_followed_by_data(aStream, &SNPID_size, SNPID);
                 assert(SNPID_size <= max_id_size);
                 aStream.ignore(max_id_size - SNPID_size);
             }
-            if (aStream)
-            {
+            if (aStream) {
                 read_length_followed_by_data(aStream, &RSID_size, RSID);
                 assert(RSID_size <= max_id_size);
                 aStream.ignore(max_id_size - RSID_size);
             }
-            if (aStream)
-            {
+            if (aStream) {
                 unsigned char chromosome_char = 0;
                 read_little_endian_integer(aStream, &chromosome_char);
                 read_little_endian_integer(aStream, SNP_position);
@@ -282,8 +286,7 @@ namespace bgen
             << std::hex << context.flags << ".\n";
 #endif
         uint32_t const layout = context.flags & e_Layout;
-        if (layout == e_Layout1 || layout == e_Layout2)
-        {
+        if (layout == e_Layout1 || layout == e_Layout2) {
             // forward to v12 version which handles multiple alleles.
             impl::TwoAlleleSetter allele_setter(first_allele, second_allele);
             return bgen::read_snp_identifying_data(
@@ -310,8 +313,7 @@ namespace bgen
             double get_probability_conversion_factor(uint32_t flags)
             {
                 uint32_t layout = flags & e_Layout;
-                if (layout == e_Layout0)
-                {
+                if (layout == e_Layout0) {
                     // v1.0-style blocks, deprecated
                     return 10000.0;
                 }
@@ -334,12 +336,10 @@ namespace bgen
     void ignore_genotype_data_block(std::istream& aStream,
                                     Context const& context)
     {
-        if ((context.flags & bgen::e_CompressedSNPBlocks) != e_NoCompression)
-        {
+        if ((context.flags & bgen::e_CompressedSNPBlocks) != e_NoCompression) {
             uint32_t compressed_data_size = 0;
             read_little_endian_integer(aStream, &compressed_data_size);
-            if (compressed_data_size > 0)
-            {
+            if (compressed_data_size > 0) {
                 // gcc std::istream::ignore() has a bug / feature in which
                 // it peeks at the next char and sets eof() if you ignore all
                 // the bytes in the file. This breaks our expected invariant and
@@ -362,7 +362,10 @@ namespace bgen
         uint32_t payload_size = 0;
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
-        { read_little_endian_integer(aStream, &payload_size); } else
+        {
+            read_little_endian_integer(aStream, &payload_size);
+        }
+        else
         {
             payload_size = 6 * context.number_of_samples;
         }
@@ -378,21 +381,23 @@ namespace bgen
         // data.
         uint32_t const compressionType =
             (context.flags & bgen::e_CompressedSNPBlocks);
-        if (compressionType != e_NoCompression)
-        {
+        if (compressionType != e_NoCompression) {
             byte_t const* begin = &compressed_data[0];
             byte_t const* const end =
                 &compressed_data[0] + compressed_data.size();
             uint32_t uncompressed_data_size = 0;
-            if ((context.flags & e_Layout) == e_Layout1)
-            { uncompressed_data_size = 6 * context.number_of_samples; } else
+            if ((context.flags & e_Layout) == e_Layout1) {
+                uncompressed_data_size = 6 * context.number_of_samples;
+            }
+            else
             {
                 begin = read_little_endian_integer(begin, end,
                                                    &uncompressed_data_size);
             }
             buffer->resize(uncompressed_data_size);
-            if (compressionType == e_ZlibCompression)
-            { zlib_uncompress(begin, end, buffer); }
+            if (compressionType == e_ZlibCompression) {
+                zlib_uncompress(begin, end, buffer);
+            }
             else if (compressionType == e_ZstdCompression)
             {
                 throw std::runtime_error(
@@ -422,14 +427,15 @@ namespace bgen
                                                 uint8_t const bits)
             {
                 assert(bits <= 64 - 8);
-                while ((*size) < bits && buffer < end)
-                {
+                while ((*size) < bits && buffer < end) {
                     (*data) |=
                         uint64_t(*(reinterpret_cast<byte_t const*>(buffer++)))
                         << (*size);
                     (*size) += 8;
                 }
-                if ((*size) < bits) { throw BGenError(); }
+                if ((*size) < bits) {
+                    throw BGenError();
+                }
                 return buffer;
             }
 
@@ -488,8 +494,7 @@ namespace bgen
                     (0xFFFFFFFFFFFFFFFF >> (64 - number_of_bits));
                 double total_fractional_part = 0.0;
                 double sum = 0.0;
-                for (std::size_t i = 0; i < n; ++i)
-                {
+                for (std::size_t i = 0; i < n; ++i) {
                     p[i] *= scale;
                     sum += p[i];
                     index[i] = i;
@@ -512,23 +517,24 @@ namespace bgen
                 std::size_t const r = std::floor(total_fractional_part + 0.5);
                 std::sort(index, index + n, CompareFractionalPart(p, n));
 
-                for (std::size_t i = 0; i < r; ++i)
-                { p[index[i]] = std::ceil(p[index[i]]); }
-                for (std::size_t i = r; i < n; ++i)
-                { p[index[i]] = std::floor(p[index[i]]); } }
+                for (std::size_t i = 0; i < r; ++i) {
+                    p[index[i]] = std::ceil(p[index[i]]);
+                }
+                for (std::size_t i = r; i < n; ++i) {
+                    p[index[i]] = std::floor(p[index[i]]);
+                }
+            }
 
             byte_t* write_scaled_probs(uint64_t* data, std::size_t* offset,
                                        double const* probs, std::size_t const n,
                                        int const number_of_bits,
                                        byte_t* destination, byte_t* const end)
             {
-                for (std::size_t i = 0; i < (n - 1); ++i)
-                {
+                for (std::size_t i = 0; i < (n - 1); ++i) {
                     uint64_t const storedValue = uint64_t(probs[i]);
                     *data |= storedValue << (*offset);
                     (*offset) += number_of_bits;
-                    if ((*offset) >= 32)
-                    {
+                    if ((*offset) >= 32) {
                         assert((destination + 4) <= end);
                         destination =
                             std::copy(reinterpret_cast<byte_t const*>(data),

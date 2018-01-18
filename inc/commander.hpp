@@ -30,12 +30,15 @@
 #include <reporter.hpp>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
-const std::string version = "2.0.15.beta";
-const std::string date = "27 October 2017";
+#include <zlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+const std::string version = "2.1.0.beta";
+const std::string date = "14 Jan 2018";
 class Commander
 {
 public:
@@ -45,7 +48,7 @@ public:
 
     // base
     std::vector<int> index() const { return base.col_index; };
-    bool has_index() const { return base.is_index; };
+    bool is_index() const { return base.is_index; };
     bool beta() const { return base.is_beta; };
     double base_info_score() const { return base.info_score_threshold; };
     double maf_base_control() const { return base.maf_control_threshold; };
@@ -105,9 +108,10 @@ public:
 
     int get_category(double p) const
     {
-        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i)
-        {
-            if (p <= p_thresholds.barlevel[i]) { return i; }
+        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i) {
+            if (p <= p_thresholds.barlevel[i]) {
+                return i;
+            }
         }
         if (p > p_thresholds.barlevel.back())
             return p_thresholds.barlevel.size();
@@ -135,14 +139,14 @@ public:
         std::string s = prs_calculation.score_calculation;
         std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         if (s == "STD")
-            return SCORING::STANDARD;
+            return SCORING::STANDARDIZE;
         else if (s == "SUM")
             return SCORING::SUM;
         else
             return SCORING::AVERAGE;
     }
 
-    int model() const { return prs_calculation.model; };
+    MODEL model() const { return prs_calculation.model; };
     bool no_regress() const { return prs_calculation.no_regress; };
 
     // prs_snp_filtering
@@ -283,8 +287,9 @@ private:
     struct
     {
         std::string missing_score;
+        std::string model_name;
         std::string score_calculation;
-        int model; // use model enum
+        MODEL model; // use model enum
         int no_regress;
     } prs_calculation;
 
@@ -380,7 +385,7 @@ private:
                                    const std::string& c)
     {
 
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -402,7 +407,7 @@ private:
                                    std::string& error_message)
     {
 
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
@@ -414,7 +419,7 @@ private:
                                     std::vector<T>& target, bool& error,
                                     const std::string& c)
     {
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -435,8 +440,7 @@ private:
                             bool& target_boolean, bool& error,
                             const std::string& c)
     {
-        if (message.find(c) != message.end())
-        {
+        if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -457,39 +461,38 @@ private:
                           std::string& error_message, bool& error)
     {
         std::string input = in;
-        if (input.empty())
-        {
+        if (input.empty()) {
             error_message.append("ERROR: Model cannot be empty!\n");
             error = true;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'A')
-        {
+        if (input.at(0) == 'A') {
             input = "add";
-            prs_calculation.model = +MODEL::ADDITIVE;
+            prs_calculation.model = MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prs_calculation.model = +MODEL::DOMINANT;
+            prs_calculation.model = MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prs_calculation.model = +MODEL::RECESSIVE;
+            prs_calculation.model = MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prs_calculation.model = +MODEL::HETEROZYGOUS;
+            prs_calculation.model = MODEL::HETEROZYGOUS;
         }
         else
         {
             error = true;
             error_message.append("ERROR: Unrecognized model: " + input + "!\n");
         }
-        if (message.find("model") != message.end())
-        { error_message.append("Warning: Duplicated argument --model\n"); }
+        if (message.find("model") != message.end()) {
+            error_message.append("Warning: Duplicated argument --model\n");
+        }
         message["model"] = input;
     }
     inline void set_string(const std::string& input,
@@ -498,8 +501,7 @@ private:
                            const std::string& c, std::string& error_message)
     {
 
-        if (message.find(c) != message.end())
-        {
+        if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -510,9 +512,10 @@ private:
     inline int index_check(const std::string& target,
                            const std::vector<std::string>& ref) const
     {
-        for (size_t i = 0; i < ref.size(); ++i)
-        {
-            if (target.compare(ref[i]) == 0) { return i; }
+        for (size_t i = 0; i < ref.size(); ++i) {
+            if (target.compare(ref[i]) == 0) {
+                return i;
+            }
         }
         return -1;
     };
@@ -524,15 +527,13 @@ private:
         try
         {
             int index = misc::convert<int>(optarg);
-            if (index >= max)
-            {
+            if (index >= max) {
                 error = true;
                 error_message.append("ERROR: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
-            if (index < 0)
-            {
+            if (index < 0) {
                 error = true;
                 error_message.append("ERROR: Negative " + name + " index!\n");
                 return -1;
