@@ -41,3 +41,5 @@ src/bk/
 *.png
 
 PRSice\.*
+
+*.gz
