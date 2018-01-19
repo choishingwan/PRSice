@@ -114,16 +114,10 @@ int main(int argc, char* argv[])
                 commander.out(), target_file->index(), commander.ld_geno(),
                 commander.ld_maf(), commander.ld_info(), commander.ld_hard_threshold(),
                 commander.hard_coded(), true, reporter);
-            if (!reference_file->sort_by_p()) {
-                std::string error_message =
-                    "No SNPs left for PRSice processing";
-                reporter.report(error_message);
-                return -1;
-            }
         }
         // get the sort by p inex vector for target
         // so that we can still find out the relative coordinates of each SNPs
-        else if (!target_file->sort_by_p())
+        if (!target_file->sort_by_p())
         {
             std::string error_message = "No SNPs left for PRSice processing";
             reporter.report(error_message);
