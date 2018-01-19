@@ -174,6 +174,7 @@ public:
         // when proxy = 2, we will not perform proxy
         // That's because no SNP can have an R2 > 2
         if (target.clumped()) return;
+
         bool completed = false;
         if (r2 > proxy) {
             // proxy clump
