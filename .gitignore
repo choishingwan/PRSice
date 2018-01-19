@@ -1,7 +1,7 @@
 reference/
 window
 *.o
-
+PRSice_*
 bin/
 
 build/
