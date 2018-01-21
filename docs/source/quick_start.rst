@@ -1,6 +1,7 @@
+.. _prsice-quick-start:
 
-Quick Start
-************
+PRsice Quick Start
+******************
 
 ===========
 Preparation
