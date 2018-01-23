@@ -53,11 +53,23 @@ coded as missing
 - `--hard-thres`: The genotype probability threshold. SNPs with no genotype having a probability larger than this
 threshold will be treated as missing
 
+
+!!! Note
+
+  Similar to PLINK files, you can use the # substitution for BGEN files that are separated into different chromosomes
+
 ## Phenotype files
-PRSice also support an external phenotype file as in input.
+PRSice also support an external phenotype file as in input using the `--pheno-file`
 This file should contain the FID and IID (or just IID if `--ignore-fid` is set)
 and the target phenotype.
 
+You can specify the target phenotype name using `--pheno-col`.
+Multiple phenotype can be provided using a comma separated list. e.g.
+```
+  --pheno-col A,B,C
+```
+
+will cause PRSice to perform the analysis on phenotype A, B and C.
 
 # Target File Related Parameters
 

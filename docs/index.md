@@ -38,8 +38,10 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
     PRSice can automatically download all required packages, even without administrative right.
     You can specify the install directory using :code:`--dir`. For example
 
+    ```
         Rscript PRSice.R --dir .
-
+    ```
+    
     will install all required packages under the local directory
 
 # Quick Start
@@ -49,7 +51,9 @@ For Quick start use, please refer to [Quick Start](quick_start.md)
 
     You can also type
 
+    ```
         Rscript PRSice.R -h
+    ```
 
     to view all available parameters
 

@@ -13,7 +13,7 @@ Can be in the form of  [PLINK binary](https://www.cog-genomics.org/plink2/format
     You should first perform quality control on your genotype file before passing it to PRSice.
     You can do that using PLINK. A good starting point is (assume **_($target)_** is the prefix of your target binary file)
 
-```
+``` bash
 plink --bfile ($target) \
     --maf 0.05 \
     --mind 0.1 \
