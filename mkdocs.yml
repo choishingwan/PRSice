@@ -12,7 +12,8 @@ pages:
 
     - Details of PRSice/PRSet:
         - General Usages: general.md
-        - Base File: base_file.md
+        - Base File
+        : base_file.md
 
     - Developers:
         - For Developers: developers.md
@@ -24,5 +25,4 @@ markdown_extensions:
     - admonition
     - toc:
         permalink: True
-    - codehilite:
-        linenums: True
+    - codehilite

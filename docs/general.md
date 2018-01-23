@@ -1,3 +1,10 @@
+# Introduction
+PRSice is seperated into two main parts:
+
+1. PRSice executable
+2. PRSice Rscript
+
+
 # General Usage
 ```
 usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>
