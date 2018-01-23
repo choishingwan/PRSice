@@ -12,8 +12,8 @@ pages:
 
     - Details of PRSice/PRSet:
         - General Usages: general.md
-        - Base File
-        : base_file.md
+        - Base File: base_file.md
+        - Target File: target_file.md
 
     - Developers:
         - For Developers: developers.md
