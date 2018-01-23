@@ -46,7 +46,7 @@ SNPs based on their INFO score and MAF respectively.
 For binary trait base file, you can also filter the MAF according the the case and control separately using
 
 ```
---maf-base <MAF Name for Control>,<MAF Threshold for Control>:<MAF Name for Case>,<MAF Threshold for Case>
+--maf-base <Name for Control>,<Threshold for Control>:<Name for Case>,<Threshold for Case>
 ```
 
 By default, PRSice will look for the following column names automatically from your base file header if `--index` was not provided:

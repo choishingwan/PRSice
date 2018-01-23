@@ -12,12 +12,6 @@ box-sizing: border-box;
     padding-right-ltr-source: physical;
     padding-right-rtl-source: physical;
 
-border-radius: 16px !important;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
-    border-bottom-left-radius: 16px;
-
 border: 1px solid #CCC !important;
     border-top-width: 1px;
     border-right-width-value: 1px;
