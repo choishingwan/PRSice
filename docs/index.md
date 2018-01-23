@@ -1,4 +1,8 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
+
+!!! Note
+    We are holding a Summer School on Polygenic Risk Score in Social, Genetics and Developmental Psychiatry Centre
+
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
 Some of the features include:
 
@@ -27,7 +31,7 @@ Some of the features include:
 
 To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3+**) installed.
 
-[[Additional steps | Additional Steps for MAC and Window users]] might be required for MAC and Window users.
+[Additional steps](extra_steps.md) might be required for MAC and Window users.
 
 !!! Note
 
@@ -39,7 +43,7 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
     will install all required packages under the local directory
 
 # Quick Start
-For Quick start use, please refer to [Quick Start]
+For Quick start use, please refer to [Quick Start](quick_start.md)
 
 !!! tip
 
@@ -48,8 +52,12 @@ For Quick start use, please refer to [Quick Start]
         Rscript PRSice.R -h
 
     to view all available parameters
+
+# Output of Results
+You can see the expected output of PRSice [here](step_by_step.md#output-of-results)
+
 # Detailed Guide
-You can find a more detailed document explaining the input and output of PRSice in [[this page | Detailed Guide (PRSice)]]
+You can find a more detailed document explaining the input and output of PRSice in [this page](step_by_step.md)
 
 # Full command line options
 You can find all command line options of PRSice in [[this page | Command line options of PRSice]]

@@ -54,7 +54,7 @@ By default, PRSice will look for the following column names automatically from y
 
 If you don't want the specific column to be included e.g. You don't want to perform info score filtering but your file contains an
 INFO column, you can use `--no-default` to disable all the defaults of PRSice.
-PRSice will ignore any columns that were not found in your file (e.g. If you specified `--A2 B` but none of your column header is *B*,  de34then PRSice will treat it as if no *A2* information is presented)
+PRSice will ignore any columns that were not found in your file (e.g. If you specified `--A2 B` but none of your column header is *B*,  then PRSice will treat it as if no *A2* information is presented)
 
 
 ## Target Dataset
