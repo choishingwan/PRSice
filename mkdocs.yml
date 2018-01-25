@@ -8,7 +8,7 @@ pages:
         - Detailed Guide: step_by_step.md
 
     - PRSet:
-        - Quick Starting: quick_start_prset.md
+        - Quick Start: quick_start_prset.md
 
     - Details of PRSice/PRSet:
         - General Usages: general.md
