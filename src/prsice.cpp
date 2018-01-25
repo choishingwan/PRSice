@@ -1000,11 +1000,13 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     size_t processed = 0;
     for (int iter = 0; iter < num_iter + 1; ++iter) {
         size_t cur_perm = m_perm_per_slice;
+
         cur_perm += (cur_remain > 0) ? 1 : 0;
         if (cur_perm + processed > m_num_perm) {
             cur_perm = m_num_perm - processed;
         }
         cur_remain--;
+        if(cur_perm <1) break;
         g_permuted_pheno.resize(cur_perm);
         for (size_t p = 0; p < cur_perm; ++p) {
             perm.setIdentity();
@@ -1097,9 +1099,11 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
         }
         else
         {
-            Eigen::VectorXd beta =
+
+        		Eigen::VectorXd beta =
                 g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
             Eigen::MatrixXd fitted = m_independent_variables * beta;
+
             Eigen::VectorXd residual = g_permuted_pheno[i] - fitted;
             int rdf = n - rank;
             double rss = 0.0;
