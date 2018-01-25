@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Shing Wan CHOI">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>PRSet - PRSice-2</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  <link href="../css/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "PRSet";
+    var mkdocs_page_input_path = "prset_command.md";
+    var mkdocs_page_url = "/prset_command/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> PRSice-2</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSice</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start/">Quick Start</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../step_by_step/">Detailed Guide</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start_prset/">Quick Start</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Details of PRSice/PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../general/">General Usages</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../base_file/">Base File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../target_file/">Target File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../clumping/">Clumping</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../covariate/">Adjusting for Covariates</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../pthresholding/">P-value Thresholding</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">PRSet</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#introduction">Introduction</a></li>
+    
+
+    <li class="toctree-l3"><a href="#command">Command</a></li>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prslice_command/">PRSlice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../plot/">Plotting</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../misc/">Miscellaneous</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Developers</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../developers/">For Developers</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Misc</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">PRSice-2</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Details of PRSice/PRSet &raquo;</li>
+        
+      
+    
+    <li>PRSet</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/prset_command.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>It is vital that the human genome build is the same for the GTF file,
+bed files, target file and the base file.
+Otherwise the coordinates of the SNPs can be wrong and PRSice will
+not be able to correctly assign the gene membership, leading to
+invalid results.</p>
+</div>
+<h1 id="command">Command<a class="headerlink" href="#command" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--bed</code> | <code>-B</code>
+    Bed file containing the selected regions.
+    Name of bed file will be used as the region
+    identifier. WARNING: Bed file is 0-based</p>
+</li>
+<li>
+<p><code>--feature</code></p>
+<p>Feature(s) to be included from the gtf file.</p>
+<p>Default: <em>exon,CDS,gene,protein_coding</em></p>
+</li>
+<li>
+<p><code>--gtf</code> | <code>-g</code></p>
+<p>GTF file containing gene boundaries. Required when <code>--msigdb</code> is used</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Human Genome build GRCh38 can be downloaded from <a href="ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens">here</a>.</p>
+</div>
+</li>
+<li>
+<p><code>--msigdb</code> | <code>-m</code></p>
+<p>MSIGDB file containing the pathway information. Require the gtf file.
+The MSigDB file format is a simple tab/space delimited text file
+where each line correspond to a single gene set following by Gene IDs:
+<code>[Set A] [Gene 1] [Gene 2] ...
+    [Set B] [Gene 1] [Gene 2] ...</code></p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can download some curated MSigDB files from <a href="http://software.broadinstitute.org/gsea/msigdb/">here</a> after registration in <a href="http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb">here</a></p>
+</div>
+</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../prslice_command/" class="btn btn-neutral float-right" title="PRSlice">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../pthresholding/" class="btn btn-neutral" title="P-value Thresholding"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../pthresholding/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../prslice_command/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>

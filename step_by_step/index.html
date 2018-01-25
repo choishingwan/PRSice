@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Shing Wan CHOI">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Detailed Guide - PRSice-2</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  <link href="../css/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Detailed Guide";
+    var mkdocs_page_input_path = "step_by_step.md";
+    var mkdocs_page_url = "/step_by_step/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> PRSice-2</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSice</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start/">Quick Start</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">Detailed Guide</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#input-data">Input Data</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l4" href="#base-dataset">Base Dataset</a></li>
+        
+            <li><a class="toctree-l4" href="#target-dataset">Target Dataset</a></li>
+        
+            <li><a class="toctree-l4" href="#phenotype-files">Phenotype files</a></li>
+        
+        </ul>
+    
+
+    <li class="toctree-l3"><a href="#ld-reference">LD reference</a></li>
+    
+
+    <li class="toctree-l3"><a href="#clumping">Clumping</a></li>
+    
+
+    <li class="toctree-l3"><a href="#output-of-results">Output of Results</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l4" href="#figures">Figures</a></li>
+        
+            <li><a class="toctree-l4" href="#prs-model-fit">PRS model-fit</a></li>
+        
+            <li><a class="toctree-l4" href="#scores-for-each-individual">Scores for each individual</a></li>
+        
+            <li><a class="toctree-l4" href="#summary-information">Summary Information</a></li>
+        
+            <li><a class="toctree-l4" href="#log-file">Log File</a></li>
+        
+        </ul>
+    
+
+    </ul>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start_prset/">Quick Start</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Details of PRSice/PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../general/">General Usages</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../base_file/">Base File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../target_file/">Target File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../clumping/">Clumping</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../covariate/">Adjusting for Covariates</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../pthresholding/">P-value Thresholding</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prset_command/">PRSet</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prslice_command/">PRSlice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../plot/">Plotting</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../misc/">Miscellaneous</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Developers</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../developers/">For Developers</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Misc</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">PRSice-2</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>PRSice &raquo;</li>
+        
+      
+    
+    <li>Detailed Guide</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/step_by_step.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
+<h2 id="base-dataset">Base Dataset<a class="headerlink" href="#base-dataset" title="Permanent link">&para;</a></h2>
+<p>Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
+PRSice has no problem reading in a gzipped base file.</p>
+<p>If you are using output from PLINK, then please make sure there is a column for the effect allele (A1) and specify it with <code>--A1</code> option.
+On the other hand, if you are using another form of output, then you can provide the column headers using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>For PRSice to run, the base file must contain the effect allele (--A1), effect size estimates (--stat), p-value for association (--pvalue), and the snp id (--snp).</p>
+</div>
+<p>If the input file does not contain a column header, then you can specify the column using their index (start counting from 0) with the <code>--index</code> flag.</p>
+<p>e.g. if the first column of the file contains the p-value information, you can use:
+<code>--pvalue 0 --index</code></p>
+<p>Below is an example input file:</p>
+<table>
+<thead>
+<tr>
+<th align="center">SNP</th>
+<th align="center">CHR</th>
+<th align="center">BP</th>
+<th align="center">A1</th>
+<th align="center">A2</th>
+<th align="center">OR</th>
+<th align="center">SE</th>
+<th align="center">P</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">rs3094315</td>
+<td align="center">1</td>
+<td align="center">752566</td>
+<td align="center">A</td>
+<td align="center">G</td>
+<td align="center">0.9912</td>
+<td align="center">0.0229</td>
+<td align="center">0.7009</td>
+</tr>
+<tr>
+<td align="center">rs3131972</td>
+<td align="center">1</td>
+<td align="center">752721</td>
+<td align="center">A</td>
+<td align="center">G</td>
+<td align="center">1.007</td>
+<td align="center">0.0228</td>
+<td align="center">0.769</td>
+</tr>
+<tr>
+<td align="center">rs3131971</td>
+<td align="center">1</td>
+<td align="center">752894</td>
+<td align="center">T</td>
+<td align="center">C</td>
+<td align="center">1.003</td>
+<td align="center">0.0232</td>
+<td align="center">0.8962</td>
+</tr>
+</tbody>
+</table>
+<p>and the parameters can either be</p>
+<p><code>--snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --se SE --pvalue P</code></p>
+<p>or</p>
+<p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --se 6 --pvalue 7 --index</code></p>
+<p>Strand flips are automatically detected and accounted for</p>
+<p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, you can use
+<code>--info-base &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--maf-base &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> to filter
+SNPs based on their INFO score and MAF respectively.</p>
+<p>For binary trait base file, you can also filter the MAF according the the case and control separately using</p>
+<pre class="codehilite"><code>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;</code></pre>
+
+
+<p>By default, PRSice will look for the following column names automatically from your base file header if <code>--index</code> was not provided:</p>
+<blockquote>
+<p>CHR, BP, A1, A2, SNP, P, INFO, SE (case sensitive) and OR / BETA (case insensitive)</p>
+</blockquote>
+<p>If you don't want the specific column to be included e.g. You don't want to perform info score filtering but your file contains an
+INFO column, you can use <code>--no-default</code> to disable all the defaults of PRSice.
+PRSice will ignore any columns that were not found in your file (e.g. If you specified <code>--A2 B</code> but none of your column header is <em>B</em>,  then PRSice will treat it as if no <em>A2</em> information is presented)</p>
+<h2 id="target-dataset">Target Dataset<a class="headerlink" href="#target-dataset" title="Permanent link">&para;</a></h2>
+<p>Currently we support two different formats</p>
+<h3 id="plink-binary">PLINK Binary<a class="headerlink" href="#plink-binary" title="Permanent link">&para;</a></h3>
+<p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).</p>
+<p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
+<p>If you want to use a <strong>.fam</strong> file with a different prefix from the <strong>.bed</strong> and <strong>.bim</strong> file, you can do</p>
+<pre class="codehilite"><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;</code></pre>
+
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>You MUST ensure the fam file contains the correct number of samples</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>-9 will NOT be considered as missing for quantitative traits</p>
+</div>
+<p>If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
+PRSice will automatically substitute # with 1-22</p>
+<p>i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
+<pre class="codehilite"><code>--target chr#</code></pre>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If an external fam file is provided, the substitution will not be performed on it. This is because all chromosome should have the same fam file. fam file from any of the chromosome should be ok</p>
+</div>
+<h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
+<p>We also support BGEN v1.2. To specify a BGEN file, you simply add <code>--type bgen</code> or <code>--ld-type bgen</code> to your PRSice command</p>
+<p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
+a phenotype file (<code>--pheno-file</code>) for PRSice to run. Or you can provide a sample file using</p>
+<pre class="codehilite"><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;</code></pre>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We will still require this sample file even if you are doing <code>--no-regress</code> as we do want the sample ID.  we might loosen this requirement later on.</p>
+</div>
+<p>With BGEN, a number of other PRSice options become effective:
+- <code>--hard</code>: Normally, with BGEN format, we will calculate the PRS using the dosage information.
+But you can ask for hard-thresholding by using the <code>--hard</code> option. Then we will code the SNP as the genotype with
+probability larger than threshold specified by <code>--hard-thres</code>. If no such genotype is presented, the SNP will be
+coded as missing
+- <code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
+threshold will be treated as missing</p>
+<h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
+<h1 id="ld-reference">LD reference<a class="headerlink" href="#ld-reference" title="Permanent link">&para;</a></h1>
+<p>When your target sample is small (e.g. &lt; 500 samples), you might want to use an external reference panel
+to improve the LD estimation for clumping.</p>
+<p>The LD reference follows the same notion as the target dataset. Simply use</p>
+<pre class="codehilite"><code>--ld &lt;LD refernce&gt;</code></pre>
+
+
+<p>to specify your LD reference panel file and <code>--ld-type</code> to specify the format</p>
+<p>When a LD reference file is not provided and <code>--no-clump</code> was not specified, the target file
+will be used as the LD reference panel</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Any parameters with the <code>--ld</code> prefix will only work on the file specified by the <code>--ld</code> parameter.
+That is, if a LD reference file is not provided, none of the <code>--ld-*</code> options will be used.
+If you would like to apply a different filtering to the target file when using it as the reference panel (e.g. using only controls), you will need to provide that target file separately to the <code>--ld</code> parameter</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the LD reference panel is in BGEN format, then it will always be hard coded when estimating the LD</p>
+</div>
+<h1 id="clumping">Clumping<a class="headerlink" href="#clumping" title="Permanent link">&para;</a></h1>
+<p>By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
+Similar to PLINK, the r<sup>2</sup> values computed by PRSice are based on maximum likelihood haplotype frequency estimates.
+We do not differentiate case and control when we calculate the r<sup>2</sup>.
+You can force r<sup>2</sup> calculation in control using the <code>--ld</code> and <code>--ld-keep</code>/<code>--ld-remove</code> options</p>
+<p>You can change the value using <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
+Or you can disable clumping altogether using <code>--no-clump</code></p>
+<h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
+<h2 id="figures">Figures<a class="headerlink" href="#figures" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Hereon, we will assume <em>[Name]</em> is the output prefix specified using <code>--output</code> and <em>[date]</em> is the date when the analysis was performed.</p>
+</div>
+<p>PRSice will always generate a bar plot displaying the model fit of the PRS at P-value threshold as indicated by <code>--bar-levels</code></p>
+<p>The plot will be named as <em>[Name]_BARPLOT_[date].png</em> , where <em>[date]</em> is today’s date and <em>[Name]</em> is the output name specified using <code>--output</code>.
+An example bar plot:</p>
+<p><img alt="Bar plot" src="../img/BARPLOT.png" /></p>
+<p>If <code>--fastscore</code> is not specified, a high-resolution plot named <em>[Name]_HIGH-RES_PLOT_[date].png</em> will be generated.</p>
+<p>This plot present the model fit of PRS calculated at all P-value thresholds.</p>
+<p>A green line connects points showing the model fit at the broad P-value thresholds used in the corresponding bar plot are also added.
+An example high-resolution plot:</p>
+<p><img alt="High Resolution Plot" src="../img/HIGH-RES_PLOT.png" /></p>
+<p>If <code>--quantile [number of quantile]</code> is specified, a quantile plot named [Name]_QUANTILE_PLOT_[date].png will be generated.
+The quantile plot provide an illustration of the effect of increaseing PRS on predcited risk of phenotype.
+An example quantile plot:</p>
+<p><img alt="Quantile Plot" src="../img/QUANTILES_PLOT.png" /></p>
+<h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
+<p>A file containing the PRS model fit across thresholds is named <em>[Name].prsice</em>; this is stored as</p>
+<blockquote>
+<p>Threshold, R2, P-value, Coefficient, Stndard Deviation and Number of SNPs at this threshold</p>
+</blockquote>
+<h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
+<p>A file containing PRS for each individual at the best-fit PRS named</p>
+<p><em>[Name].best</em> is provide.
+This file has the format of:</p>
+<blockquote>
+<p>FID,IID,PRS at best threshold, Has Phenotype</p>
+</blockquote>
+<p>Where the has phenotype column indicate whether the sample contain all the required phenotype for PRSice
+analysis
+(e.g. Samples with missing phenotype/covariate will not be included in the regression. These samples will be indicated as "No" under the has phenotype column)</p>
+<p>If <code>--all-score</code> option is used, a file named <em>[Name].all.score</em> is also generated</p>
+<p>Please note, if <code>--all-score</code> options is used, the PRS for each individual at all threshold will be given.
+In the event where the target sample size is large and a lot of threshold are tested, this file can be large.</p>
+<h2 id="summary-information">Summary Information<a class="headerlink" href="#summary-information" title="Permanent link">&para;</a></h2>
+<p>Information of the best model fit of each phenotype and gene set is stored in <em>[Name].summary</em>.
+The summary file contain the following fields:</p>
+<ol>
+<li><strong>Phenotype</strong> - Name of Phenotype</li>
+<li><strong>Set</strong> - Name of Gene Set</li>
+<li><strong>Threshold</strong> - Best P-value Threshold</li>
+<li><strong>PRS.R2</strong> - Variance explained by the PRS. If prevalence is provided, this will be adjusted for ascertainment</li>
+<li><strong>Full.R2</strong> - Variance explained by the full model (including the covariates). If prevalence is provided, this will be adjusted for ascertainment</li>
+<li><strong>Null.R2</strong> - Variance explained by the covariates. If prevalence is provided, this will be adjusted for ascertainment</li>
+<li><strong>Prevalence</strong> - Population prevalence as indicated by the user. "-" if not provided.</li>
+<li><strong>Coefficient</strong> - Regression coefficient of the model. Can provide insight of the direction of effect.</li>
+<li><strong>P</strong> - P value of the model fit</li>
+<li><strong>Num_SNP</strong> - Number of SNPs included in the model</li>
+<li><strong>Empirical-P</strong> - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting</li>
+</ol>
+<h2 id="log-file">Log File<a class="headerlink" href="#log-file" title="Permanent link">&para;</a></h2>
+<p>We value reproducible research. Therefore we try our best to make replicating PRSice run easier.
+For every PRSice run, a log file named <em>[Name].log</em> is generated which contain the all the commands
+used for the analysis and information regarding filtering, field selected etc.</p>
+<p>This also allow users to quickly identify problems in the input dataset.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../quick_start_prset/" class="btn btn-neutral float-right" title="Quick Start">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../quick_start/" class="btn btn-neutral" title="Quick Start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../quick_start/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../quick_start_prset/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>

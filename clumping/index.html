@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Shing Wan CHOI">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Clumping - PRSice-2</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  <link href="../css/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Clumping";
+    var mkdocs_page_input_path = "clumping.md";
+    var mkdocs_page_url = "/clumping/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> PRSice-2</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSice</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start/">Quick Start</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../step_by_step/">Detailed Guide</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start_prset/">Quick Start</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Details of PRSice/PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../general/">General Usages</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../base_file/">Base File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../target_file/">Target File</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">Clumping</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#introduction">Introduction</a></li>
+    
+
+    <li class="toctree-l3"><a href="#commands">Commands</a></li>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../covariate/">Adjusting for Covariates</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../pthresholding/">P-value Thresholding</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prset_command/">PRSet</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prslice_command/">PRSlice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../plot/">Plotting</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../misc/">Miscellaneous</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Developers</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../developers/">For Developers</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Misc</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">PRSice-2</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Details of PRSice/PRSet &raquo;</li>
+        
+      
+    
+    <li>Clumping</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/clumping.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
+<p>Due to Linkage Disequilibrium (LD) between SNPs,
+signals in high-LD regions will be over-represented,
+leading to bias in the PRS.
+To maximize the signals for PRS analysis, an association
+information driven pruning algorithm, i.e. Clumping can be
+performed.
+That is, when a SNP pair is in LD, only the SNP with the
+lowest p-value will be retained, this prevents the more associated
+SNP being removed from subsequent analysis, thus preserved the signal.</p>
+<p>In PRSice, the PLINK clumping algorithm is implemented where
+the r<sup>2</sup> values computed are based on maximum likelihood haplotype
+frequency estimates.
+In addition, the LD is calculated in all founder samples (ignoring case control
+status).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you would like to perform the LD estimates on only the controls, you
+can use <code>--ld</code> and <code>--keep</code>/<code>--remove</code>.</p>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>When no reference panel is provided, the target samples will be
+used for LD calculation. However, none of the <code>--ld-*</code> parameters
+will take effect. The <code>--ld-*</code> parameters will only have an effect
+on the <code>--ld</code> file. You will need to resupply the target file to the
+<code>--ld</code> parameter for the <code>--ld-*</code> parameters to take effect</p>
+</div>
+<h1 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--clump-kb</code>
+    The distance for clumping in kb. Default: 250</p>
+</li>
+<li>
+<p><code>--clump-r2</code></p>
+<p>The r<sup>2</sup> threshold for clumping. Default: 0.1</p>
+</li>
+<li>
+<p><code>--clump-p</code></p>
+<p>The p-value threshold use for clumping. Default: 1.</p>
+</li>
+<li>
+<p><code>--ld</code> | <code>-L</code></p>
+<p>LD reference file. Use for estimation of LD during clumping.
+If not provided, will use the post-filtered target genotype
+for LD calculation. Support multiple chromosome input.
+Please see <a href="../target_file/#target-file-related-parameters"><code>--target</code></a> for more information.
+When you target sample is small (e.g. &lt; 500) and
+external panel of the same population is available (e.g. 1000 genome),
+you might want to use the external reference panel
+to improve the LD estimation for clumping.</p>
+</li>
+<li>
+<p><code>--ld-geno</code></p>
+<p>Filter SNPs based on genotype missingness. Must be a value
+between <em>0.0</em> and <em>1.0</em>.</p>
+</li>
+<li>
+<p><code>--ld-info</code></p>
+<p>Filter SNPs based on info score. Only used for imputed LD reference.
+The INFO score is calculated as the MaCH imputation r-squared value.
+The pseudo code is represented as follow:</p>
+</li>
+</ul>
+<pre class="codehilite"><code>    m=Mean of expected genotype
+    v=variance of expected genotype
+    p=m/2
+    p_a = 2p(1-p)
+    INFO = v/p_a</code></pre>
+
+
+<ul>
+<li>
+<p><code>--ld-hard-thres</code></p>
+<p>Hard threshold for dosage data. Any call less than
+this will be treated as missing.Default: 0.9</p>
+</li>
+<li>
+<p><code>--ld-keep</code></p>
+<p>File containing the sample(s) to be extracted from
+the LD reference file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID.
+Mutually exclusive from <code>--ld-remove</code>. No effect if <code>--ld</code> was not provided</p>
+</li>
+<li>
+<p><code>--ld-maf</code></p>
+<p>Filter SNPs based on minor allele frequency (MAF)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When perform MAF filtering on dosage data, we will
+calculate the MAF using the hard-coded genotype</p>
+</div>
+</li>
+<li>
+<p><code>--ld-remove</code></p>
+<p>File containing the sample(s) to be removed from
+the LD reference file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID.
+Mutually exclusive from <code>--ld-keep</code></p>
+</li>
+<li>
+<p><code>--ld-type</code></p>
+<p>File type of the LD file. Support bed (binary plink)
+and bgen format. Default: bed\n"</p>
+</li>
+<li>
+<p><code>--no-clump</code></p>
+<p>When set, PRSice will not perform clumping. This is useful when you have
+a pre-clumped list of SNPs and want PRSice to only perform the regression
+analysis.</p>
+</li>
+<li>
+<p><code>--proxy</code></p>
+<p>Proxy threshold for index SNP to be considered
+as part of the region represented by the clumped
+SNP(s). e.g. <code>--proxy 0.8</code> means the index SNP will
+represent region of any clumped SNP(s) that has
+r<sup>2</sup>=0.8 even if the index SNP does not physically
+locate within the region</p>
+</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../covariate/" class="btn btn-neutral float-right" title="Adjusting for Covariates">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../target_file/" class="btn btn-neutral" title="Target File"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../target_file/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../covariate/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>

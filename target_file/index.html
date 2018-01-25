@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Shing Wan CHOI">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Target File - PRSice-2</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  <link href="../css/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Target File";
+    var mkdocs_page_input_path = "target_file.md";
+    var mkdocs_page_url = "/target_file/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> PRSice-2</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSice</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start/">Quick Start</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../step_by_step/">Detailed Guide</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start_prset/">Quick Start</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Details of PRSice/PRSet</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../general/">General Usages</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../base_file/">Base File</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">Target File</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#introduction">Introduction</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l4" href="#plink-binary">PLINK Binary</a></li>
+        
+            <li><a class="toctree-l4" href="#bgen">BGEN</a></li>
+        
+            <li><a class="toctree-l4" href="#phenotype-files">Phenotype files</a></li>
+        
+        </ul>
+    
+
+    <li class="toctree-l3"><a href="#target-file-related-commands">Target File Related Commands</a></li>
+    
+
+    <li class="toctree-l3"><a href="#dosage-related-commands">Dosage Related Commands</a></li>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../clumping/">Clumping</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../covariate/">Adjusting for Covariates</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../pthresholding/">P-value Thresholding</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prset_command/">PRSet</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prslice_command/">PRSlice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../plot/">Plotting</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../misc/">Miscellaneous</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Developers</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../developers/">For Developers</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Misc</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">PRSice-2</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Details of PRSice/PRSet &raquo;</li>
+        
+      
+    
+    <li>Target File</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/target_file.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
+<p>Currently we support two different formats</p>
+<h3 id="plink-binary">PLINK Binary<a class="headerlink" href="#plink-binary" title="Permanent link">&para;</a></h3>
+<p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).</p>
+<p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
+<p>If you want to use a <strong>.fam</strong> file with a different prefix from the <strong>.bed</strong> and <strong>.bim</strong> file, you can do</p>
+<pre class="codehilite"><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;</code></pre>
+
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>You MUST ensure the fam file contains the correct number of samples</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>-9 will NOT be considered as missing for quantitative traits</p>
+</div>
+<p>If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
+PRSice will automatically substitute # with 1-22</p>
+<p>i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
+<pre class="codehilite"><code>--target chr#</code></pre>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If an external fam file is provided, the substitution will not be performed on it. This is because all chromosome should have the same fam file. fam file from any of the chromosome should be ok</p>
+</div>
+<div class="admonition todo">
+<p class="admonition-title">Todo</p>
+<p>We will incorporate a new function in next version where we allow different number of autosomes to be specified.
+This should allow users to use PRSice on other organisms.
+However, due to complication in handling non-diploid chromosomes, we will only
+support diploid organisms (and exclude all sex chromosomes), i.e. Mouse</p>
+</div>
+<h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
+<p>We also support BGEN v1.2. To specify a BGEN file, you simply add <code>--type bgen</code> or <code>--ld-type bgen</code> to your PRSice command</p>
+<p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
+a phenotype file (<code>--pheno-file</code>) for PRSice to run. Or you can provide a sample file using</p>
+<pre class="codehilite"><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;</code></pre>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We will still require this sample file even if you are doing <code>--no-regress</code> as we do want the sample ID.  we might loosen this requirement later on.</p>
+</div>
+<p>With BGEN, a number of other PRSice options become effective:
+- <code>--hard</code>: Normally, with BGEN format, we will calculate the PRS using the dosage information.
+But you can ask for hard-thresholding by using the <code>--hard</code> option. Then we will code the SNP as the genotype with
+probability larger than threshold specified by <code>--hard-thres</code>. If no such genotype is presented, the SNP will be
+coded as missing
+- <code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
+threshold will be treated as missing</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Similar to PLINK files, you can use the # substitution for BGEN files that are separated into different chromosomes</p>
+</div>
+<h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
+<p>PRSice also support an external phenotype file as in input using the <code>--pheno-file</code>
+This file should contain the FID and IID (or just IID if <code>--ignore-fid</code> is set)
+and the target phenotype.</p>
+<p>You can specify the target phenotype name using <code>--pheno-col</code>.
+Multiple phenotype can be provided using a comma separated list. e.g.</p>
+<pre class="codehilite"><code>  --pheno-col A,B,C</code></pre>
+
+
+<p>will cause PRSice to perform the analysis on phenotype A, B and C.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When multiple phenotype is provided, PRSice will generate a set of
+results for each phenotype with the prefix of <code>&lt;Prefix&gt;.&lt;Pheno&gt;</code> where
+<code>&lt;Prefix&gt;</code> is the parameter provided to the <code>--out</code> option</p>
+</div>
+<h1 id="target-file-related-commands">Target File Related Commands<a class="headerlink" href="#target-file-related-commands" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--binary-target</code></p>
+<p>Indicate whether the target phenotype is binary or not.
+Either T or F should be provided where T represent a binary phenotype.
+For multiple phenotypes, the input should be separated by comma without space.</p>
+<p>Default: <strong>T</strong> if <code>--beta</code> is set and <strong>F</strong> otherwise</p>
+</li>
+<li>
+<p><code>--geno</code></p>
+<p>Filter SNPs based on gentype missingness. Must be a value
+between <em>0.0</em> and <em>1.0</em>.</p>
+</li>
+<li>
+<p><code>--info</code>
+    Filter SNPs based on info score. Only used for imputed target.
+    The INFO score is calculated as the MaCH imputation r-squared value.
+    The pseudo code is represented as follow:</p>
+</li>
+</ul>
+<pre class="codehilite"><code>    m=Mean of expected genotype
+    v=variance of expected genotype
+    p=m/2
+    p_a = 2p(1-p)
+    INFO = v/p_a</code></pre>
+
+
+<ul>
+<li>
+<p><code>--keep</code></p>
+<p>File containing the sample(s) to be extracted from
+the target file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID
+Mutually exclusive from <code>--remove</code></p>
+</li>
+<li>
+<p><code>--maf</code></p>
+<p>Filter SNPs based on minor allele frequency (MAF)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When perform MAF filtering on dosage data, we will
+calculate the MAF using the hard-coded genotype</p>
+</div>
+</li>
+<li>
+<p><code>--nonfounders</code></p>
+<p>By default, PRSice will exclude all non-founders from the analysis.
+When this flag is set, non-founders will be included in the
+regression model but will still be excluded from LD estimation.</p>
+</li>
+<li>
+<p><code>--pheno-col</code></p>
+<p>Headers of phenotypes to be included from the phenotype file.
+When multiple phenotypes are provided, the phenotype name will be
+used as part of the file output prefix</p>
+</li>
+<li>
+<p><code>--pheno-file</code> | <code>-f</code></p>
+<p>Phenotype file containing the phenotype(s).
+First column must be FID of the samples and
+the second column must be IID of the samples.
+When <code>--ignore-fid</code> is set, first column must
+be the IID of the samples. Must contain a
+header if <code>--pheno-col</code> is specified</p>
+</li>
+<li>
+<p><code>--prevalence</code> | <code>-k</code></p>
+<p>Prevalence of all binary trait.
+If provided, PRSice will adjust the ascertainment bias of the R2.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When multiple binary trait is found,
+prevalence information must be provided for
+all of them (Either adjust all binary traits,
+or don't adjust at all).
+For example, if there are 3 traits A, B and C,
+ where A and C are binary traits with population
+ prevalence of 0.1 and 0.2 respectively. The correct input should be
+ <code>--binary-target T,F,T --prevalence 0.1,0.2</code></p>
+</div>
+</li>
+<li>
+<p><code>--remove</code></p>
+<p>File containing the sample(s) to be removed from
+the target file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID
+Mutually exclusive from <code>--keep</code></p>
+</li>
+<li>
+<p><code>--target</code> | <code>-t</code></p>
+<p>Target genotype file. Currently support
+both BGEN and binary PLINK format. For
+multiple chromosome input, simply substitute
+the chromosome number with #.
+PRSice will automatically replace # with 1-22.
+You can also specify a separate fam/sample file by
+<code>--target &lt;prefix&gt;,&lt;fam/sample file&gt;</code></p>
+</li>
+<li>
+<p><code>--type</code></p>
+<p>File type of the target file. Support bed (binary plink) and bgen format. Default: bed</p>
+</li>
+</ul>
+<h1 id="dosage-related-commands">Dosage Related Commands<a class="headerlink" href="#dosage-related-commands" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--hard-thres</code></p>
+<p>Hard threshold for the dosage data. SNPs with be coded as
+the genotype with probability higher than the threshold
+specified here. If no such genotype is presented, the
+SNP will be treated as missing.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If dosage data is used as a LD reference, it will always be
+hard coded to calculate the LD</p>
+<p>Default: 0.9</p>
+</div>
+</li>
+<li>
+<p><code>--hard</code></p>
+<p>When set, will use hard thresholding instead of dosage for PRS construction.
+Default is to use dosage.</p>
+</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../clumping/" class="btn btn-neutral float-right" title="Clumping">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../base_file/" class="btn btn-neutral" title="Base File"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../base_file/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../clumping/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>
