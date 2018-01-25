@@ -15,6 +15,12 @@ pages:
         - Base File: base_file.md
         - Target File: target_file.md
         - Clumping: clumping.md
+        - Adjusting for Covariates: covariate.md
+        - P-value Thresholding: pthresholding.md
+        - PRSet: prset_command.md
+        - PRSlice: prslice_command.md
+        - Plotting: plot.md
+        - Miscellaneous: misc.md
 
     - Developers:
         - For Developers: developers.md

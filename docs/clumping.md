@@ -1,4 +1,32 @@
 # Introduction
+Due to Linkage Disequilibrium (LD) between SNPs,
+signals in high-LD regions will be over-represented,
+leading to bias in the PRS.
+To maximize the signals for PRS analysis, an association
+information driven pruning algorithm, i.e. Clumping can be
+performed.
+That is, when a SNP pair is in LD, only the SNP with the
+lowest p-value will be retained, this prevents the more associated
+SNP being removed from subsequent analysis, thus preserved the signal.
+
+In PRSice, the PLINK clumping algorithm is implemented where
+the r<sup>2</sup> values computed are based on maximum likelihood haplotype
+frequency estimates.
+In addition, the LD is calculated in all founder samples (ignoring case control
+status).
+
+!!! tip
+
+    If you would like to perform the LD estimates on only the controls, you
+    can use `--ld` and `--keep`/`--remove`.
+
+!!! important
+
+    When no reference panel is provided, the target samples will be
+    used for LD calculation. However, none of the `--ld-*` parameters
+    will take effect. The `--ld-*` parameters will only have an effect
+    on the `--ld` file. You will need to resupply the target file to the
+    `--ld` parameter for the `--ld-*` parameters to take effect
 
 # Commands
 - `--clump-kb`
