@@ -19,9 +19,9 @@ Some of the features include:
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux.zip) |
-| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac.zip) |
-| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64.zip) |
+| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_perm_fix.zip) |
+| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_perm_fix.zip) |
+| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_perm_fix.zip) |
 
 !!! Note
 
@@ -41,7 +41,7 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
     ```
         Rscript PRSice.R --dir .
     ```
-    
+
     will install all required packages under the local directory
 
 # Quick Start
