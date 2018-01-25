@@ -329,8 +329,9 @@ private:
                 // sum = 0 is for v11, otherwise, it should be missing
                 if (missing || m_sum == 0) {
                     // this is missing
-                	// should use m_sample_i -1 as this is for the previous sample
-                    m_missing_samples.push_back(m_sample_i-1);
+                    // should use m_sample_i -1 as this is for the previous
+                    // sample
+                    m_missing_samples.push_back(m_sample_i - 1);
                 }
             }
             first = false;
@@ -354,7 +355,7 @@ private:
             m_score[m_sample_i] += value * geno;
             if (!exclude) m_total_prob += value * geno;
             m_entry_i++;
-            m_sum+= value;
+            m_sum += value;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
@@ -378,8 +379,10 @@ private:
                 valid = false;
             }
             size_t i_missing = 0;
-            std::sort( m_missing_samples.begin(), m_missing_samples.end() );
-            m_missing_samples.erase( std::unique( m_missing_samples.begin(), m_missing_samples.end() ), m_missing_samples.end() );
+            std::sort(m_missing_samples.begin(), m_missing_samples.end());
+            m_missing_samples.erase(
+                std::unique(m_missing_samples.begin(), m_missing_samples.end()),
+                m_missing_samples.end());
             size_t num_miss = m_missing_samples.size();
             double mean =
                 m_total_prob
@@ -485,8 +488,8 @@ private:
         void set_value(uint32_t, double value)
         {
             if (value > hard_prob && value >= m_hard_threshold) {
-                //geno = 2 - m_entry_i;
-            	geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                // geno = 2 - m_entry_i;
+                geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
             }
             m_entry_i++;
         }

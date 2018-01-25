@@ -1006,7 +1006,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
             cur_perm = m_num_perm - processed;
         }
         cur_remain--;
-        if(cur_perm <1) break;
+        if (cur_perm < 1) break;
         g_permuted_pheno.resize(cur_perm);
         for (size_t p = 0; p < cur_perm; ++p) {
             perm.setIdentity();
@@ -1015,6 +1015,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
                          rand_gen);
             g_permuted_pheno[p] = perm * m_phenotype; // permute columns
         }
+
         // if want to use windows, we need to ditch the use of std::thread
         // now multithread it and get the corresponding p-values
 
@@ -1024,8 +1025,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         size_t start = 0;
         g_perm_range.clear();
 
-        uintptr_t ulii;
-        for (ulii = 0; ulii < n_thread; ulii++) {
+        for (uintptr_t ulii = 0; ulii < n_thread; ulii++) {
             size_t ending = start + job_size + (remain > 0);
             ending = (ending > cur_perm) ? cur_perm : ending;
             perm_info cur_info;
@@ -1036,6 +1036,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
             g_perm_range[ulii] = cur_info;
             start = ending;
             remain--;
+
 #ifdef _WIN32
             pthread_store[ulii] = (HANDLE) _beginthreadex(
                 nullptr, 4096, thread_perm, (void*) ulii, 0, nullptr);
@@ -1090,6 +1091,7 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
     size_t n = m_independent_variables.rows();
     std::vector<double> temp_store;
     temp_store.reserve(end - start);
+
     for (size_t i = start; i < end; ++i) {
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (g_logit_perm) {
@@ -1099,8 +1101,7 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
         }
         else
         {
-
-        		Eigen::VectorXd beta =
+            Eigen::VectorXd beta =
                 g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
             Eigen::MatrixXd fitted = m_independent_variables * beta;
 

@@ -85,8 +85,8 @@ public:
         }
         if (perm) {
             // first check for ridiculously large sample size
-            // allow 10 GB here
-            if (CHAR_BIT * sample_ct > 1000000000) {
+            // allow 1 GB here
+            if (CHAR_BIT * sample_ct > 100000000) {
                 m_perm_per_slice = 1;
             }
             else
@@ -95,7 +95,7 @@ public:
                 // equal to c_commander.num_permutation();
 
                 int sample_memory = CHAR_BIT * sample_ct;
-                m_perm_per_slice = 1000000000 / sample_memory;
+                m_perm_per_slice = 100000000 / sample_memory;
                 m_perm_per_slice = (m_perm_per_slice > m_num_perm)
                                        ? m_num_perm
                                        : m_perm_per_slice;

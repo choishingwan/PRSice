@@ -21,6 +21,7 @@
 #include "misc.hpp"
 #include "storage.hpp"
 #include <chrono>
+#include <cmath>
 #include <ctime>
 #include <fstream>
 #include <getopt.h>
@@ -451,6 +452,7 @@ private:
         }
         catch (const std::runtime_error& er)
         {
+            error = true;
             error_message.append("ERROR: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
         }

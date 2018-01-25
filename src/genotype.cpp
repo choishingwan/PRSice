@@ -909,7 +909,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
      * Index of the SNP to start process from and the up bound is the SNP to end
      */
     // sample related constants
-	reporter.report("Start performing clumping");
+    reporter.report("Start performing clumping");
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
@@ -998,12 +998,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     }
 #endif
     if (llxx) {
-         message = std::to_string(llxx) + " MB RAM detected; reserving "
-                 + std::to_string(malloc_size_mb) + " MB for clumping\n";
+        message = std::to_string(llxx) + " MB RAM detected; reserving "
+                  + std::to_string(malloc_size_mb) + " MB for clumping\n";
     }
     else
     {
-         message = "Failed to calculate system memory. Attemping to reserve" + std::to_string(malloc_size_mb) + " MB for clumping\n";
+        message = "Failed to calculate system memory. Attemping to reserve"
+                  + std::to_string(malloc_size_mb) + " MB for clumping\n";
     }
     bigstack_ua =
         (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
@@ -1016,8 +1017,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         bigstack_ua =
             (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
         if (bigstack_ua) {
-             message.append(
-               "Allocated " + std::to_string(malloc_size_mb) + " MB successfully, after larger attempt(s) failed\n");
+            message.append(
+                "Allocated " + std::to_string(malloc_size_mb)
+                + " MB successfully, after larger attempt(s) failed\n");
         }
         else if (malloc_size_mb == BIGSTACK_MIN_MB)
         {
@@ -1025,7 +1027,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         }
     }
     // force 64-byte align to make cache line sensitivity work
-     reporter.report(message);
+    reporter.report(message);
     bigstack_initial_base =
         (unsigned char*) round_up_pow2((uintptr_t) bigstack_ua, CACHELINE);
     uintptr_t* window_data = (uintptr_t*) bigstack_initial_base;
@@ -1054,17 +1056,19 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // skip any SNPs that are clumped
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
-        if (cur_target_snp.clumped() || cur_target_snp.p_value() > clump_info.p_value)
+        if (cur_target_snp.clumped()
+            || cur_target_snp.p_value() > clump_info.p_value)
             continue;
-        auto&& target_ref_index = reference.m_existed_snps_index.find(cur_target_snp.rs());
+        auto&& target_ref_index =
+            reference.m_existed_snps_index.find(cur_target_snp.rs());
         if (target_ref_index == reference.m_existed_snps_index.end()) continue;
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
 
         auto&& ref_snp = reference.m_existed_snps[target_ref_index->second];
-        if (!cur_target_snp.matching(ref_snp.chr(), ref_snp.loc(), ref_snp.ref(),
-                              ref_snp.alt(), flipped))
+        if (!cur_target_snp.matching(ref_snp.chr(), ref_snp.loc(),
+                                     ref_snp.ref(), ref_snp.alt(), flipped))
         {
             mismatch++;
             if (!mismatch_error) {
@@ -1090,12 +1094,15 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // transversing on TARGET
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
             auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped() || pair_target_snp.p_value() > clump_info.p_value)
+            if (pair_target_snp.clumped()
+                || pair_target_snp.p_value() > clump_info.p_value)
                 continue;
             auto&& pair_ref_index =
                 reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end()) continue;
-            auto&& ref_pair_snp = reference.m_existed_snps[pair_ref_index->second];
+            if (pair_ref_index == reference.m_existed_snps_index.end())
+                continue;
+            auto&& ref_pair_snp =
+                reference.m_existed_snps[pair_ref_index->second];
             window_data_ptr[founder_ctv2 - 2] = 0;
             window_data_ptr[founder_ctv2 - 1] = 0;
             if (++cur_window_size == max_window_size) {
@@ -1130,11 +1137,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         window_data_ptr = window_data;
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
             auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped() || pair_target_snp.p_value() > clump_info.p_value)
+            if (pair_target_snp.clumped()
+                || pair_target_snp.p_value() > clump_info.p_value)
                 continue;
             auto&& pair_ref_index =
                 reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end()) continue;
+            if (pair_ref_index == reference.m_existed_snps_index.end())
+                continue;
 
             uint32_t counts[18];
             genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
@@ -1177,12 +1186,15 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
             window_data_ptr = window_data;
             auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped() || pair_target_snp.p_value() > clump_info.p_value)
+            if (pair_target_snp.clumped()
+                || pair_target_snp.p_value() > clump_info.p_value)
                 continue;
             auto&& pair_ref_index =
                 reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end()) continue;
-            auto&& ref_pair_snp = reference.m_existed_snps[pair_ref_index->second];
+            if (pair_ref_index == reference.m_existed_snps_index.end())
+                continue;
+            auto&& ref_pair_snp =
+                reference.m_existed_snps[pair_ref_index->second];
             window_data_ptr[founder_ctv2 - 2] = 0;
             window_data_ptr[founder_ctv2 - 1] = 0;
 
@@ -1231,7 +1243,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             used_thresholds.insert(thres);
             m_thresholds.push_back(thres);
         }
-        if (unique_threshold.find(cur_target_snp.category()) == unique_threshold.end())
+        if (unique_threshold.find(cur_target_snp.category())
+            == unique_threshold.end())
         {
             unique_threshold.insert(cur_target_snp.category());
         }
