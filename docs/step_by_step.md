@@ -112,6 +112,30 @@ coded as missing
 threshold will be treated as missing
 
 ## Phenotype files
+Sometimes, the phenotype information are not stored within the genotype files.
+In this scenario, a phenotype file can be provided to PRSice using the `--pheno-file`
+parameter.
+The first two column of the phenotype file should be the FID and the IID, or if
+`--ignore-fid` is set, the first column should be the IID.
+The rest of the columns can be the phenotype(s).
+
+If the user want to specify a trait within the phenotype file, the file must
+contain a column header and the column name for the trait can be provided using
+`--pheno-col` parameter. Multiple column name can be provided via a comma separated
+list: e.g. `--pheno-col A,B,C,D`. Trait(s) not found within the phenotype file will
+be automatically skipped.
+
+!!! important
+
+    The column name should not contain *space* nor *comma*
+
+!!! note
+
+    When multiple traits are provided, the column name will be appended to
+    the output prefix.
+
+
+
 
 # LD reference
 When your target sample is small (e.g. < 500 samples), you might want to use an external reference panel
