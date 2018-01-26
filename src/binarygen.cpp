@@ -80,11 +80,14 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             std::vector<std::string> token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
-            std::string header_test =token[0];
-            std::transform(header_test.begin(), header_test.end(), header_test.begin(), ::toupper);
-            if(header_test.compare("FID")==0 || (header_test.compare("IID")==0 && m_ignore_fid)){
-            	// this is the header, skip
-            	continue;
+            std::string header_test = token[0];
+            std::transform(header_test.begin(), header_test.end(),
+                           header_test.begin(), ::toupper);
+            if (header_test.compare("FID") == 0
+                || (header_test.compare("IID") == 0 && m_ignore_fid))
+            {
+                // this is the header, skip
+                continue;
             }
             if (token.size()
                 < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
@@ -361,8 +364,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
 
 
             if (i_snp % 1000 == 0) {
-                fprintf(stderr, "\r%zuK SNPs processed in %s\r",
-                		i_snp / 1000, bgen_name.c_str());
+                fprintf(stderr, "\r%zuK SNPs processed in %s\r", i_snp / 1000,
+                        bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
             std::string allele;
@@ -436,7 +439,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                     && m_snp_selection_list.find(RSID)
                            != m_snp_selection_list.end()))
             {
-            	user_exclude=true;
+                user_exclude = true;
                 exclude_snp = true;
             }
 
@@ -448,8 +451,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 m_num_ambig++;
                 if (!m_keep_ambig) exclude_snp = true;
             }
-            if(!user_exclude){
-            	duplicate_check_list.insert(RSID);
+            if (!user_exclude) {
+                duplicate_check_list.insert(RSID);
             }
             std::vector<genfile::byte_t> buffer1;
             std::vector<genfile::byte_t>* buffer2 = nullptr;

@@ -110,15 +110,15 @@ int main(int argc, char* argv[])
                                          commander.ld_remove_file(), true,
                                          reporter);
             // only load SNPs that can be found in the target file index
-            reference_file->load_snps(
-                commander.out(), target_file->index(), commander.ld_geno(),
-                commander.ld_maf(), commander.ld_info(), commander.ld_hard_threshold(),
-                commander.hard_coded(), true, reporter);
+            reference_file->load_snps(commander.out(), target_file->index(),
+                                      commander.ld_geno(), commander.ld_maf(),
+                                      commander.ld_info(),
+                                      commander.ld_hard_threshold(),
+                                      commander.hard_coded(), true, reporter);
         }
         // get the sort by p inex vector for target
         // so that we can still find out the relative coordinates of each SNPs
-        if (!target_file->sort_by_p())
-        {
+        if (!target_file->sort_by_p()) {
             std::string error_message = "No SNPs left for PRSice processing";
             reporter.report(error_message);
             return -1;

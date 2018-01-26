@@ -31,6 +31,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string temp_string = "";
     size_t temp_int = 0;
     size_t max_thread = 0;
+    double dummy_double = 0.0;
+    double intpart;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
@@ -86,8 +88,15 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                     error, command);
             // Long opts for misc
             else if (command.compare("perm") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 misc.permutation, dummy, error, command);
+            {
+                // use double to account for scientific?
+                set_numeric<double>(optarg, message_store, error_messages,
+                                    dummy_double, dummy, error, command);
+                if (!error) {
+                    std::modf(dummy_double, &intpart);
+                    misc.permutation = intpart;
+                }
+            }
             // Long opts for reference_panel
             else if (command.compare("ld-keep") == 0)
                 set_string(optarg, message_store, reference_panel.keep_file,
@@ -435,8 +444,10 @@ Commander::Commander()
     misc.logit_perm = false;
     misc.permutation = 0;
     misc.print_snp = false;
+    misc.provided_seed = false;
     misc.thread = 1;
     misc.seed = 0;
+
 
     reference_panel.file_name = "";
     reference_panel.type = "bed";
@@ -1444,11 +1455,13 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
                 error_message.append("ERROR: LD hard threshold must be larger "
                                      "than 0 and smaller than 1!\n");
             }
-            else if(!reference_panel.file_name.empty())
+            else if (!reference_panel.file_name.empty())
             {
                 message["ld-hard-thres"] =
                     std::to_string(reference_snp_filtering.hard_threshold);
-            }else{
+            }
+            else
+            {
                 message["hard-thres"] =
                     std::to_string(prs_snp_filtering.hard_threshold);
             }
@@ -1783,9 +1796,9 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         message["upper"] = std::to_string(p_thresholds.upper);
     }
     std::sort(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end());
-        p_thresholds.barlevel.erase(
-            std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
-            p_thresholds.barlevel.end());
+    p_thresholds.barlevel.erase(
+        std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
+        p_thresholds.barlevel.end());
     std::string bar_message = "";
     for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
