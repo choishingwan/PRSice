@@ -74,12 +74,33 @@ Below are some other parameters available for PRSice
         most significant threshold
         2. Repeat PRSice analysis *N* times with permuted phenotype. Count the
         number of time where the p-value of the most significant threshold for
-        the permuted 
+        the permuted
 
-"    --seed          | -s    Seed used for permutation. If not provided,\n"
-"                            system time will be used as seed. When same\n"
-"                            seed and same input is provided, same result\n"
-"                            can be generated\n"
-"    --print-snp             Print all SNPs used to construct the best PRS\n"
-"    --thread        | -n    Number of thread use\n"
-"    --help          | -h    Display this help message\n";
+- `--seed` | `-s`
+
+    Seed used for permutation. If not provided,
+    system time will be used as seed. This will
+    allow the same results to be generated when
+    the same seed and input is used
+
+- `--print-snp`
+
+    Print all SNPs used to construct the best PRS
+
+- `--thread` | `-n`
+
+    Number of thread use
+
+    !!! tip
+
+        You can ask for maximum number of thread by using `--thread max`
+
+    !!! note
+
+        Multi-threading will actually be slower if you require more thread than
+        what is available. To avoid this, PRSice will limit the maximum number
+        of thread used to the number of core available on the system as detected by PRSice.
+
+- `--help` | `-h`
+
+    Display the help messages
