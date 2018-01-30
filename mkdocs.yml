@@ -10,7 +10,7 @@ pages:
     - PRSet:
         - Quick Start: quick_start_prset.md
         - Detailed Guide: prset_detail.md
-        
+
     - Details of PRSice/PRSet:
         - General Usages: general.md
         - Base File: base_file.md

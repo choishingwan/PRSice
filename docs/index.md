@@ -1,6 +1,6 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! settings "SGDP Summer School Registration is now open!"
+!!! important "SGDP Summer School Registration is now open!"
 
     [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
 
@@ -49,7 +49,7 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
 !!! Note
 
     PRSice can automatically download all required packages, even without administrative right.
-    You can specify the install directory using :code:`--dir`. For example
+    You can specify the install directory using `--dir`. For example
 
     ```
         Rscript PRSice.R --dir .
@@ -63,10 +63,13 @@ For Quick start use, please refer to [Quick Start](quick_start.md)
 !!! tip
 
     You can also type
+
     ```
         ./PRSice
     ```
+
     to view all available parameters unrelated to plotting, or
+
     ```
         Rscript PRSice.R -h
     ```
@@ -86,7 +89,7 @@ You can find all command line options of PRSice in [[this page | Command line op
 ## Citation
 If you use PRSice, then please cite:
 
-!!! quote
+!!! important "Citation"
 
     PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
 
