@@ -1,7 +1,20 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! Note
-    We are holding a Summer School on Polygenic Risk Score in Social, Genetics and Developmental Psychiatry Centre
+!!! important "SGDP Summer School Registration is now open!"
+
+    [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
+
+    <h2>The 19th SGDP Summer School will be taking place 18th to 21st June 2018</h2>
+
+    This years Summer School will be comprised of two new courses:
+
+    - **E-Mental Health: digital technologies for care in the modern age _(lead by  Dr. Richard Stott)_**
+        - *Monday 18th June - Wednesday 20th June 2018*
+    - **Polygenic Risk Score Analysis _(lead by Dr. Paul O'Reily)_**
+        - *Thursday 21st June 2018*
+
+    You can find more information [here](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
+
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
 Some of the features include:
@@ -19,9 +32,9 @@ Some of the features include:
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_20180201.zip) |
-| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_20180201.zip) |
-| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_20180201.zip) |
+| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_perm_fix.zip) |
+| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_perm_fix.zip) |
+| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_perm_fix.zip) |
 
 !!! Note
 
@@ -36,7 +49,7 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
 !!! Note
 
     PRSice can automatically download all required packages, even without administrative right.
-    You can specify the install directory using :code:`--dir`. For example
+    You can specify the install directory using `--dir`. For example
 
     ```
         Rscript PRSice.R --dir .
@@ -52,10 +65,16 @@ For Quick start use, please refer to [Quick Start](quick_start.md)
     You can also type
 
     ```
+        ./PRSice
+    ```
+
+    to view all available parameters unrelated to plotting, or
+
+    ```
         Rscript PRSice.R -h
     ```
 
-    to view all available parameters
+    to view all available parameters, including those used for plotting
 
 # Output of Results
 You can see the expected output of PRSice [here](step_by_step.md#output-of-results)
@@ -70,7 +89,7 @@ You can find all command line options of PRSice in [[this page | Command line op
 ## Citation
 If you use PRSice, then please cite:
 
-!!! quote
+!!! important "Citation"
 
     PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
 
