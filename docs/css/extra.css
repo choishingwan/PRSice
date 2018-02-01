@@ -118,3 +118,19 @@ img[src*='#center'] {
     display: block;
     margin: auto;
 }
+
+
+.admonition.announcement{
+    padding: 12px;
+    margin: -12px -12px 0px -12px;
+    background-color: rgba(98, 0, 234, .1);
+}
+.admonition.announcement .admonition-title{
+    border-bottom: .1rem solid rgba(98, 0, 234, .1);
+    background-color: #6200ea;
+}
+
+.admonition.announcement .admonition-title:before{
+    content: "\f0a1";
+    font-family: 'FontAwesome';
+}

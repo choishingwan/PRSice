@@ -1,6 +1,6 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! important "SGDP Summer School Registration is now open!"
+!!! announcement "SGDP Summer School Registration is now open!"
 
     [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
 
