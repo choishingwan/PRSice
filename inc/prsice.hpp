@@ -265,7 +265,7 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
-    void reset_independent();
+
 };
 
 #endif // PRSICE_H

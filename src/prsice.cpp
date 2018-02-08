@@ -751,17 +751,11 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     reporter.report(message);
 }
 
-void PRSice::reset_independent(){
-	for(size_t i = 0; i < g_independent_variables.rows(); ++i){
-		g_independent_variables(i,1) = 0.0;
-	}
-}
 void PRSice::run_prsice(const Commander& c_commander,
                         const std::string& region_name,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-	reset_independent();
 	target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
