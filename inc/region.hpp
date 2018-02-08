@@ -17,6 +17,7 @@
 #ifndef REGION_H
 #define REGION_H
 
+#include "gzstream.h"
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "reporter.hpp"
