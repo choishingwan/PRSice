@@ -32,9 +32,9 @@ Some of the features include:
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_20180201.zip) |
-| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_20180201.zip) |
-| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_20180201.zip) |
+| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_20180208.zip) |
+| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_20180208.zip) |
+| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_20180208.zip) |
 
 !!! Note
 
