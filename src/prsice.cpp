@@ -21,7 +21,7 @@
 // But I don't want to pass a void package to the function containing all this
 // that'd be a nigtmare to backware convert them back...
 bool PRSice::g_logit_perm = false;
-Eigen::MatrixXd PRSice::m_independent_variables;
+Eigen::MatrixXd PRSice::g_independent_variables;
 std::vector<double> PRSice::g_perm_result;
 std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
 Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
@@ -122,7 +122,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
 {
     m_null_r2 = 0.0;
     m_phenotype = Eigen::VectorXd::Zero(0);
-    m_independent_variables.resize(0, 0);
+    g_independent_variables.resize(0, 0);
     m_sample_with_phenotypes.clear();
 
 
@@ -146,16 +146,16 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     // get the null r2
     double null_r2_adjust = 0.0;
     int n_thread = c_commander.thread();
-    if (m_independent_variables.cols() > 2 && !no_regress) {
-        assert(m_independent_variables.rows() == m_phenotype.rows());
+    if (g_independent_variables.cols() > 2 && !no_regress) {
+        assert(g_independent_variables.rows() == m_phenotype.rows());
         if (c_commander.is_binary(pheno_index)) {
             // ignore the first column
             // this is ok as both the first column (intercept) and the
             // second column (PRS) is currently 1
             Regression::glm(m_phenotype,
-                            m_independent_variables.topRightCorner(
-                                m_independent_variables.rows(),
-                                m_independent_variables.cols() - 1),
+                            g_independent_variables.topRightCorner(
+                                g_independent_variables.rows(),
+                                g_independent_variables.cols() - 1),
                             m_null_p, m_null_r2, m_null_coeff, m_null_se, 25,
                             n_thread, true);
         }
@@ -164,9 +164,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
             // ignore the first column
             Regression::linear_regression(
                 m_phenotype,
-                m_independent_variables.topRightCorner(
-                    m_independent_variables.rows(),
-                    m_independent_variables.cols() - 1),
+                g_independent_variables.topRightCorner(
+                    g_independent_variables.rows(),
+                    g_independent_variables.cols() - 1),
                 m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se,
                 n_thread, true);
         }
@@ -593,7 +593,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     size_t num_sample = m_sample_with_phenotypes.size();
     if (c_cov_file.empty()) {
         // if no covariates, just return a matrix of 1
-        m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
+        g_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
         return;
     }
     // obtain the index of each covariate
@@ -611,7 +611,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // std::vector<std::unordered_map<std::string, int>> factor_levels;
     // check_factor_cov( c_cov_file,c_cov_header, cov_index, factor_levels);
 
-    m_independent_variables =
+    g_independent_variables =
         Eigen::MatrixXd::Ones(num_sample, cov_index.size() + 2);
     bool valid = true;
     size_t num_valid = 0;
@@ -647,7 +647,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
                 if (token[cov_index[i_cov]].compare("NA") == 0) {
                     valid = false;
-                    m_independent_variables(index, i_cov + 2) = 0;
+                    g_independent_variables(index, i_cov + 2) = 0;
                     missing_count[i_cov]++;
                 }
                 else
@@ -656,7 +656,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     {
                         double temp =
                             misc::convert<double>(token[cov_index[i_cov]]);
-                        m_independent_variables(index, i_cov + 2) =
+                        g_independent_variables(index, i_cov + 2) =
                             temp; // + 2 because first line = intercept, second
                                   // line = PRS
                     }
@@ -664,7 +664,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     {
                         valid = false;
                         // place holder as 0, will remove it later
-                        m_independent_variables(index, i_cov + 2) = 0;
+                        g_independent_variables(index, i_cov + 2) = 0;
                         missing_count[i_cov]++;
                     }
                 }
@@ -725,7 +725,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                           return std::get<1>(t1) < std::get<1>(t2);
                   });
 
-        // update the m_phenotype and m_independent
+        // update the m_phenotype and g_independent
         m_sample_with_phenotypes.clear();
         for (size_t cur_index = 0; cur_index < valid_sample_index.size();
              ++cur_index)
@@ -736,13 +736,13 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             if (original_index != cur_index) {
                 m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
                 for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                    m_independent_variables(cur_index, i_cov + 2) =
-                        m_independent_variables(original_index, i_cov + 2);
+                    g_independent_variables(cur_index, i_cov + 2) =
+                        g_independent_variables(original_index, i_cov + 2);
                 }
             }
         }
-        m_independent_variables.conservativeResize(
-            valid_sample_index.size(), m_independent_variables.cols());
+        g_independent_variables.conservativeResize(
+            valid_sample_index.size(), g_independent_variables.cols());
         m_phenotype.conservativeResize(valid_sample_index.size(), 1);
     }
     message = "After reading the covariate file, "
@@ -751,12 +751,18 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     reporter.report(message);
 }
 
-
+void PRSice::reset_independent(){
+	for(size_t i = 0; i < g_independent_variables.rows(); ++i){
+		g_independent_variables(i,1) = 0.0;
+	}
+}
 void PRSice::run_prsice(const Commander& c_commander,
                         const std::string& region_name,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
+	reset_independent();
+	target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
@@ -890,7 +896,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         if (m_sample_with_phenotypes.find(sample)
             != m_sample_with_phenotypes.end())
         {
-            m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+            g_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
                 target.calculate_score(m_score, sample_id);
         }
     }
@@ -899,7 +905,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     if (m_target_binary[pheno_index]) {
         try
         {
-            Regression::glm(m_phenotype, m_independent_variables, p_value, r2,
+            Regression::glm(m_phenotype, g_independent_variables, p_value, r2,
                             coefficient, se, 25, thread, true);
         }
         catch (const std::runtime_error& error)
@@ -910,7 +916,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
             fprintf(stderr, "       Please send me the DEBUG files\n");
             std::ofstream debug;
             debug.open("DEBUG");
-            debug << m_independent_variables << std::endl;
+            debug << g_independent_variables << std::endl;
             debug.close();
             debug.open("DEBUG.y");
             debug << m_phenotype << std::endl;
@@ -920,7 +926,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     }
     else
     {
-        Regression::linear_regression(m_phenotype, m_independent_variables,
+        Regression::linear_regression(m_phenotype, g_independent_variables,
                                       p_value, r2, r2_adjust, coefficient, se,
                                       thread, true);
     }
@@ -977,13 +983,13 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         if (m_sample_with_phenotypes.find(sample)
             != m_sample_with_phenotypes.end())
         {
-            m_independent_variables(m_sample_with_phenotypes[sample], 1) =
+            g_independent_variables(m_sample_with_phenotypes[sample], 1) =
                 target.calculate_score(m_score, sample_id);
         }
     }
     int rank = 0;
     if (!logit_perm) {
-        g_perm_pre_decomposed.compute(m_independent_variables);
+        g_perm_pre_decomposed.compute(g_independent_variables);
         rank = g_perm_pre_decomposed.rank();
         Eigen::MatrixXd R = g_perm_pre_decomposed.matrixR()
                                 .topLeftCorner(rank, rank)
@@ -1088,7 +1094,7 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
     size_t processed = pi.processed;
     size_t rank = pi.rank;
     bool intercept = true;
-    size_t n = m_independent_variables.rows();
+    size_t n = g_independent_variables.rows();
     std::vector<double> temp_store;
     temp_store.reserve(end - start);
 
@@ -1096,14 +1102,14 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (g_logit_perm) {
             double r2, coefficient, se;
-            Regression::glm(g_permuted_pheno[i], m_independent_variables, obs_p,
+            Regression::glm(g_permuted_pheno[i], g_independent_variables, obs_p,
                             r2, coefficient, se, 25, 1, true);
         }
         else
         {
             Eigen::VectorXd beta =
                 g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
-            Eigen::MatrixXd fitted = m_independent_variables * beta;
+            Eigen::MatrixXd fitted = g_independent_variables * beta;
 
             Eigen::VectorXd residual = g_permuted_pheno[i] - fitted;
             int rdf = n - rank;
@@ -1307,7 +1313,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
 
 void PRSice::summarize(const Commander& commander, Reporter& reporter)
 {
-    bool prev_out;
+    bool prev_out=false;
 
     const bool perm = (commander.permutation() != 0);
     std::string message = "There are ";

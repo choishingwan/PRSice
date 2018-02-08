@@ -234,7 +234,7 @@ private:
         size_t rank;
     };
 
-    static Eigen::MatrixXd m_independent_variables;
+    static Eigen::MatrixXd g_independent_variables;
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
@@ -265,6 +265,7 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
+    void reset_independent();
 };
 
 #endif // PRSICE_H

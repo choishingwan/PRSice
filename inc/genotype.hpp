@@ -191,6 +191,12 @@ public:
         return score;
     }
 
+    void reset_sample_prs(){
+    	for(auto&& sample: m_sample_names){
+    		sample.prs = 0.0;
+    		sample.num_snp = 0.0;
+    	}
+    };
 protected:
     // variable storages
     // vector storing all the genotype files
