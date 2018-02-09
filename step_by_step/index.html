@@ -95,6 +95,9 @@
     <li class="toctree-l3"><a href="#clumping">Clumping</a></li>
     
 
+    <li class="toctree-l3"><a href="#prs-calculation">PRS calculation</a></li>
+    
+
     <li class="toctree-l3"><a href="#output-of-results">Output of Results</a></li>
     
         <ul>
@@ -309,7 +312,8 @@ On the other hand, if you are using another form of output, then you can provide
 <code>--info-base &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--maf-base &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> to filter
 SNPs based on their INFO score and MAF respectively.</p>
 <p>For binary trait base file, you can also filter the MAF according the the case and control separately using</p>
-<pre class="codehilite"><code>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;</code></pre>
+<div class="codehilite"><pre><span></span>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
+</pre></div>
 
 
 <p>By default, PRSice will look for the following column names automatically from your base file header if <code>--index</code> was not provided:</p>
@@ -325,7 +329,8 @@ PRSice will ignore any columns that were not found in your file (e.g. If you spe
 <p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).</p>
 <p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
 <p>If you want to use a <strong>.fam</strong> file with a different prefix from the <strong>.bed</strong> and <strong>.bim</strong> file, you can do</p>
-<pre class="codehilite"><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;</code></pre>
+<div class="codehilite"><pre><span></span>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
+</pre></div>
 
 
 <div class="admonition warning">
@@ -339,7 +344,8 @@ PRSice will ignore any columns that were not found in your file (e.g. If you spe
 <p>If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
 PRSice will automatically substitute # with 1-22</p>
 <p>i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
-<pre class="codehilite"><code>--target chr#</code></pre>
+<div class="codehilite"><pre><span></span>--target chr#
+</pre></div>
 
 
 <div class="admonition note">
@@ -350,7 +356,8 @@ PRSice will automatically substitute # with 1-22</p>
 <p>We also support BGEN v1.2. To specify a BGEN file, you simply add <code>--type bgen</code> or <code>--ld-type bgen</code> to your PRSice command</p>
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
 a phenotype file (<code>--pheno-file</code>) for PRSice to run. Or you can provide a sample file using</p>
-<pre class="codehilite"><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;</code></pre>
+<div class="codehilite"><pre><span></span>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
+</pre></div>
 
 
 <div class="admonition note">
@@ -389,7 +396,8 @@ the output prefix.</p>
 <p>When your target sample is small (e.g. &lt; 500 samples), you might want to use an external reference panel
 to improve the LD estimation for clumping.</p>
 <p>The LD reference follows the same notion as the target dataset. Simply use</p>
-<pre class="codehilite"><code>--ld &lt;LD refernce&gt;</code></pre>
+<div class="codehilite"><pre><span></span>--ld &lt;LD refernce&gt;
+</pre></div>
 
 
 <p>to specify your LD reference panel file and <code>--ld-type</code> to specify the format</p>
@@ -412,6 +420,61 @@ We do not differentiate case and control when we calculate the r<sup>2</sup>.
 You can force r<sup>2</sup> calculation in control using the <code>--ld</code> and <code>--ld-keep</code>/<code>--ld-remove</code> options</p>
 <p>You can change the value using <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
 Or you can disable clumping altogether using <code>--no-clump</code></p>
+<h1 id="prs-calculation">PRS calculation<a class="headerlink" href="#prs-calculation" title="Permanent link">&para;</a></h1>
+<p>PRSice allow different genetic models to be specified (e.g. add, dom, het, rec), and the polygenic score
+of each of those are calculated differently</p>
+<p>Assuming <span class="arithmatex">\(S\)</span> is the summary statistic for the effective allele and <span class="arithmatex">\(G\)</span> is the number
+of the effective allele observed, then the main difference between the models is
+how we code the genotype:</p>
+<p>For additive model (add)</p>
+<div class="arithmatex">\[
+G = G
+\]</div>
+<p>For dominant model (with respect to the effective allele of the base file)</p>
+<div class="arithmatex">\[
+    G =
+  \begin{cases}
+    0 &amp; \text{if $G$ = 0} \\
+    1 &amp; \text{otherwise}
+  \end{cases}
+\]</div>
+<p>For recessive model (with respect to the effective allele of the base file)</p>
+<div class="arithmatex">\[
+    G =
+  \begin{cases}
+    1 &amp; \text{if $G$ = 2} \\
+    0 &amp; \text{otherwise}
+  \end{cases}
+\]</div>
+<p>For heterozygous model</p>
+<div class="arithmatex">\[
+    G =
+  \begin{cases}
+    1 &amp; \text{if $G$ = 1} \\
+    0 &amp; \text{otherwise}
+  \end{cases}
+\]</div>
+<p>Then depending on the <code>--score</code> option, the PRS is calculated as (assuming <span class="arithmatex">\(M\)</span> is the number of SNPs)</p>
+<p>For <code>--score avg</code> (default)
+$$
+    PRS = \sum{\frac{S\times G}{2}}\div M
+$$</p>
+<p>For <code>--score sum</code>
+$$
+    PRS = \sum{\frac{S\times G}{2}}
+$$</p>
+<p>For <code>--score std</code>
+$$
+    PRS = (\sum{\frac{S\times G}{2}} - \text{Mean}(PRS))\div \text{SD}(PRS)
+$$</p>
+<p>Sometimes, sample can have missing genotype. We use the <code>--missing</code> option to determine how
+PRSice handle the missingness.</p>
+<p>When not specified, the Minor Allele Frequency in the target sample will be used as the
+genotype as the sample with missing genotype.</p>
+<p>If <code>--missing NO_MEAN_IMPUTATION</code> is set, the SNP for the missing
+samples will be excluded.
+Alternatively, if <code>--missing CENTER</code> is set, all PRS calculated will be minus by
+the MAF of the SNP (therefore, missing samples will have PRS of 0).</p>
 <h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
 <h2 id="figures">Figures<a class="headerlink" href="#figures" title="Permanent link">&para;</a></h2>
 <div class="admonition note">
@@ -424,18 +487,40 @@ An example bar plot:</p>
 <p><img alt="Bar plot" src="../img/BARPLOT.png" /></p>
 <p>If <code>--fastscore</code> is not specified, a high-resolution plot named <em>[Name]_HIGH-RES_PLOT_[date].png</em> will be generated.</p>
 <p>This plot present the model fit of PRS calculated at all P-value thresholds.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The model fit here is the R2 of the Full model - the R2 of the Null model</p>
+<p>Assuming Sex is used as the covariate in the PRSice calculation, then the
+R2 reported here, is the R2 of <span class="arithmatex">\(Pheno\sim PRS+Sex\)</span> - R2 of <span class="arithmatex">\(Pheno\sim Sex\)</span></p>
+</div>
 <p>A green line connects points showing the model fit at the broad P-value thresholds used in the corresponding bar plot are also added.
 An example high-resolution plot:</p>
 <p><img alt="High Resolution Plot" src="../img/HIGH-RES_PLOT.png" /></p>
 <p>If <code>--quantile [number of quantile]</code> is specified, a quantile plot named [Name]_QUANTILE_PLOT_[date].png will be generated.
-The quantile plot provide an illustration of the effect of increaseing PRS on predcited risk of phenotype.
+The quantile plot provide an illustration of the effect of increasing PRS on predicted risk of phenotype.
 An example quantile plot:</p>
 <p><img alt="Quantile Plot" src="../img/QUANTILES_PLOT.png" /></p>
+<p>Specifically, the quantile plot is generated by the following steps</p>
+<ol>
+<li>Regress out the covariate from the phenotype (if any) and use the standardized residual from
+this regression to represent the phenotype</li>
+<li>Distribute samples into user specified number of quantiles</li>
+<li>Treat the quantiles as a factor, where the <code>--quant-ref</code> is the base factor</li>
+<li>Perform regression with <span class="arithmatex">\(Pheno \sim Quantile\)</span></li>
+<li>Set the reference quantile to have coefficient of 1 (if binary) or 0 (otherwise)</li>
+</ol>
+<p>The point of each quantile is their odds when compared to the reference quantile</p>
 <h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
 <p>A file containing the PRS model fit across thresholds is named <em>[Name].prsice</em>; this is stored as</p>
 <blockquote>
 <p>Threshold, R2, P-value, Coefficient, Stndard Deviation and Number of SNPs at this threshold</p>
 </blockquote>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The model fit here is the R2 of the Full model - the R2 of the Null model</p>
+<p>Assuming Sex is used as the covariate in the PRSice calculation, then the
+R2 reported here, is the R2 of <span class="arithmatex">\(Pheno\sim PRS+Sex\)</span> - R2 of <span class="arithmatex">\(Pheno\sim Sex\)</span></p>
+</div>
 <h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
 <p>A file containing PRS for each individual at the best-fit PRS named</p>
 <p><em>[Name].best</em> is provide.
@@ -517,6 +602,7 @@ used for the analysis and information regarding filtering, field selected etc.</
 </div>
     <script>var base_url = '..';</script>
     <script src="../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
       <script src="../search/require.js"></script>
       <script src="../search/search.js"></script>
 

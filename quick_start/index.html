@@ -239,14 +239,15 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 <p>You should first perform quality control on your genotype file before passing it to PRSice.
 You can do that using PLINK. A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of your target binary file)</p>
 </div>
-<pre class="codehilite"><code class="language-bash">plink --bfile ($target) \
-    --maf 0.05 \
-    --mind 0.1 \
-    --geno 0.1 \
-    --hwe 1e-6 \
-    --make-just-bim \
-    --make-just-fam \
-    --out ($target).qc</code></pre>
+<div class="codehilite"><pre><span></span>plink --bfile <span class="o">(</span><span class="nv">$target</span><span class="o">)</span> <span class="se">\</span>
+    --maf <span class="m">0</span>.05 <span class="se">\</span>
+    --mind <span class="m">0</span>.1 <span class="se">\</span>
+    --geno <span class="m">0</span>.1 <span class="se">\</span>
+    --hwe 1e-6 <span class="se">\</span>
+    --make-just-bim <span class="se">\</span>
+    --make-just-fam <span class="se">\</span>
+    --out <span class="o">(</span><span class="nv">$target</span><span class="o">)</span>.qc
+</pre></div>
 
 
 <p>Then you can add <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> to PRSice command to filter out
@@ -260,24 +261,26 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 </div>
 <h2 id="binary-traits">Binary Traits<a class="headerlink" href="#binary-traits" title="Permanent link">&para;</a></h2>
 <p>For binary traits, you can use the following command</p>
-<pre class="codehilite"><code class="language-bash">Rscript PRSice.R --dir . \
-    --prsice ./PRSice \
-    --base TOY_BASE_GWAS.assoc \
-    --target TOY_TARGET_DATA \
-    --thread 1 \
-    --stat OR \
-    --binary-target T</code></pre>
+<div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
+    --prsice ./PRSice <span class="se">\</span>
+    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
+    --target TOY_TARGET_DATA <span class="se">\</span>
+    --thread <span class="m">1</span> <span class="se">\</span>
+<span class="hll">    --stat OR <span class="se">\</span>
+</span><span class="hll">    --binary-target T
+</span></pre></div>
 
 
 <h2 id="quantitative-traits">Quantitative Traits<a class="headerlink" href="#quantitative-traits" title="Permanent link">&para;</a></h2>
 <p>For quantitative traits, you can use</p>
-<pre class="codehilite"><code class="language-bash">Rscript PRSice.R --dir . \
-    --prsice ./PRSice \
-    --base TOY_BASE_GWAS.assoc \
-    --target TOY_TARGET_DATA \
-    --thread 1 \
-    --stat BETA \
-    --binary-target F</code></pre>
+<div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
+    --prsice ./PRSice <span class="se">\</span>
+    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
+    --target TOY_TARGET_DATA <span class="se">\</span>
+    --thread <span class="m">1</span> <span class="se">\</span>
+<span class="hll">    --stat BETA <span class="se">\</span>
+</span><span class="hll">    --binary-target F
+</span></pre></div>
 
 
 <div class="admonition note">
@@ -335,6 +338,7 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 </div>
     <script>var base_url = '..';</script>
     <script src="../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
       <script src="../search/require.js"></script>
       <script src="../search/search.js"></script>
 
