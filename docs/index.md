@@ -1,12 +1,12 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! announcement "SGDP Summer School Registration is now open!"
+!!! announcement "Our PRS Analyses Summer School is now open!"
 
     [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
 
     <h2>We are holding a Summer School on PRS analyses!!</h2>
 
-    - **[Polygenic Risk Score Analysis](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
+    - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
         - *Thursday 21st June 2018*
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
