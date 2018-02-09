@@ -265,30 +265,28 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and you are working in <code>($HOME)/PRSice</code></p>
 <h2 id="with-msigdb-data">With MSigDB data<a class="headerlink" href="#with-msigdb-data" title="Permanent link">&para;</a></h2>
 <p>Assuming you have <a href="http://software.broadinstitute.org/gsea/msigdb/">downloaded</a> a MSigDB file (<em>set.txt</em>) and a gene gtf file (gene.gtf) from <a href="http://www.ensembl.org/index.html">Ensemble</a>, then you can run PRSet with the following command</p>
-<div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
-    --prsice ./bin/PRSice <span class="se">\</span>
-    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
-    --target TOY_TARGET_DATA <span class="se">\</span>
-    --binary-target T <span class="se">\</span>
-    --thread <span class="m">1</span> <span class="se">\</span>
-<span class="hll">    --gtf gene.gtf <span class="se">\</span>
-</span><span class="hll">    --msigdb set.txt <span class="se">\</span>
-</span><span class="hll">    --multi-plot <span class="m">10</span>
-</span></pre></div>
+<pre class="codehilite"><code class="language-bash">Rscript PRSice.R \
+    --prsice ./bin/PRSice \
+    --base TOY_BASE_GWAS.assoc \
+    --target TOY_TARGET_DATA \
+    --binary-target T \
+    --thread 1 \
+    --gtf gene.gtf \
+    --msigdb set.txt \
+    --multi-plot 10</code></pre>
 
 
 <p>This will perform PRSet analysis and generate the multi-set plot with the top 10 gene sets</p>
 <h2 id="with-bed-files">With Bed Files<a class="headerlink" href="#with-bed-files" title="Permanent link">&para;</a></h2>
 <p>Alternatively, if you have a list of bed files e.g. <em>A.bed,B.bed</em> as an input, you can run PRSet as</p>
-<div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
-    --prsice ./bin/PRSice <span class="se">\</span>
-    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
-    --target TOY_TARGET_DATA <span class="se">\</span>
-    --binary-target T <span class="se">\</span>
-    --thread <span class="m">1</span> <span class="se">\</span>
-<span class="hll">    --bed A.bed,B.bed <span class="se">\</span>
-</span><span class="hll">    --multi-plot <span class="m">10</span>
-</span></pre></div>
+<pre class="codehilite"><code class="language-bash">Rscript PRSice.R \
+    --prsice ./bin/PRSice \
+    --base TOY_BASE_GWAS.assoc \
+    --target TOY_TARGET_DATA \
+    --binary-target T \
+    --thread 1 \
+    --bed A.bed,B.bed \
+    --multi-plot 10</code></pre>
 
 
 <div class="admonition note">

@@ -229,8 +229,7 @@
 <p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).</p>
 <p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
 <p>If you want to use a <strong>.fam</strong> file with a different prefix from the <strong>.bed</strong> and <strong>.bim</strong> file, you can do</p>
-<div class="codehilite"><pre><span></span>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
-</pre></div>
+<pre class="codehilite"><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;</code></pre>
 
 
 <div class="admonition warning">
@@ -244,8 +243,7 @@
 <p>If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
 PRSice will automatically substitute # with 1-22</p>
 <p>i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
-<div class="codehilite"><pre><span></span>--target chr#
-</pre></div>
+<pre class="codehilite"><code>--target chr#</code></pre>
 
 
 <div class="admonition note">
@@ -263,8 +261,7 @@ support diploid organisms (and exclude all sex chromosomes), i.e. Mouse</p>
 <p>We also support BGEN v1.2. To specify a BGEN file, you simply add <code>--type bgen</code> or <code>--ld-type bgen</code> to your PRSice command</p>
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
 a phenotype file (<code>--pheno-file</code>) for PRSice to run. Or you can provide a sample file using</p>
-<div class="codehilite"><pre><span></span>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
-</pre></div>
+<pre class="codehilite"><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;</code></pre>
 
 
 <div class="admonition note">
@@ -288,8 +285,7 @@ This file should contain the FID and IID (or just IID if <code>--ignore-fid</cod
 and the target phenotype.</p>
 <p>You can specify the target phenotype name using <code>--pheno-col</code>.
 Multiple phenotype can be provided using a comma separated list. e.g.</p>
-<div class="codehilite"><pre><span></span>  --pheno-col A,B,C
-</pre></div>
+<pre class="codehilite"><code>  --pheno-col A,B,C</code></pre>
 
 
 <p>will cause PRSice to perform the analysis on phenotype A, B and C.</p>
@@ -320,12 +316,11 @@ between <em>0.0</em> and <em>1.0</em>.</p>
     The pseudo code is represented as follow:</p>
 </li>
 </ul>
-<div class="codehilite"><pre><span></span>    m=Mean of expected genotype
+<pre class="codehilite"><code>    m=Mean of expected genotype
     v=variance of expected genotype
     p=m/2
     p_a = 2p(1-p)
-    INFO = v/p_a
-</pre></div>
+    INFO = v/p_a</code></pre>
 
 
 <ul>
