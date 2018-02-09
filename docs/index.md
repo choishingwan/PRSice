@@ -2,8 +2,6 @@
 
 !!! announcement "Our PRS Analyses Summer School is now open!"
 
-    [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
-
     <h2>We are holding a Summer School on PRS analyses!!</h2>
 
     - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
