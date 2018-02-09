@@ -4,17 +4,10 @@
 
     [ ![SGDP Summer School](img/SummerSchool.png#center) ](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
 
-    <h2>The 19th SGDP Summer School will be taking place 18th to 21st June 2018</h2>
+    <h2>We are holding a Summer School on PRS analyses!!</h2>
 
-    This years Summer School will be comprised of two new courses:
-
-    - **E-Mental Health: digital technologies for care in the modern age _(lead by  Dr. Richard Stott)_**
-        - *Monday 18th June - Wednesday 20th June 2018*
-    - **Polygenic Risk Score Analysis _(lead by Dr. Paul O'Reily)_**
+    - **[Polygenic Risk Score Analysis](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
         - *Thursday 21st June 2018*
-
-    You can find more information [here](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx)
-
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
 Some of the features include:
