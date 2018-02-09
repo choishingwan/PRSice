@@ -752,6 +752,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     }
     message.append(std::to_string(m_existed_snps.size())
                    + " total variant(s) included from base file\n\n");
+    if(num_mismatched>0){
+    	message.append("WARNING: Mismatched SNPs detected between base and target!");
+    	message.append("You should check the files are based on the "
+    	                               "same genome build\n");
+    	message.append("Or that can just be InDels\n");
+    }
     reporter.report(message);
     if (m_existed_snps.size() == 0) {
         throw std::runtime_error("Error: No valid variant remaining");
