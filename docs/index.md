@@ -98,7 +98,7 @@ For more details on the authors, see:
 
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
 
-[PRSet](PRSet) is developed and test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
+[PRSet](preset_detail.md) is developed and test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
 
 PRSice-2 and all new functionalities are coded by:
 
