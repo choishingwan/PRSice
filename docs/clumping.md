@@ -10,7 +10,7 @@ lowest p-value will be retained, this prevents the more associated
 SNP being removed from subsequent analysis, thus preserved the signal.
 
 In PRSice, the PLINK clumping algorithm is implemented where
-the r<sup>2</sup> values computed are based on maximum likelihood haplotype
+the r^2^ values computed are based on maximum likelihood haplotype
 frequency estimates.
 In addition, the LD is calculated in all founder samples (ignoring case control
 status).
@@ -34,7 +34,7 @@ status).
 
 - `--clump-r2`
 
-    The r<sup>2</sup> threshold for clumping. Default: 0.1
+    The r^2^ threshold for clumping. Default: 0.1
 
 - `--clump-p`
 
@@ -117,5 +117,5 @@ status).
     as part of the region represented by the clumped
     SNP(s). e.g. `--proxy 0.8` means the index SNP will
     represent region of any clumped SNP(s) that has
-    r<sup>2</sup>=0.8 even if the index SNP does not physically
+    r^2^=0.8 even if the index SNP does not physically
     locate within the region
