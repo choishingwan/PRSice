@@ -115,6 +115,10 @@
                     
     <a class="" href="../quick_start_prset/">Quick Start</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../prset_detail/">Detailed Guide</a>
+                </li>
     </ul>
 	    </li>
           
@@ -351,6 +355,26 @@ coded as missing
 - <code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
 threshold will be treated as missing</p>
 <h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
+<p>Sometimes, the phenotype information are not stored within the genotype files.
+In this scenario, a phenotype file can be provided to PRSice using the <code>--pheno-file</code>
+parameter.
+The first two column of the phenotype file should be the FID and the IID, or if
+<code>--ignore-fid</code> is set, the first column should be the IID.
+The rest of the columns can be the phenotype(s).</p>
+<p>If the user want to specify a trait within the phenotype file, the file must
+contain a column header and the column name for the trait can be provided using
+<code>--pheno-col</code> parameter. Multiple column name can be provided via a comma separated
+list: e.g. <code>--pheno-col A,B,C,D</code>. Trait(s) not found within the phenotype file will
+be automatically skipped.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The column name should not contain <em>space</em> nor <em>comma</em></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When multiple traits are provided, the column name will be appended to
+the output prefix.</p>
+</div>
 <h1 id="ld-reference">LD reference<a class="headerlink" href="#ld-reference" title="Permanent link">&para;</a></h1>
 <p>When your target sample is small (e.g. &lt; 500 samples), you might want to use an external reference panel
 to improve the LD estimation for clumping.</p>

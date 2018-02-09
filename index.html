@@ -112,6 +112,10 @@
                     
     <a class="" href="quick_start_prset/">Quick Start</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="prset_detail/">Detailed Guide</a>
+                </li>
     </ul>
 	    </li>
           
@@ -221,9 +225,15 @@
               
                 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>We are holding a Summer School on Polygenic Risk Score in Social, Genetics and Developmental Psychiatry Centre</p>
+<div class="admonition announcement">
+<p class="admonition-title">Our PRS Analyses Summer School is now open!</p>
+<p><h2>We are holding a Summer School on PRS analyses!!</h2></p>
+<ul>
+<li><strong><a href="https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx">Polygenic Risk Score Analyses</a> <em>(led by Dr. Paul O'Reily, Dr. Sam Choi)</em></strong><ul>
+<li><em>Thursday 21st June 2018</em></li>
+</ul>
+</li>
+</ul>
 </div>
 <p>PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
 Some of the features include:</p>
@@ -249,15 +259,15 @@ Some of the features include:</p>
 <tbody>
 <tr>
 <td>Linux 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_perm_fix.zip">v2.1.0.beta</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_20180208.zip">v2.1.0.beta</a></td>
 </tr>
 <tr>
 <td>OS X 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_perm_fix.zip">v2.1.0.beta</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_20180208.zip">v2.1.0.beta</a></td>
 </tr>
 <tr>
 <td>Windows 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_perm_fix.zip">v2.1.0.beta</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_20180208.zip">v2.1.0.beta</a></td>
 </tr>
 </tbody>
 </table>
@@ -271,7 +281,7 @@ Some of the features include:</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>PRSice can automatically download all required packages, even without administrative right.
-You can specify the install directory using :code:<code>--dir</code>. For example</p>
+You can specify the install directory using <code>--dir</code>. For example</p>
 <p><code>Rscript PRSice.R --dir .</code></p>
 <p>will install all required packages under the local directory</p>
 </div>
@@ -280,8 +290,10 @@ You can specify the install directory using :code:<code>--dir</code>. For exampl
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>You can also type</p>
+<p><code>./PRSice</code></p>
+<p>to view all available parameters unrelated to plotting, or</p>
 <p><code>Rscript PRSice.R -h</code></p>
-<p>to view all available parameters</p>
+<p>to view all available parameters, including those used for plotting</p>
 </div>
 <h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
 <p>You can see the expected output of PRSice <a href="step_by_step/#output-of-results">here</a></p>
@@ -291,8 +303,8 @@ You can specify the install directory using :code:<code>--dir</code>. For exampl
 <p>You can find all command line options of PRSice in [[this page | Command line options of PRSice]]</p>
 <h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">&para;</a></h2>
 <p>If you use PRSice, then please cite:</p>
-<div class="admonition quote">
-<p class="admonition-title">Quote</p>
+<div class="admonition important">
+<p class="admonition-title">Citation</p>
 <p>PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468</p>
 </div>
 <h2 id="support">Support<a class="headerlink" href="#support" title="Permanent link">&para;</a></h2>
@@ -373,5 +385,5 @@ We also utilize the <a href="./eigen.tuxfamily.org">Eigen C++</a> library.</p>
 
 <!--
 MkDocs version : 0.17.2
-Build Date UTC : 2018-01-25 17:02:47
+Build Date UTC : 2018-02-09 13:21:47
 -->

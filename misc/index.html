@@ -76,6 +76,10 @@
                     
     <a class="" href="../quick_start_prset/">Quick Start</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../prset_detail/">Detailed Guide</a>
+                </li>
     </ul>
 	    </li>
           
@@ -269,18 +273,40 @@ operation (with slight difference in implementation for optimum performance)</p>
 most significant threshold</li>
 <li>Repeat PRSice analysis <em>N</em> times with permuted phenotype. Count the
 number of time where the p-value of the most significant threshold for
-the permuted </li>
+the permuted</li>
 </ol>
 </div>
 </li>
+<li>
+<p><code>--seed</code> | <code>-s</code></p>
+<p>Seed used for permutation. If not provided,
+system time will be used as seed. This will
+allow the same results to be generated when
+the same seed and input is used</p>
+</li>
+<li>
+<p><code>--print-snp</code></p>
+<p>Print all SNPs used to construct the best PRS</p>
+</li>
+<li>
+<p><code>--thread</code> | <code>-n</code></p>
+<p>Number of thread use</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can ask for maximum number of thread by using <code>--thread max</code></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Multi-threading will actually be slower if you require more thread than
+what is available. To avoid this, PRSice will limit the maximum number
+of thread used to the number of core available on the system as detected by PRSice.</p>
+</div>
+</li>
+<li>
+<p><code>--help</code> | <code>-h</code></p>
+<p>Display the help messages</p>
+</li>
 </ul>
-<p>"    --seed          | -s    Seed used for permutation. If not provided,\n"
-"                            system time will be used as seed. When same\n"
-"                            seed and same input is provided, same result\n"
-"                            can be generated\n"
-"    --print-snp             Print all SNPs used to construct the best PRS\n"
-"    --thread        | -n    Number of thread use\n"
-"    --help          | -h    Display this help message\n";</p>
               
             </div>
           </div>
