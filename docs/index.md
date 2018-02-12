@@ -6,10 +6,9 @@
 
     - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
         - *Thursday 21st June 2018*
-
-
-
-PRSiceD (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
+<p>
+</p>
+PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
 Some of the features include:
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
@@ -29,9 +28,9 @@ Some of the features include:
 | OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_20180208.zip) |
 | Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_20180208.zip) |
 
-!!! Note
+!!! Caution
 
-    PRSice-2 is currently under open beta
+    PRSice-2 is currently under open beta - please report any errors that you spot to our google group (see below)
 
 ## R Packages Requirements
 
@@ -39,7 +38,7 @@ To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3
 
 [Additional steps](extra_steps.md) might be required for MAC and Window users.
 
-!!! Note
+!!! Download all required R packages 
 
     PRSice can automatically download all required packages, even without administrative right.
     You can specify the install directory using `--dir`. For example
