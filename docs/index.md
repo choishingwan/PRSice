@@ -6,16 +6,9 @@
 
     - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
         - *Thursday 21st June 2018*
-<<<<<<< HEAD
 <p>
 </p>
-PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
-=======
-
-<p></p>
-PRSiceD (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
->>>>>>> 486679113bbd05082ce53036ac86ba9ef0a3769a
-Some of the features include:
+PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
 2. Most predictive PRS identified
