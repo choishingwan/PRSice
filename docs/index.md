@@ -4,7 +4,7 @@
 
     <h2>We are holding a Summer School on PRS analyses!!</h2>
 
-    - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/index.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
+    - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/Course-2-Polygenic-Risk-Score-Analyses.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
         - *Thursday 21st June 2018*
 <p>
 </p>
