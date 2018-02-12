@@ -30,15 +30,15 @@ Some of the features include:
 
 !!! Caution
 
-    PRSice-2 is currently under open beta - please report any errors that you spot to our google group (see below)
+    PRSice-2 is currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
 
 ## R Packages Requirements
 
 To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3+**) installed.
 
-[Additional steps](extra_steps.md) might be required for MAC and Window users.
+[Additional steps](extra_steps.md) might be required for Mac and Windows users.
 
-!!! Download all required R packages 
+!!! Note 
 
     PRSice can automatically download all required packages, even without administrative right.
     You can specify the install directory using `--dir`. For example
