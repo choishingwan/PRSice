@@ -935,8 +935,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     double freqx2;
     double dxx;
     double r2 = -1.0;
-    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(m_founder_ct);
-    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_founder_ct);
+    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.founder_ct());
+    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(reference.founder_ct());
     bool mismatch_error = false;
     bool flipped = false;
     int mismatch = 0;
@@ -944,7 +944,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> index_tots(6);
 
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
-    fill_quatervec_55(m_founder_ct, founder_include2.data());
+    fill_quatervec_55(reference.founder_ct(), founder_include2.data());
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
@@ -1051,7 +1051,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     if (!max_window_size) {
         throw std::runtime_error("ERROR: Not enough memory for clumping!");
     }
-
+    int clumped_count = 0;
+    int not_found = 0;
     double prev_progress = -1.0;
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
@@ -1063,11 +1064,16 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         // skip any SNPs that are clumped
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
         if (cur_target_snp.clumped()
-            || cur_target_snp.p_value() > clump_info.p_value)
+            || cur_target_snp.p_value() > clump_info.p_value){
+        		clumped_count++;
             continue;
+        }
         auto&& target_ref_index =
             reference.m_existed_snps_index.find(cur_target_snp.rs());
-        if (target_ref_index == reference.m_existed_snps_index.end()) continue;
+        if (target_ref_index == reference.m_existed_snps_index.end()){
+        		not_found++;
+        		continue;
+        }
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
@@ -1256,7 +1262,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         }
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
-
+    std::cerr << "Clumped: " << clumped_count << std::endl;
+    std::cerr <<"Not found: " << not_found << std::endl;
     window_data = nullptr;
     window_data_ptr = nullptr;
     delete[] bigstack_ua;

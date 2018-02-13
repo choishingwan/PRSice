@@ -197,6 +197,9 @@ public:
     		sample.num_snp = 0.0;
     	}
     };
+    uintptr_t founder_ct() const{
+    		return m_founder_ct;
+    }
 protected:
     // variable storages
     // vector storing all the genotype files
