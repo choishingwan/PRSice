@@ -467,6 +467,8 @@ Commander::Commander()
     p_thresholds.set_thresholds = false;
 
     prs_calculation.missing_score = "MEAN_IMPUTE";
+    // Change this in next major release
+    // prs_calculation.score_calculation = "sum";
     prs_calculation.score_calculation = "average";
     prs_calculation.model = MODEL::ADDITIVE;
     prs_calculation.no_regress = false;
