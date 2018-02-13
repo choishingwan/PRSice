@@ -756,7 +756,7 @@ void PRSice::run_prsice(const Commander& c_commander,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-	target.reset_sample_prs();
+    target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
@@ -1307,7 +1307,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
 
 void PRSice::summarize(const Commander& commander, Reporter& reporter)
 {
-    bool prev_out=false;
+    bool prev_out = false;
 
     const bool perm = (commander.permutation() != 0);
     std::string message = "There are ";
