@@ -538,7 +538,7 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
 
         auto&& context = m_context_map[m_cur_file];
         PRS_Interpreter setter(&m_sample_names, m_model, m_missing_score,
-                               snp.stat()*2, snp.is_flipped()); # Multiple by ploidy
+                               snp.stat()*2, snp.is_flipped()); // Multiple by ploidy
         // after this, m_sample contain the latest PRS score
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
@@ -575,7 +575,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         uintptr_t* lbptr = genotype.data();
         uii = 0;
         std::vector<size_t> missing_samples;
-        double stat = m_existed_snps[i_snp].stat() * 2; # Multiply by ploidy
+        double stat = m_existed_snps[i_snp].stat() * 2; // Multiply by ploidy
         bool flipped = m_existed_snps[i_snp].is_flipped();
         std::vector<double> genotypes(num_included_samples);
 

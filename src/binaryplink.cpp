@@ -619,7 +619,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         uint32_t ukk;
         std::vector<size_t> missing_samples;
         std::vector<double> sample_genotype(num_included_samples);
-        double stat = m_existed_snps[i_snp].stat() * 2; # Multiply by ploidy
+        double stat = m_existed_snps[i_snp].stat() * 2; // Multiply by ploidy
         bool flipped = m_existed_snps[i_snp].is_flipped();
         uint32_t sample_idx = 0;
 
