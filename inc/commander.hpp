@@ -39,7 +39,7 @@
 #include <windows.h>
 #endif
 const std::string version = "2.1.0.beta";
-const std::string date = "14 Jan 2018";
+const std::string date = "14 Feb 2018";
 class Commander
 {
 public:

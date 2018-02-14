@@ -1066,16 +1066,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
         if (cur_target_snp.clumped()
             || cur_target_snp.p_value() > clump_info.p_value)
-        {
-            clumped_count++;
             continue;
-        }
         auto&& target_ref_index =
             reference.m_existed_snps_index.find(cur_target_snp.rs());
-        if (target_ref_index == reference.m_existed_snps_index.end()) {
-            not_found++;
+        if (target_ref_index == reference.m_existed_snps_index.end())
             continue;
-        }
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
@@ -1264,8 +1259,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         }
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
-    std::cerr << "Clumped: " << clumped_count << std::endl;
-    std::cerr << "Not found: " << not_found << std::endl;
     window_data = nullptr;
     window_data_ptr = nullptr;
     delete[] bigstack_ua;
