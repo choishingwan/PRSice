@@ -63,10 +63,10 @@ Rscript PRSice.R --dir . \
 ```
 
 !!! Note
-    The default of PRSice is based on the header of your base file:
-    1. When *BETA* (case insensitive) is found in the header and `--stat` was not provided, `--beta` will be added to your command, and if `--binary-target` was not provided, `--binary-target F` will be added to your command
+    If you do not provide the PRSice command line with the type of Effect (`--stat`) or data type (`--binary-target`) then PRSice will try to work these out from the header of your base file:
+
+    1. When *BETA* (case insensitive) is found in the header and `--stat` was not provided, `--beta` will be added to your command, and if `--binary-target` was not provided, `--binary-target F` will be added to your command 
+   
     2. When *OR* (case insensitive) is found in the header and `--binary-target` was not provided, `--binary-target T` will be added to your command
 
-    You can also disable this behavior by using the `--no-default` option
-
-    Most importantly, PRSice will detail all effective option in its log file where you can simply copy and paste it to get the same output
+    PRSice will detail all effective options in its log file where you can simply copy and paste it to get the same output
