@@ -169,7 +169,11 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="../developers/">For Developers</a>
+    <a class="" href="../compilation/">Compile from Source</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../decisions/">Development Decisions</a>
                 </li>
     </ul>
 	    </li>
@@ -285,11 +289,16 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The default of PRSice is based on the header of your base file:
-1. When <em>BETA</em> (case insensitive) is found in the header and <code>--stat</code> was not provided, <code>--beta</code> will be added to your command, and if <code>--binary-target</code> was not provided, <code>--binary-target F</code> will be added to your command
-2. When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to your command</p>
-<p>You can also disable this behavior by using the <code>--no-default</code> option</p>
-<p>Most importantly, PRSice will detail all effective option in its log file where you can simply copy and paste it to get the same output</p>
+<p>If you do not provide the PRSice command line with the type of Effect (<code>--stat</code>) or data type (<code>--binary-target</code>) then PRSice will try to work these out from the header of your base file:</p>
+<ol>
+<li>
+<p>When <em>BETA</em> (case insensitive) is found in the header and <code>--stat</code> was not provided, <code>--beta</code> will be added to your command, and if <code>--binary-target</code> was not provided, <code>--binary-target F</code> will be added to your command </p>
+</li>
+<li>
+<p>When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to your command</p>
+</li>
+</ol>
+<p>PRSice will detail all effective options in its log file where you can simply copy and paste it to get the same output</p>
 </div>
               
             </div>

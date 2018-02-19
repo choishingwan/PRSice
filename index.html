@@ -65,11 +65,8 @@
             
     <li class="toctree-l2"><a href="#executable-downloads">Executable downloads</a></li>
     
-        <ul>
-        
-            <li><a class="toctree-l3" href="#r-packages-requirements">R Packages Requirements</a></li>
-        
-        </ul>
+
+    <li class="toctree-l2"><a href="#r-packages-requirements">R Packages Requirements</a></li>
     
 
     <li class="toctree-l2"><a href="#quick-start">Quick Start</a></li>
@@ -182,7 +179,11 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="developers/">For Developers</a>
+    <a class="" href="compilation/">Compile from Source</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="decisions/">Development Decisions</a>
                 </li>
     </ul>
 	    </li>
@@ -245,7 +246,7 @@
 </li>
 </ul>
 </div>
-<p><br />
+<p><br/>
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:</p>
 <ol>
 <li>High-resolution scoring (PRS calculated across a large number of P-value thresholds)</li>
@@ -285,11 +286,11 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 <p class="admonition-title">Caution</p>
 <p>PRSice-2 is currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)</p>
 </div>
-<h2 id="r-packages-requirements">R Packages Requirements<a class="headerlink" href="#r-packages-requirements" title="Permanent link">&para;</a></h2>
+<h1 id="r-packages-requirements">R Packages Requirements<a class="headerlink" href="#r-packages-requirements" title="Permanent link">&para;</a></h1>
 <p>To plot graphs, PRSice requires <a href="https://www.r-project.org/">R</a> (<strong>version 3.2.3+</strong>) installed.</p>
 <p><a href="extra_steps/">Additional steps</a> might be required for Mac and Windows users.</p>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
+<p class="admonition-title">Installing required R packages</p>
 <p>PRSice can automatically download all required packages, even without administrative right.
 You can specify the install directory using <code>--dir</code>. For example</p>
 <p><code>Rscript PRSice.R --dir .</code></p>
@@ -298,7 +299,7 @@ You can specify the install directory using <code>--dir</code>. For example</p>
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
 <p>For Quick start use, please refer to <a href="quick_start/">Quick Start</a></p>
 <div class="admonition tip">
-<p class="admonition-title">Tip</p>
+<p class="admonition-title">List user options</p>
 <p>You can also type</p>
 <p><code>./PRSice</code></p>
 <p>to view all available parameters unrelated to plotting, or</p>
@@ -396,5 +397,5 @@ We also utilize the <a href="./eigen.tuxfamily.org">Eigen C++</a> library.</p>
 
 <!--
 MkDocs version : 0.17.2
-Build Date UTC : 2018-02-14 00:22:27
+Build Date UTC : 2018-02-19 15:20:56
 -->
