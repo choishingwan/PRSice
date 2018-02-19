@@ -24,7 +24,7 @@ pages:
         - Miscellaneous: misc.md
 
     - Developers:
-        - For Developers: developers.md
+        - Compile from Source: compilation.md
 
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md
