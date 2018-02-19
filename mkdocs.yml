@@ -25,6 +25,7 @@ pages:
 
     - Developers:
         - Compile from Source: compilation.md
+        - Development Decisions: decisions.md
 
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md
