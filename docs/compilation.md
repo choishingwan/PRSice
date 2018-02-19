@@ -1,4 +1,4 @@
-# Introduction
+# Introduction [![Build Status](https://travis-ci.org/choishingwan/PRSice.svg?branch=beta_testing)](https://travis-ci.org/choishingwan/PRSice)
 Here is the guideline for anyone who might want to compile PRSice from source. 
 
 # Prerequisites
