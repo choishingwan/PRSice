@@ -92,6 +92,9 @@
         </ul>
     
 
+    <li class="toctree-l3"><a href="#quality-control-of-target-samples">Quality Control of Target Samples</a></li>
+    
+
     </ul>
                 </li>
                 <li class="">
@@ -229,7 +232,7 @@
             <div class="section">
               
                 <h1 id="preparation">Preparation<a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h1>
-<p>To perform PRSice, you will need</p>
+<p>Before performing PRSice, you should perform quality control on your target samples. <a href="./#quality-control-of-target-samples">See here</a> for an example.</p>
 <h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>PRSice.R file:</strong> A wrapper for the PRSice binary and for plotting</li>
@@ -238,24 +241,6 @@
 <li><strong>Target data set:</strong> Raw genotype data of <strong>target phenotype</strong>.
 Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed">PLINK binary</a> or <a href="http://www.well.ox.ac.uk/~gav/bgen_format/">BGEN</a></li>
 </ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>You should first perform quality control on your genotype file before passing it to PRSice.
-You can do that using PLINK. A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of your target binary file)</p>
-</div>
-<div class="codehilite"><pre><span></span>plink --bfile <span class="o">(</span><span class="nv">$target</span><span class="o">)</span> <span class="se">\</span>
-    --maf <span class="m">0</span>.05 <span class="se">\</span>
-    --mind <span class="m">0</span>.1 <span class="se">\</span>
-    --geno <span class="m">0</span>.1 <span class="se">\</span>
-    --hwe 1e-6 <span class="se">\</span>
-    --make-just-bim <span class="se">\</span>
-    --make-just-fam <span class="se">\</span>
-    --out <span class="o">(</span><span class="nv">$target</span><span class="o">)</span>.qc
-</pre></div>
-
-
-<p>Then you can add <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> to PRSice command to filter out
-the samples and SNPs</p>
 <h1 id="running-prsice">Running PRSice<a class="headerlink" href="#running-prsice" title="Permanent link">&para;</a></h1>
 <p>In most case, you can simply run PRSice using the following command, assuming your
 PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working in <code>($HOME)/PRSice</code></p>
@@ -264,7 +249,7 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 <p>For window users, please use <strong>Rscript.exe</strong> instead of <strong>Rscript</strong></p>
 </div>
 <h2 id="binary-traits">Binary Traits<a class="headerlink" href="#binary-traits" title="Permanent link">&para;</a></h2>
-<p>For binary traits, you can use the following command</p>
+<p>For binary traits, you can use the following command (commands specific to binary traits are highlighted in yellow)</p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
     --prsice ./PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
@@ -276,7 +261,7 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 
 
 <h2 id="quantitative-traits">Quantitative Traits<a class="headerlink" href="#quantitative-traits" title="Permanent link">&para;</a></h2>
-<p>For quantitative traits, you can use</p>
+<p>For quantitative traits, you can use  (commands specific to quantitative traits are highlighted in yellow)</p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
     --prsice ./PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
@@ -300,6 +285,22 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 </ol>
 <p>PRSice will detail all effective options in its log file where you can simply copy and paste it to get the same output</p>
 </div>
+<h1 id="quality-control-of-target-samples">Quality Control of Target Samples<a class="headerlink" href="#quality-control-of-target-samples" title="Permanent link">&para;</a></h1>
+<p>You can perform quality control on the target samples using PLINK. 
+A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of your target binary file)</p>
+<div class="codehilite"><pre><span></span>plink --bfile <span class="o">(</span><span class="nv">$target</span><span class="o">)</span> <span class="se">\</span>
+    --maf <span class="m">0</span>.05 <span class="se">\</span>
+    --mind <span class="m">0</span>.1 <span class="se">\</span>
+    --geno <span class="m">0</span>.1 <span class="se">\</span>
+    --hwe 1e-6 <span class="se">\</span>
+    --make-just-bim <span class="se">\</span>
+    --make-just-fam <span class="se">\</span>
+    --out <span class="o">(</span><span class="nv">$target</span><span class="o">)</span>.qc
+</pre></div>
+
+
+<p>Then you can add <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> to PRSice command to filter out
+the samples and SNPs</p>
               
             </div>
           </div>
