@@ -730,6 +730,7 @@ if(use.ggplot){
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
     function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
+        binary <- as.logical(binary)
         writeLines("Plotting the quantile plot")
         num_cov <- ncol(pheno) - 2
         if (!provided("ignore_fid", argv)) {
@@ -879,9 +880,10 @@ quantile_plot <-
                     coef.quantiles <- exp(coef.quantiles)
                 }
             }
-            coef.quantiles[1] <- ifelse(binary,1,0)
-            ci.quantiles.u[1] <- ifelse(binary,1,0)
-            ci.quantiles.l[1] <- ifelse(binary,1,0)
+            
+            coef.quantiles[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.u[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.l[1] <- ifelse(binary & (num_cov==0),1,0)
             quantiles.for.table <-
                 c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
             quantiles.df <-
