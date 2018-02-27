@@ -11,13 +11,13 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
 2. Most predictive PRS identified
-3. Genotyped (PLINK binary) and imputed (Oxford bgen v1.2) data input
-4. Biobank-scale unimputed data can be analysed within hours
-5. Incorporation of covariates
-6. Application across multiple target traits simultaneously
-7. Results plotted in several formats (bar plots, high-res plots, quantile plots)
-8. Empirical P-values output (not subject to over-fitting)
-9. PRSet: function for calculating PRS across pathways / gene sets (user list option)
+3. Empirical P-values output (not subject to over-fitting)
+4. Genotyped (PLINK binary) and imputed (Oxford bgen v1.2) data input
+5. Biobank-scale genotyped data can be analysed within hours
+6. Incorporation of covariates
+7. Application across multiple target traits simultaneously
+8. Results plotted in several formats (bar plots, high-res plots, quantile plots)
+9. PRSet: function for calculating PRS across user-defined pathways / gene sets
 
 # Executable downloads
 | Operating System | Link |

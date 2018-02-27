@@ -1,14 +1,11 @@
 # Background
 A new feature of PRSice is the ability to perform set base/pathway based analysis. This new feature is called PRSet.
 
-Paper currently under-preparation
+Paper on PRSet currently under preparation.
 
 
 !!! Important
-    This feature is currently under active development. Most notably, the current
-    statistical testing is only a simple regression. A better statistic method
-    will soon be implemented. Meanwhile, we recommend using [MAGMA](https://ctg.cncr.nl/software/magma)
-    to identify significant gene sets and use these gene sets as an input to PRSet.
+    PRSet is currently under active development. Notably, the current version of PRSet available here only provides self-contained pathway results, which eg. do not account for pathway size. We are presently testing the power of PRSet Vs alternative pathway methods, so for now recommend assuming that other leading pathway approaches (eg. [MAGMA](https://ctg.cncr.nl/software/magma)) are most powerful for identification of causal pathways.
 
 # Preparation
 PRSet is mainly based on [PRSice](quick_start.md). To perform PRSet,
