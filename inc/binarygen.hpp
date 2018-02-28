@@ -490,6 +490,7 @@ private:
             if (value > hard_prob && value >= m_hard_threshold) {
                 // geno = 2 - m_entry_i;
                 geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                hard_prob = value;
             }
             m_entry_i++;
         }
