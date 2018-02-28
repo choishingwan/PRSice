@@ -27,8 +27,8 @@ std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
 Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
 std::vector<Eigen::MatrixXd> PRSice::g_permuted_pheno;
 Eigen::VectorXd PRSice::g_pre_se_calulated;
-unsigned char* PRSice::g_prs_storage_memory=nullptr;
-int PRSice::g_max_threshold_store=1;
+unsigned char* PRSice::g_prs_storage_memory = nullptr;
+int PRSice::g_max_threshold_store = 1;
 
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 {

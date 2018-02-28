@@ -1069,8 +1069,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             continue;
         auto&& target_ref_index =
             reference.m_existed_snps_index.find(cur_target_snp.rs());
-        if (target_ref_index == reference.m_existed_snps_index.end())
-            continue;
+        if (target_ref_index == reference.m_existed_snps_index.end()) continue;
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
