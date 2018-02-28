@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
         }
         // initialize PRSice class
         PRSice prsice = PRSice(base_name, commander, region.size() > 1,
-                               target_file->num_sample(), reporter);
+                               target_file->num_sample(), reporter, target_file->num_threshold());
         // check the phenotype input columns
         prsice.pheno_check(commander, reporter);
         size_t num_pheno = prsice.num_phenotype();

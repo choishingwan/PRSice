@@ -60,7 +60,7 @@ class PRSice
 {
 public:
     PRSice(const std::string& base_name, const Commander& commander,
-           const bool prset, const size_t sample_ct, Reporter& reporter)
+           const bool prset, const size_t sample_ct, Reporter& reporter, const size_t num_threshold)
         : m_ignore_fid(commander.ignore_fid())
         , m_prset(prset)
         , m_num_perm(commander.permutation())
@@ -71,6 +71,14 @@ public:
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
+    	// might want to use some sort of memory management here
+    	// If we can store score for more than one p-value threshold,
+    	// then essentially we reduce the number of time we need to
+    	// jump around in the binary file / reduce I/O
+    	int mem_per_threshold = sample_ct*8; // in byte
+    	// only use third of the memory available (or the minimum amount
+    	// for one threshold
+    	gen_prs_memory(mem_per_threshold);
         g_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
@@ -234,14 +242,16 @@ private:
         size_t rank;
     };
 
+    // Global Stuff (Either for threading or for memory control)
     static Eigen::MatrixXd g_independent_variables;
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
     static std::vector<Eigen::MatrixXd> g_permuted_pheno;
     static Eigen::VectorXd g_pre_se_calulated;
-
-
+    static unsigned char *g_prs_storage_memory;
+    static int g_max_threshold_store;
+    // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
@@ -265,6 +275,110 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
+
+    void gen_prs_memory(int min_memory_byte)
+    {
+	#ifdef __APPLE__
+		int32_t mib[2];
+		size_t sztmp;
+	#endif
+		unsigned char* bigstack_ua = nullptr; // ua = unaligned
+		unsigned char* bigstack_initial_base;
+		int64_t llxx;
+		intptr_t default_alloc_mb;
+		intptr_t malloc_size_mb = 0;
+	#ifdef __APPLE__
+		mib[0] = CTL_HW;
+		mib[1] = HW_MEMSIZE;
+		llxx = 0;
+
+		sztmp = sizeof(int64_t);
+		sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
+		llxx /= 1048576;
+	#else
+	#ifdef _WIN32
+		MEMORYSTATUSEX memstatus;
+		memstatus.dwLength = sizeof(memstatus);
+		GlobalMemoryStatusEx(&memstatus);
+		llxx = memstatus.ullTotalPhys / 1048576;
+	#else
+		llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
+			   * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
+	#endif
+	#endif
+		if (!llxx) {
+			default_alloc_mb = BIGSTACK_DEFAULT_MB;
+		}
+		else if (llxx < (BIGSTACK_MIN_MB * 2))
+		{
+			default_alloc_mb = BIGSTACK_MIN_MB;
+		}
+		else
+		{
+			default_alloc_mb = llxx / 2;
+		}
+		if (!malloc_size_mb) {
+			malloc_size_mb = default_alloc_mb;
+		}
+		else if (malloc_size_mb < BIGSTACK_MIN_MB)
+		{
+			malloc_size_mb = BIGSTACK_MIN_MB;
+		}
+		std::string message = "";
+	#ifndef __LP64__
+		if (malloc_size_mb > 2047) {
+			malloc_size_mb = 2047;
+		}
+	#endif
+		if (llxx) {
+			message = std::to_string(llxx) + " MB RAM detected; reserving "
+					  + std::to_string(malloc_size_mb) + " MB for PRS\n";
+		}
+		else
+		{
+			message = "Failed to calculate system memory. Attemping to reserve"
+					  + std::to_string(malloc_size_mb) + " MB for PRS\n";
+		}
+		bigstack_ua =
+			(unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+		// if fail, return nullptr which will then get into the while loop
+		while (!bigstack_ua) {
+			malloc_size_mb = (malloc_size_mb * 3) / 4;
+			if (malloc_size_mb < BIGSTACK_MIN_MB) {
+				malloc_size_mb = BIGSTACK_MIN_MB;
+			}
+			bigstack_ua =
+				(unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+			if (bigstack_ua) {
+				message.append(
+					"Allocated " + std::to_string(malloc_size_mb)
+					+ " MB successfully, after larger attempt(s) failed\n");
+			}
+			else if (malloc_size_mb == BIGSTACK_MIN_MB)
+			{
+				throw std::runtime_error("Failed to allocate required memory");
+			}
+		}
+		if(malloc_size_mb*1048576 < min_memory_byte){
+			throw std::runtime_error("Failed to allocate required memory for PRS storage");
+		}
+		delete [] bigstack_ua;
+		bigstack_ua = nullptr;
+		int final_mb = malloc_size_mb/3;
+		if(final_mb*1048576 < min_memory_byte){
+			final_mb = min_memory_byte;
+			g_max_threshold_store = 1;
+		}else{
+			// because of C++'s int operation, this will round down, therefore reduce the memory
+			// require by tiny bit
+			g_max_threshold_store = final_mb/min_memory_byte;
+			final_mb = g_max_threshold_store * min_memory_byte;
+		}
+		g_prs_storage_memory = (unsigned char*) malloc(final_mb*sizeof(char));
+		if(!g_prs_storage_memory){
+			throw std::runtime_error("Failed to allocate required memory for PRS storage");
+		}
+    }
 };
 
 #endif // PRSICE_H
