@@ -79,7 +79,7 @@ public:
         int mem_per_threshold = sample_ct * 8; // in byte
         // only use third of the memory available (or the minimum amount
         // for one threshold
-        gen_prs_memory(mem_per_threshold, reporter);
+        gen_prs_memory(mem_per_threshold, reporter, num_threshold);
         g_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
@@ -277,14 +277,14 @@ private:
     void process_permutations();
     void summary();
 
-    void gen_prs_memory(int min_memory_byte, Reporter& reporer)
+    void gen_prs_memory(int min_memory_byte, Reporter& reporter, size_t const max_threshold)
     {
+    		intptr_t max_req_memory = min_memory_byte*max_threshold;
 #ifdef __APPLE__
         int32_t mib[2];
         size_t sztmp;
 #endif
         unsigned char* bigstack_ua = nullptr; // ua = unaligned
-        unsigned char* bigstack_initial_base;
         int64_t llxx;
         intptr_t default_alloc_mb;
         intptr_t malloc_size_mb = 0;
@@ -338,7 +338,7 @@ private:
         else
         {
             message = "Failed to calculate system memory. Attemping to reserve"
-                      + std::to_string(malloc_size_mb) + " MB for PRS\n";
+                      + std::to_string(malloc_size_mb) + " MB for PRS storage\n";
         }
         bigstack_ua =
             (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
@@ -366,16 +366,21 @@ private:
         }
         delete[] bigstack_ua;
         bigstack_ua = nullptr;
-        int final_mb = malloc_size_mb / 3;
+        std::cerr << message << std::endl;
+        intptr_t final_mb = malloc_size_mb / 3;
         if (final_mb * 1048576 < min_memory_byte) {
             final_mb = min_memory_byte;
             g_max_threshold_store = 1;
+        }
+        else if(final_mb * 1048576 > max_req_memory){
+        		final_mb = max_req_memory;
+        		g_max_threshold_store = max_threshold;
         }
         else
         {
             // because of C++'s int operation, this will round down, therefore
             // reduce the memory require by tiny bit
-            g_max_threshold_store = final_mb / min_memory_byte;
+            g_max_threshold_store = final_mb * 1048576 / min_memory_byte;
             final_mb = g_max_threshold_store * min_memory_byte;
         }
         g_prs_storage_memory = (unsigned char*) malloc(final_mb * sizeof(char));
@@ -383,11 +388,25 @@ private:
             throw std::runtime_error(
                 "Failed to allocate required memory for PRS storage");
         }
-        std::string message = "Allocated " + std::to_string(final_mb / 1048576)
-                              + " MB successfully. A total of "
-                              + std::to_string(g_max_threshold_store)
-                              + " threshold can be performed at the same time";
+        message = "Reserving " + std::to_string(final_mb / 1048576)
+                              + " MB for PRS storage.";
         reporter.report(message);
+        /**
+         * In fact, the biggest difficulty of using memory pool in the PRSice class is down
+         * to a number of problem:
+         * 1. Regression might require memory for temporary objects (looking at GLM)
+         * 2. Permutation will also need some memory for some objects (e.g. pre-decomposed matrix)
+         * 3. We still need memory for all the global variables and the matrix
+         * 4. We need two matrix for PRS temp store (Num SNP and The score)
+         * And I am not certain I can handle these memory nicely as I am not familiar with
+         * memory pool
+         *
+         * Thing is, we can still experience memory error if user provide too many samples /
+         * too many covariates. In that case, we might still crash without any proper warnings
+         * Also, while we can test the amount of memory available like PLINK, unless we use the
+         * memory pool method like PLINK, we can't be certain that the memory is actually available
+         * when we finally try to use them
+         */
     }
 };
 
