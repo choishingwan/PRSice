@@ -636,7 +636,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 ujj = CTZLU(ulii) & (BITCT - 2);
                 ukk = (ulii >> ujj) & 3;
                 sample_idx = uii + (ujj / 2);
-                if (ukk == 1 || ukk == 3) // Because 01 is coded as missing
+                if (ukk == 1 || ukk == 3) // Because 10 is coded as missing
                 {
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
@@ -701,15 +701,15 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         // actual index should differ due to PLINK automatically remove samples
         // that are not included
         size_t actual_index = 0;
-        for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (!m_sample_names[i_sample].included) continue;
+        for (auto && sample : m_sample_names) {
+            if (!sample.included) continue;
             if (i_missing < num_miss
                 && actual_index == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    m_sample_names[i_sample].prs += center_score;
+                	sample.prs += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    m_sample_names[i_sample].num_snp++;
+                	sample.num_snp++;
 
                 i_missing++;
             }
@@ -717,7 +717,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                    m_sample_names[i_sample].prs -= center_score;
+                	sample.prs -= center_score;
                 }
                 int g = (flipped) ? fabs(sample_genotype[actual_index] - 2)
                                   : sample_genotype[actual_index];
@@ -732,8 +732,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 {
                     g = (g == 2) ? 1 : g;
                 }
-                m_sample_names[i_sample].prs += g * stat * 0.5;
-                m_sample_names[i_sample].num_snp++;
+                sample.prs += g * stat * 0.5;
+                sample.num_snp++;
             }
             actual_index++;
         }
