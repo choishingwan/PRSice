@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
                 // immediately free the memory if needed
                 if (!commander.ref_name().empty()) delete reference_file;
             }
-            if (!target_file->prepare_prsice()) {
+            if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =
                     "No SNPs left for PRSice processing";
                 reporter.report(error_message);

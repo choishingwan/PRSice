@@ -108,7 +108,7 @@ public:
             sample.prs = 0.0;
         }
     };
-    bool prepare_prsice();
+    bool prepare_prsice(Reporter& reporter);
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_names.size())
@@ -201,6 +201,11 @@ public:
     uintptr_t founder_ct() const { return m_founder_ct; }
 
 protected:
+    // global stuff
+    static std::vector<int> g_num_snps;
+    static std::vector<double> g_prs_storage;
+    static int g_max_threshold_store;
+    void gen_prs_memory(Reporter& reporter);
     // variable storages
     // vector storing all the genotype files
     std::vector<std::string> m_genotype_files;
@@ -302,7 +307,7 @@ protected:
 
 
     std::vector<double> m_thresholds;
-
+    std::vector<int> m_categories;
 
     uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;

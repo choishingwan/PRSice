@@ -17,6 +17,114 @@
 #include "genotype.hpp"
 
 
+std::vector<int> Genotype::g_num_snps;
+std::vector<double> Genotype::g_prs_storage;
+int Genotype::g_max_threshold_store = 1;
+
+void Genotype::gen_prs_memory(Reporter& reporter)
+{
+    intptr_t min_memory_byte =
+        4 * m_sample_names.size() + 8 * m_sample_names.size();
+    intptr_t max_req_memory = min_memory_byte * m_num_threshold;
+#ifdef __APPLE__
+    int32_t mib[2];
+    size_t sztmp;
+#endif
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    int64_t llxx;
+    intptr_t default_alloc_mb;
+    intptr_t malloc_size_mb = 0;
+#ifdef __APPLE__
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    llxx = 0;
+
+    sztmp = sizeof(int64_t);
+    sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
+    llxx /= 1048576;
+#else
+#ifdef _WIN32
+    MEMORYSTATUSEX memstatus;
+    memstatus.dwLength = sizeof(memstatus);
+    GlobalMemoryStatusEx(&memstatus);
+    llxx = memstatus.ullTotalPhys / 1048576;
+#else
+    llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
+           * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
+#endif
+#endif
+    if (!llxx) {
+        default_alloc_mb = BIGSTACK_DEFAULT_MB;
+    }
+    else if (llxx < (BIGSTACK_MIN_MB * 2))
+    {
+        default_alloc_mb = BIGSTACK_MIN_MB;
+    }
+    else
+    {
+        default_alloc_mb = llxx / 2;
+    }
+    if (!malloc_size_mb) {
+        malloc_size_mb = default_alloc_mb;
+    }
+    else if (malloc_size_mb < BIGSTACK_MIN_MB)
+    {
+        malloc_size_mb = BIGSTACK_MIN_MB;
+    }
+    std::string message = "";
+#ifndef __LP64__
+    if (malloc_size_mb > 2047) {
+        malloc_size_mb = 2047;
+    }
+#endif
+    bigstack_ua =
+        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    // if fail, return nullptr which will then get into the while loop
+    while (!bigstack_ua) {
+        malloc_size_mb = (malloc_size_mb * 3) / 4;
+        if (malloc_size_mb < BIGSTACK_MIN_MB) {
+            malloc_size_mb = BIGSTACK_MIN_MB;
+        }
+        bigstack_ua =
+            (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+        if (bigstack_ua) {
+        }
+        else if (malloc_size_mb == BIGSTACK_MIN_MB)
+        {
+            throw std::runtime_error(
+                "Failed to allocate required memory for PRS storage");
+        }
+    }
+    if (malloc_size_mb * 1048576 < min_memory_byte) {
+        throw std::runtime_error(
+            "Failed to allocate required memory for PRS storage");
+    }
+    delete[] bigstack_ua;
+    bigstack_ua = nullptr;
+    // use only a third of the memory so that we should have enough left
+    // though there is no guarantee
+    intptr_t final_mb = malloc_size_mb / 3;
+    if (final_mb * 1048576 < min_memory_byte) {
+        g_max_threshold_store = 1;
+    }
+    else if (final_mb * 1048576 > max_req_memory)
+    {
+        g_max_threshold_store = m_num_threshold;
+    }
+    else
+    {
+        g_max_threshold_store = final_mb * 1048576 / min_memory_byte;
+    }
+    // essentially this is a pseudo memory pool
+    // We only want these two 2D vectors and we check how many columns
+    // we can put in one go. Then we define this vector and keep using
+    // it until the end of everything
+    // It will be over kill for set based analysis situation as not
+    // all set has the max number of threshold, but that should be ok
+    g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
+    g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
+}
+
 std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
 {
     std::vector<std::string> genotype_files;
@@ -608,6 +716,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 {
                     unique_thresholds.insert(category);
                     m_thresholds.push_back(pthres);
+                    m_categories.push_back(category);
                 }
                 m_max_category =
                     (m_max_category < category) ? category : m_max_category;
@@ -949,6 +1058,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
+    m_categories.clear();
 // reference must have sorted
 
 // try and get a workspace
@@ -1248,6 +1358,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         if (used_thresholds.find(thres) == used_thresholds.end()) {
             used_thresholds.insert(thres);
             m_thresholds.push_back(thres);
+            m_categories.push_back(cur_target_snp.category());
         }
         if (unique_threshold.find(cur_target_snp.category())
             == unique_threshold.end())
@@ -1312,12 +1423,26 @@ bool Genotype::sort_by_p()
     return true;
 }
 
-bool Genotype::prepare_prsice()
+bool Genotype::prepare_prsice(Reporter& reporter)
 {
+    gen_prs_memory(reporter);
+    // thing is, the category might not be continuous,
+    // and we want SNPs within the same process to be
+    // sorted together (e.g. if we can only do
+    // 2 thresholds in one go, we will want to sort
+    // the SNPs where every 2 category (doesn't matter
+    // if they are continuous or not) should have the
+    // same ID)
+
     if (m_existed_snps.size() == 0) return false;
+    // first, sort the threshold and update the sort ID
+    std::sort(m_categories.begin(), m_categories.end());
+    std::map<int, int> cate_id;
+    for (size_t i = 0; i < m_categories.size(); ++i)
+        cate_id[m_categories[i]] = i;
     std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [](SNP const& t1, SNP const& t2) {
-                  if (t1.category() == t2.category()) {
+              [&cate_id](SNP const& t1, SNP const& t2) {
+                  if (cate_id[t1.category()] == cate_id[t2.category()]) {
                       if (t1.file_name().compare(t2.file_name()) == 0) {
                           return t1.byte_pos() < t2.byte_pos();
                       }
@@ -1325,7 +1450,7 @@ bool Genotype::prepare_prsice()
                           return t1.file_name().compare(t2.file_name()) < 0;
                   }
                   else
-                      return t1.category() < t2.category();
+                      return cate_id[t1.category()] < cate_id[t2.category()];
               });
     return true;
 }
