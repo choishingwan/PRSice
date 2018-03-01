@@ -1052,8 +1052,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     if (!max_window_size) {
         throw std::runtime_error("ERROR: Not enough memory for clumping!");
     }
-    int clumped_count = 0;
-    int not_found = 0;
     double prev_progress = -1.0;
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
