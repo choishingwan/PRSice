@@ -38,8 +38,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.0.beta";
-const std::string date = "14 Feb 2018";
+const std::string version = "2.1.1.beta";
+const std::string date = "2 Mar 2018";
 class Commander
 {
 public:
