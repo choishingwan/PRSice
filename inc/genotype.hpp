@@ -84,7 +84,8 @@ public:
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
                    const bool require_statistic);
-    bool get_score(const size_t region_index, const bool require_statistic);
+    bool get_score(int& cur_index, std::vector<size_t>& num_snps_included,
+                      const size_t region_index);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
@@ -191,7 +192,7 @@ public:
             throw std::out_of_range("Sample name vector out of range");
         return m_sample_names[i].IID;
     }
-    double calculate_score(size_t i, bool require_statistic);
+    double calculate_sample_score(size_t i);
     double calculate_score(SCORING score_type, size_t i) const
     {
         if (i > m_sample_names.size())

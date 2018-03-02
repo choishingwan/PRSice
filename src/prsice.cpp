@@ -835,15 +835,16 @@ void PRSice::run_prsice(const Commander& c_commander,
     // So we need to know how many thresholds are read with
     // each call of target
     int thresholds_per_round = Genotype::threshold_per_round();
-    std::vector<int> cur_num_snps;
+    std::vector<size_t> cur_num_snps;
     /*
     while (target.get_score(cur_index, cur_category, cur_threshold,
                             m_num_snp_included, region_index,
                             require_standardize))
                             */
     while (target.get_score(cur_index, cur_num_snps, region_index)) {
-        for (size_t i_thres = 0; i_thres < thresholds_per_rounud; ++i_thres) {
+        for (size_t i_thres = 0; i_thres < thresholds_per_round; ++i_thres) {
             if (!target.has_category(i_thres)) break;
+            m_num_snp_included += cur_num_snps[i_thres];
             cur_category = target.get_category(i_thres);
             cur_threshold = target.get_thresholds(i_thres);
             double progress =
@@ -852,7 +853,7 @@ void PRSice::run_prsice(const Commander& c_commander,
                 fprintf(stderr, "\rProcessing %03.2f%%", progress);
                 prev_progress = progress;
             }
-            target.calculate_score(i_thres, require_standardize);
+            target.calculate_sample_score(i_thres);
             if (print_all_scores) {
                 for (size_t sample = 0; sample < m_sample_index.size();
                      ++sample)

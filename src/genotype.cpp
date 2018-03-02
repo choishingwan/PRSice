@@ -1440,11 +1440,10 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     std::sort(m_thresholds.begin(), m_thresholds.end());
     for (size_t i = 0; i < m_categories.size(); ++i)
         m_categories_index[m_categories[i]] = i;
+    std::unordered_map<int, int> tmp_cat = m_categories_index;
     std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [&m_categories_index](SNP const& t1, SNP const& t2) {
-                  if (m_categories_index[t1.category()]
-                      == m_categories_index[t2.category()])
-                  {
+              [&tmp_cat](SNP const& t1, SNP const& t2) {
+                  if (tmp_cat[t1.category()] == tmp_cat[t2.category()]) {
                       if (t1.file_name().compare(t2.file_name()) == 0) {
                           return t1.byte_pos() < t2.byte_pos();
                       }
@@ -1452,16 +1451,47 @@ bool Genotype::prepare_prsice(Reporter& reporter)
                           return t1.file_name().compare(t2.file_name()) < 0;
                   }
                   else
-                      return m_categories_index[t1.category()]
-                             < m_categories_index[t2.category()];
+                      return tmp_cat[t1.category()] < tmp_cat[t2.category()];
               });
     return true;
 }
 
-double Genotype::calculate_score(size_t i, bool require_statistic){
-	// if current category index is 0, then
-	// directly add to sample prs
-	// otherwise, +=
+double Genotype::calculate_sample_score(size_t i)
+{
+    // if current category index is 0, then
+    // directly add to sample prs
+    // otherwise, +=
+    // WARNING: Main assumption behind is that whoever decide to use this
+    // function will honor the fact that i should always be increasing,
+    // otherwise, the result will be wrong.
+    misc::RunningStat rs;
+    int sample_size = m_sample_names.size();
+    if (m_cur_category_index == 0 && i == 0) {
+        for (size_t i_sample = 0; i_sample < sample_size; ++i_sample) {
+            auto&& sample = m_sample_names[i_sample];
+            sample.num_snp = g_num_snps[i_sample];
+            sample.prs = g_prs_storage[i_sample];
+            if (sample.num_snp == 0)
+                rs.push(0.0);
+            else
+                rs.push(sample.prs / (double) sample.num_snp);
+        }
+    }
+    else
+    {
+        for (size_t i_sample = 0; i_sample < sample_size; ++i_sample) {
+            auto&& sample = m_sample_names[i_sample];
+            // this is a simple 2 d vector
+            sample.num_snp += g_num_snps[i_sample + i * sample_size];
+            sample.prs += g_prs_storage[i_sample + i * sample_size];
+            if (sample.num_snp == 0)
+                rs.push(0.0);
+            else
+                rs.push(sample.prs / (double) sample.num_snp);
+        }
+    }
+    m_mean_score = rs.mean();
+    m_score_sd = rs.sd();
 }
 
 bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
@@ -1490,7 +1520,7 @@ bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
     read_score(cur_index, end_index, region_index);
     // should be last thing
     cur_index = end_index;
-    if (ended) m_cur_tcategory_index = m_categories.size();
+    if (ended) m_cur_category_index = m_categories.size();
     return true;
 }
 
