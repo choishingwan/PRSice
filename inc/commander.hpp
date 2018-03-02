@@ -21,6 +21,7 @@
 #include "misc.hpp"
 #include "storage.hpp"
 #include <chrono>
+#include <cmath>
 #include <ctime>
 #include <fstream>
 #include <getopt.h>
@@ -30,12 +31,15 @@
 #include <reporter.hpp>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
-const std::string version = "2.0.15.beta";
-const std::string date = "27 October 2017";
+#include <zlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+const std::string version = "2.1.1.beta";
+const std::string date = "2 Mar 2018";
 class Commander
 {
 public:
@@ -136,14 +140,14 @@ public:
         std::string s = prs_calculation.score_calculation;
         std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         if (s == "STD")
-            return SCORING::STANDARD;
+            return SCORING::STANDARDIZE;
         else if (s == "SUM")
             return SCORING::SUM;
         else
             return SCORING::AVERAGE;
     }
 
-    int model() const { return prs_calculation.model; };
+    MODEL model() const { return prs_calculation.model; };
     bool no_regress() const { return prs_calculation.no_regress; };
 
     // prs_snp_filtering
@@ -284,8 +288,9 @@ private:
     struct
     {
         std::string missing_score;
+        std::string model_name;
         std::string score_calculation;
-        int model; // use model enum
+        MODEL model; // use model enum
         int no_regress;
     } prs_calculation;
 
@@ -381,7 +386,7 @@ private:
                                    const std::string& c)
     {
 
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -403,7 +408,7 @@ private:
                                    std::string& error_message)
     {
 
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
@@ -415,7 +420,7 @@ private:
                                     std::vector<T>& target, bool& error,
                                     const std::string& c)
     {
-        message[c] = input;
+        message[c] = message[c] + input;
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -447,6 +452,7 @@ private:
         }
         catch (const std::runtime_error& er)
         {
+            error = true;
             error_message.append("ERROR: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
         }
@@ -464,22 +470,22 @@ private:
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
             input = "add";
-            prs_calculation.model = +MODEL::ADDITIVE;
+            prs_calculation.model = MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prs_calculation.model = +MODEL::DOMINANT;
+            prs_calculation.model = MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prs_calculation.model = +MODEL::RECESSIVE;
+            prs_calculation.model = MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prs_calculation.model = +MODEL::HETEROZYGOUS;
+            prs_calculation.model = MODEL::HETEROZYGOUS;
         }
         else
         {

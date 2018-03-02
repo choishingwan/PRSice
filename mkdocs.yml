@@ -1,0 +1,38 @@
+site_name: PRSice-2
+repo_url: https://github.com/choishingwan/PRSice
+site_author: Shing Wan CHOI
+pages:
+    - index.md
+    - PRSice:
+        - Quick Start: quick_start.md
+        - Detailed Guide: step_by_step.md
+
+    - PRSet:
+        - Quick Start: quick_start_prset.md
+
+    - Details of PRSice/PRSet:
+        - General Usages: general.md
+        - Base File: base_file.md
+        - Target File: target_file.md
+        - Clumping: clumping.md
+        - Adjusting for Covariates: covariate.md
+        - P-value Thresholding: pthresholding.md
+        - PRSet: prset_command.md
+        - PRSlice: prslice_command.md
+        - Plotting: plot.md
+        - Miscellaneous: misc.md
+
+    - Developers:
+        - For Developers: developers.md
+
+    - Misc:
+        - Additional Steps for MAC and Window users: extra_steps.md
+theme: readthedocs
+markdown_extensions:
+    - admonition
+    - toc:
+        permalink: True
+    - codehilite
+
+extra_css:
+  - css/extra.css

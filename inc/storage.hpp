@@ -28,6 +28,7 @@ struct Sample
     int num_snp;
     bool included;
     bool has_pheno;
+    double prs;
 };
 
 struct Sample_lite
@@ -137,7 +138,7 @@ enum class MISSING_SCORE
 enum class SCORING
 {
     AVERAGE,
-    STANDARD,
+    STANDARDIZE,
     SUM
 };
 template <>

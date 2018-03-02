@@ -32,7 +32,7 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
     // get the bed file names
     m_genotype_files = set_genotype_files(prefix);
     m_sample_file =
-        sample_file.empty() ? m_genotype_files.front() : sample_file;
+        sample_file.empty() ? m_genotype_files.front() + ".fam" : sample_file;
 }
 
 
@@ -156,6 +156,12 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
         sample_index++;
         if (duplicated_samples.find(id) != duplicated_samples.end())
             duplicated_sample_id.push_back(id);
+        if (!cur_sample.included) {
+            // try to reduce memory usage...
+            cur_sample.FID = "";
+            cur_sample.IID = "";
+            cur_sample.pheno = "";
+        }
         duplicated_samples.insert(id);
         sample_name.push_back(cur_sample);
     }
@@ -195,15 +201,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         std::string bim_name = prefix + ".bim";
         std::string bed_name = prefix + ".bed";
         std::ifstream bim(bim_name.c_str());
-        std::ifstream bed(bed_name.c_str());
         if (!bim.is_open()) {
             std::string error_message =
                 "ERROR: Cannot open bim file: " + bim_name;
-            throw std::runtime_error(error_message);
-        }
-        if (!bed.is_open()) {
-            std::string error_message =
-                "ERROR: Cannot open bed file: " + bed_name;
             throw std::runtime_error(error_message);
         }
         // First pass, get the number of marker in bed & bim
@@ -226,6 +226,14 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         bim.clear();
         bim.seekg(0, bim.beg);
         check_bed(bed_name, num_snp_read);
+
+        std::ifstream bed(bed_name.c_str());
+        if (!bed.is_open()) {
+            std::string error_message =
+                "ERROR: Cannot open bed file: " + bed_name;
+            throw std::runtime_error(error_message);
+        }
+        bed.seekg(m_bed_offset, std::ios_base::beg);
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
         int prev_snp_processed = 0;
@@ -329,92 +337,100 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 // throw std::runtime_error(
                 //    "ERROR: Duplicated SNP ID detected!\n");
             }
-            else if (ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
+            else if (!ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
                      || m_keep_ambig)
             {
 
                 // now read in the binary information and determine if we want
                 // to keep this SNP
+                // only do the filtering if we need to as my current
+                // implementation isn't as efficient as PLINK
                 if (num_snp_read - prev_snp_processed > 1) {
                     // skip unread lines
                     if (!bed.seekg(m_bed_offset
-                                       + (num_snp_read
+                                       + ((num_snp_read - 1)
                                           * ((uint64_t) unfiltered_sample_ct4)),
                                    std::ios_base::beg))
                     {
                         std::string error_message =
-                            "ERROR: Cannot read the bed file: " + bed_name;
+                            "ERROR: Cannot read the bed file(seek): "
+                            + bed_name;
                         throw std::runtime_error(error_message);
                     }
                 }
+                prev_snp_processed = (num_snp_read - 1);
                 // get the location of the SNP in the binary file
                 std::streampos byte_pos = bed.tellg();
-                if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
-                                           m_sample_include.data(), final_mask,
-                                           false, bed, m_tmp_genotype.data(),
-                                           genotype.data()))
-                {
-                    std::string error_message =
-                        "ERROR: Cannot read the bed file: " + bed_name;
-                    throw std::runtime_error(error_message);
-                }
-                // Now genotype contain the genotype binary vector
-                uintptr_t* lbptr = genotype.data();
-                uint32_t uii = 0;
-                uintptr_t ulii = 0;
-                uint32_t ujj;
-                uint32_t ukk;
-                uint32_t sample_idx = 0;
-                int aa = 0, aA = 0, AA = 0;
-                size_t nmiss = 0;
-                do
-                {
-                    ulii = ~(*lbptr++);
-                    if (uii + BITCT2 > m_unfiltered_sample_ct) {
-                        ulii &=
-                            (ONELU
-                             << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
-                            - ONELU;
+                if (maf > 0 || geno < 1) {
+                    if (load_and_collapse_incl(
+                            m_unfiltered_sample_ct, m_sample_ct,
+                            m_sample_include.data(), final_mask, false, bed,
+                            m_tmp_genotype.data(), genotype.data()))
+                    {
+                        std::string error_message =
+                            "ERROR: Cannot read the bed file(read): "
+                            + bed_name;
+                        throw std::runtime_error(error_message);
                     }
-                    while (ulii) {
-                        ujj = CTZLU(ulii) & (BITCT - 2);
-                        ukk = (ulii >> ujj) & 3;
-                        sample_idx = uii + (ujj / 2);
-                        if (ukk == 1
-                            || ukk == 3) // Because 01 is coded as missing
-                        {
-                            // 3 is homo alternative
-                            // int flipped_geno = snp_list[snp_index].geno(ukk);
-                            if (sample_idx < m_sample_ct) {
-                                int g = (ukk == 3) ? 2 : ukk;
-                                switch (g)
-                                {
-                                case 0: aa++; break;
-                                case 1: aA++; break;
-                                case 2: AA++; break;
+                    // Now genotype contain the genotype binary vector
+                    uintptr_t* lbptr = genotype.data();
+                    uint32_t uii = 0;
+                    uintptr_t ulii = 0;
+                    uint32_t ujj;
+                    uint32_t ukk;
+                    uint32_t sample_idx = 0;
+                    int aa = 0, aA = 0, AA = 0;
+                    size_t nmiss = 0;
+                    do
+                    {
+                        ulii = ~(*lbptr++);
+                        if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                            ulii &= (ONELU
+                                     << ((m_unfiltered_sample_ct & (BITCT2 - 1))
+                                         * 2))
+                                    - ONELU;
+                        }
+                        while (ulii) {
+                            ujj = CTZLU(ulii) & (BITCT - 2);
+                            ukk = (ulii >> ujj) & 3;
+                            sample_idx = uii + (ujj / 2);
+                            if (ukk == 1
+                                || ukk == 3) // Because 01 is coded as missing
+                            {
+                                // 3 is homo alternative
+                                // int flipped_geno =
+                                // snp_list[snp_index].geno(ukk);
+                                if (sample_idx < m_sample_ct) {
+                                    int g = (ukk == 3) ? 2 : ukk;
+                                    switch (g)
+                                    {
+                                    case 0: aa++; break;
+                                    case 1: aA++; break;
+                                    case 2: AA++; break;
+                                    }
                                 }
                             }
+                            else // this should be 2
+                            {
+                                nmiss++;
+                            }
+                            ulii &= ~((3 * ONELU) << ujj);
                         }
-                        else // this should be 2
-                        {
-                            nmiss++;
-                        }
-                        ulii &= ~((3 * ONELU) << ujj);
+                        uii += BITCT2;
+                    } while (uii < m_sample_ct);
+                    // remove SNP if we have higher missingess than specified
+                    if ((double) nmiss / (double) m_sample_ct > geno) {
+                        m_num_geno_filter++;
+                        continue;
                     }
-                    uii += BITCT2;
-                } while (uii < m_sample_ct);
-                // remove SNP if we have higher missingess than specified
-                if ((double) nmiss / (double) m_sample_ct > geno) {
-                    m_num_geno_filter++;
-                    continue;
-                }
-                double cur_maf = ((double) (aA + AA * 2)
-                                  / ((double) (m_sample_ct - nmiss) * 2.0));
-                cur_maf = cur_maf > 0.5 ? 1 - cur_maf : cur_maf;
-                // remove SNP if maf lower than threshold
-                if (cur_maf < maf) {
-                    m_num_maf_filter++;
-                    continue;
+                    double cur_maf = ((double) (aA + AA * 2)
+                                      / ((double) (m_sample_ct - nmiss) * 2.0));
+                    cur_maf = cur_maf > 0.5 ? 1 - cur_maf : cur_maf;
+                    // remove SNP if maf lower than threshold
+                    if (cur_maf < maf) {
+                        m_num_maf_filter++;
+                        continue;
+                    }
                 }
 
                 m_num_ambig +=
@@ -425,6 +441,10 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 snp_info.emplace_back(
                     SNP(bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos));
+            }
+            else if (!m_keep_ambig)
+            {
+                m_num_ambig++;
             }
         }
     }
@@ -534,15 +554,14 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker)
 
 BinaryPlink::~BinaryPlink() {}
 
-void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
-                             size_t start_index, size_t end_bound,
+void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    size_t num_included_samples = current_prs_score.size();
+    size_t num_included_samples = m_sample_names.size();
 
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -550,16 +569,20 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
     }
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
-        if (m_cur_file.empty()
-            || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
+        auto&& cur_snp = m_existed_snps[i_snp];
+        int vector_pad =
+            (m_categories_index[cur_snp.category()] - m_cur_category_index)
+            * num_included_samples;
+        if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
         {
             // If we are processing a new file
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
             }
-            m_cur_file = m_existed_snps[i_snp].file_name();
+            m_cur_file = cur_snp.file_name();
             std::string bedname = m_cur_file + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
             if (!m_bed_file.is_open()) {
@@ -567,17 +590,21 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
                     "ERROR: Cannot open bed file: " + bedname;
                 throw std::runtime_error(error_message);
             }
+            m_prev_loc = 0;
         }
         // only read this SNP if it falls within our region of interest
-        if (!m_existed_snps[i_snp].in(region_index)) continue;
+        if (!cur_snp.in(region_index)) continue;
         // current location of the snp in the bed file
         // allow for quick jumping
         // very useful for read score as most SNPs might not
         // be next to each other
-        std::streampos cur_line = m_existed_snps[i_snp].byte_pos();
-        if (!m_bed_file.seekg(cur_line, std::ios_base::beg)) {
+        std::streampos cur_line = cur_snp.byte_pos();
+        if (m_prev_loc != cur_line
+            && !m_bed_file.seekg(cur_line, std::ios_base::beg))
+        {
             throw std::runtime_error("ERROR: Cannot read the bed file!");
         }
+        m_prev_loc = cur_line + (std::streampos) unfiltered_sample_ct4;
         // loadbuf_raw is the temporary
         // loadbuff is where the genotype will be located
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
@@ -595,8 +622,8 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         uint32_t ukk;
         std::vector<size_t> missing_samples;
         std::vector<double> sample_genotype(num_included_samples);
-        double stat = m_existed_snps[i_snp].stat();
-        bool flipped = m_existed_snps[i_snp].is_flipped();
+        double stat = cur_snp.stat() * 2; // Multiply by ploidy
+        bool flipped = cur_snp.is_flipped();
         uint32_t sample_idx = 0;
 
         int aa = 0, aA = 0, AA = 0;
@@ -638,7 +665,7 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         } while (uii < num_included_samples);
 
         if (num_included_samples - nmiss == 0) {
-            m_existed_snps[i_snp].invalidate();
+            cur_snp.invalidate();
             continue;
         }
         // due to the way the binary code works, the aa will always be 0
@@ -650,18 +677,18 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             aa = AA;
             AA = temp;
         }
-        if (m_model == +MODEL::HETEROZYGOUS) {
+        if (m_model == MODEL::HETEROZYGOUS) {
             // 010
             aa += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::DOMINANT)
+        else if (m_model == MODEL::DOMINANT)
         {
             // 011;
             aA += AA;
             AA = 0;
         }
-        else if (m_model == +MODEL::RECESSIVE)
+        else if (m_model == MODEL::RECESSIVE)
         {
             // 001
             aa += aA;
@@ -674,13 +701,21 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         size_t i_missing = 0;
+        // actual index should differ due to PLINK automatically remove samples
+        // that are not included
+        size_t actual_index = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (i_missing < num_miss && i_sample == missing_samples[i_missing])
+            auto&& sample = m_sample_names[i_sample];
+            if (!sample.included) continue;
+            if (i_missing < num_miss
+                && actual_index == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    current_prs_score[i_sample].prs += center_score;
+                    // m_sample_names[i_sample].prs += center_score;
+                    g_prs_storage[vector_pad + i_sample] += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    current_prs_score[i_sample].num_snp++;
+                    // m_sample_names[i_sample].num_snp++;
+                    g_num_snps[vector_pad + i_sample]++;
 
                 i_missing++;
             }
@@ -688,24 +723,28 @@ void BinaryPlink::read_score(std::vector<Sample_lite>& current_prs_score,
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                    current_prs_score[i_sample].prs -= center_score;
+                    // m_sample_names[i_sample].prs -= center_score;
+                    g_prs_storage[vector_pad + i_sample] -= center_score;
                 }
-                int g = (flipped) ? fabs(sample_genotype[i_sample] - 2)
-                                  : sample_genotype[i_sample];
-                if (m_model == +MODEL::HETEROZYGOUS) {
+                int g = (flipped) ? fabs(sample_genotype[actual_index] - 2)
+                                  : sample_genotype[actual_index];
+                if (m_model == MODEL::HETEROZYGOUS) {
                     g = (g == 2) ? 0 : g;
                 }
-                else if (m_model == +MODEL::RECESSIVE)
+                else if (m_model == MODEL::RECESSIVE)
                 {
                     g = std::max(0, g - 1);
                 }
-                else if (m_model == +MODEL::DOMINANT)
+                else if (m_model == MODEL::DOMINANT)
                 {
                     g = (g == 2) ? 1 : g;
                 }
-                current_prs_score[i_sample].prs += g * stat * 0.5;
-                current_prs_score[i_sample].num_snp++;
+                // m_sample_names[i_sample].prs += g * stat * 0.5;
+                g_prs_storage[vector_pad + i_sample] += g * stat * 0.5;
+                // m_sample_names[i_sample].num_snp++;
+                g_num_snps[vector_pad + i_sample]++;
             }
+            actual_index++;
         }
     }
 }

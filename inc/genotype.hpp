@@ -32,12 +32,14 @@
 #include <deque>
 #include <fstream>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#ifdef __APPLE__
+#include <sys/sysctl.h> // sysctl()
+#endif
+
 class Genotype
 {
 public:
@@ -50,7 +52,7 @@ public:
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 
-
+    static int threshold_per_round() { return g_max_threshold_store; }
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, bool verbose,
                       Reporter& reporter);
@@ -79,9 +81,11 @@ public:
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
     size_t num_sample() const { return m_sample_names.size(); }
-    bool get_score(std::vector<Sample_lite>& current_prs_score, int& cur_index,
-                   int& cur_category, double& cur_threshold,
-                   size_t& num_snp_included, const size_t region_index);
+    bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
+                   size_t& num_snp_included, const size_t region_index,
+                   const bool require_statistic);
+    bool get_score(int& cur_index, std::vector<size_t>& num_snps_included,
+                   const size_t region_index);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
@@ -91,9 +95,142 @@ public:
     // void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference, Reporter& reporter);
     void set_info(const Commander& c_commander, const bool ld = false);
+    void reset_sample()
+    {
+        for (auto&& sample : m_sample_names) {
+            sample.num_snp = 0;
+            sample.prs = 0.0;
+            sample.has_pheno = false;
+        }
+    };
 
+    void reset_sample_prs()
+    {
+        for (auto&& sample : m_sample_names) {
+            sample.prs = 0.0;
+            sample.num_snp = 0.0;
+        }
+    };
+    void reset_prs()
+    {
+        m_cur_category_index = 0;
+        /*// don't need this for now as sample prs should be built on the
+        vectors for (auto&& sample : m_sample_names) { sample.prs = 0.0;
+            sample.num_snp = 0.0;
+        }
+        */
+    }
+    bool prepare_prsice(Reporter& reporter);
+    bool has_category(size_t i) const
+    {
+        return (m_cur_category_index + i < m_categories.size());
+    }
+    double get_thresholds(size_t i) const
+    {
+        return m_thresholds.at(m_cur_category_index + i);
+    }
+    int get_category(size_t i) const
+    {
+        return m_categories.at(m_cur_category_index + i);
+    }
+    std::string sample_id(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        if (m_ignore_fid)
+            return m_sample_names[i].IID;
+        else
+            return m_sample_names[i].FID + "_" + m_sample_names[i].IID;
+    }
+    bool sample_included(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].included;
+    };
+    void got_pheno(size_t i)
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        m_sample_names[i].has_pheno = true;
+    }
+    void invalid_pheno(size_t i)
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        m_sample_names[i].has_pheno = false;
+    }
+    bool has_pheno(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].has_pheno;
+    }
+    std::string pheno(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].pheno;
+    }
+    bool pheno_is_na(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].pheno.compare("NA") == 0;
+    }
+    std::string fid(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].FID;
+    }
+    std::string iid(size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        return m_sample_names[i].IID;
+    }
+    void calculate_sample_score(size_t i);
+    double calculate_score(SCORING score_type, size_t i) const
+    {
+        if (i > m_sample_names.size())
+            throw std::out_of_range("Sample name vector out of range");
+        double score = 0;
+        switch (score_type)
+        {
+        case SCORING::AVERAGE:
+            if (m_sample_names[i].num_snp == 0) return 0;
+            return m_sample_names[i].prs / (double) m_sample_names[i].num_snp;
+            break;
+        case SCORING::SUM: return m_sample_names[i].prs; break;
+        case SCORING::STANDARDIZE:
+            if (m_sample_names[i].num_snp == 0)
+                return -m_mean_score / m_score_sd;
+            else
+                return ((m_sample_names[i].prs
+                         / (double) m_sample_names[i].num_snp)
+                        - m_mean_score)
+                       / m_score_sd;
+            break;
+        }
+        return score;
+    }
+    void update_index(size_t i)
+    {
+        if (i == m_existed_snps.size())
+            m_cur_category_index = m_categories.size();
+        else
+            m_cur_category_index =
+                m_categories_index[m_existed_snps[i].category()];
+    }
+    uintptr_t founder_ct() const { return m_founder_ct; }
 
 protected:
+    // global stuff
+    static std::vector<int> g_num_snps;
+    static std::vector<double> g_prs_storage;
+    static int g_max_threshold_store;
+    void gen_prs_memory(Reporter& reporter);
     // variable storages
     // vector storing all the genotype files
     std::vector<std::string> m_genotype_files;
@@ -137,13 +274,12 @@ protected:
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
     double m_hard_threshold;
-    bool m_hard_coded=false;
+    bool m_hard_coded = false;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
     std::vector<uintptr_t> m_tmp_genotype;
-
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
@@ -173,13 +309,18 @@ protected:
                   std::vector<uint32_t>& pair_tot,
                   std::vector<uintptr_t>& genotype_vector,
                   std::vector<uintptr_t>& pair_genotype_vector);
+    double get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
+                  std::vector<uintptr_t>& index_data,
+                  std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
-    int m_model = +MODEL::ADDITIVE;
+    MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
+    double m_mean_score = 0.0;
+    double m_score_sd = 0.0;
     struct
     {
         double r2;
@@ -191,7 +332,9 @@ protected:
 
 
     std::vector<double> m_thresholds;
-
+    std::vector<int> m_categories;
+    std::unordered_map<int, int> m_categories_index;
+    int m_cur_category_index = 0;
 
     uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;
@@ -199,8 +342,7 @@ protected:
 
     virtual inline void read_genotype(uintptr_t* genotype, const SNP& snp,
                                       const std::string& file_name){};
-    virtual void read_score(std::vector<Sample_lite>& current_prs_score,
-                            size_t start_index, size_t end_bound,
+    virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};
 
 

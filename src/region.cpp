@@ -182,15 +182,35 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
 {
     std::unordered_map<std::string, Region::region_bound> result_boundary;
     if (gtf.empty()) return result_boundary; // basically return an empty map
-    std::ifstream gtf_file;
-    gtf_file.open(gtf.c_str());
-    if (!gtf_file.is_open()) {
-        std::string error_message = "Cannot open gtf file: " + gtf;
-        throw std::runtime_error(error_message);
-    }
+
     std::string line;
     size_t num_line = 0, exclude_feature = 0;
-    while (std::getline(gtf_file, line)) {
+
+
+    bool gz_input = false;
+    GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
+    if (gtf.substr(gtf.find_last_of(".") + 1).compare("gz") == 0) {
+        gz_gtf_file.open(gtf.c_str());
+        if (!gz_gtf_file.good()) {
+            std::string error_message =
+                "ERROR: Cannot open GTF (gz) to read!\n";
+            throw std::runtime_error(error_message);
+        }
+        gz_input = true;
+    }
+
+    std::ifstream gtf_file;
+    if (!gz_input) {
+        gtf_file.open(gtf.c_str());
+        if (!gtf_file.is_open()) {
+            std::string error_message = "Cannot open gtf file: " + gtf;
+            throw std::runtime_error(error_message);
+        }
+    }
+
+    while ((!gz_input && std::getline(gtf_file, line))
+           || (gz_input && std::getline(gz_gtf_file, line)))
+    {
         num_line++;
         misc::trim(line);
         if (line.empty() || line[0] == '#') continue;

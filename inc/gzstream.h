@@ -34,10 +34,10 @@
 #include <iostream>
 #include <zlib.h>
 
-#ifdef GZSTREAM_NAMESPACE
+
 namespace GZSTREAM_NAMESPACE
 {
-#endif
+
 
 // ----------------------------------------------------------------------------
 // Internal classes to implement gzstream. See below for user classes.
@@ -125,9 +125,9 @@ public:
     }
 };
 
-#ifdef GZSTREAM_NAMESPACE
+
 } // namespace GZSTREAM_NAMESPACE
-#endif
+
 
 #endif // GZSTREAM_H
 // ============================================================================

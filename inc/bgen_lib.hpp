@@ -101,8 +101,9 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
 {
     uLongf const source_size = (end - begin);
     uLongf dest_size = dest->size() * sizeof(T);
-    uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
-               reinterpret_cast<Bytef const*>(begin), source_size);
+    int result =
+        uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
+                   reinterpret_cast<Bytef const*>(begin), source_size);
     assert(result == Z_OK);
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
@@ -577,7 +578,6 @@ namespace bgen
         {
             assert(0);
         }
-
         read_length_followed_by_data(aStream, &RSID_size, RSID);
         read_length_followed_by_data(aStream, &chromosome_size, chromosome);
         read_little_endian_integer(aStream, SNP_position);
@@ -888,7 +888,6 @@ namespace bgen
                                                             32768.0));
             }
         };
-
         template <typename Setter>
         void parse_probability_data(byte_t const* buffer,
                                     byte_t const* const end,
@@ -907,24 +906,12 @@ namespace bgen
                 setter.set_number_of_entries(ploidy, 3, ePerUnorderedGenotype,
                                              eProbability);
                 assert(end >= buffer + 6);
-                std::vector<uint16_t> prob_vec;
-                double sum = 0.0;
                 for (std::size_t g = 0; g < 3; ++g) {
                     uint16_t prob;
                     buffer = read_little_endian_integer(buffer, end, &prob);
-                    prob_vec.push_back(prob);
-                    sum += prob;
-                }
-                for (std::size_t g = 0; g < 3; ++g) {
-                    if (sum == 0.0) {
-                        setter.set_value(g, genfile::MissingValue());
-                    }
-                    else
-                    {
-                        setter.set_value(
-                            g, impl::convert_from_integer_representation(
-                                   prob_vec[g], probability_conversion_factor));
-                    }
+                    setter.set_value(g,
+                                     impl::convert_from_integer_representation(
+                                         prob, probability_conversion_factor));
                 }
             }
             call_finalise(setter);
@@ -1165,6 +1152,7 @@ namespace bgen
             }
             call_finalise(setter);
         }
+
 
         struct ProbabilityDataWriter
             : public genfile::bgen::impl::ProbabilityDataWriterBase

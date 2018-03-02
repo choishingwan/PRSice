@@ -30,10 +30,10 @@
 #include <iostream>
 #include <string.h> // for memcpy
 
-#ifdef GZSTREAM_NAMESPACE
+
 namespace GZSTREAM_NAMESPACE
 {
-#endif
+
 
 // ----------------------------------------------------------------------------
 // Internal classes to implement gzstream. See header file for user classes.
@@ -154,9 +154,9 @@ void gzstreambase::close()
         if (!buf.close()) clear(rdstate() | std::ios::badbit);
 }
 
-#ifdef GZSTREAM_NAMESPACE
+
 } // namespace GZSTREAM_NAMESPACE
-#endif
+
 
 // ============================================================================
 // EOF //

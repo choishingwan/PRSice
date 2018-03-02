@@ -38,29 +38,45 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#ifdef _WIN32
+#include <process.h>
+#include <windows.h>
+#define pthread_t HANDLE
+#define THREAD_RET_TYPE unsigned __stdcall
+#define THREAD_RETURN return 0
+#define EOLN_STR "\r\n"
+#else
+#include <pthread.h>
+#define THREAD_RET_TYPE void*
+#define THREAD_RETURN return nullptr
+#endif
+
 // This should be the class to handle all the procedures
 class PRSice
 {
 public:
     PRSice(const std::string& base_name, const Commander& commander,
-           const bool prset, const size_t sample_ct, Reporter& reporter)
+           const bool prset, const size_t sample_ct, Reporter& reporter,
+           const size_t num_threshold)
         : m_ignore_fid(commander.ignore_fid())
         , m_prset(prset)
-        , m_logit_perm(commander.logit_perm())
-        , m_num_perm(commander.num_permutation())
-        , m_score(commander.get_scoring())
+        , m_num_perm(commander.permutation())
+        , m_score(commander.get_score())
+        , m_missing_score(commander.get_missing_score())
         , m_base_name(base_name)
         , m_target(commander.target_name())
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
-
-        bool perm = commander.permute();
+        g_logit_perm = commander.logit_perm();
+        // we calculate the number of permutation we can run at one time
+        bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
+        // check if there's any binary phenotype
         bool has_binary = false;
         for (auto&& b : m_target_binary) {
             if (b) {
@@ -70,8 +86,8 @@ public:
         }
         if (perm) {
             // first check for ridiculously large sample size
-            // allow 10 GB here
-            if (CHAR_BIT * sample_ct > 1000000000) {
+            // allow 1 GB here
+            if (CHAR_BIT * sample_ct > 100000000) {
                 m_perm_per_slice = 1;
             }
             else
@@ -80,7 +96,7 @@ public:
                 // equal to c_commander.num_permutation();
 
                 int sample_memory = CHAR_BIT * sample_ct;
-                m_perm_per_slice = 1000000000 / sample_memory;
+                m_perm_per_slice = 100000000 / sample_memory;
                 m_perm_per_slice = (m_perm_per_slice > m_num_perm)
                                        ? m_num_perm
                                        : m_perm_per_slice;
@@ -88,7 +104,7 @@ public:
                 m_remain_slice = m_num_perm % m_perm_per_slice;
             }
             if (has_binary) {
-                if (!m_logit_perm) {
+                if (!g_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform  linear regression instead of logistic "
@@ -127,7 +143,7 @@ public:
     void run_prsice(const Commander& c_commander,
                     const std::string& region_name, const size_t pheno_index,
                     const size_t region_index, Genotype& target);
-    void regress_score(const double threshold, size_t thread,
+    void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
 
     void prsice(const Commander& c_commander, const Region& c_region,
@@ -149,6 +165,7 @@ private:
         double coefficient;
         double p;
         double emp_p;
+        double se;
         int num_snp;
     };
 
@@ -163,7 +180,7 @@ private:
         double prevalence;
     };
 
-    struct
+    struct Pheno_Info
     {
         std::vector<int> col;
         std::vector<std::string> name;
@@ -172,16 +189,15 @@ private:
         bool use_pheno;
     } pheno_info;
 
-    static std::mutex score_mutex;
-
 
     bool m_ignore_fid = false;
     bool m_prset = false;
-    bool m_logit_perm = false;
-    bool m_average_score = true;
+    static bool g_logit_perm;
     Eigen::VectorXd m_phenotype;
-    Eigen::MatrixXd m_independent_variables;
     double m_null_r2 = 0.0;
+    double m_null_p = 1.0;
+    double m_null_se = 0.0;
+    double m_null_coeff = 0.0;
     int m_best_index = -1;
     int m_perm_per_slice = 0;
     int m_remain_slice = 0;
@@ -192,38 +208,49 @@ private:
     size_t m_all_thresholds = 0;
     size_t m_max_fid_length = 3;
     size_t m_max_iid_length = 3;
-    SCORING m_score = SCORING::MEAN_IMPUTE;
+    SCORING m_score = SCORING::AVERAGE;
+    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
     std::string m_base_name;
     std::string m_target;
     std::string m_out;
     std::vector<bool> m_target_binary;
-    std::vector<double> m_perm_result;
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
-    std::vector<Sample_lite> m_current_sample_score;
-    std::vector<Sample_lite> m_best_sample_score;
-    std::vector<std::string> m_sample_included;
+    std::vector<double> m_best_sample_score;
     std::vector<size_t> m_sample_index;
     std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
                                                       // phenotype
-    std::vector<Sample> m_sample_names; // might want to not storing it here
+
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
+    // pthread mutli_thread require stuff?
+    struct perm_info
+    {
+        size_t start;
+        size_t end;
+        size_t processed;
+        size_t rank;
+    };
 
+    // Global Stuff (Either for threading or for memory control)
+    static Eigen::MatrixXd g_independent_variables;
+    static std::vector<double> g_perm_result;
+    static std::unordered_map<uintptr_t, perm_info> g_perm_range;
+    static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
+    static std::vector<Eigen::MatrixXd> g_permuted_pheno;
+    static Eigen::VectorXd g_pre_se_calulated;
+    // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
-    void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-                     std::vector<Eigen::MatrixXd>& pheno_perm, size_t start,
-                     size_t end, int rank, const Eigen::VectorXd& pre_se,
-                     size_t processed, bool logit_perm);
+    static THREAD_RET_TYPE thread_perm(void* id);
 
-    void permutation(const size_t n_thread, bool logit_perm);
-    void update_sample_included();
-    void gen_pheno_vec(const std::string& pheno_file_name,
+    void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
+    void update_sample_included(Genotype& target);
+    void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
     std::vector<size_t> get_cov_index(const std::string& c_cov_file,
                                       std::vector<std::string>& cov_header,

@@ -48,10 +48,11 @@ public:
         threshold.category = category;
         threshold.p_threshold = p_threshold;
     };
+
     inline void set_flipped() { statistic.flipped = true; };
     std::string get_rs() const { return basic.rs; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
-
+    static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     bool operator==(const SNP& Ref) const
     {
         if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
@@ -168,14 +169,12 @@ public:
     };
 
     void set_clumped() { clump_info.clumped = true; };
-    void clump(std::vector<SNP>& snp_list, double proxy = 2);
-    void clump(std::vector<SNP>& snp_list, size_t target_index, double r2,
-               double proxy = 2)
+    void clump(SNP& target, double r2, double proxy = 2)
     {
         // when proxy = 2, we will not perform proxy
         // That's because no SNP can have an R2 > 2
-        auto& target = snp_list[target_index];
         if (target.clumped()) return;
+
         bool completed = false;
         if (r2 > proxy) {
             // proxy clump
@@ -206,7 +205,7 @@ public:
     bool valid() const { return basic.valid; };
     void invalidate() { basic.valid = false; };
     void set_low_bound(size_t low) { clump_info.low_bound = low; };
-    void set_up_bounud(size_t up) { clump_info.up_bound = up; };
+    void set_up_bound(size_t up) { clump_info.up_bound = up; };
     size_t up_bound() const { return clump_info.up_bound; };
     size_t low_bound() const { return clump_info.low_bound; };
 
