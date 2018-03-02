@@ -282,6 +282,11 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
 {
     if (context.flags & genfile::bgen::e_SampleIdentifiers) {
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
+        uint32_t tmp_offset;
+        genfile::bgen::Context tmp_context ;
+        genfile::bgen::read_offset( bgen_file, &tmp_offset ) ;
+        genfile::bgen::read_header_block( bgen_file, &tmp_context ) ;
+
         uint32_t sample_block_size = 0;
         uint32_t actual_number_of_samples = 0;
         uint16_t identifier_size;

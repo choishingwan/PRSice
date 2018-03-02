@@ -639,7 +639,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 ujj = CTZLU(ulii) & (BITCT - 2);
                 ukk = (ulii >> ujj) & 3;
                 sample_idx = uii + (ujj / 2);
-                if (ukk == 1 || ukk == 3) // Because 01 is coded as missing
+                if (ukk == 1 || ukk == 3) // Because 10 is coded as missing
                 {
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
