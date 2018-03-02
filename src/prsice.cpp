@@ -756,7 +756,8 @@ void PRSice::run_prsice(const Commander& c_commander,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-    target.reset_sample_prs();
+    // target.reset_sample_prs();
+    target.reset_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
@@ -830,42 +831,55 @@ void PRSice::run_prsice(const Commander& c_commander,
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
     bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    // we now try to read in multiple thresholds in one go
+    // So we need to know how many thresholds are read with
+    // each call of target
+    int thresholds_per_round = Genotype::threshold_per_round();
+    std::vector<int> cur_num_snps;
+    /*
     while (target.get_score(cur_index, cur_category, cur_threshold,
                             m_num_snp_included, region_index,
                             require_standardize))
-    {
-
-        double progress =
-            (double) cur_category / (double) (max_category) *100.0;
-        if (progress - prev_progress > 0.01 && !m_prset) {
-            fprintf(stderr, "\rProcessing %03.2f%%", progress);
-            prev_progress = progress;
-        }
-
-        if (print_all_scores) {
-            for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
-                double score =
-                    target.calculate_score(m_score, m_sample_index[sample]);
-                size_t loc = header_length + sample * width_of_line
-                             + m_max_fid_length + 1 + m_max_iid_length + 1
-                             + iter_threshold + iter_threshold * 12;
-                all_out.seekp(loc);
-                all_out << score;
+                            */
+    while (target.get_score(cur_index, cur_num_snps, region_index)) {
+        for (size_t i_thres = 0; i_thres < thresholds_per_rounud; ++i_thres) {
+            if (!target.has_category(i_thres)) break;
+            cur_category = target.get_category(i_thres);
+            cur_threshold = target.get_thresholds(i_thres);
+            double progress =
+                (double) cur_category / (double) (max_category) *100.0;
+            if (progress - prev_progress > 0.01 && !m_prset) {
+                fprintf(stderr, "\rProcessing %03.2f%%", progress);
+                prev_progress = progress;
             }
-        }
-        if (no_regress) {
-            iter_threshold++;
-            continue;
-        }
-        regress_score(target, cur_threshold, num_thread, pheno_index,
-                      iter_threshold);
+            target.calculate_score(i_thres, require_standardize);
+            if (print_all_scores) {
+                for (size_t sample = 0; sample < m_sample_index.size();
+                     ++sample)
+                {
+                    double score =
+                        target.calculate_score(m_score, m_sample_index[sample]);
+                    size_t loc = header_length + sample * width_of_line
+                                 + m_max_fid_length + 1 + m_max_iid_length + 1
+                                 + iter_threshold + iter_threshold * 12;
+                    all_out.seekp(loc);
+                    all_out << score;
+                }
+            }
+            if (no_regress) {
+                iter_threshold++;
+                continue;
+            }
+            regress_score(target, cur_threshold, num_thread, pheno_index,
+                          iter_threshold);
 
-        if (c_commander.permutation() != 0) {
-            permutation(target, num_thread,
-                        c_commander.logit_perm()
-                            && m_target_binary[pheno_index]);
+            if (c_commander.permutation() != 0) {
+                permutation(target, num_thread,
+                            c_commander.logit_perm()
+                                && m_target_binary[pheno_index]);
+            }
+            iter_threshold++;
         }
-        iter_threshold++;
     }
     if (all_out.is_open()) all_out.close();
     if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);

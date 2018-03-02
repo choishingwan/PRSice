@@ -1437,12 +1437,14 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     if (m_existed_snps.size() == 0) return false;
     // first, sort the threshold and update the sort ID
     std::sort(m_categories.begin(), m_categories.end());
-    std::map<int, int> cate_id;
+    std::sort(m_thresholds.begin(), m_thresholds.end());
     for (size_t i = 0; i < m_categories.size(); ++i)
-        cate_id[m_categories[i]] = i;
+        m_categories_index[m_categories[i]] = i;
     std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [&cate_id](SNP const& t1, SNP const& t2) {
-                  if (cate_id[t1.category()] == cate_id[t2.category()]) {
+              [&m_categories_index](SNP const& t1, SNP const& t2) {
+                  if (m_categories_index[t1.category()]
+                      == m_categories_index[t2.category()])
+                  {
                       if (t1.file_name().compare(t2.file_name()) == 0) {
                           return t1.byte_pos() < t2.byte_pos();
                       }
@@ -1450,8 +1452,45 @@ bool Genotype::prepare_prsice(Reporter& reporter)
                           return t1.file_name().compare(t2.file_name()) < 0;
                   }
                   else
-                      return cate_id[t1.category()] < cate_id[t2.category()];
+                      return m_categories_index[t1.category()]
+                             < m_categories_index[t2.category()];
               });
+    return true;
+}
+
+double Genotype::calculate_score(size_t i, bool require_statistic){
+	// if current category index is 0, then
+	// directly add to sample prs
+	// otherwise, +=
+}
+
+bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
+                         const size_t region_index)
+{
+    if (m_existed_snps.size() == 0
+        || m_cur_category_index == m_categories.size()
+        || cur_index == m_existed_snps.size())
+        return false;
+    bool ended = false;
+    int end_index = 0;
+    num_snps_included.resize(g_max_threshold_store, 0);
+    int max_category = m_cur_category_index + g_max_threshold_store;
+    for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
+        auto&& category = m_existed_snps[i].category();
+        end_index = i;
+        if (m_categories_index[category] >= max_category) {
+            ended = true;
+            break;
+        }
+        if (m_existed_snps[i].in(region_index)) {
+            num_snps_included[m_categories_index[category]
+                              - m_cur_category_index]++;
+        }
+    }
+    read_score(cur_index, end_index, region_index);
+    // should be last thing
+    cur_index = end_index;
+    if (ended) m_cur_tcategory_index = m_categories.size();
     return true;
 }
 

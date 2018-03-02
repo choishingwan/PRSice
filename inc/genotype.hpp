@@ -52,7 +52,7 @@ public:
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 
-
+    static int threshold_per_round() { return g_max_threshold_store; }
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, bool verbose,
                       Reporter& reporter);
@@ -84,6 +84,7 @@ public:
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
                    const bool require_statistic);
+    bool get_score(const size_t region_index, const bool require_statistic);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
@@ -101,14 +102,38 @@ public:
             sample.has_pheno = false;
         }
     };
-    void reset_prs()
+
+    void reset_sample_prs()
     {
         for (auto&& sample : m_sample_names) {
-            sample.num_snp = 0;
             sample.prs = 0.0;
+            sample.num_snp = 0.0;
         }
     };
+    void reset_prs()
+    {
+        m_cur_category_index = 0;
+        std::fill(g_prs_storage.begin(), g_prs_storage.end(), 0);
+        std::fill(g_num_snps.begin(), g_num_snps.end(), 0);
+        /*// don't need this for now as sample prs should be built on the
+        vectors for (auto&& sample : m_sample_names) { sample.prs = 0.0;
+            sample.num_snp = 0.0;
+        }
+        */
+    }
     bool prepare_prsice(Reporter& reporter);
+    bool has_category(size_t i) const
+    {
+        return (m_cur_category_index + i < m_categories.size());
+    }
+    double get_thresholds(size_t i) const
+    {
+        return m_thresholds.at(m_cur_category_index + i);
+    }
+    int get_category(size_t i) const
+    {
+        return m_categories.at(m_cur_category_index + i);
+    }
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_names.size())
@@ -166,6 +191,7 @@ public:
             throw std::out_of_range("Sample name vector out of range");
         return m_sample_names[i].IID;
     }
+    double calculate_score(size_t i, bool require_statistic);
     double calculate_score(SCORING score_type, size_t i) const
     {
         if (i > m_sample_names.size())
@@ -191,13 +217,6 @@ public:
         return score;
     }
 
-    void reset_sample_prs()
-    {
-        for (auto&& sample : m_sample_names) {
-            sample.prs = 0.0;
-            sample.num_snp = 0.0;
-        }
-    };
     uintptr_t founder_ct() const { return m_founder_ct; }
 
 protected:
@@ -308,6 +327,8 @@ protected:
 
     std::vector<double> m_thresholds;
     std::vector<int> m_categories;
+    std::unordered_map<int, int> m_categories_index;
+    int m_cur_category_index = 0;
 
     uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;
