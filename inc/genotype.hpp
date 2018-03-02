@@ -190,7 +190,7 @@ public:
             throw std::out_of_range("Sample name vector out of range");
         return m_sample_names[i].IID;
     }
-    double calculate_sample_score(size_t i);
+    void calculate_sample_score(size_t i);
     double calculate_score(SCORING score_type, size_t i) const
     {
         if (i > m_sample_names.size())
@@ -215,7 +215,10 @@ public:
         }
         return score;
     }
-
+    void update_index(size_t i){
+    		if(i == m_existed_snps.size()-1) m_cur_category_index = m_categories.size();
+    		else m_cur_category_index = m_categories_index[m_existed_snps[i].category()];
+    }
     uintptr_t founder_ct() const { return m_founder_ct; }
 
 protected:

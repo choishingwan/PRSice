@@ -881,7 +881,9 @@ void PRSice::run_prsice(const Commander& c_commander,
             }
             iter_threshold++;
         }
+        target.update_index(cur_index);
     }
+    std::cerr << "Outside" << std::endl;
     if (all_out.is_open()) all_out.close();
     if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();

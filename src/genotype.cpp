@@ -1456,7 +1456,7 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
-double Genotype::calculate_sample_score(size_t i)
+void Genotype::calculate_sample_score(size_t i)
 {
     // if current category index is 0, then
     // directly add to sample prs
@@ -1499,17 +1499,16 @@ bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
 {
     if (m_existed_snps.size() == 0
         || m_cur_category_index == m_categories.size()
-        || cur_index == m_existed_snps.size())
+        || cur_index == m_existed_snps.size()-1)
         return false;
-    bool ended = false;
     int end_index = 0;
     num_snps_included.resize(g_max_threshold_store, 0);
     int max_category = m_cur_category_index + g_max_threshold_store;
+    if(cur_index == -1) cur_index = 0;
     for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
         auto&& category = m_existed_snps[i].category();
         end_index = i;
         if (m_categories_index[category] >= max_category) {
-            ended = true;
             break;
         }
         if (m_existed_snps[i].in(region_index)) {
@@ -1522,7 +1521,6 @@ bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
     read_score(cur_index, end_index, region_index);
     // should be last thing
     cur_index = end_index;
-    if (ended) m_cur_category_index = m_categories.size();
     return true;
 }
 
