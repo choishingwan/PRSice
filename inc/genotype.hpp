@@ -85,7 +85,7 @@ public:
                    size_t& num_snp_included, const size_t region_index,
                    const bool require_statistic);
     bool get_score(int& cur_index, std::vector<size_t>& num_snps_included,
-                      const size_t region_index);
+                   const size_t region_index);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
@@ -215,9 +215,13 @@ public:
         }
         return score;
     }
-    void update_index(size_t i){
-    		if(i == m_existed_snps.size()-1) m_cur_category_index = m_categories.size();
-    		else m_cur_category_index = m_categories_index[m_existed_snps[i].category()];
+    void update_index(size_t i)
+    {
+        if (i == m_existed_snps.size())
+            m_cur_category_index = m_categories.size();
+        else
+            m_cur_category_index =
+                m_categories_index[m_existed_snps[i].category()];
     }
     uintptr_t founder_ct() const { return m_founder_ct; }
 

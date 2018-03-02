@@ -1499,22 +1499,28 @@ bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
 {
     if (m_existed_snps.size() == 0
         || m_cur_category_index == m_categories.size()
-        || cur_index == m_existed_snps.size()-1)
+        || cur_index == m_existed_snps.size())
         return false;
     int end_index = 0;
     num_snps_included.resize(g_max_threshold_store, 0);
     int max_category = m_cur_category_index + g_max_threshold_store;
-    if(cur_index == -1) cur_index = 0;
+    if (cur_index == -1) cur_index = 0;
+    bool end_with_left_over = false;
     for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
         auto&& category = m_existed_snps[i].category();
         end_index = i;
         if (m_categories_index[category] >= max_category) {
+            end_with_left_over = true;
             break;
         }
         if (m_existed_snps[i].in(region_index)) {
             num_snps_included[m_categories_index[category]
                               - m_cur_category_index]++;
         }
+    }
+    if (!end_with_left_over) {
+        // end without anything left
+        end_index = m_existed_snps.size();
     }
     std::fill(g_prs_storage.begin(), g_prs_storage.end(), 0);
     std::fill(g_num_snps.begin(), g_num_snps.end(), 0);
