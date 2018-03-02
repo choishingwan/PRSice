@@ -830,7 +830,7 @@ void PRSice::run_prsice(const Commander& c_commander,
     size_t max_category = target.max_category() + 1;
     int cur_category = 0, cur_index = -1;
     double cur_threshold = 0.0, prev_progress = 0.0;
-    bool require_standardize = (m_score == SCORING::STANDARDIZE);
+
     // we now try to read in multiple thresholds in one go
     // So we need to know how many thresholds are read with
     // each call of target

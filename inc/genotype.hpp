@@ -114,8 +114,6 @@ public:
     void reset_prs()
     {
         m_cur_category_index = 0;
-        std::fill(g_prs_storage.begin(), g_prs_storage.end(), 0);
-        std::fill(g_num_snps.begin(), g_num_snps.end(), 0);
         /*// don't need this for now as sample prs should be built on the
         vectors for (auto&& sample : m_sample_names) { sample.prs = 0.0;
             sample.num_snp = 0.0;

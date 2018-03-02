@@ -1517,6 +1517,8 @@ bool Genotype::get_score(int& cur_index, std::vector<size_t>& num_snps_included,
                               - m_cur_category_index]++;
         }
     }
+    std::fill(g_prs_storage.begin(), g_prs_storage.end(), 0);
+    std::fill(g_num_snps.begin(), g_num_snps.end(), 0);
     read_score(cur_index, end_index, region_index);
     // should be last thing
     cur_index = end_index;

@@ -572,14 +572,16 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
 
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
+    		auto && cur_snp = m_existed_snps[i_snp];
+    		int vector_pad = (m_categories_index[cur_snp.category()]-m_cur_category_index) * num_included_samples;
         if (m_cur_file.empty()
-            || m_cur_file.compare(m_existed_snps[i_snp].file_name()) != 0)
+            || m_cur_file.compare(cur_snp.file_name()) != 0)
         {
             // If we are processing a new file
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
             }
-            m_cur_file = m_existed_snps[i_snp].file_name();
+            m_cur_file = cur_snp.file_name();
             std::string bedname = m_cur_file + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
             if (!m_bed_file.is_open()) {
@@ -590,12 +592,12 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             m_prev_loc = 0;
         }
         // only read this SNP if it falls within our region of interest
-        if (!m_existed_snps[i_snp].in(region_index)) continue;
+        if (!cur_snp.in(region_index)) continue;
         // current location of the snp in the bed file
         // allow for quick jumping
         // very useful for read score as most SNPs might not
         // be next to each other
-        std::streampos cur_line = m_existed_snps[i_snp].byte_pos();
+        std::streampos cur_line = cur_snp.byte_pos();
         if (m_prev_loc != cur_line
             && !m_bed_file.seekg(cur_line, std::ios_base::beg))
         {
@@ -619,8 +621,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         uint32_t ukk;
         std::vector<size_t> missing_samples;
         std::vector<double> sample_genotype(num_included_samples);
-        double stat = m_existed_snps[i_snp].stat() * 2; // Multiply by ploidy
-        bool flipped = m_existed_snps[i_snp].is_flipped();
+        double stat = cur_snp.stat() * 2; // Multiply by ploidy
+        bool flipped = cur_snp.is_flipped();
         uint32_t sample_idx = 0;
 
         int aa = 0, aA = 0, AA = 0;
@@ -662,7 +664,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         } while (uii < num_included_samples);
 
         if (num_included_samples - nmiss == 0) {
-            m_existed_snps[i_snp].invalidate();
+            cur_snp.invalidate();
             continue;
         }
         // due to the way the binary code works, the aa will always be 0
@@ -702,14 +704,17 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         // that are not included
         size_t actual_index = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (!m_sample_names[i_sample].included) continue;
+        		auto && sample = m_sample_names[i_sample];
+            if (!sample.included) continue;
             if (i_missing < num_miss
                 && actual_index == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    m_sample_names[i_sample].prs += center_score;
+                    //m_sample_names[i_sample].prs += center_score;
+                		g_prs_storage[vector_pad+i_sample] += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    m_sample_names[i_sample].num_snp++;
+                    //m_sample_names[i_sample].num_snp++;
+                		g_num_snps[vector_pad+i_sample]++;
 
                 i_missing++;
             }
@@ -717,7 +722,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                    m_sample_names[i_sample].prs -= center_score;
+                    //m_sample_names[i_sample].prs -= center_score;
+                		g_prs_storage[vector_pad+i_sample] -= center_score;
                 }
                 int g = (flipped) ? fabs(sample_genotype[actual_index] - 2)
                                   : sample_genotype[actual_index];
@@ -732,8 +738,10 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 {
                     g = (g == 2) ? 1 : g;
                 }
-                m_sample_names[i_sample].prs += g * stat * 0.5;
-                m_sample_names[i_sample].num_snp++;
+                //m_sample_names[i_sample].prs += g * stat * 0.5;
+        			g_prs_storage[vector_pad+i_sample] += g*stat*0.5;
+                //m_sample_names[i_sample].num_snp++;
+        			g_num_snps[vector_pad+i_sample]++;
             }
             actual_index++;
         }
