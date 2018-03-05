@@ -1196,15 +1196,12 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 continue;
 
             uint32_t counts[18];
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-=======
             if (pair_ref_index == reference.m_existed_snps_index.end())
                 continue;
             r2 = -1;
             if(!use_pearson){
             	uint32_t counts[18];
             	genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
->>>>>>> Stashed changes
                           &(counts[0]), &(counts[1]), &(counts[2]));
             	counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
             	genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
