@@ -572,11 +572,9 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
 
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
-        auto&& cur_snp = m_existed_snps[i_snp];
-        int vector_pad =
-            (m_categories_index[cur_snp.category()] - m_cur_category_index)
-            * num_included_samples;
-        if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
+    	auto && cur_snp = m_existed_snps[i_snp];
+        if (m_cur_file.empty()
+            || m_cur_file.compare(cur_snp.file_name()) != 0)
         {
             // If we are processing a new file
             if (m_bed_file.is_open()) {
