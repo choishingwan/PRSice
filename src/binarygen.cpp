@@ -527,9 +527,6 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         auto&& snp = m_existed_snps[i_snp];
         if (!snp.in(region_index)) continue;
-        int vector_pad =
-            (m_categories_index[snp.category()] - m_cur_category_index)
-            * m_sample_names.size();
         if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
             if (m_bgen_file.is_open()) m_bgen_file.close();
             std::string bgen_name = snp.file_name() + ".bgen";
@@ -544,10 +541,15 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
+
+        PRS_Interpreter setter(&m_sample_names, m_model, m_missing_score,
+                               snp.stat() * 2, snp.is_flipped());
+        /*
         PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
                                vector_pad, m_model, m_missing_score,
                                snp.stat() * 2,
                                snp.is_flipped()); // Multiple by ploidy
+                               */
         // after this, m_sample contain the latest PRS score
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
@@ -672,24 +674,25 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         size_t num_miss = missing_samples.size();
         size_t actual_index = 0;
         for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
-            if (!m_sample_names[i_sample].included) continue;
+            auto&& sample = m_sample_names[i_sample];
+            if (!sample.included) continue;
             if (i_missing < num_miss
                 && actual_index == missing_samples[i_missing])
             {
                 if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    // m_sample_names[i_sample].prs += center_score;
-                    g_prs_storage[i_sample + vector_pad] += center_score;
+                    sample.prs += center_score;
+                // g_prs_storage[i_sample + vector_pad] += center_score;
                 if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    // m_sample_names[i_sample].num_snp++;
-                    g_num_snps[i_sample + vector_pad]++;
+                    sample.num_snp++;
+                // g_num_snps[i_sample + vector_pad]++;
                 i_missing++;
             }
             else
             { // not missing sample
                 if (m_missing_score == MISSING_SCORE::CENTER) {
                     // if centering, we want to keep missing at 0
-                    // m_sample_names[i_sample].prs -= center_score;
-                    g_prs_storage[i_sample + vector_pad] -= center_score;
+                    sample.prs -= center_score;
+                    // g_prs_storage[i_sample + vector_pad] -= center_score;
                 }
 
                 int g = (flipped) ? fabs(genotypes[actual_index] - 2)
@@ -706,10 +709,10 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                     g = (g == 2) ? 1 : g;
                 }
 
-                // m_sample_names[i_sample].prs += g * stat * 0.5;
-                // m_sample_names[i_sample].num_snp++;
-                g_prs_storage[i_sample + vector_pad] += g * stat * 0.5;
-                g_num_snps[i_sample + vector_pad]++;
+                sample.prs += g * stat * 0.5;
+                sample.num_snp++;
+                // g_prs_storage[i_sample + vector_pad] += g * stat * 0.5;
+                // g_num_snps[i_sample + vector_pad]++;
             }
             actual_index++;
         }
