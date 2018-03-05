@@ -661,6 +661,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     // we do it here such that the m_existed_snps is sorted correctly
     size_t low_bound = 0, last_snp = 0;
     int prev_chr = 0, prev_loc = 0;
+    m_max_window_size =0;
     for (auto&& cur_snp : m_existed_snps) {
         if (prev_chr != cur_snp.chr()) {
             prev_chr = cur_snp.chr();
@@ -686,11 +687,22 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                || cur_snp.loc() - m_existed_snps[last_snp].loc()
                       > clump_info.distance)
         {
+        	int low_bound = m_existed_snps[last_snp].low_bound();
             m_existed_snps[last_snp++].set_up_bound(vector_index);
+            if(m_max_window_size < vector_index-low_bound){
+            	m_max_window_size = vector_index-low_bound;
+            }
         }
         m_existed_snps_index[cur_snp.rs()] = vector_index++;
         // cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
         cur_snp.set_flag(region);
+    }
+    for(size_t i = m_existed_snps.size()-1; i >=0; i--){
+    	auto && cur_snp = m_existed_snps[i];
+    	if(cur_snp.up_bound()!= m_existed_snps.size()) break;
+    	if(m_max_window_size < cur_snp.up_bound()-cur_snp.low_bound()){
+    		m_max_window_size = cur_snp.up_bound()-cur_snp.low_bound();
+    	}
     }
     // Suggest that we want to release memory
     // but this is only a suggest as this is non-binding request
@@ -928,6 +940,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
     bool is_x = false;
+    bool use_pearson = false;
     double freq11;
     double freq11_expected;
     double freq1x;
@@ -943,7 +956,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     int mismatch = 0;
     std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
     std::vector<uint32_t> index_tots(6);
-
+    // pre-allocate the memory without bothering the memory pool stuff
+    std::vector<uint32_t>ld_missing_count(m_max_window_size);
+    uint32_t* ld_missing_ct_ptr = nullptr; // kinda stupid for me to use it but let's forget about it now
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(reference.founder_ct(), founder_include2.data());
     std::unordered_set<int> unique_threshold;
@@ -1044,16 +1059,27 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                  - (uintptr_t)(bigstack_initial_base
                                                - bigstack_ua))
                                 & (~(CACHELINE - ONELU))]);
+    // m_max_window_size represent the maximum number of SNPs required for any one window
     uintptr_t max_window_size =
         (((uintptr_t) g_bigstack_end) - ((uintptr_t) bigstack_initial_base))
-        / (founder_ctv2 * sizeof(intptr_t));
+        / (founder_ctv2 * sizeof(intptr_t)*m_max_window_size);
+    if(use_pearson){
+    	// we need more memory for pearson because we also need the storage for the geno mask
+    	max_window_size /= 2;
+    }
     g_bigstack_end = nullptr;
     uintptr_t cur_window_size = 0;
     if (!max_window_size) {
         throw std::runtime_error("ERROR: Not enough memory for clumping!");
     }
-    int clumped_count = 0;
+    // point to the middle of the bigstack?
+    uintptr_t* geno_mask = nullptr;
+    uintptr_t* geno_mask_ptr = nullptr;
+    if(use_pearson){
+    	geno_mask = (uintptr_t*)bigstack_initial_base+m_max_window_size*founder_ctv2*sizeof(intptr_t);
+    }
     int not_found = 0;
+    int clumped_count = 0;
     double prev_progress = -1.0;
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
@@ -1099,6 +1125,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t start = cur_target_snp.low_bound();
         size_t end = cur_target_snp.up_bound();
         window_data_ptr = window_data;
+        geno_mask_ptr = geno_mask;
+        ld_missing_ct_ptr = ld_missing_count.data();
         cur_window_size = 0;
         // transversing on TARGET
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
@@ -1119,6 +1147,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             }
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
+            if(use_pearson){
+            	geno_mask_ptr[founder_ctv2 - 2] = 0;
+            	geno_mask_ptr[founder_ctv2 - 1] = 0;
+            	ld_process_load2(window_data_ptr, geno_mask_ptr, ld_missing_ct_ptr, m_founder_ct, is_x, nullptr);
+                geno_mask_ptr = &(geno_mask_ptr[founder_ctv2]);
+                ld_missing_ct_ptr++;
+            }
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
 
@@ -1128,22 +1163,28 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 
         reference.read_genotype(window_data_ptr, ref_snp, ref_snp.file_name());
 
-        vec_datamask(m_founder_ct, 0, window_data_ptr, founder_include2.data(),
-                     index_data.data());
-        index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-        vec_datamask(m_founder_ct, 2, window_data_ptr, founder_include2.data(),
+        if(!use_pearson){
+        	vec_datamask(m_founder_ct, 0, window_data_ptr, founder_include2.data(),
+        			index_data.data());
+        	index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
+        	vec_datamask(m_founder_ct, 2, window_data_ptr, founder_include2.data(),
                      &(index_data[founder_ctv2]));
-        index_tots[1] =
-            popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-        vec_datamask(m_founder_ct, 3, window_data_ptr, founder_include2.data(),
+        	index_tots[1] =
+        			popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
+        	vec_datamask(m_founder_ct, 3, window_data_ptr, founder_include2.data(),
                      &(index_data[2 * founder_ctv2]));
-        index_tots[2] =
-            popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
-
+        	index_tots[2] =
+        			popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
+        }else{
+        	geno_mask_ptr[founder_ctv2 - 2] = 0;
+        	geno_mask_ptr[founder_ctv2 - 1] = 0;
+        	ld_process_load2(window_data_ptr, geno_mask_ptr, ld_missing_ct_ptr, m_founder_ct, is_x, nullptr);
+        }
         if (++cur_window_size == max_window_size) {
             throw std::runtime_error("ERROR: Out of memory!");
         }
         window_data_ptr = window_data;
+
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
@@ -1156,35 +1197,45 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 
             uint32_t counts[18];
             genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+=======
+            if (pair_ref_index == reference.m_existed_snps_index.end())
+                continue;
+            r2 = -1;
+            if(!use_pearson){
+            	uint32_t counts[18];
+            	genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+>>>>>>> Stashed changes
                           &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
+            	counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+            	genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
                           founder_ctl2, &(counts[3]), &(counts[4]),
                           &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
+            	counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+            	genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
                           founder_ctl2, &(counts[6]), &(counts[7]),
                           &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            r2 = -1;
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
+            	counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+            	if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
                                         &freqx1, &freqx2, &freq11))
-            {
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                {
-                    r2 = 0.0;
-                }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
+            	{
+            		freq11_expected = freqx1 * freq1x;
+            		dxx = freq11 - freq11_expected;
+            		// if r^2 threshold is 0, let everything else through but
+            		// exclude the apparent zeroes.  Zeroes *are* included if
+            		// r2_thresh is negative,
+            		// though (only nans are rejected then).
+            		if (fabs(dxx) < SMALL_EPSILON
+            				|| fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
+            		{
+            			r2 = 0.0;
+            		}
+            		else
+            		{
+            			r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+            		}
+            	}
+            }else{
+
             }
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
@@ -1209,37 +1260,42 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
 
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
-            uint32_t counts[18];
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                          &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                          founder_ctl2, &(counts[3]), &(counts[4]),
-                          &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                          founder_ctl2, &(counts[6]), &(counts[7]),
-                          &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            r2 = -1;
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
-                                        &freqx1, &freqx2, &freq11))
-            {
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                {
-                    r2 = 0.0;
-                }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
+
+			r2 = -1;
+            if(!use_pearson){
+				uint32_t counts[18];
+				genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+							  &(counts[0]), &(counts[1]), &(counts[2]));
+				counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+				genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
+							  founder_ctl2, &(counts[3]), &(counts[4]),
+							  &(counts[5]));
+				counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+				genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
+							  founder_ctl2, &(counts[6]), &(counts[7]),
+							  &(counts[8]));
+				counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+				if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
+											&freqx1, &freqx2, &freq11))
+				{
+					freq11_expected = freqx1 * freq1x;
+					dxx = freq11 - freq11_expected;
+					// if r^2 threshold is 0, let everything else through but
+					// exclude the apparent zeroes.  Zeroes *are* included if
+					// r2_thresh is negative,
+					// though (only nans are rejected then).
+					if (fabs(dxx) < SMALL_EPSILON
+						|| fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
+					{
+						r2 = 0.0;
+					}
+					else
+					{
+						r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+					}
+				}
+            }else{
+
             }
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);

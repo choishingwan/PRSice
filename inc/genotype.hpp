@@ -40,6 +40,10 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
+
+#define MULTIPLEX_LD 1920
+#define MULTIPLEX_2LD (MULTIPLEX_LD * 2)
+
 class Genotype
 {
 public:
@@ -286,6 +290,7 @@ protected:
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
+    size_t m_max_window_size = 0;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
@@ -530,15 +535,538 @@ protected:
         }
     }
 #endif
-};
 
-/*
- class Plink: public Genotype{
- public:
- Plink(std::string prefix, int num_auto=22, bool no_x=false, bool no_y=false,
- bool no_xy=false, bool no_mt=false, const size_t thread=1); private: void
- load_sample(); std::vector<SNP> load_snps();
- };
- */
+    // mask_buf has the same size as the geno_buf and is used in later situation
+    // missing_ct_ptr seems to be a int for number of missing
+    // in plink, because they use multi-threading, they use a vector for this
+    // but as we are clumping, we can't do multi-threading in the way
+    // plink does (though might be possible if we start to incorporate the
+    // highly complicated memory pool of plink)
+	void ld_process_load2(uintptr_t *geno_buf, uintptr_t *mask_buf,
+			uint32_t *missing_ct_ptr, uint32_t founder_ct,
+			uint32_t is_x, uintptr_t *founder_male_include2) {
+		// if is_x is always false, then we can safely ignore founder_male_include2
+		uintptr_t *geno_ptr = geno_buf;
+		uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(founder_ct);
+		uintptr_t *geno_end = &(geno_buf[founder_ctl2]);
+		uintptr_t *mask_buf_ptr = mask_buf;
+		uintptr_t cur_geno;
+		uintptr_t shifted_masked_geno;
+		uintptr_t new_geno;
+		uintptr_t new_mask;
+		do {
+			cur_geno = *geno_ptr;
+			shifted_masked_geno = (cur_geno >> 1) & FIVEMASK;
+			new_geno = cur_geno - shifted_masked_geno;
+			*geno_ptr++ = new_geno;
+			new_mask = (((~cur_geno) & FIVEMASK) | shifted_masked_geno) * 3;
+			*mask_buf_ptr++ = new_mask;
+		} while (geno_ptr < geno_end);
+		if (is_x) {
+			geno_ptr = geno_buf;
+			do {
+				new_geno = *geno_ptr;
+				*geno_ptr++ = new_geno + ((~(new_geno | (new_geno >> 1))) &
+                                    	(*founder_male_include2++));
+			} while (geno_ptr < geno_end);
+		}
+		if (founder_ct % BITCT2) {
+			mask_buf[founder_ct / BITCT2] &=
+					(ONELU << (2 * (founder_ct % BITCT2))) - ONELU;
+		}
+		*missing_ct_ptr = founder_ct - (popcount_longs(mask_buf, founder_ctl2) / 2);
+    }
+
+
+
+	// amazing bitwise R2 calculation function from PLINK
+#ifdef __LP64__
+static inline void ld_dot_prod_batch(__m128i *vec1, __m128i *vec2,
+                                     __m128i *mask1, __m128i *mask2,
+                                     int32_t *return_vals, uint32_t iters) {
+  // Main routine for computation of \sum_i^M (x_i - \mu_x)(y_i - \mu_y), where
+  // x_i, y_i \in \{-1, 0, 1\}, but there are missing values.
+  //
+  //
+  // We decompose this sum into
+  //   \sum_i x_iy_i - \mu_y\sum_i x_i - \mu_x\sum_i y_i +
+  //   (M - # missing)\mu_x\mu_y.
+  // *Without* missing values, this can be handled very cleanly.  The last
+  // three terms can all be precomputed, and \sum_i x_iy_i can be handled in a
+  // manner very similar to bitwise Hamming distance.  This is several times as
+  // fast as the lookup tables used for relationship matrices.
+  //
+  // Unfortunately, when missing values are present,
+  // \mu_y\sum_{i: nonmissing from y} x_i and
+  // \mu_x\sum_{i: nonmissing from x} y_i must also be evaluated (and, in
+  // practice, \mu_y\sum_{i: nonmissing from y} x_i^2 and
+  // \mu_x\sum_{i: nonmissing from x} y_i^2 should be determined here as well);
+  // this removes much of the speed advantage, and the best applications of the
+  // underlying ternary dot product algorithm used here lie elsewhere.
+  // Nevertheless, it is still faster, so we use it.
+  // (possible todo: accelerated function when there really are no missing
+  // values, similar to what is now done for --fast-epistasis)
+  //
+  //
+  // Input:
+  // * vec1 and vec2 are encoded -1 -> 00, 0/missing -> 01, 1 -> 10.
+  // * mask1 and mask2 mask out missing values (i.e. 00 for missing, 11 for
+  //   nonmissing).
+  // * return_vals provides space for return values.
+  // * iters is the number of 48-byte windows to process, anywhere from 1 to 10
+  //   inclusive.
+  //
+  // This function performs the update
+  //   return_vals[0] += (-N) + \sum_i x_iy_i
+  //   return_vals[1] += N_y + \sum_{i: nonmissing from y} x_i
+  //   return_vals[2] += N_x + \sum_{i: nonmissing from x} y_i
+  //   return_vals[3] += N_y - \sum_{i: nonmissing from y} x_i^2
+  //   return_vals[4] += N_x - \sum_{i: nonmissing from x} y_i^2
+  // where N is the number of samples processed after applying the missingness
+  // masks indicated by the subscripts.
+  //
+  // Computation of terms [1]-[4] is based on the identity
+  //   N_y + \sum_{i: nonmissing from y} x_i = popcount2(vec1 & mask2)
+  // where "popcount2" refers to starting with two-bit integers instead of
+  // one-bit integers in our summing process (this allows us to skip a few
+  // operations).  (Once we can assume the presence of hardware popcount, a
+  // slightly different implementation may be better.)
+  //
+  // The trickier [0] computation currently proceeds as follows:
+  //
+  // 1. zcheck := (vec1 | vec2) & 0x5555...
+  // Detects whether at least one member of the pair has a 0/missing value.
+  //
+  // 2. popcount2(((vec1 ^ vec2) & (0xaaaa... - zcheck)) | zcheck)
+  // Subtracting this *from* a bias will give us our desired \sum_i x_iy_i dot
+  // product.
+  //
+  // MULTIPLEX_LD sets of values are usually handled per function call.  If
+  // fewer values are present, the ends of all input vectors should be zeroed
+  // out.
+
+  const __m128i m1 = {FIVEMASK, FIVEMASK};
+  const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+  const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+  __m128i loader1;
+  __m128i loader2;
+  __m128i sum1;
+  __m128i sum2;
+  __m128i sum11;
+  __m128i sum22;
+  __m128i sum12;
+  __m128i tmp_sum1;
+  __m128i tmp_sum2;
+  __m128i tmp_sum12;
+  __univec acc;
+  __univec acc1;
+  __univec acc2;
+  __univec acc11;
+  __univec acc22;
+  acc.vi = _mm_setzero_si128();
+  acc1.vi = _mm_setzero_si128();
+  acc2.vi = _mm_setzero_si128();
+  acc11.vi = _mm_setzero_si128();
+  acc22.vi = _mm_setzero_si128();
+  do {
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    sum1 = *mask2++;
+    sum2 = *mask1++;
+    sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    // sum11 = _mm_and_si128(_mm_and_si128(_mm_xor_si128(sum1, m1), m1),
+    // loader1); sum22 = _mm_and_si128(_mm_and_si128(_mm_xor_si128(sum2, m1),
+    // m1), loader2);
+    sum1 = _mm_and_si128(sum1, loader1);
+    sum2 = _mm_and_si128(sum2, loader2);
+    sum11 = _mm_and_si128(sum1, m1);
+    sum22 = _mm_and_si128(sum2, m1);
+    // use andnot to eliminate need for 0xaaaa... to occupy an xmm register
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12),
+                               _mm_xor_si128(loader1, loader2));
+    sum12 = _mm_or_si128(sum12, loader1);
+
+    // sum1, sum2, and sum12 now store the (biased) two-bit sums of
+    // interest; merge to 4 bits to prevent overflow.  this merge can be
+    // postponed for sum11 and sum22 because the individual terms are 0/1
+    // instead of 0/1/2.
+    sum1 = _mm_add_epi64(_mm_and_si128(sum1, m2),
+                         _mm_and_si128(_mm_srli_epi64(sum1, 2), m2));
+    sum2 = _mm_add_epi64(_mm_and_si128(sum2, m2),
+                         _mm_and_si128(_mm_srli_epi64(sum2, 2), m2));
+    sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2),
+                          _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum1 = *mask2++;
+    tmp_sum2 = *mask1++;
+    tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
+    tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
+    sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
+    sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
+                               _mm_xor_si128(loader1, loader2));
+    tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+
+    sum1 = _mm_add_epi64(
+        sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2),
+                            _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
+    sum2 = _mm_add_epi64(
+        sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2),
+                            _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
+    sum12 = _mm_add_epi64(
+        sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
+                             _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum1 = *mask2++;
+    tmp_sum2 = *mask1++;
+    tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
+    tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
+    sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
+    sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
+                               _mm_xor_si128(loader1, loader2));
+    tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+
+    sum1 = _mm_add_epi64(
+        sum1, _mm_add_epi64(_mm_and_si128(tmp_sum1, m2),
+                            _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
+    sum2 = _mm_add_epi64(
+        sum2, _mm_add_epi64(_mm_and_si128(tmp_sum2, m2),
+                            _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
+    sum11 = _mm_add_epi64(_mm_and_si128(sum11, m2),
+                          _mm_and_si128(_mm_srli_epi64(sum11, 2), m2));
+    sum22 = _mm_add_epi64(_mm_and_si128(sum22, m2),
+                          _mm_and_si128(_mm_srli_epi64(sum22, 2), m2));
+    sum12 = _mm_add_epi64(
+        sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
+                             _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+
+    acc1.vi = _mm_add_epi64(
+        acc1.vi, _mm_add_epi64(_mm_and_si128(sum1, m4),
+                               _mm_and_si128(_mm_srli_epi64(sum1, 4), m4)));
+    acc2.vi = _mm_add_epi64(
+        acc2.vi, _mm_add_epi64(_mm_and_si128(sum2, m4),
+                               _mm_and_si128(_mm_srli_epi64(sum2, 4), m4)));
+    acc11.vi = _mm_add_epi64(
+        acc11.vi, _mm_add_epi64(_mm_and_si128(sum11, m4),
+                                _mm_and_si128(_mm_srli_epi64(sum11, 4), m4)));
+    acc22.vi = _mm_add_epi64(
+        acc22.vi, _mm_add_epi64(_mm_and_si128(sum22, m4),
+                                _mm_and_si128(_mm_srli_epi64(sum22, 4), m4)));
+    acc.vi = _mm_add_epi64(
+        acc.vi, _mm_add_epi64(_mm_and_si128(sum12, m4),
+                              _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
+  } while (--iters);
+  // moved down because we've almost certainly run out of xmm registers
+  const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+#if MULTIPLEX_LD > 960
+  acc1.vi = _mm_add_epi64(_mm_and_si128(acc1.vi, m8),
+                          _mm_and_si128(_mm_srli_epi64(acc1.vi, 8), m8));
+  acc2.vi = _mm_add_epi64(_mm_and_si128(acc2.vi, m8),
+                          _mm_and_si128(_mm_srli_epi64(acc2.vi, 8), m8));
+  acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+                         _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
+#else
+  acc1.vi =
+      _mm_and_si128(_mm_add_epi64(acc1.vi, _mm_srli_epi64(acc1.vi, 8)), m8);
+  acc2.vi =
+      _mm_and_si128(_mm_add_epi64(acc2.vi, _mm_srli_epi64(acc2.vi, 8)), m8);
+  acc.vi = _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
+#endif
+  acc11.vi =
+      _mm_and_si128(_mm_add_epi64(acc11.vi, _mm_srli_epi64(acc11.vi, 8)), m8);
+  acc22.vi =
+      _mm_and_si128(_mm_add_epi64(acc22.vi, _mm_srli_epi64(acc22.vi, 8)), m8);
+
+  return_vals[0] -= ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
+  return_vals[1] += ((acc1.u8[0] + acc1.u8[1]) * 0x1000100010001LLU) >> 48;
+  return_vals[2] += ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
+  return_vals[3] += ((acc11.u8[0] + acc11.u8[1]) * 0x1000100010001LLU) >> 48;
+  return_vals[4] += ((acc22.u8[0] + acc22.u8[1]) * 0x1000100010001LLU) >> 48;
+}
+
+void ld_dot_prod(uintptr_t *vec1, uintptr_t *vec2, uintptr_t *mask1,
+                 uintptr_t *mask2, int32_t *return_vals, uint32_t batch_ct_m1,
+                 uint32_t last_batch_size) {
+  while (batch_ct_m1--) {
+    ld_dot_prod_batch((__m128i *)vec1, (__m128i *)vec2, (__m128i *)mask1,
+                      (__m128i *)mask2, return_vals, MULTIPLEX_LD / 192);
+    vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
+    vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
+    mask1 = &(mask1[MULTIPLEX_LD / BITCT2]);
+    mask2 = &(mask2[MULTIPLEX_LD / BITCT2]);
+  }
+  ld_dot_prod_batch((__m128i *)vec1, (__m128i *)vec2, (__m128i *)mask1,
+                    (__m128i *)mask2, return_vals, last_batch_size);
+}
+
+static inline int32_t ld_dot_prod_nm_batch(__m128i *vec1, __m128i *vec2,
+                                           uint32_t iters) {
+  // faster ld_dot_prod_batch() for no-missing-calls case.
+  const __m128i m1 = {FIVEMASK, FIVEMASK};
+  const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+  const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+  const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+  __m128i loader1;
+  __m128i loader2;
+  __m128i sum12;
+  __m128i tmp_sum12;
+  __univec acc;
+  acc.vi = _mm_setzero_si128();
+  do {
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12),
+                               _mm_xor_si128(loader1, loader2));
+    sum12 = _mm_or_si128(sum12, loader1);
+    sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2),
+                          _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
+                               _mm_xor_si128(loader1, loader2));
+    tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+    sum12 = _mm_add_epi64(
+        sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
+                             _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
+    loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
+                               _mm_xor_si128(loader1, loader2));
+    tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
+    sum12 = _mm_add_epi64(
+        sum12, _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
+                             _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
+
+    acc.vi = _mm_add_epi64(
+        acc.vi, _mm_add_epi64(_mm_and_si128(sum12, m4),
+                              _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
+  } while (--iters);
+#if MULTIPLEX_LD > 960
+  acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+                         _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
+#else
+  acc.vi = _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
+#endif
+  return (uint32_t)(((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48);
+}
+
+int32_t ld_dot_prod_nm(uintptr_t *vec1, uintptr_t *vec2, uint32_t founder_ct,
+                       uint32_t batch_ct_m1, uint32_t last_batch_size) {
+  // accelerated implementation for no-missing-loci case
+  int32_t result = (int32_t)founder_ct;
+  while (batch_ct_m1--) {
+    result -= ld_dot_prod_nm_batch((__m128i *)vec1, (__m128i *)vec2,
+                                   MULTIPLEX_LD / 192);
+    vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
+    vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
+  }
+  result -=
+      ld_dot_prod_nm_batch((__m128i *)vec1, (__m128i *)vec2, last_batch_size);
+  return result;
+}
+#else
+static inline void ld_dot_prod_batch(uintptr_t *vec1, uintptr_t *vec2,
+                                     uintptr_t *mask1, uintptr_t *mask2,
+                                     int32_t *return_vals, uint32_t iters) {
+  uint32_t final_sum1 = 0;
+  uint32_t final_sum2 = 0;
+  uint32_t final_sum11 = 0;
+  uint32_t final_sum22 = 0;
+  uint32_t final_sum12 = 0;
+  uintptr_t loader1;
+  uintptr_t loader2;
+  uintptr_t sum1;
+  uintptr_t sum2;
+  uintptr_t sum11;
+  uintptr_t sum22;
+  uintptr_t sum12;
+  uintptr_t tmp_sum1;
+  uintptr_t tmp_sum2;
+  uintptr_t tmp_sum12;
+  do {
+    // (The important part of the header comment on the 64-bit version is
+    // copied below.)
+    //
+    // Input:
+    // * vec1 and vec2 are encoded -1 -> 00, 0/missing -> 01, 1 -> 10.
+    // * mask1 and mask2 mask out missing values (i.e. 00 for missing, 11 for
+    //   nonmissing).
+    // * return_vals provides space for return values.
+    // * iters is the number of 12-byte windows to process, anywhere from 1 to
+    //   40 inclusive.  (No, this is not the interface you'd use for a
+    //   general-purpose library.)  [32- and 64-bit differ here.]
+    //
+    // This function performs the update
+    //   return_vals[0] += (-N) + \sum_i x_iy_i
+    //   return_vals[1] += N_y + \sum_{i: nonmissing from y} x_i
+    //   return_vals[2] += N_x + \sum_{i: nonmissing from x} y_i
+    //   return_vals[3] += N_y - \sum_{i: nonmissing from y} x_i^2
+    //   return_vals[4] += N_x - \sum_{i: nonmissing from x} y_i^2
+    // where N is the number of samples processed after applying the
+    // missingness masks indicated by the subscripts.
+    //
+    // Computation of terms [1]-[4] is based on the identity
+    //   N_y + \sum_{i: nonmissing from y} x_i = popcount2(vec1 & mask2)
+    // where "popcount2" refers to starting with two-bit integers instead of
+    // one-bit integers in our summing process (this allows us to skip a few
+    // operations).  (Once we can assume the presence of hardware popcount, a
+    // slightly different implementation may be better.)
+    //
+    // The trickier [0] computation currently proceeds as follows:
+    //
+    // 1. zcheck := (vec1 | vec2) & 0x5555...
+    // Detects whether at least one member of the pair has a 0/missing value.
+    //
+    // 2. popcount2(((vec1 ^ vec2) & (0xaaaa... - zcheck)) | zcheck)
+    // Subtracting this *from* a bias will give us our desired \sum_i x_iy_i
+    // dot product.
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    sum1 = *mask2++;
+    sum2 = *mask1++;
+    sum12 = (loader1 | loader2) & FIVEMASK;
+
+    sum1 = sum1 & loader1;
+    sum2 = sum2 & loader2;
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - sum12);
+    sum12 = sum12 | loader1;
+    sum11 = sum1 & FIVEMASK;
+    sum22 = sum2 & FIVEMASK;
+
+    sum1 = (sum1 & 0x33333333) + ((sum1 >> 2) & 0x33333333);
+    sum2 = (sum2 & 0x33333333) + ((sum2 >> 2) & 0x33333333);
+    sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum1 = *mask2++;
+    tmp_sum2 = *mask1++;
+    tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+    tmp_sum1 = tmp_sum1 & loader1;
+    tmp_sum2 = tmp_sum2 & loader2;
+
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+    tmp_sum12 = tmp_sum12 | loader1;
+    sum11 += tmp_sum1 & FIVEMASK;
+    sum22 += tmp_sum2 & FIVEMASK;
+
+    sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
+    sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
+    sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum1 = *mask2++;
+    tmp_sum2 = *mask1++;
+    tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+
+    tmp_sum1 = tmp_sum1 & loader1;
+    tmp_sum2 = tmp_sum2 & loader2;
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+    tmp_sum12 = tmp_sum12 | loader1;
+    sum11 += tmp_sum1 & FIVEMASK;
+    sum22 += tmp_sum2 & FIVEMASK;
+
+    sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
+    sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
+    sum11 = (sum11 & 0x33333333) + ((sum11 >> 2) & 0x33333333);
+    sum22 = (sum22 & 0x33333333) + ((sum22 >> 2) & 0x33333333);
+    sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+
+    sum1 = (sum1 & 0x0f0f0f0f) + ((sum1 >> 4) & 0x0f0f0f0f);
+    sum2 = (sum2 & 0x0f0f0f0f) + ((sum2 >> 4) & 0x0f0f0f0f);
+    sum11 = (sum11 & 0x0f0f0f0f) + ((sum11 >> 4) & 0x0f0f0f0f);
+    sum22 = (sum22 & 0x0f0f0f0f) + ((sum22 >> 4) & 0x0f0f0f0f);
+    sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
+
+    // technically could do the multiply-and-shift only once every two rounds
+    final_sum1 += (sum1 * 0x01010101) >> 24;
+    final_sum2 += (sum2 * 0x01010101) >> 24;
+    final_sum11 += (sum11 * 0x01010101) >> 24;
+    final_sum22 += (sum22 * 0x01010101) >> 24;
+    final_sum12 += (sum12 * 0x01010101) >> 24;
+  } while (--iters);
+  return_vals[0] -= final_sum12;
+  return_vals[1] += final_sum1;
+  return_vals[2] += final_sum2;
+  return_vals[3] += final_sum11;
+  return_vals[4] += final_sum22;
+}
+
+void ld_dot_prod(uintptr_t *vec1, uintptr_t *vec2, uintptr_t *mask1,
+                 uintptr_t *mask2, int32_t *return_vals, uint32_t batch_ct_m1,
+                 uint32_t last_batch_size) {
+  while (batch_ct_m1--) {
+    ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals, MULTIPLEX_LD / 48);
+    vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
+    vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
+    mask1 = &(mask1[MULTIPLEX_LD / BITCT2]);
+    mask2 = &(mask2[MULTIPLEX_LD / BITCT2]);
+  }
+  ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals, last_batch_size);
+}
+
+static inline int32_t ld_dot_prod_nm_batch(uintptr_t *vec1, uintptr_t *vec2,
+                                           uint32_t iters) {
+  uint32_t final_sum12 = 0;
+  uintptr_t loader1;
+  uintptr_t loader2;
+  uintptr_t sum12;
+  uintptr_t tmp_sum12;
+  do {
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    sum12 = (loader1 | loader2) & FIVEMASK;
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - sum12);
+    sum12 = sum12 | loader1;
+    sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+    tmp_sum12 = tmp_sum12 | loader1;
+    sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+
+    loader1 = *vec1++;
+    loader2 = *vec2++;
+    tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+    loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+    tmp_sum12 = tmp_sum12 | loader1;
+    sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+    sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
+
+    final_sum12 += (sum12 * 0x01010101) >> 24;
+  } while (--iters);
+  return final_sum12;
+}
+
+int32_t ld_dot_prod_nm(uintptr_t *vec1, uintptr_t *vec2, uint32_t founder_ct,
+                       uint32_t batch_ct_m1, uint32_t last_batch_size) {
+  int32_t result = (int32_t)founder_ct;
+  while (batch_ct_m1--) {
+    result -= ld_dot_prod_nm_batch(vec1, vec2, MULTIPLEX_LD / 48);
+    vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
+    vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
+  }
+  result -= ld_dot_prod_nm_batch(vec1, vec2, last_batch_size);
+  return result;
+}
+#endif // __LP64__
+
+};
 
 #endif /* SRC_GENOTYPE_HPP_ */
