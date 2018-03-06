@@ -94,7 +94,8 @@ public:
     void read_base(const Commander& c_commander, Region& region,
                    Reporter& reporter);
     // void clump(Genotype& reference);
-    void efficient_clumping(Genotype& reference, Reporter& reporter, bool const pearson);
+    void efficient_clumping(Genotype& reference, Reporter& reporter,
+                            bool const pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
     void reset_sample()
     {
@@ -223,7 +224,7 @@ public:
                 m_categories_index[m_existed_snps[i].category()];
     }
     uintptr_t founder_ct() const { return m_founder_ct; }
-    uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct;}
+    uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
 
 protected:
     // variable storages
@@ -1143,99 +1144,111 @@ protected:
 #endif // __LP64__
 
 
-    uint32_t ld_missing_ct_intersect(uintptr_t *lptr1, uintptr_t *lptr2,
+    uint32_t ld_missing_ct_intersect(uintptr_t* lptr1, uintptr_t* lptr2,
                                      uintptr_t word12_ct, uintptr_t word12_rem,
-                                     uintptr_t lshift_last) {
-      // variant of popcount_longs_intersect()
-      uintptr_t tot = 0;
-      uintptr_t *lptr1_end2;
-    #ifdef __LP64__
-      const __m128i m1 = {FIVEMASK, FIVEMASK};
-      const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-      const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-      const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-      __m128i *vptr1 = (__m128i *)lptr1;
-      __m128i *vptr2 = (__m128i *)lptr2;
-      __m128i *vend1;
-      __m128i loader1;
-      __m128i loader2;
-      __univec acc;
+                                     uintptr_t lshift_last)
+    {
+        // variant of popcount_longs_intersect()
+        uintptr_t tot = 0;
+        uintptr_t* lptr1_end2;
+#ifdef __LP64__
+        const __m128i m1 = {FIVEMASK, FIVEMASK};
+        const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
+        const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
+        const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
+        __m128i* vptr1 = (__m128i*) lptr1;
+        __m128i* vptr2 = (__m128i*) lptr2;
+        __m128i* vend1;
+        __m128i loader1;
+        __m128i loader2;
+        __univec acc;
 
-      while (word12_ct >= 10) {
-        word12_ct -= 10;
-        vend1 = &(vptr1[60]);
-      ld_missing_ct_intersect_main_loop:
-        acc.vi = _mm_setzero_si128();
-        do {
-          loader1 = _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
-          loader2 = _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
-          loader1 = _mm_add_epi64(
-              loader1, _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-          loader2 = _mm_add_epi64(
-              loader2, _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-          loader1 = _mm_add_epi64(
-              loader1, _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-          loader2 = _mm_add_epi64(
-              loader2, _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-          loader1 = _mm_add_epi64(_mm_and_si128(loader1, m2),
-                                  _mm_and_si128(_mm_srli_epi64(loader1, 2), m2));
-          loader1 = _mm_add_epi64(
-              loader1,
-              _mm_add_epi64(_mm_and_si128(loader2, m2),
-                            _mm_and_si128(_mm_srli_epi64(loader2, 2), m2)));
-          acc.vi = _mm_add_epi64(
-              acc.vi, _mm_add_epi64(_mm_and_si128(loader1, m4),
-                                    _mm_and_si128(_mm_srli_epi64(loader1, 4), m4)));
-        } while (vptr1 < vend1);
-        acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
-                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
-        tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
-      }
-      if (word12_ct) {
-        vend1 = &(vptr1[word12_ct * 6]);
-        word12_ct = 0;
-        goto ld_missing_ct_intersect_main_loop;
-      }
-      lptr1 = (uintptr_t *)vptr1;
-      lptr2 = (uintptr_t *)vptr2;
-    #else
-      uintptr_t *lptr1_end = &(lptr1[word12_ct * 12]);
-      uintptr_t tmp_stor;
-      uintptr_t loader1;
-      uintptr_t loader2;
-      while (lptr1 < lptr1_end) {
-        loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
-        loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
-        tmp_stor = (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
+        while (word12_ct >= 10) {
+            word12_ct -= 10;
+            vend1 = &(vptr1[60]);
+        ld_missing_ct_intersect_main_loop:
+            acc.vi = _mm_setzero_si128();
+            do
+            {
+                loader1 =
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
+                loader2 =
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
+                loader1 = _mm_add_epi64(
+                    loader1,
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
+                loader2 = _mm_add_epi64(
+                    loader2,
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
+                loader1 = _mm_add_epi64(
+                    loader1,
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
+                loader2 = _mm_add_epi64(
+                    loader2,
+                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
+                loader1 = _mm_add_epi64(
+                    _mm_and_si128(loader1, m2),
+                    _mm_and_si128(_mm_srli_epi64(loader1, 2), m2));
+                loader1 = _mm_add_epi64(
+                    loader1,
+                    _mm_add_epi64(
+                        _mm_and_si128(loader2, m2),
+                        _mm_and_si128(_mm_srli_epi64(loader2, 2), m2)));
+                acc.vi = _mm_add_epi64(
+                    acc.vi, _mm_add_epi64(
+                                _mm_and_si128(loader1, m4),
+                                _mm_and_si128(_mm_srli_epi64(loader1, 4), m4)));
+            } while (vptr1 < vend1);
+            acc.vi =
+                _mm_add_epi64(_mm_and_si128(acc.vi, m8),
+                              _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
+            tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
+        }
+        if (word12_ct) {
+            vend1 = &(vptr1[word12_ct * 6]);
+            word12_ct = 0;
+            goto ld_missing_ct_intersect_main_loop;
+        }
+        lptr1 = (uintptr_t*) vptr1;
+        lptr2 = (uintptr_t*) vptr2;
+#else
+        uintptr_t* lptr1_end = &(lptr1[word12_ct * 12]);
+        uintptr_t tmp_stor;
+        uintptr_t loader1;
+        uintptr_t loader2;
+        while (lptr1 < lptr1_end) {
+            loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
+            loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
+            tmp_stor = (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
 
-        loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-        loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
-        loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
-        tmp_stor += (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
-        tot += (tmp_stor * 0x01010101) >> 24;
-      }
-    #endif
-      lptr1_end2 = &(lptr1[word12_rem]);
-      while (lptr1 < lptr1_end2) {
-        tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK);
-      }
-      if (lshift_last) {
-        tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK) << lshift_last);
-      }
-      return tot;
+            loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
+            loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
+            loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
+            tmp_stor += (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
+            tot += (tmp_stor * 0x01010101) >> 24;
+        }
+#endif
+        lptr1_end2 = &(lptr1[word12_rem]);
+        while (lptr1 < lptr1_end2) {
+            tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK);
+        }
+        if (lshift_last) {
+            tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK)
+                                  << lshift_last);
+        }
+        return tot;
     }
-
 };
 
 #endif /* SRC_GENOTYPE_HPP_ */
