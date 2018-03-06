@@ -575,9 +575,6 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
-        int vector_pad =
-            (m_categories_index[cur_snp.category()] - m_cur_category_index)
-            * num_included_samples;
         if (!cur_snp.in(region_index)) continue;
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,

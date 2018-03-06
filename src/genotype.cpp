@@ -698,7 +698,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         // cur_snp.set_flag( region.check(cur_snp.chr(), cur_snp.loc()));
         cur_snp.set_flag(region);
     }
-    for (size_t i = m_existed_snps.size() - 1; i >= 0; i--) {
+    for (int i = m_existed_snps.size() - 1; i >= 0; i--) {
         auto&& cur_snp = m_existed_snps[i];
         if (cur_snp.up_bound() != m_existed_snps.size()) break;
         if (m_max_window_size < cur_snp.up_bound() - cur_snp.low_bound()) {
@@ -959,14 +959,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> index_tots(6);
     // pre-allocate the memory without bothering the memory pool stuff
     std::vector<uint32_t> ld_missing_count(m_max_window_size);
-    uint32_t* ld_missing_ct_ptr =
-        nullptr; // kinda stupid for me to use it but let's forget about it now
+    // kinda stupid for me to use it but let's forget about it now
+    uint32_t* ld_missing_ct_ptr = nullptr;
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(reference.founder_ct(), founder_include2.data());
     std::unordered_set<int> unique_threshold;
     std::unordered_set<double> used_thresholds;
     m_thresholds.clear();
-    m_categories.clear();
 // reference must have sorted
 
 // try and get a workspace
@@ -1022,6 +1021,17 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         malloc_size_mb = 2047;
     }
 #endif
+
+
+    if(malloc_size_mb*1048576 > m_max_window_size * founder_ctv2 * sizeof(intptr_t)){
+    	if(use_pearson){
+    		// + 1 just incase my calculation is wrong...
+    		malloc_size_mb = (m_max_window_size+1) * founder_ctv2 * sizeof(intptr_t) *2 / 1048576+1;
+    	}
+    	else{
+    		malloc_size_mb = (m_max_window_size+1) * founder_ctv2 * sizeof(intptr_t) / 1048576+1;
+    	}
+    }
     if (llxx) {
         message = std::to_string(llxx) + " MB RAM detected; reserving "
                   + std::to_string(malloc_size_mb) + " MB for clumping\n";
@@ -1064,9 +1074,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                                 & (~(CACHELINE - ONELU))]);
     // m_max_window_size represent the maximum number of SNPs required for any
     // one window
+    // and max_window_size is the number of windows we can handle in one round
+    // given the memory that we have
     uintptr_t max_window_size =
         (((uintptr_t) g_bigstack_end) - ((uintptr_t) bigstack_initial_base))
-        / (founder_ctv2 * sizeof(intptr_t) * m_max_window_size);
+        / (founder_ctv2 * sizeof(intptr_t));
     if (use_pearson) {
         // we need more memory for pearson because we also need the storage for
         // the geno mask
@@ -1162,6 +1174,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
 
+        if (++cur_window_size == max_window_size) {
+            throw std::runtime_error("ERROR: Out of memory!");
+        }
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
         std::fill(index_data.begin(), index_data.end(), 0);
@@ -1189,9 +1204,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             ld_process_load2(window_data_ptr, geno_mask_ptr, ld_missing_ct_ptr,
                              m_founder_ct, is_x, nullptr);
         }
-        if (++cur_window_size == max_window_size) {
-            throw std::runtime_error("ERROR: Out of memory!");
-        }
+
         window_data_ptr = window_data;
 
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
@@ -1204,7 +1217,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             if (pair_ref_index == reference.m_existed_snps_index.end())
                 continue;
 
-            uint32_t counts[18];
             if (pair_ref_index == reference.m_existed_snps_index.end())
                 continue;
             r2 = -1;
