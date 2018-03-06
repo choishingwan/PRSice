@@ -906,7 +906,7 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
 }
 
 
-void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
+void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter, bool const pearson)
 {
     /*
      *	Threading doesn't speed things up too much
@@ -929,19 +929,38 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
      * Index of the SNP to start process from and the up bound is the SNP to end
      */
     // sample related constants
+	// Remember that we are actually using the genotype from the reference panel
+	// so the sample size should corresponse to the sample size in the reference
     reporter.report("Start performing clumping");
     const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
+        BITCT_TO_WORDCT(reference.unfiltered_sample_ct());
+    const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(reference.founder_ct());
     const uint32_t founder_ctsplit = 3 * founder_ctv3;
+    const uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.founder_ct());
+    const uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(reference.founder_ct());
+    const uintptr_t founder_ctwd = reference.founder_ct() / BITCT2;
+    const  uintptr_t founder_ctwd12 = founder_ctwd / 12;
+    const uintptr_t founder_ctwd12_rem = founder_ctwd - (12 * founder_ctwd12);
+    const uintptr_t lshift_last = 2 * ((0x7fffffc0 - reference.founder_ct()) % BITCT2);
+    const uintptr_t founder_ct_mld = (reference.founder_ct() + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
+    const uint32_t founder_ct_mld_m1 = ((uint32_t)founder_ct_mld) - 1;
+#ifdef __LP64__
+    const uint32_t founder_ct_mld_rem =
+      (MULTIPLEX_LD / 192) - (founder_ct_mld * MULTIPLEX_LD - reference.founder_ct()) / 192;
+#else
+    const uint32_t founder_ct_mld_rem =
+      (MULTIPLEX_LD / 48) - (founder_ct_mld * MULTIPLEX_LD - reference.founder_ct()) / 48;
+#endif
+    const uintptr_t founder_ct_192_long = founder_ct_mld_m1 * (MULTIPLEX_LD / BITCT2) + founder_ct_mld_rem * (192 / BITCT2);
     const int num_snp = m_existed_snps.size();
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
     std::vector<int> remain_core_snps;
+    int32_t dp_result[5];
     const double min_r2 = (clump_info.use_proxy)
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
     bool is_x = false;
-    bool use_pearson = false;
+    const bool use_pearson = pearson;
     double freq11;
     double freq11_expected;
     double freq1x;
@@ -949,9 +968,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     double freqx1;
     double freqx2;
     double dxx;
+    double dyy;
+    double cov12;
     double r2 = -1.0;
-    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.founder_ct());
-    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(reference.founder_ct());
     bool mismatch_error = false;
     bool flipped = false;
     int mismatch = 0;
@@ -959,6 +978,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> index_tots(6);
     // pre-allocate the memory without bothering the memory pool stuff
     std::vector<uint32_t> ld_missing_count(m_max_window_size);
+    uint32_t index_missing_ct=0;
     // kinda stupid for me to use it but let's forget about it now
     uint32_t* ld_missing_ct_ptr = nullptr;
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
@@ -1022,15 +1042,18 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     }
 #endif
 
-
-    if(malloc_size_mb*1048576 > m_max_window_size * founder_ctv2 * sizeof(intptr_t)){
-    	if(use_pearson){
-    		// + 1 just incase my calculation is wrong...
-    		malloc_size_mb = (m_max_window_size+1) * founder_ctv2 * sizeof(intptr_t) *2 / 1048576+1;
-    	}
-    	else{
-    		malloc_size_mb = (m_max_window_size+1) * founder_ctv2 * sizeof(intptr_t) / 1048576+1;
-    	}
+    // size required for haplotype likelihood and pearson is different
+    if(!use_pearson & (malloc_size_mb*1048576 > (m_max_window_size +1)* founder_ctv2 * sizeof(intptr_t))){
+    	malloc_size_mb = (m_max_window_size+1) * founder_ctv2 * sizeof(intptr_t) / 1048576+1;
+    }else if( malloc_size_mb*1048576 > (m_max_window_size+1) * founder_ct_192_long *2* sizeof(intptr_t)){
+    	size_t total_required_size = 0;
+    	size_t require_size = founder_ct_192_long * sizeof(intptr_t);
+    	require_size = round_up_pow2(require_size, CACHELINE);
+    	total_required_size=require_size*2;
+    	require_size = m_max_window_size * founder_ct_192_long * sizeof(intptr_t);
+    	require_size =  round_up_pow2(require_size, CACHELINE);
+    	total_required_size+=require_size*2;
+    	malloc_size_mb = total_required_size*sizeof(intptr_t)/(sizeof(char)* 1048576)+1;
     }
     if (llxx) {
         message = std::to_string(llxx) + " MB RAM detected; reserving "
@@ -1065,7 +1088,25 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     reporter.report(message);
     bigstack_initial_base =
         (unsigned char*) round_up_pow2((uintptr_t) bigstack_ua, CACHELINE);
-    uintptr_t* window_data = (uintptr_t*) bigstack_initial_base;
+
+    // we need this as for pearson ld calculation
+    uintptr_t *index_geno=nullptr;
+    uintptr_t *index_mask = nullptr;
+    uintptr_t *window_data = nullptr;
+    uintptr_t* geno_mask = nullptr;
+    uintptr_t* geno_mask_ptr = nullptr;
+    if(use_pearson){
+    	index_geno = (uintptr_t*) bigstack_initial_base;
+    	size_t require_size = founder_ct_192_long * sizeof(intptr_t);
+    	require_size = round_up_pow2(require_size, CACHELINE);
+    	index_mask = index_geno+require_size;
+    	window_data = index_mask+require_size;
+    	require_size = m_max_window_size * founder_ct_192_long * sizeof(intptr_t);
+    	require_size =  round_up_pow2(require_size, CACHELINE);
+        geno_mask = window_data+require_size;
+    }else{
+    	window_data = (uintptr_t*) bigstack_initial_base;
+    }
     uintptr_t* window_data_ptr = nullptr;
     unsigned char* g_bigstack_end =
         &(bigstack_initial_base[(malloc_size_mb * 1048576
@@ -1076,6 +1117,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     // one window
     // and max_window_size is the number of windows we can handle in one round
     // given the memory that we have
+
     uintptr_t max_window_size =
         (((uintptr_t) g_bigstack_end) - ((uintptr_t) bigstack_initial_base))
         / (founder_ctv2 * sizeof(intptr_t));
@@ -1090,12 +1132,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         throw std::runtime_error("ERROR: Not enough memory for clumping!");
     }
     // point to the middle of the bigstack?
-    uintptr_t* geno_mask = nullptr;
-    uintptr_t* geno_mask_ptr = nullptr;
-    if (use_pearson) {
-        geno_mask = (uintptr_t*) bigstack_initial_base
-                    + m_max_window_size * founder_ctv2 * sizeof(intptr_t);
-    }
     double prev_progress = -1.0;
     for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
         double progress = (double) i_snp / (double) num_snp * 100;
@@ -1140,8 +1176,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         size_t start = cur_target_snp.low_bound();
         size_t end = cur_target_snp.up_bound();
         window_data_ptr = window_data;
-        geno_mask_ptr = geno_mask;
         ld_missing_ct_ptr = ld_missing_count.data();
+        geno_mask_ptr = geno_mask;
         cur_window_size = 0;
         // transversing on TARGET
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
@@ -1155,23 +1191,31 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 continue;
             auto&& ref_pair_snp =
                 reference.m_existed_snps[pair_ref_index->second];
-            window_data_ptr[founder_ctv2 - 2] = 0;
-            window_data_ptr[founder_ctv2 - 1] = 0;
+            if(!use_pearson){
+            	window_data_ptr[founder_ctv2 - 2] = 0;
+            	window_data_ptr[founder_ctv2 - 1] = 0;
+            }else{
+            	fill_ulong_zero(founder_ct_192_long, window_data_ptr);
+            }
             if (++cur_window_size == max_window_size) {
                 throw std::runtime_error("ERROR: Out of memory!");
             }
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
             if (use_pearson) {
-                geno_mask_ptr[founder_ctv2 - 2] = 0;
-                geno_mask_ptr[founder_ctv2 - 1] = 0;
+            	//geno_mask_ptr[founder_ctv2 - 2] = 0;
+            	//geno_mask_ptr[founder_ctv2 - 1] = 0;
+            	fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
                 ld_process_load2(window_data_ptr, geno_mask_ptr,
-                                 ld_missing_ct_ptr, m_founder_ct, is_x,
+                                 ld_missing_ct_ptr, reference.founder_ct(), is_x,
                                  nullptr);
-                geno_mask_ptr = &(geno_mask_ptr[founder_ctv2]);
                 ld_missing_ct_ptr++;
+                geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
+                window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
             }
-            window_data_ptr = &(window_data_ptr[founder_ctv2]);
+            else{
+            	window_data_ptr = &(window_data_ptr[founder_ctv2]);
+            }
         }
 
         if (++cur_window_size == max_window_size) {
@@ -1180,18 +1224,16 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
         std::fill(index_data.begin(), index_data.end(), 0);
-
-        reference.read_genotype(window_data_ptr, ref_snp, ref_snp.file_name());
-
         if (!use_pearson) {
-            vec_datamask(m_founder_ct, 0, window_data_ptr,
+        	reference.read_genotype(window_data_ptr, ref_snp, ref_snp.file_name());
+            vec_datamask(reference.founder_ct(), 0, window_data_ptr,
                          founder_include2.data(), index_data.data());
             index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-            vec_datamask(m_founder_ct, 2, window_data_ptr,
+            vec_datamask(reference.founder_ct(), 2, window_data_ptr,
                          founder_include2.data(), &(index_data[founder_ctv2]));
             index_tots[1] =
                 popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-            vec_datamask(m_founder_ct, 3, window_data_ptr,
+            vec_datamask(reference.founder_ct(), 3, window_data_ptr,
                          founder_include2.data(),
                          &(index_data[2 * founder_ctv2]));
             index_tots[2] =
@@ -1199,14 +1241,19 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         }
         else
         {
-            geno_mask_ptr[founder_ctv2 - 2] = 0;
-            geno_mask_ptr[founder_ctv2 - 1] = 0;
-            ld_process_load2(window_data_ptr, geno_mask_ptr, ld_missing_ct_ptr,
-                             m_founder_ct, is_x, nullptr);
+
+        	fill_ulong_zero(founder_ct_192_long, index_geno);
+        	reference.read_genotype(index_geno, ref_snp, ref_snp.file_name());
+        	fill_ulong_zero(founder_ct_192_long, index_mask);
+            ld_process_load2(index_geno, index_mask, &index_missing_ct,
+            		reference.founder_ct(), is_x, nullptr);
         }
 
         window_data_ptr = window_data;
-
+        if(use_pearson){
+        	geno_mask_ptr = geno_mask;
+        }
+        size_t cur_index = 0;
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
@@ -1253,15 +1300,44 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                         r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
                     }
                 }
+                window_data_ptr = &(window_data_ptr[founder_ctv2]);
             }
             else
             {
+            	// taking risk here, we don't know if this is what PLINK acutally wants
+            	// as they have a complete different structure here (for their multi-thread)
+            	uint32_t fixed_non_missing_ct = reference.founder_ct() - index_missing_ct;
+            	uint32_t non_missing_ct = fixed_non_missing_ct - ld_missing_count[cur_index];
+                if (index_missing_ct && ld_missing_count[cur_index]) {
+                  non_missing_ct += ld_missing_ct_intersect(
+                      geno_mask_ptr, index_mask, founder_ctwd12,
+                      founder_ctwd12_rem, lshift_last);
+                }
+                dp_result[0] = reference.founder_ct();
+                dp_result[1] = -fixed_non_missing_ct;
+                dp_result[2] = ld_missing_count[cur_index] - reference.founder_ct();
+                dp_result[3] = dp_result[1];
+                dp_result[4] = dp_result[2];
+                ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
+                            index_mask, dp_result, founder_ct_mld_m1,
+                            founder_ct_mld_rem);
+                double non_missing_ctd = (double)((int32_t)non_missing_ct);
+                dxx = dp_result[1];
+                dyy = dp_result[2];
+                cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
+                dxx = (dp_result[3] * non_missing_ctd + dxx * dxx) *
+                		(dp_result[4] * non_missing_ctd + dyy * dyy);
+                r2 = (cov12 * cov12) / dxx;
+            	cur_index++;
+            	geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
+            	window_data_ptr=&(window_data_ptr[founder_ct_192_long]);
+
             }
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
             }
-            window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
+
 
         for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
             window_data_ptr = window_data;
@@ -1275,9 +1351,12 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
                 continue;
             auto&& ref_pair_snp =
                 reference.m_existed_snps[pair_ref_index->second];
-            window_data_ptr[founder_ctv2 - 2] = 0;
-            window_data_ptr[founder_ctv2 - 1] = 0;
-
+            if(!use_pearson){
+            	window_data_ptr[founder_ctv2 - 2] = 0;
+            	window_data_ptr[founder_ctv2 - 1] = 0;
+            }else{
+            	fill_ulong_zero(founder_ct_192_long, window_data_ptr);
+            }
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
 
@@ -1318,6 +1397,37 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
             }
             else
             {
+            	geno_mask_ptr = geno_mask;
+            	ld_missing_ct_ptr = ld_missing_count.data();
+
+            	fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
+            	ld_process_load2(window_data_ptr, geno_mask_ptr,
+            			ld_missing_ct_ptr, reference.founder_ct(), is_x,
+						nullptr);
+            	// taking risk here, we don't know if this is what PLINK acutally wants
+            	// as they have a complete different structure here (for their multi-thread)
+            	uint32_t fixed_non_missing_ct = reference.founder_ct() - index_missing_ct;
+            	uint32_t non_missing_ct = fixed_non_missing_ct - ld_missing_count[cur_index];
+            	if (index_missing_ct && ld_missing_count[cur_index]) {
+            		non_missing_ct += ld_missing_ct_intersect(
+            				geno_mask_ptr, index_mask, founder_ctwd12,
+							founder_ctwd12_rem, lshift_last);
+            	}
+            	dp_result[0] = reference.founder_ct();
+            	dp_result[1] = -fixed_non_missing_ct;
+            	dp_result[2] = ld_missing_count[0] - reference.founder_ct();
+            	dp_result[3] = dp_result[1];
+            	dp_result[4] = dp_result[2];
+            	ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
+            			index_mask, dp_result, founder_ct_mld_m1,
+						founder_ct_mld_rem);
+            	double non_missing_ctd = (double)((int32_t)non_missing_ct);
+            	dxx = dp_result[1];
+            	dyy = dp_result[2];
+            	cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
+            	dxx = (dp_result[3] * non_missing_ctd + dxx * dxx) *
+            			(dp_result[4] * non_missing_ctd + dyy * dyy);
+            	r2 = (cov12 * cov12) / dxx;
             }
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
