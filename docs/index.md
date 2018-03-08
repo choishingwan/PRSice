@@ -73,8 +73,7 @@ You can see the expected output of PRSice [here](step_by_step.md#output-of-resul
 You can find a more detailed document explaining the input and output of PRSice in [this page](step_by_step.md)
 
 # Full command line options
-You can find all command line options of PRSice in [[this page | Command line options of PRSice]]
-
+You can find all command line options of PRSice under the section *Details of PRSice/PRSet*
 
 ## Citation
 If you use PRSice, then please cite:

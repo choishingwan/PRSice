@@ -12,6 +12,7 @@ SNP being removed from subsequent analysis, thus preserved the signal.
 In PRSice, the PLINK clumping algorithm is implemented where
 the r^2^ values computed are based on maximum likelihood haplotype
 frequency estimates.
+You can use the Pearson Correlation instead by specifying `--pearson`.
 In addition, the LD is calculated in all founder samples (ignoring case control
 status).
 
@@ -30,7 +31,10 @@ status).
 
 # Commands
 - `--clump-kb`
-    The distance for clumping in kb. Default: 250
+    The distance for clumping in kb.
+    For example, if `--clump-kb 250` is provided, PRSice will clump any SNPs that is 
+    within 250kb to **both** end of the index SNP (therefore a 500kb window with the index SNP at the center).
+    Default: 250
 
 - `--clump-r2`
 
