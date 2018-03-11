@@ -980,6 +980,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     double dyy;
     double cov12;
     double r2 = -1.0;
+    double non_missing_ctd = 0;
     bool mismatch_error = false;
     bool flipped = false;
     int mismatch = 0;
@@ -988,6 +989,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     // pre-allocate the memory without bothering the memory pool stuff
     std::vector<uint32_t> ld_missing_count(m_max_window_size);
     uint32_t index_missing_ct = 0;
+    uint32_t fixed_non_missing_ct = 0;
+    uint32_t non_missing_ct = 0;
     // kinda stupid for me to use it but let's forget about it now
     uint32_t* ld_missing_ct_ptr = nullptr;
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
@@ -1335,9 +1338,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 // taking risk here, we don't know if this is what PLINK
                 // acutally wants as they have a complete different structure
                 // here (for their multi-thread)
-                uint32_t fixed_non_missing_ct =
+                fixed_non_missing_ct =
                     reference.founder_ct() - index_missing_ct;
-                uint32_t non_missing_ct =
+                non_missing_ct =
                     fixed_non_missing_ct - ld_missing_count[cur_index];
                 if (index_missing_ct && ld_missing_count[cur_index]) {
                     non_missing_ct += ld_missing_ct_intersect(
@@ -1353,7 +1356,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
                             index_mask, dp_result, founder_ct_mld_m1,
                             founder_ct_mld_rem);
-                double non_missing_ctd = (double) ((int32_t) non_missing_ct);
+                non_missing_ctd = (double) ((int32_t) non_missing_ct);
                 dxx = dp_result[1];
                 dyy = dp_result[2];
                 cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
@@ -1440,9 +1443,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 // taking risk here, we don't know if this is what PLINK
                 // acutally wants as they have a complete different structure
                 // here (for their multi-thread)
-                uint32_t fixed_non_missing_ct =
+                fixed_non_missing_ct =
                     reference.founder_ct() - index_missing_ct;
-                uint32_t non_missing_ct =
+                non_missing_ct =
                     fixed_non_missing_ct - ld_missing_count[cur_index];
                 if (index_missing_ct && ld_missing_count[cur_index]) {
                     non_missing_ct += ld_missing_ct_intersect(
@@ -1457,7 +1460,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
                             index_mask, dp_result, founder_ct_mld_m1,
                             founder_ct_mld_rem);
-                double non_missing_ctd = (double) ((int32_t) non_missing_ct);
+                non_missing_ctd = (double) ((int32_t) non_missing_ct);
                 dxx = dp_result[1];
                 dyy = dp_result[2];
                 cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
