@@ -90,6 +90,7 @@ public:
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
     bool print_snp() const { return misc.print_snp; };
+    bool pearson() const { return misc.pearson; };
     int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
@@ -193,7 +194,7 @@ private:
     bool process(int argc, char* argv[], const char* optString,
                  const struct option longOpts[], Reporter& reporter);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct
+    struct Base
     {
         std::string name;
         std::string chr;
@@ -225,7 +226,7 @@ private:
         bool provided_info;
     } base;
 
-    struct
+    struct Clump
     {
         int no_clump;
         double proxy;
@@ -235,19 +236,20 @@ private:
         bool provided_proxy;
     } clumping;
 
-    struct
+    struct Covar
     {
         std::string file_name;
         std::vector<std::string> covariates;
         // Numeric factors should be defined with ""
     } covariate;
 
-    struct
+    struct Misc
     {
         std::string out;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;
+        int pearson;
         int permutation;
         int print_snp;
         int thread;
@@ -255,7 +257,7 @@ private:
         bool provided_seed;
     } misc;
 
-    struct
+    struct Reference
     {
         std::string file_name;
         std::string type;
@@ -263,7 +265,7 @@ private:
         std::string remove_file;
     } reference_panel;
 
-    struct
+    struct Ref_filtering
     {
         double geno;
         double hard_threshold;
@@ -274,7 +276,7 @@ private:
         // must be hard coded for reference
     } reference_snp_filtering;
 
-    struct
+    struct Thresholding
     {
         std::vector<double> barlevel;
         double lower;
@@ -285,7 +287,7 @@ private:
         bool set_thresholds;
     } p_thresholds;
 
-    struct
+    struct Calculation
     {
         std::string missing_score;
         std::string model_name;
@@ -294,7 +296,7 @@ private:
         int no_regress;
     } prs_calculation;
 
-    struct
+    struct Filtering
     {
         std::string exclude_file;
         std::string extract_file;
@@ -307,7 +309,7 @@ private:
         int predict_ambig; // PRSoS stuff?
     } prs_snp_filtering;
 
-    struct
+    struct PRSet
     {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
@@ -316,13 +318,13 @@ private:
         bool perform_prset;
     } prset;
 
-    struct
+    struct PRSlice
     {
         int size;
         bool provided;
     } prslice;
 
-    struct
+    struct Target
     {
         std::string name;
         std::string keep_file;

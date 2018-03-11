@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
                 target_file->efficient_clumping((commander.ref_name().empty())
                                                     ? *target_file
                                                     : *reference_file,
-                                                reporter);
+                                                reporter, commander.pearson());
                 // immediately free the memory if needed
                 if (!commander.ref_name().empty()) delete reference_file;
             }

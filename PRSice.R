@@ -784,7 +784,6 @@ quantile_plot <-
             )
             writeLines(paste("Will not generate the quantile plot for ", prefix))
             return()
-            
         }
         quants <- NULL
         if(num_cov > 0){
@@ -795,6 +794,32 @@ quantile_plot <-
           }
           residual <- rstandard(glm(Pheno~., family=family, data=reg))
           pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
+          if (pheno.as.quant &&
+              length(unique(pheno.merge$Pheno)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$Pheno)),
+                      " unique Phenotype but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+          } else if (length(unique(pheno.merge$PRS)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$PRS)),
+                      " unique PRS but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+              writeLines(paste("Will not generate the quantile plot for ", prefix))
+              return()
+          }
         }
         if (!pheno.as.quant) {
           quants <- as.numeric(cut(

@@ -291,14 +291,9 @@ private:
 
     struct PRS_Interpreter
     {
-        PRS_Interpreter(std::vector<Sample>* sample,
-                        std::vector<double>* prs_score,
-                        std::vector<int>* num_snps, int vector_pad, MODEL model,
+        PRS_Interpreter(std::vector<Sample>* sample, MODEL model,
                         MISSING_SCORE missing, double stat, bool flipped)
             : m_sample(sample)
-            , m_prs_score(prs_score)
-            , m_num_snps(num_snps)
-            , m_vector_pad(vector_pad)
             , m_model(model)
             , m_missing(missing)
             , m_stat(stat)
@@ -395,35 +390,34 @@ private:
             for (size_t i_sample = 0; i_sample < m_num_included_samples;
                  ++i_sample)
             {
+                auto&& sample = m_sample->at(i_sample);
                 if (i_missing < num_miss
                     && i_sample == m_missing_samples[i_missing])
                 {
                     if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
-                        // m_sample->at(i_sample).prs += m_stat * mean;
-                        m_prs_score->at(i_sample + m_vector_pad) +=
-                            m_stat * mean;
-                    if (m_missing != MISSING_SCORE::SET_ZERO)
-                        // m_sample->at(i_sample).num_snp++;
-                        m_num_snps->at(i_sample + m_vector_pad)++;
+                        sample.prs += m_stat * mean;
+                    // m_prs_score->at(i_sample + m_vector_pad) +=
+                    //    m_stat * mean;
+                    if (m_missing != MISSING_SCORE::SET_ZERO) sample.num_snp++;
+                    // m_num_snps->at(i_sample + m_vector_pad)++;
                     i_missing++;
                 }
                 else
                 { // not missing sample
                     if (m_missing == MISSING_SCORE::CENTER) {
                         // if centering, we want to keep missing at 0
-                        // m_sample->at(i_sample).prs -= m_stat * mean;
-                        m_prs_score->at(i_sample + m_vector_pad) -=
-                            m_stat * mean;
+                        sample.prs -= m_stat * mean;
+                        // m_prs_score->at(i_sample + m_vector_pad) -=
+                        //    m_stat * mean;
                     }
                     // again, so that it will generate the same result as
                     // genotype file format when we are 100% certain of the
                     // genotypes
-                    // m_sample->at(i_sample).prs +=
+                    sample.prs += m_score[i_sample] * m_stat * 0.5;
+                    // m_prs_score->at(i_sample + m_vector_pad) +=
                     //    m_score[i_sample] * m_stat * 0.5;
-                    m_prs_score->at(i_sample + m_vector_pad) +=
-                        m_score[i_sample] * m_stat * 0.5;
-                    // m_sample->at(i_sample).num_snp++;
-                    m_num_snps->at(i_sample + m_vector_pad)++;
+                    sample.num_snp++;
+                    // m_num_snps->at(i_sample + m_vector_pad)++;
                 }
             }
         }
@@ -439,10 +433,7 @@ private:
         bool valid = true;
         std::vector<Sample>* m_sample;
         std::vector<double> m_score;
-        std::vector<double>* m_prs_score;
-        std::vector<int>* m_num_snps;
         std::vector<size_t> m_missing_samples;
-        int m_vector_pad;
         MODEL m_model;
         MISSING_SCORE m_missing;
         double m_stat = 0.0;

@@ -349,6 +349,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (misc.print_all_scores) message_store["all-score"] = "";
     if (misc.ignore_fid) message_store["ignore-fid"] = "";
     if (misc.logit_perm) message_store["logit-perm"] = "";
+    if (misc.pearson) message_store["pearson"] = "";
     if (misc.print_snp) message_store["print-snp"] = "";
     if (p_thresholds.fastscore) message_store["fastscore"] = "";
     if (p_thresholds.no_full) message_store["no-full"] = "";
@@ -442,6 +443,7 @@ Commander::Commander()
     misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
+    misc.pearson = 0;
     misc.permutation = 0;
     misc.print_snp = false;
     misc.provided_seed = false;
@@ -544,6 +546,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"no-regress", no_argument, &prs_calculation.no_regress, 1},
         {"nonfounders", no_argument, &target.include_nonfounders, 1},
         {"fastscore", no_argument, &p_thresholds.fastscore, 1},
+        {"pearson", no_argument, &misc.pearson, 1},
         {"print-snp", no_argument, &misc.print_snp, 1},
         // long flags, need to work on them
         {"A1", required_argument, NULL, 0},
@@ -969,6 +972,15 @@ void Commander::set_help_message()
           "target\n"
           "                            has the same A1 and A2 alleles\n"
           "    --out           | -o    Prefix for all file output\n"
+          "    --pearson               Use Pearson Correlation for LD "
+          "calculation\n"
+          "                            instead of the maximum likelihood "
+          "haplotype\n"
+          "                            frequency estimates. This will slightly "
+          "\n"
+          "                            decrease the accuracy of LD estimates, "
+          "but\n"
+          "                            should increase the speed of clumping\n"
           "    --perm                  Number of permutation to perform. This "
           "swill\n"
           "                            generate the empirical p-value. "
