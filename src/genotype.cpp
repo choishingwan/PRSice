@@ -110,7 +110,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     std::ifstream in;
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "ERROR: Cannot open file: " + input;
+        std::string error_message = "Error: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -124,7 +124,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
             if (!error) {
                 error = true;
                 std::string message =
-                    "WARNING: Some SNPs from the "
+                    "Warning: Some SNPs from the "
                     "extraction/exclusion list has rs-id of . "
                     "They will be excluded unless the file contains at least 3 "
                     "columns."
@@ -151,7 +151,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
     std::ifstream in;
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "ERROR: Cannot open file: " + input;
+        std::string error_message = "Error: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -167,7 +167,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
         {
             if (token.size() < 2)
                 throw std::runtime_error(
-                    "ERROR: Require FID and IID for extraction. "
+                    "Error: Require FID and IID for extraction. "
                     "You can ignore the FID by using the --ignore-fid flag");
             result.insert(token[0] + "_" + token[1]);
         }
@@ -312,7 +312,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         gz_snp_file.open(input.c_str());
         if (!gz_snp_file.good()) {
             std::string error_message =
-                "ERROR: Cannot open base file (gz) to read!\n";
+                "Error: Cannot open base file (gz) to read!\n";
             throw std::runtime_error(error_message);
         }
         gz_input = true;
@@ -323,7 +323,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         snp_file.open(input.c_str());
         if (!snp_file.is_open()) {
             std::string error_message =
-                "ERROR: Cannot open base file: " + input;
+                "Error: Cannot open base file: " + input;
             throw std::runtime_error(error_message);
         }
     }
@@ -462,14 +462,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                         token[index[+BASE_INDEX::BP]].c_str());
                     if (loc < 0) {
                         std::string error_message =
-                            "ERROR: " + rs_id + " has negative loci!\n";
+                            "Error: " + rs_id + " has negative loci!\n";
                         throw std::runtime_error(error_message);
                     }
                 }
                 catch (const std::runtime_error& error)
                 {
                     std::string error_message =
-                        "ERROR: Non-numeric loci for " + rs_id + "!\n";
+                        "Error: Non-numeric loci for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
                 }
             }
@@ -542,7 +542,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 pvalue = misc::convert<double>(token[index[+BASE_INDEX::P]]);
                 if (pvalue < 0.0 || pvalue > 1.0) {
                     std::string error_message =
-                        "ERROR: Invalid p-value for " + rs_id + "!\n";
+                        "Error: Invalid p-value for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
                 }
                 else if (pvalue > threshold)
@@ -767,10 +767,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                    + " total variant(s) included from base file\n\n");
     if (num_mismatched > 0) {
         message.append(
-            "WARNING: Mismatched SNPs detected between base and target!");
+            "Warning: Mismatched SNPs detected between base and target!");
         message.append("You should check the files are based on the "
-                       "same genome build\n");
-        message.append("Or that can just be InDels\n");
+                       "same genome build, or that can just be InDels\n");
     }
     reporter.report(message);
     if (m_existed_snps.size() == 0) {
@@ -1156,7 +1155,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     g_bigstack_end = nullptr;
     uintptr_t cur_window_size = 0;
     if (!max_window_size) {
-        throw std::runtime_error("ERROR: Not enough memory for clumping!");
+        throw std::runtime_error("Error: Not enough memory for clumping!");
     }
     // point to the middle of the bigstack?
     double prev_progress = -1.0;
@@ -1186,7 +1185,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             mismatch++;
             if (!mismatch_error) {
                 std::string message =
-                    "WARNING: Mismatched SNPs between LD reference and target!";
+                    "Warning: Mismatched SNPs between LD reference and target!";
                 message.append("Will use information from target file");
                 message.append("You should check the files are based on the "
                                "same genome build\n");
@@ -1227,7 +1226,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 fill_ulong_zero(founder_ct_192_long, window_data_ptr);
             }
             if (++cur_window_size == max_window_size) {
-                throw std::runtime_error("ERROR: Out of memory!");
+                throw std::runtime_error("Error: Out of memory!");
             }
             reference.read_genotype(window_data_ptr, ref_pair_snp,
                                     ref_pair_snp.file_name());
@@ -1249,7 +1248,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         }
 
         if (++cur_window_size == max_window_size) {
-            throw std::runtime_error("ERROR: Out of memory!");
+            throw std::runtime_error("Error: Out of memory!");
         }
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
@@ -1634,7 +1633,7 @@ void Genotype::print_snp(std::string& output, double threshold,
     snp_out.open(output);
     if (!snp_out.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open file: " + output + " to write";
+            "Error: Cannot open file: " + output + " to write";
         throw std::runtime_error(error_message);
     }
     for (auto&& snp : m_existed_snps) {

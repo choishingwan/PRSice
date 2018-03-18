@@ -57,7 +57,7 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         std::vector<std::string> col = misc::split(line);
         if (col.size() < (size_t)(1 + !m_ignore_fid)) {
             throw std::runtime_error(
-                "ERROR: Not enough column in Phenotype file."
+                "Error: Not enough column in Phenotype file."
                 "Have you use the --ignore-fid option");
         }
         std::string sample_id = col[0];
@@ -367,12 +367,12 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             message.append("Might want to consider using --ignore-fid\n");
         }
         reporter.report(message);
-        throw std::runtime_error("ERROR: No sample left");
+        throw std::runtime_error("Error: No sample left");
     }
     if (invalid_pheno == num_included && regress) {
-        message.append("ERROR: All sample has invalid phenotypes!");
+        message.append("Error: All sample has invalid phenotypes!");
         reporter.report(message);
-        throw std::runtime_error("ERROR: No sample left");
+        throw std::runtime_error("Error: No sample left");
     }
     if (input_sanity_check.size() < 2 && !binary && regress) {
         message.append("Only one phenotype value detected");
@@ -439,7 +439,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
     cov.open(c_cov_file.c_str());
     if (!cov.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open covariate file: " + c_cov_file;
+            "Error: Cannot open covariate file: " + c_cov_file;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -480,7 +480,7 @@ std::vector<size_t> PRSice::get_cov_index(const std::string& c_cov_file,
     // so that is ok?
     std::sort(cov_index.begin(), cov_index.end());
     if (cov_index.size() == 0) {
-        throw std::runtime_error("ERROR: No valid covariates!");
+        throw std::runtime_error("Error: No valid covariates!");
     }
     else
     {
@@ -511,7 +511,7 @@ void PRSice::check_factor_cov(
     cov.open(c_cov_file.c_str());
     if (!cov.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open covariate file: " + c_cov_file;
+            "Error: Cannot open covariate file: " + c_cov_file;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -526,7 +526,7 @@ void PRSice::check_factor_cov(
         std::vector<std::string> token = misc::split(line);
         if (token.size() < max_index) {
             std::string error_message =
-                "ERROR: Malformed covariate file, should contain at least "
+                "Error: Malformed covariate file, should contain at least "
                 + std::to_string(max_index) + " column!";
             throw std::runtime_error(error_message);
         }
@@ -569,7 +569,7 @@ void PRSice::check_factor_cov(
     log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
     if (!log_file_stream.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open log file: " + m_log_file;
+            "Error: Cannot open log file: " + m_log_file;
         throw std::runtime_error(error_message);
     }
 
@@ -619,7 +619,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     cov.open(c_cov_file.c_str());
     if (!cov.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open covariate file: " + c_cov_file;
+            "Error: Cannot open covariate file: " + c_cov_file;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -635,7 +635,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         std::vector<std::string> token = misc::split(line);
         if (token.size() < max_index) {
             std::string error_message =
-                "ERROR: Malformed covariate file, should contain at least "
+                "Error: Malformed covariate file, should contain at least "
                 + std::to_string(max_index) + " column!";
             throw std::runtime_error(error_message);
         }
@@ -906,7 +906,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         {
             // This should only happen when the glm doesn't converge.
             // Let's hope that won't happen...
-            fprintf(stderr, "ERROR: GLM model did not converge!\n");
+            fprintf(stderr, "Error: GLM model did not converge!\n");
             fprintf(stderr, "       Please send me the DEBUG files\n");
             std::ofstream debug;
             debug.open("DEBUG");
@@ -915,7 +915,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
             debug.open("DEBUG.y");
             debug << m_phenotype << std::endl;
             debug.close();
-            fprintf(stderr, "ERROR: %s\n", error.what());
+            fprintf(stderr, "Error: %s\n", error.what());
         }
     }
     else
@@ -1043,7 +1043,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
             if (!pthread_store[ulii]) {
                 join_threads(pthread_store.data(), ulii);
                 throw std::runtime_error(
-                    "ERROR: Cannot create thread for permutation!");
+                    "Error: Cannot create thread for permutation!");
             }
 #else
             if (pthread_create(&(pthread_store[ulii]), nullptr,
@@ -1051,7 +1051,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
             {
                 join_threads(pthread_store.data(), ulii);
                 throw std::runtime_error(
-                    "ERROR: Cannot create thread for permutation!");
+                    "Error: Cannot create thread for permutation!");
             }
 #endif
         }
@@ -1195,7 +1195,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                == 0) // we know regions with 0 SNP will not have valid PRS
     {
         if (region.get_count(region_index) != 0) {
-            fprintf(stderr, "ERROR: No valid PRS ");
+            fprintf(stderr, "Error: No valid PRS ");
             if (m_prset)
                 fprintf(stderr, "for %s",
                         region.get_name(region_index).c_str());
@@ -1213,7 +1213,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prsice_out.open(out_prsice.c_str());
     if (!prsice_out.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open file: " + out_prsice + " to write";
+            "Error: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
     }
     prsice_out << "Threshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
@@ -1244,14 +1244,14 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     best_out.open(out_best.c_str());
     if (!best_out.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open file: " + out_best + " to write";
+            "Error: Cannot open file: " + out_best + " to write";
         throw std::runtime_error(error_message);
     }
     /*
     summary_out.open(out_summary.c_str());
     if (!summary_out.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open file: " + out_summary + " to write";
+            "Error: Cannot open file: " + out_summary + " to write";
         throw std::runtime_error(error_message);
     }
     */
@@ -1279,7 +1279,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     best_out << "FID\tIID\tPRS\tHas_Phenotype" << std::endl;
     int best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
-        fprintf(stderr, "ERROR: Best R2 obtained when no SNPs were included\n");
+        fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
         fprintf(stderr, "       Cannot output the best PRS score\n");
     }
     else
@@ -1346,7 +1346,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     out.open(out_name.c_str());
     if (!out.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open file: " + out_name + " to write";
+            "Error: Cannot open file: " + out_name + " to write";
         throw std::runtime_error(error_message);
     }
     out << "Phenotype\tSet\tThreshold\tPRS.R2\tFull.R2\tNull."

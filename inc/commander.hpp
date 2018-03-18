@@ -39,7 +39,7 @@
 #include <windows.h>
 #endif
 const std::string version = "2.1.1.beta";
-const std::string date = "2 Mar 2018";
+const std::string date = "17 Mar 2018";
 class Commander
 {
 public:
@@ -284,7 +284,7 @@ private:
         double upper;
         int fastscore;
         int no_full;
-        bool set_thresholds;
+        bool set_use_thresholds;
     } p_thresholds;
 
     struct Calculation
@@ -363,32 +363,22 @@ private:
                       std::string& error_message);
     void target_check(std::map<std::string, std::string>& message, bool& error,
                       std::string& error_message);
-    /*
-        inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
-                                bool no_mt, bool& error, std::string&
-       error_message, bool& species_error)
-        {
-            if (species.double_set && !species_error) {
-                species_error = true;
-                error = true;
-                error_message.append("ERROR: Can only specify one species\n");
-            }
-            species.num_auto = num_auto;
-            species.no_x = no_x;
-            species.no_y = no_y;
-            species.no_xy = no_xy;
-            species.no_mt = no_mt;
-            species.double_set = true;
-        };
-    */
+
     inline void load_binary_vector(const std::string& input,
                                    std::map<std::string, std::string>& message,
                                    std::string& error_message,
                                    std::vector<bool>& target, bool& error,
                                    const std::string& c)
     {
-
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        // check if the input is ended with , which is usually the case
+        // when someone mixed in the space
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)");
+        }
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -396,10 +386,10 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Invalid argument passed to " + c + ": "
-                                 + input + "!\n");
+            error = true;
             error_message.append(
-                "       Require binary arguments e.g. T/F, True/False\n");
+                "Error: Invalid argument passed to " + c + ": " + input
+                + "! Require binary arguments e.g. T/F, True/False\n");
         }
     }
 
@@ -410,7 +400,13 @@ private:
                                    std::string& error_message)
     {
 
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
@@ -422,7 +418,13 @@ private:
                                     std::vector<T>& target, bool& error,
                                     const std::string& c)
     {
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -430,7 +432,7 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
             error = true;
         }
@@ -455,7 +457,7 @@ private:
         catch (const std::runtime_error& er)
         {
             error = true;
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
         }
     }
@@ -466,7 +468,7 @@ private:
     {
         std::string input = in;
         if (input.empty()) {
-            error_message.append("ERROR: Model cannot be empty!\n");
+            error_message.append("Error: Model cannot be empty!\n");
             error = true;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
@@ -492,7 +494,7 @@ private:
         else
         {
             error = true;
-            error_message.append("ERROR: Unrecognized model: " + input + "!\n");
+            error_message.append("Error: Unrecognized model: " + input + "!\n");
         }
         if (message.find("model") != message.end()) {
             error_message.append("Warning: Duplicated argument --model\n");
@@ -533,13 +535,13 @@ private:
             int index = misc::convert<int>(optarg);
             if (index >= max) {
                 error = true;
-                error_message.append("ERROR: " + name
+                error_message.append("Error: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
             if (index < 0) {
                 error = true;
-                error_message.append("ERROR: Negative " + name + " index!\n");
+                error_message.append("Error: Negative " + name + " index!\n");
                 return -1;
             }
             return index;
@@ -547,7 +549,7 @@ private:
         catch (const std::runtime_error& er)
         {
             error = true;
-            error_message.append("ERROR: " + name + " index is not numeric!\n");
+            error_message.append("Error: " + name + " index is not numeric!\n");
             return -1;
         }
     }

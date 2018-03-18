@@ -111,11 +111,10 @@ public:
                         "regression within the permutation and uses the "
                         "p-value to rank the thresholds. Our assumptions "
                         "are as follow:\n";
-                    message.append("         1. Linear Regression & Logistic "
+                    message.append("1) Linear Regression & Logistic "
                                    "Regression produce similar p-values\n");
-                    message.append(
-                        "         2. P-value is correlated with R2\n\n");
-                    message.append("         If you must, you can run logistic "
+                    message.append("2) P-value is correlated with R2\n\n");
+                    message.append("If you must, you can run logistic "
                                    "regression instead by setting the "
                                    "--logit-perm flag\n\n");
                     reporter.report(message);

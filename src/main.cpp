@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
             else
             {
                 std::string error_message =
-                    "ERROR: We currently have not implemented PRSlice. We will "
+                    "Error: We currently have not implemented PRSlice. We will "
                     "implement PRSlice once the implementation of PRSice is "
                     "stabalized";
                 reporter.report(error_message);
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     }
     catch (const std::bad_alloc)
     {
-        std::string error_message = "ERROR: Bad Allocation exception detected. "
+        std::string error_message = "Error: Bad Allocation exception detected. "
                                     "This is likely due to insufficient memory "
                                     "for PRSice. You can try re-running PRSice "
                                     "with more memory.";

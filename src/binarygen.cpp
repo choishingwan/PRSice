@@ -39,7 +39,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     std::ifstream sample_file(m_sample_file.c_str());
     if (!sample_file.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open sample file: " + m_sample_file;
+            "Error: Cannot open sample file: " + m_sample_file;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -63,7 +63,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             std::vector<std::string> header_format = misc::split(line);
             if (header_format[sex_col].compare("D") != 0) {
                 std::string error_message =
-                    "ERROR: Sex must be coded as \"D\" in bgen sample file!";
+                    "Error: Sex must be coded as \"D\" in bgen sample file!";
                 throw std::runtime_error(error_message);
             }
         }
@@ -93,7 +93,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
             {
                 std::string error_message =
-                    "ERROR: Line " + std::to_string(line_id)
+                    "Error: Line " + std::to_string(line_id)
                     + " must have at least "
                     + std::to_string((sex_col != -1) ? (sex_col)
                                                      : (1 + !m_ignore_fid))
@@ -135,7 +135,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 }
                 catch (const std::runtime_error& er)
                 {
-                    throw std::runtime_error("ERROR: Invalid sex coding!\n");
+                    throw std::runtime_error("Error: Invalid sex coding!\n");
                 }
             }
             if (duplicated_samples.find(id) != duplicated_samples.end()) {
@@ -148,10 +148,8 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     if (!duplicated_sample_id.empty()) {
         // TODO: Produce a file containing id of all valid samples
         std::string error_message =
-            "ERROR: A total of " + std::to_string(duplicated_sample_id.size())
-            + " duplicated samples detected!\n";
-        error_message.append(
-            "Please ensure all samples have an unique identifier");
+            "Error: A total of " + std::to_string(duplicated_sample_id.size())
+            + " duplicated samples detected! Please ensure all samples have an unique identifier");
         throw std::runtime_error(error_message);
     }
 
@@ -191,7 +189,7 @@ bool BinaryGen::check_is_sample_format()
     std::ifstream sample_file(m_sample_file.c_str());
     if (!sample_file.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open sample file: " + m_sample_file;
+            "Error: Cannot open sample file: " + m_sample_file;
         throw std::runtime_error(error_message);
     }
     std::string first_line, second_line;
@@ -226,7 +224,7 @@ void BinaryGen::get_context(std::string& prefix)
     std::string bgen_name = prefix + ".bgen";
     std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
     if (!bgen_file.is_open()) {
-        std::string error_message = "ERROR: Cannot open bgen file " + bgen_name;
+        std::string error_message = "Error: Cannot open bgen file " + bgen_name;
         throw std::runtime_error(error_message);
     }
     genfile::bgen::Context context;
@@ -249,7 +247,7 @@ void BinaryGen::get_context(std::string& prefix)
          || magic[3] != 'n')
         && (magic[0] != 0 || magic[1] != 0 || magic[2] != 0 || magic[3] != 0))
     {
-        throw std::runtime_error("ERROR: Incorrect magic string!\nPlease "
+        throw std::runtime_error("Error: Incorrect magic string!\nPlease "
                                  "check you have provided a valid bgen "
                                  "file!");
     }
@@ -268,12 +266,12 @@ void BinaryGen::get_context(std::string& prefix)
             == genfile::bgen::e_ZstdCompression)
         {
             throw std::runtime_error(
-                "ERROR: zstd compression currently not supported");
+                "Error: zstd compression currently not supported");
         }
     }
     else
     {
-        throw std::runtime_error("ERROR: Problem reading bgen file!");
+        throw std::runtime_error("Error: Problem reading bgen file!");
     }
 }
 
@@ -303,11 +301,11 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
             genfile::bgen::read_length_followed_by_data(
                 bgen_file, &identifier_size, &identifier);
             if (!bgen_file)
-                throw std::runtime_error("ERROR: Problem reading bgen file!");
+                throw std::runtime_error("Error: Problem reading bgen file!");
             bytes_read += sizeof(identifier_size) + identifier_size;
             // Only need to use IID as BGEN doesn't have the FID information
             if (m_sample_names[i].IID.compare(identifier) != 0) {
-                throw std::runtime_error("ERROR: Sample mismatch "
+                throw std::runtime_error("Error: Sample mismatch "
                                          "between bgen and phenotype "
                                          "file!");
             }
@@ -358,7 +356,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
         if (!bgen_file.is_open()) {
             std::string error_message =
-                "ERROR: Cannot open bgen file " + bgen_name;
+                "Error: Cannot open bgen file " + bgen_name;
             throw std::runtime_error(error_message);
         }
         uint32_t offset = m_context_map[prefix].offset;
@@ -399,7 +397,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 prev_chr = chromosome;
                 if (m_chr_order.find(chromosome) != m_chr_order.end()) {
 
-                    throw std::runtime_error("ERROR: SNPs on the same "
+                    throw std::runtime_error("Error: SNPs on the same "
                                              "chromosome must be clustered "
                                              "together!");
                 }
@@ -409,7 +407,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 { // bigger than the maximum code, ignore it
                     if (!chr_error) {
                         fprintf(stderr,
-                                "WARNING: SNPs with chromosome number larger "
+                                "Warning: SNPs with chromosome number larger "
                                 "than %du\n",
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
@@ -421,7 +419,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
-                        fprintf(stderr, "WARNING: Currently not support "
+                        fprintf(stderr, "Warning: Currently not support "
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
@@ -492,7 +490,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
         std::string dup_name = out_prefix + ".valid";
         log_file_stream.open(dup_name.c_str());
         if (!log_file_stream.is_open()) {
-            std::string error_message = "ERROR: Cannot open file: " + dup_name;
+            std::string error_message = "Error: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
         for (auto&& snp : snp_res) {
@@ -504,7 +502,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
         }
         log_file_stream.close();
         std::string error_message =
-            "ERROR: Duplicated SNP ID detected!. Valid SNP ID stored at "
+            "Error: Duplicated SNP ID detected!. Valid SNP ID stored at "
             + dup_name + ". You can avoid this error by using --extract "
             + dup_name;
         throw std::runtime_error(error_message);
@@ -533,7 +531,7 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
             if (!m_bgen_file.is_open()) {
                 std::string error_message =
-                    "ERROR: Cannot open bgen file: " + snp.file_name();
+                    "Error: Cannot open bgen file: " + snp.file_name();
                 throw std::runtime_error(error_message);
             }
             m_cur_file = snp.file_name();
@@ -581,7 +579,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                                    m_sample_include.data(), final_mask, false,
                                    m_tmp_genotype.data(), genotype.data()))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
         uintptr_t* lbptr = genotype.data();
         uii = 0;

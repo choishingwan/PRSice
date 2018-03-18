@@ -48,7 +48,7 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
         catch (const std::runtime_error& error)
         {
             gtf_boundary.clear();
-            fprintf(stderr, "ERROR: Cannot process GTF file: %s\n",
+            fprintf(stderr, "Error: Cannot process GTF file: %s\n",
                     error.what());
             fprintf(stderr,
                     "       Will not process any of the msigdb items\n");
@@ -91,7 +91,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
             if (line.empty()) continue;
             std::vector<std::string> token = misc::split(line);
             if (token.size() < 3) {
-                fprintf(stderr, "ERROR: %s contain less than 3 column\n",
+                fprintf(stderr, "Error: %s contain less than 3 column\n",
                         b.c_str());
                 fprintf(stderr, "       This file will be ignored\n");
                 error = true;
@@ -107,7 +107,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
                 else
                 {
                     fprintf(stderr,
-                            "ERROR: Negative Start Coordinate at line %zu!\n",
+                            "Error: Negative Start Coordinate at line %zu!\n",
                             num_line);
                     fprintf(stderr, "       This file will be ignored\n");
                     error = true;
@@ -117,7 +117,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
             catch (const std::runtime_error& er)
             {
                 fprintf(stderr,
-                        "ERROR: Cannot convert start coordinate! (line: %zu)\n",
+                        "Error: Cannot convert start coordinate! (line: %zu)\n",
                         num_line);
                 fprintf(stderr, "       This file will be ignored\n");
                 error = true;
@@ -131,7 +131,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
                 else
                 {
                     fprintf(stderr,
-                            "ERROR: Negative End Coordinate at line %zu!\n",
+                            "Error: Negative End Coordinate at line %zu!\n",
                             num_line);
                     fprintf(stderr, "       This file will be ignored\n");
                     error = true;
@@ -141,7 +141,7 @@ void Region::process_bed(const std::vector<std::string>& bed)
             catch (const std::runtime_error& er)
             {
                 fprintf(stderr,
-                        "ERROR: Cannot convert end coordinate! (line: %zu)\n",
+                        "Error: Cannot convert end coordinate! (line: %zu)\n",
                         num_line);
                 fprintf(stderr, "       This file will be ignored\n");
                 error = true;
@@ -193,7 +193,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
         gz_gtf_file.open(gtf.c_str());
         if (!gz_gtf_file.good()) {
             std::string error_message =
-                "ERROR: Cannot open GTF (gz) to read!\n";
+                "Error: Cannot open GTF (gz) to read!\n";
             throw std::runtime_error(error_message);
         }
         gz_input = true;
@@ -226,7 +226,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
                 temp = misc::convert<int>(token[+GTF::START]);
                 if (temp < 0) {
                     fprintf(stderr,
-                            "ERROR: Negative Start Coordinate! (line: %zu)\n",
+                            "Error: Negative Start Coordinate! (line: %zu)\n",
                             num_line);
                     fprintf(stderr, "       Will ignore the gtf file\n");
                     result_boundary.clear();
@@ -240,7 +240,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
             {
                 fprintf(
                     stderr,
-                    "ERROR: Cannot convert the start coordinate! (line: %zu)\n",
+                    "Error: Cannot convert the start coordinate! (line: %zu)\n",
                     num_line);
                 fprintf(stderr, "       Will ignore the gtf file\n");
                 result_boundary.clear();
@@ -252,7 +252,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
                 temp = misc::convert<int>(token[+GTF::END]);
                 if (temp < 0) {
                     fprintf(stderr,
-                            "ERROR: Negative End Coordinate! (line: %zu)\n",
+                            "Error: Negative End Coordinate! (line: %zu)\n",
                             num_line);
                     fprintf(stderr, "       Will ignore the gtf file\n");
                     result_boundary.clear();
@@ -266,7 +266,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
             {
                 fprintf(
                     stderr,
-                    "ERROR: Cannot convert the end coordinate! (line: %zu)\n",
+                    "Error: Cannot convert the end coordinate! (line: %zu)\n",
                     num_line);
                 fprintf(stderr, "       Will ignore the gtf file\n");
                 result_boundary.clear();
@@ -307,7 +307,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
                 if (result_boundary[id].chr != m_chr_order[chr]) {
                     fprintf(
                         stderr,
-                        "ERROR: Same gene occur on two separate chromosome!\n");
+                        "Error: Same gene occur on two separate chromosome!\n");
                     fprintf(stderr, "       Will ignore the gtf file\n");
                     result_boundary.clear();
                     id_to_name.clear();

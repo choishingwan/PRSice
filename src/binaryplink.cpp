@@ -44,7 +44,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
     famfile.open(m_sample_file.c_str());
     if (!famfile.is_open()) {
         std::string error_message =
-            "ERROR: Cannot open fam file: " + m_sample_file;
+            "Error: Cannot open fam file: " + m_sample_file;
         throw std::runtime_error(error_message);
     }
     // number of unfiltered samples
@@ -168,7 +168,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
     if (!duplicated_sample_id.empty()) {
         // TODO: Produce a file containing id of all valid samples
         std::string error_message =
-            "ERROR: A total of " + std::to_string(duplicated_sample_id.size())
+            "Error: A total of " + std::to_string(duplicated_sample_id.size())
             + " duplicated samples detected!\n";
         error_message.append(
             "Please ensure all samples have an unique identifier");
@@ -203,7 +203,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         std::ifstream bim(bim_name.c_str());
         if (!bim.is_open()) {
             std::string error_message =
-                "ERROR: Cannot open bim file: " + bim_name;
+                "Error: Cannot open bim file: " + bim_name;
             throw std::runtime_error(error_message);
         }
         // First pass, get the number of marker in bed & bim
@@ -230,7 +230,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         std::ifstream bed(bed_name.c_str());
         if (!bed.is_open()) {
             std::string error_message =
-                "ERROR: Cannot open bed file: " + bed_name;
+                "Error: Cannot open bed file: " + bed_name;
             throw std::runtime_error(error_message);
         }
         bed.seekg(m_bed_offset, std::ios_base::beg);
@@ -268,7 +268,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 // only work on this if this is a new chromosome
                 prev_chr = chr;
                 if (m_chr_order.find(chr) != m_chr_order.end()) {
-                    throw std::runtime_error("ERROR: SNPs on the same "
+                    throw std::runtime_error("Error: SNPs on the same "
                                              "chromosome must be clustered "
                                              "together!");
                 }
@@ -280,7 +280,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                     if (!chr_error) {
                         // only print this if an error isn't previously given
                         std::string error_message =
-                            "WARNING: SNPs with chromosome number larger "
+                            "Warning: SNPs with chromosome number larger "
                             "than "
                             + std::to_string(m_max_code) + "."
                             + " They will be ignored!\n";
@@ -299,7 +299,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                     {
                         // we ignore Sex chromosomes and haploid chromosome
 
-                        fprintf(stderr, "WARNING: Currently not support "
+                        fprintf(stderr, "Warning: Currently not support "
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
@@ -314,7 +314,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 loc = misc::convert<int>(bim_info[+BIM::BP]);
                 if (loc < 0) {
                     std::string error_message =
-                        "ERROR: SNP with negative corrdinate: "
+                        "Error: SNP with negative corrdinate: "
                         + bim_info[+BIM::RS] + ":" + bim_info[+BIM::BP] + "\n";
                     error_message.append(
                         "Please check you have the correct input");
@@ -325,7 +325,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
             {
 
                 std::string error_message =
-                    "ERROR: SNP with non-numeric corrdinate: "
+                    "Error: SNP with non-numeric corrdinate: "
                     + bim_info[+BIM::RS] + ":" + bim_info[+BIM::BP] + "\n";
                 error_message.append("Please check you have the correct input");
                 throw std::runtime_error(error_message);
@@ -335,7 +335,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
             {
                 duplicated_snp.insert(bim_info[+BIM::RS]);
                 // throw std::runtime_error(
-                //    "ERROR: Duplicated SNP ID detected!\n");
+                //    "Error: Duplicated SNP ID detected!\n");
             }
             else if (!ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
                      || m_keep_ambig)
@@ -353,7 +353,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                                    std::ios_base::beg))
                     {
                         std::string error_message =
-                            "ERROR: Cannot read the bed file(seek): "
+                            "Error: Cannot read the bed file(seek): "
                             + bed_name;
                         throw std::runtime_error(error_message);
                     }
@@ -368,7 +368,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                             m_tmp_genotype.data(), genotype.data()))
                     {
                         std::string error_message =
-                            "ERROR: Cannot read the bed file(read): "
+                            "Error: Cannot read the bed file(read): "
                             + bed_name;
                         throw std::runtime_error(error_message);
                     }
@@ -454,7 +454,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         std::string dup_name = out_prefix + ".valid";
         log_file_stream.open(dup_name.c_str());
         if (!log_file_stream.is_open()) {
-            std::string error_message = "ERROR: Cannot open file: " + dup_name;
+            std::string error_message = "Error: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
         for (auto&& snp : m_existed_snps) {
@@ -463,7 +463,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         }
         log_file_stream.close();
         std::string error_message =
-            "ERROR: Duplicated SNP ID detected!.Valid SNP ID stored at "
+            "Error: Duplicated SNP ID detected!.Valid SNP ID stored at "
             + dup_name + ". You can avoid this error by using --extract "
             + dup_name;
         throw std::runtime_error(error_message);
@@ -584,7 +584,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             m_bed_file.open(bedname.c_str(), std::ios::binary);
             if (!m_bed_file.is_open()) {
                 std::string error_message =
-                    "ERROR: Cannot open bed file: " + bedname;
+                    "Error: Cannot open bed file: " + bedname;
                 throw std::runtime_error(error_message);
             }
             m_prev_loc = 0;
@@ -599,7 +599,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         if (m_prev_loc != cur_line
             && !m_bed_file.seekg(cur_line, std::ios_base::beg))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
         m_prev_loc = cur_line + (std::streampos) unfiltered_sample_ct4;
         // loadbuf_raw is the temporary
@@ -609,7 +609,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                                    m_bed_file, m_tmp_genotype.data(),
                                    genotype.data()))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
 
         uintptr_t* lbptr = genotype.data();
