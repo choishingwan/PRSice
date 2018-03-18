@@ -22,6 +22,7 @@
 #include "storage.hpp"
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <getopt.h>

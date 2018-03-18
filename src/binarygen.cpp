@@ -149,7 +149,8 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
         // TODO: Produce a file containing id of all valid samples
         std::string error_message =
             "Error: A total of " + std::to_string(duplicated_sample_id.size())
-            + " duplicated samples detected! Please ensure all samples have an unique identifier");
+            + " duplicated samples detected! Please ensure all samples have an "
+              "unique identifier";
         throw std::runtime_error(error_message);
     }
 
