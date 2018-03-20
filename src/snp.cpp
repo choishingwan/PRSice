@@ -51,6 +51,8 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
     clump_info.clumped = false;
     file_info.file = file_name;
     file_info.byte_pos = byte_pos;
+    ref_file_info.file = file_name;
+    ref_file_info.byte_pos = byte_pos;
 }
 SNP::~SNP() {}
 

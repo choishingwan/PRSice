@@ -43,11 +43,10 @@ private:
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
     bool check_is_sample_format();
-    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info_score,
-                                    const double hard_threshold,
-                                    const bool hard_coded,
-                                    const std::string& out_prefix);
+    std::vector<SNP>
+    gen_snp_vector(const double geno, const double maf, const double info_score,
+                   const double hard_threshold, const bool hard_coded,
+                   const std::string& out_prefix, Genotype* target = nullptr);
     void get_context(std::string& prefix);
     bool check_sample_consistent(const std::string& bgen_name,
                                  const genfile::bgen::Context& context);
@@ -82,7 +81,8 @@ private:
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
     };
 
-    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
+    inline void read_genotype(uintptr_t* genotype,
+                              const std::streampos byte_pos,
                               const std::string& file_name)
     {
         // the bgen library seems over complicated
@@ -92,10 +92,10 @@ private:
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
-        if (load_and_collapse_incl(snp.byte_pos(), file_name,
-                                   m_unfiltered_sample_ct, m_founder_ct,
-                                   m_founder_info.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype))
+        if (load_and_collapse_incl(byte_pos, file_name, m_unfiltered_sample_ct,
+                                   m_founder_ct, m_founder_info.data(),
+                                   final_mask, false, m_tmp_genotype.data(),
+                                   genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bgen file!");
         }

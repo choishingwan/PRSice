@@ -183,11 +183,20 @@ void Genotype::load_samples(const std::string& keep_file,
     if (!remove_file.empty()) {
         m_sample_selection_list = load_ref(remove_file, m_ignore_fid);
     }
-    if (!keep_file.empty()) {
+    else if (!keep_file.empty())
+    {
         m_remove_sample = false;
         m_sample_selection_list = load_ref(keep_file, m_ignore_fid);
     }
-    m_sample_names = gen_sample_vector();
+    if (!m_is_ref) {
+        m_sample_names = gen_sample_vector();
+    }
+    else
+    {
+        // don't bother loading up the sample vector as it should
+        // never be used for reference panel (except for the founder_info)
+        gen_sample_vector();
+    }
     std::string message = std::to_string(m_unfiltered_sample_ct) + " people ("
                           + std::to_string(m_num_male) + " male(s), "
                           + std::to_string(m_num_female)
@@ -196,7 +205,6 @@ void Genotype::load_samples(const std::string& keep_file,
     if (verbose) reporter.report(message);
     m_sample_selection_list.clear();
 }
-
 
 void Genotype::load_snps(
     const std::string out_prefix,
@@ -237,7 +245,12 @@ void Genotype::load_snps(
             std::to_string(m_num_maf_filter)
             + " variant(s) excluded based on INFO score threshold\n");
     }
-
+    if (m_num_ref_target_mismatch != 0) {
+        message.append("Warning: Mismatched SNPs detected between reference "
+                       "panel and target!");
+        message.append(" You should check the files are based on the "
+                       "same genome build, or that can just be InDels\n");
+    }
     message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
@@ -248,18 +261,19 @@ void Genotype::load_snps(const std::string out_prefix,
                          const std::string& exclude_file, const double geno,
                          const double maf, const double info,
                          const double hard_threshold, const bool hard_coded,
-                         bool verbose, Reporter& reporter)
+                         bool verbose, Reporter& reporter, Genotype* target)
 {
-    if (!extract_file.empty()) {
-        m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_file, reporter);
+    if (!m_is_ref) {
+        if (!extract_file.empty()) {
+            m_exclude_snp = false;
+            m_snp_selection_list = load_snp_list(extract_file, reporter);
+        }
+        if (!exclude_file.empty()) {
+            m_snp_selection_list = load_snp_list(exclude_file, reporter);
+        }
     }
-    if (!exclude_file.empty()) {
-        m_snp_selection_list = load_snp_list(exclude_file, reporter);
-    }
-
-    m_existed_snps =
-        gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
+    m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded,
+                                    out_prefix, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
@@ -284,11 +298,53 @@ void Genotype::load_snps(const std::string out_prefix,
         message.append(std::to_string(m_num_maf_filter)
                        + " variant(s) excluded based on INFO score threshold");
     }
-    message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+    if (!m_is_ref) {
+        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+    }
+    else
+    {
+        message.append(std::to_string(target->m_existed_snps.size())
+                       + " variant(s) remained\n");
+    }
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
 }
 
+void Genotype::update_snps(std::vector<int>& retained_index)
+{
+
+    if (retained_index.size() != m_existed_snps.size())
+    { // only do this if we need to remove some SNPs
+        // we assume exist_index doesn't have any duplicated index
+        std::sort(retained_index.begin(), retained_index.end());
+        int start = (retained_index.empty()) ? -1 : retained_index.front();
+        int end = start;
+        std::vector<SNP>::iterator last = m_existed_snps.begin();
+        for (auto&& ind : retained_index) {
+            if (ind == start || ind - end == 1)
+                end = ind; // try to perform the copy as a block
+            else
+            {
+                std::copy(m_existed_snps.begin() + start,
+                          m_existed_snps.begin() + end + 1, last);
+                last += end + 1 - start;
+                start = ind;
+                end = ind;
+            }
+        }
+        if (!retained_index.empty()) {
+            std::copy(m_existed_snps.begin() + start,
+                      m_existed_snps.begin() + end + 1, last);
+            last += end + 1 - start;
+        }
+        m_existed_snps.erase(last, m_existed_snps.end());
+    }
+    m_existed_snps_index.clear();
+    size_t vector_index = 0;
+    for (auto&& cur_snp : m_existed_snps) {
+        m_existed_snps_index[cur_snp.rs()] = vector_index++;
+    }
+}
 Genotype::~Genotype() {}
 
 void Genotype::read_base(const Commander& c_commander, Region& region,
@@ -980,8 +1036,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     double cov12;
     double r2 = -1.0;
     double non_missing_ctd = 0;
-    bool mismatch_error = false;
-    bool flipped = false;
     int mismatch = 0;
     std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
     std::vector<uint32_t> index_tots(6);
@@ -1171,31 +1225,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         if (cur_target_snp.clumped()
             || cur_target_snp.p_value() > clump_info.p_value)
             continue;
-        auto&& target_ref_index =
-            reference.m_existed_snps_index.find(cur_target_snp.rs());
-        if (target_ref_index == reference.m_existed_snps_index.end()) continue;
+        // with the new change, all SNPs are stored in target
+        // so we can safely ignore the finding in reference
+        // though we still need to get the sample size information
+        // from the reference panel
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
-
-        auto&& ref_snp = reference.m_existed_snps[target_ref_index->second];
-        if (!cur_target_snp.matching(ref_snp.chr(), ref_snp.loc(),
-                                     ref_snp.ref(), ref_snp.alt(), flipped))
-        {
-            mismatch++;
-            if (!mismatch_error) {
-                std::string message =
-                    "Warning: Mismatched SNPs between LD reference and target!";
-                message.append("Will use information from target file");
-                message.append("You should check the files are based on the "
-                               "same genome build\n");
-                reporter.report(message);
-                mismatch_error = true;
-            }
-        }
-        // location cannot be negative
-        // if this become a problem, we can also put it forward
-        // and skip it just like SNPs with large p-values
 
         // set the missing information
         // contain_missing == 3 = has missing
@@ -1211,12 +1247,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             if (pair_target_snp.clumped()
                 || pair_target_snp.p_value() > clump_info.p_value)
                 continue;
-            auto&& pair_ref_index =
-                reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end())
-                continue;
-            auto&& ref_pair_snp =
-                reference.m_existed_snps[pair_ref_index->second];
             if (!use_pearson) {
                 window_data_ptr[founder_ctv2 - 2] = 0;
                 window_data_ptr[founder_ctv2 - 1] = 0;
@@ -1228,8 +1258,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             if (++cur_window_size == max_window_size) {
                 throw std::runtime_error("Error: Out of memory!");
             }
-            reference.read_genotype(window_data_ptr, ref_pair_snp,
-                                    ref_pair_snp.file_name());
+            reference.read_genotype(window_data_ptr,
+                                    pair_target_snp.ref_byte_pos(),
+                                    pair_target_snp.ref_file_name());
             if (use_pearson) {
                 // geno_mask_ptr[founder_ctv2 - 2] = 0;
                 // geno_mask_ptr[founder_ctv2 - 1] = 0;
@@ -1254,8 +1285,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         window_data_ptr[founder_ctv2 - 1] = 0;
         std::fill(index_data.begin(), index_data.end(), 0);
         if (!use_pearson) {
-            reference.read_genotype(window_data_ptr, ref_snp,
-                                    ref_snp.file_name());
+            reference.read_genotype(window_data_ptr,
+                                    cur_target_snp.ref_byte_pos(),
+                                    cur_target_snp.ref_file_name());
             vec_datamask(reference.founder_ct(), 0, window_data_ptr,
                          founder_include2.data(), index_data.data());
             index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
@@ -1273,7 +1305,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         {
 
             fill_ulong_zero(founder_ct_192_long, index_geno);
-            reference.read_genotype(index_geno, ref_snp, ref_snp.file_name());
+            reference.read_genotype(index_geno, cur_target_snp.ref_byte_pos(),
+                                    cur_target_snp.ref_file_name());
             fill_ulong_zero(founder_ct_192_long, index_mask);
             ld_process_load2(index_geno, index_mask, &index_missing_ct,
                              reference.founder_ct(), is_x, nullptr);
@@ -1288,13 +1321,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
                 || pair_target_snp.p_value() > clump_info.p_value)
-                continue;
-            auto&& pair_ref_index =
-                reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end())
-                continue;
-
-            if (pair_ref_index == reference.m_existed_snps_index.end())
                 continue;
             r2 = -1;
             if (!use_pearson) {
@@ -1378,12 +1404,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             if (pair_target_snp.clumped()
                 || pair_target_snp.p_value() > clump_info.p_value)
                 continue;
-            auto&& pair_ref_index =
-                reference.m_existed_snps_index.find(pair_target_snp.rs());
-            if (pair_ref_index == reference.m_existed_snps_index.end())
-                continue;
-            auto&& ref_pair_snp =
-                reference.m_existed_snps[pair_ref_index->second];
             if (!use_pearson) {
                 window_data_ptr[founder_ctv2 - 2] = 0;
                 window_data_ptr[founder_ctv2 - 1] = 0;
@@ -1392,8 +1412,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             {
                 fill_ulong_zero(founder_ct_192_long, window_data_ptr);
             }
-            reference.read_genotype(window_data_ptr, ref_pair_snp,
-                                    ref_pair_snp.file_name());
+            reference.read_genotype(window_data_ptr,
+                                    pair_target_snp.ref_byte_pos(),
+                                    pair_target_snp.ref_file_name());
 
             r2 = -1;
             if (!use_pearson) {

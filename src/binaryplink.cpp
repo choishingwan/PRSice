@@ -39,7 +39,6 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
 std::vector<Sample> BinaryPlink::gen_sample_vector()
 {
     assert(m_genotype_files.size() > 0);
-    // open the fam file
     std::ifstream famfile;
     famfile.open(m_sample_file.c_str());
     if (!famfile.is_open()) {
@@ -65,6 +64,11 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
                     + std::to_string(m_unfiltered_sample_ct + 1) + "\n";
                 throw std::runtime_error(message);
             }
+            // fam file will always have both the FID and IID
+            // though this _ concatination might cause a bug if
+            // there is a situation where a sample with FID A_B IID A and
+            // a sample with FID A and IID B_A, then this will be
+            // in-distinguishable
             founder_info.insert(token[+FAM::FID] + "_" + token[+FAM::IID]);
             m_unfiltered_sample_ct++;
         }
@@ -103,6 +107,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
+        cur_sample.founder = true;
         // false as we have not check if the pheno information is valid
         cur_sample.has_pheno = false;
         if (!m_remove_sample) {
@@ -123,25 +128,16 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             m_founder_ct++;
             // so m_founder_info is a subset of m_sample_include
             SET_BIT(sample_index, m_founder_info.data());
+            SET_BIT(sample_index, m_sample_include.data());
         }
-        else if (cur_sample.included && m_keep_nonfounder)
+        else if (cur_sample.included)
         {
-            // nonfounder but we want to keep it
             SET_BIT(sample_index, m_sample_include.data());
             m_num_non_founder++;
-        }
-        else
-        {
-            // nonfounder / unwanted sample
-            if (cur_sample.included) {
-                // user didn't specify they want the nonfounder
-                // so ignore it
-                cur_sample.included = false;
-                m_num_non_founder++;
-            }
+            cur_sample.founder = m_keep_nonfounder;
         }
         m_sample_ct += cur_sample.included;
-        if (cur_sample.included) SET_BIT(sample_index, m_sample_include.data());
+
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
         }
@@ -163,7 +159,10 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             cur_sample.pheno = "";
         }
         duplicated_samples.insert(id);
-        sample_name.push_back(cur_sample);
+        // only storing this for target data
+        if (!m_is_ref) {
+            sample_name.push_back(cur_sample);
+        }
     }
     if (!duplicated_sample_id.empty()) {
         // TODO: Produce a file containing id of all valid samples
@@ -181,21 +180,23 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
 }
 
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
-                                             const double maf,
-                                             const double info,
-                                             const double hard_threshold,
-                                             const bool hard_coded,
-                                             const std::string& out_prefix)
+std::vector<SNP>
+BinaryPlink::gen_snp_vector(const double geno, const double maf,
+                            const double info, const double hard_threshold,
+                            const bool hard_coded,
+                            const std::string& out_prefix, Genotype* target)
 {
     std::unordered_set<std::string> duplicated_snp;
     std::vector<SNP> snp_info;
+
+    std::vector<int> ref_target_overlap_index;
     std::string line;
-    uintptr_t final_mask = get_final_mask(m_sample_ct);
-    uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     int chr_index = 0;
     int chr_code = 0;
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     for (auto prefix : m_genotype_files) {
         std::string bim_name = prefix + ".bim";
@@ -210,6 +211,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         int num_snp_read = 0;
         std::string prev_chr = "";
         bool chr_error = false, chr_sex_error = false; // to limit error report
+        // first, we need the number of SNPs included so that
+        // we can check the bit of the bim
         while (std::getline(bim, line)) {
             misc::trim(line);
             if (line.empty()) continue;
@@ -225,6 +228,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         }
         bim.clear();
         bim.seekg(0, bim.beg);
+        // check if the bed file is valid
         check_bed(bed_name, num_snp_read);
 
         std::ifstream bed(bed_name.c_str());
@@ -245,49 +249,61 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
             // doesn't need to do the format check as we have already done it in
             // the previous pass change them to upper case to avoid match
             // problems
+            if (m_is_ref) {
+                // SNP not found in the target file
+                if (target->m_existed_snps_index.find(bim_info[+BIM::RS])
+                    == target->m_existed_snps_index.end())
+                {
+                    continue;
+                }
+            }
             std::transform(bim_info[+BIM::A1].begin(), bim_info[+BIM::A1].end(),
                            bim_info[+BIM::A1].begin(), ::toupper);
             std::transform(bim_info[+BIM::A2].begin(), bim_info[+BIM::A2].end(),
                            bim_info[+BIM::A2].begin(), ::toupper);
             std::string chr = bim_info[+BIM::CHR];
             // exclude SNPs that are not required
-            if (!m_exclude_snp
-                && m_snp_selection_list.find(bim_info[+BIM::RS])
-                       == m_snp_selection_list.end())
-            {
-                continue;
-            }
-            else if (m_exclude_snp
-                     && m_snp_selection_list.find(bim_info[+BIM::RS])
-                            != m_snp_selection_list.end())
-            {
-                continue;
+            if (!m_is_ref) {
+                if (!m_exclude_snp
+                    && m_snp_selection_list.find(bim_info[+BIM::RS])
+                           == m_snp_selection_list.end())
+                {
+                    continue;
+                }
+                else if (m_exclude_snp
+                         && m_snp_selection_list.find(bim_info[+BIM::RS])
+                                != m_snp_selection_list.end())
+                {
+                    continue;
+                }
             }
             /** check if this is from a new chromosome **/
             if (chr.compare(prev_chr) != 0) {
-                // only work on this if this is a new chromosome
                 prev_chr = chr;
                 if (m_chr_order.find(chr) != m_chr_order.end()) {
                     throw std::runtime_error("Error: SNPs on the same "
                                              "chromosome must be clustered "
                                              "together!");
                 }
+                // m_chr_order is to provide consistent sorting for the
+                // region class
                 m_chr_order[chr] = chr_index++;
                 // get the chromosome codes
                 chr_code = get_chrom_code_raw(chr.c_str());
-                if (((const uint32_t) chr_code) > m_max_code)
-                { // bigger than the maximum code, ignore it
+                if (((const uint32_t) chr_code) > m_max_code) {
+                    // bigger than the maximum code, ignore it
                     if (!chr_error) {
-                        // only print this if an error isn't previously given
+                        // only print this if an error isn't previously
+                        // given
                         std::string error_message =
                             "Warning: SNPs with chromosome number larger "
                             "than "
                             + std::to_string(m_max_code) + "."
                             + " They will be ignored!\n";
-                        std::cerr
-                            << error_message
-                            << std::endl; // currently avoid passing in
-                                          // reporter here so that I don't need
+                        std::cerr << error_message
+                                  << std::endl; // currently avoid passing
+                                                // in reporter here so that
+                                                // I don't need
                         // to pass the reporter as a parameter
                         chr_error = true;
                         continue;
@@ -307,6 +323,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                     }
                 }
             }
+
             // now read in the coordinate
             int loc = -1;
             try
@@ -334,13 +351,10 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 != m_existed_snps_index.end())
             {
                 duplicated_snp.insert(bim_info[+BIM::RS]);
-                // throw std::runtime_error(
-                //    "Error: Duplicated SNP ID detected!\n");
             }
             else if (!ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2])
                      || m_keep_ambig)
             {
-
                 // now read in the binary information and determine if we want
                 // to keep this SNP
                 // only do the filtering if we need to as my current
@@ -360,8 +374,12 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
                 }
                 prev_snp_processed = (num_snp_read - 1);
                 // get the location of the SNP in the binary file
+                // this is used in clumping and PRS calculation which
+                // allow us to jump directly to the SNP of interest
                 std::streampos byte_pos = bed.tellg();
                 if (maf > 0 || geno < 1) {
+                    // only load in all included samples (including
+                    // non-founders)
                     if (load_and_collapse_incl(
                             m_unfiltered_sample_ct, m_sample_ct,
                             m_sample_include.data(), final_mask, false, bed,
@@ -435,12 +453,32 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
 
                 m_num_ambig +=
                     ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2]);
-                m_existed_snps_index[bim_info[+BIM::RS]] = snp_info.size();
-                // TODO: When working with SNP class, we need to add in the aA
-                // AA aa variable to avoid re-calculating the mean
-                snp_info.emplace_back(
-                    SNP(bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
+                if (!m_is_ref) {
+                    m_existed_snps_index[bim_info[+BIM::RS]] = snp_info.size();
+                    // TODO: When working with SNP class, we need to add in the
+                    // aA AA aa variable to avoid re-calculating the mean
+                    // need to use push_back here as we don't know the
+                    // total number of SNPs in all the bim file ('we procedss
+                    // each one after another)
+                    snp_info.push_back(SNP(
+                        bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos));
+                }
+                else
+                {
+                    auto&& target_index =
+                        target->m_existed_snps_index[bim_info[+BIM::RS]];
+                    bool dummy;
+                    if (!target->m_existed_snps[target_index].matching(
+                            chr_code, loc, bim_info[+BIM::A1],
+                            bim_info[+BIM::A2], dummy))
+                    {
+                        m_num_ref_target_mismatch++;
+                    }
+                    target->m_existed_snps[target_index].add_reference(
+                        prefix, byte_pos);
+                    ref_target_overlap_index.push_back(target_index);
+                }
             }
             else if (!m_keep_ambig)
             {
@@ -448,7 +486,10 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
             }
         }
     }
-
+    snp_info.shrink_to_fit();
+    if (m_is_ref) {
+        target->update_snps(ref_target_overlap_index);
+    }
     if (duplicated_snp.size() != 0) {
         std::ofstream log_file_stream;
         std::string dup_name = out_prefix + ".valid";
@@ -463,7 +504,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const double geno,
         }
         log_file_stream.close();
         std::string error_message =
-            "Error: Duplicated SNP ID detected!.Valid SNP ID stored at "
+            "Error: Duplicated SNP ID detected! Valid SNP ID (post --extract / "
+            "--exclude, non-duplicated SNPs) stored at "
             + dup_name + ". You can avoid this error by using --extract "
             + dup_name;
         throw std::runtime_error(error_message);

@@ -40,7 +40,8 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
-
+// class BinaryPlink;
+// class BinaryGen;
 #define MULTIPLEX_LD 1920
 #define MULTIPLEX_2LD (MULTIPLEX_LD * 2)
 
@@ -56,21 +57,27 @@ public:
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 
+    // after load samples, samples that we don't want to include
+    // will all have their FID, IID and phenotype masked by empty string
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, bool verbose,
                       Reporter& reporter);
+    // we use pointer for the target such that we can have a nullptr as default
+    // therefore not providing any input argument for target file processing
     void load_snps(const std::string out_prefix,
                    const std::string& extract_file,
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter);
+                   bool verbose, Reporter& reporter,
+                   Genotype* target = nullptr);
 
     void load_snps(const std::string out_prefix,
                    const std::unordered_map<std::string, size_t>& existed_snps,
                    const double geno, const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
                    bool verbose, Reporter& reporter);
+    void is_reference(const bool is_ref) { m_is_ref = is_ref; }
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -145,52 +152,18 @@ public:
     }
     bool sample_included(size_t i) const
     {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].included;
+        return m_sample_names.at(i).included;
     };
-    void got_pheno(size_t i)
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        m_sample_names[i].has_pheno = true;
-    }
-    void invalid_pheno(size_t i)
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        m_sample_names[i].has_pheno = false;
-    }
-    bool has_pheno(size_t i) const
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].has_pheno;
-    }
-    std::string pheno(size_t i) const
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].pheno;
-    }
+    void got_pheno(size_t i) { m_sample_names.at(i).has_pheno = true; }
+    void invalid_pheno(size_t i) { m_sample_names.at(i).has_pheno = false; }
+    bool has_pheno(size_t i) const { return m_sample_names.at(i).has_pheno; }
+    std::string pheno(size_t i) const { return m_sample_names.at(i).pheno; }
     bool pheno_is_na(size_t i) const
     {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].pheno.compare("NA") == 0;
+        return m_sample_names.at(i).pheno.compare("NA") == 0;
     }
-    std::string fid(size_t i) const
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].FID;
-    }
-    std::string iid(size_t i) const
-    {
-        if (i > m_sample_names.size())
-            throw std::out_of_range("Sample name vector out of range");
-        return m_sample_names[i].IID;
-    }
+    std::string fid(size_t i) const { return m_sample_names.at(i).FID; }
+    std::string iid(size_t i) const { return m_sample_names.at(i).IID; }
     double calculate_score(SCORING score_type, size_t i) const
     {
         if (i > m_sample_names.size())
@@ -227,11 +200,15 @@ public:
     uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
 
 protected:
+    friend class BinaryPlink;
+    friend class BinaryGen;
     // variable storages
     // vector storing all the genotype files
     std::vector<std::string> m_genotype_files;
     // sample file name. Fam for plink
     std::string m_sample_file;
+
+    bool m_is_ref = false;
     /** chromosome information **/
     // here such that we can extend PRSice to other organism if we have time
     // also use for handling sex chromosome (which is something that require
@@ -266,6 +243,7 @@ protected:
     std::unordered_set<std::string> m_snp_selection_list;
     uintptr_t m_marker_ct = 0;
     uint32_t m_num_ambig = 0;
+    uint32_t m_num_ref_target_mismatch = 0;
     uint32_t m_num_maf_filter = 0;
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
@@ -286,11 +264,10 @@ protected:
     {
         return std::vector<Sample>(0);
     };
-    virtual std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                            const double info,
-                                            const double hard_threshold,
-                                            const bool hard_coded,
-                                            const std::string& out_prefix)
+    virtual std::vector<SNP>
+    gen_snp_vector(const double geno, const double maf, const double info,
+                   const double hard_threshold, const bool hard_coded,
+                   const std::string& out_prefix, Genotype* target = nullptr)
     {
         return std::vector<SNP>(0);
     };
@@ -336,8 +313,9 @@ protected:
     uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;
 
-
-    virtual inline void read_genotype(uintptr_t* genotype, const SNP& snp,
+    void update_snps(std::vector<int>& retained_index);
+    virtual inline void read_genotype(uintptr_t* genotype,
+                                      const std::streampos byte_pos,
                                       const std::string& file_name){};
     virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};

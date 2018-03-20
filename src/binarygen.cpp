@@ -47,7 +47,6 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     if (is_sample_format) {
         std::getline(sample_file, line);
         std::vector<std::string> header_names = misc::split(line);
-        std::getline(sample_file, line);
         // might want to get the reporter involved.
         fprintf(stderr, "Detected bgen sample file format\n");
         for (size_t i = 3; i < header_names.size(); ++i) {
@@ -58,6 +57,8 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 break;
             }
         }
+        // read in the second line
+        std::getline(sample_file, line);
         if (sex_col != -1) {
             // double check if the format is alright
             std::vector<std::string> header_format = misc::split(line);
@@ -76,18 +77,21 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     std::vector<int> sex;
     while (std::getline(sample_file, line)) {
         misc::trim(line);
+        line_id++;
         if (!line.empty()) {
             std::vector<std::string> token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
-            std::string header_test = token[0];
-            std::transform(header_test.begin(), header_test.end(),
-                           header_test.begin(), ::toupper);
-            if (header_test.compare("FID") == 0
-                || (header_test.compare("IID") == 0 && m_ignore_fid))
-            {
-                // this is the header, skip
-                continue;
+            if (line_id == 1) {
+                std::string header_test = token[0];
+                std::transform(header_test.begin(), header_test.end(),
+                               header_test.begin(), ::toupper);
+                if (header_test.compare("FID") == 0
+                    || (header_test.compare("IID") == 0 && m_ignore_fid))
+                {
+                    // this is the header, skip
+                    continue;
+                }
             }
             if (token.size()
                 < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
@@ -119,6 +123,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             cur_sample.has_pheno = false;
             cur_sample.prs = 0.0;
             cur_sample.num_snp = 0.0;
+            cur_sample.founder = true;
             if (!m_remove_sample) {
                 cur_sample.included = (m_sample_selection_list.find(id)
                                        != m_sample_selection_list.end());
@@ -142,7 +147,9 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 duplicated_sample_id.push_back(id);
             }
             duplicated_samples.insert(id);
-            sample_name.push_back(cur_sample);
+            if (!m_is_ref) {
+                sample_name.push_back(cur_sample);
+            }
         }
     }
     if (!duplicated_sample_id.empty()) {
@@ -181,6 +188,9 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             m_num_ambig_sex++;
         }
     }
+    // For BGEN, we assume all samples are founder as we don't have the
+    // information
+    m_founder_info = m_sample_include;
     sample_file.close();
     return sample_name;
 }
@@ -319,12 +329,14 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                            const double info_score,
                                            const double hard_threshold,
                                            const bool hard_coded,
-                                           const std::string& out_prefix)
+                                           const std::string& out_prefix,
+                                           Genotype* target)
 {
 
 
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
+    std::vector<int> ref_target_overlap_index;
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> duplicate_check_list;
     m_hard_threshold = hard_threshold;
@@ -436,17 +448,23 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                        + std::to_string(SNP_position);
             }
             user_exclude = false;
-            if ((!m_exclude_snp
-                 && m_snp_selection_list.find(RSID)
-                        == m_snp_selection_list.end())
-                || (m_exclude_snp
-                    && m_snp_selection_list.find(RSID)
-                           != m_snp_selection_list.end()))
+            if (!m_is_ref) {
+                if ((!m_exclude_snp
+                     && m_snp_selection_list.find(RSID)
+                            == m_snp_selection_list.end())
+                    || (m_exclude_snp
+                        && m_snp_selection_list.find(RSID)
+                               != m_snp_selection_list.end()))
+                {
+                    user_exclude = true;
+                    exclude_snp = true;
+                }
+            }
+            else if (target->m_existed_snps_index.find(RSID)
+                     == target->m_existed_snps_index.end())
             {
-                user_exclude = true;
                 exclude_snp = true;
             }
-
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
             }
@@ -475,17 +493,37 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                         context, setter);
                     if (setter.filter_snp(maf, geno, info_score)) continue;
                 }
-                m_existed_snps_index[RSID] = snp_res.size();
-                // TODO: Update SNP constructor
-                snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
-                                         alleles.front(), alleles.back(),
-                                         prefix, byte_pos));
+                if (!m_is_ref) {
+                    m_existed_snps_index[RSID] = snp_res.size();
+                    // TODO: Update SNP constructor
+                    snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
+                                             alleles.front(), alleles.back(),
+                                             prefix, byte_pos));
+                }
+                else
+                {
+                    auto&& target_index = target->m_existed_snps_index[RSID];
+                    bool dummy;
+                    if (!target->m_existed_snps[target_index].matching(
+                            chr_code, SNP_position, alleles.front(),
+                            alleles.back(), dummy))
+                    {
+                        m_num_ref_target_mismatch++;
+                    }
+                    target->m_existed_snps[target_index].add_reference(
+                        prefix, byte_pos);
+                    ref_target_overlap_index.push_back(target_index);
+                }
             }
         }
         bgen_file.close();
         fprintf(stderr, "\n");
     }
     snp_res.shrink_to_fit(); // so that it will be more suitable
+
+    if (m_is_ref) {
+        target->update_snps(ref_target_overlap_index);
+    }
     if (duplicated_snps.size() != 0) {
         std::ofstream log_file_stream;
         std::string dup_name = out_prefix + ".valid";

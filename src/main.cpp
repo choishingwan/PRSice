@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
                 commander.thread(), commander.ignore_fid(),
                 commander.nonfounders(), commander.keep_ambig(), reporter,
                 commander);
+            target_file->is_reference(false);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
@@ -96,31 +97,35 @@ int main(int argc, char* argv[])
         // Need to handle paths in the name
         std::string base_name = misc::remove_extension<std::string>(
             misc::base_name<std::string>(commander.base_name()));
-        std::string message = "Start processing " + base_name + "\n";
-        message.append("==============================\n");
-        reporter.report(message);
         try
         {
             target_file->set_info(commander);
-            target_file->read_base(commander, region, reporter);
-
+            // load reference panel first so that we have updated the target
             if (!commander.ref_name().empty()) {
-                reporter.report("Loading reference panel\n");
+                reporter.report("Loading reference "
+                                "panel\n==============================\n");
                 reference_file = factory.createGenotype(
                     commander.ref_name(), commander.ref_type(),
                     commander.thread(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), reporter,
                     commander);
+                reference_file->is_reference(true);
                 reference_file->load_samples(commander.ld_keep_file(),
-                                             commander.ld_remove_file(), true,
-                                             reporter);
+                                             commander.ld_remove_file(),
+                                             verbose, reporter);
                 // only load SNPs that can be found in the target file index
                 reference_file->load_snps(
-                    commander.out(), target_file->index(), commander.ld_geno(),
-                    commander.ld_maf(), commander.ld_info(),
-                    commander.ld_hard_threshold(), commander.hard_coded(), true,
-                    reporter);
+                    commander.out(), commander.extract_file(),
+                    commander.exclude_file(), commander.geno(), commander.maf(),
+                    commander.info(), commander.hard_threshold(),
+                    commander.hard_coded(), verbose, reporter, target_file);
             }
+
+            std::string message = "Start processing " + base_name + "\n";
+            message.append("==============================\n");
+            reporter.report(message);
+            target_file->read_base(commander, region, reporter);
+
             // get the sort by p inex vector for target
             // so that we can still find out the relative coordinates of each
             // SNPs

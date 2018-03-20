@@ -35,21 +35,21 @@ private:
     uintptr_t m_bed_offset = 3;
     std::vector<Sample> gen_sample_vector();
 
-    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info,
-                                    const double hard_threshold,
-                                    const bool hard_coded,
-                                    const std::string& out_prefix);
+    std::vector<SNP>
+    gen_snp_vector(const double geno, const double maf, const double info,
+                   const double hard_threshold, const bool hard_coded,
+                   const std::string& out_prefix, Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);
 
     // this is for ld calculation only
-    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
+    inline void read_genotype(uintptr_t* genotype,
+                              const std::streampos byte_pos,
                               const std::string& file_name)
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-        std::streampos snp_index = snp.byte_pos();
+        std::streampos snp_index = byte_pos;
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
