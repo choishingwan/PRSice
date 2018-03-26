@@ -29,6 +29,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <chrono>
+#include <errno.h>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -265,6 +266,23 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
+
+    void join_all_threads(pthread_t* threads, uint32_t ctp1)
+    {
+        if (ctp1==0) {
+            return;
+        }
+    #ifdef _WIN32
+        WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
+        for (uint32_t uii = 0; uii < ctp1; ++uii) {
+            CloseHandle(threads[uii]);
+        }
+    #else
+        for (uint32_t uii = 0; uii < ctp1; uii++) {
+            pthread_join(threads[uii], nullptr);
+        }
+    #endif
+    }
 };
 
 #endif // PRSICE_H

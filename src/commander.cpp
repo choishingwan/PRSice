@@ -218,7 +218,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     max_threads = sysinfo.dwNumberOfProcessors;
-    int32_t known_procs = g_thread_ct;
+    int32_t known_procs = max_threads;
 #else
     int32_t known_procs = sysconf(_SC_NPROCESSORS_ONLN);
     max_threads = (known_procs == -1) ? 1 : known_procs;

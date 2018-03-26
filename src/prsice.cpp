@@ -1036,45 +1036,41 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
             g_perm_range[ulii] = cur_info;
             start = ending;
             remain--;
-
-#ifdef _WIN32
-            pthread_store[ulii] = (HANDLE) _beginthreadex(
-                nullptr, 4096, thread_perm, (void*) ulii, 0, nullptr);
-            if (!pthread_store[ulii]) {
-                join_threads(pthread_store.data(), ulii);
-                throw std::runtime_error(
-                    "Error: Cannot create thread for permutation!");
-            }
-#else
-            if (pthread_create(&(pthread_store[ulii]), nullptr,
-                               &PRSice::thread_perm, (void*) ulii))
+            try
             {
-                join_threads(pthread_store.data(), ulii);
-                throw std::runtime_error(
-                    "Error: Cannot create thread for permutation!");
-            }
-#endif
-        }
-        join_threads(pthread_store.data(), n_thread);
+#ifdef _WIN32
+                pthread_store[ulii] = (HANDLE) _beginthreadex(
+                    nullptr, 4096, thread_perm, (void*) ulii, 0, nullptr);
+                if (!pthread_store[ulii]) {
+                    join_all_threads(pthread_store.data(), ulii);
+                    throw std::runtime_error(
+                        "Error: Cannot create thread for permutation!");
+                }
+#else
+                int error_code =
+                    pthread_create(&(pthread_store[ulii]), nullptr,
+                                   &PRSice::thread_perm, (void*) ulii);
+                if (error_code) {
 
-        // spawn_threads(pthread_store.data(), &thread_perm, n_thread);
-        /*
-        for (size_t i_thread = 0; i_thread < n_thread; ++i_thread) {
-            size_t ending = start + job_size + (remain > 0);
-            ending = (ending > cur_perm) ? cur_perm : ending;
-            perm_info cur_info;
-            cur_info.start = start;
-            cur_info.end = ending;
-            cur_info.rank = rank;
-            cur_info.processed = processed;
-            m_perm_range[i_thread] = cur_info;
-            thread_store.push_back(
-                std::thread(&PRSice::thread_perm, this, i_thread));
-            start = ending;
-            remain--;
+                    std::string error_message =
+                        "Error: Cannot create thread for permutation! ("
+                        + std::string(strerror(error_code)) + ")";
+                    //join_threads(pthread_store.data(), ulii);
+                    throw std::runtime_error(error_message);
+                }
+#endif
+            }
+            catch (std::exception& ex)
+            {
+                std::string error_message =
+                    "Error: Cannot create thread for permutation!\n";
+                error_message.append(ex.what());
+                throw std::runtime_error(error_message);
+            }
         }
-        for (auto&& thread : thread_store) thread.join();
-        */
+        join_all_threads(pthread_store.data(), n_thread);
+
+
         processed += cur_perm;
     }
 }
