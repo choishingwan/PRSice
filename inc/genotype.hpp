@@ -154,6 +154,11 @@ public:
     {
         return m_sample_names.at(i).included;
     };
+
+    bool sample_is_founder(size_t i) const
+    {
+        return m_sample_names.at(i).founder;
+    }
     void got_pheno(size_t i) { m_sample_names.at(i).has_pheno = true; }
     void invalid_pheno(size_t i) { m_sample_names.at(i).has_pheno = false; }
     bool has_pheno(size_t i) const { return m_sample_names.at(i).has_pheno; }

@@ -61,8 +61,7 @@ class PRSice
 {
 public:
     PRSice(const std::string& base_name, const Commander& commander,
-           const bool prset, const size_t sample_ct, Reporter& reporter,
-           const size_t num_threshold)
+           const bool prset, const size_t sample_ct, Reporter& reporter)
         : m_ignore_fid(commander.ignore_fid())
         , m_prset(prset)
         , m_num_perm(commander.permutation())
@@ -86,24 +85,11 @@ public:
             }
         }
         if (perm) {
-            // first check for ridiculously large sample size
-            // allow 1 GB here
-            if (CHAR_BIT * sample_ct > 100000000) {
-                m_perm_per_slice = 1;
-            }
-            else
-            {
-                // in theory, most of the time, perm_per_slice should be
-                // equal to c_commander.num_permutation();
+            gen_perm_memory(sample_ct, reporter);
 
-                int sample_memory = CHAR_BIT * sample_ct;
-                m_perm_per_slice = 100000000 / sample_memory;
-                m_perm_per_slice = (m_perm_per_slice > m_num_perm)
-                                       ? m_num_perm
-                                       : m_perm_per_slice;
-                // Additional slice to keep
-                m_remain_slice = m_num_perm % m_perm_per_slice;
-            }
+            // Additional slice to keep
+            // DEBUG here
+            m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
                 if (!g_logit_perm) {
                     std::string message =
@@ -240,7 +226,7 @@ private:
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
-    static std::vector<Eigen::MatrixXd> g_permuted_pheno;
+    static Eigen::MatrixXd g_permuted_pheno;
     static Eigen::VectorXd g_pre_se_calulated;
     // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
@@ -269,20 +255,22 @@ private:
 
     void join_all_threads(pthread_t* threads, uint32_t ctp1)
     {
-        if (ctp1==0) {
+        if (ctp1 == 0) {
             return;
         }
-    #ifdef _WIN32
+#ifdef _WIN32
         WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
         for (uint32_t uii = 0; uii < ctp1; ++uii) {
             CloseHandle(threads[uii]);
         }
-    #else
+#else
         for (uint32_t uii = 0; uii < ctp1; uii++) {
             pthread_join(threads[uii], nullptr);
         }
-    #endif
+#endif
     }
+
+    void gen_perm_memory(const size_t sample_ct, Reporter& reporter);
 };
 
 #endif // PRSICE_H

@@ -25,7 +25,7 @@ Eigen::MatrixXd PRSice::g_independent_variables;
 std::vector<double> PRSice::g_perm_result;
 std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
 Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
-std::vector<Eigen::MatrixXd> PRSice::g_permuted_pheno;
+Eigen::MatrixXd PRSice::g_permuted_pheno;
 Eigen::VectorXd PRSice::g_pre_se_calulated;
 
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
@@ -256,7 +256,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         pheno_file.close();
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
             std::string id = target.sample_id(i_sample);
-            bool included = target.sample_included(i_sample);
+            bool included = target.sample_is_founder(i_sample);
             if (included) num_included++;
             if (phenotype_info.find(id) != phenotype_info.end() && included
                 && phenotype_info[id].compare("NA") != 0)
@@ -304,7 +304,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // No phenotype file is provided
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-            bool included = target.sample_included(i_sample);
+            bool included = target.sample_is_founder(i_sample);
             if (included) num_included++;
             if (target.pheno_is_na(i_sample) || !included) {
                 // it is ok to skip NA as default = sample.has_pheno = false
@@ -322,7 +322,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                     }
                     else
                     {
-                        throw std::runtime_error("");
+                        throw std::runtime_error(
+                            "Invalid binary phenotype format!");
                     }
                 }
                 else
@@ -966,8 +967,10 @@ void PRSice::process_permutations()
 void PRSice::permutation(Genotype& target, const size_t n_thread,
                          bool logit_perm)
 {
+
     int num_iter = m_num_perm / m_perm_per_slice;
-    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm(
+
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     size_t num_include_samples = target.num_sample();
     Eigen::setNbThreads(n_thread);
@@ -982,6 +985,8 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         }
     }
     int rank = 0;
+    // logit_perm can only be true if it is binary trait and user used the
+    // --logit-perm flag
     if (!logit_perm) {
         g_perm_pre_decomposed.compute(g_independent_variables);
         rank = g_perm_pre_decomposed.rank();
@@ -990,7 +995,6 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
                                 .triangularView<Eigen::Upper>();
         g_pre_se_calulated = (R.transpose() * R).inverse().diagonal();
     }
-    Eigen::setNbThreads(1);
     int cur_remain = m_remain_slice;
     // we reseed the random number generator in each iteration so that
     // we will always get the same pheontype permutation
@@ -998,24 +1002,28 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     // need to do the permutation of phenotype without threading
     // so that we can reserve the sequence
     size_t processed = 0;
+    // +1 so that we will also procdess the last slice
     for (int iter = 0; iter < num_iter + 1; ++iter) {
-        size_t cur_perm = m_perm_per_slice;
 
+        Eigen::setNbThreads(n_thread);
+        size_t cur_perm = m_perm_per_slice;
         cur_perm += (cur_remain > 0) ? 1 : 0;
+        cur_remain--;
         if (cur_perm + processed > m_num_perm) {
             cur_perm = m_num_perm - processed;
         }
-        cur_remain--;
         if (cur_perm < 1) break;
-        g_permuted_pheno.resize(cur_perm);
+        // g_permuted_pheno.resize(cur_perm);
         for (size_t p = 0; p < cur_perm; ++p) {
-            perm.setIdentity();
-            std::shuffle(perm.indices().data(),
-                         perm.indices().data() + perm.indices().size(),
+            perm_matrix.setIdentity();
+            std::shuffle(perm_matrix.indices().data(),
+                         perm_matrix.indices().data()
+                             + perm_matrix.indices().size(),
                          rand_gen);
-            g_permuted_pheno[p] = perm * m_phenotype; // permute columns
+            g_permuted_pheno.col(p) =
+                perm_matrix * m_phenotype; // permute columns
         }
-
+        Eigen::setNbThreads(1);
         // if want to use windows, we need to ditch the use of std::thread
         // now multithread it and get the corresponding p-values
 
@@ -1055,7 +1063,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
                     std::string error_message =
                         "Error: Cannot create thread for permutation! ("
                         + std::string(strerror(error_code)) + ")";
-                    //join_threads(pthread_store.data(), ulii);
+                    // join_threads(pthread_store.data(), ulii);
                     throw std::runtime_error(error_message);
                 }
 #endif
@@ -1073,6 +1081,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
 
         processed += cur_perm;
     }
+    exit(-1);
 }
 
 THREAD_RET_TYPE PRSice::thread_perm(void* id)
@@ -1092,16 +1101,16 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (g_logit_perm) {
             double r2, coefficient, se;
-            Regression::glm(g_permuted_pheno[i], g_independent_variables, obs_p,
-                            r2, coefficient, se, 25, 1, true);
+            Regression::glm(g_permuted_pheno.col(i), g_independent_variables,
+                            obs_p, r2, coefficient, se, 25, 1, true);
         }
         else
         {
             Eigen::VectorXd beta =
-                g_perm_pre_decomposed.solve(g_permuted_pheno[i]);
+                g_perm_pre_decomposed.solve(g_permuted_pheno.col(i));
             Eigen::MatrixXd fitted = g_independent_variables * beta;
 
-            Eigen::VectorXd residual = g_permuted_pheno[i] - fitted;
+            Eigen::VectorXd residual = g_permuted_pheno.col(i) - fitted;
             int rdf = n - rank;
             double rss = 0.0;
             for (size_t r = 0; r < n; ++r) {
@@ -1376,4 +1385,103 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
 PRSice::~PRSice()
 {
     // dtor
+}
+
+void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
+{
+    intptr_t min_memory_byte = 8 * sample_ct;
+    intptr_t max_req_memory = min_memory_byte * m_num_perm;
+#ifdef __APPLE__
+    int32_t mib[2];
+    size_t sztmp;
+#endif
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    int64_t llxx;
+    intptr_t default_alloc_mb;
+    intptr_t malloc_size_mb = 0;
+#ifdef __APPLE__
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    llxx = 0;
+
+    sztmp = sizeof(int64_t);
+    sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
+    llxx /= 1048576;
+#else
+#ifdef _WIN32
+    MEMORYSTATUSEX memstatus;
+    memstatus.dwLength = sizeof(memstatus);
+    GlobalMemoryStatusEx(&memstatus);
+    llxx = memstatus.ullTotalPhys / 1048576;
+#else
+    llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
+           * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
+#endif
+#endif
+    if (!llxx) {
+        default_alloc_mb = BIGSTACK_DEFAULT_MB;
+    }
+    else if (llxx < (BIGSTACK_MIN_MB * 2))
+    {
+        default_alloc_mb = BIGSTACK_MIN_MB;
+    }
+    else
+    {
+        default_alloc_mb = llxx / 2;
+    }
+    if (!malloc_size_mb) {
+        malloc_size_mb = default_alloc_mb;
+    }
+    else if (malloc_size_mb < BIGSTACK_MIN_MB)
+    {
+        malloc_size_mb = BIGSTACK_MIN_MB;
+    }
+    std::string message = "";
+#ifndef __LP64__
+    if (malloc_size_mb > 2047) {
+        malloc_size_mb = 2047;
+    }
+#endif
+    bigstack_ua =
+        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    // if fail, return nullptr which will then get into the while loop
+    while (!bigstack_ua) {
+        malloc_size_mb = (malloc_size_mb * 3) / 4;
+        if (malloc_size_mb < BIGSTACK_MIN_MB) {
+            malloc_size_mb = BIGSTACK_MIN_MB;
+        }
+        bigstack_ua =
+            (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+        if (bigstack_ua) {
+        }
+        else if (malloc_size_mb == BIGSTACK_MIN_MB)
+        {
+            throw std::runtime_error(
+                "Failed to allocate required memory for permutation storage");
+        }
+    }
+    if (malloc_size_mb * 1048576 < min_memory_byte) {
+        throw std::runtime_error(
+            "Failed to allocate required memory for permutation storage");
+    }
+    delete[] bigstack_ua;
+    bigstack_ua = nullptr;
+    // use only a third of the memory so that we should have enough left
+    // though there is no guarantee
+    intptr_t final_mb = malloc_size_mb / 3;
+    // start update here
+    if (final_mb * 1048576 < min_memory_byte) {
+        m_perm_per_slice = 1;
+    }
+    else if (final_mb * 1048576 > max_req_memory)
+    {
+        m_perm_per_slice = m_num_perm;
+    }
+    else
+    {
+        m_perm_per_slice = final_mb * 1048576 / min_memory_byte;
+    }
+    g_permuted_pheno = Eigen::MatrixXd::Zero(sample_ct, m_perm_per_slice);
+    // g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
+    // g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
 }
