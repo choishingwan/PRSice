@@ -40,21 +40,37 @@ help_message <-
     --dir                   Location to install ggplot. Only require if ggplot\n
                             is not installed\n
 \nBase File:\n
+    --A1                    Column header containing allele 1 (effective allele)\n
+                            Default: A1\n
+    --A2                    Column header containing allele 2 (non-effective allele)\n
+                            Default: A2\n
     --base          | -b    Base association file\n
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
                             to be in the form of BETA.\n
-    --A1                    Column header containing allele 1 (effect allele)\n
-                            Default: A1\n
-    --A2                    Column header containing allele 2 (reference allele)\n
-                            Default: A2\n
     --bp                    Column header containing the SNP coordinate\n
                             Default: BP\n
     --chr                   Column header containing the chromosome\n
                             Default: CHR\n
-    --index                 If set, assume the INDEX instead of NAME of\n
+    --index                 If set, assume the INDEX instead of NAME  for\n
                             the corresponding columns are provided. Index\n
                             should be 0-based (start counting from 0)\n
+    --info-base             Base INFO score filtering. Format should be\n
+                            <Column name>,<Threshold>. SNPs with info \n
+                            score less than <Threshold> will be ignored\n
+                            Column name default: INFO\n
+                            Threshold default: 0.9\n
+    --maf-base              Base MAF filtering. Format should be\n
+                            <Column name>,<Threshold>. SNPs with maf\n
+                            less than <Threshold> will be ignored. An\n
+                            additional column can also be added (e.g.\n
+                            also filter MAF for cases), using the\n
+                            following format:\n
+                            <Column name>,<Threshold>:<Column name>,<Threshold>\n
+    --no-default            Remove all default options. If set, PRSice\n
+                            will not set any default column name and you\n
+                            will have to ensure all required columns are\n
+                            provided. (--snp, --stat, --A1, --pvalue)\n
     --pvalue        | -p    Column header containing the p-value\n
                             Default: P\n
     --se                    Column header containing the standard error\n
@@ -63,32 +79,86 @@ help_message <-
                             Default: SNP\n
     --stat                  Column header containing the summary statistic\n
                             If --beta is set, default as BETA. Otherwise,\n
-                            try and search for OR or BETA from the header\n
+                            will search for OR or BETA from the header\n
                             of the base file\n
-    --info-base             Base INFO score filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with info\n
-                            score less than <Threshold> will be ignored\n
-                            Column name default: INFO\n
-                            Threshold default: 0.9\n
-    --maf-base              Base MAF filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with maf 
-                            less than <Threshold> will be ignored\n
+\nTarget File:\n
+    --binary-target         Indicate whether the target phenotype\n
+                            is binary or not. Either T or F should be\n
+                            provided where T represent a binary phenotype.\n
+                            For multiple phenotypes, the input should be\n
+                            separated by comma without space. \n
+                            Default: T if --beta and F if --beta is not\n
+    --geno                  Filter SNPs based on gentype missingness\n
+    --info                  Filter SNPs based on info score. Only used\n
+                            for imputed target\n
+    --keep                  File containing the sample(s) to be extracted from\n
+                            the target file. First column should be FID and\n
+                            the second column should be IID. If --ignore-fid is\n
+                            set, first column should be IID\n
+                            Mutually exclusive from --remove\n
+    --maf                   Filter SNPs based on minor allele frequency (MAF)\n
+    --nonfounders           Keep the nonfounders in the analysis\n
+                            Note: They will still be excluded from LD calculation\n
+    --pheno-col     | -F    Headers of phenotypes to be included from the\n
+                            phenotype file\n
+    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
+                            First column must be FID of the samples and\n
+                            the second column must be IID of the samples.\n
+                            When --ignore-fid is set, first column must\n
+                            be the IID of the samples.\n
+                            Must contain a header if --pheno-col is\n
+                            specified\n
+    --prevalence    | -k    Prevalence of all binary trait. If provided\n
+                            will adjust the ascertainment bias of the R2.\n
+                            Note that when multiple binary trait is found,\n
+                            prevalence information must be provided for\n
+                            all of them (Either adjust all binary traits,\n
+                            or don't adjust at all)\n
+    --remove                File containing the sample(s) to be removed from\n
+                            the target file. First column should be FID and\n
+                            the second column should be IID. If --ignore-fid is\n
+                            set, first column should be IID\n
+                            Mutually exclusive from --keep\n
+    --target        | -t    Target genotype file. Currently support\n
+                            both BGEN and binary PLINK format. For \n
+                            multiple chromosome input, simply substitute\n
+                            the chromosome number with #. PRSice will\n
+                            automatically replace # with 1-22\n
+                            For binary plink format, you can also specify\n
+                            a seperate fam file by <prefix>,<fam file>\n
+    --type                  File type of the target file. Support bed \n
+                            (binary plink) and bgen format. Default: bed\n
+\nDosage:\n
+    --hard-thres            Hard threshold for dosage data. Any call less than\n
+                            this will be treated as missing. Note that if dosage\n
+                            data is used as a LD reference, it will always be\n
+                            hard coded to calculate the LD\n
+    --hard                  Use hard coding instead of dosage for PRS construction.\n
+                            Default is to use dosage instead of hard coding\n
 \nClumping:\n
     --clump-kb              The distance for clumping in kb\n
-                            Default: 250\n
+                            Default: 250 \n
     --clump-r2              The R2 threshold for clumping\n
-                            Default: 0.1\n
+                            Default: 0.1 \n
     --clump-p               The p-value threshold use for clumping.\n
-                            Default: 1\n
+                            Default: 1.0 \n
     --ld            | -L    LD reference file. Use for LD calculation. If not\n
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
                             Please see --target for more information\n
+    --ld-geno               Filter SNPs based on genotype missingness\n
+    --ld-info               Filter SNPs based on info score. Only used\n
+                            for imputed LD reference\n
+    --ld-hard-thres         Hard threshold for dosage data. Any call less than\n
+                            this will be treated as missing.\n
+                            Default: 0.9\n
     --ld-keep               File containing the sample(s) to be extracted from\n
                             the LD reference file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
                             set, first column should be IID\n
                             Mutually exclusive from --ld-remove\n
+                            No effect if --ld was not provided\n
+    --ld-maf                Filter SNPs based on minor allele frequency\n
     --ld-remove             File containing the sample(s) to be removed from\n
                             the LD reference file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
@@ -96,7 +166,7 @@ help_message <-
                             Mutually exclusive from --ld-keep\n
     --ld-type               File type of the LD file. Support bed (binary plink)\n
                             and bgen format. Default: bed\n
-    --no-clump              Avoid performing clumping\n
+    --no-clump              Stop PRSice from performing clumping\n
     --proxy                 Proxy threshold for index SNP to be considered\n
                             as part of the region represented by the clumped\n
                             SNP(s). e.g. --proxy 0.8 means the index SNP will\n
@@ -104,9 +174,6 @@ help_message <-
                             R2>=0.8 even if the index SNP does not physically\n
                             locate within the region\n
 \nCovariate:\n
-    --cov-file      | -C    Covariate file. First column should be FID and \n
-                            the second column should be IID. If --ignore-fid\n
-                            is set, first column should be IID\n
     --cov-col       | -c    Header of covariates. If not provided, will use\n
                             all variables in the covariate file. By adding\n
                             @ in front of the string, any numbers within [\n
@@ -114,14 +181,63 @@ help_message <-
                             read as PC1,PC2,PC3. Discontinuous input are also\n
                             supported: @cov[1.3-5] will be parsed as \n
                             cov1,cov3,cov4,cov5\n
-\nDosage:\n
-    --hard-thres            Hard threshold for dosage data. Any call less than\n
-                            this will be treated as missing. Note that if dosage\n
-                            data, is used as a LD reference, it will always be\n
-                            hard coded to calculate the LD\n
-                            Default: 0.9\n
-    --hard                  Use hard coding instead of dosage for PRS construction.\n
-                            Default is to use dosage instead of hard coding\n
+    --cov-file      | -C    Covariate file. First column should be FID and \n
+                            the second column should be IID. If --ignore-fid\n
+                            is set, first column should be IID\n
+\nP-value Thresholding:\n
+    --bar-levels            Level of barchart to be plotted. When --fastscore\n
+                            is set, PRSice will only calculate the PRS for \n
+                            threshold within the bar level. Levels should be\n
+                            comma separated without space\n
+    --fastscore             Only calculate threshold stated in --bar-levels\n
+    --no-full               By default, PRSice will include the full model, \n
+                            i.e. p-value threshold = 1. Setting this flag will\n
+                            disable that behaviour\n
+    --interval      | -i    The step size of the threshold. Default: 0.00005 \n
+    --lower         | -l    The starting p-value threshold. Default: 0.0001 \n
+    --model                 Genetic model use for regression. The genetic\n
+                            encoding is based on the base data where the\n
+                            encoding represent number of the coding allele\n
+                            Available models include:\n
+                            add - Additive model, code as 0/1/2 (default)\n
+                            dom - Dominant model, code as 0/1/1\n
+                            rec - Recessive model, code as 0/0/1\n
+                            het - Heterozygous only model, code as 0/1/0\n
+    --no-regress            Do not perform the regression analysis and simply\n
+                            output all PRS.\n
+    --missing               Method to handle missing genotypes. By default, \n
+                            final scores are averages of valid per-allele \n
+                            scores with missing genotypes contribute an amount\n
+                            proportional to imputed allele frequency. To throw\n
+                            out missing observations instead (decreasing the\n
+                            denominator in the final average when this happens),\n
+                            use the 'no_mean_imputation' modifier. Alternatively,\n
+                            you can use the 'center' modifier to shift all scores\n
+                            to mean zero. \n
+    --score                 Method to calculate the polygenic score.\n
+                            Available methods include:\n
+                            avg - Take the average effect size (default)\n
+                            std - Standardize the effect size \n
+                            sum - Direct summation of the effect size \n
+    --upper         | -u    The final p-value threshold. Default: 0.5 \n
+\nPRSet:\n
+    --bed           | -B    Bed file containing the selected regions.\n
+                            Name of bed file will be used as the region\n
+                            identifier. WARNING: Bed file is 0-based\n
+    --feature               Feature(s) to be included from the gtf file.\n
+                            Default: exon,CDS,gene,protein_coding.\n
+    --gtf           | -g    GTF file containing gene boundaries. Required\n
+                            when --msigdb is used\n
+    --msigdb        | -m    MSIGDB file containing the pathway information.\n
+                            Require the gtf file\n
+\nPRSlice:\n
+    --prslice               Perform PRSlice where the whole genome is first cut\n
+                            into bin size specified by this option. PRSice will\n
+                            then be performed on each bin. Bins are then sorted\n
+                            according to the their R2. PRSice is then performed\n
+                            again to find the best bin combination.\n
+                            This cannot be performed together with PRSet\n
+                            (Currently not implemented)\n
 \nPlotting:\n
     --bar-col-high          Colour of the most predicting threshold\n
                             Default: firebrick\n
@@ -143,119 +259,36 @@ help_message <-
                             contain FID if --ignore-fid isn't set.\n
     --quant-ref             Reference quantile for quantile plot\n
     --scatter-r2            y-axis of the high resolution scatter plot should be R2\n
-\nPRSet:\n
-    --bed           | -B    Bed file containing the selected regions.\n
-                            Name of bed file will be used as the region\n
-                            identifier. WARNING: Bed file is 0-based\n
-    --feature               Feature(s) to be included from the gtf file.\n
-                            Default: exon,CDS,gene,protein_coding.\n
-    --gtf           | -g    GTF file containing gene boundaries. Required\n
-                            when --msigdb is used\n
-    --msigdb        | -m    MSIGDB file containing the pathway information.\n
-                            Require the gtf file\n
-\nPRSice:\n
-    --bar-levels            Level of barchart to be plotted. When --fastscore\n
-                            is set, PRSice will only calculate the PRS for \n
-                            threshold within the bar level. Levels should be\n
-                            comma separated without space\n
-    --fastscore             Only calculate threshold stated in --bar-levels\n
-    --full                  Include the full model in the analysis\n
-    --interval      | -i    The step size of the threshold. Default: 0.00005\n
-    --lower         | -l    The starting p-value threshold. Default: 0.0001\n
-    --model                 Genetic model use for regression. The genetic\n
-                            encoding is based on the base data where the\n
-                            encoding represent number of the effective allele\n
-                            Available models include:\n
-                            add - Additive model, code as 0/1/2 (default)\n
-                            dom - Dominant model, code as 0/1/1\n
-                            rec - Recessive model, code as 0/0/1\n
-                            het - Heterozygous only model, code as 0/1/0\n
-    --no-regress            Do not perform the regression analysis and simply\n
-                            output all PRS.\n
-    --score                 Method to handle missing genotypes. By default, \n
-                            final scores are averages of valid per-allele \n
-                            scores with missing genotypes contribute an amount\n
-                            proportional to imputed allele frequency. To throw\n
-                            out missing observations instead (decreasing the\n
-                            denominator in the final average when this happens),\n
-                            use the 'no_mean_imputation' modifier. Alternatively,\n
-                            you can use the 'center' modifier to shift all scores\n
-                            to mean zero. \n
-    --upper         | -u    The final p-value threshold. Default: 0.5\n
-\nPRSlice:\n
-    --prslice               Perform PRSlice where the whole genome is first cut\n
-                            into bin size specified by this option. PRSice will\n
-                            then be performed on each bin. Bins are then sorted\n
-                            according to the their R2. PRSice is then performed\n
-                            again to find the best bin combination.\n
-                            This cannot be performed together with PRSet
-\nTarget File:\n
-    --binary-target         Indicate whether the target phenotype\n
-                            is binary or not. Either T or F should be\n
-                            provided where T represent a binary phenotype.\n
-                            For multiple phenotypes, the input should be\n
-                            separated by comma without space. Default: T\n
-    --keep                  File containing the sample(s) to be extracted from\n
-                            the target file. First column should be FID and\n
-                            the second column should be IID. If --ignore-fid is\n
-                            set, first column should be IID\n
-                            Mutually exclusive from --remove\n
-    --remove                File containing the sample(s) to be removed from\n
-                            the target file. First column should be FID and\n
-                            the second column should be IID. If --ignore-fid is\n
-                            set, first column should be IID\n
-                            Mutually exclusive from --keep\n
-    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
-                            First column must be FID of the samples and\n
-                            the second column must be IID of the samples.\n
-                            When --ignore-fid is set, first column must\n
-                            be the IID of the samples.\n
-                            Must contain a header if --pheno-col is\n
-                            specified\n
-    --pheno-col             Headers of phenotypes to be included from the\n
-                            phenotype file\n
-    --prevalence    | -k    Prevalence of all binary trait. If provided\n
-                            will adjust the ascertainment bias of the R2.\n
-                            Note that when multiple binary trait is found,\n
-                            prevalence information must be provided for\n
-                            all of them (Either adjust all binary traits,\n
-                            or don't adjust at all)\n
-    --nonfounders           Keep the nonfounders in the analysis\n
-                            Note: They will still be excluded from LD calculation\n
-    --target        | -t    Target genotype file. Currently support\n
-                            both BGEN and binary PLINK format. For \n
-                            multiple chromosome input, simply substitute\n
-                            the chromosome number with #. PRSice will\n
-                            automatically replace # with 1-22\n
-    --type                  File type of the target file. Support bed \n
-                            (binary plink) and bgen format. Default: bed\n
+
 \nMisc:\n
-    --all                   Output PRS for ALL threshold. WARNING: This\n
+    --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
-    --exclude               File contains SNPs to be excluded from \n
+    --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
-                            first column of most file will be assume to\n
+                            first column of all file will be assume to\n
                             be IID instead of FID\n
-    --logit_perm            When performing permutation, still use logistic\n
+    --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
     --out           | -o    Prefix for all file output\n
-    --perm                  Number of permutation to perform. This will\n
-                            generate the empirical p-value for the BEST\n
-                            threshold\n
+    --perm                  Number of permutation to perform. This swill\n
+                            generate the empirical p-value. Recommend to\n
+                            use value larger than 10,000\n
     --seed          | -s    Seed used for permutation. If not provided,\n
                             system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
-                            should be generated\n
+                            can be generated\n
     --print-snp             Print all SNPs used to construct the best PRS\n
     --thread        | -n    Number of thread use\n
     --help          | -h    Display this help message\n"
+
+
 
 
 # Library handling --------------------------------------------------------
@@ -383,74 +416,93 @@ for (library in libraries)
 # We don't type the help message here. Will just directly use the usage information from c++
 # See the Help Messages section for more information
 option_list <- list(
-    make_option(c("-b", "--base"), type = "character"),
-    make_option(c("-B", "--bed"), type = "character"),
-    make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
-    make_option(c("--cov-header"), type = "character", dest = "cov_header"),
-    #For backward compatibility
-    make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
-    make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
-    make_option(c("-g", "--gtf"), type = "character"),
-    make_option(c("-i", "--interval"), type = "numeric"),
-    make_option(c("-k", "--prevalence"), type = "numeric"),
-    make_option(c("-l", "--lower"), type = "numeric"),
-    make_option(c("-L", "--ld"), type = "character"),
-    make_option(c("-m", "--msigdb"), type = "character"),
-    make_option(c("-n", "--thread"), type = "numeric"),
-    make_option(c("-o", "--out"), type = "character", default = "PRSice"),
-    make_option(c("-p", "--pvalue"), type = "character"),
-    make_option(c("-s", "--seed"), type = "numeric"),
-    make_option(c("-t", "--target"), type = "character"),
-    make_option(c("-u", "--upper"), type = "numeric"),
-    make_option(c("--all"), action = "store_true"),
-    make_option(c("--beta"), action = "store_true"),
-    make_option(c("--fastscore"), action = "store_true"),
-    make_option(c("--full"), action = "store_true"),
-    make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
-    make_option(c("--index"), action = "store_true"),
-    make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
-    make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
-    make_option(c("--no-clump"), action = "store_true", dest = "no_clump"),
-    make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
-    make_option(c("--no-regress"), action = "store_true", dest = "no_regress"),
-    make_option(c("--no-x"), action = "store_true", dest = "no_x"),
-    make_option(c("--no-y"), action = "store_true", dest = "no_y"),
-    make_option(c("--no-xy"), action = "store_true", dest = "no_xy"),
-    make_option(c("--no-mt"), action = "store_true", dest = "no_mt"),
-    make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
-    make_option(c("--A1"), type = "character"),
-    make_option(c("--A2"), type = "character"),
-    make_option(
-        c("--bar-levels"),
-        type = "character",
-        dest = "bar_levels",
-        default = "0.001,0.05,0.1,0.2,0.3,0.4,0.5"
-    ),
-    make_option(c("--binary-target"), type = "character", dest = "binary_target"),
-    make_option(c("--bp"), type = "character"),
-    make_option(c("--chr"), type = "character"),
-    make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
-    make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
-    make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
-    make_option(c("--exclude"), type = "character"),
-    make_option(c("--extract"), type = "character"),
-    make_option(c("--feature"), type = "character"),
-    make_option(c("--info-base"), type = "character", dest = "info_base"),
-    make_option(c("--maf-base"), type = "character", dest="maf_base"),
-    make_option(c("--keep"), type = "character"),
-    make_option(c("--ld-type"), type = "character", dest = "ld_type"),
-    make_option(c("--model"), type = "character", default="add"),
-    make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
-    make_option(c("--perm"), type = "numeric"),
-    make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
-    make_option(c("--proxy"), type = "numeric"),
-    make_option(c("--prslice"), type = "numeric"),
-    make_option(c("--remove"), type = "character"),
-    make_option(c("--score"), type = "character"),
-    make_option(c("--se"), type = "character"),
-    make_option(c("--snp"), type = "character"),
-    make_option(c("--stat"), type = "character"),
-    make_option(c("--type"), type = "character"),
+  # Base file
+  make_option(c("--A1"), type = "character"),
+  make_option(c("--A2"), type = "character"),
+  make_option(c("-b", "--base"), type = "character"),
+  make_option(c("--beta"), action = "store_true"),
+  make_option(c("--bp"), type = "character"),
+  make_option(c("--chr"), type = "character"),
+  make_option(c("--index"), action = "store_true"),
+  make_option(c("--info-base"), type = "character", dest = "info_base"),
+  make_option(c("--maf-base"), type = "character", dest="maf_base"),
+  make_option(c("--no-default"), action = "store_true", dest="no_default"),
+  make_option(c("-p", "--pvalue"), type = "character"),
+  make_option(c("--se"), type = "character"),
+  make_option(c("--snp"), type = "character"),
+  make_option(c("--stat"), type = "character"),
+  # Target file
+  make_option(c("--binary-target"), type = "character", dest = "binary_target"),
+  make_option(c("--geno"), type = "numeric"),
+  make_option(c("--info"), type = "numeric"),
+  make_option(c("--keep"), type = "character"),
+  make_option(c("--maf"), type = "numeric"),
+  make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
+  make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
+  make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
+  make_option(c("-k", "--prevalence"), type = "numeric"),
+  make_option(c("--remove"), type = "character"),
+  make_option(c("-t", "--target"), type = "character"),
+  make_option(c("--type"), type = "character"),
+  # Dosage
+  make_option(c("--hard-thres"), type = "numeric"),
+  make_option(c("--hard"), action = "store_true"),
+  # Clumping
+  make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
+  make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
+  make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
+  make_option(c("-L", "--ld"), type = "character"),
+  make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
+  make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
+  make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
+  make_option(c("--ld-keep"), type = "character", dest="ld_keep"),
+  make_option(c("--ld-maf"), type = "numeric", dest="ld_maf"),
+  make_option(c("--ld-remove"), type = "character", dest="ld_remove"),
+  make_option(c("--ld-type"), type = "character", dest="ld_type"),
+  make_option(c("--no-clump"), action = "store_true", dest = "no_clump"),
+  make_option(c("--proxy"), type = "numeric"),
+  # Covariates
+  make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
+  make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
+  # P-thresholding
+  make_option(
+    c("--bar-levels"),
+    type = "character",
+    dest = "bar_levels"
+  ),
+  make_option(c("--fastscore"), action = "store_true"),
+  make_option(c("--no-full"), action = "store_true"),
+  make_option(c("-i", "--interval"), type = "numeric"),
+  make_option(c("-l", "--lower"), type = "numeric"),
+  make_option(c("--model"), type = "character"),
+  make_option(c("--missing"), type = "character"),
+  make_option(c("--no-regress"), action = "store_true", dest = "no_regress"),
+  make_option(c("--score"), type = "character"),
+  make_option(c("-u", "--upper"), type = "numeric"),
+  # PRSet
+  make_option(c("-B", "--bed"), type = "character"),
+  make_option(c("--feature"), type = "character"),
+  make_option(c("-g", "--gtf"), type = "character"),
+  make_option(c("-m", "--msigdb"), type = "character"),
+  # PRSlice 
+  make_option(c("--prslice"), type = "numeric"),
+  # Misc
+  make_option(c("--all-score"), action = "store_true", dest="all_score"),
+  make_option(c("--exclude"), type = "character"),
+  make_option(c("--extract"), type = "character"),
+  make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
+  make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
+  make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
+  make_option(c("-o", "--out"), type = "character", default = "PRSice"),
+  make_option(c("--perm"), type = "numeric"),
+  make_option(c("-s", "--seed"), type = "numeric"),
+  make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
+  make_option(c("-n", "--thread"), type = "numeric"),
+    #make_option(c("--no-x"), action = "store_true", dest = "no_x"),
+    #make_option(c("--no-y"), action = "store_true", dest = "no_y"),
+    #make_option(c("--no-xy"), action = "store_true", dest = "no_xy"),
+    #make_option(c("--no-mt"), action = "store_true", dest = "no_mt"),
+    #make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
     #R Specified options
     make_option(c("--plot"), action = "store_true"),
     make_option(c("--quantile", "-q"), type = "numeric"),
@@ -535,15 +587,30 @@ provided <- function(name, argv) {
     return(name %in% names(argv))
 }
 
-
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+            os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+            os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+            os <- "linux"
+    }
+    tolower(os)
+}
 
 # CALL_PRSICE: Call the cpp PRSice if required
 # To ensure the excutable is set correctly
 # This is also one of the reason why window doesn't work. I don't know if we can handle the \
 # WINDOW PEOPLE
+os <- get_os()
 if (provided("prsice", argv)) {
     if (!startsWith(argv$prsice, "/") &&
-        !startsWith(argv$prsice, ".")) {
+        !startsWith(argv$prsice, ".") && os!="windows") {
         argv$prsice = paste("./", argv$prsice, sep = "")
     }
 }
@@ -568,9 +635,10 @@ argv_c <- argv
 names(argv_c) <- gsub("_", "-", names(argv))
 flags <-
     c(
-        "all",
+        "all-score",
         "beta",
-        "full",
+        "no-full",
+        "no-default",
         "ignore-fid",
         "index",
         "keep-ambig",
@@ -585,9 +653,6 @@ flags <-
         "print-snp"
     )
 
-if(provided("full", argv)){
-    argv$bar_levels <- paste(argv$bar_levels, "1",sep="")
-}
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
@@ -618,7 +683,32 @@ if (!provided("plot", argv)) {
     }
 }
 
+# Read in the commands ----------------------------------------------------
+logFile <- paste(argv$out,"log",sep=".")
+con  <- file(logFile, open = "r")
 
+c<- NULL
+# Only need to know the information of binary target
+while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
+  line <- (trimws(oneLine))
+  if(startsWith(line, "--")){
+    commands <- strsplit(line, split=" ")[[1]]
+    commands <- commands[commands!="" & commands!="\\"]
+    if(length(commands) == 1){
+      # Flag
+    }else{
+      # With input
+      c <- gsub("--", "", commands[1])
+      i <- commands[2]
+      if(c=="binary-target"){
+        argv$binary_target <- commands[2]
+      }else if(c=="bar-levels"){
+        argv$bar_levels <- commands[2]
+      }
+    }
+  }
+} 
+close(con)
 # Plottings ---------------------------------------------------------------
 
 # Standard Theme for all plots
@@ -640,6 +730,7 @@ if(use.ggplot){
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
     function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
+        binary <- as.logical(binary)
         writeLines("Plotting the quantile plot")
         num_cov <- ncol(pheno) - 2
         if (!provided("ignore_fid", argv)) {
@@ -693,41 +784,60 @@ quantile_plot <-
             )
             writeLines(paste("Will not generate the quantile plot for ", prefix))
             return()
-            
         }
         quants <- NULL
+        if(num_cov > 0){
+          reg <- pheno.merge[,c("Pheno", paste("Cov", 1:num_cov))]
+          family <- gaussian
+          if(binary){
+            family <- binomial 
+          }
+          residual <- rstandard(glm(Pheno~., family=family, data=reg))
+          pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
+          if (pheno.as.quant &&
+              length(unique(pheno.merge$Pheno)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$Pheno)),
+                      " unique Phenotype but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+          } else if (length(unique(pheno.merge$PRS)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$PRS)),
+                      " unique PRS but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+              writeLines(paste("Will not generate the quantile plot for ", prefix))
+              return()
+          }
+        }
         if (!pheno.as.quant) {
-            quants <- as.numeric(cut(
-                pheno.merge$PRS,
-                breaks = unique(quantile(
-                    pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
-                )),
-                include.lowest = T
-            ))
+          quants <- as.numeric(cut(
+            pheno.merge$PRS,
+            breaks = unique(quantile(
+              pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+          ))
+          
         } else{
-            
-            if (num_cov > 0) {
-                reg <-
-                    pheno.merge[, c("Pheno", paste("Cov", 1:num_cov))]
-                
-                family <- gaussian
-                if (binary) {
-                    family <- binomial
-                }
-                residual <- rstandard(glm(Pheno~., family=family))
-                pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
-                
-            } else{
-                pheno.merge <- pheno.merge[, c("Pheno", "PRS")]
-            }
-            
-            quants <- as.numeric(cut(
-                pheno.merge$Pheno,
-                breaks = unique(quantile(
-                    pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
-                )),
-                include.lowest = T
-            ))
+          quants <- as.numeric(cut(
+            pheno.merge$Pheno,
+            breaks = unique(quantile(
+              pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+          ))
         }
         
         if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
@@ -749,48 +859,38 @@ quantile_plot <-
             extract_ID <- paste(extract$V1, extract$V2, sep = "_")
             best_ID <- paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
           }
-            quants[best_ID %in% extract_ID] <-
-                num_quant + 1 # We only matched based on the IID here
-            num_quant <- num_quant + 1
+          quants[best_ID %in% extract_ID] <-
+            num_quant + 1 # We only matched based on the IID here
+          num_quant <- num_quant + 1
         }
-        if (!pheno.as.quant) {
+        quant.ref <- ceiling(argv$quantile / 2)
+        if (provided("quant_ref", argv)) {
+          quant.ref <- argv$quant_ref
+          if (quant.ref > argv$quantile) {
             quant.ref <- ceiling(argv$quantile / 2)
-            if (provided("quant_ref", argv)) {
-                quant.ref <- argv$quant_ref
-                if (quant.ref > argv$quantile) {
-                    quant.ref <- ceiling(argv$quantile / 2)
-                    writeLines(
-                        paste(
-                            "WARNING: reference quantile",
-                            quant.ref,
-                            "is greater than number of quantiles",
-                            argv$quantile,
-                            "\n Using middle quantile by default"
-                        )
-                    )
-                }
-            }
-            
-            quants <-
-                factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
-        } else{
-            quants <- factor(quants)
+            writeLines(
+              paste(
+                "WARNING: reference quantile",
+                quant.ref,
+                "is greater than number of quantiles",
+                argv$quantile,
+                "\n Using middle quantile by default"
+              )
+            )
+          }
         }
+        
+        quants <-
+          factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
         pheno.merge$quantile <- quants
         if (!pheno.as.quant) {
-            if (num_cov > 0) {
-                pheno.merge <-
-                    pheno.merge[, c("Pheno", "quantile", paste("Cov", 1:num_cov))]
-            } else{
-                pheno.merge <- pheno.merge[, c("Pheno", "quantile")]
-            }
-            
-            
             family <- gaussian
             if (binary) {
-                family <- binomial
+                if( num_cov ==0 ){
+                    family <- binomial
+                }
             }
-            reg <- summary(glm(Pheno ~ ., family, data = pheno.merge))
+            reg <- summary(glm(Pheno ~ quantile, family, data = pheno.merge))
             coef.quantiles <- (reg$coefficients[1:num_quant, 1])
             ci <- (1.96 * reg$coefficients[1:num_quant, 2])
             
@@ -799,13 +899,16 @@ quantile_plot <-
             ci.quantiles.l <-
                 coef.quantiles - ci
             if(binary){
-              ci.quantiles.u <- exp(ci.quantiles.u)
-              ci.quantiles.l <- exp(ci.quantiles.l)
-              coef.quantiles <- exp(coef.quantiles)
+                if(num_cov==0){
+                    ci.quantiles.u <- exp(ci.quantiles.u)
+                    ci.quantiles.l <- exp(ci.quantiles.l)
+                    coef.quantiles <- exp(coef.quantiles)
+                }
             }
-            coef.quantiles[1] <- ifelse(binary,1,0)
-            ci.quantiles.u[1] <- ifelse(binary,1,0)
-            ci.quantiles.l[1] <- ifelse(binary,1,0)
+            
+            coef.quantiles[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.u[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.l[1] <- ifelse(binary & (num_cov==0),1,0)
             quantiles.for.table <-
                 c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
             quantiles.df <-
@@ -824,13 +927,13 @@ quantile_plot <-
                 factor(quantiles.df$Group, levels = c(0, 1))
             quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
             
-            
             if(use.ggplot){
-              plot.quant(quantiles.df, num_quant, binary, extract, prefix)
+              plot.quant(quantiles.df, num_quant, binary, extract, prefix, num_cov)
             }else{
-              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix)
+              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix, num_cov)
             }
         }else{
+            # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
             pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
             for(i in 1:num_quant){
                 cur.prs <- pheno.merge$PRS[as.numeric(as.character(pheno.merge$quantile))%in%i]
@@ -919,48 +1022,52 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
       scale_colour_manual(values = c("#D55E00","#0072B2"))
   }
   ggsave(
-    paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
+    paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
     quantiles.plot,
     height=10,width=10
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix){
-  quantiles.plot <-
-    ggplot(quantiles.df, aes(
-      x = DEC,
-      y = Coef,
-      ymin = CI.L,
-      ymax = CI.U
-    )) + 
-    theme_sam+
-    xlab("Quantiles for Polygenic Score") +
-    scale_x_continuous(breaks = seq(0, num_quant, 1))
-  if (binary) {
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
     quantiles.plot <-
-      quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-  } else{
-    quantiles.plot <- quantiles.plot +
-      ylab("Change in Phenotype \ngiven score in quantiles")
-  }
-  if (is.null(extract)) {
-    quantiles.plot <-
-      quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
-      geom_pointrange(colour = "royalblue2", size = 0.9)
-  } else{
-    quantiles.plot <-
-      quantiles.plot + geom_point(aes(color = Group), size = 4) +
-      geom_pointrange(aes(color = Group), size = 0.9) +
-      scale_colour_manual(values = c("#0072B2", "#D55E00"))
-  }
-  ggsave(
-    paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
-    quantiles.plot,
-    height=10, width=10
-  )
+        ggplot(quantiles.df, aes(
+            x = DEC,
+            y = Coef,
+            ymin = CI.L,
+            ymax = CI.U
+        )) + 
+        theme_sam+
+        scale_x_continuous(breaks = seq(0, num_quant, 1))+
+        xlab("Quantiles for Polygenic Score")
+    if (binary){
+        if(num_cov==0) {
+            quantiles.plot <-
+                quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+        }
+    } else if(num_cov!=0){
+        quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+    }else{
+        quantiles.plot <- quantiles.plot +
+            ylab("Change in Phenotype \ngiven score in quantiles")
+    }
+    if (is.null(extract)) {
+        quantiles.plot <-
+            quantiles.plot + geom_point(colour = "royalblue2", size = 4) +
+            geom_pointrange(colour = "royalblue2", size = 0.9)
+    } else{
+        quantiles.plot <-
+            quantiles.plot + geom_point(aes(color = Group), size = 4) +
+            geom_pointrange(aes(color = Group), size = 0.9) +
+            scale_colour_manual(values = c("#0072B2", "#D55E00"))
+    }
+    ggsave(
+        paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
+        quantiles.plot,
+        height=10, width=10
+    )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -970,10 +1077,16 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
     quantiles.df$color[quantiles.df$Group==1] <- "#D55E00"
   }
   ylab <- NULL
-  if (binary) {
-    ylab <- "Odds Ratio for Score on Phenotype"
-  } else{
-      ylab <-"Change in Phenotype \ngiven score in quantiles"
+  if (binary){
+      if(num_cov==0) {
+          quantiles.plot <-
+              quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+      }
+  } else if(num_cov!=0){
+      quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+  }else{
+      quantiles.plot <- quantiles.plot +
+          ylab("Change in Phenotype \ngiven score in quantiles")
   }
   xlab <- "Quantiles for Polygenic Score"
   with(quantiles.df, 
@@ -997,9 +1110,8 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix){
 high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # we will always include the best threshold
     writeLines("Plotting the high resolution plot")
-    
     barchart.levels <-
-        c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+        c(strsplit(argv$bar_levels, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
     barchart.levels <-
         as.numeric(as.character(sort(
             unique(barchart.levels), decreasing = F
@@ -1079,6 +1191,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
       ggfig.points + geom_point(aes(y = -log10(P))) + geom_line(aes(y = -log10(P)), colour = "green",
                                                                 data = PRS[with(PRS, Threshold %in% barchart.levels) ,]) +
       ylab(bquote(PRS ~ model ~ fit: ~ italic(P) - value ~ (-log[10])))
+    
   }
   ggsave(
     paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
@@ -1090,7 +1203,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
 bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     writeLines("Plotting Bar Plot")
     barchart.levels <-
-        c(strsplit(argv$bar_level, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
+        c(strsplit(argv$bar_levels, split = ",")[[1]], PRS$Threshold[which.max(PRS$R2)])
     barchart.levels <-
         as.numeric(as.character(sort(
             unique(barchart.levels), decreasing = F
@@ -1261,7 +1374,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
               header = T)
     }
     
-    PRS.best <- subset(PRS.best, Has_Phenotype == "Yes")
+    PRS.best <- subset(PRS.best, PRS.best$Has_Phenotype == "Yes")
     colnames(PRS.best)[3] <- "PRS"
     # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
     # Good thing is, only quantile plot really needs the cov and phenotype information
@@ -1376,7 +1489,6 @@ if (provided("pheno_col", argv)) {
 
 update_cov_header <- function(c) {
     res <- NULL
-    
     for (i in c) {
         if (substr(i, 0, 1) == "@") {
             i <- substr(i, 2, nchar(i))
@@ -1629,7 +1741,7 @@ if (!is.null(phenos)) {
         } else{
             colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
         }
-        #Unless someone being stupid and name their sample's FID and IID as the header, this should be fine
+        
     }
     # Give run_plot a ready to use matrix
     best <- NULL

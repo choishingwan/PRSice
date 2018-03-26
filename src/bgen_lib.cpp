@@ -98,7 +98,6 @@ namespace bgen
         {
             throw BGenError();
         }
-
         if (aStream) {
             context->number_of_samples = number_of_samples;
             context->number_of_variants = number_of_snp_blocks;
@@ -402,7 +401,7 @@ namespace bgen
             else if (compressionType == e_ZstdCompression)
             {
                 throw std::runtime_error(
-                    "ERROR: zstd compression currently not supported");
+                    "Error: zstd compression currently not supported");
                 // zstd_uncompress( begin, end, buffer ) ;
             }
             assert(buffer->size() == uncompressed_data_size);

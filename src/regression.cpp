@@ -22,7 +22,8 @@ namespace Regression
 // on purposely perform the copying of x
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
                        double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, size_t thread, bool intercept)
+                       double& coeff, double& standard_error, size_t thread,
+                       bool intercept)
 {
     Eigen::setNbThreads(thread);
     // in more general cases, the following is needed (adding the intercept)
@@ -64,8 +65,8 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     double tval = beta(intercept)
                   / se(se_index); // only interested in the one coefficient
     coeff = beta(intercept);
-    boost::math::students_t dist(rdf);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tval)));
+    standard_error = se(se_index);
+    p_value = misc::calc_tprob(tval, n);
 }
 
 Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta)
@@ -209,8 +210,8 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
-         double& r2, double& coeff, size_t max_iter, size_t thread,
-         bool intercept)
+         double& r2, double& coeff, double& standard_error, size_t max_iter,
+         size_t thread, bool intercept)
 {
     Eigen::setNbThreads(thread);
     /*
@@ -333,7 +334,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
-    boost::math::normal_distribution<> dist(0, 1);
-    p_value = 2 * boost::math::cdf(boost::math::complement(dist, fabs(tvalue)));
+    p_value = misc::chiprob_p(tvalue * tvalue, 1);
+    // p_value = chiprob_p(coeff*coeff,1);
+    standard_error = se(se_index);
 }
 }

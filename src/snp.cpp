@@ -29,32 +29,6 @@ SNP::SNP()
     threshold.p_threshold = 0.0;
     threshold.category = 0;
     clump_info.clumped = false;
-    clump_info.contain_missing = false;
-    clump_info.contain_geno = false;
-}
-
-
-SNP::SNP(const std::string& rs_id, const int chr, const int loc,
-         const std::string& ref_allele, const std::string& alt_allele,
-         const std::string& file_name, const int num_line)
-{
-    basic.ref = ref_allele;
-    basic.alt = alt_allele;
-    basic.rs = rs_id;
-    basic.chr = chr;
-    basic.loc = loc;
-    basic.valid = true;
-    statistic.se = 0.0;
-    statistic.p_value = 0.0;
-    statistic.stat = 0.0;
-    statistic.flipped = false;
-    threshold.p_threshold = 0.0;
-    threshold.category = 0;
-    clump_info.clumped = false;
-    clump_info.contain_missing = false;
-    clump_info.contain_geno = false;
-    file_info.file = file_name;
-    file_info.id = num_line;
 }
 
 
@@ -75,10 +49,10 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
     threshold.p_threshold = 0.0;
     threshold.category = 0;
     clump_info.clumped = false;
-    clump_info.contain_missing = false;
-    clump_info.contain_geno = false;
     file_info.file = file_name;
     file_info.byte_pos = byte_pos;
+    ref_file_info.file = file_name;
+    ref_file_info.byte_pos = byte_pos;
 }
 SNP::~SNP() {}
 
@@ -112,41 +86,35 @@ std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
     return idx;
 }
 
-
-void SNP::clump(std::vector<SNP>& snp_list, double proxy)
+std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
 {
-    // when proxy = 2, we will not perform proxy
-    // That's because no SNP can have an R2 > 2
-    // go through each of the target
-    for (size_t i_target = 0; i_target < clump_info.target.size(); ++i_target) {
-
-        auto&& target_index = clump_info.target[i_target];
-        // don't bother with anyone who are already clumped
-        if (snp_list[target_index].clumped()) continue;
-        // check if we are going to proxy clump it or just normal clump it
-        bool completed = false;
-        // if we can perform proxy clump, we will always perform proxy
-        // clump instead of normal clump
-        if (clump_info.r2[i_target] > proxy) {
-            // proxy clump
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
-                // two become one
-                m_flags[i_flag] |= snp_list[target_index].m_flags[i_flag];
+    std::vector<size_t> idx(input.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
+        // plink do it with respect to the location instead of statistic
+        // chr first such that SNPs within the same chromosome will
+        // be processed together
+        if (input[i1].basic.chr == input[i2].basic.chr) {
+            if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
+                if (input[i1].basic.loc == input[i2].basic.loc) {
+                    if (fabs(input[i1].statistic.stat)
+                        == fabs(input[i2].statistic.stat))
+                    {
+                        return input[i1].statistic.se < input[i2].statistic.se;
+                    }
+                    else
+                        return fabs(input[i1].statistic.stat)
+                               > fabs(input[2].statistic.stat);
+                }
+                else
+                    return input[i1].basic.loc < input[i2].basic.loc;
             }
-            completed = true;
+            else
+                return input[i1].statistic.p_value
+                       < input[i2].statistic.p_value;
         }
         else
-        {
-            // normal clumping
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
-                snp_list[target_index].m_flags[i_flag] =
-                    snp_list[target_index].m_flags[i_flag]
-                    ^ (m_flags[i_flag]
-                       & snp_list[target_index].m_flags[i_flag]);
-                completed = (snp_list[target_index].m_flags[i_flag] == 0);
-            }
-        }
-        if (completed) snp_list[target_index].set_clumped();
-    }
-    clump_info.clumped = true; // protect from other SNPs tempering its flags
+            return input[i1].basic.chr < input[i2].basic.chr;
+    });
+    return idx;
 }

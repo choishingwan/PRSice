@@ -101,8 +101,9 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
 {
     uLongf const source_size = (end - begin);
     uLongf dest_size = dest->size() * sizeof(T);
-    uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
-               reinterpret_cast<Bytef const*>(begin), source_size);
+    int result =
+        uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
+                   reinterpret_cast<Bytef const*>(begin), source_size);
     assert(result == Z_OK);
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
@@ -210,6 +211,7 @@ namespace bgen
         std::string magic;
         std::string free_data;
         uint32_t flags;
+        uint32_t offset;
     };
 
     // Read the offset from the start of the stream.
@@ -576,7 +578,6 @@ namespace bgen
         {
             assert(0);
         }
-
         read_length_followed_by_data(aStream, &RSID_size, RSID);
         read_length_followed_by_data(aStream, &chromosome_size, chromosome);
         read_little_endian_integer(aStream, SNP_position);
@@ -887,7 +888,6 @@ namespace bgen
                                                             32768.0));
             }
         };
-
         template <typename Setter>
         void parse_probability_data(byte_t const* buffer,
                                     byte_t const* const end,
@@ -1152,6 +1152,7 @@ namespace bgen
             }
             call_finalise(setter);
         }
+
 
         struct ProbabilityDataWriter
             : public genfile::bgen::impl::ProbabilityDataWriterBase

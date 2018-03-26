@@ -17,24 +17,30 @@
 #ifndef COMMANDER_H
 #define COMMANDER_H
 
+#include "gzstream.h"
 #include "misc.hpp"
 #include "storage.hpp"
 #include <chrono>
+#include <cmath>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <map>
 #include <random>
 #include <reporter.hpp>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <unistd.h>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
-const std::string version = "2.0.14.beta";
-const std::string date = "27 October 2017";
+#include <zlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+const std::string version = "2.1.1.beta";
+const std::string date = "26 Mar 2018";
 class Commander
 {
 public:
@@ -44,65 +50,117 @@ public:
 
     // base
     std::vector<int> index() const { return base.col_index; };
-    bool has_index() const { return base.index; };
-    bool beta() const { return base.beta; };
-    bool filter_info() const { return base.use_info; };
-    bool filter_base_maf() const { return base.provided_maf; };
-    double info_score() const { return base.info_score; };
-    double maf_base() const { return base.maf_threshold; };
+    bool is_index() const { return base.is_index; };
+    bool beta() const { return base.is_beta; };
+    double base_info_score() const { return base.info_score_threshold; };
+    double maf_base_control() const { return base.maf_control_threshold; };
     std::string base_name() const { return base.name; };
+    double maf_base_case() const { return base.maf_case_threshold; };
 
     // clump
-    std::string ld_prefix() const { return clumping.ld; };
-    std::string ld_type() const { return clumping.type; };
     bool no_clump() const { return clumping.no_clump; };
-    bool use_proxy() const { return clumping.provide_proxy; };
+    bool use_proxy() const { return clumping.provided_proxy; };
     double proxy() const { return clumping.proxy; };
     double clump_p() const { return clumping.p_value; };
     double clump_r2() const { return clumping.r2; };
     double clump_dist() const { return clumping.distance * 1000; };
 
     // covariate
-    std::string get_cov_file() const { return covariate.name; };
+    std::string get_cov_file() const { return covariate.file_name; };
     std::vector<std::string> get_cov_header() const
     {
         return covariate.covariates;
     };
-
-    // filtering
-    bool filter_maf() const { return filter.use_maf; };
-    bool filter_geno() const { return filter.use_geno; };
-    bool filter_mind() const { return filter.use_mind; };
-    bool filter_hard_threshold() const { return filter.use_hard_thres; };
-    bool hard_coding() const { return filter.hard_coding; };
-    bool keep_ambig() const { return filter.keep_ambig; };
-    std::string extract_snp_file() const
+    // reference panel
+    std::string ref_name() const { return reference_panel.file_name; };
+    std::string ref_type() const { return reference_panel.type; };
+    std::string ld_keep_file() const { return reference_panel.keep_file; };
+    std::string ld_remove_file() const { return reference_panel.remove_file; };
+    // reference filtering
+    double ld_geno() const { return reference_snp_filtering.geno; };
+    double ld_hard_threshold() const
     {
-        return filter.extract ? filter.extract_file : "";
+        return reference_snp_filtering.hard_threshold;
     };
-    std::string exclude_snp_file() const
-    {
-        return filter.exclude ? filter.exclude_file : "";
-    };
-    double maf() const { return filter.maf; };
-    double geno() const { return filter.geno; };
-    double mind() const { return filter.mind; };
-    double hard_threshold() const { return filter.hard_threshold; };
+    double ld_maf() const { return reference_snp_filtering.maf; };
+    double ld_info() const { return reference_snp_filtering.info_score; };
 
     // misc
-    bool all() const { return misc.all; };
+    std::string out() const { return misc.out; };
+    bool all_scores() const { return misc.print_all_scores; };
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
-    bool permute() const { return misc.provided_permutation; };
     bool print_snp() const { return misc.print_snp; };
-    bool seeded() const { return misc.provided_seed; };
-    bool provided_memory() const { return misc.provided_memory; };
-    std::string out() const { return misc.out; };
-    int num_permutation() const { return misc.permutation; };
+    bool pearson() const { return misc.pearson; };
+    int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-    int memory() const { return misc.memory; };
 
+    // p_thresholds
+    double bar_upper() const { return p_thresholds.barlevel.back(); };
+    double get_threshold(int i) const
+    {
+        return (i < 0) ? p_thresholds.barlevel.at(0)
+                       : ((i >= (int) p_thresholds.barlevel.size())
+                              ? 1.0
+                              : p_thresholds.barlevel.at(i));
+    };
+    double lower() const { return p_thresholds.lower; };
+    double upper() const { return p_thresholds.upper; };
+    double inter() const { return p_thresholds.inter; };
+
+    int get_category(double p) const
+    {
+        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i) {
+            if (p <= p_thresholds.barlevel[i]) {
+                return i;
+            }
+        }
+        if (p > p_thresholds.barlevel.back())
+            return p_thresholds.barlevel.size();
+        return -2; // this is impossible because something will always either be
+                   // bigger than the end or smaller than the front
+    };
+    bool no_full() const { return p_thresholds.no_full; };
+    bool fastscore() const { return p_thresholds.fastscore; };
+
+    // prs_calculation
+    MISSING_SCORE get_missing_score() const
+    {
+        std::string s = prs_calculation.missing_score;
+        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+        if (s == "NO_MEAN_IMPUTATION")
+            return MISSING_SCORE::SET_ZERO;
+        else if (s == "CENTER")
+            return MISSING_SCORE::CENTER;
+        else
+            return MISSING_SCORE::MEAN_IMPUTE;
+    }
+
+    SCORING get_score() const
+    {
+        std::string s = prs_calculation.score_calculation;
+        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+        if (s == "STD")
+            return SCORING::STANDARDIZE;
+        else if (s == "SUM")
+            return SCORING::SUM;
+        else
+            return SCORING::AVERAGE;
+    }
+
+    MODEL model() const { return prs_calculation.model; };
+    bool no_regress() const { return prs_calculation.no_regress; };
+
+    // prs_snp_filtering
+    std::string exclude_file() const { return prs_snp_filtering.exclude_file; };
+    std::string extract_file() const { return prs_snp_filtering.extract_file; };
+    double geno() const { return prs_snp_filtering.geno; };
+    double hard_threshold() const { return prs_snp_filtering.hard_threshold; };
+    double maf() const { return prs_snp_filtering.maf; };
+    double info() const { return prs_snp_filtering.info_score; };
+    bool hard_coded() const { return prs_snp_filtering.is_hard_coded; };
+    bool keep_ambig() const { return prs_snp_filtering.keep_ambig; };
 
     // prset
     std::vector<std::string> bed() const { return prset.bed; };
@@ -110,40 +168,9 @@ public:
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
 
-    // prsice
-    std::string missing_score() const { return prsice.missing_score; };
-    SCORING get_scoring() const
-    {
-        if (prsice.missing_score == "no_mean_imputation")
-            return SCORING::SET_ZERO;
-        else if (prsice.missing_score == "center")
-            return SCORING::CENTER;
-        else
-            return SCORING::MEAN_IMPUTE;
-    }
-
-    double lower() const { return prsice.lower; };
-    double upper() const { return prsice.upper; };
-    double inter() const { return prsice.inter; };
-    bool no_regress() const { return prsice.no_regress; };
-    bool full() const { return prsice.full; };
-    bool fastscore() const { return prsice.fastscore; };
-    double bar_upper() const
-    {
-        return prsice.barlevel.back();
-    }; // we have sorted it
-    int model() const { return prsice.model; };
-
     // prslice
     bool perform_prslice() const { return prslice.provided; };
     int prslice_size() const { return prslice.size; };
-
-    // species
-    int num_auto() const { return species.num_auto; };
-    bool no_x() const { return species.no_x; };
-    bool no_y() const { return species.no_y; };
-    bool no_xy() const { return species.no_xy; };
-    bool no_mt() const { return species.no_mt; };
 
     // target
     std::string target_name() const { return target.name; };
@@ -153,146 +180,137 @@ public:
     {
         return target.pheno_col.at(index);
     };
-    std::string keep_sample_file() const
-    {
-        return target.keep_sample ? target.keep_file : "";
-    };
-    std::string remove_sample_file() const
-    {
-        return target.remove_sample ? target.remove_file : "";
-    };
+    std::string keep_sample_file() const { return target.keep_file; };
+    std::string remove_sample_file() const { return target.remove_file; };
     std::vector<std::string> pheno_col() const { return target.pheno_col; };
     std::vector<bool> is_binary() const { return target.is_binary; };
     std::vector<double> prevalence() const { return target.prevalence; };
     bool has_pheno_col() const { return !target.pheno_col.empty(); };
     bool is_binary(size_t index) const { return target.is_binary.at(index); };
-    bool nonfounders() const { return target.nonfounders; };
-    bool keep_sample() const { return target.keep_sample; };
-    bool remove_sample() const { return target.remove_sample; };
+    bool nonfounders() const { return target.include_nonfounders; };
 
-    int get_category(double p) const
-    {
-        for (size_t i = 0; i < prsice.barlevel.size(); ++i) {
-            if (p <= prsice.barlevel[i]) {
-                return i;
-            }
-        }
-        if (p > prsice.barlevel.back()) return prsice.barlevel.size();
-        return -2; // this is impossible because something will always either be
-                   // bigger than the end or smaller than the front
-    };
-    double get_threshold(int i) const
-    {
-        return (i < 0) ? prsice.barlevel.at(0)
-                       : ((i >= (int) prsice.barlevel.size())
-                              ? 1.0
-                              : prsice.barlevel.at(i));
-    };
 
 protected:
 private:
     bool process(int argc, char* argv[], const char* optString,
                  const struct option longOpts[], Reporter& reporter);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct
+    struct Base
     {
         std::string name;
         std::string chr;
-        std::string ref_allele;
-        std::string alt_allele;
+        std::string effect_allele;
+        std::string non_effect_allele;
         std::string statistic;
         std::string snp;
         std::string bp;
         std::string standard_error;
         std::string p_value;
         std::string info_col;
-        std::string maf;
+        std::string maf_col;
         std::vector<int> col_index;
-        int beta;
-        int index;
-        bool provided_maf;
+        int is_beta;
+        int is_index;
+        int no_default;
+        double info_score_threshold;
+        double maf_control_threshold;
+        double maf_case_threshold;
+        // determine if we are going to use default
         bool provided_chr;
-        bool provided_ref;
-        bool provided_alt;
-        bool provided_stat;
+        bool provided_effect_allele;
+        bool provided_non_effect_allele;
+        bool provided_statistic;
         bool provided_snp;
         bool provided_bp;
-        bool provided_se;
-        bool provided_p;
-        bool use_info;
-        double info_score;
-        double maf_threshold;
+        bool provided_standard_error;
+        bool provided_p_value;
+        bool provided_info;
     } base;
 
-    struct
+    struct Clump
     {
-        std::string ld;
-        std::string type;
-        std::string keep_file;
-        std::string remove_file;
         int no_clump;
         double proxy;
         double p_value;
         double r2;
         int distance;
-        bool provide_r2;
-        bool provide_p;
-        bool provide_distance;
-        bool provide_proxy;
-        bool keep_sample;
-        bool remove_sample;
-        bool use_type;
+        bool provided_proxy;
     } clumping;
 
-    struct
+    struct Covar
     {
-        std::string name;
-        std::string ancestry_dim;
+        std::string file_name;
         std::vector<std::string> covariates;
+        // Numeric factors should be defined with ""
     } covariate;
 
-    struct
+    struct Misc
+    {
+        std::string out;
+        int print_all_scores;
+        int ignore_fid;
+        int logit_perm;
+        int pearson;
+        int permutation;
+        int print_snp;
+        int thread;
+        size_t seed;
+        bool provided_seed;
+    } misc;
+
+    struct Reference
+    {
+        std::string file_name;
+        std::string type;
+        std::string keep_file;
+        std::string remove_file;
+    } reference_panel;
+
+    struct Ref_filtering
+    {
+        double geno;
+        double hard_threshold;
+        double maf;
+        double info_score;
+        // Need to have the same snp as the target
+        // so not necessary to have another set of exclude/extract files
+        // must be hard coded for reference
+    } reference_snp_filtering;
+
+    struct Thresholding
+    {
+        std::vector<double> barlevel;
+        double lower;
+        double inter;
+        double upper;
+        int fastscore;
+        int no_full;
+        bool set_use_thresholds;
+    } p_thresholds;
+
+    struct Calculation
+    {
+        std::string missing_score;
+        std::string model_name;
+        std::string score_calculation;
+        MODEL model; // use model enum
+        int no_regress;
+    } prs_calculation;
+
+    struct Filtering
     {
         std::string exclude_file;
         std::string extract_file;
         double geno;
         double hard_threshold;
         double maf;
-        double mind;
-        int hard_coding;
-        int use_geno;
-        int use_maf;
-        int use_mind;
-        int use_prob;
+        double info_score;
+        int is_hard_coded;
         int keep_ambig;
-        bool extract;
-        bool exclude;
-        bool use_hard_thres;
-    } filter;
+        int predict_ambig; // PRSoS stuff?
+    } prs_snp_filtering;
 
-    struct
-    {
-        std::string out;
-        int all;
-        int ignore_fid;
-        int logit_perm;
-        int memory;
-        int permutation;
-        int print_snp;
-        int print_all_samples;
-        int thread;
-        size_t seed;
-        bool provided_seed;
-        bool provided_permutation;
-        bool provide_thread;
-        bool provided_memory;
-        bool provided_output;
-        // I want to include cross-validation here
-        // do it after writing up the paper. A useful resource is here
-        // https://stats.stackexchange.com/questions/103459/how-do-i-know-which-method-of-cross-validation-is-best
-    } misc;
-
-    struct
+    struct PRSet
     {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
@@ -301,40 +319,13 @@ private:
         bool perform_prset;
     } prset;
 
-    struct
-    {
-        std::string missing_score;
-        std::vector<double> barlevel;
-        double lower;
-        double upper;
-        double inter;
-        bool provide_lower;
-        bool provide_upper;
-        bool provide_inter;
-        bool provided_model;
-        int model; // Use MODEL enum
-        int fastscore;
-        int no_regress;
-        int full;
-    } prsice;
-
-    struct
+    struct PRSlice
     {
         int size;
         bool provided;
     } prslice;
 
-    struct
-    {
-        int num_auto;
-        int no_x;
-        int no_y;
-        int no_xy;
-        int no_mt;
-        bool double_set;
-    } species;
-
-    struct
+    struct Target
     {
         std::string name;
         std::string keep_file;
@@ -342,59 +333,53 @@ private:
         std::string pheno_file;
         std::string type;
         std::vector<std::string> pheno_col;
-        std::vector<double>
-            prevalence; // should equal to number of binary target
-        int nonfounders;
-        bool keep_sample;
-        bool remove_sample;
-        bool use_type;
+        // should equal to number of binary target
+        std::vector<double> prevalence;
         std::vector<bool> is_binary;
+        int include_nonfounders;
     } target;
+
+    ////////////////////////////////////////////
+    //
+    // end of struct definition
+    //
+    ////////////////////////////////////////////
+
 
     std::string help_message;
     void usage();
-    void info();
-    void base_check(std::unordered_map<std::string, std::string>& message,
-                    bool& error, std::string& error_message);
-    void clump_check(std::unordered_map<std::string, std::string>& message,
-                     bool& error, std::string& error_message);
+    void set_help_message();
+    void base_check(std::map<std::string, std::string>& message, bool& error,
+                    std::string& error_message);
+    void clump_check(std::map<std::string, std::string>& message, bool& error,
+                     std::string& error_message);
     void covariate_check(bool& error, std::string& error_message);
     void filter_check(bool& error, std::string& error_message);
-    void misc_check(std::unordered_map<std::string, std::string>& message,
-                    bool& error, std::string& error_message);
-    void prset_check(std::unordered_map<std::string, std::string>& message,
-                     bool& error, std::string& error_message);
+    void misc_check(std::map<std::string, std::string>& message, bool& error,
+                    std::string& error_message);
+    void prset_check(std::map<std::string, std::string>& message, bool& error,
+                     std::string& error_message);
     void prslice_check(bool& error, std::string& error_message);
-    void prsice_check(std::unordered_map<std::string, std::string>& message,
-                      bool& error, std::string& error_message);
-    void target_check(std::unordered_map<std::string, std::string>& message,
-                      bool& error, std::string& error_message);
+    void prsice_check(std::map<std::string, std::string>& message, bool& error,
+                      std::string& error_message);
+    void target_check(std::map<std::string, std::string>& message, bool& error,
+                      std::string& error_message);
 
-    inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
-                            bool no_mt, bool& error, std::string& error_message,
-                            bool& species_error)
+    inline void load_binary_vector(const std::string& input,
+                                   std::map<std::string, std::string>& message,
+                                   std::string& error_message,
+                                   std::vector<bool>& target, bool& error,
+                                   const std::string& c)
     {
-        if (species.double_set && !species_error) {
-            species_error = true;
-            error = true;
-            error_message.append("ERROR: Can only specify one species\n");
+        if (input.empty()) return;
+        message[c] = message[c] + input;
+        // check if the input is ended with , which is usually the case
+        // when someone mixed in the space
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)");
         }
-        species.num_auto = num_auto;
-        species.no_x = no_x;
-        species.no_y = no_y;
-        species.no_xy = no_xy;
-        species.no_mt = no_mt;
-        species.double_set = true;
-    };
-
-    inline void
-    load_binary_vector(const std::string& input,
-                       std::unordered_map<std::string, std::string>& message,
-                       std::string& error_message, std::vector<bool>& target,
-                       bool& error, const std::string& c)
-    {
-
-        message[c] = input;
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -402,33 +387,45 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Invalid argument passed to " + c + ": "
-                                 + input + "!\n");
+            error = true;
             error_message.append(
-                "       Require binary arguments e.g. T/F, True/False\n");
+                "Error: Invalid argument passed to " + c + ": " + input
+                + "! Require binary arguments e.g. T/F, True/False\n");
         }
     }
 
-    inline void
-    load_string_vector(const std::string& input,
-                       std::unordered_map<std::string, std::string>& message,
-                       std::vector<std::string>& target, const std::string& c,
-                       std::string& error_message)
+    inline void load_string_vector(const std::string& input,
+                                   std::map<std::string, std::string>& message,
+                                   std::vector<std::string>& target,
+                                   const std::string& c,
+                                   std::string& error_message)
     {
 
-        message[c] = input;
+        if (input.empty()) return;
+        message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
 
     template <typename T>
-    inline void
-    load_numeric_vector(const std::string& input,
-                        std::unordered_map<std::string, std::string>& message,
-                        std::string& error_message, std::vector<T>& target,
-                        bool& error, const std::string& c)
+    inline void load_numeric_vector(const std::string& input,
+                                    std::map<std::string, std::string>& message,
+                                    std::string& error_message,
+                                    std::vector<T>& target, bool& error,
+                                    const std::string& c)
     {
-        message[c] = input;
+        if (input.empty()) return;
+        message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -436,18 +433,18 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
             error = true;
         }
     }
 
     template <typename Type>
-    inline void
-    set_numeric(const std::string& input,
-                std::unordered_map<std::string, std::string>& message,
-                std::string& error_message, Type& target, bool& target_boolean,
-                bool& error, const std::string& c)
+    inline void set_numeric(const std::string& input,
+                            std::map<std::string, std::string>& message,
+                            std::string& error_message, Type& target,
+                            bool& target_boolean, bool& error,
+                            const std::string& c)
     {
         if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
@@ -460,56 +457,55 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error = true;
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
         }
     }
 
     inline void set_model(const std::string& in,
-                          std::unordered_map<std::string, std::string>& message,
+                          std::map<std::string, std::string>& message,
                           std::string& error_message, bool& error)
     {
         std::string input = in;
         if (input.empty()) {
-            error_message.append("ERROR: Model cannot be empty!\n");
+            error_message.append("Error: Model cannot be empty!\n");
             error = true;
         }
-        prsice.provided_model = true;
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
             input = "add";
-            prsice.model = +MODEL::ADDITIVE;
+            prs_calculation.model = MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prsice.model = +MODEL::DOMINANT;
+            prs_calculation.model = MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prsice.model = +MODEL::RECESSIVE;
+            prs_calculation.model = MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prsice.model = +MODEL::HETEROZYGOUS;
+            prs_calculation.model = MODEL::HETEROZYGOUS;
         }
         else
         {
             error = true;
-            error_message.append("ERROR: Unrecognized model: " + input + "!\n");
+            error_message.append("Error: Unrecognized model: " + input + "!\n");
         }
         if (message.find("model") != message.end()) {
             error_message.append("Warning: Duplicated argument --model\n");
         }
         message["model"] = input;
     }
-    inline void
-    set_string(const std::string& input,
-               std::unordered_map<std::string, std::string>& message,
-               std::string& target, bool& target_boolean, const std::string& c,
-               std::string& error_message)
+    inline void set_string(const std::string& input,
+                           std::map<std::string, std::string>& message,
+                           std::string& target, bool& target_boolean,
+                           const std::string& c, std::string& error_message)
     {
 
         if (message.find(c) != message.end()) {
@@ -540,13 +536,13 @@ private:
             int index = misc::convert<int>(optarg);
             if (index >= max) {
                 error = true;
-                error_message.append("ERROR: " + name
+                error_message.append("Error: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
             if (index < 0) {
                 error = true;
-                error_message.append("ERROR: Negative " + name + " index!\n");
+                error_message.append("Error: Negative " + name + " index!\n");
                 return -1;
             }
             return index;
@@ -554,7 +550,7 @@ private:
         catch (const std::runtime_error& er)
         {
             error = true;
-            error_message.append("ERROR: " + name + " index is not numeric!\n");
+            error_message.append("Error: " + name + " index is not numeric!\n");
             return -1;
         }
     }

@@ -17,8 +17,10 @@
 #ifndef REGION_H
 #define REGION_H
 
+#include "gzstream.h"
 #include "misc.hpp"
 #include "plink_common.hpp"
+#include "reporter.hpp"
 #include "storage.hpp"
 #include <fstream>
 #include <iostream>
@@ -54,7 +56,7 @@ public:
     std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
     int get_count(size_t i) const { return m_region_snp_count.at(i); };
-    void info() const;
+    void info(Reporter& reporter) const;
     void print_file(std::string output) const;
     void prslice()
     {
@@ -64,7 +66,6 @@ public:
     void clean()
     {
         m_region_list = std::vector<std::vector<region_bound>>();
-        ;
         m_snp_check_index = std::vector<size_t>();
     }
 
