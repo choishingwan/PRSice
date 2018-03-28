@@ -221,7 +221,7 @@ private:
         size_t rank;
     };
 
-    // Global Stuff (Either for threading or for memory control)
+    // Global Stuff (For threading)
     static Eigen::MatrixXd g_independent_variables;
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
