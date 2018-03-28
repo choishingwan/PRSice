@@ -91,6 +91,7 @@ public:
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
     size_t num_sample() const { return m_sample_names.size(); }
+    size_t num_include_samples() const { return m_sample_ct; };
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
                    const bool require_statistic);
