@@ -109,7 +109,8 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             }
         }
     }
-
+    // TODO: Might want to error out when duplicated column is detected within
+    // the phenotype file
     size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
     message.append("There are a total of " + std::to_string(num_pheno)
                    + " phenotype to process\n");
@@ -129,7 +130,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     const bool no_regress = c_commander.no_regress();
     const std::string pheno_file = c_commander.pheno_file();
     const std::string output_name = c_commander.out();
-    target.reset_sample();
+    target.reset_sample_pheno();
     // this includes all samples
 
     gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);

@@ -105,7 +105,8 @@ public:
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
-    void reset_sample()
+
+    void reset_sample_pheno()
     {
         for (auto&& sample : m_sample_names) {
             sample.num_snp = 0;
@@ -121,27 +122,7 @@ public:
             sample.num_snp = 0.0;
         }
     };
-    void reset_prs()
-    {
-        m_cur_category_index = 0;
-        for (auto&& sample : m_sample_names) {
-            sample.prs = 0.0;
-            sample.num_snp = 0.0;
-        }
-    }
     bool prepare_prsice(Reporter& reporter);
-    bool has_category(size_t i) const
-    {
-        return (m_cur_category_index + i < m_categories.size());
-    }
-    double get_thresholds(size_t i) const
-    {
-        return m_thresholds.at(m_cur_category_index + i);
-    }
-    int get_category(size_t i) const
-    {
-        return m_categories.at(m_cur_category_index + i);
-    }
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_names.size())
@@ -151,14 +132,11 @@ public:
         else
             return m_sample_names[i].FID + "_" + m_sample_names[i].IID;
     }
-    bool sample_included(size_t i) const
-    {
-        return m_sample_names.at(i).included;
-    };
 
-    bool sample_is_founder(size_t i) const
+
+    bool sample_in_regression(size_t i) const
     {
-        return m_sample_names.at(i).founder;
+        return m_sample_names.at(i).in_regression;
     }
     void got_pheno(size_t i) { m_sample_names.at(i).has_pheno = true; }
     void invalid_pheno(size_t i) { m_sample_names.at(i).has_pheno = false; }

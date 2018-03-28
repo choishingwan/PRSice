@@ -90,6 +90,8 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
     std::unordered_set<std::string> duplicated_samples;
     std::vector<std::string> duplicated_sample_id;
     uintptr_t sample_index = 0; // this is just for error message
+    bool inclusion = false;
+    bool in_regression = false;
     while (std::getline(famfile, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -107,36 +109,38 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
-        cur_sample.founder = true;
+        cur_sample.in_regression = true;
         // false as we have not check if the pheno information is valid
         cur_sample.has_pheno = false;
         if (!m_remove_sample) {
-            cur_sample.included = (m_sample_selection_list.find(id)
-                                   != m_sample_selection_list.end());
+            inclusion = (m_sample_selection_list.find(id)
+                         != m_sample_selection_list.end());
         }
         else
         {
-            cur_sample.included = (m_sample_selection_list.find(id)
-                                   == m_sample_selection_list.end());
+            inclusion = (m_sample_selection_list.find(id)
+                         == m_sample_selection_list.end());
         }
 
         if (founder_info.find(token[+FAM::FATHER]) == founder_info.end()
             && founder_info.find(token[+FAM::MOTHER]) == founder_info.end()
-            && cur_sample.included)
+            && inclusion)
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
+            cur_sample.in_regression = true;
             // so m_founder_info is a subset of m_sample_include
             SET_BIT(sample_index, m_founder_info.data());
             SET_BIT(sample_index, m_sample_include.data());
         }
-        else if (cur_sample.included)
+        else if (inclusion)
         {
             SET_BIT(sample_index, m_sample_include.data());
             m_num_non_founder++;
-            cur_sample.founder = m_keep_nonfounder;
+            // cur_sample.founder = m_keep_nonfounder;
+            cur_sample.in_regression = m_keep_nonfounder;
         }
-        m_sample_ct += cur_sample.included;
+        m_sample_ct += inclusion;
 
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
@@ -152,17 +156,12 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
         sample_index++;
         if (duplicated_samples.find(id) != duplicated_samples.end())
             duplicated_sample_id.push_back(id);
-        if (!cur_sample.included) {
-            // try to reduce memory usage...
-            cur_sample.FID = "";
-            cur_sample.IID = "";
-            cur_sample.pheno = "";
-        }
-        duplicated_samples.insert(id);
-        // only storing this for target data
-        if (!m_is_ref) {
+        // only store samples that we need, and use the m_sample_include and
+        // m_founder_info to indicate if sample is needed
+        if (inclusion && !m_is_ref) {
             sample_name.push_back(cur_sample);
         }
+        duplicated_samples.insert(id);
     }
     if (!duplicated_sample_id.empty()) {
         // TODO: Produce a file containing id of all valid samples
@@ -603,7 +602,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    size_t num_included_samples = m_sample_names.size();
+    size_t num_samples_read = m_sample_names.size();
 
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -660,7 +659,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         uint32_t ujj;
         uint32_t ukk;
         std::vector<size_t> missing_samples;
-        std::vector<double> sample_genotype(num_included_samples);
+        std::vector<double> sample_genotype(num_samples_read);
         double stat = cur_snp.stat() * 2; // Multiply by ploidy
         bool flipped = cur_snp.is_flipped();
         uint32_t sample_idx = 0;
@@ -682,7 +681,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 {
                     // 3 is homo alternative
                     // int flipped_geno = snp_list[snp_index].geno(ukk);
-                    if (sample_idx < num_included_samples) {
+                    if (sample_idx < num_samples_read) {
                         int g = (ukk == 3) ? 2 : ukk;
                         switch (g)
                         {
@@ -701,15 +700,15 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 ulii &= ~((3 * ONELU) << ujj);
             }
             uii += BITCT2;
-        } while (uii < num_included_samples);
+        } while (uii < num_samples_read);
 
-        if (num_included_samples - nmiss == 0) {
+        if (num_samples_read - nmiss == 0) {
             cur_snp.invalidate();
             continue;
         }
         // due to the way the binary code works, the aa will always be 0
         // added there just for fun tbh
-        aa = num_included_samples - nmiss - aA - AA;
+        aa = num_samples_read - nmiss - aA - AA;
         assert(aa >= 0);
         if (flipped) {
             int temp = aa;
@@ -735,7 +734,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             AA = 0;
         }
         double maf = ((double) (aA + AA * 2)
-                      / ((double) (num_included_samples - nmiss)
+                      / ((double) (num_samples_read - nmiss)
                          * 2.0)); // MAF does not count missing
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
@@ -743,9 +742,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         // actual index should differ due to PLINK automatically remove samples
         // that are not included
         size_t actual_index = 0;
-        for (size_t i_sample = 0; i_sample < num_included_samples; ++i_sample) {
+        for (size_t i_sample = 0; i_sample < num_samples_read; ++i_sample) {
             auto&& sample = m_sample_names[i_sample];
-            if (!sample.included) continue;
             if (i_missing < num_miss
                 && actual_index == missing_samples[i_missing])
             {
