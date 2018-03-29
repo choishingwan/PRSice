@@ -25,7 +25,7 @@ Eigen::MatrixXd PRSice::g_independent_variables;
 std::vector<double> PRSice::g_perm_result;
 std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
 Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
-Eigen::MatrixXd PRSice::g_permuted_pheno;
+std::vector<double> PRSice::g_permuted_pheno;
 Eigen::VectorXd PRSice::g_pre_se_calulated;
 
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
@@ -1482,7 +1482,10 @@ void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
     {
         m_perm_per_slice = final_mb * 1048576 / min_memory_byte;
     }
-    g_permuted_pheno = Eigen::MatrixXd::Zero(sample_ct, m_perm_per_slice);
+    // wanna use double vector here as the sample size here might not be
+    // the one used in the permutation. This might then lead to problem
+    	// in the permutation (segmentation fault, etc)
+    g_permuted_pheno.resize(sample_ct*m_perm_per_slice);
     // g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
     // g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
 }

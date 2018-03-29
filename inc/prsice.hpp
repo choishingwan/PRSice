@@ -226,7 +226,7 @@ private:
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
-    static Eigen::MatrixXd g_permuted_pheno;
+    static std::vector<double> g_permuted_pheno;
     static Eigen::VectorXd g_pre_se_calulated;
     // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
