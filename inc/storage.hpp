@@ -26,7 +26,7 @@ struct Sample
     std::string IID;
     std::string pheno;
     int num_snp;
-    bool has_pheno;
+    bool include;
     bool in_regression;
     double prs;
 };

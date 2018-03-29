@@ -121,11 +121,11 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                                  ? cur_sample.IID
                                  : cur_sample.FID + "_" + cur_sample.IID;
             cur_sample.pheno = "";
-            cur_sample.has_pheno = false;
+            // true as we assume all bgen samples are founders
+            cur_sample.include = true;
             cur_sample.prs = 0.0;
             cur_sample.num_snp = 0.0;
-            // true as we assume all bgen samples are founders
-            cur_sample.in_regression = true;
+            cur_sample.in_regression = false;
             if (!m_remove_sample) {
                 inclusion = (m_sample_selection_list.find(id)
                              != m_sample_selection_list.end());

@@ -130,6 +130,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     const bool no_regress = c_commander.no_regress();
     const std::string pheno_file = c_commander.pheno_file();
     const std::string output_name = c_commander.out();
+
+    // this reset the in_regression flag of all samples
     target.reset_sample_pheno();
     // this includes all samples
 
@@ -178,12 +180,11 @@ void PRSice::update_sample_included(Genotype& target)
 {
     m_max_fid_length = 3;
     m_max_iid_length = 3;
-    m_sample_index.clear();
     // anyone that's included in the study are considered
     // therefore, it should work even for multiple different
     // phenotypes
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-        bool included = target.sample_included(i_sample);
+        bool included = target.is_include(i_sample);
         if (!included) continue;
         m_max_fid_length = (m_max_fid_length > target.fid(i_sample).length())
                                ? m_max_fid_length
@@ -195,11 +196,8 @@ void PRSice::update_sample_included(Genotype& target)
         if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
             == m_sample_with_phenotypes.end())
         {
-            target.invalid_pheno(i_sample);
+            target.set_in_regression(i_sample, false);
         }
-        // sample index store the index of samples that we need on from the
-        // m_sample_names of target
-        m_sample_index.push_back(i_sample);
     }
 }
 
@@ -257,7 +255,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         pheno_file.close();
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
             std::string id = target.sample_id(i_sample);
-            bool included = target.sample_is_founder(i_sample);
+            bool included = target.is_include(i_sample);
             if (included) num_included++;
             if (phenotype_info.find(id) != phenotype_info.end() && included
                 && phenotype_info[id].compare("NA") != 0)
@@ -275,7 +273,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                         else
                         {
                             // so that it will add invalid
-                            throw std::runtime_error("");
+                            throw std::runtime_error(
+                                "Invalid binary phenotype format!");
                         }
                     }
                     else
@@ -287,7 +286,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                         }
                     }
                     m_sample_with_phenotypes[id] = sample_index_ct++;
-                    target.got_pheno(i_sample);
+                    target.set_in_regression(i_sample, true);
                 }
                 catch (const std::runtime_error& error)
                 {
@@ -305,7 +304,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // No phenotype file is provided
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-            bool included = target.sample_is_founder(i_sample);
+            bool included = target.is_include(i_sample);
             if (included) num_included++;
             if (target.pheno_is_na(i_sample) || !included) {
                 // it is ok to skip NA as default = sample.has_pheno = false
@@ -337,7 +336,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 }
                 m_sample_with_phenotypes[target.sample_id(i_sample)] =
                     sample_index_ct++;
-                target.got_pheno(i_sample);
+                target.set_in_regression(i_sample, true);
             }
             catch (const std::runtime_error& error)
             {
@@ -647,7 +646,11 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             // sample is found in the phenotype vector
             int index = m_sample_with_phenotypes[id]; // index on vector
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                if (token[cov_index[i_cov]].compare("NA") == 0) {
+                if (token[cov_index[i_cov]].compare("NA") == 0
+                    || token[cov_index[i_cov]].compare("Na") == 0
+                    || token[cov_index[i_cov]].compare("na") == 0
+                    || token[cov_index[i_cov]].compare("nA") == 0)
+                {
                     valid = false;
                     g_independent_variables(index, i_cov + 2) = 0;
                     missing_count[i_cov]++;
@@ -658,9 +661,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     {
                         double temp =
                             misc::convert<double>(token[cov_index[i_cov]]);
-                        g_independent_variables(index, i_cov + 2) =
-                            temp; // + 2 because first line = intercept, second
-                                  // line = PRS
+                        g_independent_variables(index, i_cov + 2) = temp;
+                        // + 2 because first line = intercept, second
+                        // line = PRS
                     }
                     catch (const std::runtime_error& error)
                     {
@@ -701,14 +704,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     // we sorted the column index so we can't tell what the
                     // column name is useless we also store the head of the file
                     // (too troublesome)
-                    message.append("Column " + std::to_string(miss)
+                    message.append("Error: Column " + std::to_string(miss)
                                    + " is invalid, please check it is of the "
                                      "correct format\n");
                 }
             }
             reporter.report(message);
-            throw std::runtime_error(
-                "All samples removed due to missingness in covariate file!");
+            throw std::runtime_error("Error: All samples removed due to "
+                                     "missingness in covariate file!");
         }
         if (portion > 0.05) {
             message.append(
@@ -758,13 +761,15 @@ void PRSice::run_prsice(const Commander& c_commander,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-    // target.reset_sample_prs();
-    target.reset_prs();
+
+    target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
     const bool print_all_scores = c_commander.all_scores();
     const int num_thread = c_commander.thread();
+    const bool multi = pheno_info.name.size() > 1;
+    const size_t num_samples_included = target.num_sample();
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
@@ -773,9 +778,8 @@ void PRSice::run_prsice(const Commander& c_commander,
     m_prs_results.clear();
     m_best_sample_score.clear();
     m_prs_results.resize(target.num_threshold());
-    // set to -1 to indicate not don
+    // set to -1 to indicate not done
     for (auto&& p : m_prs_results) p.threshold = -1;
-    const bool multi = pheno_info.name.size() > 1;
     // initialize score vector
     m_best_sample_score.resize(target.num_sample());
 
@@ -817,8 +821,9 @@ void PRSice::run_prsice(const Commander& c_commander,
         }
         all_out << header << std::endl;
 
-        for (auto&& sample : m_sample_index) {
-            std::string name = target.fid(sample) + " " + target.iid(sample);
+        for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample) {
+            std::string name =
+                target.fid(i_sample) + " " + target.iid(i_sample);
             all_out << std::setfill(' ') << std::setw(width_of_line)
                     << std::left << name << std::endl;
         }
@@ -845,9 +850,9 @@ void PRSice::run_prsice(const Commander& c_commander,
         }
 
         if (print_all_scores) {
-            for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
+            for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 double score =
-                    target.calculate_score(m_score, m_sample_index[sample]);
+                    target.calculate_score(m_score, num_samples_included);
                 size_t loc = header_length + sample * width_of_line
                              + m_max_fid_length + 1 + m_max_iid_length + 1
                              + iter_threshold + iter_threshold * 12;
@@ -880,7 +885,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
 {
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
            se = 0.0;
-    size_t num_include_samples = target.num_sample();
+    const size_t num_include_samples = target.num_sample();
     if (m_num_snp_included == 0
         || (m_num_snp_included == m_prs_results[iter_threshold].num_snp))
     {
@@ -896,7 +901,6 @@ void PRSice::regress_score(Genotype& target, const double threshold,
                 target.calculate_score(m_score, sample_id);
         }
     }
-
 
     if (m_target_binary[pheno_index]) {
         try
@@ -1005,7 +1009,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     size_t processed = 0;
     // +1 so that we will also procdess the last slice
     for (int iter = 0; iter < num_iter + 1; ++iter) {
-
+        double* perm_pheno_ptr = g_permuted_pheno.data();
         Eigen::setNbThreads(n_thread);
         size_t cur_perm = m_perm_per_slice;
         cur_perm += (cur_remain > 0) ? 1 : 0;
@@ -1016,13 +1020,16 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         if (cur_perm < 1) break;
         // g_permuted_pheno.resize(cur_perm);
         for (size_t p = 0; p < cur_perm; ++p) {
+            Eigen::Map<Eigen::VectorXd> perm_vec(perm_pheno_ptr,
+                                                 m_phenotype.rows());
             perm_matrix.setIdentity();
             std::shuffle(perm_matrix.indices().data(),
                          perm_matrix.indices().data()
                              + perm_matrix.indices().size(),
                          rand_gen);
-            g_permuted_pheno.col(p) =
-                perm_matrix * m_phenotype; // permute columns
+            // key point here: g_permuted_pheno is a vector
+            perm_vec = perm_matrix * m_phenotype; // permute columns
+            perm_pheno_ptr = &(perm_pheno_ptr[m_phenotype.rows()]);
         }
         Eigen::setNbThreads(1);
         // if want to use windows, we need to ditch the use of std::thread
@@ -1082,7 +1089,6 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
 
         processed += cur_perm;
     }
-    exit(-1);
 }
 
 THREAD_RET_TYPE PRSice::thread_perm(void* id)
@@ -1099,19 +1105,22 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
     temp_store.reserve(end - start);
 
     for (size_t i = start; i < end; ++i) {
+        double* perm_pheno_ptr = g_permuted_pheno.data();
+        perm_pheno_ptr = &(perm_pheno_ptr[i * g_independent_variables.rows()]);
+        Eigen::Map<Eigen::VectorXd> perm_pheno(perm_pheno_ptr,
+                                               g_independent_variables.rows());
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (g_logit_perm) {
             double r2, coefficient, se;
-            Regression::glm(g_permuted_pheno.col(i), g_independent_variables,
-                            obs_p, r2, coefficient, se, 25, 1, true);
+            Regression::glm(perm_pheno, g_independent_variables, obs_p, r2,
+                            coefficient, se, 25, 1, true);
         }
         else
         {
-            Eigen::VectorXd beta =
-                g_perm_pre_decomposed.solve(g_permuted_pheno.col(i));
+            Eigen::VectorXd beta = g_perm_pre_decomposed.solve(perm_pheno);
             Eigen::MatrixXd fitted = g_independent_variables * beta;
 
-            Eigen::VectorXd residual = g_permuted_pheno.col(i) - fitted;
+            Eigen::VectorXd residual = perm_pheno - fitted;
             int rdf = n - rank;
             double rss = 0.0;
             for (size_t r = 0; r < n; ++r) {
@@ -1290,16 +1299,13 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     }
     else
     {
-        for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
+        for (size_t sample = 0; sample < target.num_sample(); ++sample) {
             // samples that are extracted are ignored
             // sample excluded will not be output here
-            auto sample_index = m_sample_index[sample];
-            if (!target.sample_included(sample_index)) continue;
             std::string has_pheno =
-                target.has_pheno(sample_index) ? "Yes" : "No";
-            best_out << target.fid(sample_index) << "\t"
-                     << target.iid(sample_index) << "\t"
-                     << m_best_sample_score[sample_index] << "\t" << has_pheno
+                target.sample_in_regression(sample) ? "Yes" : "No";
+            best_out << target.fid(sample) << "\t" << target.iid(sample) << "\t"
+                     << m_best_sample_score[sample] << "\t" << has_pheno
                      << std::endl;
         }
     }
@@ -1484,8 +1490,8 @@ void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
     }
     // wanna use double vector here as the sample size here might not be
     // the one used in the permutation. This might then lead to problem
-    	// in the permutation (segmentation fault, etc)
-    g_permuted_pheno.resize(sample_ct*m_perm_per_slice);
+    // in the permutation (segmentation fault, etc)
+    g_permuted_pheno.resize(sample_ct * m_perm_per_slice);
     // g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
     // g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
 }

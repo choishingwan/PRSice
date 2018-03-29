@@ -1600,6 +1600,50 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
                          const size_t region_index,
                          const bool require_statistic)
 {
+    if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
+        return false;
+    int end_index = 0;
+    bool ended = false;
+    if (cur_index == -1) // first run
+    {
+        cur_index = 0;
+        cur_category = m_existed_snps[cur_index].category();
+    }
+    cur_threshold = m_existed_snps[cur_index].get_threshold();
+    // existed snp should be sorted such that the SNPs should be
+    // access sequentially
+    for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
+        if (m_existed_snps[i].category() != cur_category) {
+            end_index = i;
+            ended = true;
+            break;
+        }
+        //		// Use as part of the output
+        if (m_existed_snps[i].in(region_index)) num_snp_included++;
+    }
+    if (!ended) {
+        end_index = m_existed_snps.size();
+        cur_category = m_existed_snps.back().category();
+    }
+    else
+        cur_category = m_existed_snps[end_index].category();
+    read_score(cur_index, end_index, region_index);
+    cur_index = end_index;
+    if (require_statistic) {
+        misc::RunningStat rs;
+        for (auto&& sample : m_sample_names) {
+            if (!sample.include) continue;
+            if (sample.num_snp == 0) {
+                rs.push(0.0);
+            }
+            else
+            {
+                rs.push(sample.prs / (double) sample.num_snp);
+            }
+        }
+        m_mean_score = rs.mean();
+        m_score_sd = rs.sd();
+    }
     return true;
 }
 

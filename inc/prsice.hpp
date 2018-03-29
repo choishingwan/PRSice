@@ -204,7 +204,6 @@ private:
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
     std::vector<double> m_best_sample_score;
-    std::vector<size_t> m_sample_index;
     std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
                                                       // non-sig, margin sig,
                                                       // and sig pathway &

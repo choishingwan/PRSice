@@ -91,7 +91,7 @@ public:
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
     size_t num_sample() const { return m_sample_names.size(); }
-    size_t num_include_samples() const { return m_sample_ct; };
+
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
                    const bool require_statistic);
@@ -111,7 +111,7 @@ public:
         for (auto&& sample : m_sample_names) {
             sample.num_snp = 0;
             sample.prs = 0.0;
-            sample.has_pheno = false;
+            sample.in_regression = false;
         }
     };
 
@@ -138,9 +138,15 @@ public:
     {
         return m_sample_names.at(i).in_regression;
     }
-    void got_pheno(size_t i) { m_sample_names.at(i).has_pheno = true; }
-    void invalid_pheno(size_t i) { m_sample_names.at(i).has_pheno = false; }
-    bool has_pheno(size_t i) const { return m_sample_names.at(i).has_pheno; }
+    bool is_include(size_t i) const { return m_sample_names.at(i).include; }
+    void set_in_regression(size_t i, bool within)
+    {
+        m_sample_names.at(i).in_regression = within;
+    }
+    bool include_for_regression(size_t i) const
+    {
+        return m_sample_names.at(i).in_regression;
+    };
     std::string pheno(size_t i) const { return m_sample_names.at(i).pheno; }
     bool pheno_is_na(size_t i) const
     {

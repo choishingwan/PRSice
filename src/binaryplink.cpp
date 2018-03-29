@@ -91,7 +91,6 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
     std::vector<std::string> duplicated_sample_id;
     uintptr_t sample_index = 0; // this is just for error message
     bool inclusion = false;
-    bool in_regression = false;
     while (std::getline(famfile, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -109,9 +108,9 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
-        cur_sample.in_regression = true;
+        cur_sample.in_regression = false;
         // false as we have not check if the pheno information is valid
-        cur_sample.has_pheno = false;
+        cur_sample.include = true;
         if (!m_remove_sample) {
             inclusion = (m_sample_selection_list.find(id)
                          != m_sample_selection_list.end());
@@ -128,7 +127,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
-            cur_sample.in_regression = true;
+            cur_sample.include = true;
             // so m_founder_info is a subset of m_sample_include
             SET_BIT(sample_index, m_founder_info.data());
             SET_BIT(sample_index, m_sample_include.data());
@@ -138,7 +137,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             SET_BIT(sample_index, m_sample_include.data());
             m_num_non_founder++;
             // cur_sample.founder = m_keep_nonfounder;
-            cur_sample.in_regression = m_keep_nonfounder;
+            cur_sample.include = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
 
