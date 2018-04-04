@@ -730,12 +730,10 @@ if(use.ggplot){
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
     function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
+        PRS.best <- PRS.best[,!colnames(PRS.best)%in%c("Has_Phenotype")]
         binary <- as.logical(binary)
         writeLines("Plotting the quantile plot")
-        num_cov <- ncol(pheno) - 2
-        if (!provided("ignore_fid", argv)) {
-            num_cov <- num_cov - 1
-        }
+        num_cov <- sum(!colnames(pheno)%in%c("FID", "IID", "Pheno"))
         extract = NULL
         if (provided("quant_extract", argv)) {
             if(use.data.table){
@@ -753,7 +751,7 @@ quantile_plot <-
         pheno.include <-
             NULL #Because we always name the phenotype as pheno, it will never be PRS
         
-        if (provided("ignore_fid", argv)) {
+        if (provided("ignore_fid", argv) & sum(colnames(pheno)%in%c("FID"))!=1) {
             pheno.merge <- merge(PRS.best, pheno, by = "IID")
         } else{
             pheno.merge <- merge(PRS.best, pheno, by = c("FID", "IID"))
@@ -886,7 +884,7 @@ quantile_plot <-
         if (!pheno.as.quant) {
             family <- gaussian
             if (binary) {
-                if( num_cov ==0 ){
+                if( num_cov == 0 ){
                     family <- binomial
                 }
             }
@@ -1375,7 +1373,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
     }
     
     PRS.best <- subset(PRS.best, PRS.best$Has_Phenotype == "Yes")
-    colnames(PRS.best)[3] <- "PRS"
+    # colnames(PRS.best)[3] <- "PRS"
     # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
     # Good thing is, only quantile plot really needs the cov and phenotype information
     if (provided("quantile", argv) && argv$quantile > 0) {
