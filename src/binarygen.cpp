@@ -303,18 +303,22 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                                   &actual_number_of_samples);
         bytes_read += 8;
         assert(actual_number_of_samples == context.number_of_samples);
-        for (size_t i = 0; i < actual_number_of_samples; ++i) {
-            genfile::bgen::read_length_followed_by_data(
-                bgen_file, &identifier_size, &identifier);
-            if (!bgen_file)
-                throw std::runtime_error("Error: Problem reading bgen file!");
-            bytes_read += sizeof(identifier_size) + identifier_size;
-            // Only need to use IID as BGEN doesn't have the FID information
-            if (m_sample_names[i].IID.compare(identifier) != 0) {
-                throw std::runtime_error("Error: Sample mismatch "
-                                         "between bgen and phenotype "
-                                         "file!");
-            }
+        // we don't need to check the sample name when we are doing the LD
+        // as we don't store any
+        if(!m_is_ref){
+        	for (size_t i = 0; i < actual_number_of_samples; ++i) {
+				genfile::bgen::read_length_followed_by_data(
+					bgen_file, &identifier_size, &identifier);
+				if (!bgen_file)
+					throw std::runtime_error("Error: Problem reading bgen file!");
+				bytes_read += sizeof(identifier_size) + identifier_size;
+				// Only need to use IID as BGEN doesn't have the FID information
+				if (m_sample_names[i].IID.compare(identifier) != 0) {
+					throw std::runtime_error("Error: Sample mismatch "
+											 "between bgen and phenotype "
+											 "file!");
+				}
+			}
         }
         assert(bytes_read == sample_block_size);
     }
@@ -327,8 +331,6 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                            const std::string& out_prefix,
                                            Genotype* target)
 {
-
-
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
     std::vector<int> ref_target_overlap_index;
@@ -372,8 +374,6 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
         uint32_t num_snp = m_context_map[prefix].number_of_variants;
         auto&& context = m_context_map[prefix];
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
-
-
             if (i_snp % 1000 == 0) {
                 fprintf(stderr, "\r%zuK SNPs processed in %s\r", i_snp / 1000,
                         bgen_name.c_str());
