@@ -852,7 +852,7 @@ void PRSice::run_prsice(const Commander& c_commander,
         if (print_all_scores) {
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 double score =
-                    target.calculate_score(m_score, num_samples_included);
+                    target.calculate_score(m_score, sample);
                 size_t loc = header_length + sample * width_of_line
                              + m_max_fid_length + 1 + m_max_iid_length + 1
                              + iter_threshold + iter_threshold * 12;
