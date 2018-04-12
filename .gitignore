@@ -13,6 +13,5 @@ src/bk/
 *.zip
 \.settings/
 \.cproject
-*.png
 PRSice\.*
 *.gz

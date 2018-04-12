@@ -43,11 +43,10 @@ private:
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
     bool check_is_sample_format();
-    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info_score,
-                                    const double hard_threshold,
-                                    const bool hard_coded,
-                                    const std::string& out_prefix);
+    std::vector<SNP>
+    gen_snp_vector(const double geno, const double maf, const double info_score,
+                   const double hard_threshold, const bool hard_coded,
+                   const std::string& out_prefix, Genotype* target = nullptr);
     void get_context(std::string& prefix);
     bool check_sample_consistent(const std::string& bgen_name,
                                  const genfile::bgen::Context& context);
@@ -77,12 +76,13 @@ private:
         auto&& context = m_context_map[file_name];
         std::vector<genfile::byte_t> buffer1, buffer2;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        PLINK_generator setter(&m_sample_names, genotype, m_hard_threshold);
+        PLINK_generator setter(&m_sample_include, genotype, m_hard_threshold);
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
             m_bgen_file, context, setter, &buffer1, &buffer2, false);
     };
 
-    inline void read_genotype(uintptr_t* genotype, const SNP& snp,
+    inline void read_genotype(uintptr_t* genotype,
+                              const std::streampos byte_pos,
                               const std::string& file_name)
     {
         // the bgen library seems over complicated
@@ -92,10 +92,10 @@ private:
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
-        if (load_and_collapse_incl(snp.byte_pos(), file_name,
-                                   m_unfiltered_sample_ct, m_founder_ct,
-                                   m_founder_info.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype))
+        if (load_and_collapse_incl(byte_pos, file_name, m_unfiltered_sample_ct,
+                                   m_founder_ct, m_founder_info.data(),
+                                   final_mask, false, m_tmp_genotype.data(),
+                                   genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bgen file!");
         }
@@ -151,11 +151,11 @@ private:
 
     struct QC_Checker
     {
-        QC_Checker(std::vector<Sample>* sample, double hard_thres,
+        QC_Checker(std::vector<uintptr_t>* sample_info, double hard_thres,
                    bool hard_code)
             : hard_coded(hard_code)
             , hard_threshold(hard_thres)
-            , sample_inclusion(sample)
+            , sample_inclusion(sample_info)
         {
         }
         void initialise(std::size_t number_of_samples,
@@ -170,7 +170,8 @@ private:
         bool set_sample(std::size_t i)
         {
             m_sample_i = i;
-            exclude = !sample_inclusion->at(m_sample_i).included;
+            // exclude = !sample_inclusion->at(m_sample_i).included;
+            exclude = !IS_SET(sample_inclusion->data(), m_sample_i);
             if (!exclude) num_included_sample++;
             return true;
         }
@@ -282,7 +283,7 @@ private:
         double hard_prob = 0;
         double exp = 0.0;
         double hard_threshold = 0.0;
-        std::vector<Sample>* sample_inclusion;
+        std::vector<uintptr_t>* sample_inclusion;
         // QC info
         double geno_miss_rate = 0.0;
         double maf = 0.0;
@@ -292,8 +293,11 @@ private:
     struct PRS_Interpreter
     {
         PRS_Interpreter(std::vector<Sample>* sample, MODEL model,
-                        MISSING_SCORE missing, double stat, bool flipped)
+                        MISSING_SCORE missing,
+                        std::vector<uintptr_t>* sample_inclusion, double stat,
+                        bool flipped)
             : m_sample(sample)
+            , m_sample_inclusion(sample_inclusion)
             , m_model(model)
             , m_missing(missing)
             , m_stat(stat)
@@ -313,7 +317,8 @@ private:
         bool set_sample(std::size_t i)
         {
             m_sample_i = i;
-            exclude = !m_sample->at(m_sample_i).included;
+            exclude = !IS_SET(m_sample_inclusion->data(), m_sample_i);
+            // exclude = !m_sample->at(m_sample_i).included;
             m_num_included_samples += !exclude;
             return true;
         }
@@ -329,8 +334,9 @@ private:
                 // sum = 0 is for v11, otherwise, it should be missing
                 if (missing || m_sum == 0) {
                     // this is missing
-                	// should use m_sample_i -1 as this is for the previous sample
-                    m_missing_samples.push_back(m_sample_i-1);
+                    // should use m_sample_i -1 as this is for the previous
+                    // sample
+                    m_missing_samples.push_back(m_sample_i - 1);
                 }
             }
             first = false;
@@ -354,7 +360,7 @@ private:
             m_score[m_sample_i] += value * geno;
             if (!exclude) m_total_prob += value * geno;
             m_entry_i++;
-            m_sum+= value;
+            m_sum += value;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
@@ -364,6 +370,8 @@ private:
 
         void finalise()
         {
+
+            // TODO: Double check this function in case there are any problem
             // summarize the last sample's info
             if (!exclude) {
                 if (missing || m_sum == 0) {
@@ -378,36 +386,49 @@ private:
                 valid = false;
             }
             size_t i_missing = 0;
-            std::sort( m_missing_samples.begin(), m_missing_samples.end() );
-            m_missing_samples.erase( std::unique( m_missing_samples.begin(), m_missing_samples.end() ), m_missing_samples.end() );
+            std::sort(m_missing_samples.begin(), m_missing_samples.end());
+            m_missing_samples.erase(
+                std::unique(m_missing_samples.begin(), m_missing_samples.end()),
+                m_missing_samples.end());
             size_t num_miss = m_missing_samples.size();
             double mean =
                 m_total_prob
                 / (((double) m_num_included_samples - (double) num_miss) * 2);
+            size_t idx_sample_include = 0;
             for (size_t i_sample = 0; i_sample < m_num_included_samples;
                  ++i_sample)
             {
-                if (i_missing < num_miss
-                    && i_sample == m_missing_samples[i_missing])
-                {
-                    if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
-                        m_sample->at(i_sample).prs += m_stat * mean;
-                    if (m_missing != MISSING_SCORE::SET_ZERO)
-                        m_sample->at(i_sample).num_snp++;
-                    i_missing++;
-                }
-                else
-                { // not missing sample
-                    if (m_missing == MISSING_SCORE::CENTER) {
-                        // if centering, we want to keep missing at 0
-                        m_sample->at(i_sample).prs -= m_stat * mean;
+                if (IS_SET(m_sample_inclusion->data(), i_sample)) {
+                    auto&& sample = m_sample->at(idx_sample_include++);
+                    if (i_missing < num_miss
+                        && i_sample == m_missing_samples[i_missing])
+                    {
+                        if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
+                            sample.prs += m_stat * mean;
+                        // m_prs_score->at(i_sample + m_vector_pad) +=
+                        //    m_stat * mean;
+                        if (m_missing != MISSING_SCORE::SET_ZERO)
+                            sample.num_snp++;
+                        // m_num_snps->at(i_sample + m_vector_pad)++;
+                        i_missing++;
                     }
-                    // again, so that it will generate the same result as
-                    // genotype file format when we are 100% certain of the
-                    // genotypes
-                    m_sample->at(i_sample).prs +=
-                        m_score[i_sample] * m_stat * 0.5;
-                    m_sample->at(i_sample).num_snp++;
+                    else
+                    { // not missing sample
+                        if (m_missing == MISSING_SCORE::CENTER) {
+                            // if centering, we want to keep missing at 0
+                            sample.prs -= m_stat * mean;
+                            // m_prs_score->at(i_sample + m_vector_pad) -=
+                            //    m_stat * mean;
+                        }
+                        // again, so that it will generate the same result as
+                        // genotype file format when we are 100% certain of the
+                        // genotypes
+                        sample.prs += m_score[i_sample] * m_stat * 0.5;
+                        // m_prs_score->at(i_sample + m_vector_pad) +=
+                        //    m_score[i_sample] * m_stat * 0.5;
+                        sample.num_snp++;
+                        // m_num_snps->at(i_sample + m_vector_pad)++;
+                    }
                 }
             }
         }
@@ -422,6 +443,7 @@ private:
         bool exclude = false;
         bool valid = true;
         std::vector<Sample>* m_sample;
+        std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<double> m_score;
         std::vector<size_t> m_missing_samples;
         MODEL m_model;
@@ -434,7 +456,7 @@ private:
 
     struct PLINK_generator
     {
-        PLINK_generator(std::vector<Sample>* sample, uintptr_t* genotype,
+        PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
                         double hard_threshold)
             : m_hard_threshold(hard_threshold)
             , m_sample(sample)
@@ -453,7 +475,8 @@ private:
         bool set_sample(std::size_t i)
         {
             m_sample_i = i;
-            exclude = !m_sample->at(m_sample_i).included;
+            // exclude = !m_sample->at(m_sample_i).included;
+            exclude = !IS_SET(m_sample->data(), m_sample_i);
             return true;
         }
 
@@ -485,8 +508,9 @@ private:
         void set_value(uint32_t, double value)
         {
             if (value > hard_prob && value >= m_hard_threshold) {
-                //geno = 2 - m_entry_i;
-            	geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                // geno = 2 - m_entry_i;
+                geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                hard_prob = value;
             }
             m_entry_i++;
         }
@@ -518,7 +542,7 @@ private:
         int index = 0;
         double hard_prob = 0;
         double m_hard_threshold = 0.0;
-        std::vector<Sample>* m_sample;
+        std::vector<uintptr_t>* m_sample;
         uintptr_t* m_genotype;
     };
 };

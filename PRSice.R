@@ -730,11 +730,10 @@ if(use.ggplot){
 # quantile_plot: plotting the quantile plots
 quantile_plot <-
     function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
+        PRS.best <- PRS.best[,!colnames(PRS.best)%in%c("Has_Phenotype")]
+        binary <- as.logical(binary)
         writeLines("Plotting the quantile plot")
-        num_cov <- ncol(pheno) - 2
-        if (!provided("ignore_fid", argv)) {
-            num_cov <- num_cov - 1
-        }
+        num_cov <- sum(!colnames(pheno)%in%c("FID", "IID", "Pheno"))
         extract = NULL
         if (provided("quant_extract", argv)) {
             if(use.data.table){
@@ -752,7 +751,7 @@ quantile_plot <-
         pheno.include <-
             NULL #Because we always name the phenotype as pheno, it will never be PRS
         
-        if (provided("ignore_fid", argv)) {
+        if (provided("ignore_fid", argv) & sum(colnames(pheno)%in%c("FID"))!=1) {
             pheno.merge <- merge(PRS.best, pheno, by = "IID")
         } else{
             pheno.merge <- merge(PRS.best, pheno, by = c("FID", "IID"))
@@ -783,7 +782,6 @@ quantile_plot <-
             )
             writeLines(paste("Will not generate the quantile plot for ", prefix))
             return()
-            
         }
         quants <- NULL
         if(num_cov > 0){
@@ -794,6 +792,32 @@ quantile_plot <-
           }
           residual <- rstandard(glm(Pheno~., family=family, data=reg))
           pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
+          if (pheno.as.quant &&
+              length(unique(pheno.merge$Pheno)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$Pheno)),
+                      " unique Phenotype but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+          } else if (length(unique(pheno.merge$PRS)) < num_quant) {
+              writeLines(
+                  paste(
+                      "WARNING: There are only ",
+                      length(unique(pheno.merge$PRS)),
+                      " unique PRS but asked for ",
+                      num_quant,
+                      " quantiles",
+                      sep = ""
+                  )
+              )
+              writeLines(paste("Will not generate the quantile plot for ", prefix))
+              return()
+          }
         }
         if (!pheno.as.quant) {
           quants <- as.numeric(cut(
@@ -860,7 +884,7 @@ quantile_plot <-
         if (!pheno.as.quant) {
             family <- gaussian
             if (binary) {
-                if( num_cov ==0 ){
+                if( num_cov == 0 ){
                     family <- binomial
                 }
             }
@@ -879,9 +903,10 @@ quantile_plot <-
                     coef.quantiles <- exp(coef.quantiles)
                 }
             }
-            coef.quantiles[1] <- ifelse(binary,1,0)
-            ci.quantiles.u[1] <- ifelse(binary,1,0)
-            ci.quantiles.l[1] <- ifelse(binary,1,0)
+            
+            coef.quantiles[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.u[1] <- ifelse(binary & (num_cov==0),1,0)
+            ci.quantiles.l[1] <- ifelse(binary & (num_cov==0),1,0)
             quantiles.for.table <-
                 c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
             quantiles.df <-
@@ -1348,7 +1373,7 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
     }
     
     PRS.best <- subset(PRS.best, PRS.best$Has_Phenotype == "Yes")
-    colnames(PRS.best)[3] <- "PRS"
+    # colnames(PRS.best)[3] <- "PRS"
     # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
     # Good thing is, only quantile plot really needs the cov and phenotype information
     if (provided("quantile", argv) && argv$quantile > 0) {

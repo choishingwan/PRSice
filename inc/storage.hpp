@@ -26,17 +26,11 @@ struct Sample
     std::string IID;
     std::string pheno;
     int num_snp;
-    bool included;
-    bool has_pheno;
+    bool include;
+    bool in_regression;
     double prs;
 };
 
-struct Sample_lite
-{
-    double prs;
-    int num_snp;
-    bool has_pheno;
-};
 
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP

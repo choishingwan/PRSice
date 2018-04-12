@@ -29,6 +29,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <chrono>
+#include <errno.h>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -84,24 +85,11 @@ public:
             }
         }
         if (perm) {
-            // first check for ridiculously large sample size
-            // allow 10 GB here
-            if (CHAR_BIT * sample_ct > 1000000000) {
-                m_perm_per_slice = 1;
-            }
-            else
-            {
-                // in theory, most of the time, perm_per_slice should be
-                // equal to c_commander.num_permutation();
+            gen_perm_memory(sample_ct, reporter);
 
-                int sample_memory = CHAR_BIT * sample_ct;
-                m_perm_per_slice = 1000000000 / sample_memory;
-                m_perm_per_slice = (m_perm_per_slice > m_num_perm)
-                                       ? m_num_perm
-                                       : m_perm_per_slice;
-                // Additional slice to keep
-                m_remain_slice = m_num_perm % m_perm_per_slice;
-            }
+            // Additional slice to keep
+            // DEBUG here
+            m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
                 if (!g_logit_perm) {
                     std::string message =
@@ -110,11 +98,10 @@ public:
                         "regression within the permutation and uses the "
                         "p-value to rank the thresholds. Our assumptions "
                         "are as follow:\n";
-                    message.append("         1. Linear Regression & Logistic "
+                    message.append("1) Linear Regression & Logistic "
                                    "Regression produce similar p-values\n");
-                    message.append(
-                        "         2. P-value is correlated with R2\n\n");
-                    message.append("         If you must, you can run logistic "
+                    message.append("2) P-value is correlated with R2\n\n");
+                    message.append("If you must, you can run logistic "
                                    "regression instead by setting the "
                                    "--logit-perm flag\n\n");
                     reporter.report(message);
@@ -217,7 +204,6 @@ private:
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
     std::vector<double> m_best_sample_score;
-    std::vector<size_t> m_sample_index;
     std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
@@ -234,14 +220,14 @@ private:
         size_t rank;
     };
 
-    static Eigen::MatrixXd m_independent_variables;
+    // Global Stuff (For threading)
+    static Eigen::MatrixXd g_independent_variables;
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
-    static std::vector<Eigen::MatrixXd> g_permuted_pheno;
+    static std::vector<double> g_permuted_pheno;
     static Eigen::VectorXd g_pre_se_calulated;
-
-
+    // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
@@ -265,6 +251,25 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
+
+    void join_all_threads(pthread_t* threads, uint32_t ctp1)
+    {
+        if (ctp1 == 0) {
+            return;
+        }
+#ifdef _WIN32
+        WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
+        for (uint32_t uii = 0; uii < ctp1; ++uii) {
+            CloseHandle(threads[uii]);
+        }
+#else
+        for (uint32_t uii = 0; uii < ctp1; uii++) {
+            pthread_join(threads[uii], nullptr);
+        }
+#endif
+    }
+
+    void gen_perm_memory(const size_t sample_ct, Reporter& reporter);
 };
 
 #endif // PRSICE_H
