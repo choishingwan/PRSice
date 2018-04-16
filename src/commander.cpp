@@ -107,7 +107,9 @@ Commander::Commander()
 
     prset.gtf = "";
     prset.msigdb = "";
+    prset.background = "";
     prset.perform_prset = false;
+    prset.set_perm = 10000;
 
     prslice.size = -1;
     prslice.provided = false;
@@ -169,6 +171,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         // long flags, need to work on them
         {"A1", required_argument, NULL, 0},
         {"A2", required_argument, NULL, 0},
+        {"background", required_argument, NULL, 0},
         {"bar-levels", required_argument, NULL, 0},
         {"binary-target", required_argument, NULL, 0},
         {"bp", required_argument, NULL, 0},
@@ -202,6 +205,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"remove", required_argument, NULL, 0},
         {"score", required_argument, NULL, 0},
         {"se", required_argument, NULL, 0},
+        {"set-perm", required_argument, NULL, 0},
         {"snp", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
@@ -386,6 +390,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, dummy, command,
                            error_messages);
+            else if(command.compare("background")==0)
+            	set_string(optarg, message_store, prset.background, dummy, command, error_messages);
+            else if(command.compare("set-perm")==0)
+            	set_numeric<int>(optarg, message_store, error_messages, prset.set_perm, dummy, error, command);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
@@ -1789,6 +1797,11 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
         prset.feature.push_back("protein_coding");
         prset.feature.push_back("CDS");
         message["feature"] = "exon,gene,protein_coding,CDS";
+    }
+    // don't check file exist here?
+    if(prset.set_perm <= 0){
+    	error = true;
+    	error_message.append("Error: Negative number of set permutation provided!");
     }
 }
 

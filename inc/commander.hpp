@@ -167,7 +167,8 @@ public:
     std::vector<std::string> feature() const { return prset.feature; };
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
-
+    std::string background() const { return prset.background; };
+    int set_perm() const { return prset.set_perm; };
     // prslice
     bool perform_prslice() const { return prslice.provided; };
     int prslice_size() const { return prslice.size; };
@@ -316,6 +317,8 @@ private:
         std::vector<std::string> feature;
         std::string gtf;
         std::string msigdb;
+        std::string background;
+        int set_perm;
         bool perform_prset;
     } prset;
 
