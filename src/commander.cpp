@@ -110,6 +110,8 @@ Commander::Commander()
     prset.background = "";
     prset.perform_prset = false;
     prset.set_perm = 10000;
+    prset.window_5 = 0;
+    prset.window_3 = 0;
 
     prslice.size = -1;
     prslice.provided = false;
@@ -209,6 +211,8 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"snp", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
+        {"wind-5", required_argument, NULL, 0},
+        {"wind-3", required_argument, NULL, 0},
         {NULL, 0, 0, 0}};
     return process(argc, argv, optString, longOpts, reporter);
 }
@@ -397,6 +401,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
+            else if(command.compare("wind-5")==0)
+            	set_numeric<int>(optarg, message_store, error_messages, prset.window_5, dummy, error, command);
+            else if(command.compare("wind-3")==0)
+            	set_numeric<int>(optarg, message_store, error_messages, prset.window_3, dummy, error, command);
             else
             {
                 std::string er = "Error: Undefined operator: " + command

@@ -172,7 +172,8 @@ public:
     // prslice
     bool perform_prslice() const { return prslice.provided; };
     int prslice_size() const { return prslice.size; };
-
+    int window_5() const { return prset.window_5; };
+    int window_3() const { return prset.window_3; };
     // target
     std::string target_name() const { return target.name; };
     std::string target_type() const { return target.type; };
@@ -319,6 +320,8 @@ private:
         std::string msigdb;
         std::string background;
         int set_perm;
+        int window_5;
+        int window_3;
         bool perform_prset;
     } prset;
 

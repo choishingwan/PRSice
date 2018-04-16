@@ -41,10 +41,10 @@ class Region
 {
 public:
     Region(std::vector<std::string> feature,
-           const std::unordered_map<std::string, int>& chr_order);
+           const std::unordered_map<std::string, int>& chr_order, const int window_5, const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
-             const std::vector<std::string>& bed, const std::string& out);
+             const std::vector<std::string>& bed, const std::string& out, const std::string &background, Reporter &reporter);
     void reset()
     {
         m_snp_check_index = std::vector<size_t>(m_region_name.size());
@@ -96,9 +96,13 @@ private:
     std::vector<size_t> m_snp_check_index;
     // the number of SNPs from the base+target that falls into the region
     std::vector<int> m_region_snp_count;
+    int m_5prime = 0;
+    int m_3prime = 0;
 
     bool in_feature(std::string in) const
     {
+    	// number of feature should be small enough such that
+    	// iterating the vector should be alright?
         for (auto& feature : m_gtf_feature) {
             if (in.compare(feature) == 0) return true;
         }
@@ -106,18 +110,21 @@ private:
     }
 
 
-    void process_bed(const std::vector<std::string>& bed);
+    void process_bed(const std::vector<std::string>& bed, Reporter & reporter);
 
     std::unordered_map<std::string, region_bound> process_gtf(
         const std::string& gtf,
         std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-        const std::string& out_prefix);
-
+        const std::string& out_prefix,
+		Reporter &reporter);
+    std::vector<Region::region_bound> solve_overlap(std::vector<Region::region_bound> &current_region);
     void process_msigdb(
         const std::string& msigdb,
         const std::unordered_map<std::string, region_bound>& gtf_info,
         const std::unordered_map<std::string, std::set<std::string>>&
-            id_to_name);
+            id_to_name,
+			Reporter &reporter);
+    void generate_background(const std::unordered_map<std::string, region_bound> &gtf_info, const size_t num_bed_region, Reporter &reporter);
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */

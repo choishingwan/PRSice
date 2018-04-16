@@ -77,11 +77,11 @@ int main(int argc, char* argv[])
         }
         // TODO: Revamp Region to make it suitable for prslice too
         Region region =
-            Region(commander.feature(), target_file->get_chr_order());
+            Region(commander.feature(), target_file->get_chr_order(), commander.window_5(), commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
-                       commander.out());
+                       commander.out(), commander.background(), reporter);
         }
         catch (const std::runtime_error& error)
         {
