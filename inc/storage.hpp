@@ -114,6 +114,15 @@ enum class GTF
     ATTRIBUTE
 };
 
+enum class BED
+{
+	CHR,
+	START,
+	END,
+	NAME,
+	SCORE,
+	STRAND
+};
 enum class MODEL
 {
     ADDITIVE,
@@ -153,6 +162,10 @@ struct enumeration_traits<FAM> : enumeration_trait_indexing
 };
 template <>
 struct enumeration_traits<BIM> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<BED> : enumeration_trait_indexing
 {
 };
 #endif /* PRSICE_INC_STORAGE_HPP_ */

@@ -38,6 +38,10 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
 	    m_region_snp_count = std::vector<int>(m_region_name.size());
 		return;
 	}
+	if((m_5prime >0 ||  m_3prime > 0) && (m_5prime!=m_3prime)){
+		std::string message = "Warning: We will assume a positive strand for any features with unspecific strand information e.g. \".\"";
+		reporter.report(message);
+	}
     process_bed(bed, reporter);
     m_out_prefix = out;
     size_t num_bed_region = m_region_list.size();
@@ -64,6 +68,9 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     }
     if(background.empty()){
     	generate_background(gtf_boundary, num_bed_region, reporter);
+    }
+    else{
+    	// what is a good way to determine the input type for background?
     }
     m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
@@ -117,10 +124,7 @@ std::vector<Region::region_bound> Region::solve_overlap(std::vector<Region::regi
 void Region::process_bed(const std::vector<std::string>& bed, Reporter &reporter)
 {
 	// TODO: Allow user define name by modifying their input (e.g. Bed:Name
-	if(bed.size() > 0 && (m_5prime >0 ||  m_3prime > 0) && (m_5prime!=m_3prime)){
-		std::string message = "Warning: As bed file does not come with strand information, we will assume all regions are on the positive strand, e.g. start coordinates always on the 5' end";
-		reporter.report(message);
-	}
+	bool print_warning = false;
     for (auto& b : bed) {
     	std::string message = "Reading: "+b;
     	reporter.report(message);
@@ -151,12 +155,17 @@ void Region::process_bed(const std::vector<std::string>& bed, Reporter &reporter
             	reporter.report(message);
             	break;
             }
+            if(token.size() <= +BED::STRAND && (m_5prime >0 ||  m_3prime > 0) && (m_5prime!=m_3prime) && !print_warning){
+            		std::string message = "Warning: You bed file does not contain strand information, we will assume all regions are on the positive strand, e.g. start coordinates always on the 5' end";
+            		reporter.report(message);
+            		print_warning = true;
+            }
             int temp = 0;
             size_t start = 0, end = 0;
             message="";
             try
             {
-                temp = misc::convert<int>(token[1]);
+                temp = misc::convert<int>(token[+BED::START]);
                 if (temp >= 0)
                     start = temp + 1; // That's because bed is 0 based
                 else
@@ -173,7 +182,7 @@ void Region::process_bed(const std::vector<std::string>& bed, Reporter &reporter
             }
             try
             {
-                temp = misc::convert<int>(token[2]);
+                temp = misc::convert<int>(token[+BED::END]);
                 if (temp >= 0)
                     end = temp + 1; // That's because bed is 0 based
                 else
@@ -195,13 +204,32 @@ void Region::process_bed(const std::vector<std::string>& bed, Reporter &reporter
             }
             if(error) break;
             // only include regions that falls into the chromosome of interest
-            if (m_chr_order.find(token[0]) != m_chr_order.end()) {
-
-                if(start-m_5prime<1){
-                	start = 1;
-                }
-                else start -= m_5prime;
-                end += m_3prime;
+            if (m_chr_order.find(token[+BED::CHR]) != m_chr_order.end()) {
+            	if(token.size() > +BED::STRAND){
+                    if(token[+BED::STRAND].compare("-")==0){
+                    	if(start-m_3prime <1){
+                    		start = 1;
+                    	}
+                    	else start -= m_3prime;
+                    	end+=m_5prime;
+                    }
+                    else if(token[+BED::STRAND].compare("+")==0 || token[+BED::STRAND].compare(".")==0){
+                    	if(start-m_5prime < 1){
+                    		start = 1;
+                    	}else start -=m_5prime;
+                    	end+=m_3prime;
+                    }else{
+                    	std::string error = "Error: Undefined strand information. Possibly a malform BED file: "+token[+BED::STRAND];
+                        throw std::runtime_error(error);
+                    }
+            	}
+            	else{
+					if(start-m_5prime<1){
+						start = 1;
+					}
+					else start -= m_5prime;
+					end += m_3prime;
+				}
                 region_bound cur_bound;
                 cur_bound.chr = m_chr_order[token[0]];
                 cur_bound.start = start;
@@ -234,10 +262,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
 
     std::unordered_map<std::string, Region::region_bound> result_boundary;
     if (gtf.empty()) return result_boundary; // basically return an empty map
-    if((m_5prime >0 ||  m_3prime > 0) && (m_5prime!=m_3prime)){
-    	std::string message = "Warning: We will assume a positive strand for any features with unspecific strand information e.g. \".\"";
-    	reporter.report(message);
-    }
+
     std::string line;
     size_t num_line = 0, exclude_feature = 0;
 
