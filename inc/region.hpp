@@ -125,6 +125,10 @@ private:
             id_to_name,
 			Reporter &reporter);
     void generate_background(const std::unordered_map<std::string, region_bound> &gtf_info, const size_t num_bed_region, Reporter &reporter);
+    void read_background(const std::string &background,
+            const std::unordered_map<std::string, region_bound>& gtf_info,
+            const std::unordered_map<std::string, std::set<std::string>>&
+                id_to_name, Reporter &reporter);
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */

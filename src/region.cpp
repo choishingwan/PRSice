@@ -71,6 +71,7 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     }
     else{
     	// what is a good way to determine the input type for background?
+    	read_background(background, gtf_boundary, id_to_name, reporter);
     }
     m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
@@ -519,6 +520,159 @@ void Region::generate_background(const std::unordered_map<std::string, Region::r
 		}
 	}
 	m_region_list.push_back(solve_overlap(temp_storage));
+    m_region_name.push_back("Background");
+}
+
+void Region::read_background(const std::string &background,
+        const std::unordered_map<std::string, region_bound>& gtf_info,
+        const std::unordered_map<std::string, std::set<std::string>>&
+            id_to_name, Reporter &reporter){
+    std::unordered_map<std::string, int> file_type{{"bed", 1},
+                                                   {"range", 0},
+                                                   {"gene", 2}};
+    std::vector<std::string> background_info = misc::split(background, ":");
+    if(background_info.size() != 2){
+    	std::string error = "Error: Format of --background should be <File Name>:<File Type>";
+    	throw std::runtime_error(error);
+    }
+    auto type = file_type.find(background_info[1]);
+    if(type == file_type.end()){
+    	std::string error = "Error: Undefined file type. Supported formats are bed, gene or range";
+    	throw std::runtime_error(error);
+    }
+    std::ifstream input;
+    input.open(background_info[0].c_str());
+    if(!input.is_open()){
+    	std::string error = "Error: Cannot open background file: "+background_info[0];
+    	throw std::runtime_error(error);
+    }
+    bool print_warning = false, error = false;
+    std::vector<Region::region_bound> current_bound;
+    std::string line;
+    if(type==0 || type==1){
+    	// range or bed
+        size_t num_line = 0;
+    	while(std::getline(input, line)){
+    		num_line++;
+    		misc::trim(line);
+    		if (line.empty()) continue;
+    		std::vector<std::string> token = misc::split(line);
+    		if (token.size() < 3) {
+    			std::string message = "Error: "+background_info[0]+" contain less than 3 columns, it will be ignored";
+    			throw std::runtime_error(message);
+    		}
+    		if(token.size() <= +BED::STRAND && (m_5prime >0 ||  m_3prime > 0) && (m_5prime!=m_3prime) && !print_warning){
+    			std::string message = "Warning: You bed file does not contain strand information, we will assume all regions are on the positive strand, e.g. start coordinates always on the 5' end";
+    			reporter.report(message);
+    			print_warning = true;
+    		}
+    		int temp = 0;
+    		size_t start = 0, end = 0;
+    		std::string message="";
+    		try
+    		{
+    			temp = misc::convert<int>(token[+BED::START]);
+    			if (temp >= 0)
+    				start = temp + type; // That's because bed is 0 based and range format is 1 based
+    			else
+    			{
+    				message.append("Error: Negative Start Coordinate at line "+std::to_string(num_line)+"!");
+    				error = true;
+    			}
+    		}
+    		catch (const std::runtime_error& er)
+    		{
+    			message.append("Error: Cannot convert start coordinate! (line: "+std::to_string(num_line)+")!");
+    			error = true;
+    		}
+    		try
+    		{
+    			temp = misc::convert<int>(token[+BED::END]);
+    			if (temp >= 0)
+    				end = temp + 1; // That's because bed is 0 based
+    			else
+    			{
+    				message.append("Error: Negative End Coordinate at line "+std::to_string(num_line)+"!");
+    				error = true;
+    			}
+    		}
+    		catch (const std::runtime_error& er)
+    		{
+    			message.append("Error: Cannot convert end coordinate! (line: "+std::to_string(num_line)+")!");
+    			error = true;
+    		}
+    		if(start > end){
+    			error = true;
+    			message.append("Error: Start coordinate should be smaller than end coordinate!\n");
+    			message.append("start: "+std::to_string(start)+"\n");
+    			message.append("end: "+std::to_string(end)+"\n");
+    		}
+    		if(error) break;
+    		// only include regions that falls into the chromosome of interest
+    		if (m_chr_order.find(token[+BED::CHR]) != m_chr_order.end()) {
+    			if(token.size() > +BED::STRAND){
+    				if(token[+BED::STRAND].compare("-")==0){
+    					if(start-m_3prime <1){
+    						start = 1;
+    					}
+    					else start -= m_3prime;
+    					end+=m_5prime;
+    				}
+    				else if(token[+BED::STRAND].compare("+")==0 || token[+BED::STRAND].compare(".")==0){
+    					if(start-m_5prime < 1){
+    						start = 1;
+    					}else start -=m_5prime;
+    					end+=m_3prime;
+    				}else{
+    					std::string error = "Error: Undefined strand information. Possibly a malform BED file: "+token[+BED::STRAND];
+    					throw std::runtime_error(error);
+    				}
+    			}
+    			else{
+    				if(start-m_5prime<1){
+    					start = 1;
+    				}
+    				else start -= m_5prime;
+    				end += m_3prime;
+    			}
+    			region_bound cur_bound;
+    			cur_bound.chr = m_chr_order[token[0]];
+    			cur_bound.start = start;
+    			cur_bound.end = end;
+    			// this should help us to avoid problem
+    			current_bound.push_back(cur_bound);
+    		}
+    	}
+    }else{
+    	// gene list format
+
+        while (std::getline(input, line)) {
+            misc::trim(line);
+            if (line.empty()) continue;
+            if (gtf_info.find(line) == gtf_info.end()) {
+            	// we cannot find the gene name in the gtf information (which uses gene ID)
+            	if (id_to_name.find(line) != id_to_name.end()) {
+            		// we found a way to convert the gene name to gene id
+            		auto& name = id_to_name.at(line);
+            		// problem is, one gene name can correspond to multiple gene id
+            		// in that case, wee will take all of them
+            		for (auto&& translate : name) {
+            			if (gtf_info.find(translate) != gtf_info.end())
+            			{
+            				current_bound.push_back(
+            						gtf_info.at(translate));
+            			}
+            		}
+            	}
+            }
+            else
+            {
+            	current_bound.push_back(gtf_info.at(line));
+            }
+        }
+    }
+    input.close();
+	m_region_list.push_back(solve_overlap(current_bound));
     m_region_name.push_back("Background");
 }
 
