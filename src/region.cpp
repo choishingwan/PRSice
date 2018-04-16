@@ -34,6 +34,8 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
                  const std::vector<std::string>& bed, const std::string& out, const std::string &background, Reporter &reporter)
 {
 	if(gtf.empty() && bed.size()==0){
+	    m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
+	    m_region_snp_count = std::vector<int>(m_region_name.size());
 		return;
 	}
     process_bed(bed, reporter);
