@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
                     if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
                     }
-                    for (size_t i_region = 0; i_region < region.size();
+                    for (size_t i_region = 0; i_region < region.size()-(region.size()>1?1:0);
                          ++i_region)
                     {
                         prsice.run_prsice(commander, region.get_name(i_region),
@@ -199,6 +199,8 @@ int main(int argc, char* argv[])
                         fprintf(stderr, "\rProcessing %03.2f%% of sets\n",
                                 100.0);
                     }
+                    // perform permutation here
+
                 }
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
@@ -225,7 +227,7 @@ int main(int argc, char* argv[])
         }
         delete target_file;
     }
-    catch (const std::bad_alloc)
+    catch (const std::bad_alloc &er)
     {
         std::string error_message = "Error: Bad Allocation exception detected. "
                                     "This is likely due to insufficient memory "

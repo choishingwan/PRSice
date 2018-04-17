@@ -22,7 +22,6 @@ Region::Region(std::vector<std::string> feature,
 			   const int window_3)
     : m_chr_order(chr_order), m_5prime(window_5), m_3prime(window_3)
 {
-
     // Make the base region which includes everything
     m_duplicated_names.insert("Base");
     m_region_name.push_back("Base");
@@ -610,15 +609,16 @@ void Region::read_background(const std::string &background,
     		if(error) break;
     		// only include regions that falls into the chromosome of interest
     		if (m_chr_order.find(token[+BED::CHR]) != m_chr_order.end()) {
-    			if(token.size() > +BED::STRAND){
-    				if(token[+BED::STRAND].compare("-")==0){
+    			int strand_index = (type==1)?(+BED::STRAND) : (+BED::END+1);
+    			if(token.size() > strand_index){
+    				if(token[strand_index].compare("-")==0){
     					if(start-m_3prime <1){
     						start = 1;
     					}
     					else start -= m_3prime;
     					end+=m_5prime;
     				}
-    				else if(token[+BED::STRAND].compare("+")==0 || token[+BED::STRAND].compare(".")==0){
+    				else if(token[strand_index].compare("+")==0 || token[strand_index].compare(".")==0){
     					if(start-m_5prime < 1){
     						start = 1;
     					}else start -=m_5prime;
