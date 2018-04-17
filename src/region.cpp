@@ -534,7 +534,7 @@ void Region::read_background(const std::string &background,
     	std::string error = "Error: Format of --background should be <File Name>:<File Type>";
     	throw std::runtime_error(error);
     }
-    auto type = file_type.find(background_info[1]);
+    auto &&type = file_type.find(background_info[1]);
     if(type == file_type.end()){
     	std::string error = "Error: Undefined file type. Supported formats are bed, gene or range";
     	throw std::runtime_error(error);
@@ -548,7 +548,7 @@ void Region::read_background(const std::string &background,
     bool print_warning = false, error = false;
     std::vector<Region::region_bound> current_bound;
     std::string line;
-    if(type==0 || type==1){
+    if(type->second ==0 || type->second ==1){
     	// range or bed
         size_t num_line = 0;
     	while(std::getline(input, line)){
@@ -572,7 +572,7 @@ void Region::read_background(const std::string &background,
     		{
     			temp = misc::convert<int>(token[+BED::START]);
     			if (temp >= 0)
-    				start = temp + type; // That's because bed is 0 based and range format is 1 based
+    				start = temp + type->second; // That's because bed is 0 based and range format is 1 based
     			else
     			{
     				message.append("Error: Negative Start Coordinate at line "+std::to_string(num_line)+"!");
@@ -609,7 +609,7 @@ void Region::read_background(const std::string &background,
     		if(error) break;
     		// only include regions that falls into the chromosome of interest
     		if (m_chr_order.find(token[+BED::CHR]) != m_chr_order.end()) {
-    			int strand_index = (type==1)?(+BED::STRAND) : (+BED::END+1);
+    			int strand_index = (type->second==1)?(+BED::STRAND) : (+BED::END+1);
     			if(token.size() > strand_index){
     				if(token[strand_index].compare("-")==0){
     					if(start-m_3prime <1){
