@@ -463,7 +463,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
             }
-            else if (ambiguous(alleles.front(), alleles.back()))
+            else if (!exclude_snp && ambiguous(alleles.front(), alleles.back()))
             {
                 m_num_ambig++;
                 if (!m_keep_ambig) exclude_snp = true;

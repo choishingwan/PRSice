@@ -167,6 +167,7 @@ int main(int argc, char* argv[])
                     // initialize the phenotype & independent variable matrix
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
+                    prsice.prep_output(commander, *target_file, region.names(), i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
                     if (region.size() > 1) {

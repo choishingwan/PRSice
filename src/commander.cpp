@@ -336,10 +336,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                     reference_snp_filtering.hard_threshold,
                                     dummy, error, command);
             // Long opts for p_thresholds
-            else if (command.compare("bar-levels") == 0)
+            else if (command.compare("bar-levels") == 0){
                 load_numeric_vector<double>(
                     optarg, message_store, error_messages,
                     p_thresholds.barlevel, error, command);
+                p_thresholds.set_use_thresholds = true;
+            }
             // Long opts for prs_calculation
             else if (command.compare("model") == 0)
                 set_model(optarg, message_store, error_messages, error);
@@ -1831,7 +1833,6 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
         if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     }
-    if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     if (prset.perform_prset) {
         if (!p_thresholds.set_use_thresholds && !p_thresholds.fastscore) {
             // if user use fastscore or provided any threshold, then we will
@@ -1839,7 +1840,12 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
             message["bar-levels"] = 1;
             p_thresholds.fastscore = true;
             p_thresholds.barlevel = {1};
+        }else if(p_thresholds.barlevel.size()==0){
+        	// return to default of PRSice otherwise
+            p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+            if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
         }
+
     }
     else if (!p_thresholds.fastscore)
     {
@@ -1863,6 +1869,7 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         message["lower"] = std::to_string(p_thresholds.lower);
         message["upper"] = std::to_string(p_thresholds.upper);
     }
+    if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     std::sort(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end());
     p_thresholds.barlevel.erase(
         std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
