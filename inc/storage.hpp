@@ -117,12 +117,12 @@ enum class GTF
 
 enum class BED
 {
-	CHR,
-	START,
-	END,
-	NAME,
-	SCORE,
-	STRAND
+    CHR,
+    START,
+    END,
+    NAME,
+    SCORE,
+    STRAND
 };
 enum class MODEL
 {

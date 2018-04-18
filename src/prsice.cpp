@@ -793,8 +793,8 @@ void PRSice::run_prsice(const Commander& c_commander,
             all_out_name.append("." + pheno_info.name[pheno_index]);
         }
         all_out_name.append(".all.score");
-        all_out.open(all_out_name.c_str(), std::fstream::out | std::fstream::in
-                                               | std::fstream::ate);
+        all_out.open(all_out_name.c_str(),
+                     std::fstream::out | std::fstream::in | std::fstream::ate);
         if (!all_out.is_open()) {
             std::string error_message =
                 "Cannot open file " + all_out_name + " for write";
@@ -823,10 +823,12 @@ void PRSice::run_prsice(const Commander& c_commander,
 
         if (print_all_scores) {
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
-                double score =
-                    target.calculate_score(m_score, sample);
-                size_t loc = m_all_file.header_length+sample*m_all_file.line_width+
-                		m_all_file.skip_column_length+m_all_file.processed_threshold+m_all_file.processed_threshold*m_numeric_width;
+                double score = target.calculate_score(m_score, sample);
+                size_t loc = m_all_file.header_length
+                             + sample * m_all_file.line_width
+                             + m_all_file.skip_column_length
+                             + m_all_file.processed_threshold
+                             + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
                 all_out << std::setprecision(m_precision) << score;
             }
@@ -849,53 +851,57 @@ void PRSice::run_prsice(const Commander& c_commander,
     if (all_out.is_open()) all_out.close();
     if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
-    if(!no_regress){
-    	print_best(target, pheno_index, c_commander);
-    	if(m_prset){
-    		// if it is prset based permutation, we wouldn't have
-    		// reserved the memory and due to the special usaage,
-    		// we'd like to have a separate memory pool for each thread.
-    		// That can be done by having each thread allocating their
-    		// own memory, though that might be more complicated than I'd
-    		// like as we might also need to take into account the number
-    		// of situation that can be done in one go
-    	}
+    if (!no_regress) {
+        print_best(target, pheno_index, c_commander);
+        if (m_prset) {
+            // if it is prset based permutation, we wouldn't have
+            // reserved the memory and due to the special usaage,
+            // we'd like to have a separate memory pool for each thread.
+            // That can be done by having each thread allocating their
+            // own memory, though that might be more complicated than I'd
+            // like as we might also need to take into account the number
+            // of situation that can be done in one go
+        }
     }
-
-
 }
 
-void PRSice::print_best(Genotype &target, const size_t pheno_index, const Commander &commander){
+void PRSice::print_best(Genotype& target, const size_t pheno_index,
+                        const Commander& commander)
+{
 
-	std::string pheno_name =
-	        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
-	std::string output_prefix = commander.out();
+    std::string pheno_name =
+        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
+    std::string output_prefix = commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     std::string out_best = output_prefix + ".best";
     std::fstream best_out(out_best.c_str(), std::fstream::out | std::fstream::in
-            | std::fstream::ate);
-	auto&& best_info = m_prs_results[m_best_index];
-	int best_snp_size = best_info.num_snp;
-	if (best_snp_size == 0) {
-		fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
-		fprintf(stderr, "       Cannot output the best PRS score\n");
-	}
-	else
-	{
-		for (size_t sample = 0; sample < target.num_sample(); ++sample) {
-			// samples that are extracted are ignored
-			// sample excluded will not be output here
-			std::string has_pheno =
-					target.sample_in_regression(sample) ? "Yes" : "No";
+                                                | std::fstream::ate);
+    auto&& best_info = m_prs_results[m_best_index];
+    int best_snp_size = best_info.num_snp;
+    if (best_snp_size == 0) {
+        fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
+        fprintf(stderr, "       Cannot output the best PRS score\n");
+    }
+    else
+    {
+        for (size_t sample = 0; sample < target.num_sample(); ++sample) {
+            // samples that are extracted are ignored
+            // sample excluded will not be output here
+            std::string has_pheno =
+                target.sample_in_regression(sample) ? "Yes" : "No";
 
-            size_t loc = m_best_file.header_length+sample*m_best_file.line_width+
-            		m_best_file.skip_column_length+m_best_file.processed_threshold+m_best_file.processed_threshold*m_numeric_width;
+            size_t loc = m_best_file.header_length
+                         + sample * m_best_file.line_width
+                         + m_best_file.skip_column_length
+                         + m_best_file.processed_threshold
+                         + m_best_file.processed_threshold * m_numeric_width;
             best_out.seekp(loc);
-            best_out << std::setprecision(m_precision) <<  m_best_sample_score[sample];
-		}
-	}
-	best_out.close();
-	m_best_file.processed_threshold++;
+            best_out << std::setprecision(m_precision)
+                     << m_best_sample_score[sample];
+        }
+    }
+    best_out.close();
+    m_best_file.processed_threshold++;
 }
 void PRSice::regress_score(Genotype& target, const double threshold,
                            size_t thread, const size_t pheno_index,
@@ -1175,12 +1181,15 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
 }
 
 
-void PRSice::prep_output(const Commander& c_commander, Genotype &target, std::vector<std::string> region_name, const size_t pheno_index){
-	// As R has a default precision of 7, we will go a bit
-	// higher to ensure we use up all precision
-	std::string pheno_name =
-	        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
-	std::string output_prefix = c_commander.out();
+void PRSice::prep_output(const Commander& c_commander, Genotype& target,
+                         std::vector<std::string> region_name,
+                         const size_t pheno_index)
+{
+    // As R has a default precision of 7, we will go a bit
+    // higher to ensure we use up all precision
+    std::string pheno_name =
+        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
+    std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     const bool perm = (c_commander.permutation() != 0);
     std::string output_name = output_prefix;
@@ -1205,78 +1214,87 @@ void PRSice::prep_output(const Commander& c_commander, Genotype &target, std::ve
     // .best output
     best_out.open(out_best.c_str());
     if (!best_out.is_open()) {
-    	std::string error_message =
-    			"Error: Cannot open file: " + out_best + " to write";
-    	throw std::runtime_error(error_message);
+        std::string error_message =
+            "Error: Cannot open file: " + out_best + " to write";
+        throw std::runtime_error(error_message);
     }
     std::string header_line = "FID IID In_Regression";
     // if not preset, then it is PRS,otherwise, it will be the
-    if(!m_prset) header_line.append(" PRS");
-    else{
-    	for(size_t i = 0; i < region_name.size()-1; ++i){
-    		header_line.append(" "+region_name[i]);
-    	}
+    if (!m_prset)
+        header_line.append(" PRS");
+    else
+    {
+        for (size_t i = 0; i < region_name.size() - 1; ++i) {
+            header_line.append(" " + region_name[i]);
+        }
     }
     best_out << header_line << std::endl;
-    m_best_file.header_length = header_line.length()+1;
+    m_best_file.header_length = header_line.length() + 1;
     m_best_file.processed_threshold = 0;
-    // each numeric output took 12 spaces, then for each output, there is one space next to each
-    m_best_file.line_width = region_name.size()*m_numeric_width + region_name.size()
-    		+ m_max_fid_length +1+ m_max_iid_length+1;
-    m_best_file.skip_column_length = m_max_fid_length+m_max_iid_length+3+3;
+    // each numeric output took 12 spaces, then for each output, there is one
+    // space next to each
+    m_best_file.line_width = region_name.size() * m_numeric_width
+                             + region_name.size() + m_max_fid_length + 1
+                             + m_max_iid_length + 1;
+    m_best_file.skip_column_length =
+        m_max_fid_length + m_max_iid_length + 3 + 3;
 
 
     // also handle all score here
     const bool all_scores = c_commander.all_scores();
-    if(all_scores){
-    	all_out.open(out_all.c_str());
-    	if (!all_out.is_open()) {
-    		std::string error_message =
-    				"Cannot open file " + out_all + " for write";
-    		throw std::runtime_error(error_message);
-    	}
-    	std::vector<double> avail_thresholds = target.get_thresholds();
-    	std::sort(avail_thresholds.begin(), avail_thresholds.end());
-    	size_t num_thresholds = avail_thresholds.size();
-    	header_line = "FID IID";
-    	if(!m_prset){
+    if (all_scores) {
+        all_out.open(out_all.c_str());
+        if (!all_out.is_open()) {
+            std::string error_message =
+                "Cannot open file " + out_all + " for write";
+            throw std::runtime_error(error_message);
+        }
+        std::vector<double> avail_thresholds = target.get_thresholds();
+        std::sort(avail_thresholds.begin(), avail_thresholds.end());
+        size_t num_thresholds = avail_thresholds.size();
+        header_line = "FID IID";
+        if (!m_prset) {
             for (auto& thres : avail_thresholds) {
-            	header_line.append(" " + std::to_string(thres));
+                header_line.append(" " + std::to_string(thres));
             }
-    	}else{
-        	for(size_t i = 0; i < region_name.size()-1; ++i){
-        		for (auto& thres : avail_thresholds) {
-            		header_line.append(" " + region_name[i]+"_"+std::to_string(thres));
-            	}
+        }
+        else
+        {
+            for (size_t i = 0; i < region_name.size() - 1; ++i) {
+                for (auto& thres : avail_thresholds) {
+                    header_line.append(" " + region_name[i] + "_"
+                                       + std::to_string(thres));
+                }
             }
-    	}
-    	m_all_file.header_length = header_line.length()+1;
-    	m_all_file.processed_threshold = 0;
-    	m_all_file.line_width = num_thresholds*region_name.size()*m_numeric_width+
-    			num_thresholds*region_name.size()+
-				m_max_fid_length+1+m_max_iid_length+1;
-    	m_all_file.skip_column_length = m_max_fid_length+m_max_iid_length+2;
-    	all_out << header_line << std::endl;
+        }
+        m_all_file.header_length = header_line.length() + 1;
+        m_all_file.processed_threshold = 0;
+        m_all_file.line_width =
+            num_thresholds * region_name.size() * m_numeric_width
+            + num_thresholds * region_name.size() + m_max_fid_length + 1
+            + m_max_iid_length + 1;
+        m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
+        all_out << header_line << std::endl;
     }
 
     // output sample IDs
     size_t num_samples_included = target.num_sample();
     for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample) {
-    	std::string name =
-    			target.fid(i_sample) + " " + target.iid(i_sample);
-    	std::string best_line = name+" "+((target.sample_in_regression(i_sample))?"Yes":"No");
-    	best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
-                       << std::left << best_line << std::endl;
-    	if(all_scores){
-        	all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
-                           << std::left << name << std::endl;
-    	}
+        std::string name = target.fid(i_sample) + " " + target.iid(i_sample);
+        std::string best_line =
+            name + " "
+            + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+        best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
+                 << std::left << best_line << std::endl;
+        if (all_scores) {
+            all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
+                    << std::left << name << std::endl;
+        }
     }
     m_all_file.line_width++;
-    m_best_file.line_width++;// now account for new line
+    m_best_file.line_width++; // now account for new line
     best_out.close();
-    if(all_out.is_open()) all_out.close();
-
+    if (all_out.is_open()) all_out.close();
 }
 void PRSice::output(const Commander& c_commander, const Region& region,
                     const size_t pheno_index, const size_t region_index,
@@ -1359,7 +1377,8 @@ void PRSice::output(const Commander& c_commander, const Region& region,
             null = top * null / (1 + bottom * null);
         }
         double r2 = full - null;
-        prsice_out << region.get_name(region_index) << "\t" << m_prs_results[i].threshold << "\t" << r2 << "\t"
+        prsice_out << region.get_name(region_index) << "\t"
+                   << m_prs_results[i].threshold << "\t" << r2 << "\t"
                    << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
                    << "\t" << m_prs_results[i].se << "\t"
                    << m_prs_results[i].num_snp;

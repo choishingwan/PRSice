@@ -305,20 +305,21 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         assert(actual_number_of_samples == context.number_of_samples);
         // we don't need to check the sample name when we are doing the LD
         // as we don't store any
-        if(!m_is_ref){
-        	for (size_t i = 0; i < actual_number_of_samples; ++i) {
-				genfile::bgen::read_length_followed_by_data(
-					bgen_file, &identifier_size, &identifier);
-				if (!bgen_file)
-					throw std::runtime_error("Error: Problem reading bgen file!");
-				bytes_read += sizeof(identifier_size) + identifier_size;
-				// Only need to use IID as BGEN doesn't have the FID information
-				if (m_sample_names[i].IID.compare(identifier) != 0) {
-					throw std::runtime_error("Error: Sample mismatch "
-											 "between bgen and phenotype "
-											 "file!");
-				}
-			}
+        if (!m_is_ref) {
+            for (size_t i = 0; i < actual_number_of_samples; ++i) {
+                genfile::bgen::read_length_followed_by_data(
+                    bgen_file, &identifier_size, &identifier);
+                if (!bgen_file)
+                    throw std::runtime_error(
+                        "Error: Problem reading bgen file!");
+                bytes_read += sizeof(identifier_size) + identifier_size;
+                // Only need to use IID as BGEN doesn't have the FID information
+                if (m_sample_names[i].IID.compare(identifier) != 0) {
+                    throw std::runtime_error("Error: Sample mismatch "
+                                             "between bgen and phenotype "
+                                             "file!");
+                }
+            }
         }
         assert(bytes_read == sample_block_size);
     }
