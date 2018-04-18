@@ -102,6 +102,14 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             throw std::runtime_error(error_message);
         }
         Sample cur_sample;
+
+        if (token[+FAM::FID].length() > MAX_ID_SLEN
+            || token[+FAM::IID].length() > MAX_ID_SLEN)
+        {
+            throw std::runtime_error(
+                std::string("Error: Sample ID: " + token[+FAM::IID]
+                            + " is pathologically long"));
+        }
         cur_sample.FID = token[+FAM::FID];
         cur_sample.IID = token[+FAM::IID];
         std::string id = (m_ignore_fid)

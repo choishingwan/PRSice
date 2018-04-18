@@ -77,7 +77,8 @@ int main(int argc, char* argv[])
         }
         // TODO: Revamp Region to make it suitable for prslice too
         Region region =
-            Region(commander.feature(), target_file->get_chr_order(), commander.window_5(), commander.window_3());
+            Region(commander.feature(), target_file->get_chr_order(),
+                   commander.window_5(), commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
@@ -167,13 +168,15 @@ int main(int argc, char* argv[])
                     // initialize the phenotype & independent variable matrix
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
-                    prsice.prep_output(commander, *target_file, region.names(), i_pheno);
+                    prsice.prep_output(commander, *target_file, region.names(),
+                                       i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
                     if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
                     }
-                    for (size_t i_region = 0; i_region < region.size()-(region.size()>1?1:0);
+                    for (size_t i_region = 0;
+                         i_region < region.size() - (region.size() > 1 ? 1 : 0);
                          ++i_region)
                     {
                         prsice.run_prsice(commander, region.get_name(i_region),
@@ -200,7 +203,6 @@ int main(int argc, char* argv[])
                         fprintf(stderr, "\rProcessing %03.2f%% of sets\n",
                                 100.0);
                     }
-
                 }
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
@@ -227,7 +229,7 @@ int main(int argc, char* argv[])
         }
         delete target_file;
     }
-    catch (const std::bad_alloc &er)
+    catch (const std::bad_alloc& er)
     {
         std::string error_message = "Error: Bad Allocation exception detected. "
                                     "This is likely due to insufficient memory "

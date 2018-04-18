@@ -41,10 +41,12 @@ class Region
 {
 public:
     Region(std::vector<std::string> feature,
-           const std::unordered_map<std::string, int>& chr_order, const int window_5, const int window_3);
+           const std::unordered_map<std::string, int>& chr_order,
+           const int window_5, const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
-             const std::vector<std::string>& bed, const std::string& out, const std::string &background, Reporter &reporter);
+             const std::vector<std::string>& bed, const std::string& out,
+             const std::string& background, Reporter& reporter);
     void reset()
     {
         m_snp_check_index = std::vector<size_t>(m_region_name.size());
@@ -101,8 +103,8 @@ private:
 
     bool in_feature(std::string in) const
     {
-    	// number of feature should be small enough such that
-    	// iterating the vector should be alright?
+        // number of feature should be small enough such that
+        // iterating the vector should be alright?
         for (auto& feature : m_gtf_feature) {
             if (in.compare(feature) == 0) return true;
         }
@@ -110,25 +112,29 @@ private:
     }
 
 
-    void process_bed(const std::vector<std::string>& bed, Reporter & reporter);
+    void process_bed(const std::vector<std::string>& bed, Reporter& reporter);
 
     std::unordered_map<std::string, region_bound> process_gtf(
         const std::string& gtf,
         std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-        const std::string& out_prefix,
-		Reporter &reporter);
-    std::vector<Region::region_bound> solve_overlap(std::vector<Region::region_bound> &current_region);
+        const std::string& out_prefix, Reporter& reporter);
+    std::vector<Region::region_bound>
+    solve_overlap(std::vector<Region::region_bound>& current_region);
     void process_msigdb(
         const std::string& msigdb,
         const std::unordered_map<std::string, region_bound>& gtf_info,
         const std::unordered_map<std::string, std::set<std::string>>&
             id_to_name,
-			Reporter &reporter);
-    void generate_background(const std::unordered_map<std::string, region_bound> &gtf_info, const size_t num_bed_region, Reporter &reporter);
-    void read_background(const std::string &background,
-            const std::unordered_map<std::string, region_bound>& gtf_info,
-            const std::unordered_map<std::string, std::set<std::string>>&
-                id_to_name, Reporter &reporter);
+        Reporter& reporter);
+    void generate_background(
+        const std::unordered_map<std::string, region_bound>& gtf_info,
+        const size_t num_bed_region, Reporter& reporter);
+    void read_background(
+        const std::string& background,
+        const std::unordered_map<std::string, region_bound>& gtf_info,
+        const std::unordered_map<std::string, std::set<std::string>>&
+            id_to_name,
+        Reporter& reporter);
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */

@@ -336,7 +336,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                     reference_snp_filtering.hard_threshold,
                                     dummy, error, command);
             // Long opts for p_thresholds
-            else if (command.compare("bar-levels") == 0){
+            else if (command.compare("bar-levels") == 0)
+            {
                 load_numeric_vector<double>(
                     optarg, message_store, error_messages,
                     p_thresholds.barlevel, error, command);
@@ -396,17 +397,21 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, dummy, command,
                            error_messages);
-            else if(command.compare("background")==0)
-            	set_string(optarg, message_store, prset.background, dummy, command, error_messages);
-            else if(command.compare("set-perm")==0)
-            	set_numeric<int>(optarg, message_store, error_messages, prset.set_perm, dummy, error, command);
+            else if (command.compare("background") == 0)
+                set_string(optarg, message_store, prset.background, dummy,
+                           command, error_messages);
+            else if (command.compare("set-perm") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.set_perm, dummy, error, command);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
-            else if(command.compare("wind-5")==0)
-            	set_numeric<int>(optarg, message_store, error_messages, prset.window_5, dummy, error, command);
-            else if(command.compare("wind-3")==0)
-            	set_numeric<int>(optarg, message_store, error_messages, prset.window_3, dummy, error, command);
+            else if (command.compare("wind-5") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_5, dummy, error, command);
+            else if (command.compare("wind-3") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_3, dummy, error, command);
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -1809,13 +1814,16 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
         message["feature"] = "exon,gene,protein_coding,CDS";
     }
     // don't check file exist here?
-    if(prset.set_perm <= 0){
-    	error = true;
-    	error_message.append("Error: Negative number of set permutation provided!");
+    if (prset.set_perm <= 0) {
+        error = true;
+        error_message.append(
+            "Error: Negative number of set permutation provided!");
     }
-    if(prset.set_perm != 0 && misc.permutation >=0){
-    	error = true;
-    	error_message.append("Error: Currently only support either set-base permutation (for competitive p-value) or PRSice base permutation (--perm)");
+    if (prset.set_perm != 0 && misc.permutation >= 0) {
+        error = true;
+        error_message.append("Error: Currently only support either set-base "
+                             "permutation (for competitive p-value) or PRSice "
+                             "base permutation (--perm)");
     }
 }
 
@@ -1844,12 +1852,13 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
             message["bar-levels"] = 1;
             p_thresholds.fastscore = true;
             p_thresholds.barlevel = {1};
-        }else if(p_thresholds.barlevel.size()==0){
-        	// return to default of PRSice otherwise
+        }
+        else if (p_thresholds.barlevel.size() == 0)
+        {
+            // return to default of PRSice otherwise
             p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
             if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
         }
-
     }
     else if (!p_thresholds.fastscore)
     {

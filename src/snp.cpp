@@ -36,9 +36,19 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
          const std::string& ref_allele, const std::string& alt_allele,
          const std::string& file_name, const std::streampos byte_pos)
 {
+    if (rs_id.length() > MAX_ID_SLEN) {
+        throw std::runtime_error("Error: " + rs_id
+                                 + " is a pathologically long ID.");
+    }
+    basic.rs = rs_id;
+    if (ref_allele.length() > MAX_ID_SLEN || alt_allele.length() > MAX_ID_SLEN)
+    {
+        throw std::runtime_error("Error: " + rs_id
+                                 + " has a pathologically long allele code.");
+    }
+
     basic.ref = ref_allele;
     basic.alt = alt_allele;
-    basic.rs = rs_id;
     basic.chr = chr;
     basic.loc = loc;
     basic.valid = true;
@@ -49,6 +59,10 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
     threshold.p_threshold = 0.0;
     threshold.category = 0;
     clump_info.clumped = false;
+    if (file_name > MAX_ID_SLEN) {
+        throw std::runtime_error("Error: " + file_name
+                                 + " is a pathologically long file name.");
+    }
     file_info.file = file_name;
     file_info.byte_pos = byte_pos;
     ref_file_info.file = file_name;

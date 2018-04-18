@@ -109,11 +109,23 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             m_unfiltered_sample_ct++;
             Sample cur_sample;
             if (is_sample_format || !m_ignore_fid) {
+                if (token[0].length() > MAX_ID_SLEN
+                    || token[1].length() > MAX_ID_SLEN)
+                {
+                    throw std::runtime_error(
+                        std::string("Error: Line " + std::to_string(line_id)
+                                    + " has a pathologically long ID"));
+                }
                 cur_sample.FID = token[0];
                 cur_sample.IID = token[1];
             }
             else
             {
+                if (token[0].length() > MAX_ID_SLEN) {
+                    throw std::runtime_error(
+                        std::string("Error: Line " + std::to_string(line_id)
+                                    + " has a pathologically long ID"));
+                }
                 cur_sample.FID = "";
                 cur_sample.IID = token[0];
             }
@@ -305,20 +317,21 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         assert(actual_number_of_samples == context.number_of_samples);
         // we don't need to check the sample name when we are doing the LD
         // as we don't store any
-        if(!m_is_ref){
-        	for (size_t i = 0; i < actual_number_of_samples; ++i) {
-				genfile::bgen::read_length_followed_by_data(
-					bgen_file, &identifier_size, &identifier);
-				if (!bgen_file)
-					throw std::runtime_error("Error: Problem reading bgen file!");
-				bytes_read += sizeof(identifier_size) + identifier_size;
-				// Only need to use IID as BGEN doesn't have the FID information
-				if (m_sample_names[i].IID.compare(identifier) != 0) {
-					throw std::runtime_error("Error: Sample mismatch "
-											 "between bgen and phenotype "
-											 "file!");
-				}
-			}
+        if (!m_is_ref) {
+            for (size_t i = 0; i < actual_number_of_samples; ++i) {
+                genfile::bgen::read_length_followed_by_data(
+                    bgen_file, &identifier_size, &identifier);
+                if (!bgen_file)
+                    throw std::runtime_error(
+                        "Error: Problem reading bgen file!");
+                bytes_read += sizeof(identifier_size) + identifier_size;
+                // Only need to use IID as BGEN doesn't have the FID information
+                if (m_sample_names[i].IID.compare(identifier) != 0) {
+                    throw std::runtime_error("Error: Sample mismatch "
+                                             "between bgen and phenotype "
+                                             "file!");
+                }
+            }
         }
         assert(bytes_read == sample_block_size);
     }
