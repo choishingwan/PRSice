@@ -849,7 +849,20 @@ void PRSice::run_prsice(const Commander& c_commander,
     if (all_out.is_open()) all_out.close();
     if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
-    if(!no_regress) print_best(target, pheno_index, c_commander);
+    if(!no_regress){
+    	print_best(target, pheno_index, c_commander);
+    	if(m_prset){
+    		// if it is prset based permutation, we wouldn't have
+    		// reserved the memory and due to the special usaage,
+    		// we'd like to have a separate memory pool for each thread.
+    		// That can be done by having each thread allocating their
+    		// own memory, though that might be more complicated than I'd
+    		// like as we might also need to take into account the number
+    		// of situation that can be done in one go
+    	}
+    }
+
+
 }
 
 void PRSice::print_best(Genotype &target, const size_t pheno_index, const Commander &commander){
@@ -879,9 +892,6 @@ void PRSice::print_best(Genotype &target, const size_t pheno_index, const Comman
             		m_best_file.skip_column_length+m_best_file.processed_threshold+m_best_file.processed_threshold*m_numeric_width;
             best_out.seekp(loc);
             best_out << std::setprecision(m_precision) <<  m_best_sample_score[sample];
-			//best_out << target.fid(sample) << "\t" << target.iid(sample) << "\t"
-			//		<< m_best_sample_score[sample] << "\t" << has_pheno
-			//		<< std::endl;
 		}
 	}
 	best_out.close();
@@ -1179,9 +1189,6 @@ void PRSice::prep_output(const Commander& c_commander, Genotype &target, std::ve
     std::string out_best = output_name + ".best";
     std::ofstream prsice_out, best_out, all_out;
 
-
-
-
     // .prsice output
     prsice_out.open(out_prsice.c_str());
     if (!prsice_out.is_open()) {
@@ -1317,7 +1324,6 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
 
     const bool perm = (c_commander.permutation() != 0);
-    std::string output_name = output_prefix;
 
     bool valid = m_best_index != -1;
     if (!valid
@@ -1333,22 +1339,17 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         }
         return;
     }
-    //if (m_prset)
-    //    output_name = output_prefix + "." + region.get_name(region_index);
-    std::string out_best = output_name + ".best";
-    std::string out_prsice = output_name + ".prsice";
-    std::string out_snp = output_name + ".snps";
+    std::string out_prsice = output_prefix + ".prsice";
+    std::string out_snp = output_prefix + ".snps";
     // std::string out_summary = output_name + ".summary";
-    std::ofstream best_out, prsice_out, snp_out, summary_out;
+    std::ofstream prsice_out, snp_out;
     prsice_out.open(out_prsice.c_str(), std::fstream::app);
     if (!prsice_out.is_open()) {
         std::string error_message =
             "Error: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
     }
-    //prsice_out << "Threshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
-    //if (perm) prsice_out << "\tEmpirical_P";
-    //prsice_out << std::endl;
+
     for (size_t i = 0; i < m_prs_results.size(); ++i) {
         if (m_prs_results[i].threshold < 0 || m_prs_results[i].p < 0) continue;
         double full = m_prs_results[i].r2;
@@ -1370,24 +1371,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         prsice_out << std::endl;
     }
     prsice_out.close();
-    /*
-    best_out.open(out_best.c_str());
-    if (!best_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_best + " to write";
-        throw std::runtime_error(error_message);
-    }
-    */
-    /*
-    summary_out.open(out_summary.c_str());
-    if (!summary_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_summary + " to write";
-        throw std::runtime_error(error_message);
-    }
-    */
     auto&& best_info = m_prs_results[m_best_index];
-    // summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
 
 
     prsice_summary prs_sum;
@@ -1407,27 +1391,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         m_significant_store[1]++;
     else
         m_significant_store[2]++;
-    /*
-    best_out << "FID\tIID\tPRS\tHas_Phenotype" << std::endl;
-    int best_snp_size = best_info.num_snp;
-    if (best_snp_size == 0) {
-        fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
-        fprintf(stderr, "       Cannot output the best PRS score\n");
-    }
-    else
-    {
-        for (size_t sample = 0; sample < target.num_sample(); ++sample) {
-            // samples that are extracted are ignored
-            // sample excluded will not be output here
-            std::string has_pheno =
-                target.sample_in_regression(sample) ? "Yes" : "No";
-            best_out << target.fid(sample) << "\t" << target.iid(sample) << "\t"
-                     << m_best_sample_score[sample] << "\t" << has_pheno
-                     << std::endl;
-        }
-    }
-    best_out.close();
-	*/
+
     if (c_commander.print_snp()) {
         target.print_snp(out_snp, m_prs_results[m_best_index].threshold,
                          region_index);

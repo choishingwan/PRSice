@@ -200,7 +200,6 @@ int main(int argc, char* argv[])
                         fprintf(stderr, "\rProcessing %03.2f%% of sets\n",
                                 100.0);
                     }
-                    // perform permutation here
 
                 }
                 if (!commander.no_regress())

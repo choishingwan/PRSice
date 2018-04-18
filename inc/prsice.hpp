@@ -17,7 +17,6 @@
 #ifndef PRSICE_H
 #define PRSICE_H
 
-#include "columnFile.hpp"
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "misc.hpp"

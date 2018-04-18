@@ -1813,6 +1813,10 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
     	error = true;
     	error_message.append("Error: Negative number of set permutation provided!");
     }
+    if(prset.set_perm != 0 && misc.permutation >=0){
+    	error = true;
+    	error_message.append("Error: Currently only support either set-base permutation (for competitive p-value) or PRSice base permutation (--perm)");
+    }
 }
 
 
