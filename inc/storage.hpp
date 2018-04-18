@@ -26,6 +26,7 @@ struct Sample
     std::string IID;
     std::string pheno;
     int num_snp;
+    // include is related to founder status
     bool include;
     bool in_regression;
     double prs;

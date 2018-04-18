@@ -137,6 +137,7 @@ public:
     void output(const Commander& c_commander, const Region& region,
                 const size_t pheno_index, const size_t region_index,
                 Genotype& target);
+    void prep_output(const Commander &commander, Genotype &target, std::vector<std::string> region_name, const size_t pheno_index);
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
@@ -220,6 +221,24 @@ private:
         size_t rank;
     };
 
+    struct column_file_info
+    {
+    	size_t header_length;
+    	size_t skip_column_length;
+    	size_t line_width;
+    	size_t processed_threshold;
+    };
+
+    column_file_info m_all_file, m_best_file, m_snp_output;
+    // As R has a default precision of 7, we will go a bit
+    	// higher to ensure we use up all precision
+    size_t m_precision = 9;
+	// the 7 are:
+	// 1 for sign
+	// 1 for dot
+	// 2 for e- (scientific)
+	// 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
+    size_t m_numeric_width = m_precision+7;
     // Global Stuff (For threading)
     static Eigen::MatrixXd g_independent_variables;
     static std::vector<double> g_perm_result;
@@ -270,6 +289,7 @@ private:
     }
 
     void gen_perm_memory(const size_t sample_ct, Reporter& reporter);
+    void print_best(Genotype &target, const size_t pheno_index, const Commander &commander);
 };
 
 #endif // PRSICE_H

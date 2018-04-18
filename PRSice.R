@@ -1394,7 +1394,6 @@ run_plot <- function(prefix, argv, pheno_matrix, binary) {
 # Process file names for plotting------------------------------------------------------
 if (provided("no_regress", argv)) {
     quit("yes")
-    
 }
 ignore_fid <- provided("ignore_fid", argv)
 
@@ -1444,7 +1443,7 @@ if (!provided("pheno_file", argv) &&
             You must indicate whether the phenotype is binary using --binary-target"
         )
     }
-    }
+}
 
 phenos = NULL
 binary_target = strsplit(argv$binary_target, split = ",")[[1]]
@@ -1585,9 +1584,7 @@ if (provided("cov_file", argv)) {
 # we no longer have those complication
 prefix <- argv$out
 
-
-regions <- read.table(paste(prefix, "region", sep = "."), header =
-                          T)
+regions <- read.table(paste(prefix, "region", sep = "."), header =T)
 num_region = nrow(regions)
 
 
