@@ -36,9 +36,10 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
          const std::string& ref_allele, const std::string& alt_allele,
          const std::string& file_name, const std::streampos byte_pos)
 {
+
+    basic.rs = rs_id;
     basic.ref = ref_allele;
     basic.alt = alt_allele;
-    basic.rs = rs_id;
     basic.chr = chr;
     basic.loc = loc;
     basic.valid = true;

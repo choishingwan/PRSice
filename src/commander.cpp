@@ -63,10 +63,12 @@ Commander::Commander()
     misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
+    misc.memory = 0;
     misc.pearson = false;
     misc.permutation = 0;
     misc.print_snp = false;
     misc.provided_seed = false;
+    misc.provided_memory = false;
     misc.thread = 1;
     misc.seed = 0;
 
@@ -199,6 +201,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-info", required_argument, NULL, 0},
         {"maf-base", required_argument, NULL, 0},
         {"maf", required_argument, NULL, 0},
+        {"memory", required_argument, NULL, 0},
         {"missing", required_argument, NULL, 0},
         {"model", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
@@ -412,6 +415,9 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("wind-3") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
                                  prset.window_3, dummy, error, command);
+
+            else if (command.compare("memory") == 0)
+            	set_memory(optarg, message_store, error_messages, error);
             else
             {
                 std::string er = "Error: Undefined operator: " + command

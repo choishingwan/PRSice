@@ -219,7 +219,9 @@ public:
 
 private:
     // basic info
-
+    /*
+     * Memory size = MAX_ID_SLEN*3 (ref alt rs)+ 4*
+     */
     struct Clump
     {
         bool clumped;
