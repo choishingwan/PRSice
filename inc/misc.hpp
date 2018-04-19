@@ -131,6 +131,7 @@ inline int getValue(){ //Note: this value is in KB!
     return result;
 }
 
+// this works on MAC and Linux
 inline size_t current_ram_usage(){
 #if defined __APPLE__
 	// From https://stackoverflow.com/a/1911863
@@ -143,7 +144,7 @@ inline size_t current_ram_usage(){
 	{
 		throw std::runtime_error("Unable to determine memory used");
 	}
-	return t_info.virtual_size;
+	return t_info.resident_size;
 #elif defined _WIN32
 	PROCESS_MEMORY_COUNTERS_EX pmc;
 	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
