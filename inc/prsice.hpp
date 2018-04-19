@@ -92,7 +92,7 @@ public:
             }
         }
         if (perm) {
-            gen_perm_memory(sample_ct, reporter);
+            gen_perm_memory(commander, sample_ct, reporter);
 
             // Additional slice to keep
             // DEBUG here
@@ -297,7 +297,7 @@ private:
 #endif
     }
 
-    void gen_perm_memory(const size_t sample_ct, Reporter& reporter);
+    void gen_perm_memory(const Commander &commander, const size_t sample_ct, Reporter& reporter);
     void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
 };

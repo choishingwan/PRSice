@@ -158,6 +158,7 @@ int main(int argc, char* argv[])
                 return -1;
             }
             // initialize PRSice class
+            target_file->count_snp_in_region(region);
             PRSice prsice = PRSice(base_name, commander, region.size() > 1,
                                    target_file->num_sample(), reporter);
             // check the phenotype input columns

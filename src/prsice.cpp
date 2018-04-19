@@ -1475,7 +1475,7 @@ PRSice::~PRSice()
     // dtor
 }
 
-void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
+void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, Reporter& reporter)
 {
     intptr_t min_memory_byte = 8 * sample_ct;
     intptr_t max_req_memory = min_memory_byte * m_num_perm;
@@ -1555,8 +1555,12 @@ void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
     delete[] bigstack_ua;
     bigstack_ua = nullptr;
 	// * 0.5 to provide room of error
-    intptr_t final_mb = (malloc_size_mb*1048576-misc::current_ram_usage())*0.5;
+    size_t valid_memory = commander.max_memory(malloc_size_mb*1048576);
+    intptr_t final_mb = (valid_memory-misc::current_ram_usage())*0.5;
     // start update here
+    if(final_mb < 0){
+    	throw std::runtime_error("Error: Insufficient memory for permutation!");
+    }
     if (final_mb < min_memory_byte) {
         m_perm_per_slice = 1;
     }
@@ -1568,6 +1572,8 @@ void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
     {
         m_perm_per_slice = final_mb  / min_memory_byte;
     }
+    message = std::to_string(((final_mb>max_req_memory)?max_req_memory:final_mb)/1048576) + " MB RAM reserved for permutation\n";
+    reporter.report(message);
     // wanna use double vector here as the sample size here might not be
     // the one used in the permutation. This might then lead to problem
     // in the permutation (segmentation fault, etc)
