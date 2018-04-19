@@ -109,23 +109,11 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             m_unfiltered_sample_ct++;
             Sample cur_sample;
             if (is_sample_format || !m_ignore_fid) {
-                if (token[0].length() > MAX_ID_SLEN
-                    || token[1].length() > MAX_ID_SLEN)
-                {
-                    throw std::runtime_error(
-                        std::string("Error: Line " + std::to_string(line_id)
-                                    + " has a pathologically long ID"));
-                }
                 cur_sample.FID = token[0];
                 cur_sample.IID = token[1];
             }
             else
             {
-                if (token[0].length() > MAX_ID_SLEN) {
-                    throw std::runtime_error(
-                        std::string("Error: Line " + std::to_string(line_id)
-                                    + " has a pathologically long ID"));
-                }
                 cur_sample.FID = "";
                 cur_sample.IID = token[0];
             }

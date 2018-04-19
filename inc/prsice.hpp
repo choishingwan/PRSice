@@ -55,7 +55,13 @@
 #define THREAD_RET_TYPE void*
 #define THREAD_RETURN return nullptr
 #endif
-
+#ifdef __APPLE__
+#include <mach/vm_statistics.h>
+#include <mach/mach_types.h>
+#include <mach/mach_init.h>
+#include <mach/mach_host.h>
+#include <mach/mach.h>
+#endif
 // This should be the class to handle all the procedures
 class PRSice
 {
@@ -72,6 +78,7 @@ public:
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
+    	std::cerr << misc::current_ram_usage() << std::endl;
         g_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);

@@ -51,11 +51,6 @@ public:
     void add_reference(const std::string ref_file,
                        const std::streampos ref_byte_pos)
     {
-
-        if (ref_file > MAX_ID_SLEN) {
-            throw std::runtime_error("Error: " + ref_file
-                                     + " is a pathologically long file name.");
-        }
         ref_file_info.file = ref_file;
         ref_file_info.byte_pos = ref_byte_pos;
     }
