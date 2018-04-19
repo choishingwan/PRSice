@@ -106,7 +106,7 @@ inline bool to_bool(const std::string& input)
     }
 }
 
-int parseLine(char* line){
+inline int parseLine(char* line){
     // This assumes that a digit will be found and the line ends in " Kb".
     int i = strlen(line);
     const char* p = line;
@@ -116,7 +116,7 @@ int parseLine(char* line){
     return i;
 }
 
-int getValue(){ //Note: this value is in KB!
+inline int getValue(){ //Note: this value is in KB!
     FILE* file = fopen("/proc/self/status", "r");
     int result = -1;
     char line[128];
