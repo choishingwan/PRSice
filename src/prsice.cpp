@@ -1554,20 +1554,19 @@ void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
     }
     delete[] bigstack_ua;
     bigstack_ua = nullptr;
-    // use only a third of the memory so that we should have enough left
-    // though there is no guarantee
-    intptr_t final_mb = malloc_size_mb / 3;
+	// * 0.5 to provide room of error
+    intptr_t final_mb = (malloc_size_mb*1048576-misc::current_ram_usage())*0.5;
     // start update here
-    if (final_mb * 1048576 < min_memory_byte) {
+    if (final_mb < min_memory_byte) {
         m_perm_per_slice = 1;
     }
-    else if (final_mb * 1048576 > max_req_memory)
+    else if (final_mb > max_req_memory)
     {
         m_perm_per_slice = m_num_perm;
     }
     else
     {
-        m_perm_per_slice = final_mb * 1048576 / min_memory_byte;
+        m_perm_per_slice = final_mb  / min_memory_byte;
     }
     // wanna use double vector here as the sample size here might not be
     // the one used in the permutation. This might then lead to problem
