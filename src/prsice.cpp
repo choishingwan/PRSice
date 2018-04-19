@@ -1572,7 +1572,7 @@ void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, 
     {
         m_perm_per_slice = final_mb  / min_memory_byte;
     }
-    message = std::to_string(((final_mb>max_req_memory)?max_req_memory:final_mb)/1048576) + " MB RAM reserved for permutation\n";
+    message = std::to_string(((final_mb>max_req_memory)?max_req_memory:final_mb)/1048576.0) + " MB RAM reserved for permutation\n";
     reporter.report(message);
     // wanna use double vector here as the sample size here might not be
     // the one used in the permutation. This might then lead to problem
