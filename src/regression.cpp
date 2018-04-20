@@ -31,7 +31,7 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     // this to speed things up
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
     Eigen::VectorXd beta = z.solve(y);
-    Eigen::MatrixXd fitted = A * beta;
+    Eigen::VectorXd fitted = A * beta;
     Eigen::VectorXd residual = y - fitted;
     double mss = 0.0;
     double rss = 0.0;

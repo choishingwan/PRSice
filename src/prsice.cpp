@@ -1580,7 +1580,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 	size_t num_thread = commander.thread();
 	const size_t num_sample = target.num_sample();
 	const size_t num_regress_sample = g_independent_variables.rows();
-	const size_t basic_memory_required_per_thread = num_regress_sample*8*(g_independent_variables.cols()+1)*3;
+	const size_t basic_memory_required_per_thread = num_regress_sample*8*(g_independent_variables.cols()*6+15);
 	const size_t additional_memory_required_per_prs = g_independent_variables.rows()*8;
 	size_t total_memory = misc::total_ram_available();
 
@@ -1592,7 +1592,9 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 		throw std::runtime_error("Error: Not enough memory for permutation");
 	}
 	// again, artificially reduce memory request to avoid problem
+
 	const size_t available_memory = (valid_memory-used_memory)*0.5;
+	std::cerr << "Memory information: " << valid_memory << "\t" << used_memory << "\t" << available_memory << std::endl;
 	if(available_memory < basic_memory_required_per_thread)
 	{
 		fprintf(stderr, "\n");
@@ -1612,6 +1614,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 		num_thread = available_memory/basic_memory_required_per_thread;
 		num_prs_store = num_thread;
 	}
+
+	std::cerr << "Expect to use: " << num_prs_store*additional_memory_required_per_prs + basic_memory_required_per_thread*num_thread << std::endl;
 	size_t processed_permutations = 0;
 	g_permuted_pheno.resize(num_prs_store*num_regress_sample,0);
 
@@ -1645,7 +1649,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 			}
 		}
 		// now, the g_permuted_pheno should be populated by the new PRS
-
+		std::cerr << "Now used up: " << misc::current_ram_usage() << std::endl;
 		 std::vector<pthread_t> pthread_store(num_thread);
 		 int job_size =  remain_job / num_thread;
 		 int remain = remain_job % num_thread;
