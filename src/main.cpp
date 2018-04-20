@@ -180,11 +180,11 @@ int main(int argc, char* argv[])
                          i_region < region.size() - (region.size() > 1 ? 1 : 0);
                          ++i_region)
                     {
-                        prsice.run_prsice(commander, region.get_name(i_region),
+                        prsice.run_prsice(commander, region,
                                           i_pheno, i_region, *target_file);
                         if (region.size() > 1) {
                             fprintf(stderr, "\rProcessing %03.2f%% of sets",
-                                    (double) i_region / (double) region.size()
+                                    (double) i_region / (double) (region.size()-1)
                                         * 100.0);
                         }
                         if (!commander.no_regress())

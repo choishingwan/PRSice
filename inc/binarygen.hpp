@@ -134,7 +134,9 @@ private:
         return 0;
     }
 
-
+    void read_score(std::vector<size_t> &index);
+    void hard_code_score(std::vector<size_t> &index);
+    void dosage_score(std::vector<size_t> &index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index);
     void hard_code_score(size_t start_index, size_t end_bound,

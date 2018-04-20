@@ -32,6 +32,7 @@
 #include <deque>
 #include <fstream>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -199,6 +200,7 @@ public:
         region.post_clump_count(result);
     };
 
+    void get_null_score(const size_t &set_size, const size_t &background_index, const bool require_standardize);
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -319,6 +321,7 @@ protected:
                                       const std::string& file_name){};
     virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};
+    virtual void read_score(std::vector<size_t> &index){};
 
 
     // hh_exists

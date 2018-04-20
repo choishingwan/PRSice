@@ -1595,6 +1595,40 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
+void Genotype::get_null_score(const size_t &set_size, const size_t &background_index,  const bool require_statistic){
+	if(m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
+	std::vector<size_t> selected_snp_index(set_size);
+	size_t snp_found=0;
+
+    std::vector<int> snp_index(m_existed_snps.size());
+    std::iota(std::begin(snp_index), std::end(snp_index),0);
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(snp_index.begin(), snp_index.end(), g);
+    for(size_t i = 0; i < snp_index.size(); ++i){
+    	if(!m_existed_snps[i].in(background_index)) continue;
+    	selected_snp_index.push_back(i);
+    	snp_found++;
+    	if(snp_found==set_size) break;
+    }
+    SNP::sort_snp_index(selected_snp_index, m_existed_snps);
+    read_score(selected_snp_index);
+    if (require_statistic) {
+        misc::RunningStat rs;
+        for (auto&& sample : m_sample_names) {
+            if (!sample.include) continue;
+            if (sample.num_snp == 0) {
+                rs.push(0.0);
+            }
+            else
+            {
+                rs.push(sample.prs / (double) sample.num_snp);
+            }
+        }
+        m_mean_score = rs.mean();
+        m_score_sd = rs.sd();
+    }
+}
 bool Genotype::get_score(int& cur_index, int& cur_category,
                          double& cur_threshold, size_t& num_snp_included,
                          const size_t region_index,

@@ -32,6 +32,11 @@
 
 #if defined __APPLE__
 #include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/mach_init.h>
+#include <mach/mach_types.h>
+#include <mach/vm_statistics.h>
+#include <sys/sysctl.h>
 #elif defined _WIN32
 #include "psapi.h"
 #include <windows.h>
@@ -40,6 +45,11 @@
 #include "stdlib.h"
 #include "string.h"
 #endif
+
+#define BIGSTACK_MIN_MB 64
+#define BIGSTACK_DEFAULT_MB 2048
+
+
 namespace misc
 {
 // my own codes
@@ -157,6 +167,81 @@ inline size_t current_ram_usage()
 #else
     return getValue() * 1024;
 #endif
+}
+
+inline size_t total_ram_available(){
+#ifdef __APPLE__
+    int32_t mib[2];
+    size_t sztmp;
+#endif
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    int64_t llxx;
+    intptr_t default_alloc_mb;
+    intptr_t malloc_size_mb = 0;
+#ifdef __APPLE__
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    llxx = 0;
+
+    sztmp = sizeof(int64_t);
+    sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
+    llxx /= 1048576;
+#else
+#ifdef _WIN32
+    MEMORYSTATUSEX memstatus;
+    memstatus.dwLength = sizeof(memstatus);
+    GlobalMemoryStatusEx(&memstatus);
+    llxx = memstatus.ullTotalPhys / 1048576;
+#else
+    llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
+           * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
+#endif
+#endif
+    if (!llxx) {
+        default_alloc_mb = BIGSTACK_DEFAULT_MB;
+    }
+    else if (llxx < (BIGSTACK_MIN_MB * 2))
+    {
+        default_alloc_mb = BIGSTACK_MIN_MB;
+    }
+    else
+    {
+        default_alloc_mb = llxx / 2;
+    }
+    if (!malloc_size_mb) {
+        malloc_size_mb = default_alloc_mb;
+    }
+    else if (malloc_size_mb < BIGSTACK_MIN_MB)
+    {
+        malloc_size_mb = BIGSTACK_MIN_MB;
+    }
+    std::string message = "";
+#ifndef __LP64__
+    if (malloc_size_mb > 2047) {
+        malloc_size_mb = 2047;
+    }
+#endif
+    bigstack_ua =
+        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    // if fail, return nullptr which will then get into the while loop
+    while (!bigstack_ua) {
+        malloc_size_mb = (malloc_size_mb * 3) / 4;
+        if (malloc_size_mb < BIGSTACK_MIN_MB) {
+            malloc_size_mb = BIGSTACK_MIN_MB;
+        }
+        bigstack_ua =
+            (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+        if (bigstack_ua) {
+        }
+        else if (malloc_size_mb == BIGSTACK_MIN_MB)
+        {
+            throw std::runtime_error(
+                "Failed to allocate required memory");
+        }
+    }
+    delete[] bigstack_ua;
+    bigstack_ua = nullptr;
+    return malloc_size_mb*1024*1024;
 }
 // function from John D.Cook
 // https://www.johndcook.com/blog/standard_deviation/

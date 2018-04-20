@@ -134,7 +134,7 @@ public:
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
     void run_prsice(const Commander& c_commander,
-                    const std::string& region_name, const size_t pheno_index,
+    				const Region &region,  const size_t pheno_index,
                     const size_t region_index, Genotype& target);
     void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
@@ -162,6 +162,7 @@ private:
         double p;
         double emp_p;
         double se;
+        double competitive_p;
         int num_snp;
     };
 
@@ -189,7 +190,7 @@ private:
     bool m_ignore_fid = false;
     bool m_prset = false;
     static bool g_logit_perm;
-    Eigen::VectorXd m_phenotype;
+
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
     double m_null_se = 0.0;
@@ -218,7 +219,7 @@ private:
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
                                                       // phenotype
-
+    std::unordered_map<int, std::vector<double> > m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
     // pthread mutli_thread require stuff?
@@ -228,6 +229,7 @@ private:
         size_t end;
         size_t processed;
         size_t rank;
+        bool binary;
     };
 
     struct column_file_info
@@ -250,6 +252,7 @@ private:
     size_t m_numeric_width = m_precision + 7;
     // Global Stuff (For threading)
     static Eigen::MatrixXd g_independent_variables;
+    static Eigen::VectorXd g_phenotype;
     static std::vector<double> g_perm_result;
     static std::unordered_map<uintptr_t, perm_info> g_perm_range;
     static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
@@ -260,7 +263,7 @@ private:
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
     static THREAD_RET_TYPE thread_perm(void* id);
-
+    static THREAD_RET_TYPE thread_set_perm(void* id);
     void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
     void update_sample_included(Genotype& target);
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
@@ -301,7 +304,7 @@ private:
                          Reporter& reporter);
     void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
-    void run_competitive(Genotype& target, const Commander& commander);
+    void run_competitive(Genotype& target, const Commander& commander,  const size_t background_index, const size_t num_snp, const bool store_null, const bool binary);
 };
 
 #endif // PRSICE_H

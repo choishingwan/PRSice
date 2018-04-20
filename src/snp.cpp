@@ -119,3 +119,14 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
     });
     return idx;
 }
+
+void SNP::sort_snp_index(std::vector<size_t> &index, const std::vector<SNP> &input){
+	std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
+	        if (input[i1].file_info.file.compare(input[i2].file_info.file)==0) {
+	                return input[i1].file_info.byte_pos
+	                       < input[i2].file_info.byte_pos;
+	        }
+	        else
+	            return input[i1].file_info.file.compare(input[i2].file_info.file) <0;
+	    });
+}

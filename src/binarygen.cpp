@@ -590,6 +590,43 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
     }
 }
 
+void BinaryGen::dosage_score(std::vector<size_t> &index)
+{
+    m_cur_file = "";
+    std::vector<genfile::byte_t> buffer1, buffer2;
+    for (auto&& i_snp : index) {
+        auto&& snp = m_existed_snps[i_snp];
+        if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
+            if (m_bgen_file.is_open()) m_bgen_file.close();
+            std::string bgen_name = snp.file_name() + ".bgen";
+            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+            if (!m_bgen_file.is_open()) {
+                std::string error_message =
+                    "Error: Cannot open bgen file: " + snp.file_name();
+                throw std::runtime_error(error_message);
+            }
+            m_cur_file = snp.file_name();
+        }
+        m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
+
+        auto&& context = m_context_map[m_cur_file];
+
+        PRS_Interpreter setter(&m_sample_names, m_model, m_missing_score,
+                               &m_sample_include, snp.stat() * 2,
+                               snp.is_flipped());
+        /*
+        PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
+                               vector_pad, m_model, m_missing_score,
+                               snp.stat() * 2,
+                               snp.is_flipped()); // Multiple by ploidy
+                               */
+        // after this, m_sample contain the latest PRS score
+        genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
+            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+    }
+}
+
+
 void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                                 const size_t region_index)
 {
@@ -749,6 +786,166 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
     }
 }
 
+
+
+void BinaryGen::hard_code_score(std::vector<size_t> &index)
+{
+
+    m_cur_file = "";
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uintptr_t ulii = 0;
+    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t final_mask = get_final_mask(m_sample_ct);
+
+    size_t num_sample_read = m_sample_names.size();
+    // index is w.r.t. partition, which contain all the information
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    //    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+    for (auto && i_snp: index)
+    { // for each SNP
+        auto&& cur_snp = m_existed_snps[i_snp];
+        if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
+                                   m_unfiltered_sample_ct, m_sample_ct,
+                                   m_sample_include.data(), final_mask, false,
+                                   m_tmp_genotype.data(), genotype.data()))
+        {
+            throw std::runtime_error("Error: Cannot read the bed file!");
+        }
+        uintptr_t* lbptr = genotype.data();
+        uii = 0;
+        std::vector<size_t> missing_samples;
+        double stat = cur_snp.stat() * 2; // Multiply by ploidy
+        bool flipped = cur_snp.is_flipped();
+        std::vector<double> genotypes(num_sample_read);
+
+        uint32_t sample_idx = 0;
+        int nmiss = 0;
+        int aa = 0, aA = 0, AA = 0;
+        do
+        {
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            while (ulii) {
+                ujj = CTZLU(ulii) & (BITCT - 2);
+                ukk = (ulii >> ujj) & 3;
+                sample_idx = uii + (ujj / 2);
+                if (ukk == 1 || ukk == 3) // Because 01 is coded as missing
+                {
+                    // 3 is homo alternative
+                    // int flipped_geno = snp_list[snp_index].geno(ukk);
+                    if (sample_idx < num_sample_read) {
+                        int g = (ukk == 3) ? 2 : ukk;
+                        switch (g)
+                        {
+                        case 0: aa++; break;
+                        case 1: aA++; break;
+                        case 2: AA++; break;
+                        }
+                        genotypes[sample_idx] = g;
+                    }
+                }
+                else // this should be 2
+                {
+                    missing_samples.push_back(sample_idx);
+                    nmiss++;
+                }
+                ulii &= ~((3 * ONELU) << ujj);
+            }
+            uii += BITCT2;
+        } while (uii < num_sample_read);
+
+
+        size_t i_missing = 0;
+
+        if (num_sample_read - nmiss == 0) {
+            cur_snp.invalidate();
+            continue;
+        }
+        // due to the way the binary code works, the aa will always be 0
+        // added there just for fun tbh
+        aa = num_sample_read - nmiss - aA - AA;
+        assert(aa >= 0);
+        if (flipped) {
+            int temp = aa;
+            aa = AA;
+            AA = temp;
+        }
+        if (m_model == MODEL::HETEROZYGOUS) {
+            // 010
+            aa += AA;
+            AA = 0;
+        }
+        else if (m_model == MODEL::DOMINANT)
+        {
+            // 011;
+            aA += AA;
+            AA = 0;
+        }
+        else if (m_model == MODEL::RECESSIVE)
+        {
+            // 001
+            aa += aA;
+            aA = AA;
+            AA = 0;
+        }
+
+        double maf = ((double) (aA + AA * 2)
+                      / ((double) (num_sample_read - nmiss)
+                         * 2.0)); // MAF does not count missing
+        double center_score = stat * maf;
+        size_t num_miss = missing_samples.size();
+        size_t actual_index = 0;
+        for (size_t i_sample = 0; i_sample < num_sample_read; ++i_sample) {
+            auto&& sample = m_sample_names[i_sample];
+            if (i_missing < num_miss
+                && actual_index == missing_samples[i_missing])
+            {
+                if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
+                    sample.prs += center_score;
+                // g_prs_storage[i_sample + vector_pad] += center_score;
+                if (m_missing_score != MISSING_SCORE::SET_ZERO)
+                    sample.num_snp++;
+                // g_num_snps[i_sample + vector_pad]++;
+                i_missing++;
+            }
+            else
+            { // not missing sample
+                if (m_missing_score == MISSING_SCORE::CENTER) {
+                    // if centering, we want to keep missing at 0
+                    sample.prs -= center_score;
+                    // g_prs_storage[i_sample + vector_pad] -= center_score;
+                }
+
+                int g = (flipped) ? fabs(genotypes[actual_index] - 2)
+                                  : genotypes[actual_index];
+                if (m_model == MODEL::HETEROZYGOUS) {
+                    g = (g == 2) ? 0 : g;
+                }
+                else if (m_model == MODEL::RECESSIVE)
+                {
+                    g = std::max(0, g - 1);
+                }
+                else if (m_model == MODEL::DOMINANT)
+                {
+                    g = (g == 2) ? 1 : g;
+                }
+
+                sample.prs += g * stat * 0.5;
+                sample.num_snp++;
+                // g_prs_storage[i_sample + vector_pad] += g * stat * 0.5;
+                // g_num_snps[i_sample + vector_pad]++;
+            }
+            actual_index++;
+        }
+    }
+}
+
+
 void BinaryGen::read_score(size_t start_index, size_t end_bound,
                            const size_t region_index)
 {
@@ -758,4 +955,11 @@ void BinaryGen::read_score(size_t start_index, size_t end_bound,
     }
     else
         dosage_score(start_index, end_bound, region_index);
+}
+
+void BinaryGen::read_score(std::vector<size_t> &index){
+	// because I don't want to touch the code in dosage_score, we will reset the sample here
+	reset_sample_prs();
+	if (m_hard_coded) hard_code_score(index);
+	else dosage_score(index);
 }
