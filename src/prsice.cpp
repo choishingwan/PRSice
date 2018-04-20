@@ -1405,11 +1405,11 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prs_sum.set = region.get_name(region_index);
     prs_sum.result = best_info;
     prs_sum.result.r2 = best_info.r2;
+    prs_sum.result.competitive_p = best_info.competitive_p;
     prs_sum.r2_null = m_null_r2;
     prs_sum.top = top;
     prs_sum.bottom = bottom;
     prs_sum.prevalence = prevalence;
-    prs_sum.result.competitive_p = best_info.competitive_p;
     m_prs_summary.push_back(prs_sum);
     if (best_info.p > 0.1)
         m_significant_store[0]++;
@@ -1562,6 +1562,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 	    int num_more_significant =  std::upper_bound(null.begin(), null.end(), p_value) - null.begin();
 	    double competitive_p = ((double)num_more_significant+1.0)/((double)num_perm+1.0);
 	    m_prs_results[m_best_index].competitive_p = competitive_p;
+
 	    return;
 	}
 
@@ -1611,16 +1612,20 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 		num_prs_store = num_thread;
 	}
 	size_t processed_permutations = 0;
-	g_permuted_pheno.resize(num_prs_store*num_regress_sample);
+	g_permuted_pheno.resize(num_prs_store*num_regress_sample,0);
 
     g_perm_result.resize(num_perm, 2);
 	// we will risk it, don't bother reserving size for the independent variable for each thread for now
 	// (because we can't be certain the vector will release the memory and I don't want to use new just yet
+
 	while(processed_permutations < num_perm){
 		// as long as we have not finished all required permutations, we will continue
+		std::fill(g_permuted_pheno.begin(), g_permuted_pheno.end(), 0);
 		size_t remain_job = num_perm-processed_permutations;
 		remain_job = (remain_job>num_prs_store)?num_prs_store:remain_job;
+		std::cerr << "Start reading PRS" << std::endl;
 		for(size_t i = 0; i < remain_job; ++i){
+			// this is slow
 			target.get_null_score(num_snp, background_index, require_standardize);
 			//  now populate teh g_permuted_pheno vector with the new PRS score
 			for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
@@ -1634,7 +1639,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 			}
 		}
 		// now, the g_permuted_pheno should be populated by the new PRS
-
+		std::cerr << "Initialize thread jobs" << std::endl;
 
 		 std::vector<pthread_t> pthread_store(num_thread);
 		 int job_size =  remain_job / num_thread;
@@ -1716,6 +1721,7 @@ THREAD_RET_TYPE PRSice::thread_set_perm(void* id){
     Eigen::MatrixXd independent(g_independent_variables);
     const size_t num_regress_sample = independent.rows();
     double r2, coefficient, se, r2_adjust;
+    Eigen::setNbThreads(1);
     for (size_t i = start; i < end; ++i) {
     	// the required PRS will be located at start
     	for(size_t i_sample = 0; i_sample<num_regress_sample; ++i_sample){
