@@ -225,8 +225,8 @@ inline size_t total_ram_available(){
         malloc_size_mb = 2047;
     }
 #endif
-    bigstack_ua =
-        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    bigstack_ua = new unsigned char[malloc_size_mb * 1048576 ];
+        //(unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
     // if fail, return nullptr which will then get into the while loop
     while (!bigstack_ua) {
         malloc_size_mb = (malloc_size_mb * 3) / 4;
