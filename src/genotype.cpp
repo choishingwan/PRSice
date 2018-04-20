@@ -1141,8 +1141,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         message = "Failed to calculate system memory. Attemping to reserve"
                   + std::to_string(malloc_size_mb) + " MB for clumping\n";
     }
-    bigstack_ua = new unsigned char[malloc_size_mb * 1048576];
-        //(unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    bigstack_ua =
+        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
     // if fail, return nullptr which will then get into the while loop
     while (!bigstack_ua) {
         malloc_size_mb = (malloc_size_mb * 3) / 4;
@@ -1509,7 +1509,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     window_data = nullptr;
     window_data_ptr = nullptr;
-    delete[] bigstack_ua;
+    free(bigstack_ua);
     bigstack_ua = nullptr;
     bigstack_initial_base = nullptr;
 
