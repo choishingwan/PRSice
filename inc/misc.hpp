@@ -44,6 +44,10 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+#include <sys/param.h>
 #endif
 
 #define BIGSTACK_MIN_MB 64
