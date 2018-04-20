@@ -417,7 +417,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                  prset.window_3, dummy, error, command);
 
             else if (command.compare("memory") == 0)
-            	set_memory(optarg, message_store, error_messages, error);
+                set_memory(optarg, message_store, error_messages, error);
             else
             {
                 std::string er = "Error: Undefined operator: " + command

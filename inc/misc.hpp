@@ -31,13 +31,13 @@
 #include <vector>
 
 #if defined __APPLE__
-	#include<mach/mach.h>
+#include <mach/mach.h>
 #elif defined _WIN32
-#include <windows.h>
 #include "psapi.h"
+#include <windows.h>
 #else
-#include "stdlib.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "string.h"
 #endif
 namespace misc
@@ -106,23 +106,25 @@ inline bool to_bool(const std::string& input)
     }
 }
 
-inline int parseLine(char* line){
+inline int parseLine(char* line)
+{
     // This assumes that a digit will be found and the line ends in " Kb".
     int i = strlen(line);
     const char* p = line;
-    while (*p <'0' || *p > '9') p++;
-    line[i-3] = '\0';
+    while (*p < '0' || *p > '9') p++;
+    line[i - 3] = '\0';
     i = atoi(p);
     return i;
 }
 
-inline int getValue(){ //Note: this value is in KB!
+inline int getValue()
+{ // Note: this value is in KB!
     FILE* file = fopen("/proc/self/status", "r");
     int result = -1;
     char line[128];
 
-    while (fgets(line, 128, file) != NULL){
-        if (strncmp(line, "VmSize:", 7) == 0){
+    while (fgets(line, 128, file) != NULL) {
+        if (strncmp(line, "VmSize:", 7) == 0) {
             result = parseLine(line);
             break;
         }
@@ -132,29 +134,29 @@ inline int getValue(){ //Note: this value is in KB!
 }
 
 // this works on MAC and Linux
-inline size_t current_ram_usage(){
+inline size_t current_ram_usage()
+{
 #if defined __APPLE__
-	// From https://stackoverflow.com/a/1911863
-	struct task_basic_info t_info;
-	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+    // From https://stackoverflow.com/a/1911863
+    struct task_basic_info t_info;
+    mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
 
-	if (KERN_SUCCESS != task_info(mach_task_self(),
-			TASK_BASIC_INFO, (task_info_t)&t_info,
-			&t_info_count))
-	{
-		throw std::runtime_error("Unable to determine memory used");
-	}
-	return t_info.resident_size;
+    if (KERN_SUCCESS
+        != task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info,
+                     &t_info_count))
+    {
+        throw std::runtime_error("Unable to determine memory used");
+    }
+    return t_info.resident_size;
 #elif defined _WIN32
-	PROCESS_MEMORY_COUNTERS_EX pmc;
-	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
-	SIZE_T virtualMemUsedByMe = pmc.PrivateUsage;
-	SIZE_T physMemUsedByMe = pmc.WorkingSetSize;
-	return physMemUsedByMe;
+    PROCESS_MEMORY_COUNTERS_EX pmc;
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    SIZE_T virtualMemUsedByMe = pmc.PrivateUsage;
+    SIZE_T physMemUsedByMe = pmc.WorkingSetSize;
+    return physMemUsedByMe;
 #else
-	return getValue()*1024;
+    return getValue() * 1024;
 #endif
-
 }
 // function from John D.Cook
 // https://www.johndcook.com/blog/standard_deviation/

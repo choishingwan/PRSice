@@ -861,6 +861,7 @@ void PRSice::run_prsice(const Commander& c_commander,
             // own memory, though that might be more complicated than I'd
             // like as we might also need to take into account the number
             // of situation that can be done in one go
+            run_competitive(target, c_commander);
         }
     }
 }
@@ -1494,7 +1495,8 @@ PRSice::~PRSice()
     // dtor
 }
 
-void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, Reporter& reporter)
+void PRSice::gen_perm_memory(const Commander& commander, const size_t sample_ct,
+                             Reporter& reporter)
 {
     intptr_t min_memory_byte = 8 * sample_ct;
     intptr_t max_req_memory = min_memory_byte * m_num_perm;
@@ -1573,12 +1575,12 @@ void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, 
     }
     delete[] bigstack_ua;
     bigstack_ua = nullptr;
-	// * 0.5 to provide room of error
-    size_t valid_memory = commander.max_memory(malloc_size_mb*1048576);
-    intptr_t final_mb = (valid_memory-misc::current_ram_usage())*0.5;
+    // * 0.5 to provide room of error
+    size_t valid_memory = commander.max_memory(malloc_size_mb * 1048576);
+    intptr_t final_mb = (valid_memory - misc::current_ram_usage()) * 0.5;
     // start update here
-    if(final_mb < 0){
-    	throw std::runtime_error("Error: Insufficient memory for permutation!");
+    if (final_mb < 0) {
+        throw std::runtime_error("Error: Insufficient memory for permutation!");
     }
     if (final_mb < min_memory_byte) {
         m_perm_per_slice = 1;
@@ -1589,9 +1591,12 @@ void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, 
     }
     else
     {
-        m_perm_per_slice = final_mb  / min_memory_byte;
+        m_perm_per_slice = final_mb / min_memory_byte;
     }
-    message = std::to_string(((final_mb>max_req_memory)?max_req_memory:final_mb)/1048576.0) + " MB RAM reserved for permutation\n";
+    message =
+        std::to_string(((final_mb > max_req_memory) ? max_req_memory : final_mb)
+                       / 1048576.0)
+        + " MB RAM reserved for permutation\n";
     reporter.report(message);
     // wanna use double vector here as the sample size here might not be
     // the one used in the permutation. This might then lead to problem
@@ -1599,4 +1604,22 @@ void PRSice::gen_perm_memory(const Commander &commander,const size_t sample_ct, 
     g_permuted_pheno.resize(sample_ct * m_perm_per_slice);
     // g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
     // g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
+}
+
+
+void run_competitive(Genotype& target, const Commander& commander)
+{
+    /*
+     * Steps are as follow
+     * 1. Check if null of same size is calculated already
+     *    - Directly get the empirical p-value if already calculated
+     * 2. Otherwise, calculate potential memory usage per thread
+     *    - memory usage per thread = 8 * sample size * (width of independent
+     * variables+1)*3 (multiply by 3 just in case we use too much in regression)
+     * 3. Calculate additional PRS that we can realistically store given the
+     * memory size
+     *    - This is calculated as 8 * sample size
+     * 4. Read all PRS
+     * 5. Generate thread and run the regression in each threads
+     */
 }

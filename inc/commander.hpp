@@ -95,9 +95,12 @@ public:
     int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-    size_t max_memory(size_t detected) const {
-    	if(!misc.provided_memory) return detected;
-    	else return (misc.memory > detected)? detected: misc.memory;
+    size_t max_memory(size_t detected) const
+    {
+        if (!misc.provided_memory)
+            return detected;
+        else
+            return (misc.memory > detected) ? detected : misc.memory;
     }
     // p_thresholds
     double bar_upper() const { return p_thresholds.barlevel.back(); };
@@ -527,53 +530,73 @@ private:
         target_boolean = true;
     }
 
-    inline void set_memory(const std::string & input, std::map<std::string, std::string >& message,
-    		std::string &error_messages, bool &error){
-    	if (message.find("memory") != message.end()) {
-    		error_messages.append("Warning: Duplicated argument --memory\n");
-    	}
-    	try{
-    		int memory = misc::convert<int>(input);
-    		misc.memory = memory;
-    	}
+    inline void set_memory(const std::string& input,
+                           std::map<std::string, std::string>& message,
+                           std::string& error_messages, bool& error)
+    {
+        if (message.find("memory") != message.end()) {
+            error_messages.append("Warning: Duplicated argument --memory\n");
+        }
+        try
+        {
+            int memory = misc::convert<int>(input);
+            misc.memory = memory;
+        }
         catch (const std::runtime_error& er)
         {
             // contain MB KB or B here
-        	if(input.length() >= 2){
-        		try{
-        		std::string unit = input.substr( input.length() - 2 );
-        		std::string value = input.substr(0, input.length()-2);
-        		std::transform(unit.begin(), unit.end(),
-        				unit.begin(), ::toupper);
-        		if(unit.compare("KB")==0){
-        			misc.memory = misc::convert<size_t>(value)*1024;
-        		}else if(unit.compare("MB")==0){
-        			misc.memory = misc::convert<size_t>(value)*1024*1024;
-        		}else if(unit.compare("GB")==0){
-        			misc.memory = misc::convert<size_t>(value)*1024*1024*1024;
-        		}else if(unit.compare("TB")==0){
-        			misc.memory = misc::convert<size_t>(value)*1024*1024*1024*1024;
-        		}
-        		else{
-        			// maybe only one input?
-        			unit = input.substr(input.length()-1);
-        			value = input.substr(0,input.length()-1);
-            		std::transform(unit.begin(), unit.end(),
-            				unit.begin(), ::toupper);
-        			if(unit.compare("B")==0){
-        				misc.memory=misc::convert<size_t>(value);
-        				std::cerr << "Update to: " << misc.memory << std::endl;
-        			}
-        		}
-        		}catch(const std::runtime_error& er_info){
-            		error = true;
-            		error_messages.append("Error: Undefined memory input: "+input);
-        		}
-
-        	}else{
-        		error = true;
-        		error_messages.append("Error: Undefined memory input: "+input);
-        	}
+            if (input.length() >= 2) {
+                try
+                {
+                    std::string unit = input.substr(input.length() - 2);
+                    std::string value = input.substr(0, input.length() - 2);
+                    std::transform(unit.begin(), unit.end(), unit.begin(),
+                                   ::toupper);
+                    if (unit.compare("KB") == 0) {
+                        misc.memory = misc::convert<size_t>(value) * 1024;
+                    }
+                    else if (unit.compare("MB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024;
+                    }
+                    else if (unit.compare("GB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024 * 1024;
+                    }
+                    else if (unit.compare("TB") == 0)
+                    {
+                        misc.memory = misc::convert<size_t>(value) * 1024 * 1024
+                                      * 1024 * 1024;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(input.length() - 1);
+                        value = input.substr(0, input.length() - 1);
+                        std::transform(unit.begin(), unit.end(), unit.begin(),
+                                       ::toupper);
+                        if (unit.compare("B") == 0) {
+                            misc.memory = misc::convert<size_t>(value);
+                            std::cerr << "Update to: " << misc.memory
+                                      << std::endl;
+                        }
+                    }
+                }
+                catch (const std::runtime_error& er_info)
+                {
+                    error = true;
+                    error_messages.append("Error: Undefined memory input: "
+                                          + input);
+                }
+            }
+            else
+            {
+                error = true;
+                error_messages.append("Error: Undefined memory input: "
+                                      + input);
+            }
         }
 
         message["memory"] = input;

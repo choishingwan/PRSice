@@ -70,16 +70,27 @@ public:
         m_region_list = std::vector<std::vector<region_bound>>();
         m_snp_check_index = std::vector<size_t>();
     }
-    void post_clump_count(std::vector<int> &count){
-    	int max = 0;
-    	m_region_post_clump_count.resize(count.size());
-    	for(size_t i= 0; i < count.size(); ++i){
-    		max = (count[i]>max && i != count.size()-1)? count[i]:max;
-    		m_region_post_clump_count[i] = count[i];
-    	}
-    	if(count.size() > 1 && max > count.back()){
-    		throw std::runtime_error("Error: Not enough background SNP for calculation of competitive P-value!");
-    	}
+    void post_clump_count(std::vector<int>& count)
+    {
+        int max = 0;
+        m_region_post_clump_count.resize(count.size());
+        for (size_t i = 0; i < count.size(); ++i) {
+            max = (count[i] > max && i != count.size() - 1) ? count[i] : max;
+            m_region_post_clump_count[i] = count[i];
+            if (m_region_size_duplicated.find(count[i])
+                != m_region_size_duplicated.end())
+                m_region_size_duplicated[count[i]] = true;
+            else
+                m_region_size_duplicated[count[i]] = false;
+        }
+        if (count.size() > 1 && max > count.back()) {
+            throw std::runtime_error("Error: Not enough background SNP for "
+                                     "calculation of competitive P-value!");
+        }
+    }
+    bool duplicated_size(size_t i_region)
+    {
+        return m_region_size_duplicated[m_region_post_clump_count.at(i_region)];
     }
 
 private:
@@ -110,6 +121,9 @@ private:
     // the number of SNPs from the base+target that falls into the region
     std::vector<int> m_region_snp_count;
     std::vector<int> m_region_post_clump_count;
+    // this is use for informing us if we would bother to store the permutation
+    // results
+    std::unordered_map<int, bool> m_region_size_duplicated;
     int m_5prime = 0;
     int m_3prime = 0;
 

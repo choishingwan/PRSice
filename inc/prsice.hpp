@@ -56,11 +56,11 @@
 #define THREAD_RETURN return nullptr
 #endif
 #ifdef __APPLE__
-#include <mach/vm_statistics.h>
-#include <mach/mach_types.h>
-#include <mach/mach_init.h>
-#include <mach/mach_host.h>
 #include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/mach_init.h>
+#include <mach/mach_types.h>
+#include <mach/vm_statistics.h>
 #endif
 // This should be the class to handle all the procedures
 class PRSice
@@ -297,9 +297,11 @@ private:
 #endif
     }
 
-    void gen_perm_memory(const Commander &commander, const size_t sample_ct, Reporter& reporter);
+    void gen_perm_memory(const Commander& commander, const size_t sample_ct,
+                         Reporter& reporter);
     void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
+    void run_competitive(Genotype& target, const Commander& commander);
 };
 
 #endif // PRSICE_H

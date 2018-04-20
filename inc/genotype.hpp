@@ -188,15 +188,17 @@ public:
     }
     uintptr_t founder_ct() const { return m_founder_ct; }
     uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
-    void count_snp_in_region(Region & region) const {
-    	std::vector<int> result(region.size(),0);
-    	for(auto &&snp : m_existed_snps){
-    		for(size_t i_region = 0; i_region < region.size(); ++i_region){
-    			result[i_region]+= snp.in(i_region);
-    		}
-    	}
-    	region.post_clump_count(result);
+    void count_snp_in_region(Region& region) const
+    {
+        std::vector<int> result(region.size(), 0);
+        for (auto&& snp : m_existed_snps) {
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+                result[i_region] += snp.in(i_region);
+            }
+        }
+        region.post_clump_count(result);
     };
+
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
