@@ -534,7 +534,7 @@ private:
                            std::map<std::string, std::string>& message,
                            std::string& error_messages, bool& error)
     {
-    	misc.provided_memory = true;
+        misc.provided_memory = true;
         if (message.find("memory") != message.end()) {
             error_messages.append("Warning: Duplicated argument --memory\n");
         }

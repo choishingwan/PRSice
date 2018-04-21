@@ -590,7 +590,7 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
     }
 }
 
-void BinaryGen::dosage_score(std::vector<size_t> &index)
+void BinaryGen::dosage_score(std::vector<size_t>& index)
 {
     m_cur_file = "";
     std::vector<genfile::byte_t> buffer1, buffer2;
@@ -787,8 +787,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
 }
 
 
-
-void BinaryGen::hard_code_score(std::vector<size_t> &index)
+void BinaryGen::hard_code_score(std::vector<size_t>& index)
 {
 
     m_cur_file = "";
@@ -803,8 +802,7 @@ void BinaryGen::hard_code_score(std::vector<size_t> &index)
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     //    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
-    for (auto && i_snp: index)
-    { // for each SNP
+    for (auto&& i_snp : index) { // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
@@ -957,9 +955,13 @@ void BinaryGen::read_score(size_t start_index, size_t end_bound,
         dosage_score(start_index, end_bound, region_index);
 }
 
-void BinaryGen::read_score(std::vector<size_t> &index){
-	// because I don't want to touch the code in dosage_score, we will reset the sample here
-	reset_sample_prs();
-	if (m_hard_coded) hard_code_score(index);
-	else dosage_score(index);
+void BinaryGen::read_score(std::vector<size_t>& index)
+{
+    // because I don't want to touch the code in dosage_score, we will reset the
+    // sample here
+    reset_sample_prs();
+    if (m_hard_coded)
+        hard_code_score(index);
+    else
+        dosage_score(index);
 }

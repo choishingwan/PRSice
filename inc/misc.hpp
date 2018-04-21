@@ -44,10 +44,10 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <unistd.h>
 #include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #define BIGSTACK_MIN_MB 64
@@ -173,7 +173,8 @@ inline size_t current_ram_usage()
 #endif
 }
 
-inline size_t total_ram_available(){
+inline size_t total_ram_available()
+{
 #ifdef __APPLE__
     int32_t mib[2];
     size_t sztmp;
@@ -239,13 +240,12 @@ inline size_t total_ram_available(){
         }
         else if (malloc_size_mb == BIGSTACK_MIN_MB)
         {
-            throw std::runtime_error(
-                "Failed to allocate required memory");
+            throw std::runtime_error("Failed to allocate required memory");
         }
     }
-    free( bigstack_ua);
+    free(bigstack_ua);
     bigstack_ua = nullptr;
-    return malloc_size_mb*1024*1024;
+    return malloc_size_mb * 1024 * 1024;
 }
 // function from John D.Cook
 // https://www.johndcook.com/blog/standard_deviation/

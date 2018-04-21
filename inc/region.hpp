@@ -75,7 +75,8 @@ public:
         int max = 0;
         m_region_post_clump_count.resize(count.size());
         for (size_t i = 0; i < count.size(); ++i) {
-            max = (count[i] > max && i != count.size() - 1 && i != 0) ? count[i] : max;
+            max = (count[i] > max && i != count.size() - 1 && i != 0) ? count[i]
+                                                                      : max;
             m_region_post_clump_count[i] = count[i];
             if (m_region_size_duplicated.find(count[i])
                 != m_region_size_duplicated.end())
@@ -89,12 +90,14 @@ public:
                                      "calculation of competitive P-value!");
         }
     }
-    size_t num_post_clump_snp(size_t i_region) const{
-    	return m_region_post_clump_count.at(i_region);
+    size_t num_post_clump_snp(size_t i_region) const
+    {
+        return m_region_post_clump_count.at(i_region);
     }
     bool duplicated_size(size_t i_region) const
     {
-        return m_region_size_duplicated.at(m_region_post_clump_count.at(i_region));
+        return m_region_size_duplicated.at(
+            m_region_post_clump_count.at(i_region));
     }
 
 private:

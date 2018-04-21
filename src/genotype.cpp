@@ -1544,6 +1544,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     }
     m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
+
     // no longer require the m_existed_snps_index
     message = "";
     if (mismatch != 0) {
@@ -1595,21 +1596,21 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
-void Genotype::get_null_score(const size_t &set_size, const size_t &background_index,  const bool require_statistic){
-	if(m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
-	std::vector<size_t> selected_snp_index(set_size);
-	size_t snp_found=0;
+void Genotype::get_null_score(const size_t& set_size,
+                              const size_t& background_index,
+                              const bool require_statistic)
+{
+    if (m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
+    std::vector<size_t> selected_snp_index(set_size);
+    size_t snp_found = 0;
 
-    std::vector<int> snp_index(m_existed_snps.size());
-    std::iota(std::begin(snp_index), std::end(snp_index),0);
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(snp_index.begin(), snp_index.end(), g);
-    for(size_t i = 0; i < snp_index.size(); ++i){
-    	if(!m_existed_snps[i].in(background_index)) continue;
-    	selected_snp_index.push_back(i);
-    	snp_found++;
-    	if(snp_found==set_size) break;
+    std::shuffle(m_background_snp_index.begin(), m_background_snp_index.end(), g);
+    for (auto &&index : m_background_snp_index) {
+        selected_snp_index.push_back(index);
+        snp_found++;
+        if (snp_found == set_size) break;
     }
     SNP::sort_snp_index(selected_snp_index, m_existed_snps);
     read_score(selected_snp_index);

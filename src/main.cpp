@@ -161,6 +161,9 @@ int main(int argc, char* argv[])
             target_file->count_snp_in_region(region);
             PRSice prsice = PRSice(base_name, commander, region.size() > 1,
                                    target_file->num_sample(), reporter);
+            if(region.size() > 1){
+            		target_file->init_background_index(region.size()-1);
+            }
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);
             size_t num_pheno = prsice.num_phenotype();
@@ -180,12 +183,12 @@ int main(int argc, char* argv[])
                          i_region < region.size() - (region.size() > 1 ? 1 : 0);
                          ++i_region)
                     {
-                        prsice.run_prsice(commander, region,
-                                          i_pheno, i_region, *target_file);
+                        prsice.run_prsice(commander, region, i_pheno, i_region,
+                                          *target_file);
                         if (region.size() > 1) {
                             fprintf(stderr, "\rProcessing %03.2f%% of sets",
-                                    (double) i_region / (double) (region.size()-1)
-                                        * 100.0);
+                                    (double) i_region
+                                        / (double) (region.size() - 1) * 100.0);
                         }
                         if (!commander.no_regress())
                             prsice.output(commander, region, i_pheno, i_region,

@@ -200,7 +200,13 @@ public:
         region.post_clump_count(result);
     };
 
-    void get_null_score(const size_t &set_size, const size_t &background_index, const bool require_standardize);
+    void get_null_score(const size_t& set_size, const size_t& background_index,
+                        const bool require_standardize);
+    void init_background_index(const size_t &background_index){
+    		m_background_snp_index.clear();
+    		for(size_t i = 0; i < m_existed_snps.size(); ++i)
+    			if(m_existed_snps[i].in(background_index)) m_background_snp_index.push_back(i);
+    }
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -256,6 +262,7 @@ protected:
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
     std::vector<uintptr_t> m_tmp_genotype;
+    std::vector<size_t> m_background_snp_index;
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
@@ -321,7 +328,7 @@ protected:
                                       const std::string& file_name){};
     virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};
-    virtual void read_score(std::vector<size_t> &index){};
+    virtual void read_score(std::vector<size_t>& index){};
 
 
     // hh_exists

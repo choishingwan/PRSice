@@ -133,9 +133,9 @@ public:
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
-    void run_prsice(const Commander& c_commander,
-    				const Region &region,  const size_t pheno_index,
-                    const size_t region_index, Genotype& target);
+    void run_prsice(const Commander& c_commander, const Region& region,
+                    const size_t pheno_index, const size_t region_index,
+                    Genotype& target);
     void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
 
@@ -219,7 +219,7 @@ private:
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
                                                       // phenotype
-    std::unordered_map<int, std::vector<double> > m_null_store;
+    std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
 
     // pthread mutli_thread require stuff?
@@ -304,7 +304,9 @@ private:
                          Reporter& reporter);
     void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
-    void run_competitive(Genotype& target, const Commander& commander,  const size_t background_index, const size_t num_snp, const bool store_null, const bool binary);
+    void run_competitive(Genotype& target, const Commander& commander,
+                         const size_t background_index, const size_t num_snp,
+                         const bool store_null, const bool binary);
 };
 
 #endif // PRSICE_H
