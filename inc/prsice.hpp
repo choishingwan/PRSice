@@ -44,6 +44,7 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <mingw.thread.h>
 #include <process.h>
 #include <windows.h>
 #define pthread_t HANDLE
@@ -52,6 +53,7 @@
 #define EOLN_STR "\r\n"
 #else
 #include <pthread.h>
+#include <thread>
 #define THREAD_RET_TYPE void*
 #define THREAD_RETURN return nullptr
 #endif

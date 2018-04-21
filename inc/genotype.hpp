@@ -202,11 +202,14 @@ public:
 
     void get_null_score(const size_t& set_size, const size_t& background_index,
                         const bool require_standardize);
-    void init_background_index(const size_t &background_index){
-    		m_background_snp_index.clear();
-    		for(size_t i = 0; i < m_existed_snps.size(); ++i)
-    			if(m_existed_snps[i].in(background_index)) m_background_snp_index.push_back(i);
+    void init_background_index(const size_t& background_index)
+    {
+        m_background_snp_index.clear();
+        for (size_t i = 0; i < m_existed_snps.size(); ++i)
+            if (m_existed_snps[i].in(background_index))
+                m_background_snp_index.push_back(i);
     }
+
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;

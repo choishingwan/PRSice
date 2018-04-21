@@ -1606,8 +1606,9 @@ void Genotype::get_null_score(const size_t& set_size,
 
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(m_background_snp_index.begin(), m_background_snp_index.end(), g);
-    for (auto &&index : m_background_snp_index) {
+    std::shuffle(m_background_snp_index.begin(), m_background_snp_index.end(),
+                 g);
+    for (auto&& index : m_background_snp_index) {
         selected_snp_index.push_back(index);
         snp_found++;
         if (snp_found == set_size) break;

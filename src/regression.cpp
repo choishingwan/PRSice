@@ -32,8 +32,8 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
     Eigen::VectorXd beta = z.solve(y);
     Eigen::VectorXd fitted = A * beta;
-    double rss =  (A * beta - y).squaredNorm();
-    double mss = (fitted.array() -fitted.mean()).pow(2).sum();
+    double rss = (A * beta - y).squaredNorm();
+    double mss = (fitted.array() - fitted.mean()).pow(2).sum();
     r2 = mss / (mss + rss);
 
     int n = A.rows();

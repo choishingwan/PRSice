@@ -161,8 +161,8 @@ int main(int argc, char* argv[])
             target_file->count_snp_in_region(region);
             PRSice prsice = PRSice(base_name, commander, region.size() > 1,
                                    target_file->num_sample(), reporter);
-            if(region.size() > 1){
-            		target_file->init_background_index(region.size()-1);
+            if (region.size() > 1) {
+                target_file->init_background_index(region.size() - 1);
             }
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);

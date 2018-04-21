@@ -1535,8 +1535,8 @@ void PRSice::gen_perm_memory(const Commander& commander, const size_t sample_ct,
     {
         m_perm_per_slice = final_mb / min_memory_byte;
     }
-    if(m_perm_per_slice*sample_ct > g_permuted_pheno.max_size()){
-    		m_perm_per_slice = g_permuted_pheno.max_size()/ sample_ct;
+    if (m_perm_per_slice * sample_ct > g_permuted_pheno.max_size()) {
+        m_perm_per_slice = g_permuted_pheno.max_size() / sample_ct;
     }
     std::string message =
         std::to_string(((final_mb > max_req_memory) ? max_req_memory : final_mb)
@@ -1645,8 +1645,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         num_prs_store = num_thread;
     }
     // need to be careful not to store too much that the vector cannot handle
-    if(num_prs_store*num_regress_sample >  g_permuted_pheno.max_size()){
-    		num_prs_store = g_permuted_pheno.max_size()/ num_regress_sample;
+    if (num_prs_store * num_regress_sample > g_permuted_pheno.max_size()) {
+        num_prs_store = g_permuted_pheno.max_size() / num_regress_sample;
     }
     std::cerr << "Expect to use: "
               << num_prs_store * additional_memory_required_per_prs
@@ -1707,8 +1707,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
 #ifdef _WIN32
                 pthread_store[ulii] = (HANDLE) _beginthreadex(
                     nullptr, 4096, thread_set_perm, (void*) ulii, 0, nullptr);
-                i f(!pthread_store[ulii])
-                {
+                if (!pthread_store[ulii]) {
                     join_all_threads(pthread_store.data(), ulii);
                     throw std::runtime_error(
                         "Error: Cannot create thread for permutation!");
@@ -1757,6 +1756,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
 
 THREAD_RET_TYPE PRSice::thread_set_perm(void* id)
 {
+    std::vector<std::thread> thread_store;
     size_t i_thread = (size_t) id;
     perm_info pi = g_perm_range[i_thread];
     size_t start = pi.start;
@@ -1767,14 +1767,14 @@ THREAD_RET_TYPE PRSice::thread_set_perm(void* id)
     temp_store.reserve(end - start);
     // we copy this to avoid thread racing
     std::cerr << "In thread: " << misc::current_ram_usage() << std::endl;
-    Eigen::MatrixXd independent=g_independent_variables;
+    Eigen::MatrixXd independent = g_independent_variables;
     std::cerr << "In thread init: " << misc::current_ram_usage() << std::endl;
     const size_t num_regress_sample = independent.rows();
     double r2, coefficient, se, r2_adjust;
     Eigen::setNbThreads(1);
     for (size_t i = start; i < end; ++i) {
 
-		std::cerr << i << " ";
+        std::cerr << i << " ";
         // the required PRS will be located at start
         for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
             independent(i, 1) =
@@ -1795,10 +1795,10 @@ THREAD_RET_TYPE PRSice::thread_set_perm(void* id)
                 fprintf(stderr, "Error: GLM model did not converge!\n");
                 fprintf(stderr, "       Please send me the DEBUG files\n");
                 std::ofstream debug;
-                debug.open(std::string("DEBUG"+std::to_string(i)));
+                debug.open(std::string("DEBUG" + std::to_string(i)));
                 debug << g_independent_variables << std::endl;
                 debug.close();
-                debug.open(std::string("DEBUG.y"+std::to_string(i)));
+                debug.open(std::string("DEBUG.y" + std::to_string(i)));
                 debug << g_phenotype << std::endl;
                 debug.close();
                 fprintf(stderr, "Error: %s\n", error.what());

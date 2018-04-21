@@ -38,8 +38,9 @@
 #include <mach/vm_statistics.h>
 #include <sys/sysctl.h>
 #elif defined _WIN32
-#include "psapi.h"
+// psapi must go after windows, or will generate error
 #include <windows.h>
+#include "psapi.h"
 #else
 #include "stdio.h"
 #include "stdlib.h"
@@ -163,10 +164,13 @@ inline size_t current_ram_usage()
     }
     return t_info.resident_size;
 #elif defined _WIN32
-    PROCESS_MEMORY_COUNTERS_EX pmc;
-    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
-    SIZE_T virtualMemUsedByMe = pmc.PrivateUsage;
-    SIZE_T physMemUsedByMe = pmc.WorkingSetSize;
+    PROCESS_MEMORY_COUNTERS_EX memCounter;
+    BOOL result = GetProcessMemoryInfo(
+        GetCurrentProcess(),
+        reinterpret_cast<PPROCESS_MEMORY_COUNTERS>(&memCounter),
+        sizeof(memCounter));
+    SIZE_T virtualMemUsedByMe = memCounter.PrivateUsage;
+    SIZE_T physMemUsedByMe = memCounter.WorkingSetSize;
     return physMemUsedByMe;
 #else
     return getValue() * 1024;
