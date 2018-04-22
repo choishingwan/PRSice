@@ -95,7 +95,7 @@ public:
     int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-    size_t max_memory(size_t detected) const
+    size_t max_memory(const size_t detected) const
     {
         if (!misc.provided_memory)
             return detected;

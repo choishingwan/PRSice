@@ -26,6 +26,7 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
+#include "thread_queue.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <chrono>
@@ -152,6 +153,10 @@ public:
                        size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
 
+
+    PRSice() = default;
+    PRSice(const PRSice&) = delete;            // disable copying
+    PRSice& operator=(const PRSice&) = delete; // disable assignment
 protected:
 private:
     struct prsice_result
@@ -242,11 +247,11 @@ private:
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
     size_t m_numeric_width = m_precision + 7;
-    // Global Stuff (For threading)
     Eigen::MatrixXd m_independent_variables;
     Eigen::VectorXd m_phenotype;
     std::vector<double> m_perm_result;
     std::vector<double> m_permuted_pheno;
+    std::mutex thread_mutex;
     // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
@@ -300,6 +305,14 @@ private:
     void run_competitive(Genotype& target, const Commander& commander,
                          const size_t background_index, const size_t num_snp,
                          const bool store_null, const bool binary);
+    void produce_null_prs(Thread_Queue<std::vector<double>>& q,
+                          Genotype& target, std::vector<size_t>& sample_index,
+                          size_t num_consumer, size_t num_perm, size_t set_size,
+                          size_t background_index, double original_p,
+                          bool require_standardize);
+    void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
+                     int& num_significant, std::vector<double>& null_p_value,
+                     bool is_binary, bool store_p);
 };
 
 #endif // PRSICE_H
