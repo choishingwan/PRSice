@@ -313,6 +313,12 @@ private:
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, std::vector<double>& null_p_value,
                      bool is_binary, bool store_p);
+    void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
+                            int& num_significant,
+                            std::vector<double>& null_p_value, size_t num_perm,
+                            size_t set_size, size_t background_index,
+                            double original_p, bool require_standardize,
+                            bool is_binary, bool store_p);
 };
 
 #endif // PRSICE_H
