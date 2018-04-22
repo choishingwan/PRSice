@@ -306,7 +306,7 @@ private:
                          const size_t background_index, const size_t num_snp,
                          const bool store_null, const bool binary);
     void produce_null_prs(Thread_Queue<std::vector<double>>& q,
-                          Genotype& target, std::vector<size_t>& sample_index,
+                          Genotype& target, std::vector<int>& sample_index,
                           size_t num_consumer, size_t num_perm, size_t set_size,
                           size_t background_index, double original_p,
                           bool require_standardize);

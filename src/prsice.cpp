@@ -1489,7 +1489,7 @@ void PRSice::gen_perm_memory(const Commander& commander, const size_t sample_ct,
 
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target,
-                              std::vector<size_t>& sample_index,
+                              std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
                               size_t set_size, size_t background_index,
                               double original_p, bool require_standardize)
@@ -1590,7 +1590,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         * (m_independent_variables.cols() * 6 + 15);
 
     // read in the sample index to avoid repeated find
-    std::vector<size_t> sample_index(num_sample, -1);
+    std::vector<int> sample_index(num_sample, -1);
     for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
         std::string sample = target.sample_id(sample_id);
         if (m_sample_with_phenotypes.find(sample)
