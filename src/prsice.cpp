@@ -1046,7 +1046,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         // now multithread it and get the corresponding p-values
 
         // std::vector<pthread_t> pthread_store(n_thread);
-        std::vector<std::thread> thread_store(n_thread);
+        std::vector<std::thread> thread_store;
         int job_size = cur_perm / n_thread;
         int remain = cur_perm % n_thread;
         size_t start = 0;
