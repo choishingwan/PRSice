@@ -44,18 +44,17 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <mingw.mutex.h>
 #include <mingw.thread.h>
 #include <process.h>
 #include <windows.h>
-#define pthread_t HANDLE
-#define THREAD_RET_TYPE unsigned __stdcall
-#define THREAD_RETURN return 0
+//#define pthread_t HANDLE
+//#define THREAD_RET_TYPE unsigned __stdcall
+//#define THREAD_RETURN return 0
 #define EOLN_STR "\r\n"
 #else
-#include <pthread.h>
 #include <thread>
-#define THREAD_RET_TYPE void*
-#define THREAD_RETURN return nullptr
+//#include <pthread.h>
 #endif
 #ifdef __APPLE__
 #include <mach/mach.h>
@@ -81,7 +80,7 @@ public:
         , m_target_binary(commander.is_binary())
     {
 
-        g_logit_perm = commander.logit_perm();
+        m_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
@@ -100,7 +99,7 @@ public:
             // DEBUG here
             m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
-                if (!g_logit_perm) {
+                if (!m_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform  linear regression instead of logistic "
@@ -191,7 +190,7 @@ private:
 
     bool m_ignore_fid = false;
     bool m_prset = false;
-    static bool g_logit_perm;
+    bool m_logit_perm;
 
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
@@ -223,16 +222,7 @@ private:
                                                       // phenotype
     std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
-
-    // pthread mutli_thread require stuff?
-    struct perm_info
-    {
-        size_t start;
-        size_t end;
-        size_t processed;
-        size_t rank;
-        bool binary;
-    };
+    static std::mutex lock_guard;
 
     struct column_file_info
     {
@@ -253,20 +243,20 @@ private:
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
     size_t m_numeric_width = m_precision + 7;
     // Global Stuff (For threading)
-    static Eigen::MatrixXd g_independent_variables;
-    static Eigen::VectorXd g_phenotype;
-    static std::vector<double> g_perm_result;
-    static std::unordered_map<uintptr_t, perm_info> g_perm_range;
-    static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
-    static std::vector<double> g_permuted_pheno;
-    static Eigen::VectorXd g_pre_se_calulated;
+    Eigen::MatrixXd m_independent_variables;
+    Eigen::VectorXd m_phenotype;
+    std::vector<double> m_perm_result;
+    std::vector<double> m_permuted_pheno;
     // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
-    static THREAD_RET_TYPE thread_perm(void* id);
-    static THREAD_RET_TYPE thread_set_perm(void* id);
-    void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
+    // static THREAD_RET_TYPE thread_perm(void* id);
+    void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                     size_t start, size_t end, int rank,
+                     const Eigen::VectorXd& pre_se, size_t processed);
+    // static THREAD_RET_TYPE thread_set_perm(void* id);
+    void permutation(Genotype& target, const size_t n_thread, bool is_binary);
     void update_sample_included(Genotype& target);
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
@@ -284,23 +274,24 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
-
-    void join_all_threads(pthread_t* threads, uint32_t ctp1)
-    {
-        if (ctp1 == 0) {
-            return;
+    /*
+        void join_all_threads(pthread_t* threads, uint32_t ctp1)
+        {
+            if (ctp1 == 0) {
+                return;
+            }
+    #ifdef _WIN32
+            WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
+            for (uint32_t uii = 0; uii < ctp1; ++uii) {
+                CloseHandle(threads[uii]);
+            }
+    #else
+            for (uint32_t uii = 0; uii < ctp1; uii++) {
+                pthread_join(threads[uii], nullptr);
+            }
+    #endif
         }
-#ifdef _WIN32
-        WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
-        for (uint32_t uii = 0; uii < ctp1; ++uii) {
-            CloseHandle(threads[uii]);
-        }
-#else
-        for (uint32_t uii = 0; uii < ctp1; uii++) {
-            pthread_join(threads[uii], nullptr);
-        }
-#endif
-    }
+        */
 
     void gen_perm_memory(const Commander& commander, const size_t sample_ct,
                          Reporter& reporter);
