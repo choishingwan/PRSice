@@ -1560,13 +1560,17 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
     std::vector<double> cur_null_p;
     Eigen::MatrixXd independent = m_independent_variables;
     const size_t num_regress_sample = m_independent_variables.rows();
+    size_t processed = 0;
     while (true) {
         std::vector<double> prs;
         q.pop(prs);
+
         if (prs.empty()) {
+
             // all job finished
-            return;
+            break;
         }
+        processed++;
         for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
             independent(i_sample, 1) = prs[i_sample];
         }
