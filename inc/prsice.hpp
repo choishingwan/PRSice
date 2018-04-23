@@ -251,7 +251,7 @@ private:
     Eigen::VectorXd m_phenotype;
     std::vector<double> m_perm_result;
     std::vector<double> m_permuted_pheno;
-    std::mutex thread_mutex;
+    std::mutex m_thread_mutex;
     // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,

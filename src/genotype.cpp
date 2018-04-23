@@ -1601,19 +1601,15 @@ void Genotype::get_null_score(const size_t& set_size,
                               const bool require_statistic)
 {
     if (m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
-    std::vector<size_t> selected_snp_index(set_size);
-    size_t snp_found = 0;
 
     std::random_device rd;
     std::mt19937 g(rd());
     std::shuffle(m_background_snp_index.begin(), m_background_snp_index.end(),
                  g);
-    for (auto&& index : m_background_snp_index) {
-        selected_snp_index.push_back(index);
-        snp_found++;
-        if (snp_found == set_size) break;
-    }
+    std::vector<size_t> selected_snp_index(m_background_snp_index.begin(), m_background_snp_index.begin()+set_size);
+
     SNP::sort_snp_index(selected_snp_index, m_existed_snps);
+
     read_score(selected_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;

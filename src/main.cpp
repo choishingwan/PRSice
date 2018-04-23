@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
                 return -1;
             }
             // initialize PRSice class
-            target_file->count_snp_in_region(region);
+            target_file->count_snp_in_region(region, commander.out(), commander.print_snp());
             PRSice prsice(base_name, commander, region.size() > 1,
                           target_file->num_sample(), reporter);
             if (region.size() > 1) {

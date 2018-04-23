@@ -1807,7 +1807,7 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
                             bool& error, std::string& error_message)
 {
     if (!prset.perform_prset) return;
-    if (!prset.gtf.empty() && prset.msigdb.empty()) {
+    if (prset.gtf.empty() && !prset.msigdb.empty()) {
         error = true;
         error_message.append(
             "Error: Must provide a gtf file if msigdb is specified\n");

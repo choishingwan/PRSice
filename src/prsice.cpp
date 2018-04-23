@@ -1344,12 +1344,14 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prs_sum.set = region.get_name(region_index);
     prs_sum.result = best_info;
     prs_sum.result.r2 = best_info.r2;
+
     prs_sum.result.competitive_p = best_info.competitive_p;
     prs_sum.r2_null = m_null_r2;
     prs_sum.top = top;
     prs_sum.bottom = bottom;
     prs_sum.prevalence = prevalence;
     m_prs_summary.push_back(prs_sum);
+
     if (best_info.p > 0.1)
         m_significant_store[0]++;
     else if (best_info.p > 1e-5)
@@ -1432,7 +1434,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             << sum.result.p << "\t" << sum.result.num_snp;
         if (m_prset) {
             out << "\t"
-                << ((sum.result.emp_p >= 0.0) ? std::to_string(sum.result.emp_p)
+                << ((sum.result.competitive_p >= 0.0) ? std::to_string(sum.result.competitive_p)
                                               : "-");
         }
         if (perm) out << "\t" << sum.result.emp_p;
@@ -1522,6 +1524,7 @@ void PRSice::null_set_no_thread(
         if (store_p) null_p_value.push_back(obs_p);
         processed++;
     }
+
 }
 
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
@@ -1589,11 +1592,12 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
         cur_num_significant += (original_p > obs_p);
         cur_null_p.push_back(obs_p);
     }
+
     {
-        std::unique_lock<std::mutex> locker(thread_mutex);
+        std::unique_lock<std::mutex> locker(m_thread_mutex);
+
         num_significant += cur_num_significant;
         if (store_p) {
-            std::cerr << "one thread completed" << std::endl;
             null_p_value.insert(null_p_value.end(),
                                 std::make_move_iterator(cur_null_p.begin()),
                                 std::make_move_iterator(cur_null_p.end()));
@@ -1674,7 +1678,10 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
 
     std::vector<double> null_p_value;
     int num_more_significant = 0;
+
     if (store_null) null_p_value.reserve(num_perm);
+    //bool debug_null = true;
+    //if (debug_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
         std::thread producer(
@@ -1697,8 +1704,9 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         null_set_no_thread(target, sample_index, num_more_significant,
                            null_p_value, num_perm, num_snp, background_index,
                            obs_p_value, require_standardize, is_binary,
-                           store_null);
+						   store_null);
     }
+
     if (store_null) {
         std::sort(null_p_value.begin(), null_p_value.end());
         m_null_store[num_snp] = null_p_value;
