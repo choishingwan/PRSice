@@ -193,6 +193,7 @@ int main(int argc, char* argv[])
                         if (!commander.no_regress())
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
+                        /*
                         else if (commander.print_snp())
                         {
                             std::string output_name = commander.out();
@@ -202,6 +203,7 @@ int main(int argc, char* argv[])
                             std::string out_snp = output_name + ".snps";
                             target_file->print_snp(out_snp, -1, i_region);
                         }
+                        */
                     }
                     if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets\n",

@@ -44,9 +44,9 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         pheno.close();
         misc::trim(line);
         std::vector<std::string> col = misc::split(line);
-        if (col.size() < (size_t)(1 + !m_ignore_fid)) {
+        if (col.size() < (size_t)(2 + !m_ignore_fid)) {
             throw std::runtime_error(
-                "Error: Not enough column in Phenotype file."
+                "Error: Not enough column in Phenotype file. "
                 "Have you use the --ignore-fid option");
         }
         std::string sample_id = col[0];
@@ -1358,11 +1358,12 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         m_significant_store[1]++;
     else
         m_significant_store[2]++;
-
+/*
     if (c_commander.print_snp()) {
         target.print_snp(out_snp, m_prs_results[m_best_index].threshold,
                          region_index);
     }
+    */
 }
 
 void PRSice::summarize(const Commander& commander, Reporter& reporter)
