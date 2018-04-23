@@ -1495,13 +1495,30 @@ void PRSice::null_set_no_thread(
     size_t background_index, double original_p, bool require_standardize,
     bool is_binary, bool store_p)
 {
+
     size_t processed = 0;
     const size_t num_sample = sample_index.size();
     const size_t num_regress_sample = m_independent_variables.rows();
     double coefficient, se, r2, r2_adjust;
+    std::mt19937 g(m_seed);
+    const size_t num_background = target.num_background();
+    std::vector<size_t> selection_list(num_background);
+    std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
         std::vector<double> prs(num_regress_sample, 0);
-        target.get_null_score(set_size, background_index, require_standardize);
+        auto begin = selection_list.begin();
+        auto end = selection_list.end();
+        size_t left = std::distance(begin, end);
+        size_t num_snp  = set_size;
+        while(num_snp--){
+        	auto r = begin;
+        	std::uniform_int_distribution<> dist(0,left);
+        	std::advance(r, dist(g));
+        	std::swap(*begin, *r);
+        	++begin;
+        	--left;
+        }
+        target.get_null_score(set_size, background_index, selection_list,require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 m_independent_variables(sample_index[sample_id], 1) =
@@ -1528,6 +1545,7 @@ void PRSice::null_set_no_thread(
 
 }
 
+
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
@@ -1537,9 +1555,26 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     size_t processed = 0;
     const size_t num_sample = sample_index.size();
     const size_t num_regress_sample = m_independent_variables.rows();
+
+    std::mt19937 g(m_seed);
+    const size_t num_background = target.num_background();
+    std::vector<size_t> selection_list(num_background);
+    std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
         std::vector<double> prs(num_regress_sample, 0);
-        target.get_null_score(set_size, background_index, require_standardize);
+        auto begin = selection_list.begin();
+        auto end = selection_list.end();
+        size_t left = std::distance(begin, end);
+        size_t num_snp  = set_size;
+        while(num_snp--){
+        	auto r = begin;
+        	std::uniform_int_distribution<> dist(0,left);
+        	std::advance(r, dist(g));
+        	std::swap(*begin, *r);
+        	++begin;
+        	--left;
+        }
+        target.get_null_score(set_size, background_index, selection_list, require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 prs[sample_index[sample_id]] =
@@ -1596,13 +1631,17 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
 
     {
         std::unique_lock<std::mutex> locker(m_thread_mutex);
-
+        std::ofstream debug;
+        debug.open("DEBUG", std::fstream::app);
+        for(auto &&p: cur_null_p){
+        	debug << p << std::endl;
+        }
+        debug.close();
         num_significant += cur_num_significant;
         if (store_p) {
             null_p_value.insert(null_p_value.end(),
-                                std::make_move_iterator(cur_null_p.begin()),
-                                std::make_move_iterator(cur_null_p.end()));
-            cur_null_p.erase(cur_null_p.begin(), cur_null_p.end());
+                               cur_null_p.begin(),
+                                cur_null_p.end());
         }
     }
 }
@@ -1680,9 +1719,9 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     std::vector<double> null_p_value;
     int num_more_significant = 0;
 
-    if (store_null) null_p_value.reserve(num_perm);
-    //bool debug_null = true;
-    //if (debug_null) null_p_value.reserve(num_perm);
+    //if (store_null) null_p_value.reserve(num_perm);
+    bool debug_null = true;
+    if (debug_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
         std::thread producer(
@@ -1695,7 +1734,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
                 obs_p_value, std::ref(num_more_significant),
-                std::ref(null_p_value), is_binary, store_null));
+                std::ref(null_p_value), is_binary, debug_null));
         }
         producer.join();
         for (auto&& thread : consumer_store) thread.join();
@@ -1705,9 +1744,17 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         null_set_no_thread(target, sample_index, num_more_significant,
                            null_p_value, num_perm, num_snp, background_index,
                            obs_p_value, require_standardize, is_binary,
-						   store_null);
+						   debug_null);
     }
+    if(debug_null && num_snp == 77){
+    	std::ofstream DEBUG;
+    	DEBUG.open("Null77");
+    	for(auto &p : null_p_value){
+    		DEBUG << p << std::endl;
+    	}
+    	DEBUG.close();
 
+    }
     if (store_null) {
         std::sort(null_p_value.begin(), null_p_value.end());
         m_null_store[num_snp] = null_p_value;

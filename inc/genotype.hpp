@@ -218,6 +218,7 @@ public:
     };
 
     void get_null_score(const size_t& set_size, const size_t& background_index,
+    	    	const std::vector<size_t> &selection_list,
                         const bool require_standardize);
     void init_background_index(const size_t& background_index)
     {
@@ -226,6 +227,7 @@ public:
             if (m_existed_snps[i].in(background_index))
                 m_background_snp_index.push_back(i);
     }
+    size_t num_background() const { return m_background_snp_index.size(); };
 
 protected:
     friend class BinaryPlink;
@@ -315,6 +317,7 @@ protected:
                   std::vector<uintptr_t>& index_data,
                   std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
+    unsigned int  m_seed;
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;

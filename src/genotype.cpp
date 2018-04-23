@@ -844,6 +844,7 @@ void Genotype::set_info(const Commander& c_commander, const bool ld)
     m_model = c_commander.model();
     m_missing_score = c_commander.get_missing_score();
     m_scoring = c_commander.get_score();
+    m_seed = c_commander.seed();
 }
 
 double Genotype::get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
@@ -1596,18 +1597,19 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
+
+
 void Genotype::get_null_score(const size_t& set_size,
                               const size_t& background_index,
+							  const std::vector<size_t> &selection_list,
                               const bool require_statistic)
 {
     if (m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
 
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(m_background_snp_index.begin(), m_background_snp_index.end(),
-                 g);
-    std::vector<size_t> selected_snp_index(m_background_snp_index.begin(), m_background_snp_index.begin()+set_size);
-
+    // use Fisher-Yates algorithm
+    auto first = selection_list.begin();
+    auto last = selection_list.begin() + set_size;
+    std::vector<size_t> selected_snp_index(first, last);
     SNP::sort_snp_index(selected_snp_index, m_existed_snps);
 
     read_score(selected_snp_index);

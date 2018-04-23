@@ -29,6 +29,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <random>
 
 #if defined __APPLE__
 #include <mach/mach.h>
@@ -103,6 +104,7 @@ private:
     size_t m_col = 0;
     std::vector<T> m_storage;
 };
+
 
 inline bool to_bool(const std::string& input)
 {
