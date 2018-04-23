@@ -1631,12 +1631,7 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
 
     {
         std::unique_lock<std::mutex> locker(m_thread_mutex);
-        std::ofstream debug;
-        debug.open("DEBUG", std::fstream::app);
-        for(auto &&p: cur_null_p){
-        	debug << p << std::endl;
-        }
-        debug.close();
+
         num_significant += cur_num_significant;
         if (store_p) {
             null_p_value.insert(null_p_value.end(),
@@ -1719,9 +1714,9 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     std::vector<double> null_p_value;
     int num_more_significant = 0;
 
-    //if (store_null) null_p_value.reserve(num_perm);
-    bool debug_null = true;
-    if (debug_null) null_p_value.reserve(num_perm);
+    if (store_null) null_p_value.reserve(num_perm);
+    //bool debug_null = true;
+    //if (debug_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
         std::thread producer(
@@ -1734,7 +1729,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
                 obs_p_value, std::ref(num_more_significant),
-                std::ref(null_p_value), is_binary, debug_null));
+                std::ref(null_p_value), is_binary, store_null));
         }
         producer.join();
         for (auto&& thread : consumer_store) thread.join();
@@ -1744,16 +1739,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         null_set_no_thread(target, sample_index, num_more_significant,
                            null_p_value, num_perm, num_snp, background_index,
                            obs_p_value, require_standardize, is_binary,
-						   debug_null);
-    }
-    if(debug_null && num_snp == 77){
-    	std::ofstream DEBUG;
-    	DEBUG.open("Null77");
-    	for(auto &p : null_p_value){
-    		DEBUG << p << std::endl;
-    	}
-    	DEBUG.close();
-
+						   store_null);
     }
     if (store_null) {
         std::sort(null_p_value.begin(), null_p_value.end());
