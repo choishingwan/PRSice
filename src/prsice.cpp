@@ -1658,7 +1658,6 @@ void PRSice::null_set_no_thread(
 
     size_t processed = 0;
     const size_t num_sample = sample_index.size();
-    const size_t num_regress_sample = m_independent_variables.rows();
     double coefficient, se, r2, r2_adjust;
     std::mt19937 g(m_seed);
     const size_t num_background = target.num_background();
