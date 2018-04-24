@@ -152,11 +152,33 @@ public:
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
+    void init_process_count(const Commander &commander, size_t num_region, size_t num_thresholds){
+    	const bool perm = (commander.permutation() > 0);
+    	const bool set_perm = (commander.set_perm() >0);
+    	// the number of raw PRSice run
+    	m_total_process = num_thresholds*num_phenotype()*((num_region>1)?num_region-1:1);
+    	if(perm){
+    		m_total_process*=(commander.permutation()+1);
+    	}
+    	if(set_perm){
+    		// the additional permutation we've got to run, num_region -2 as we don't perform
+    		// permutation on the background set nor the base set
+    		m_total_process+=num_thresholds*num_phenotype()*(num_region-2)*(commander.set_perm());
+    	}
 
-
-    PRSice() = default;
+    }
     PRSice(const PRSice&) = delete;            // disable copying
     PRSice& operator=(const PRSice&) = delete; // disable assignment
+    void print_progress(bool completed = false){
+    	double cur_progress = ((double)m_analysis_done/(double)m_total_process)*100.0;
+    	if(cur_progress - m_previous_percentage > 0.01){
+    		fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
+    		m_previous_percentage = cur_progress;
+    	}
+    	if(m_previous_percentage >= 100.0 || completed){
+    		fprintf(stderr, "\rProcessing %03.2f%%\n",100.0);
+    	}
+    }
 protected:
 private:
     struct prsice_result
@@ -195,7 +217,7 @@ private:
 
     bool m_ignore_fid = false;
     bool m_prset = false;
-    bool m_logit_perm;
+    bool m_logit_perm=false;
 
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
@@ -211,6 +233,9 @@ private:
     size_t m_all_thresholds = 0;
     size_t m_max_fid_length = 3;
     size_t m_max_iid_length = 3;
+    size_t m_total_process = 0;
+    size_t m_analysis_done = 0;
+    double m_previous_percentage = 0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
@@ -256,11 +281,9 @@ private:
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
-    // static THREAD_RET_TYPE thread_perm(void* id);
     void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
                      size_t start, size_t end, int rank,
                      const Eigen::VectorXd& pre_se, size_t processed);
-    // static THREAD_RET_TYPE thread_set_perm(void* id);
     void permutation(Genotype& target, const size_t n_thread, bool is_binary);
     void update_sample_included(Genotype& target);
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
@@ -279,25 +302,6 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
-    /*
-        void join_all_threads(pthread_t* threads, uint32_t ctp1)
-        {
-            if (ctp1 == 0) {
-                return;
-            }
-    #ifdef _WIN32
-            WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
-            for (uint32_t uii = 0; uii < ctp1; ++uii) {
-                CloseHandle(threads[uii]);
-            }
-    #else
-            for (uint32_t uii = 0; uii < ctp1; uii++) {
-                pthread_join(threads[uii], nullptr);
-            }
-    #endif
-        }
-        */
-
     void gen_perm_memory(const Commander& commander, const size_t sample_ct,
                          Reporter& reporter);
     void print_best(Genotype& target, const size_t pheno_index,

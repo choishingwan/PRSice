@@ -166,6 +166,7 @@ int main(int argc, char* argv[])
             }
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);
+            prsice.init_process_count(commander, region.size(), target_file->num_threshold());
             size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
@@ -176,40 +177,34 @@ int main(int argc, char* argv[])
                                        i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
-                    if (region.size() > 1) {
+                    /*if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
-                    }
+                    }*/
                     for (size_t i_region = 0;
                          i_region < region.size() - (region.size() > 1 ? 1 : 0);
                          ++i_region)
                     {
                         prsice.run_prsice(commander, region, i_pheno, i_region,
                                           *target_file);
+                        /*
                         if (region.size() > 1) {
                             fprintf(stderr, "\rProcessing %03.2f%% of sets",
                                     (double) i_region
                                         / (double) (region.size() - 1) * 100.0);
-                        }
+                        }*/
                         if (!commander.no_regress())
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
-                        /*
-                        else if (commander.print_snp())
-                        {
-                            std::string output_name = commander.out();
-                            if (region.size() > 1)
-                                output_name.append("."
-                                                   + region.get_name(i_region));
-                            std::string out_snp = output_name + ".snps";
-                            target_file->print_snp(out_snp, -1, i_region);
-                        }
-                        */
+
                     }
+                    /*
                     if (region.size() > 1) {
                         fprintf(stderr, "\rProcessing %03.2f%% of sets\n",
                                 100.0);
                     }
+                    */
                 }
+                prsice.print_progress(true);
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
             }

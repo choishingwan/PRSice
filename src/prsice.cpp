@@ -802,12 +802,15 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                             m_num_snp_included, region_index,
                             require_standardize))
     {
+    	m_analysis_done++;
+    	/*
         double progress =
             (double) cur_category / (double) (max_category) *100.0;
         if (progress - prev_progress > 0.01 && !m_prset) {
             fprintf(stderr, "\rProcessing %03.2f%%", progress);
             prev_progress = progress;
-        }
+        }*/
+    	print_progress();
 
         if (print_all_scores) {
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
@@ -835,7 +838,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         m_all_file.processed_threshold++;
     }
     if (all_out.is_open()) all_out.close();
-    if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
+    //if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
@@ -1060,6 +1063,9 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
         }
         for (auto&& thread : thread_store) thread.join();
         processed += cur_perm;
+    	m_analysis_done+= cur_perm;
+
+    	print_progress();
     }
 }
 
@@ -1505,6 +1511,7 @@ void PRSice::null_set_no_thread(
     std::vector<size_t> selection_list(num_background);
     std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
+
         std::vector<double> prs(num_regress_sample, 0);
         auto begin = selection_list.begin();
         auto end = selection_list.end();
@@ -1525,7 +1532,9 @@ void PRSice::null_set_no_thread(
                     target.calculate_score(m_score, sample_id);
             }
         }
+    	m_analysis_done++;
 
+    	print_progress();
         double obs_p = 2.0; // for safety reason, make sure it is out bound
         if (is_binary) {
             Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
@@ -1561,6 +1570,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     std::vector<size_t> selection_list(num_background);
     std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
+
         std::vector<double> prs(num_regress_sample, 0);
         auto begin = selection_list.begin();
         auto end = selection_list.end();
@@ -1582,6 +1592,10 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             }
         }
         q.push(prs, num_consumer);
+
+    	m_analysis_done++;
+
+    	print_progress();
         processed++;
     }
     // send termination signal to the consumers
