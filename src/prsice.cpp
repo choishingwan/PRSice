@@ -1738,6 +1738,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                     target.calculate_score(m_score, sample_id);
             }
         }
+
         q.push(prs, num_consumer);
 
     	m_analysis_done++;
