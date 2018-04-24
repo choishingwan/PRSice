@@ -794,22 +794,16 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     // current threshold iteration
     size_t iter_threshold = 0;
     // +1 such that only 100% when finished
-    size_t max_category = target.max_category() + 1;
+
     int cur_category = 0, cur_index = -1;
-    double cur_threshold = 0.0, prev_progress = 0.0;
+    double cur_threshold = 0.0;
     bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    print_progress();
     while (target.get_score(cur_index, cur_category, cur_threshold,
                             m_num_snp_included, region_index,
                             require_standardize))
     {
     	m_analysis_done++;
-    	/*
-        double progress =
-            (double) cur_category / (double) (max_category) *100.0;
-        if (progress - prev_progress > 0.01 && !m_prset) {
-            fprintf(stderr, "\rProcessing %03.2f%%", progress);
-            prev_progress = progress;
-        }*/
     	print_progress();
 
         if (print_all_scores) {
@@ -838,7 +832,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         m_all_file.processed_threshold++;
     }
     if (all_out.is_open()) all_out.close();
-    //if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
@@ -991,6 +984,7 @@ void PRSice::process_permutations()
 void PRSice::permutation(Genotype& target, const size_t n_thread,
                          bool is_binary)
 {
+
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     Eigen::setNbThreads(n_thread);
@@ -1002,6 +996,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     // 2. Not require logit perm
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed;
     Eigen::VectorXd pre_se_calulated;
+    bool run_glm = true;
     if (!is_binary || !m_logit_perm) {
         decomposed.compute(m_independent_variables);
         rank = decomposed.rank();
@@ -1009,7 +1004,24 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
                                 .topLeftCorner(rank, rank)
                                 .triangularView<Eigen::Upper>();
         pre_se_calulated = (R.transpose() * R).inverse().diagonal();
+        run_glm = false;
     }
+
+    if(n_thread ==1){
+    	run_null_perm_no_thread(decomposed, rank, pre_se_calulated, run_glm);
+    }else{
+
+        Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
+    	std::thread producer(&PRSice::gen_null_pheno, this, std::ref(set_perm_queue), n_thread-1);
+    	std::vector<std::thread> consume_store;
+    	for(size_t i = 0; i < n_thread-1; ++i){
+    			consume_store.push_back(std::thread(&PRSice::consume_null_pheno, this, std::ref(set_perm_queue),
+    					std::ref(decomposed), rank, std::cref(pre_se_calulated), run_glm));
+    	}
+    	producer.join();
+    	for(auto && consume : consume_store) consume.join();
+    }
+    /*
     int cur_remain = m_remain_slice;
     // we reseed the random number generator in each iteration so that
     // we will always get the same pheontype permutation
@@ -1067,8 +1079,150 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
 
     	print_progress();
     }
+    */
 }
 
+void PRSice::run_null_perm_no_thread(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+		int rank, const Eigen::VectorXd& pre_se, bool run_glm){
+	size_t processed = 0;
+
+	std::mt19937 rand_gen{m_seed};
+	Eigen::setNbThreads(1);
+	const size_t num_regress_sample = m_phenotype.rows();
+	const bool intercept = true;
+	Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
+			m_phenotype.rows());
+	while (processed < m_num_perm) {
+		Eigen::VectorXd perm_pheno(num_regress_sample);
+		perm_matrix.setIdentity();
+		std::shuffle(perm_matrix.indices().data(),
+				perm_matrix.indices().data()
+				+ perm_matrix.indices().size(),
+				rand_gen);
+		perm_pheno = perm_matrix * m_phenotype;
+		m_analysis_done++;
+		print_progress();
+		double coefficient, se, r2;
+		double obs_p = 2.0; // for safety reason, make sure it is out bound
+		if (run_glm) {
+			Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+					coefficient, se, 25, 1, true);
+		}
+		else
+		{
+			Eigen::VectorXd beta = decomposed.solve(perm_pheno);
+			Eigen::MatrixXd fitted = m_independent_variables * beta;
+
+			Eigen::VectorXd residual = perm_pheno - fitted;
+			int rdf = num_regress_sample - rank;
+			double rss = 0.0;
+			for (size_t r = 0; r < num_regress_sample; ++r) {
+				rss += residual(r) * residual(r);
+			}
+			size_t se_index = intercept;
+			for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
+				if (decomposed.colsPermutation().indices()(ind) == intercept) {
+					se_index = ind;
+					break;
+				}
+			}
+			double resvar = rss / (double) rdf;
+			Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
+			double tval = beta(intercept) / se(se_index);
+			obs_p = misc::calc_tprob(tval,num_regress_sample);
+		}
+
+    	double ori_p = m_perm_result[processed];
+    	m_perm_result[processed] = (ori_p>obs_p)? obs_p : ori_p;
+    	processed++;
+	}
+
+}
+
+void PRSice::gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t> > &q, size_t num_consumer){
+	size_t processed = 0;
+    std::mt19937 rand_gen{m_seed};
+	Eigen::setNbThreads(1);
+	const size_t num_regress_sample = m_phenotype.rows();
+	Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
+	        m_phenotype.rows());
+	while (processed < m_num_perm) {
+		std::vector<double> null_pheno(num_regress_sample);
+		Eigen::Map<Eigen::VectorXd> perm_vec(null_pheno.data(),
+		                                                 num_regress_sample);
+		perm_matrix.setIdentity();
+		std::shuffle(perm_matrix.indices().data(),
+				perm_matrix.indices().data()
+				+ perm_matrix.indices().size(),
+				rand_gen);
+		            // key point here: g_permuted_pheno is a vector
+		perm_vec = perm_matrix * m_phenotype; // permute columns
+		std::pair<std::vector<double>, size_t> p = std::make_pair(null_pheno, processed);
+		q.push(p, num_consumer);
+		m_analysis_done++;
+		print_progress();
+		processed++;
+	}
+	    // send termination signal to the consumers
+	for (size_t i = 0; i < num_consumer; ++i) {
+		q.push(std::pair<std::vector<double>, size_t>(std::vector<double>(), 0), num_consumer);
+	}
+}
+
+void PRSice::consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+		int rank, const Eigen::VectorXd& pre_se, bool run_glm){
+	const size_t n = m_phenotype.rows();
+	const bool intercept = true;
+	std::vector<double> temp_store;
+	std::vector<size_t> temp_index;
+	while (true) {
+		std::pair<std::vector<double>, size_t> input;
+		q.pop(input);
+		// all job finished
+
+		if (std::get<0>(input).empty()) break;
+		Eigen::Map<Eigen::VectorXd> perm_pheno(std::get<0>(input).data(), n);
+		double coefficient, se, r2;
+		double obs_p = 2.0; // for safety reason, make sure it is out bound
+		if (run_glm) {
+			Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+					coefficient, se, 25, 1, true);
+		}
+		else
+		{
+			Eigen::VectorXd beta = decomposed.solve(perm_pheno);
+			Eigen::MatrixXd fitted = m_independent_variables * beta;
+
+			Eigen::VectorXd residual = perm_pheno - fitted;
+			int rdf = n - rank;
+			double rss = 0.0;
+			for (size_t r = 0; r < n; ++r) {
+				rss += residual(r) * residual(r);
+			}
+			size_t se_index = intercept;
+			for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
+				if (decomposed.colsPermutation().indices()(ind) == intercept) {
+					se_index = ind;
+					break;
+				}
+			}
+			double resvar = rss / (double) rdf;
+			Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
+			double tval = beta(intercept) / se(se_index);
+			obs_p = misc::calc_tprob(tval, n);
+		}
+		temp_store.push_back(obs_p);
+		temp_index.push_back(std::get<1>(input));
+	}
+
+    std::lock_guard<std::mutex> lock(lock_guard);
+    for(size_t i = 0; i < temp_store.size(); ++i){
+    	double obs_p = temp_store[i];
+    	auto &&index = temp_index[i];
+    	double ori_p = m_perm_result[index];
+    	m_perm_result[index] = (ori_p>obs_p)? obs_p : ori_p;
+    }
+}
 void PRSice::thread_perm(
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, size_t start,
     size_t end, int rank, const Eigen::VectorXd& pre_se, size_t processed)
@@ -1613,7 +1767,6 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
     std::vector<double> cur_null_p;
     Eigen::MatrixXd independent = m_independent_variables;
     const size_t num_regress_sample = m_independent_variables.rows();
-    size_t processed = 0;
     while (true) {
         std::vector<double> prs;
         q.pop(prs);
@@ -1623,7 +1776,6 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
             // all job finished
             break;
         }
-        processed++;
         for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
             independent(i_sample, 1) = prs[i_sample];
         }

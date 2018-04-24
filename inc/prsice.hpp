@@ -94,11 +94,14 @@ public:
             }
         }
         if (perm) {
-            gen_perm_memory(commander, sample_ct, reporter);
+        	// instead of reserving the required memory, we should just adjust the
+        	// thread number, though most likely it will be light on memory now
+
+            //gen_perm_memory(commander, sample_ct, reporter);
 
             // Additional slice to keep
             // DEBUG here
-            m_remain_slice = m_num_perm % m_perm_per_slice;
+            //m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
                 if (!m_logit_perm) {
                     std::string message =
@@ -171,6 +174,8 @@ public:
     PRSice& operator=(const PRSice&) = delete; // disable assignment
     void print_progress(bool completed = false){
     	double cur_progress = ((double)m_analysis_done/(double)m_total_process)*100.0;
+    	// progress bar can be slow when permutation + thresholding is used due to the
+    	// huge amount of processing required
     	if(cur_progress - m_previous_percentage > 0.01){
     		fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
     		m_previous_percentage = cur_progress;
@@ -235,7 +240,7 @@ private:
     size_t m_max_iid_length = 3;
     size_t m_total_process = 0;
     size_t m_analysis_done = 0;
-    double m_previous_percentage = 0;
+    double m_previous_percentage = -1.0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
@@ -323,6 +328,12 @@ private:
                             size_t set_size, size_t background_index,
                             double original_p, bool require_standardize,
                             bool is_binary, bool store_p);
+    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, size_t num_consumer);
+
+    void consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+    		int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void run_null_perm_no_thread(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+    		int rank, const Eigen::VectorXd& pre_se, bool run_glm);
 };
 
 #endif // PRSICE_H
