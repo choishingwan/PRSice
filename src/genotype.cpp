@@ -1604,12 +1604,11 @@ void Genotype::get_null_score(const size_t& set_size,
 							  const std::vector<size_t> &selection_list,
                               const bool require_statistic)
 {
-    if (m_existed_snps.size() == 0 || set_size > m_existed_snps.size()) return;
+    if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
 
     // use Fisher-Yates algorithm
-    auto first = selection_list.begin();
-    auto last = selection_list.begin() + set_size;
-    std::vector<size_t> selected_snp_index(first, last);
+    std::vector<size_t> selected_snp_index;
+    for(size_t i = 0; i < set_size; ++i) selected_snp_index.push_back(selection_list[i]);
     SNP::sort_snp_index(selected_snp_index, m_existed_snps);
 
     read_score(selected_snp_index);

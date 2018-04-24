@@ -1663,21 +1663,17 @@ void PRSice::null_set_no_thread(
     std::mt19937 g(m_seed);
     const size_t num_background = target.num_background();
     std::vector<size_t> selection_list(num_background);
-    std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
-
-        std::vector<double> prs(num_regress_sample, 0);
-        auto begin = selection_list.begin();
-        auto end = selection_list.end();
-        size_t left = std::distance(begin, end);
+        std::iota(selection_list.begin(), selection_list.end(), 0);
+        size_t begin = 0;
         size_t num_snp  = set_size;
         while(num_snp--){
-        	auto r = begin;
-        	std::uniform_int_distribution<> dist(0,left);
-        	std::advance(r, dist(g));
-        	std::swap(*begin, *r);
+        	std::uniform_int_distribution<int> dist(begin,num_background-1);
+        	size_t r = selection_list[begin];
+        	size_t advance_index = dist(g);
+        	selection_list[begin] = selection_list[advance_index];
+        	selection_list[advance_index]=r;
         	++begin;
-        	--left;
         }
         target.get_null_score(set_size, background_index, selection_list,require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
@@ -1722,21 +1718,18 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     std::mt19937 g(m_seed);
     const size_t num_background = target.num_background();
     std::vector<size_t> selection_list(num_background);
-    std::iota(selection_list.begin(), selection_list.end(), 0);
     while (processed < num_perm) {
-
         std::vector<double> prs(num_regress_sample, 0);
-        auto begin = selection_list.begin();
-        auto end = selection_list.end();
-        size_t left = std::distance(begin, end);
+        std::iota(selection_list.begin(), selection_list.end(), 0);
+        size_t begin = 0;
         size_t num_snp  = set_size;
         while(num_snp--){
-        	auto r = begin;
-        	std::uniform_int_distribution<> dist(0,left);
-        	std::advance(r, dist(g));
-        	std::swap(*begin, *r);
+        	std::uniform_int_distribution<int> dist(begin,num_background-1);
+        	size_t r = selection_list[begin];
+        	size_t advance_index = dist(g);
+        	selection_list[begin] = selection_list[advance_index];
+        	selection_list[advance_index]=r;
         	++begin;
-        	--left;
         }
         target.get_null_score(set_size, background_index, selection_list, require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {

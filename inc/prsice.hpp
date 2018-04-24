@@ -180,7 +180,8 @@ public:
     		fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
     		m_previous_percentage = cur_progress;
     	}
-    	if(m_previous_percentage >= 100.0 || completed){
+
+    	if(m_previous_percentage >= 100.0 || (completed && !m_previous_percentage >= 100.0)){
     		fprintf(stderr, "\rProcessing %03.2f%%\n",100.0);
     	}
     }
