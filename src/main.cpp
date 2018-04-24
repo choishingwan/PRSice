@@ -205,6 +205,7 @@ int main(int argc, char* argv[])
                     */
                 }
                 prsice.print_progress(true);
+        		fprintf(stderr, "\n");
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
             }
