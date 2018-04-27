@@ -166,7 +166,7 @@ public:
     	if(set_perm){
     		// the additional permutation we've got to run, num_region -2 as we don't perform
     		// permutation on the background set nor the base set
-    		m_total_process+=num_thresholds*num_phenotype()*(num_region-2)*(commander.set_perm());
+    		m_total_process+=num_phenotype()*(num_region-2)*(commander.set_perm());
     	}
 
     }
