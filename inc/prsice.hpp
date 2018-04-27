@@ -317,16 +317,15 @@ private:
                          const bool store_null, const bool binary);
     void produce_null_prs(Thread_Queue<std::vector<double>>& q,
                           Genotype& target, std::vector<int>& sample_index,
-                          size_t num_consumer, size_t num_perm, size_t set_size,
+                          size_t num_consumer, size_t num_perm, size_t set_size, size_t num_selected_snps,
                           size_t background_index, double original_p,
                           bool require_standardize);
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
-                     int& num_significant, std::vector<double>& null_p_value,
+                     int& num_significant,
                      bool is_binary, bool store_p);
     void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
-                            int& num_significant,
-                            std::vector<double>& null_p_value, size_t num_perm,
-                            size_t set_size, size_t background_index,
+                            int& num_significant, size_t num_perm,
+                            size_t set_size, size_t num_selected_snps, size_t background_index,
                             double original_p, bool require_standardize,
                             bool is_binary, bool store_p);
     void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, size_t num_consumer);

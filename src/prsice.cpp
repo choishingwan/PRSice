@@ -837,13 +837,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         print_best(target, pheno_index, c_commander);
         // we don't do competitive for the full set
         if (m_prset && c_commander.set_perm() > 0 && region_index != 0) {
-            // if it is prset based permutation, we wouldn't have
-            // reserved the memory and due to the special usaage,
-            // we'd like to have a separate memory pool for each thread.
-            // That can be done by having each thread allocating their
-            // own memory, though that might be more complicated than I'd
-            // like as we might also need to take into account the number
-            // of situation that can be done in one go
             run_competitive(target, c_commander, region.size() - 1,
                             region.num_post_clump_snp(region_index),
                             region.duplicated_size(region_index),
@@ -890,6 +883,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     best_out.close();
     m_best_file.processed_threshold++;
 }
+
 void PRSice::regress_score(Genotype& target, const double threshold,
                            size_t thread, const size_t pheno_index,
                            const size_t iter_threshold)
@@ -1021,65 +1015,6 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     	producer.join();
     	for(auto && consume : consume_store) consume.join();
     }
-    /*
-    int cur_remain = m_remain_slice;
-    // we reseed the random number generator in each iteration so that
-    // we will always get the same pheontype permutation
-    std::mt19937 rand_gen{m_seed};
-    // need to do the permutation of phenotype without threading
-    // so that we can reserve the sequence
-    size_t processed = 0;
-    const size_t num_regress_sample = m_phenotype.rows();
-    // +1 so that we will also procdess the last slice
-    while (processed < m_num_perm) {
-        double* perm_pheno_ptr = m_permuted_pheno.data();
-        Eigen::setNbThreads(n_thread);
-        size_t cur_perm = m_perm_per_slice;
-        cur_perm += (cur_remain > 0) ? 1 : 0;
-        cur_remain--;
-        if (cur_perm + processed > m_num_perm) {
-            cur_perm = m_num_perm - processed;
-        }
-        if (cur_perm < 1) break;
-        // m_permuted_pheno.resize(cur_perm);
-        for (size_t p = 0; p < cur_perm; ++p) {
-            Eigen::Map<Eigen::VectorXd> perm_vec(perm_pheno_ptr,
-                                                 num_regress_sample);
-            perm_matrix.setIdentity();
-            std::shuffle(perm_matrix.indices().data(),
-                         perm_matrix.indices().data()
-                             + perm_matrix.indices().size(),
-                         rand_gen);
-            // key point here: g_permuted_pheno is a vector
-            perm_vec = perm_matrix * m_phenotype; // permute columns
-            perm_pheno_ptr = &(perm_pheno_ptr[num_regress_sample]);
-        }
-        Eigen::setNbThreads(1);
-        // if want to use windows, we need to ditch the use of std::thread
-        // now multithread it and get the corresponding p-values
-
-        // std::vector<pthread_t> pthread_store(n_thread);
-        std::vector<std::thread> thread_store;
-        int job_size = cur_perm / n_thread;
-        int remain = cur_perm % n_thread;
-        size_t start = 0;
-
-        for (uintptr_t ulii = 0; ulii < n_thread; ulii++) {
-            size_t ending = start + job_size + (remain > 0);
-            ending = (ending > cur_perm) ? cur_perm : ending;
-            thread_store.push_back(std::thread(
-                &PRSice::thread_perm, this, std::ref(decomposed), start, ending,
-                rank, std::cref(pre_se_calulated), processed));
-            start = ending;
-            remain--;
-        }
-        for (auto&& thread : thread_store) thread.join();
-        processed += cur_perm;
-    	m_analysis_done+= cur_perm;
-
-    	print_progress();
-    }
-    */
 }
 
 void PRSice::run_null_perm_no_thread(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
@@ -1651,7 +1586,7 @@ void PRSice::gen_perm_memory(const Commander& commander, const size_t sample_ct,
 
 void PRSice::null_set_no_thread(
     Genotype& target, std::vector<int>& sample_index, int& num_significant,
-    std::vector<double>& null_p_value, size_t num_perm, size_t set_size,
+	size_t num_perm, size_t set_size, size_t num_selected_snps,
     size_t background_index, double original_p, bool require_standardize,
     bool is_binary, bool store_p)
 {
@@ -1674,7 +1609,7 @@ void PRSice::null_set_no_thread(
         	selection_list[advance_index]=r;
         	++begin;
         }
-        target.get_null_score(set_size, background_index, selection_list,require_standardize);
+        target.get_null_score(set_size, num_selected_snps, background_index, selection_list,require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 m_independent_variables(sample_index[sample_id], 1) =
@@ -1697,7 +1632,7 @@ void PRSice::null_set_no_thread(
         }
         // thread_mutex
         num_significant += (original_p > obs_p);
-        if (store_p) null_p_value.push_back(obs_p);
+        //if (store_p) null_p_value.push_back(obs_p);
         processed++;
     }
 
@@ -1707,7 +1642,7 @@ void PRSice::null_set_no_thread(
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
-                              size_t set_size, size_t background_index,
+                              size_t set_size, size_t num_selected_snps, size_t background_index,
                               double original_p, bool require_standardize)
 {
     size_t processed = 0;
@@ -1730,7 +1665,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
         	selection_list[advance_index]=r;
         	++begin;
         }
-        target.get_null_score(set_size, background_index, selection_list, require_standardize);
+        target.get_null_score(set_size, num_selected_snps, background_index, selection_list, require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 prs[sample_index[sample_id]] =
@@ -1751,10 +1686,11 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     }
 }
 
+
+
 void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
                          double original_p, int& num_significant,
-                         std::vector<double>& null_p_value, bool is_binary,
-                         bool store_p)
+						 bool is_binary, bool store_p)
 {
     int cur_num_significant = 0;
     std::vector<double> cur_null_p;
@@ -1792,29 +1728,35 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
         std::unique_lock<std::mutex> locker(m_thread_mutex);
 
         num_significant += cur_num_significant;
+        /*
         if (store_p) {
             null_p_value.insert(null_p_value.end(),
                                cur_null_p.begin(),
                                 cur_null_p.end());
-        }
+        }*/
     }
 }
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
                              const size_t background_index,
-                             const size_t num_snp, const bool store_null,
+                             const size_t set_size, const bool store_null,
                              const bool is_binary)
 {
     const size_t num_perm = commander.set_perm();
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
 
     const double obs_p_value = m_prs_results[m_best_index].p;
+    const size_t num_selected_snps = m_prs_results[m_best_index].num_snp;
     // optain result directly from the map
-    if (m_null_store.find(num_snp) != m_null_store.end()) {
+    // for now, scrap this as it is unlikely for two pathway
+    // to have the same number of post clump SNPs AND the
+    // same number of SNPs included in the best score
+    /*
+    if (m_null_store.find(set_size) != m_null_store.end()) {
         if (m_best_index < 0) {
             // no best score for us to get the empirical p-value on
             return;
         }
-        auto&& null = m_null_store[num_snp];
+        auto&& null = m_null_store[set_size];
         // we assume the null is sorted
         int num_more_significant =
             std::upper_bound(null.begin(), null.end(), obs_p_value)
@@ -1825,12 +1767,12 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
 
         return;
     }
-
+     */
     // We want to know if we have sufficient memory for the number of thread
     // specified
     size_t num_thread = commander.thread();
     // resize the result
-    m_perm_result.resize(num_perm, 2);
+    //m_perm_result.resize(num_perm, 2);
     const size_t num_sample = target.num_sample();
     const size_t num_regress_sample = m_independent_variables.rows();
     // a super over estimation of the amount of memory we need per thread
@@ -1868,27 +1810,24 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     if (available_memory / basic_memory_required_per_thread < num_thread) {
         num_thread = available_memory / basic_memory_required_per_thread;
     }
+
     Thread_Queue<std::vector<double>> set_perm_queue;
 
-    std::vector<double> null_p_value;
+    //std::vector<double> null_p_value;
     int num_more_significant = 0;
-
-    if (store_null) null_p_value.reserve(num_perm);
-    //bool debug_null = true;
-    //if (debug_null) null_p_value.reserve(num_perm);
+    //if (store_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
         std::thread producer(
             &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
             std::ref(target), std::ref(sample_index), num_thread - 1, num_perm,
-            num_snp, background_index, obs_p_value, require_standardize);
+            set_size, num_selected_snps, background_index, obs_p_value, require_standardize);
 
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
-                obs_p_value, std::ref(num_more_significant),
-                std::ref(null_p_value), is_binary, store_null));
+                obs_p_value, std::ref(num_more_significant), is_binary, store_null));
         }
         producer.join();
         for (auto&& thread : consumer_store) thread.join();
@@ -1896,14 +1835,16 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     else
     {
         null_set_no_thread(target, sample_index, num_more_significant,
-                           null_p_value, num_perm, num_snp, background_index,
+                           num_perm, set_size, num_selected_snps, background_index,
                            obs_p_value, require_standardize, is_binary,
 						   store_null);
     }
+    /*
     if (store_null) {
         std::sort(null_p_value.begin(), null_p_value.end());
-        m_null_store[num_snp] = null_p_value;
+        m_null_store[set_size] = null_p_value;
     }
+    */
     double competitive_p =
         ((double) num_more_significant + 1.0) / ((double) num_perm + 1.0);
     m_prs_results[m_best_index].competitive_p = competitive_p;

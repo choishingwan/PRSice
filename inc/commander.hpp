@@ -580,8 +580,7 @@ private:
                                        ::toupper);
                         if (unit.compare("B") == 0) {
                             misc.memory = misc::convert<size_t>(value);
-                            std::cerr << "Update to: " << misc.memory
-                                      << std::endl;
+
                         }
                     }
                 }

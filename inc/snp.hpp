@@ -61,6 +61,7 @@ public:
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     static void sort_snp_index(std::vector<size_t>& index,
                                const std::vector<SNP>& input);
+    static std::vector<size_t>  sort_snp_for_perm(std::vector<size_t>& index, const size_t select_size,  const std::vector<SNP>& input);
     bool operator==(const SNP& Ref) const
     {
         if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
