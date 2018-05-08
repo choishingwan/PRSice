@@ -477,7 +477,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 duplicate_check_list.insert(RSID);
             }
             std::vector<genfile::byte_t> buffer1;
-            std::vector<genfile::byte_t>* buffer2 = nullptr;
+            std::vector<genfile::byte_t> buffer2;
             std::streampos byte_pos = bgen_file.tellg();
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
@@ -488,9 +488,9 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                     QC_Checker setter(&m_sample_include, hard_threshold,
                                       hard_coded);
                     genfile::bgen::uncompress_probability_data(context, buffer1,
-                                                               buffer2);
+                                                               &buffer2);
                     genfile::bgen::parse_probability_data<QC_Checker>(
-                        &(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                        &(buffer2)[0], &(buffer2)[0] + buffer2.size(),
                         context, setter);
                     if (setter.filter_snp(maf, geno, info_score)) continue;
                 }
