@@ -425,7 +425,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 { // bigger than the maximum code, ignore it
                     if (!chr_error) {
                         fprintf(stderr,
-                                "Warning: SNPs with chromosome number larger "
+                                "\nWarning: SNPs with chromosome number larger "
                                 "than %du\n",
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
@@ -437,7 +437,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
-                        fprintf(stderr, "Warning: Currently not support "
+                        fprintf(stderr, "\nWarning: Currently not support "
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
