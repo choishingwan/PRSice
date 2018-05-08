@@ -992,7 +992,7 @@ void Commander::set_help_message()
           "but\n"
           "                            should increase the speed of clumping\n"
           "    --perm                  Number of permutation to perform. This "
-          "swill\n"
+          "will\n"
           "                            generate the empirical p-value. "
           "Recommend to\n"
           "                            use value larger than 10,000\n"

@@ -1846,7 +1846,7 @@ if (provided("multi_plot", argv)) {
         sets <- unique(overview$Set)
         if (length(phenos) != 1) {
             multipheno <- subset(overview, Set == "Base")
-            multipheno <- multipheno[order(multipheno$PRS.R2), ]
+            multipheno <- multipheno[order(multipheno$PRS.R2, decreasing=T), ]
             multipheno$Phenotype <-
                 factor(multipheno$Phenotype, levels = multipheno$Phenotype)
             if(use.ggplot){
