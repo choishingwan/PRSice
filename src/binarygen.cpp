@@ -284,6 +284,7 @@ void BinaryGen::get_context(std::string& prefix)
 bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                         const genfile::bgen::Context& context)
 {
+	// only do this if our gen file contains the sample information
     if (context.flags & genfile::bgen::e_SampleIdentifiers) {
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
         uint32_t tmp_offset;
@@ -301,6 +302,8 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                                   &sample_block_size);
         genfile::bgen::read_little_endian_integer(bgen_file,
                                                   &actual_number_of_samples);
+        // +8 here to account for the sample_block_size and actual_number_of_samples
+        // read above. Direct Copy and paste from BGEN lib function read_sample_identifier_block
         bytes_read += 8;
         assert(actual_number_of_samples == context.number_of_samples);
         // we don't need to check the sample name when we are doing the LD
@@ -357,6 +360,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     }
     // first pass to get the total SNP number such that we can speed up the push
     // back
+    // might need time to reserve large amount of memory for the large number
+    // of SNPs included in bgen
     snp_res.reserve(total_unfiltered_snps);
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
@@ -399,7 +404,6 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
 
                 std::transform(a.begin(), a.end(), a.begin(), ::toupper);
             }
-            std::streampos byte_pos = bgen_file.tellg();
             bool exclude_snp = false;
             // but we will not process anything
             if (chromosome.compare(prev_chr) != 0) {
@@ -474,6 +478,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             }
             std::vector<genfile::byte_t> buffer1;
             std::vector<genfile::byte_t>* buffer2 = nullptr;
+            std::streampos byte_pos = bgen_file.tellg();
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
             if (!exclude_snp) {
