@@ -171,7 +171,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
         throw std::runtime_error(error_message);
     }
 
-    m_founder_ct = m_unfiltered_sample_ct;
+    //m_founder_ct = m_unfiltered_sample_ct;
     // now set all those vectors
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     // don't bother with founder info here as we don't have this information
@@ -179,8 +179,11 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     m_founder_info.resize(unfiltered_sample_ctl, 0);
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
+	m_founder_ct = 0;
     for (size_t i = 0; i < temp_inclusion_vec.size(); ++i) {
         if (temp_inclusion_vec[i]) {
+
+        	m_founder_ct++;
             SET_BIT(i, m_sample_include.data());
             // we assume all bgen samples to be founder
             SET_BIT(i, m_founder_info.data());
@@ -247,7 +250,9 @@ void BinaryGen::get_context(std::string& prefix)
     genfile::bgen::read_little_endian_integer(bgen_file, &number_of_samples);
     bgen_file.read(&magic[0], 4);
     free_data.resize(header_size - fixed_data_size);
-    bgen_file.read(&free_data[0], free_data.size());
+    if(free_data.size() > 0){
+    	bgen_file.read(&free_data[0], free_data.size());
+    }
     genfile::bgen::read_little_endian_integer(bgen_file, &flags);
     if ((magic[0] != 'b' || magic[1] != 'g' || magic[2] != 'e'
          || magic[3] != 'n')
@@ -497,6 +502,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 if (!m_is_ref) {
                     m_existed_snps_index[RSID] = snp_res.size();
                     // TODO: Update SNP constructor
+
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.front(), alleles.back(),
                                              prefix, byte_pos));
@@ -547,7 +553,10 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             + dup_name;
         throw std::runtime_error(error_message);
     }
-
+    if(hard_coded){
+    	uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    	m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    }
     return snp_res;
 }
 
@@ -652,6 +661,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
     { // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.in(region_index)) continue;
+
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
