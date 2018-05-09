@@ -32,6 +32,18 @@
 # make PRSice work (though I have not debug PRSice executable in window)
 
 
+# Remove annoying messages ------------------------------------------------
+
+In_Regression <-
+    DEC <-
+    Coef <-
+    CI.L <-
+    CI.U <-
+    Group <-
+    Threshold <-
+    R2 <-
+    print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- NULL
+
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -299,12 +311,14 @@ if (!exists('startsWith', mode = 'function')) {
     }
 }
 
+
 libraries <-
     c("ggplot2",
       "data.table",
       "optparse",
       "methods",
       "tools",
+      "grDevices",
       "RColorBrewer")
 found <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
@@ -684,36 +698,111 @@ if (!provided("plot", argv)) {
 }
 
 # Read in the commands ----------------------------------------------------
-logFile <- paste(argv$out,"log",sep=".")
-con  <- file(logFile, open = "r")
+# Will remove this once we finish with the default handling
 
-c<- NULL
+#logFile <- paste(argv$out,"log",sep=".")
+#con  <- file(logFile, open = "r")
+
+#c<- NULL
 # Only need to know the information of binary target
-while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
-  line <- (trimws(oneLine))
-  if(startsWith(line, "--")){
-    commands <- strsplit(line, split=" ")[[1]]
-    commands <- commands[commands!="" & commands!="\\"]
-    if(length(commands) == 1){
+#while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
+#  line <- (trimws(oneLine))
+#  if(startsWith(line, "--")){
+#    commands <- strsplit(line, split=" ")[[1]]
+#    commands <- commands[commands!="" & commands!="\\"]
+#    if(length(commands) == 1){
       # Flag
-    }else{
+#    }else{
       # With input
-      c <- gsub("--", "", commands[1])
-      i <- commands[2]
-      if(c=="binary-target"){
-        argv$binary_target <- commands[2]
-      }else if(c=="bar-levels"){
-        argv$bar_levels <- commands[2]
-      }
+#      c <- gsub("--", "", commands[1])
+#      i <- commands[2]
+#      if(c=="binary-target"){
+#        argv$binary_target <- commands[2]
+#      }else if(c=="bar-levels"){
+#        argv$bar_levels <- commands[2]
+#      }
+#    }
+#  }
+#} 
+#close(con)
+
+# Determine Default -------------------------------------------------------
+# First, determine the bar levels
+if(!provided("bar-levels", argv)){
+    if(!provided("msigdb", argv) & !provided("gtf", argv) & !provided("bed", argv)) {
+        argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
+        if (!provided("no-full", argv)) {
+            argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
+        }
+    } else if (!provided("fastscore", argv) &
+               !provided("lower", argv) &
+               !provided("upper", argv) & !provided("interval", argv)) {
+        # This is prset, so by default, we don't do all threshold
+        # unless user use some of the parameter related to the thresholding
+        argv$bar_levels <- "1"
     }
-  }
-} 
-close(con)
+}
+# Next, we need to determine if we are doing binary target
+# This is only required when user does not provide --binary-target
+ 
+if(!provided("binary_target", argv)){
+    # Now we want to check if base is beta
+    base_beta <- F
+    if(provided("beta", argv)){
+        # Base is beta
+        base_beta <- T
+    }else{
+        if(!provided("base", argv)){
+            writeLines("Warning: Without base file, we cannot determine if the summary statistic is beta or OR, which is used to determine if the target phenotype is binary or not. We will now proceed assuming the target phenotype is binary. If that is incorrect, please use --binary-target to specify the correct target phenotype type, or you can provide the base file")
+        }
+        else{
+            zz <- gzfile(argv$base)
+            base_header <- readLines(zz,n=1)
+            close(zz)
+            or <- length(grep("or",base_header,ignore.case=TRUE))==1
+            beta <- length(grep("beta",base_header,ignore.case=TRUE))==1
+            if(or & beta){
+                stop("Both OR and BETA detected. Cannot determine which one should be used. Please use --beta or --binary-target")
+            }
+            if(beta){
+                base_beta <- T    
+            }
+            if(!or & !beta){
+                stop("Do not detect either BETA or OR. Please ensure your base input is correct")
+            }
+        }
+    }
+    # Now we know if the base is beta or not, we can determine the target binary status
+    if(!provided("pheno_col", argv)){
+        if(base_beta){
+            argv$binary_target <- "F"
+        }else{
+            argv$binary_target <- "T"
+        }
+    }else if(length(strsplit(argv$pheno_col, split=",")[[1]])==1){
+        if(base_beta){
+            argv$binary_target <- "F"
+        }else{
+            argv$binary_target <- "T"
+        }    
+    }
+}
+
+# Sanity check for binary-target
+if(provided("pheno_col", argv) & provided("binary_target", argv)){
+    pheno_length <- length(strsplit(argv$pheno_col, split=",")[[1]])
+    binary_length <- length(strsplit(argv$binary_target, split=",")[[1]])
+    if(pheno_length==0 & binary_length==1){
+        # This is ok
+    }else if(pheno_length!=binary_length){
+        stop("Error: Number of target phenotypes doesn't match information of binary target! You must indicate whether the phenotype is binary using --binary-target\n")        
+    }
+}
+    
+
 # Plottings ---------------------------------------------------------------
 
 # Standard Theme for all plots
-
-# Te selected theme to be used 
 theme_sam <- NULL
 if(use.ggplot){
   theme_sam <- theme_bw()+theme(axis.title=element_text(face="bold", size=18),
@@ -726,241 +815,232 @@ if(use.ggplot){
                               axis.line = element_line()
                               )
 }
-# PLOTTING: Here contains all the function for plotting
-# quantile_plot: plotting the quantile plots
-quantile_plot <-
-    function(PRS, PRS.best, pheno, prefix, argv, binary, use.ggplot) {
-        PRS.best <- PRS.best[,!colnames(PRS.best)%in%c("Has_Phenotype")]
-        binary <- as.logical(binary)
-        writeLines("Plotting the quantile plot")
-        num_cov <- sum(!colnames(pheno)%in%c("FID", "IID", "Pheno"))
-        extract = NULL
-        if (provided("quant_extract", argv)) {
-            if(use.data.table){
-              extract <- fread(argv$quant_extract,
-                            header = F,
-                            data.table = F)
-            }else{
-              extract <- read.table(argv$quant_extract,
-                              header = F)
-            }
-          
-        }
-        num_quant <- argv$quantile
-        
-        pheno.include <-
-            NULL #Because we always name the phenotype as pheno, it will never be PRS
-        
-        if (provided("ignore_fid", argv) & sum(colnames(pheno)%in%c("FID"))!=1) {
-            pheno.merge <- merge(PRS.best, pheno, by = "IID")
+
+# Quantile Plots----------------------------------------------------------
+
+quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
+    binary <- as.logical(binary)
+    writeLines("Plotting the quantile plot")
+    extract = NULL
+    if (provided("quant_extract", argv)) {
+        if (use.data.table) {
+            extract <- fread(argv$quant_extract,
+                             header = F,
+                             data.table = F)
         } else{
-            pheno.merge <- merge(PRS.best, pheno, by = c("FID", "IID"))
-        }
-        pheno.as.quant <- provided("quant_pheno", argv)
-        if (pheno.as.quant &&
-            length(unique(pheno.merge$Pheno)) < num_quant) {
-            writeLines(
-                paste(
-                    "WARNING: There are only ",
-                    length(unique(pheno.merge$Pheno)),
-                    " unique Phenotype but asked for ",
-                    num_quant,
-                    " quantiles",
-                    sep = ""
-                )
-            )
-        } else if (length(unique(pheno.merge$PRS)) < num_quant) {
-            writeLines(
-                paste(
-                    "WARNING: There are only ",
-                    length(unique(pheno.merge$PRS)),
-                    " unique PRS but asked for ",
-                    num_quant,
-                    " quantiles",
-                    sep = ""
-                )
-            )
-            writeLines(paste("Will not generate the quantile plot for ", prefix))
-            return()
-        }
-        quants <- NULL
-        if(num_cov > 0){
-          reg <- pheno.merge[,c("Pheno", paste("Cov", 1:num_cov))]
-          family <- gaussian
-          if(binary){
-            family <- binomial 
-          }
-          residual <- rstandard(glm(Pheno~., family=family, data=reg))
-          pheno.merge <- data.frame(Pheno=residual, PRS=pheno.merge$PRS)
-          if (pheno.as.quant &&
-              length(unique(pheno.merge$Pheno)) < num_quant) {
-              writeLines(
-                  paste(
-                      "WARNING: There are only ",
-                      length(unique(pheno.merge$Pheno)),
-                      " unique Phenotype but asked for ",
-                      num_quant,
-                      " quantiles",
-                      sep = ""
-                  )
-              )
-          } else if (length(unique(pheno.merge$PRS)) < num_quant) {
-              writeLines(
-                  paste(
-                      "WARNING: There are only ",
-                      length(unique(pheno.merge$PRS)),
-                      " unique PRS but asked for ",
-                      num_quant,
-                      " quantiles",
-                      sep = ""
-                  )
-              )
-              writeLines(paste("Will not generate the quantile plot for ", prefix))
-              return()
-          }
-        }
-        if (!pheno.as.quant) {
-          quants <- as.numeric(cut(
-            pheno.merge$PRS,
-            breaks = unique(quantile(
-              pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
-            )),
-            include.lowest = T
-          ))
-          
-        } else{
-          quants <- as.numeric(cut(
-            pheno.merge$Pheno,
-            breaks = unique(quantile(
-              pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
-            )),
-            include.lowest = T
-          ))
-        }
-        
-        if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
-            writeLines(paste(
-                "Duplicate quantiles formed. Will use less quantiles: ",
-                length(unique(quants)),
-                sep = ""
-            ))
-            
-        }
-        num_quant = sum(!is.na(unique(quants)))
-        if (!is.null(extract)) {
-          extract_ID <- NULL
-          best_ID <- NULL
-          if(provided("ignore_fid",argv)){
-            extract_ID <- extract$V1
-            best_ID <- pheno.merge$IID
-          }else{
-            extract_ID <- paste(extract$V1, extract$V2, sep = "_")
-            best_ID <- paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
-          }
-          quants[best_ID %in% extract_ID] <-
-            num_quant + 1 # We only matched based on the IID here
-          num_quant <- num_quant + 1
-        }
-        quant.ref <- ceiling(argv$quantile / 2)
-        if (provided("quant_ref", argv)) {
-          quant.ref <- argv$quant_ref
-          if (quant.ref > argv$quantile) {
-            quant.ref <- ceiling(argv$quantile / 2)
-            writeLines(
-              paste(
-                "WARNING: reference quantile",
-                quant.ref,
-                "is greater than number of quantiles",
-                argv$quantile,
-                "\n Using middle quantile by default"
-              )
-            )
-          }
-        }
-        
-        quants <-
-          factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
-        pheno.merge$quantile <- quants
-        if (!pheno.as.quant) {
-            family <- gaussian
-            if (binary) {
-                if( num_cov == 0 ){
-                    family <- binomial
-                }
-            }
-            reg <- summary(glm(Pheno ~ quantile, family, data = pheno.merge))
-            coef.quantiles <- (reg$coefficients[1:num_quant, 1])
-            ci <- (1.96 * reg$coefficients[1:num_quant, 2])
-            
-            ci.quantiles.u <-
-                coef.quantiles + ci
-            ci.quantiles.l <-
-                coef.quantiles - ci
-            if(binary){
-                if(num_cov==0){
-                    ci.quantiles.u <- exp(ci.quantiles.u)
-                    ci.quantiles.l <- exp(ci.quantiles.l)
-                    coef.quantiles <- exp(coef.quantiles)
-                }
-            }
-            
-            coef.quantiles[1] <- ifelse(binary & (num_cov==0),1,0)
-            ci.quantiles.u[1] <- ifelse(binary & (num_cov==0),1,0)
-            ci.quantiles.l[1] <- ifelse(binary & (num_cov==0),1,0)
-            quantiles.for.table <-
-                c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
-            quantiles.df <-
-                data.frame(
-                    Coef = coef.quantiles,
-                    CI.U = ci.quantiles.u,
-                    CI.L = ci.quantiles.l,
-                    DEC = quantiles.for.table
-                )
-            quantiles.df$Group = 0
-            if (!is.null(extract)) {
-                # Because the last quantile is set to be cases
-                quantiles.df$Group[max(quantiles.df$DEC)] = 1
-            }
-            quantiles.df$Group <-
-                factor(quantiles.df$Group, levels = c(0, 1))
-            quantiles.df <- quantiles.df[order(quantiles.df$DEC), ]
-            
-            if(use.ggplot){
-              plot.quant(quantiles.df, num_quant, binary, extract, prefix, num_cov)
-            }else{
-              plot.quant.no.g(quantiles.df, num_quant, binary, extract, prefix, num_cov)
-            }
-        }else{
-            # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
-            pheno.sum <- data.frame(mean=numeric(num_quant), quantile=1:num_quant, UCI=numeric(num_quant), LCI=numeric(num_quant))
-            for(i in 1:num_quant){
-                cur.prs <- pheno.merge$PRS[as.numeric(as.character(pheno.merge$quantile))%in%i]
-                pheno.sum$mean[i] <-mean(cur.prs,na.rm=T)
-                pheno.sum$UCI[i] <- pheno.sum$mean[i]+sd(cur.prs,na.rm=T)
-                pheno.sum$LCI[i] <- pheno.sum$mean[i]-sd(cur.prs,na.rm=T)
-            }
-            pheno.sum$Group = 0
-            if (!is.null(extract)) {
-                pheno.sum$Group[num_quant] = 1
-            }
-            pheno.sum$Group <-
-                factor(pheno.sum$Group, levels = c(0, 1))
-            if(use.ggplot){
-              plot.pheno.quant(pheno.sum, num_cov, num_quant, extract, prefix)
-            }else{
-              plot.pheno.quant.no.g(pheno.sum, num_cov, num_quant, extract, prefix)
-            }
+            extract <- read.table(argv$quant_extract,
+                                  header = F)
         }
         
     }
+    num_quant <- argv$quantile
+    pheno.merge <- merge(base.prs, pheno)
+    pheno.as.quant <- provided("quant_pheno", argv)
+    if (pheno.as.quant &&
+        length(unique(pheno.merge$Pheno)) < num_quant) {
+        writeLines(
+            paste(
+                "WARNING: There are only ",
+                length(unique(pheno.merge$Pheno)),
+                " unique Phenotype but asked for ",
+                num_quant,
+                " quantiles",
+                sep = ""
+            )
+        )
+        writeLines(paste("Will not generate the quantile plot for ", prefix))
+        return()
+    } else if (length(unique(pheno.merge$PRS)) < num_quant) {
+        writeLines(
+            paste(
+                "WARNING: There are only ",
+                length(unique(pheno.merge$PRS)),
+                " unique PRS but asked for ",
+                num_quant,
+                " quantiles",
+                sep = ""
+            )
+        )
+        writeLines(paste("Will not generate the quantile plot for ", prefix))
+        return()
+    }
+    
+    quants <- NULL
+    if (!pheno.as.quant) {
+        quants <- as.numeric(cut(
+            pheno.merge$PRS,
+            breaks = unique(quantile(
+                pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+        ))
+        
+    } else{
+        quants <- as.numeric(cut(
+            pheno.merge$Pheno,
+            breaks = unique(quantile(
+                pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
+            )),
+            include.lowest = T
+        ))
+    }
+    
+    if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
+        writeLines(paste(
+            "Duplicate quantiles formed. Will use less quantiles: ",
+            length(unique(quants)),
+            sep = ""
+        ))
+        
+    }
+    num_quant = sum(!is.na(unique(quants)))
+    if (!is.null(extract)) {
+        extract_ID <- NULL
+        best_ID <- NULL
+        if (provided("ignore_fid", argv)) {
+            extract_ID <- extract$V1
+            best_ID <- pheno.merge$IID
+        } else{
+            extract_ID <- paste(extract$V1, extract$V2, sep = "_")
+            best_ID <-
+                paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
+        }
+        quants[best_ID %in% extract_ID] <-
+            num_quant + 1 # We only matched based on the IID here
+        num_quant <- num_quant + 1
+    }
+    quant.ref <- ceiling(argv$quantile / 2)
+    if (provided("quant_ref", argv)) {
+        quant.ref <- argv$quant_ref
+        if (quant.ref > argv$quantile) {
+            quant.ref <- ceiling(argv$quantile / 2)
+            writeLines(
+                paste(
+                    "WARNING: reference quantile",
+                    quant.ref,
+                    "is greater than number of quantiles",
+                    argv$quantile,
+                    "\n Using middle quantile by default"
+                )
+            )
+        }
+    }
+    quants <-
+        factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
+    pheno.merge$quantile <- quants
+    if (!pheno.as.quant) {
+        family <- gaussian
+        if (binary) {
+            if (!use.residual) {
+                family <- binomial
+                if(max(pheno.merge$Pheno)==2){
+                    pheno.merge$Pheno <- pheno.merge$Pheno -1
+                }
+            }
+        }
+        
+        reg <-
+            summary(glm(Pheno ~ quantile, family, data = pheno.merge))
+        coef.quantiles <- (reg$coefficients[1:num_quant, 1])
+        ci <- (1.96 * reg$coefficients[1:num_quant, 2])
+        
+        ci.quantiles.u <-
+            coef.quantiles + ci
+        ci.quantiles.l <-
+            coef.quantiles - ci
+        if (binary & !use.residual) {
+            ci.quantiles.u <- exp(ci.quantiles.u)
+            ci.quantiles.l <- exp(ci.quantiles.l)
+            coef.quantiles <- exp(coef.quantiles)
+        }
+        
+        coef.quantiles[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        ci.quantiles.u[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        ci.quantiles.l[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        quantiles.for.table <-
+            c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
+        quantiles.df <-
+            data.frame(
+                Coef = coef.quantiles,
+                CI.U = ci.quantiles.u,
+                CI.L = ci.quantiles.l,
+                DEC = quantiles.for.table
+            )
+        quantiles.df$Group = 0
+        if (!is.null(extract)) {
+            # Because the last quantile is set to be cases
+            quantiles.df$Group[max(quantiles.df$DEC)] = 1
+        }
+        quantiles.df$Group <-
+            factor(quantiles.df$Group, levels = c(0, 1))
+        quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
+        
+        if (use.ggplot) {
+            plot.quant(quantiles.df,
+                       num_quant,
+                       binary,
+                       extract,
+                       prefix,
+                       use.residual)
+        } else{
+            plot.quant.no.g(quantiles.df,
+                            num_quant,
+                            binary,
+                            extract,
+                            prefix,
+                            use.residual)
+        }
+    } else{
+        # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
+        pheno.sum <-
+            data.frame(
+                mean = numeric(num_quant),
+                quantile = 1:num_quant,
+                UCI = numeric(num_quant),
+                LCI = numeric(num_quant)
+            )
+        for (i in 1:num_quant) {
+            cur.prs <-
+                pheno.merge$PRS[as.numeric(as.character(pheno.merge$quantile)) %in% i]
+            pheno.sum$mean[i] <- mean(cur.prs, na.rm = T)
+            pheno.sum$UCI[i] <-
+                pheno.sum$mean[i] + sd(cur.prs, na.rm = T)
+            pheno.sum$LCI[i] <-
+                pheno.sum$mean[i] - sd(cur.prs, na.rm = T)
+        }
+        pheno.sum$Group = 0
+        if (!is.null(extract)) {
+            pheno.sum$Group[num_quant] = 1
+        }
+        pheno.sum$Group <-
+            factor(pheno.sum$Group, levels = c(0, 1))
+        if (use.ggplot) {
+            plot.pheno.quant(pheno.sum,
+                             use.residual,
+                             num_quant,
+                             extract,
+                             prefix)
+        } else{
+            plot.pheno.quant.no.g(pheno.sum,
+                                  use.residual,
+                                  num_quant,
+                                  extract,
+                                  prefix)
+        }
+    }
+    
+}
 
-plot.pheno.quant.no.g <- function(pheno.sum, num_cov, num_quant, extract, prefix){
+plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix){
   png(paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   pheno.sum$color <- "#D55E00"
   xlab <- NULL
-  if(num_cov>0){
+  if(use_residual){
     xlab <-"Quantiles for Residualized Phenotype"
   }else{
     xlab <-"Quantiles for Phenotype"
@@ -990,7 +1070,7 @@ plot.pheno.quant.no.g <- function(pheno.sum, num_cov, num_quant, extract, prefix
   g<-dev.off()
 }
 
-plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
+plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix){
   quantiles.plot <-
     ggplot(pheno.sum, aes(
       x = quantile,
@@ -1001,7 +1081,7 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
     theme_sam+
     scale_x_continuous(breaks = seq(0, num_quant, 1))+
     ylab("Mean PRS given phenotype in quantiles")
-  if(num_cov>0){
+  if(use_residual){
     quantiles.plot <- quantiles.plot+
       xlab("Quantiles for Residualized Phenotype")
   }else{
@@ -1026,7 +1106,7 @@ plot.pheno.quant <- function(pheno.sum, num_cov, num_quant, extract, prefix){
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
     quantiles.plot <-
         ggplot(quantiles.df, aes(
             x = DEC,
@@ -1038,11 +1118,11 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov
         scale_x_continuous(breaks = seq(0, num_quant, 1))+
         xlab("Quantiles for Polygenic Score")
     if (binary){
-        if(num_cov==0) {
+        if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
         }
-    } else if(num_cov!=0){
+    } else if(use_residual){
         quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
     }else{
         quantiles.plot <- quantiles.plot +
@@ -1065,7 +1145,7 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov
     )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, num_cov){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -1076,11 +1156,11 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, nu
   }
   ylab <- NULL
   if (binary){
-      if(num_cov==0) {
+      if(!use_residual) {
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
       }
-  } else if(num_cov!=0){
+  } else if(use_residual){
       quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
   }else{
       quantiles.plot <- quantiles.plot +
@@ -1105,6 +1185,10 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, nu
   g<-dev.off()
 }
 
+
+# High Resolution Plot ----------------------------------------------------
+
+
 high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # we will always include the best threshold
     writeLines("Plotting the high resolution plot")
@@ -1115,21 +1199,21 @@ high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
             unique(barchart.levels), decreasing = F
         )))
     # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
-    PRS.ori = PRS
+    PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
     for (i in 1:length(barchart.levels)) {
         if (sum(barchart.levels[i] - threshold > 0) > 0) {
             target <- max(threshold[barchart.levels[i] - threshold >= 0])
             temp <- PRS.ori[threshold == target,]
             temp$Threshold <- barchart.levels[i]
-            PRS = rbind(PRS, temp)
+            PRS <- rbind(PRS, temp)
             
         } else{
             target <-
                 (threshold[which(abs(threshold - barchart.levels[i]) == min(abs(threshold - barchart.levels[i])))])
             temp <- PRS.ori[threshold == target,]
             temp$Threshold <- barchart.levels[i]
-            PRS = rbind(PRS, temp)
+            PRS <- rbind(PRS, temp)
             
         }
     }
@@ -1198,6 +1282,10 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
   )
 }
 
+
+# Plot bar plot -----------------------------------------------------------
+
+
 bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     writeLines("Plotting Bar Plot")
     barchart.levels <-
@@ -1207,7 +1295,6 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
             unique(barchart.levels), decreasing = F
         )))
     threshold <- as.numeric(as.character(PRS$Threshold))
-    
     PRS.ori = PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
     for (i in 1:length(barchart.levels)) {
@@ -1350,48 +1437,10 @@ plot.bar <- function(argv, output, prefix){
   )
 }
 
-# run_plot: The function used for calling different plotting functions
-run_plot <- function(prefix, argv, pheno_matrix, binary) {
-    writeLines("")
-    PRS <- NULL
-    PRS.best <- NULL
-    if(use.data.table){
-      PRS <-
-        fread(paste(prefix, ".prsice", sep = ""),
-              data.table = F)
-      PRS.best <-
-        fread(paste(prefix, ".best", sep = ""),
-              data.table = F)
-    }else{
-      
-      PRS <-
-        read.table(paste(prefix, ".prsice", sep = ""),
-              header = T)
-      PRS.best <-
-        read.table(paste(prefix, ".best", sep = ""),
-              header = T)
-    }
-    
-    PRS.best <- subset(PRS.best, PRS.best$Has_Phenotype == "Yes")
-    # colnames(PRS.best)[3] <- "PRS"
-    # start from here, we need to organize all the file accordingly so that the individual actually match up with each other
-    # Good thing is, only quantile plot really needs the cov and phenotype information
-    if (provided("quantile", argv) && argv$quantile > 0) {
-        # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
-        quantile_plot(PRS, PRS.best, pheno_matrix, prefix, argv, binary, use.ggplot)
-      
-    }
-    # Now perform the barplotting
-    if (!provided("fastscore", argv) || !argv$fastscore) {
-        high_res_plot(PRS, prefix, argv, use.ggplot)
-    }
-    bar_plot(PRS, prefix, argv, use.ggplot)
-}
+
+# Sanity Check ------------------------------------------------------------
 
 
-
-
-# Process file names for plotting------------------------------------------------------
 if (provided("no_regress", argv)) {
     quit("yes")
 }
@@ -1417,38 +1466,13 @@ if (!provided("target", argv)) {
     stop("Target file name not found. You'll need to provide the target name for plotting!")
 }
 
-if (!provided("pheno_file", argv) &&
-    !provided("binary_target", argv)) {
-    argv$binary_target = "T"
-    
-} else{
-    if (!provided("pheno_col", argv) && provided("binary_target", argv)
-        && length(argv$binary_target) == 1) {
-        #This is ok
-        test <- "ok"
-    } else if (!provided("pheno_col", argv) &&
-               !provided("binary_target", argv)) {
-        argv$binary_target = "T"
-        
-    } else if (provided("pheno_col", argv) &&
-               !provided("binary_target", argv)
-               && length(argv$pheno_col) <= 1) {
-        argv$binary_target = "T"
-    }
-    else if (provided("pheno_col", argv) &&
-             provided("binary_target", argv)
-             && length(argv$pheno_col) != length(argv$binary_target)) {
-        stop(
-            "ERROR: Number of target phenotypes doesn't match information of binary target!
-            You must indicate whether the phenotype is binary using --binary-target"
-        )
-    }
-}
 
-phenos = NULL
-binary_target = strsplit(argv$binary_target, split = ",")[[1]]
+phenos <- NULL
+
+binary_target <- strsplit(argv$binary_target, split = ",")[[1]]
+pheno.index <- 6
 if (provided("pheno_col", argv)) {
-    phenos = strsplit(argv$pheno_col, split = ",")[[1]]
+    phenos <- strsplit(argv$pheno_col, split = ",")[[1]]
     if (!provided("pheno_file", argv)) {
         writeLines(
             strwrap(
@@ -1456,34 +1480,60 @@ if (provided("pheno_col", argv)) {
                 width = 80
             )
         )
+    }else if (length(binary_target) != length(phenos)) {
+        message <-
+            "Number of binray target should match number of phenotype provided!"
+        message <- paste(
+            message,
+            "There are ",
+            length(binary_target),
+            " binary target information and ",
+            length(phenos),
+            "phenotypes",
+            sep = ""
+        )
+        stop(message)
     } else{
         header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
         # This will automatically filter out un-used phenos
-        if (length(binary_target) != length(phenos)) {
-            message <-
-                "Number of binray target should match number of phenotype provided!"
-            message = paste(
-                message,
-                "There are ",
-                length(binary_target),
-                " binary target information and ",
-                length(phenos),
-                "phenotypes",
-                sep = ""
-            )
-            stop(message)
+        valid.pheno <- phenos %in% colnames(header)
+        valid.file.index <- colnames(header) %in% phenos
+        if (sum(valid.pheno) == 0) {
+            stop("Error: None of the phenotype is identified in phenotype header!")
         }
-        binary_target = binary_target[phenos %in% colnames(header)]
-        phenos = phenos[phenos %in% colnames(header)]
+        binary_target <- binary_target[valid.pheno]
+        phenos <- phenos[valid.pheno]
+        pheno.index <- c(1:ncol(header))[valid.file.index]
     }
+} else if (provided("pheno_file", argv)) {
+    pheno.index <- 3
+    if (ignore_fid)
+        pheno.index <- 2
 } else{
     if (length(binary_target) != 1) {
         stop("Too many binary target information. We only have one phenotype")
     }
 }
 
+# From now on, phenos contain the phenotype name (if any) and
+# binary_target contain information as to whether phenotype is binary or not
 
-
+# Helper functions --------------------------------------------------------
+max_length <- function(x) {
+    info <- strsplit(as.character(x), split = "\n")[[1]]
+    max(sapply(info, nchar))
+}
+str_wrap <- function(x) {
+    lapply(strwrap(x, width = 25, simplify = FALSE), paste, collapse = "\n")
+}
+shorten_label <- function(x) {
+    lab <-
+        paste(strsplit(paste(
+            strsplit(as.character(x), split = "\\.")[[1]], collapse = " "
+        ), split = "_")[[1]], collapse = " ")
+    return(str_wrap(lab)[[1]])
+}
+# Read in covariates ------------------------------------------------------
 update_cov_header <- function(c) {
     res <- NULL
     for (i in c) {
@@ -1550,17 +1600,16 @@ update_cov_header <- function(c) {
     return(res)
 }
 
-# Now we have the correct header of phenos, bases and binary_target information
-# Need to get the covariates
-covariance = NULL
+covariance <- NULL
 if (provided("cov_file", argv)) {
-    covariance <- NULL
-    if(use.data.table){
-      covariance <- fread(argv$cov_file, data.table = F, header = T)
-    }else {
-      covariance <- read.table(argv$cov_file, header = T)
+    if (use.data.table) {
+        covariance <- fread(argv$cov_file,
+                            data.table = F,
+                            header = T)
+    } else {
+        covariance <- read.table(argv$cov_file, header = T)
     }
-      
+    
     if (provided("cov_col", argv)) {
         c = strsplit(argv$cov_col, split = ",")[[1]]
         c <- update_cov_header(c)
@@ -1574,7 +1623,8 @@ if (provided("cov_file", argv)) {
         covariance <- covariance[, selected]
     }
     if (ignore_fid) {
-        colnames(covariance) <- c("IID", paste("Cov", 1:(ncol(covariance) - 1)))
+        colnames(covariance) <-
+            c("IID", paste("Cov", 1:(ncol(covariance) - 1)))
     } else{
         colnames(covariance) <-
             c("FID", "IID", paste("Cov", 1:(ncol(covariance) - 2)))
@@ -1584,491 +1634,415 @@ if (provided("cov_file", argv)) {
 # we no longer have those complication
 prefix <- argv$out
 
-regions <- read.table(paste(prefix, "region", sep = "."), header =T)
-num_region = nrow(regions)
+#regions <- read.table(paste(prefix, "region", sep = "."), header =T)
+#num_region = nrow(regions)
 
+# Plot multi-phenotype plot -----------------------------------------------
 
-region = argv$plot_set
-# Do this for each phenotype
-
-#fam = fread(paste(argv$target, ".fam", sep = ""), data.table = F, header = F )
-#colnames(fam)[1:2] = c("FID", "IID")
-#fam_id <- paste(fam$FID, fam$IID, sep="_")
-#match_cov = NULL
-#if (!is.null(covariance)) {
-#  if(ignore_fid){
-#    match_cov <- covariance[covariance$IID %in% fam$IID,]
-#    match_cov <- match_cov[match(fam$IID, match_cov$IID),] # match the ordering
-#    match_cov <- match_cov[ !is.na(apply(match_cov[,-1],1,sum)),]
-#  }else{
-#    cov_ID <- paste(covariance$FID, covariance$IID, sep="_")
-#    match_cov = covariance[cov_ID %in% fam_id,]
-#    cov_ID <- paste(match_cov$FID, match_cov$IID, sep="_") #updated cov_ID
-#    match_cov = match_cov[match(fam_id, cov_ID),] # match the ordering
-#    match_cov <- match_cov[ !is.na(apply(match_cov[,-c(1:2)],1,sum)),] #remove all NA
-#  }
-#}
-#Now match_cov contain all samples with valid covariates
-
-
-if (!is.null(phenos)) {
-    pheno_file <- NULL
+multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
+    writeLines("Plotting the Multi-Phenotype Plot")
+    prs.summary <- NULL
     if(use.data.table){
-      pheno_file <- fread(argv$pheno_file,
-                       data.table = F)
+        prs.summary <- fread(paste0(parameters$out, ".summary"), data.table=F)
     }else{
-      pheno_file <- read.table(argv$pheno_file,
-                         header = T)
+        prs.summary <- read.table(paste0(parameters$out, ".summary"), header=T)
     }
-    if (ignore_fid) {
-        colnames(pheno_file)[1] <- "IID"
-    } else{
-        colnames(pheno_file)[1:2] <- c("FID", "IID")
-    }
-    id = 1
-    phenos.index <-
-        unlist(apply(
-            as.matrix(phenos),
-            1,
-            extract_matrix ,
-            colnames(pheno_file)
+    multipheno <- subset(prs.summary, Set=="Base")
+    multipheno$Phenotype <- sapply(multipheno$Phenotype, shorten_label)
+    multipheno <- multipheno[order(multipheno$PRS.R2, decreasing=T), ]
+    multipheno$Phenotype <- as.factor(multipheno$Phenotype)
+    if(use.ggplot){
+        b <-
+            ggplot(multipheno[1:(min(parameters$multi_plot, nrow(multipheno))), ],
+                   aes(
+                       x = Phenotype,
+                       y = PRS.R2,
+                       fill = -log10(P)
+                   )) +
+            theme_sam +
+            geom_bar(stat = "identity") +
+            coord_flip() +
+            ylab("Variance explained by PRS") +
+            scale_fill_distiller(palette = "Spectral", name = bquote(atop(-log[10] ~ model, italic(P) - value), ))
+        ggsave(paste(
+            parameters$out,
+            "_MULTIPHENO_BARPLOT_",
+            Sys.Date(),
+            ".png",
+            sep = ""
         ))
-    
-    for (p in 1:length(phenos.index)) {
-        if (!is.na(phenos.index[p])) {
-            cur_prefix <- prefix
-            if (length(phenos.index) != 1) {
-                cur_prefix <- paste(cur_prefix, phenos[p], sep = ".")
-            }
-            if (num_region != 1) {
-                cur_prefix = paste(cur_prefix, region, sep = ".")
-            }
-            # Get the best score
-            best<-NULL
-            if(use.data.table){
-            best <-
-                fread(
-                    paste(cur_prefix, "best", sep = "."),
-                    data.table = F,
-                    header = T
-                )
-            }else{
-              
-              best <-
-                read(
-                  paste(cur_prefix, "best", sep = "."),
-                  header = T
-                )
-            }
-            # Give run_plot a ready to use matrix
-            cur_pheno <- NULL
-            if (ignore_fid) {
-                cur_pheno <-
-                    data.frame(IID = pheno_file[, 1], Pheno = pheno_file[phenos.index[p]])
-                colnames(cur_pheno)[2] <- "Pheno"
-            } else{
-                cur_pheno <-
-                    data.frame(FID = pheno_file[, 1],
-                               IID = pheno_file[, 2],
-                               Pheno = pheno_file[phenos.index[p]])
-                colnames(cur_pheno)[3] <- "Pheno"
-            }
-            if (binary_target[id]) {
-                # Update the cur_pheno
-                cur_pheno$Pheno <-
-                    suppressWarnings(as.numeric(as.character(cur_pheno$Pheno)))
-                cur_pheno$Pheno[cur_pheno$Pheno > 2] <- NA
-                cur_pheno$Pheno[cur_pheno$Pheno < 0] <- NA
-                if (max(cur_pheno$Pheno, na.rm = T) == 2 &&
-                    min(cur_pheno$Pheno, na.rm = T) == 0) {
-                    stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
-                } else if (max(cur_pheno$Pheno, na.rm = T) == 2) {
-                    cur_pheno$Pheno = cur_pheno$Pheno - 1
-                }
-            }
-            if (ignore_fid) {
-                cur_pheno <- cur_pheno[cur_pheno$IID %in% best$IID, ]
-            } else{
-                cur_id <- paste(cur_pheno$FID, cur_pheno$IID, sep = "_")
-                best_id <- paste(best$FID, best$IID, sep = "_")
-                cur_pheno <- cur_pheno[cur_id %in% best_id, ]
-            }
-            cur_pheno.cov <- cur_pheno
-            if (!is.null(covariance)) {
-                if (ignore_fid) {
-                    cur_pheno.cov = merge(cur_pheno, covariance, by = "IID")
-                    
-                } else{
-                    cur_pheno.cov = merge(cur_pheno, covariance, by = c("FID", "IID"))
-                    
-                }
-            }
-            # This is a potential bug: What if there is duplicated IID?
-            cur_pheno.cov = cur_pheno.cov[match(cur_pheno$IID, cur_pheno.cov$IID), ]
-            run_plot(cur_prefix, argv, cur_pheno.cov, binary_target[id])
-        } else{
-            writeLines(paste(
-                phenos[p],
-                "not found in the phenotype file. It will be ignored"
-            ))
-        }
-        id = id + 1
-    }
-} else{
-    # No phenotype headers
-    cur_prefix = paste(prefix, region, sep = ".")
-    if (num_region == 1) {
-        cur_prefix = paste(prefix, sep = ".")
-    }
-    pheno = NULL
-    if (provided("pheno_file", argv)) {
-        pheno <- NULL
-        if(use.data.table){
-          pheno <- fread(paste(argv$pheno_file),
-                      data.table = F,
-                      header = F)
-        }else{
-          pheno <- read.table(paste(argv$pheno_file),
-                        header = F)
-        }
-        if (ignore_fid) {
-            colnames(pheno)[1] <- "IID"
-        } else{
-            colnames(pheno)[1:3] <- c("FID", "IID", "V2") #Otherwise this is V3
-        }
-        
-    }
-    # Give run_plot a ready to use matrix
-    best <- NULL
-    if(use.data.table){
-      best <-
-        fread(paste(cur_prefix, "best", sep = "."),
-              data.table = F,
-              header = T)
     }else{
-      best <-
-        read.table(paste(cur_prefix, "best", sep = "."),
-              header = T)
-    }
-    fam.clean = NULL
-    if (!is.null(pheno))
-    {
-        if (ignore_fid) {
-            fam.clean <- data.frame(IID = pheno$IID, Pheno = pheno$V2)
-        } else{
-            fam.clean <-
-                data.frame(
-                    FID = pheno$FID,
-                    IID = pheno$IID,
-                    Pheno = pheno$V2
-                )
-        }
-    } else{
-        fam_name <- argv$target
-        fam_name <- gsub("#", "1", fam_name)
-        fam <- NULL
-        if(use.data.table){
-          fam <-
-            fread(paste(fam_name, "fam", sep = "."),
-                  data.table = F,
-                  header = F)
-        }else{
-          fam <-
-            read.table(paste(fam_name, "fam", sep = "."),
-                  header = F)
-        }
-        fam.clean <-
-            data.frame(FID = fam$V1,
-                       IID = fam$V2,
-                       Pheno = fam$V6)
-    }
-    if (binary_target[1]) {
-        # Update the cur_pheno
-        fam.clean$Pheno <-
-            suppressWarnings(as.numeric(as.character(fam.clean$Pheno)))
-        fam.clean$Pheno[fam.clean$Pheno > 2] <- NA
-        fam.clean$Pheno[fam.clean$Pheno < 0] <- NA
-        if (max(fam.clean$Pheno, na.rm = T) == 2 &&
-            min(fam.clean$Pheno, na.rm = T) == 0) {
-            stop("Invalid case control formating. Either use 0/1 or 1/2 coding")
-        } else if (max(fam.clean$Pheno, na.rm = T) == 2) {
-            fam.clean$Pheno = fam.clean$Pheno - 1
-        }
-    }
-    if (ignore_fid) {
-        fam.clean <- fam.clean[fam.clean$IID %in% best$IID, ]
-    } else{
-        fam_id <- paste(fam.clean$FID, fam.clean$IID, "_")
-        best_id <- paste(best$FID, best$IID, "_")
-        fam.clean <- fam.clean[fam_id %in% best_id,]
-    }
-    cur_pheno.clean <- fam.clean
-    fam.final <- cur_pheno.clean
-    if (!is.null(covariance)) {
-        if (ignore_fid) {
-            fam.final <- merge(cur_pheno.clean, covariance, by = "IID")
-        } else{
-            fam.final <- merge(cur_pheno.clean, covariance, by = c("FID", "IID"))
-        }
-    }
-    #Again, this can be error prone
-    fam.final <-
-        fam.final[match(cur_pheno.clean$IID, fam.final$IID), ]
-    run_plot(cur_prefix, argv, fam.final, binary_target[1])
-}
-
-
-# Now check if the overview file is present
-if (provided("multi_plot", argv)) {
-    str_wrap <- function(x) {
-        lapply(strwrap(x, width = 25, simplify = FALSE), paste, collapse = "\n")
-    }
-    shorten_label <- function(x) {
-        lab <-
-            paste(strsplit(paste(
-                strsplit(as.character(x), split = "\\.")[[1]], collapse = " "
-            ), split = "_")[[1]], collapse = " ")
-        return(str_wrap(lab)[[1]])
-    }
-    overview.name <- paste(argv$out, ".summary", sep = "")
-    if (file.exists(overview.name)) {
+        png(paste(parameters$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""),
+            height=10, width=10, res=300, unit="in")
+        layout(t(1:2), widths=c(8.8,1.2))
         
-        writeLines("Plotting Multi-Plot")
-        overview <- read.table(overview.name, header = T)
-        if (nrow(overview) < 1)
-            stop((
-                "Error: Cannot generate multi-plot as only one phenotype and the base set was observed!"
-            )
-            )
-        overview$Phenotype <- sapply(overview$Phenotype, shorten_label)
-        overview$Set <- sapply(overview$Set, shorten_label)
-        phenos <- unique(overview$Phenotype)
-        sets <- unique(overview$Set)
-        if (length(phenos) != 1) {
-            multipheno <- subset(overview, Set == "Base")
-            multipheno <- multipheno[order(multipheno$PRS.R2, decreasing=T), ]
-            multipheno$Phenotype <-
-                factor(multipheno$Phenotype, levels = multipheno$Phenotype)
-            if(use.ggplot){
-              b <-
-                  ggplot(multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ],
-                         aes(
-                             x = Phenotype,
-                             y = PRS.R2,
-                             fill = -log10(P)
-                         )) +
-                  theme_sam +
-                  geom_bar(stat = "identity") +
-                  coord_flip() +
-                  ylab("Variance explained by PRS") +
-                  scale_fill_distiller(palette = "Spectral", name = bquote(atop(-log[10] ~ model, italic(P) - value), ))
-              ggsave(paste(
-                  argv$out,
-                  "_MULTIPHENO_BARPLOT_",
+        output <- multipheno[1:(min(parameters$multi_plot, nrow(multipheno))), ]
+        max.label.length <- max(sapply(output$Phenotype, 
+                                       max_length
+        ))*0.75
+        par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+             oma=c(0,0.5,0,0),
+             mar=c(4,max.label.length,0.5,0.5))
+        ylab <- "Variance explained by PRS"
+        col <- suppressWarnings(colorRampPalette(brewer.pal(12,"RdYlBu")))
+        
+        output <- output[order(-log10(output$P)),]
+        output$color <-  col(nrow(output))
+        output <- output[order(output$PRS.R2),]
+        b<- barplot(height=output$PRS.R2, 
+                    col=output$color, 
+                    border=NA, 
+                    ann=F, horiz=TRUE,
+                    ylab="",
+                    xlab=ylab)
+        axis(2,las=2, lwd=2, at=b, labels=output$Phenotype)
+        box(bty="L",lwd=2)
+        
+        
+        par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
+            mar=c(20,0,20,4))
+        output <- output[order(-log10(output$P)),]
+        image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
+        axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
+        title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
+              line=2, cex=1.5, font=2, adj=0)
+        
+        g<-dev.off()
+    }
+}
+# Plot multi-set plot -----------------------------------------------------
+
+
+multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggplot){
+    writeLines("Plotting Multi-Set-Plot")
+    if (nrow(prs.summary) < 1)
+        stop((
+            "Error: Cannot generate multi-plot as only one phenotype and the base set was observed!"
+        ))
+    overview <- subset(prs.summary, Phenotype==pheno.name)
+    # process phenotype & pathway name to make it fit into the plot
+    overview$Phenotype <- sapply(overview$Phenotype, shorten_label)
+    overview$Set <- sapply(overview$Set, shorten_label)
+    sets <- unique(overview$Set)
+    multiset <- overview[order(overview$PRS.R2, decreasing=T), ]
+    multiset$Set <- as.factor(multiset$Set)
+    if(use.ggplot){
+        b <-
+            ggplot(multiset[1:(min(parameters$multi_plot, nrow(multiset))),], aes(
+                x = Set,
+                y = PRS.R2,
+                fill = -log10(P)
+            )) +
+            theme_sam +
+            geom_bar(stat = "identity") +
+            coord_flip() +
+            ylab("Variance explained by PRS") +
+            scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value),)) +
+            theme(axis.title.y = element_blank())
+        ggsave(
+            paste(prefix,
+                  "_MULTISET_BARPLOT_",
                   Sys.Date(),
                   ".png",
-                  sep = ""
-              ))
-            }else{
-                png(paste(argv$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""),
-                    height=10, width=10, res=300, unit="in")
-                layout(t(1:2), widths=c(8.8,1.2))
-                
-                output <- multipheno[1:(min(argv$multi_plot, nrow(multipheno))), ]
-                max.label.length <- max(sapply(output$Phenotype, 
-                                               function(x){
-                                                   info <- strsplit(as.character(x), split="\n")[[1]];
-                                                   max(sapply(info, nchar))
-                                               }
-                ))*0.75
-                par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                     oma=c(0,0.5,0,0),
-                     mar=c(4,max.label.length,0.5,0.5))
-                ylab <- "Variance explained by PRS"
-                col <- suppressWarnings(colorRampPalette(brewer.pal(12,"RdYlBu")))
-                
-                output <- output[order(-log10(output$P)),]
-                output$color <-  col(nrow(output))
-                output <- output[order(output$PRS.R2),]
-                b<- barplot(height=output$PRS.R2, 
-                            col=output$color, 
-                            border=NA, 
-                            ann=F, horiz=TRUE,
-                            ylab="",
-                            xlab=ylab)
-                axis(2,las=2, lwd=2, at=b, labels=output$Phenotype)
-                box(bty="L",lwd=2)
-                
-                
-                par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                    mar=c(20,0,20,4))
-                output <- output[order(-log10(output$P)),]
-                image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
-                axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
-                title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
-                      line=2, cex=1.5, font=2, adj=0)
-                
-                g<-dev.off()
-            }
-            for (p in phenos) {
-                multiset <- subset(overview, Phenotype == p)
-                multiset <- multiset[order(multiset$PRS.R2), ]
-                multiset$Set <-
-                    factor(multiset$Set, levels = multiset$Set)
-                if(use.ggplot){
-                  b <-
-                      ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
-                          x = Set,
-                          y = PRS.R2,
-                          fill = -log10(P)
-                      )) +
-                      theme_sam +
-                      geom_bar(stat = "identity") +
-                      coord_flip() +
-                      ylab("Variance explained by PRS") +
-                      scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
-                      theme(axis.title.y = element_blank())
-                  ggsave(
-                      paste(
-                          argv$out,
-                          "_",
-                          p,
-                          "_MULTISET_BARPLOT_",
-                          Sys.Date(),
-                          ".png",
-                          sep = ""
-                      ),
-                      b,
-                      height = 10,
-                      width = 10
-                  )
-                }else{
-                    png(paste(argv$out,
-                              "_",
-                              p,
-                              "_MULTISET_BARPLOT_",
-                              Sys.Date(),
-                              ".png",
-                              sep = ""
-                    ),
-                        height=10, width=10, res=300, unit="in")
-                    layout(t(1:2), widths=c(8.8,1.2))
-                    output <- multiset[1:(min(argv$multi_plot, nrow(multiset))), ]
-                    max.label.length <- max(sapply(output$Set, 
-                                                   function(x){
-                                                       info <- strsplit(as.character(x), split="\n")[[1]];
-                                                       max(sapply(info, nchar))
-                                                    }
-                                                   ))*0.75
-                    par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                         oma=c(0,0.5,0,0),
-                         mar=c(4,max.label.length,0.5,0.5))
-                    ylab <- "Variance explained by PRS"
-                    col <- suppressWarnings(colorRampPalette(brewer.pal(12,"PuOr")))
-                    
-                    output <- output[order(-log10(output$P)),]
-                    output$color <-  col(nrow(output))
-                    output <- output[order(output$PRS.R2),]
-                    b<- barplot(height=output$PRS.R2, 
-                                col=output$color, 
-                                border=NA, 
-                                ann=F, horiz=TRUE,
-                                ylab="",
-                                xlab=ylab)
-                    axis(2,las=2, lwd=2, at=b, labels=output$Set)
-                    box(bty="L",lwd=2)
-                    
-                    
-                    par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                        mar=c(20,0,20,4))
-                    output <- output[order(-log10(output$P)),]
-                    image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
-                    axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
-                    title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
-                          line=2, cex=1.5, font=2, adj=0)
-                    
-                    g<-dev.off()
-                }
-                
-            }
-        } else{
-            # Only plot one set plot. If phenotype == "-", replace it with pheno
-            multiset <- overview
-            multiset <- multiset[order(multiset$PRS.R2), ]
-            multiset$Set <-
-                factor(multiset$Set, levels = multiset$Set)
-            if(use.ggplot){
-              b <-
-                  ggplot(multiset[1:(min(argv$multi_plot, nrow(multiset))), ], aes(
-                      x = Set,
-                      y = PRS.R2,
-                      fill = -log10(P)
-                  )) +
-                  theme_sam +
-                  geom_bar(stat = "identity") +
-                  coord_flip() +
-                  ylab("Variance explained by PRS") +
-                  scale_fill_distiller(palette = "PuOr", name = bquote(atop(-log[10] ~ model, italic(P) - value), )) +
-                  theme(axis.title.y = element_blank())
-              ggsave(
-                  paste(
-                      argv$out,
-                      "_MULTISET_BARPLOT_",
-                      Sys.Date(),
-                      ".png",
-                      sep = ""
-                  ),
-                  b,
-                  height = 10,
-                  width = 10
-              )
-            }else{
-                png(paste(argv$out,
-                          "_MULTISET_BARPLOT_",
-                          Sys.Date(),
-                          ".png",
-                          sep = ""
-                    ),
-                height=10, width=10, res=300, unit="in")
-                layout(t(1:2), widths=c(8.8,1.2))
-                output <- multiset[1:(min(argv$multi_plot, nrow(multiset))), ]
-                max.label.length <- max(sapply(output$Set, 
-                                               function(x){
-                                                   info <- strsplit(as.character(x), split="\n")[[1]];
-                                                   max(sapply(info, nchar))
-                                               }
-                ))*0.75
-                par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                     oma=c(0,0.5,0,0),
-                     mar=c(4,max.label.length,0.5,0.5))
-                ylab <- "Variance explained by PRS"
-                col <- suppressWarnings(colorRampPalette(brewer.pal(12,"PuOr")))
-                
-                output <- output[order(-log10(output$P)),]
-                output$color <-  col(nrow(output))
-                output <- output[order(output$PRS.R2),]
-                b<- barplot(height=output$PRS.R2, 
-                            col=output$color, 
-                            border=NA, 
-                            ann=F, horiz=TRUE,
-                            ylab="",
-                            xlab=ylab)
-                axis(2,las=2, lwd=2, at=b, labels=output$Set)
-                box(bty="L",lwd=2)
-                
-                
-                par(cex.lab=1.5, cex.axis=1.25, font.lab=2, 
-                    mar=c(20,0,20,4))
-                output <- output[order(-log10(output$P)),]
-                image(1, -log10(output$P), t(seq_along(-log10(output$P))), col=output$color, axes=F,ann=F)
-                axis(4,las=2,xaxs='r',yaxs='r', tck=0.2, col="white")
-                title(bquote(atop(-log[10] ~ model, italic(P) - value), ), 
-                      line=2, cex=1.5, font=2, adj=0)
-                g<-dev.off()
-            }
-            
-        }
+                  sep = ""),
+            b,
+            height = 10,
+            width = 10
+        )
+    } else{
+        png(
+            paste(
+                prefix,
+                "_MULTISET_BARPLOT_",
+                Sys.Date(),
+                ".png",
+                sep = ""
+            ),
+            height = 10,
+            width = 10,
+            res = 300,
+            unit = "in"
+        )
+        layout(t(1:2), widths = c(8.8, 1.2))
+        output <-
+            multiset[1:(min(parameters$multi_plot, nrow(multiset))),]
+        max.label.length <- max(sapply(output$Set,
+                                       max_length)) * 0.75
+        par(
+            cex.lab = 1.5,
+            cex.axis = 1.25,
+            font.lab = 2,
+            oma = c(0, 0.5, 0, 0),
+            mar = c(4, max.label.length, 0.5, 0.5)
+        )
+        ylab <- "Variance explained by PRS"
+        col <-
+            suppressWarnings(colorRampPalette(brewer.pal(12, "PuOr")))
+        
+        output <- output[order(-log10(output$P)), ]
+        output$color <-  col(nrow(output))
+        output <- output[order(output$PRS.R2, decreasing=T), ]
+        b <- barplot(
+            height = output$PRS.R2,
+            col = output$color,
+            border = NA,
+            ann = F,
+            horiz = TRUE,
+            ylab = "",
+            xlab = ylab
+        )
+        axis(
+            2,
+            las = 2,
+            lwd = 2,
+            at = b,
+            labels = output$Set
+        )
+        box(bty = "L", lwd = 2)
         
         
+        par(
+            cex.lab = 1.5,
+            cex.axis = 1.25,
+            font.lab = 2,
+            mar = c(20, 0, 20, 4)
+        )
+        output <- output[order(-log10(output$P)), ]
+        image(
+            1,
+            -log10(output$P),
+            t(seq_along(-log10(output$P))),
+            col = output$color,
+            axes = F,
+            ann = F
+        )
+        axis(
+            4,
+            las = 2,
+            xaxs = 'r',
+            yaxs = 'r',
+            tck = 0.2,
+            col = "white"
+        )
+        title(
+            bquote(atop(-log[10] ~ model, italic(P) - value),),
+            line = 2,
+            cex = 1.5,
+            font = 2,
+            adj = 0
+        )
+        
+        g <- dev.off()
     }
 }
+# Process plot functions --------------------------------------------------
+
+process_plot <-
+    function(prefix,
+             covariance,
+             is_binary,
+             pheno.file,
+             parameters,
+             pheno.index,
+             use.data.table,
+             use.ggplot,
+             pheno.name) {
+        sum.prefix <- prefix
+        if(pheno.name!="-"){
+            prefix <- paste(prefix, pheno.name, sep=".")
+        }
+        best <- NULL
+        prs.summary <- NULL
+        prsice.result <- NULL
+        phenotype <- NULL
+        if (use.data.table) {
+            best <- fread(paste0(prefix, ".best"), data.table = F)
+            prs.summary <-
+                fread(paste0(sum.prefix, ".summary"), data.table = F)
+            prsice.result <-
+                fread(paste0(prefix, ".prsice"), data.table = F)
+            phenotype <-
+                fread(pheno.file, data.table = F, header = F)
+        } else{
+            best <- read.table(paste0(prefix, ".best"), header = T)
+            prs.summary <-
+                read.table(paste0(sum.prefix, ".summary"), header = T)
+            prsice.result <-
+                read.table(paste0(prefix, ".prsice"), header = T)
+            # Allow header = false for fam or for phenotype files that does not contain phenotype name
+            phenotype <- read.table(pheno.file, header = F)
+        }
+        best <- subset(best, In_Regression == "Yes")
+        # We know the format of the best file, and it will always contain FID and IID
+        base.prs <- best[,c(1,2,4)]
+        colnames(base.prs)[3] <- "PRS"
+# Generate phenotype matrix -----------------------------------------------
+        # extract the phenotype column
+        # And only retain samples with phenotype and covariate information
+        # They will be found in the best data.frame
+        ignore_fid <- provided("ignore_fid", parameters)
+        if (ignore_fid) {
+            phenotype <- phenotype[, c(1:2, pheno.index)]
+            colnames(phenotype) <- c("FID", "IID", "Pheno")
+            phenotype <-
+                phenotype[phenotype$FID %in% best$FID &
+                              phenotype$IID %in% best$IID, ]
+        } else{
+            phenotype <- phenotype[, c(1, pheno.index)]
+            colnames(phenotype) <- c("IID", "Pheno")
+            phenotype <- phenotype[phenotype$IID %in% best$IID, ]
+        }
+        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        pheno <- phenotype
+        use.residual <- F
+        if(!is.null(covariance)){
+            # We will regress out the residual
+            # Can direct merge as we have standardized the header
+            temp.pheno <- merge(phenotype, covariance)
+            family <- gaussian
+            if(is_binary){
+                family <- binomial
+            }
+            residual <-
+                rstandard(glm(Pheno ~ ., 
+                              data = temp.pheno[, !colnames(temp.pheno) %in% c("FID", "IID")], 
+                              family =family))
+            pheno$Pheno <- residual
+            use.residual <- T
+        }
+
+# Start calling functions -------------------------------------------------
+        if (provided("quantile", parameters) && parameters$quantile > 0) {
+            # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
+            quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+        }
+        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
+            if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
+                bar_plot(prsice.result, prefix, parameters, use.ggplot) 
+                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+            }
+        }else{
+            bar_plot(prsice.result, prefix, parameters, use.ggplot)
+            high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+        }
+        if(provided("multi_plot", parameters)){
+            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
+        }
+    }
+
+
+# Check if phenotype file is of sample format -----------------------------
+is_sample_format <- function(file) {
+    con = file(file, "r")
+    first_line <- readLines(con, n = 1)
+    second_line <- readLines(con, n = 1)
+    close(con)
+    if (length(first_line) == 0 | length(second_line) == 0) {
+        # Unless there is only one sample? but that will be ridiculous for us to consider that
+        stop("Error: Phenotype file should contain at least 2 line of input")
+    }
+    first <- strsplit(first_line, split = "\t")[[1]]
+    if (length(first) == 1) {
+        # Maybe seperated by space?
+        first <- strsplit(first_line, split = " ")[[1]]
+    }
+    second <- strsplit(second_line, split = "\t")[[1]]
+    if (length(first) == 1) {
+        second <- strsplit(second_line, split = " ")[[1]]
+    }
+    if (length(first) != length(second) | length(first) < 3) {
+        return(FALSE)
+    }
+    for (i in 1:3) {
+        if (second[i] != 0) {
+            return(FALSE)
+        }
+    }
+    for (i in 4:length(second)) {
+        if (second[i] != "D" &
+            second[i] != "C" &
+            second[i] != "P" & second[i] != "B") {
+            return(FALSE)
+        }
+    }
+    return(TRUE)
+}
+# Calling plot functions --------------------------------------------------
+# Check target
+pheno.file <- NULL
+
+if (provided("pheno_file", argv)) {
+    pheno.file <- argv$pheno_file
+} else{
+    # Check if external fam / sample file is provided
+    target.info <- strsplit(argv$target, split = ",")[[1]]
+    if (length(target.info) == 2) {
+        pheno.file <- target.info[2]
+        if (provided("type", argv)) {
+            if (argv$type == "bgen") {
+                # sample file should contain FID and IID by format requirement
+                pheno.index <- 3
+                if (ignore_fid &
+                    !is_sample_format(pheno.file))
+                    pheno.index <- 2
+            }
+        }
+    } else{
+        if (provided("type", argv)) {
+            if (argv$type == "bgen") {
+                stop("Error: You must provide either a phenotype or sample file for bgen input")
+            } else if (argv$type == "bed") {
+                pheno.file <- paste0(argv$target, ".fam")
+            }
+        } else{
+            # Because default is always plink
+            pheno.file <- paste0(argv$target, ".fam")
+        }
+    }
+}
+if (!is.null(phenos) &
+    length(phenos) > 1) {
+    for (i in 1:length(phenos)) {
+        process_plot(
+            argv$out,
+            covariance,
+            binary_target[i],
+            pheno.file,
+            argv,
+            pheno.index[i],
+            use.data.table,
+            use.ggplot,
+            phenos[i]
+        )
+    }
+    if(provided("multi_plot", argv)){
+        multi_pheno_plot(argv, use.ggplot, use.data.table)
+    }
+} else if (!is.null(phenos)) {
+    process_plot(
+        argv$out,
+        covariance,
+        binary_target[1],
+        pheno.file,
+        argv,
+        pheno.index[1],
+        use.data.table,
+        use.ggplot,
+        "-"
+    )
+} else{
+    process_plot(
+        argv$out,
+        covariance,
+        binary_target[1],
+        pheno.file,
+        argv,
+        pheno.index[1],
+        use.data.table,
+        use.ggplot,
+        "-"
+    )
+}
+
+
+
