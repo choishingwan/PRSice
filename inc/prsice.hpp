@@ -157,7 +157,7 @@ public:
     void summarize(const Commander& c_commander, Reporter& reporter);
     void init_process_count(const Commander &commander, size_t num_region, size_t num_thresholds){
     	const bool perm = (commander.permutation() > 0);
-    	const bool set_perm = (commander.set_perm() >0);
+    	const bool set_perm = (commander.perform_set_perm());
     	// the number of raw PRSice run
     	m_total_process = num_thresholds*num_phenotype()*((num_region>1)?num_region-1:1);
     	if(perm){

@@ -111,6 +111,7 @@ Commander::Commander()
     prset.msigdb = "";
     prset.background = "";
     prset.perform_prset = false;
+    prset.perform_set_perm = false;
     prset.set_perm = 10000;
     prset.window_5 = 0;
     prset.window_3 = 0;
@@ -405,7 +406,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                            command, error_messages);
             else if (command.compare("set-perm") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.set_perm, dummy, error, command);
+                                 prset.set_perm, prset.perform_set_perm, error, command);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);

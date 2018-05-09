@@ -804,6 +804,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                             require_standardize))
     {
     	m_analysis_done++;
+
     	print_progress();
 
         if (print_all_scores) {
@@ -831,12 +832,13 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         iter_threshold++;
         m_all_file.processed_threshold++;
     }
+
     if (all_out.is_open()) all_out.close();
     process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
         // we don't do competitive for the full set
-        if (m_prset && c_commander.set_perm() > 0 && region_index != 0) {
+        if (m_prset && c_commander.perform_set_perm()&& region_index != 0) {
             run_competitive(target, c_commander, region.size() - 1,
                             region.num_post_clump_snp(region_index),
                             region.duplicated_size(region_index),
@@ -869,7 +871,6 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
             // sample excluded will not be output here
             std::string has_pheno =
                 target.sample_in_regression(sample) ? "Yes" : "No";
-
             size_t loc = m_best_file.header_length
                          + sample * m_best_file.line_width
                          + m_best_file.skip_column_length
@@ -1269,9 +1270,10 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
     m_best_file.processed_threshold = 0;
     // each numeric output took 12 spaces, then for each output, there is one
     // space next to each
+    std::cerr << "Checking: " << region_name.size() * m_numeric_width <<"\t" << region_name.size() + m_max_fid_length + 1 << "\t" << m_max_iid_length + 1 << std::endl;
     m_best_file.line_width = region_name.size() * m_numeric_width
                              + region_name.size() + m_max_fid_length + 1
-                             + m_max_iid_length + 1;
+                             + m_max_iid_length + 1+4;
     m_best_file.skip_column_length =
         m_max_fid_length + m_max_iid_length + 3 + 3;
 

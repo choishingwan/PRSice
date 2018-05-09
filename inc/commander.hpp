@@ -177,6 +177,7 @@ public:
     int set_perm() const { return prset.set_perm; };
     // prslice
     bool perform_prslice() const { return prslice.provided; };
+    bool perform_set_perm() const { return prset.perform_set_perm; }
     int prslice_size() const { return prslice.size; };
     int window_5() const { return prset.window_5; };
     int window_3() const { return prset.window_3; };
@@ -331,6 +332,7 @@ private:
         int window_5;
         int window_3;
         bool perform_prset;
+        bool perform_set_perm;
     } prset;
 
     struct PRSlice
