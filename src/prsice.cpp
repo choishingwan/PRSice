@@ -1270,7 +1270,7 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
     m_best_file.processed_threshold = 0;
     // each numeric output took 12 spaces, then for each output, there is one
     // space next to each
-    std::cerr << "Checking: " << region_name.size() * m_numeric_width <<"\t" << region_name.size() + m_max_fid_length + 1 << "\t" << m_max_iid_length + 1 << std::endl;
+
     m_best_file.line_width = region_name.size() * m_numeric_width
                              + region_name.size() + m_max_fid_length + 1
                              + m_max_iid_length + 1+4;

@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
             if (!perform_prslice) {
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
+                	fprintf(stderr, "Processing the %zu th phenotype\n", i_pheno);
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
                     prsice.prep_output(commander, *target_file, region.names(),
