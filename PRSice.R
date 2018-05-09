@@ -933,9 +933,6 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
         if (binary) {
             if (!use.residual) {
                 family <- binomial
-                if(max(pheno.merge$Pheno)==2){
-                    pheno.merge$Pheno <- pheno.merge$Pheno -1
-                }
             }
         }
         
@@ -1893,6 +1890,7 @@ process_plot <-
             phenotype <- phenotype[phenotype$IID %in% best$IID, ]
         }
         phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        
         pheno <- phenotype
         use.residual <- F
         if(!is.null(covariance)){
@@ -1901,6 +1899,9 @@ process_plot <-
             temp.pheno <- merge(phenotype, covariance)
             family <- gaussian
             if(is_binary){
+                if(max(temp.pheno$Pheno)==2){
+                    temp.pheno$Pheno <- temp.pheno$Pheno-1
+                }
                 family <- binomial
             }
             residual <-
