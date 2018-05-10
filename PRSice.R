@@ -33,7 +33,7 @@
 
 
 # Remove annoying messages ------------------------------------------------
-
+options(error = quote({dump.frames(to.file=TRUE); q()}))
 In_Regression <-
     DEC <-
     Coef <-
@@ -748,13 +748,14 @@ set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.ind
         prev.name <- cur.name
     }
     if(is.null(ref.level)){
+        writeLines("=======================================")
         writeLines("Warning: Cannot find required reference level, will use the middle level as reference")
+        writeLines("=======================================")
         ref.level <- levels(quant)[ceiling(length(quant.cut)/2)]
     }
     ref.index <- which(levels(quant)==ref.level)
     quant.index <- c(ref.index,c(1:length(levels(quant)))[-ref.index])
     quant<- relevel(quant, ref=ref.level)
-    
     return(list(quant, quant.index))
 }
 # Determine Default -------------------------------------------------------
@@ -888,7 +889,7 @@ call_quantile <-
             ifelse(binary & !use.residual, 1, 0)
         ci.quantiles.l[1] <-
             ifelse(binary & !use.residual, 1, 0)
-        quantiles.for.table <- levels(pheno.merge$quantile)
+        quantiles.for.table <- factor(levels(pheno.merge$quantile), levels(pheno.merge$quantile))
         quantiles.df <-
             data.frame(
                 Coef = coef.quantiles,
@@ -896,7 +897,6 @@ call_quantile <-
                 CI.L = ci.quantiles.l,
                 DEC = quantiles.for.table
             )
-        
         quantiles.df$Group = 0
         if (!is.null(extract)) {
             # Last element should be the cases
@@ -905,13 +905,20 @@ call_quantile <-
         quantiles.df$Group <-
             factor(quantiles.df$Group, levels = c(0, 1))
         quantiles.df <- quantiles.df[order(quant.index),]
-        quantiles.df$DEC <- factor(quantiles.df$DEC, levels=quantiles.df$DEC[order(quant.index)])
+        quantiles.df$DEC <- factor(quantiles.df$DEC, levels=levels(quantiles.df$DEC)[order(quant.index)])
         row.names(quantiles.df) <- quantiles.df$DEC
         quantiles.df <- cbind(Quantile = rownames(quantiles.df), quantiles.df) 
         quant.out <- quantiles.df[,-5]
+        sample.size <- as.data.frame(table(pheno.merge$quantile))
+        colnames(sample.size) <- c("Quantile", "N")
+        quant.out$Order <- 1:nrow(quant.out)
+        quant.out <- merge(quant.out,sample.size )
         if(binary & !use.residual){
             colnames(quant.out)[2] <- "OR"
         }
+        
+        quant.out <-
+            quant.out[order(quant.out$Order), !colnames(quant.out) %in% "Order"]
         write.table(
             quant.out,
             paste(prefix, "_QUANTILES_", Sys.Date(), ".txt", sep = ""),
@@ -1122,6 +1129,7 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
         quant.ref <- argv$quant_ref
         if (quant.ref > argv$quantile) {
             quant.ref <- ceiling(argv$quantile / 2)
+            writeLines("=======================================")
             writeLines(
                 paste(
                     "WARNING: reference quantile",
@@ -1131,6 +1139,7 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
                     "\n Using middle quantile by default"
                 )
             )
+            writeLines("=======================================")
         }
     }
     quants <- NULL
@@ -2009,8 +2018,8 @@ process_plot <-
             colnames(phenotype) <- c("IID", "Pheno")
             phenotype <- phenotype[phenotype$IID %in% best$IID, ]
         }
+        write.table(phenotype, "phenotypes", quote=F, row.names=F)
         phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
-        
         pheno <- phenotype
         use.residual <- F
         if(is_binary){
