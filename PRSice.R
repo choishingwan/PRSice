@@ -609,8 +609,7 @@ get_os <- function(){
 
 # CALL_PRSICE: Call the cpp PRSice if required
 # To ensure the excutable is set correctly
-# This is also one of the reason why window doesn't work. I don't know if we can handle the \
-# WINDOW PEOPLE
+# This is also one of the reason why window doesn't work. I don't know if we can handle the WINDOW PEOPLE
 os <- get_os()
 if (provided("prsice", argv)) {
     if (!startsWith(argv$prsice, "/") &&
@@ -1596,7 +1595,7 @@ extract_matrix <- function(x, y) {
 # information of base here
 
 if (!provided("target", argv)) {
-    stop("Target file name not found. You'll need to provide the target name for plotting!")
+    stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
 }
 
 
