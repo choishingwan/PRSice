@@ -9,7 +9,7 @@ P-value thresholds, e.g.  PT=1×10^−5^,1×10^−4^,…,0.05,0.1,…,0.5
 
 PRSice will automatically calculate the PRS for different p-value thresholds
 and perform a regression to test the level of association of the PRS with
-the target phenotype. This allow users to identify the PRS that "best" predicts
+the target phenotype. This allow the identification of PRS that "best" predicts
 the phenotype and can be used for downstream analysis.
 
 !!! Note
@@ -57,15 +57,12 @@ the phenotype and can be used for downstream analysis.
 
 - `--missing`
 
-    Method to handle missing genotypes. By default,
-    final scores are averages of valid per-allele
-    scores with missing genotypes contribute an amount
-    proportional to imputed allele frequency. To throw
-    out missing observations instead (decreasing the
-    denominator in the final average when this happens),
-    use the `no_mean_imputation` modifier. Alternatively,
-    you can use the `center` modifier to shift all scores
-    to mean zero.
+    Method to handle missing genotypes. 
+    Available methods include:
+    - `MEAN_IMPUTE` - Missing genotypes contribute an amount
+    proportional to imputed allele frequency (default)
+    - `no_mean_imputation` - To throw out missing observations instead
+    - `center` - shift all scores to mean zero.
 
 - `--no-regress`            
 

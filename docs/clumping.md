@@ -82,6 +82,9 @@
     When set, PRSice will not perform clumping. This is useful
     a pre-clumped list of SNPs is available.
 
+- `--pearson`
+
+    Use Pearson Correlation instead of maximum likelihood haplotype frequency estimates for LD calculation
 
 - `--proxy`
 

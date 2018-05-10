@@ -31,6 +31,8 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
     PRSice-2 is currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
 
+
+
 # R Packages Requirements
 
 To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3+**) installed.
