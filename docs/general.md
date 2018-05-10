@@ -12,11 +12,10 @@ PRSice is seperated into two main parts:
 
 !!! tip
 
-    You can perform PRS analysis using only the PRSice executable file
+    PRS analysis can be performed using only the PRSice executable file
     (without the Rscript) with all non-plotting / R related parameters.
-    This allow you to generate the PRS without performing the plotting,
-    which might be useful for users who are interested in only obtaining
-    the PRS.
+    This generates the PRS without plotting, which might be useful for 
+    those who are only interested in obtaining the PRS.
 
 ## General Usage
 ```
@@ -29,4 +28,4 @@ usage: Rscript PRSice.R [options] \
 ## PRSice Binary (R specific)
 - `--prsice`
 
-    inform the location of the PRSice executable.
+    Location of the PRSice executable.

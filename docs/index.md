@@ -1,61 +1,71 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! Note
-    We are holding a Summer School on Polygenic Risk Score in Social, Genetics and Developmental Psychiatry Centre
+!!! announcement "Our PRS Analyses Summer School is now open!"
 
-PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses.
-Some of the features include:
+    <h2>We are holding a Summer School on PRS analyses!!</h2>
+
+    - **[Polygenic Risk Score Analyses](https://www.kcl.ac.uk/ioppn/depts/sgdp-centre/study/summerschool/Course-2-Polygenic-Risk-Score-Analyses.aspx) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
+        - *Thursday 21st June 2018*
+<br/>
+PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
-2. Most predictive PRS identified
-3. Genotyped (PLINK binary) and imputed (Oxford bgen v1.2) data input
-4. Biobank-scale unimputed data can be analysed within hours
-5. Incorporation of covariates
-6. Application across multiple target traits simultaneously
-7. Results plotted in several formats (bar plots, high-res plots, quantile plots)
-8. Empirical P-values output (not subject to over-fitting)
-9. PRSet: function for calculating PRS across pathways / gene sets (user list option)
+2. Identify Most predictive PRS
+3. Empirical P-values output (not subject to over-fitting)
+4. Genotyped (PLINK binary) and imputed (Oxford bgen v1.2) data input
+5. Biobank-scale genotyped data can be analysed within hours
+6. Incorporation of covariates
+7. Application across multiple target traits simultaneously
+8. Results plotted in several formats (bar plots, high-res plots, quantile plots)
+
+[//]: # (9. PRSet: function for calculating PRS across user-defined pathways / gene sets)
 
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_linux_perm_fix.zip) |
-| OS X 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_mac_perm_fix.zip) |
-| Windows 64-bit | [v2.1.0.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.0.beta/PRSice_win64_perm_fix.zip) |
+| Linux 64-bit | [v2.1.2.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.2.beta/PRSice_linux.zip) |
+| OS X 64-bit | [v2.1.2.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.2.beta/PRSice_mac.zip) |
+| Windows 64-bit | [v2.1.2.beta](https://github.com/choishingwan/PRSice/releases/download/2.1.2.beta/PRSice_win64.zip) |
 
-!!! Note
+!!! Caution 
 
-    PRSice-2 is currently under open beta
+    PRSice-2 is currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
 
-## R Packages Requirements
+# R Packages Requirements
 
 To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3+**) installed.
 
-[Additional steps](extra_steps.md) might be required for MAC and Window users.
+[Additional steps](extra_steps.md) might be required for Mac and Windows users.
 
-!!! Note
+!!! Note "Installing required R packages" 
 
     PRSice can automatically download all required packages, even without administrative right.
-    You can specify the install directory using :code:`--dir`. For example
+    You can specify the install directory using `--dir`. For example
 
     ```
         Rscript PRSice.R --dir .
     ```
 
-    will install all required packages under the local directory
+    will install all required packages under the local directory.
 
 # Quick Start
 For Quick start use, please refer to [Quick Start](quick_start.md)
 
-!!! tip
+!!! tip "List user options"
 
     You can also type
+
+    ```
+        ./PRSice
+    ```
+
+    to view all available parameters unrelated to plotting, or
 
     ```
         Rscript PRSice.R -h
     ```
 
-    to view all available parameters
+    to view all available parameters, including those used for plotting
 
 # Output of Results
 You can see the expected output of PRSice [here](step_by_step.md#output-of-results)
@@ -64,13 +74,12 @@ You can see the expected output of PRSice [here](step_by_step.md#output-of-resul
 You can find a more detailed document explaining the input and output of PRSice in [this page](step_by_step.md)
 
 # Full command line options
-You can find all command line options of PRSice in [[this page | Command line options of PRSice]]
-
+You can find all command line options of PRSice under the section *Details of PRSice/PRSet*
 
 ## Citation
 If you use PRSice, then please cite:
 
-!!! quote
+!!! important "Citation"
 
     PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
 
@@ -78,6 +87,8 @@ If you use PRSice, then please cite:
 This wiki should contain all the basic instruction for the use of PRSice.
 Shall you have any problems, please feel free to start an issue [here](https://github.com/choishingwan/PRSice/issues) or visit our [google group](https://groups.google.com/forum/#!forum/prsice).
 You can help us to speed up the debug process by including the log file generated by PRSice.
+
+In addition, you can use the search bar in this webpage to search for specific functions. 
 
 ## Authors
 For more details on the authors, see:
@@ -88,7 +99,7 @@ For more details on the authors, see:
 
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
 
-[PRSet](PRSet) is developed and test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
+[PRSet](prset_detail.md) is developed and test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
 
 PRSice-2 and all new functionalities are coded by:
 
@@ -97,6 +108,6 @@ PRSice-2 and all new functionalities are coded by:
 
 ## Acknowledgement
 PRSice is a software package written in C++ (main) and R (plotting).
-The code relies partially on that written in PLINK by [Shaun Purcell](http://research.mssm.edu/statgen/) and [Christopher Chang](https://www.cog-genomics.org/software).
+The code relies partially on those written in PLINK by [Shaun Purcell](http://research.mssm.edu/statgen/) and [Christopher Chang](https://www.cog-genomics.org/software).
 Management of BGEN file is based on BGEN lib written by [Gavin Band](https://bitbucket.org/gavinband/bgen).
-We also utilize the [Eigen C++](eigen.tuxfamily.org) library.
+We also utilize the [Eigen C++](eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).

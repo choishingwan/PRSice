@@ -58,10 +58,11 @@ To see some example of PRSice output, you can refer to [here](step_by_step.md#ou
   schizophrenia samples. Must contain IID. Should
   contain FID if `--ignore-fid` isn't set.
 
-  !!! note
+!!! note
 
     This will only work if the base and target has a different
-    phenotype or if the target phenotype is quantitative
+    phenotype f if the target phenotype is quantitative
+
 
 - `--quant-ref`
 

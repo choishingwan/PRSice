@@ -9,6 +9,7 @@ pages:
 
     - PRSet:
         - Quick Start: quick_start_prset.md
+        - Detailed Guide: prset_detail.md
 
     - Details of PRSice/PRSet:
         - General Usages: general.md
@@ -23,7 +24,8 @@ pages:
         - Miscellaneous: misc.md
 
     - Developers:
-        - For Developers: developers.md
+        - Compile from Source: compilation.md
+        - Development Decisions: decisions.md
 
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md
@@ -33,6 +35,18 @@ markdown_extensions:
     - toc:
         permalink: True
     - codehilite
+    - pymdownx.arithmatex:
+        generic: True
+    - pymdownx.betterem:
+        smart_enable: all
+    - pymdownx.caret
 
 extra_css:
   - css/extra.css
+
+google_analytics:
+    - 'UA-113286405-1'
+    - auto
+
+extra_javascript:
+  - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
