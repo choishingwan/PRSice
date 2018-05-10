@@ -1,99 +1,11 @@
-# Introduction
-
-Currently we support two different formats
-
-### PLINK Binary
-A target dataset in PLINK binary format must consist of three files: **.bed**, **.bim**, and a **.fam** file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).
-
-The **.bed** and **.bim** file must have the same prefix.
-
-If you want to use a **.fam** file with a different prefix from the **.bed** and **.bim** file, you can do
-```
---target <bim bed prefix>,<fam file>
-```
-
-!!! warning
-
-    You MUST ensure the fam file contains the correct number of samples
-
-Missing phenotype data can be coded as NA, or -9 for binary traits and NA for quantitative traits.
-!!! Note
-
-    -9 will NOT be considered as missing for quantitative traits
-
-If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
-PRSice will automatically substitute # with 1-22
-
-i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use
-```
---target chr#
-```
-
-!!! Note
-
-    If an external fam file is provided, the substitution will not be performed on it. This is because all chromosome should have the same fam file. fam file from any of the chromosome should be ok
-
-!!! todo
-
-    We will incorporate a new function in next version where we allow different number of autosomes to be specified.
-    This should allow users to use PRSice on other organisms.
-    However, due to complication in handling non-diploid chromosomes, we will only
-    support diploid organisms (and exclude all sex chromosomes), i.e. Mouse
-
-### BGEN
-We also support BGEN v1.2. To specify a BGEN file, you simply add `--type bgen` or `--ld-type bgen` to your PRSice command
-
-As BGEN does not store the phenotype information and sometime not even the sample ID, you **must** provide
-a phenotype file (`--pheno-file`) for PRSice to run. Or you can provide a sample file using
-
-```
---target <bgen prefix>,<sample file>
-```
-
-!!! Note
-
-    We will still require this sample file even if you are doing `--no-regress` as we do want the sample ID.  we might loosen this requirement later on.
-
-With BGEN, a number of other PRSice options become effective:
-- `--hard`: Normally, with BGEN format, we will calculate the PRS using the dosage information.
-But you can ask for hard-thresholding by using the `--hard` option. Then we will code the SNP as the genotype with
-probability larger than threshold specified by `--hard-thres`. If no such genotype is presented, the SNP will be
-coded as missing
-- `--hard-thres`: The genotype probability threshold. SNPs with no genotype having a probability larger than this
-threshold will be treated as missing
-
-
-!!! Note
-    Similar to PLINK files, you can use the # substitution for BGEN files that are separated into different chromosomes
-
-## Phenotype files
-PRSice also support an external phenotype file as in input using the `--pheno-file`
-This file should contain the FID and IID (or just IID if `--ignore-fid` is set)
-and the target phenotype.
-
-You can specify the target phenotype name using `--pheno-col`.
-Multiple phenotype can be provided using a comma separated list. e.g.
-
-```
-  --pheno-col A,B,C
-```
-
-will cause PRSice to perform the analysis on phenotype A, B and C.
-
-!!! Note
-    When multiple phenotype is provided, PRSice will generate a set of
-    results for each phenotype with the prefix of `<Prefix>.<Pheno>` where
-    `<Prefix>` is the parameter provided to the `--out` option
-
-# Target File Related Commands
-
+# Basic Commands
 - `--binary-target`
 
     Indicate whether the target phenotype is binary or not.
     Either T or F should be provided where T represent a binary phenotype.
     For multiple phenotypes, the input should be separated by comma without space.
 
-    Default: **T** if `--beta` is set and **F** otherwise
+    Default: **F** if `--beta` is set and **T** otherwise
 
 - `--geno`
 
@@ -101,10 +13,9 @@ will cause PRSice to perform the analysis on phenotype A, B and C.
     between *0.0* and *1.0*.
 
 - `--info`
-    Filter SNPs based on info score. Only used for imputed target.
-    The INFO score is calculated as the MaCH imputation r-squared value.
-    The pseudo code is represented as follow:
-
+    Filter SNPs based on info score. Only used for imputed target data.
+    The INFO score is calculated as the MaCH imputation r-squared value, 
+    represented by the following pseudo code:
 ```
     m=Mean of expected genotype
     v=variance of expected genotype
@@ -127,8 +38,8 @@ will cause PRSice to perform the analysis on phenotype A, B and C.
 
     !!! Note
 
-        When perform MAF filtering on dosage data, we will
-        calculate the MAF using the hard-coded genotype
+        When perform MAF filtering on dosage data, the MAF 
+        is calculated using the hard-coded genotype
 
 - `--nonfounders`
 
@@ -182,7 +93,7 @@ will cause PRSice to perform the analysis on phenotype A, B and C.
     multiple chromosome input, simply substitute
     the chromosome number with #.
     PRSice will automatically replace # with 1-22.
-    You can also specify a separate fam/sample file by
+    A separate fam/sample file can be specified by
     `--target <prefix>,<fam/sample file>`
 
 

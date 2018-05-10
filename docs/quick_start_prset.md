@@ -3,13 +3,11 @@ A new feature of PRSice is the ability to perform set base/pathway based analysi
 
 Paper on PRSet currently under preparation.
 
-
 !!! Important
-    PRSet is currently under active development. Notably, the current version of PRSet available here only provides self-contained pathway results, which eg. do not account for pathway size. We are presently testing the power of PRSet Vs alternative pathway methods, so for now recommend assuming that other leading pathway approaches (eg. [MAGMA](https://ctg.cncr.nl/software/magma)) are most powerful for identification of causal pathways.
+    PRSet is currently under active development. Notably, the current version of PRSet only provides self-contained pathway results, which eg. do not account for pathway size. For now other leading pathway approaches (eg. [MAGMA](https://ctg.cncr.nl/software/magma)) might be more powerful for identification of causal pathways.
 
 # Preparation
-PRSet is mainly based on [PRSice](quick_start.md). To perform PRSet,
-you will need the following inputs
+PRSet is based on [PRSice](quick_start.md), with additional input requirements
 
 ## Input
 - **PRSice.R file**: A wrapper for the PRSice binary and for plotting
@@ -22,17 +20,13 @@ you will need the following inputs
 gene set on each individual line. If MSigDB is provided, GTF file is required.
 - **GTF file**: A file contain the genome boundary of each individual gene
 
-!!! Note
-
-    Currently, it is recommended to perform MAGMA to identify significant gene sets and use those as an input of PRSet
-
 # Running PRSet
 
-In most case, you can simply run PRSice using the following command, assuming your
-PRSice binary is located in `($HOME)/PRSice/bin/` and you are working in `($HOME)/PRSice`
+In most case, PRSet can simply be run using the following command, assuming the
+PRSice binary is located in `($HOME)/PRSice/bin/` and the working directory is `($HOME)/PRSice`
 
 ## With MSigDB data
-Assuming you have [downloaded](http://software.broadinstitute.org/gsea/msigdb/) a MSigDB file (*set.txt*) and a gene gtf file (gene.gtf) from [Ensemble](http://www.ensembl.org/index.html), then you can run PRSet with the following command
+Assuming a MSigDB file (*set.txt*) is [downloaded](http://software.broadinstitute.org/gsea/msigdb/) and a gene gtf file (gene.gtf) from [Ensemble](http://www.ensembl.org/index.html) is available, PRSet can then be performed using: 
 
 ``` bash hl_lines="7 8 9"
 Rscript PRSice.R \
@@ -49,7 +43,7 @@ Rscript PRSice.R \
 This will perform PRSet analysis and generate the multi-set plot with the top 10 gene sets
 
 ## With Bed Files
-Alternatively, if you have a list of bed files e.g. *A.bed,B.bed* as an input, you can run PRSet as
+Alternatively, if a list of bed files are available, e.g. *A.bed,B.bed*, PRSet can be performed by running
 
 ``` bash hl_lines="7 8"
 Rscript PRSice.R \
@@ -63,4 +57,4 @@ Rscript PRSice.R \
 ```
 
 !!! Note
-    You can use both bed and GTF+MSigDB input together*
+    Both bed and GTF+MSigDB input can be used together
