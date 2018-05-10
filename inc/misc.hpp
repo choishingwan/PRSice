@@ -26,10 +26,10 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <random>
 
 #if defined __APPLE__
 #include <mach/mach.h>
@@ -309,8 +309,11 @@ inline T convert(const std::string& str)
 {
     std::istringstream iss(str);
     T obj;
-    iss >> std::ws >> obj >> std::ws;
-    if (!iss.eof()) throw std::runtime_error("Unable to convert the input");
+    iss >> obj;
+
+    if (!iss.eof() || iss.fail()) {
+        throw std::runtime_error("Unable to convert the input");
+    }
 
     return obj;
 }

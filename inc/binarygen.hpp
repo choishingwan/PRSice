@@ -113,8 +113,8 @@ private:
                                     uintptr_t* __restrict mainbuf)
     {
         assert(unfiltered_sample_ct);
-        //if (unfiltered_sample_ct == sample_ct) {
-            rawbuf = mainbuf;
+        // if (unfiltered_sample_ct == sample_ct) {
+        rawbuf = mainbuf;
         //}
         load_raw(rawbuf, byte_pos, file_name);
         // output from load_raw should have already copied all samples
@@ -174,20 +174,20 @@ private:
 
         bool set_sample(std::size_t i)
         {
-        	if(!first && !exclude){
-        		if (missing || sum <= 0.0 || (hard_coded && genotype == -1)) {
-        			nmiss++;
-        			nmiss_maf++;
-        		}
-        		else
-        		{
-        			rs.push(exp);
-        			if (genotype == -1)
-        				nmiss_maf++;
-        			else
-        				maf_sum += genotype;
-        		}
-        	}
+            if (!first && !exclude) {
+                if (missing || sum <= 0.0 || (hard_coded && genotype == -1)) {
+                    nmiss++;
+                    nmiss_maf++;
+                }
+                else
+                {
+                    rs.push(exp);
+                    if (genotype == -1)
+                        nmiss_maf++;
+                    else
+                        maf_sum += genotype;
+                }
+            }
             m_sample_i = i;
             // exclude = !sample_inclusion->at(m_sample_i).included;
             exclude = !IS_SET(sample_inclusion->data(), m_sample_i);
@@ -197,7 +197,7 @@ private:
             genotype = -1;
             m_entry_i = 0;
             sum = 0.0;
-            hard_prob=0.0;
+            hard_prob = 0.0;
             exp = 0.0;
             return !exclude;
         }
@@ -294,7 +294,7 @@ private:
 
     struct PRS_Interpreter
     {
-    	~PRS_Interpreter(){};
+        ~PRS_Interpreter(){};
         PRS_Interpreter(std::vector<Sample>* sample, MODEL model,
                         MISSING_SCORE missing,
                         std::vector<uintptr_t>* sample_inclusion, double stat,
@@ -306,13 +306,13 @@ private:
             , m_stat(stat)
             , m_flipped(flipped)
         {
-        	// m_sample contains only samples extracted
+            // m_sample contains only samples extracted
             m_score.resize(m_sample->size(), 0);
         }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
         {
-        	m_total_sample_size = number_of_samples;
+            m_total_sample_size = number_of_samples;
         }
         void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
                                 uint32_t min_entries, uint32_t max_entries)
@@ -321,20 +321,21 @@ private:
 
         bool set_sample(std::size_t i)
         {
-        	if(!first && !exclude){
-        		if(missing || m_sum==0){
-        			m_missing_samples.push_back(m_sample_i);
-        		}
-        	}
-        	first = false;
+            if (!first && !exclude) {
+                if (missing || m_sum == 0) {
+                    m_missing_samples.push_back(m_sample_i);
+                }
+            }
+            first = false;
             m_entry_i = 0;
             missing = false;
             m_sum = 0.0;
             m_sample_i = i;
             exclude = !IS_SET(m_sample_inclusion->data(), m_sample_i);
-            if(!exclude){
-            	// as this is size_t, we can't use -1. Therefore in subsequent use, we should always -1
-            	m_score_i++;
+            if (!exclude) {
+                // as this is size_t, we can't use -1. Therefore in subsequent
+                // use, we should always -1
+                m_score_i++;
             }
             // exclude = !m_sample->at(m_sample_i).included;
             m_num_included_samples += !exclude;
@@ -346,7 +347,8 @@ private:
                                    std::size_t number_of_entries,
                                    genfile::OrderType order_type,
                                    genfile::ValueType value_type)
-        {}
+        {
+        }
 
         // Called once for each genotype (or haplotype) probability per sample.
         void set_value(uint32_t, double value)
@@ -359,7 +361,7 @@ private:
                 geno = 1;
             else if (m_model == MODEL::RECESSIVE)
                 geno = std::max(geno - 1, 0);
-            m_score[m_score_i-1] += value * geno;
+            m_score[m_score_i - 1] += value * geno;
             if (!exclude) m_total_prob += value * geno;
             m_entry_i++;
             m_sum += value;
@@ -388,18 +390,16 @@ private:
             }
             size_t i_missing = 0;
             // missing sample should be unique and sorted, right?
-            //std::sort(m_missing_samples.begin(), m_missing_samples.end());
-            //m_missing_samples.erase(
-            //    std::unique(m_missing_samples.begin(), m_missing_samples.end()),
-            //    m_missing_samples.end());
+            // std::sort(m_missing_samples.begin(), m_missing_samples.end());
+            // m_missing_samples.erase(
+            //    std::unique(m_missing_samples.begin(),
+            //    m_missing_samples.end()), m_missing_samples.end());
             size_t num_miss = m_missing_samples.size();
             double mean =
                 m_total_prob
                 / (((double) m_num_included_samples - (double) num_miss) * 2);
             size_t idx_sample_include = 0;
-            for (size_t i_sample = 0; i_sample < m_sample->size();
-                 ++i_sample)
-            {
+            for (size_t i_sample = 0; i_sample < m_sample->size(); ++i_sample) {
                 if (IS_SET(m_sample_inclusion->data(), i_sample)) {
                     auto&& sample = m_sample->at(idx_sample_include++);
                     if (i_missing < num_miss
@@ -432,9 +432,8 @@ private:
                         // m_num_snps->at(i_sample + m_vector_pad)++;
                     }
                 }
-                if(idx_sample_include >= m_num_included_samples) break;
+                if (idx_sample_include >= m_num_included_samples) break;
             }
-
         }
 
     private:
@@ -480,22 +479,22 @@ private:
 
         bool set_sample(std::size_t i)
         {
-        	if (!first && !exclude) {
-        		// summarize the previous sample's info
-        		if (shift == 0)
-        			m_genotype[index] = 0; // match behaviour of binaryplink
-        		m_genotype[index] |= geno << shift;
-        		shift += 2;
-        		if (shift == BITCT) {
-        			index++;
-        			shift = 0;
-        		}
-        	}
-        	first = false;
-        	exclude = false;
-        	geno = 1;
-        	m_entry_i = 0;
-        	hard_prob = 0.0;
+            if (!first && !exclude) {
+                // summarize the previous sample's info
+                if (shift == 0)
+                    m_genotype[index] = 0; // match behaviour of binaryplink
+                m_genotype[index] |= geno << shift;
+                shift += 2;
+                if (shift == BITCT) {
+                    index++;
+                    shift = 0;
+                }
+            }
+            first = false;
+            exclude = false;
+            geno = 1;
+            m_entry_i = 0;
+            hard_prob = 0.0;
             m_sample_i = i;
             // exclude = !m_sample->at(m_sample_i).included;
             exclude = !IS_SET(m_sample->data(), m_sample_i);

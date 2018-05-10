@@ -406,7 +406,8 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                            command, error_messages);
             else if (command.compare("set-perm") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.set_perm, prset.perform_set_perm, error, command);
+                                 prset.set_perm, prset.perform_set_perm, error,
+                                 command);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
@@ -1566,7 +1567,7 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
 
 void Commander::covariate_check(bool& error, std::string& error_message)
 {
-    if (covariate.file_name.empty() ) return;
+    if (covariate.file_name.empty()) return;
     std::ifstream cov_file;
     cov_file.open(covariate.file_name.c_str());
     if (!cov_file.is_open()) {
@@ -1584,168 +1585,179 @@ void Commander::covariate_check(bool& error, std::string& error_message)
     }
     cov_file.close();
     // obtain the header information
-    if(covariate.covariates.size() != 0){
-		std::unordered_set<std::string> included;
-		for (auto cov : covariate.covariates) {
-			if (cov.empty()) continue;
-			if (included.find(cov)
-				== included.end()) // to avoid duplicated covariance headers
-			{
-				// got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
-				// thingy to substitute them
-				if (cov.at(0) == '@') {
-					cov.erase(0, 1);
-					std::vector<std::string> open = misc::split(cov, "[");
-					std::vector<std::string> info;
-					std::vector<bool> list;
-					for (auto o : open) {
-						if (o.find("]") != std::string::npos) {
-							std::vector<std::string> close = misc::split(o, "]");
-							// the first one will always be the list
-							info.push_back(close[0]);
-							list.push_back(true);
-							for (size_t cl = 1; cl < close.size(); ++cl) {
-								info.push_back(close[cl]);
-								list.push_back(false);
-							}
-						}
-						else
-						{
-							info.push_back(o);
-							list.push_back(false);
-						}
-					}
-					std::vector<std::string> final_covariates;
-					for (size_t c = 0; c < info.size(); ++c) {
-						if (list[c]) {
-							std::vector<std::string> individual =
-								misc::split(info[c], ".");
-							std::vector<int> numeric;
-							for (auto&& ind : individual) {
-								if (ind.find("-") != std::string::npos) {
-									std::vector<std::string> range =
-										misc::split(ind, "-");
-									if (range.size() != 2) {
-										throw std::runtime_error(
-											"Error: Invalid range format, range "
-											"must be in the form of start-end");
-									}
-									try
-									{
-										size_t start =
-											misc::convert<size_t>(range[0]);
-										size_t end =
-											misc::convert<size_t>(range[1]);
-										if (start > end) {
-											int temp = end;
-											end = start;
-											start = temp;
-										}
-										for (size_t s = start; s <= end; ++s) {
-											numeric.push_back(s);
-										}
-									}
-									catch (const std::runtime_error& error)
-									{
-										std::string error_message =
-											"Error: Invalid parameter: " + range[0]
-											+ " or " + range[1]
-											+ ", only allow integer!";
-										throw std::runtime_error(error_message);
-									}
-								}
-								else
-								{
-									try
-									{
-										int temp = misc::convert<int>(ind);
-										numeric.push_back(temp);
-									}
-									catch (const std::runtime_error& error)
-									{
-										std::string error_message =
-											"Error: Invalid parameter: " + ind
-											+ ", only allow integer!";
-										throw std::runtime_error(error_message);
-									}
-								}
-							}
+    if (covariate.covariates.size() != 0) {
+        std::unordered_set<std::string> included;
+        for (auto cov : covariate.covariates) {
+            if (cov.empty()) continue;
+            if (included.find(cov)
+                == included.end()) // to avoid duplicated covariance headers
+            {
+                // got annoyed with the input of PC.1 PC.2 PC.3, do this
+                // automatic thingy to substitute them
+                if (cov.at(0) == '@') {
+                    cov.erase(0, 1);
+                    std::vector<std::string> open = misc::split(cov, "[");
+                    std::vector<std::string> info;
+                    std::vector<bool> list;
+                    for (auto o : open) {
+                        if (o.find("]") != std::string::npos) {
+                            std::vector<std::string> close =
+                                misc::split(o, "]");
+                            // the first one will always be the list
+                            info.push_back(close[0]);
+                            list.push_back(true);
+                            for (size_t cl = 1; cl < close.size(); ++cl) {
+                                info.push_back(close[cl]);
+                                list.push_back(false);
+                            }
+                        }
+                        else
+                        {
+                            info.push_back(o);
+                            list.push_back(false);
+                        }
+                    }
+                    std::vector<std::string> final_covariates;
+                    for (size_t c = 0; c < info.size(); ++c) {
+                        if (list[c]) {
+                            std::vector<std::string> individual =
+                                misc::split(info[c], ".");
+                            std::vector<int> numeric;
+                            for (auto&& ind : individual) {
+                                if (ind.find("-") != std::string::npos) {
+                                    std::vector<std::string> range =
+                                        misc::split(ind, "-");
+                                    if (range.size() != 2) {
+                                        throw std::runtime_error(
+                                            "Error: Invalid range format, "
+                                            "range "
+                                            "must be in the form of start-end");
+                                    }
+                                    try
+                                    {
+                                        size_t start =
+                                            misc::convert<size_t>(range[0]);
+                                        size_t end =
+                                            misc::convert<size_t>(range[1]);
+                                        if (start > end) {
+                                            int temp = end;
+                                            end = start;
+                                            start = temp;
+                                        }
+                                        for (size_t s = start; s <= end; ++s) {
+                                            numeric.push_back(s);
+                                        }
+                                    }
+                                    catch (const std::runtime_error& error)
+                                    {
+                                        std::string error_message =
+                                            "Error: Invalid parameter: "
+                                            + range[0] + " or " + range[1]
+                                            + ", only allow integer!";
+                                        throw std::runtime_error(error_message);
+                                    }
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        int temp = misc::convert<int>(ind);
+                                        numeric.push_back(temp);
+                                    }
+                                    catch (const std::runtime_error& error)
+                                    {
+                                        std::string error_message =
+                                            "Error: Invalid parameter: " + ind
+                                            + ", only allow integer!";
+                                        throw std::runtime_error(error_message);
+                                    }
+                                }
+                            }
 
-							// Now we have all the numeric parameters
-							if (final_covariates.empty()) {
-								for (auto n : numeric) {
-									final_covariates.push_back(std::to_string(n));
-								}
-							}
-							else
-							{
-								size_t cur_size = final_covariates.size();
-								for (size_t final = 0; final < cur_size; ++final) {
-									std::string cur = final_covariates[final];
-									final_covariates[final].append(
-										std::to_string(numeric.front()));
-									for (size_t s = 1; s < numeric.size(); ++s) {
-										final_covariates.push_back(
-											cur + std::to_string(numeric[s]));
-									}
-								}
-							}
-						}
-						else
-						{
-							for (size_t final = 0; final < final_covariates.size();
-								 ++final)
-							{
-								final_covariates[final].append(info[c]);
-							}
-							if (final_covariates.empty())
-								final_covariates.push_back(info[c]);
-						}
-					}
-					for (auto res : final_covariates) {
-						if (included.find(res) == included.end()) {
-							included.insert(res);
-						}
-					}
-				}
-				else
-					included.insert(cov);
-			}
-		}
+                            // Now we have all the numeric parameters
+                            if (final_covariates.empty()) {
+                                for (auto n : numeric) {
+                                    final_covariates.push_back(
+                                        std::to_string(n));
+                                }
+                            }
+                            else
+                            {
+                                size_t cur_size = final_covariates.size();
+                                for (size_t final = 0; final < cur_size;
+                                     ++final)
+                                {
+                                    std::string cur = final_covariates[final];
+                                    final_covariates[final].append(
+                                        std::to_string(numeric.front()));
+                                    for (size_t s = 1; s < numeric.size(); ++s)
+                                    {
+                                        final_covariates.push_back(
+                                            cur + std::to_string(numeric[s]));
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for (size_t final = 0;
+                                 final < final_covariates.size(); ++final)
+                            {
+                                final_covariates[final].append(info[c]);
+                            }
+                            if (final_covariates.empty())
+                                final_covariates.push_back(info[c]);
+                        }
+                    }
+                    for (auto res : final_covariates) {
+                        if (included.find(res) == included.end()) {
+                            included.insert(res);
+                        }
+                    }
+                }
+                else
+                    included.insert(cov);
+            }
+        }
 
-		std::vector<std::string> token = misc::split(line);
-		std::string missing = "";
-		std::unordered_set<std::string> ref;
-		for (auto&& head : token) {
-			ref.insert(head);
-		}
-		size_t valid_cov = 0;
-		std::vector<std::string> final_cov;
-		for (auto&& cov : included) {
-			if (ref.find(cov) != ref.end()) {
-				final_cov.push_back(cov);
-				valid_cov++;
-			}
-			else if (missing.empty())
-				missing = cov;
-			else
-				missing.append("," + cov);
-		}
-		if (!missing.empty()) {
-			error_message.append("Warning: Covariate(s) missing from file: "
-								 + missing + ". Header of file is: " + line + "\n");
-		}
-		if (valid_cov == 0) {
-			error = true;
-			error_message.append("Error: No valid Covariate!\n");
-		}
-		covariate.covariates = final_cov;
-    }else{
-    	// we will use all covariates
-    	std::vector<std::string> cov_header = misc::split(line);
-    	for(size_t i_cov=1+misc.ignore_fid; i_cov < cov_header.size(); ++i_cov){
-    		covariate.covariates.push_back(cov_header[i_cov]);
-    	}
+        std::vector<std::string> token = misc::split(line);
+        std::string missing = "";
+        std::unordered_set<std::string> ref;
+        for (auto&& head : token) {
+            ref.insert(head);
+        }
+        size_t valid_cov = 0;
+        std::vector<std::string> final_cov;
+        for (auto&& cov : included) {
+            if (ref.find(cov) != ref.end()) {
+                final_cov.push_back(cov);
+                valid_cov++;
+            }
+            else if (missing.empty())
+                missing = cov;
+            else
+                missing.append("," + cov);
+        }
+        if (!missing.empty()) {
+            error_message.append("Warning: Covariate(s) missing from file: "
+                                 + missing + ". Header of file is: " + line
+                                 + "\n");
+        }
+        if (valid_cov == 0) {
+            error = true;
+            error_message.append("Error: No valid Covariate!\n");
+        }
+        covariate.covariates = final_cov;
+    }
+    else
+    {
+        // we will use all covariates
+        std::vector<std::string> cov_header = misc::split(line);
+        for (size_t i_cov = 1 + misc.ignore_fid; i_cov < cov_header.size();
+             ++i_cov)
+        {
+            covariate.covariates.push_back(cov_header[i_cov]);
+        }
     }
 }
 

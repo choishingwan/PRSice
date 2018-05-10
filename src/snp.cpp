@@ -133,41 +133,52 @@ void SNP::sort_snp_index(std::vector<size_t>& index,
     });
 }
 
-std::vector<size_t> SNP::sort_snp_for_perm(std::vector<size_t>& index, const size_t select_size,  const std::vector<SNP>& input){
-	// first, sort by p
-	if(select_size != index.size()){
-		std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
-			// plink do it with respect to the location instead of statistic
-			if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
-				if (input[i1].basic.chr == input[i2].basic.chr) {
-					if (input[i1].basic.loc == input[i2].basic.loc) {
-						if (fabs(input[i1].statistic.stat)
-							== fabs(input[i2].statistic.stat))
-						{
-							return input[i1].statistic.se < input[i2].statistic.se;
-						}
-						else
-							return fabs(input[i1].statistic.stat)
-								   > fabs(input[2].statistic.stat);
-					}
-					else
-						return input[i1].basic.loc < input[i2].basic.loc;
-				}
-				else
-					return input[i1].basic.chr < input[i2].basic.chr;
-			}
-			else
-				return input[i1].statistic.p_value < input[i2].statistic.p_value;
-		});
-	}
-// now index is sorted, we want to sort the top select_size entry of index by the file info
-    std::sort(index.begin(), index.begin()+select_size, [&input](size_t i1, size_t i2){
-    	if (input[i1].file_info.file.compare(input[i2].file_info.file) == 0) {
-    		return input[i1].file_info.byte_pos < input[i2].file_info.byte_pos;
-    	}
-    	else
-    		return input[i1].file_info.file.compare(input[i2].file_info.file)
-    				< 0;
-    });
-    return std::vector<size_t>(index.begin(), index.begin()+select_size);
+std::vector<size_t> SNP::sort_snp_for_perm(std::vector<size_t>& index,
+                                           const size_t select_size,
+                                           const std::vector<SNP>& input)
+{
+    // first, sort by p
+    if (select_size != index.size()) {
+        std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
+            // plink do it with respect to the location instead of statistic
+            if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
+                if (input[i1].basic.chr == input[i2].basic.chr) {
+                    if (input[i1].basic.loc == input[i2].basic.loc) {
+                        if (fabs(input[i1].statistic.stat)
+                            == fabs(input[i2].statistic.stat))
+                        {
+                            return input[i1].statistic.se
+                                   < input[i2].statistic.se;
+                        }
+                        else
+                            return fabs(input[i1].statistic.stat)
+                                   > fabs(input[2].statistic.stat);
+                    }
+                    else
+                        return input[i1].basic.loc < input[i2].basic.loc;
+                }
+                else
+                    return input[i1].basic.chr < input[i2].basic.chr;
+            }
+            else
+                return input[i1].statistic.p_value
+                       < input[i2].statistic.p_value;
+        });
+    }
+    // now index is sorted, we want to sort the top select_size entry of index
+    // by the file info
+    std::sort(index.begin(), index.begin() + select_size,
+              [&input](size_t i1, size_t i2) {
+                  if (input[i1].file_info.file.compare(input[i2].file_info.file)
+                      == 0)
+                  {
+                      return input[i1].file_info.byte_pos
+                             < input[i2].file_info.byte_pos;
+                  }
+                  else
+                      return input[i1].file_info.file.compare(
+                                 input[i2].file_info.file)
+                             < 0;
+              });
+    return std::vector<size_t>(index.begin(), index.begin() + select_size);
 }

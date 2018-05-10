@@ -94,14 +94,15 @@ public:
             }
         }
         if (perm) {
-        	// instead of reserving the required memory, we should just adjust the
-        	// thread number, though most likely it will be light on memory now
+            // instead of reserving the required memory, we should just adjust
+            // the thread number, though most likely it will be light on memory
+            // now
 
-            //gen_perm_memory(commander, sample_ct, reporter);
+            // gen_perm_memory(commander, sample_ct, reporter);
 
             // Additional slice to keep
             // DEBUG here
-            //m_remain_slice = m_num_perm % m_perm_per_slice;
+            // m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
                 if (!m_logit_perm) {
                     std::string message =
@@ -155,36 +156,42 @@ public:
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
-    void init_process_count(const Commander &commander, size_t num_region, size_t num_thresholds){
-    	const bool perm = (commander.permutation() > 0);
-    	const bool set_perm = (commander.perform_set_perm());
-    	// the number of raw PRSice run
-    	m_total_process = num_thresholds*num_phenotype()*((num_region>1)?num_region-1:1);
-    	if(perm){
-    		m_total_process*=(commander.permutation()+1);
-    	}
-    	if(set_perm){
-    		// the additional permutation we've got to run, num_region -2 as we don't perform
-    		// permutation on the background set nor the base set
-    		m_total_process+=num_phenotype()*(num_region-2)*(commander.set_perm());
-    	}
-
+    void init_process_count(const Commander& commander, size_t num_region,
+                            size_t num_thresholds)
+    {
+        const bool perm = (commander.permutation() > 0);
+        const bool set_perm = (commander.perform_set_perm());
+        // the number of raw PRSice run
+        m_total_process = num_thresholds * num_phenotype()
+                          * ((num_region > 1) ? num_region - 1 : 1);
+        if (perm) {
+            m_total_process *= (commander.permutation() + 1);
+        }
+        if (set_perm) {
+            // the additional permutation we've got to run, num_region -2 as we
+            // don't perform permutation on the background set nor the base set
+            m_total_process +=
+                num_phenotype() * (num_region - 2) * (commander.set_perm());
+        }
     }
     PRSice(const PRSice&) = delete;            // disable copying
     PRSice& operator=(const PRSice&) = delete; // disable assignment
-    void print_progress(bool completed = false){
-    	double cur_progress = ((double)m_analysis_done/(double)m_total_process)*100.0;
-    	// progress bar can be slow when permutation + thresholding is used due to the
-    	// huge amount of processing required
-    	if(cur_progress - m_previous_percentage > 0.01){
-    		fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
-    		m_previous_percentage = cur_progress;
-    	}
+    void print_progress(bool completed = false)
+    {
+        double cur_progress =
+            ((double) m_analysis_done / (double) m_total_process) * 100.0;
+        // progress bar can be slow when permutation + thresholding is used due
+        // to the huge amount of processing required
+        if (cur_progress - m_previous_percentage > 0.01) {
+            fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
+            m_previous_percentage = cur_progress;
+        }
 
-    	if(m_previous_percentage >= 100.0 || completed){
-    		fprintf(stderr, "\rProcessing %03.2f%%",100.0);
-    	}
+        if (m_previous_percentage >= 100.0 || completed) {
+            fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
+        }
     }
+
 protected:
 private:
     struct prsice_result
@@ -223,7 +230,7 @@ private:
 
     bool m_ignore_fid = false;
     bool m_prset = false;
-    bool m_logit_perm=false;
+    bool m_logit_perm = false;
 
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
@@ -317,23 +324,27 @@ private:
                          const bool store_null, const bool binary);
     void produce_null_prs(Thread_Queue<std::vector<double>>& q,
                           Genotype& target, std::vector<int>& sample_index,
-                          size_t num_consumer, size_t num_perm, size_t set_size, size_t num_selected_snps,
-                          size_t background_index, double original_p,
-                          bool require_standardize);
+                          size_t num_consumer, size_t num_perm, size_t set_size,
+                          size_t num_selected_snps, size_t background_index,
+                          double original_p, bool require_standardize);
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
-                     int& num_significant,
-                     bool is_binary, bool store_p);
+                     int& num_significant, bool is_binary, bool store_p);
     void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
                             int& num_significant, size_t num_perm,
-                            size_t set_size, size_t num_selected_snps, size_t background_index,
-                            double original_p, bool require_standardize,
-                            bool is_binary, bool store_p);
-    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, size_t num_consumer);
+                            size_t set_size, size_t num_selected_snps,
+                            size_t background_index, double original_p,
+                            bool require_standardize, bool is_binary,
+                            bool store_p);
+    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                        size_t num_consumer);
 
-    void consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>> &q, Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-    		int rank, const Eigen::VectorXd& pre_se, bool run_glm);
-    void run_null_perm_no_thread(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-    		int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void
+    consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                       Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                       int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void run_null_perm_no_thread(
+        Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+        const Eigen::VectorXd& pre_se, bool run_glm);
 };
 
 #endif // PRSICE_H

@@ -189,36 +189,42 @@ public:
     }
     uintptr_t founder_ct() const { return m_founder_ct; }
     uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
-    void count_snp_in_region(Region& region, const std::string &name, const bool print_snp) const
+    void count_snp_in_region(Region& region, const std::string& name,
+                             const bool print_snp) const
     {
-    	std::string snp_file_name = name+".snp";
-    	std::ofstream print_file;
-    	if(print_snp){
-    		print_file.open(snp_file_name.c_str());
-    		if(!print_file.is_open()){
-    			throw std::runtime_error("Error: Cannot open snp file to write: "+snp_file_name);
-    		}
-    		print_file << "SNP\tCHR\tBP\tP";
-    		for(size_t i_region=0; i_region < region.size(); ++i_region){
-    			print_file << "\t" <<region.get_name(i_region);
-    		}
-    		print_file << std::endl;
-    	}
+        std::string snp_file_name = name + ".snp";
+        std::ofstream print_file;
+        if (print_snp) {
+            print_file.open(snp_file_name.c_str());
+            if (!print_file.is_open()) {
+                throw std::runtime_error(
+                    "Error: Cannot open snp file to write: " + snp_file_name);
+            }
+            print_file << "SNP\tCHR\tBP\tP";
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+                print_file << "\t" << region.get_name(i_region);
+            }
+            print_file << std::endl;
+        }
         std::vector<int> result(region.size(), 0);
         for (auto&& snp : m_existed_snps) {
-        	if(print_snp) print_file << snp.rs() <<"\t" << snp.chr()<<"\t" << snp.loc() << "\t" << snp.p_value();
+            if (print_snp)
+                print_file << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
+                           << "\t" << snp.p_value();
             for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 result[i_region] += snp.in(i_region);
-                if(print_snp) print_file << "\t" << (snp.in(i_region)? "Y":"N");
+                if (print_snp)
+                    print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
-            if(print_snp) print_file << std::endl;
+            if (print_snp) print_file << std::endl;
         }
-        if(print_snp) print_file.close();
+        if (print_snp) print_file.close();
         region.post_clump_count(result);
     };
 
-    void get_null_score(const size_t& set_size, const size_t &num_selected_snps, const size_t& background_index,
-    	    	const std::vector<size_t> &selection_list,
+    void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
+                        const size_t& background_index,
+                        const std::vector<size_t>& selection_list,
                         const bool require_standardize);
     void init_background_index(const size_t& background_index)
     {
@@ -317,7 +323,7 @@ protected:
                   std::vector<uintptr_t>& index_data,
                   std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
-    unsigned int  m_seed;
+    unsigned int m_seed;
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;

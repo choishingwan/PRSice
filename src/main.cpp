@@ -158,7 +158,8 @@ int main(int argc, char* argv[])
                 return -1;
             }
             // initialize PRSice class
-            target_file->count_snp_in_region(region, commander.out(), commander.print_snp());
+            target_file->count_snp_in_region(region, commander.out(),
+                                             commander.print_snp());
             PRSice prsice(base_name, commander, region.size() > 1,
                           target_file->num_sample(), reporter);
             if (region.size() > 1) {
@@ -166,12 +167,14 @@ int main(int argc, char* argv[])
             }
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);
-            prsice.init_process_count(commander, region.size(), target_file->num_threshold());
+            prsice.init_process_count(commander, region.size(),
+                                      target_file->num_threshold());
             size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
-                	fprintf(stderr, "Processing the %zu th phenotype\n", i_pheno);
+                    fprintf(stderr, "Processing the %zu th phenotype\n",
+                            i_pheno + 1);
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
                     prsice.prep_output(commander, *target_file, region.names(),
@@ -196,7 +199,6 @@ int main(int argc, char* argv[])
                         if (!commander.no_regress())
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
-
                     }
                     /*
                     if (region.size() > 1) {
@@ -206,7 +208,7 @@ int main(int argc, char* argv[])
                     */
                 }
                 prsice.print_progress(true);
-        		fprintf(stderr, "\n");
+                fprintf(stderr, "\n");
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
             }
