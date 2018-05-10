@@ -254,7 +254,7 @@ make
 <p>Without CMake, you can simply do the following</p>
 <div class="codehilite"><pre><span></span>git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-g++ -std=c++11 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div>
 
 
@@ -263,7 +263,7 @@ g++ -std=c++11 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 <div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.0.beta &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
 cd PRSice-2.1.0.beta
-g++ -std=c++11 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div>
               
             </div>

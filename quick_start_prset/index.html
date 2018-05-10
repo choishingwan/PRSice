@@ -238,11 +238,10 @@
 <p>Paper on PRSet currently under preparation.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>PRSet is currently under active development. Notably, the current version of PRSet available here only provides self-contained pathway results, which eg. do not account for pathway size. We are presently testing the power of PRSet Vs alternative pathway methods, so for now recommend assuming that other leading pathway approaches (eg. <a href="https://ctg.cncr.nl/software/magma">MAGMA</a>) are most powerful for identification of causal pathways.</p>
+<p>PRSet is currently under active development. Notably, the current version of PRSet only provides self-contained pathway results, which eg. do not account for pathway size. For now other leading pathway approaches (eg. <a href="https://ctg.cncr.nl/software/magma">MAGMA</a>) might be more powerful for identification of causal pathways.</p>
 </div>
 <h1 id="preparation">Preparation<a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h1>
-<p>PRSet is mainly based on <a href="../quick_start/">PRSice</a>. To perform PRSet,
-you will need the following inputs</p>
+<p>PRSet is based on <a href="../quick_start/">PRSice</a>, with additional input requirements</p>
 <h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>PRSice.R file</strong>: A wrapper for the PRSice binary and for plotting</li>
@@ -257,15 +256,11 @@ you will need the following inputs</p>
 gene set on each individual line. If MSigDB is provided, GTF file is required.</li>
 <li><strong>GTF file</strong>: A file contain the genome boundary of each individual gene</li>
 </ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Currently, it is recommended to perform MAGMA to identify significant gene sets and use those as an input of PRSet</p>
-</div>
 <h1 id="running-prset">Running PRSet<a class="headerlink" href="#running-prset" title="Permanent link">&para;</a></h1>
-<p>In most case, you can simply run PRSice using the following command, assuming your
-PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and you are working in <code>($HOME)/PRSice</code></p>
+<p>In most case, PRSet can simply be run using the following command, assuming the
+PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and the working directory is <code>($HOME)/PRSice</code></p>
 <h2 id="with-msigdb-data">With MSigDB data<a class="headerlink" href="#with-msigdb-data" title="Permanent link">&para;</a></h2>
-<p>Assuming you have <a href="http://software.broadinstitute.org/gsea/msigdb/">downloaded</a> a MSigDB file (<em>set.txt</em>) and a gene gtf file (gene.gtf) from <a href="http://www.ensembl.org/index.html">Ensemble</a>, then you can run PRSet with the following command</p>
+<p>Assuming a MSigDB file (<em>set.txt</em>) is <a href="http://software.broadinstitute.org/gsea/msigdb/">downloaded</a> and a gene gtf file (gene.gtf) from <a href="http://www.ensembl.org/index.html">Ensemble</a> is available, PRSet can then be performed using: </p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
     --prsice ./bin/PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
@@ -280,7 +275,7 @@ PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and you are working
 
 <p>This will perform PRSet analysis and generate the multi-set plot with the top 10 gene sets</p>
 <h2 id="with-bed-files">With Bed Files<a class="headerlink" href="#with-bed-files" title="Permanent link">&para;</a></h2>
-<p>Alternatively, if you have a list of bed files e.g. <em>A.bed,B.bed</em> as an input, you can run PRSet as</p>
+<p>Alternatively, if a list of bed files are available, e.g. <em>A.bed,B.bed</em>, PRSet can be performed by running</p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
     --prsice ./bin/PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
@@ -294,7 +289,7 @@ PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and you are working
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>You can use both bed and GTF+MSigDB input together*</p>
+<p>Both bed and GTF+MSigDB input can be used together</p>
 </div>
               
             </div>

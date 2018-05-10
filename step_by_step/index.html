@@ -102,7 +102,11 @@
     
         <ul>
         
-            <li><a class="toctree-l4" href="#figures">Figures</a></li>
+            <li><a class="toctree-l4" href="#bar-plot">Bar Plot</a></li>
+        
+            <li><a class="toctree-l4" href="#high-resolution-plot">High Resolution Plot</a></li>
+        
+            <li><a class="toctree-l4" href="#quantile-plots">Quantile Plots</a></li>
         
             <li><a class="toctree-l4" href="#prs-model-fit">PRS model-fit</a></li>
         
@@ -248,19 +252,18 @@
             <div class="section">
               
                 <h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
+<p>Here, we briefly discuss different input files required by PRSice:</p>
 <h2 id="base-dataset">Base Dataset<a class="headerlink" href="#base-dataset" title="Permanent link">&para;</a></h2>
 <p>Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
 PRSice has no problem reading in a gzipped base file.</p>
-<p>If you are using output from PLINK, then please make sure there is a column for the effect allele (A1) and specify it with <code>--A1</code> option.
-On the other hand, if you are using another form of output, then you can provide the column headers using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
+<p>PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with <code>--A1</code> option. 
+On the other hand, if the base data follows other formats, then the column headers can be provided using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>For PRSice to run, the base file must contain the effect allele (--A1), effect size estimates (--stat), p-value for association (--pvalue), and the snp id (--snp).</p>
+<p>PRSice requires the base file to contain information of the effective allele (--A1), effect size estimates (--stat), p-value for association (--pvalue), and the SNP ID (--snp).</p>
 </div>
-<p>If the input file does not contain a column header, then you can specify the column using their index (start counting from 0) with the <code>--index</code> flag.</p>
-<p>e.g. if the first column of the file contains the p-value information, you can use:
-<code>--pvalue 0 --index</code></p>
-<p>Below is an example input file:</p>
+<p>If the input file does not contain a column header, the column can be specified using their index (start counting from 0) with the <code>--index</code> flag.</p>
+<p>For example, with the following input format:</p>
 <table>
 <thead>
 <tr>
@@ -307,97 +310,103 @@ On the other hand, if you are using another form of output, then you can provide
 </tr>
 </tbody>
 </table>
-<p>and the parameters can either be</p>
+<p>the parameters can either be</p>
 <p><code>--snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --se SE --pvalue P</code></p>
 <p>or</p>
 <p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --se 6 --pvalue 7 --index</code></p>
-<p>Strand flips are automatically detected and accounted for</p>
-<p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, you can use
-<code>--info-base &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--maf-base &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> to filter
+<p>Strand flips are automatically detected and accounted for.</p>
+<p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, 
+<code>--info-base &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--maf-base &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> can be used to filter
 SNPs based on their INFO score and MAF respectively.</p>
-<p>For binary trait base file, you can also filter the MAF according the the case and control separately using</p>
+<p>For binary trait base file, SNPs can be filtered according to the MAF in case and control separately using</p>
 <div class="codehilite"><pre><span></span>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
 </pre></div>
 
 
-<p>By default, PRSice will look for the following column names automatically from your base file header if <code>--index</code> was not provided:</p>
+<p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided:</p>
 <blockquote>
 <p>CHR, BP, A1, A2, SNP, P, INFO, SE (case sensitive) and OR / BETA (case insensitive)</p>
 </blockquote>
-<p>If you don't want the specific column to be included e.g. You don't want to perform info score filtering but your file contains an
-INFO column, you can use <code>--no-default</code> to disable all the defaults of PRSice.
-PRSice will ignore any columns that were not found in your file (e.g. If you specified <code>--A2 B</code> but none of your column header is <em>B</em>,  then PRSice will treat it as if no <em>A2</em> information is presented)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PRSice will ignore any columns that were not found in the base file (e.g. If<code>--A2 B</code> is specified but none of the column header is <em>B</em>,  then PRSice will treat it as if no <em>A2</em> information is presented)</p>
+</div>
 <h2 id="target-dataset">Target Dataset<a class="headerlink" href="#target-dataset" title="Permanent link">&para;</a></h2>
-<p>Currently we support two different formats</p>
+<p>Currently two different target file format is supported by PRSice:</p>
 <h3 id="plink-binary">PLINK Binary<a class="headerlink" href="#plink-binary" title="Permanent link">&para;</a></h3>
-<p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently we only support a SNP major PLINK input (default output of the latest PLINK program).</p>
+<p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently only SNP major PLINK format are supported  (default output of the latest PLINK program).</p>
 <p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
-<p>If you want to use a <strong>.fam</strong> file with a different prefix from the <strong>.bed</strong> and <strong>.bim</strong> file, you can do</p>
+<p>If the <strong>.fam</strong> file follow a different prefix from the <strong>.bed</strong> and <strong>bim</strong> file, it can be specified using</p>
 <div class="codehilite"><pre><span></span>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
 </pre></div>
 
 
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>You MUST ensure the fam file contains the correct number of samples</p>
+<p>The fam file MUST contains the correct number of samples or PRSice will crash</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>-9 will NOT be considered as missing for quantitative traits</p>
 </div>
-<p>If your binary file is separated into individual chromosomes, then you can place an # in place of the chromosome number.
+<p>If the binary file is separated into individual chromosomes, then an # can be used to specify the location of the chromosome number in the file name.
 PRSice will automatically substitute # with 1-22</p>
-<p>i.e. If your files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
+<p>i.e. If tje files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
 <div class="codehilite"><pre><span></span>--target chr#
 </pre></div>
 
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If an external fam file is provided, the substitution will not be performed on it. This is because all chromosome should have the same fam file. fam file from any of the chromosome should be ok</p>
+<p>Chromosome number substitution will not be performed on the external fam file as the fam file should be the same for all chromosomes. </p>
 </div>
 <h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
-<p>We also support BGEN v1.2. To specify a BGEN file, you simply add <code>--type bgen</code> or <code>--ld-type bgen</code> to your PRSice command</p>
+<p>PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the <code>--type bgen</code> or <code>--ld-type bgen</code> to the PRSice command</p>
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
-a phenotype file (<code>--pheno-file</code>) for PRSice to run. Or you can provide a sample file using</p>
+a phenotype file (<code>--pheno-file</code>) for PRSice to run. Alternatively, the sample file can be provided using</p>
 <div class="codehilite"><pre><span></span>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
 </pre></div>
 
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>We will still require this sample file even if you are doing <code>--no-regress</code> as we do want the sample ID.  we might loosen this requirement later on.</p>
+<p>The sample file is required even if <code>--no-regress</code> is set as the sample ID is required for output. This requirement might be losen in future versions</p>
 </div>
-<p>With BGEN, a number of other PRSice options become effective:
-- <code>--hard</code>: Normally, with BGEN format, we will calculate the PRS using the dosage information.
-But you can ask for hard-thresholding by using the <code>--hard</code> option. Then we will code the SNP as the genotype with
+<p>With BGEN input, a number of PRSice options become effective:</p>
+<ul>
+<li>
+<p><code>--hard</code>: Normally, with BGEN format, PRS is calculated using the dosage information.
+But hard-thresholding can be performed by using the <code>--hard</code> option. SNPs will then coded as the genotype (0,1 or 2) with
 probability larger than threshold specified by <code>--hard-thres</code>. If no such genotype is presented, the SNP will be
-coded as missing
-- <code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
+coded as missing</p>
+</li>
+<li>
+<p><code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
 threshold will be treated as missing</p>
+</li>
+</ul>
 <h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
-<p>Sometimes, the phenotype information are not stored within the genotype files.
-In this scenario, a phenotype file can be provided to PRSice using the <code>--pheno-file</code>
+<p>An external phenotype file can be provided to PRSice using the <code>--pheno-file</code>
 parameter.
-The first two column of the phenotype file should be the FID and the IID, or if
+The first two column of the phenotype file should be the FID and the IID, or when
 <code>--ignore-fid</code> is set, the first column should be the IID.
 The rest of the columns can be the phenotype(s).</p>
-<p>If the user want to specify a trait within the phenotype file, the file must
-contain a column header and the column name for the trait can be provided using
-<code>--pheno-col</code> parameter. Multiple column name can be provided via a comma separated
+<p>To specify a trait within the phenotype file, the column name for the trait can be specified using
+<code>--pheno-col</code>, providing that the phenotype file contains a header.
+Multiple column name can be provided via a comma separated
 list: e.g. <code>--pheno-col A,B,C,D</code>. Trait(s) not found within the phenotype file will
 be automatically skipped.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>The column name should not contain <em>space</em> nor <em>comma</em></p>
+<p>The column name(s) should not contain <em>space</em> nor <em>comma</em></p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When multiple traits are provided, the column name will be appended to
+<p>When more than one traits are provided, the column name will be appended to
 the output prefix.</p>
 </div>
 <h1 id="ld-reference">LD reference<a class="headerlink" href="#ld-reference" title="Permanent link">&para;</a></h1>
-<p>When your target sample is small (e.g. &lt; 500 samples), you might want to use an external reference panel
+<p>When the target sample is small (e.g. &lt; 500 samples), an external reference panel can be used
 to improve the LD estimation for clumping.</p>
 <p>The LD reference follows the same notion as the target dataset. Simply use</p>
 <div class="codehilite"><pre><span></span>--ld &lt;LD refernce&gt;
@@ -405,31 +414,34 @@ to improve the LD estimation for clumping.</p>
 
 
 <p>to specify your LD reference panel file and <code>--ld-type</code> to specify the format</p>
-<p>When a LD reference file is not provided and <code>--no-clump</code> was not specified, the target file
+<p>When a LD reference file is not provided and <code>--no-clump</code> is not specified, the target file
 will be used as the LD reference panel</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>Any parameters with the <code>--ld</code> prefix will only work on the file specified by the <code>--ld</code> parameter.
 That is, if a LD reference file is not provided, none of the <code>--ld-*</code> options will be used.
-If you would like to apply a different filtering to the target file when using it as the reference panel (e.g. using only controls), you will need to provide that target file separately to the <code>--ld</code> parameter</p>
+If a different set of filtering is to be perforemd on the target file when performing LD calculation, it must
+be provided separately to the <code>--ld</code> parameter</p>
+<p>e.g. <code>--target &lt;target&gt; --ld &lt;target&gt; --keep &lt;samples for PRS&gt; --ld-keep &lt;samples for LD&gt;</code></p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If the LD reference panel is in BGEN format, then it will always be hard coded when estimating the LD</p>
+<p>BGEN file will always be hard coded when used to estimate the LD</p>
 </div>
 <h1 id="clumping">Clumping<a class="headerlink" href="#clumping" title="Permanent link">&para;</a></h1>
 <p>By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
 Similar to PLINK, the r<sup>2</sup> values computed by PRSice are based on maximum likelihood haplotype frequency estimates.
-We do not differentiate case and control when we calculate the r<sup>2</sup>.
-You can force r<sup>2</sup> calculation in control using the <code>--ld</code> and <code>--ld-keep</code>/<code>--ld-remove</code> options</p>
-<p>You can change the value using <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
-Or you can disable clumping altogether using <code>--no-clump</code></p>
+The pearson correlation r<sup>2</sup> calculation is also supported and can be specified by using <code>--pearson</code>.</p>
+<p>Both cases and controls are included in the LD calculation. 
+Alternatively, a combination of <code>--ld</code> and <code>--ld-keep</code>/<code>-ld-remove</code> can be used to restrict LD calculation in control samples. </p>
+<p>Clumping parameters can be changed by using the <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
+Clumping can be disabled using <code>--no-clump</code></p>
 <h1 id="prs-calculation">PRS calculation<a class="headerlink" href="#prs-calculation" title="Permanent link">&para;</a></h1>
 <p>PRSice allow different genetic models to be specified (e.g. add, dom, het, rec), and the polygenic score
 of each of those are calculated differently</p>
 <p>Assuming <span class="arithmatex">\(S\)</span> is the summary statistic for the effective allele and <span class="arithmatex">\(G\)</span> is the number
 of the effective allele observed, then the main difference between the models is
-how we code the genotype:</p>
+how the genotypes are coded:</p>
 <p>For additive model (add)</p>
 <div class="arithmatex">\[
 G = G
@@ -459,84 +471,162 @@ G = G
   \end{cases}
 \]</div>
 <p>Then depending on the <code>--score</code> option, the PRS is calculated as (assuming <span class="arithmatex">\(M\)</span> is the number of SNPs)</p>
-<p>For <code>--score avg</code> (default)
+<p><code>--score avg</code> (default):
 $$
     PRS = \sum{\frac{S\times G}{2}}\div M
 $$</p>
-<p>For <code>--score sum</code>
+<p><code>--score sum</code>:
 $$
     PRS = \sum{\frac{S\times G}{2}}
 $$</p>
-<p>For <code>--score std</code>
+<p><code>--score std</code>:
 $$
     PRS = (\sum{\frac{S\times G}{2}} - \text{Mean}(PRS))\div \text{SD}(PRS)
 $$</p>
-<p>Sometimes, sample can have missing genotype. We use the <code>--missing</code> option to determine how
+<p>Sometimes, sample can have missing genotype. 
+The <code>--missing</code> option is used to determine how
 PRSice handle the missingness.</p>
-<p>When not specified, the Minor Allele Frequency in the target sample will be used as the
+<p>When not specified, the Minor Allele Frequency (MAF) in the target sample will be used as the
 genotype as the sample with missing genotype.</p>
 <p>If <code>--missing NO_MEAN_IMPUTATION</code> is set, the SNP for the missing
 samples will be excluded.
-Alternatively, if <code>--missing CENTER</code> is set, all PRS calculated will be minus by
+Alternatively, if <code>--missing CENTER</code> is set, all PRS calculated will be minused by
 the MAF of the SNP (therefore, missing samples will have PRS of 0).</p>
 <h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
-<h2 id="figures">Figures<a class="headerlink" href="#figures" title="Permanent link">&para;</a></h2>
+<h2 id="bar-plot">Bar Plot<a class="headerlink" href="#bar-plot" title="Permanent link">&para;</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Hereon, we will assume <em>[Name]</em> is the output prefix specified using <code>--output</code> and <em>[date]</em> is the date when the analysis was performed.</p>
+<p>Hereon,  <em>[Name]</em> is assumed to be the output prefix specified using <code>--out</code> and <em>[date]</em> is the date when the analysis was performed.</p>
 </div>
 <p>PRSice will always generate a bar plot displaying the model fit of the PRS at P-value threshold as indicated by <code>--bar-levels</code></p>
-<p>The plot will be named as <em>[Name]_BARPLOT_[date].png</em> , where <em>[date]</em> is today’s date and <em>[Name]</em> is the output name specified using <code>--output</code>.
+<p>The plot will be named as <em>[Name]_BARPLOT_[date].png</em> .
 An example bar plot:</p>
 <p><img alt="Bar plot" src="../img/BARPLOT.png" /></p>
+<h2 id="high-resolution-plot">High Resolution Plot<a class="headerlink" href="#high-resolution-plot" title="Permanent link">&para;</a></h2>
 <p>If <code>--fastscore</code> is not specified, a high-resolution plot named <em>[Name]_HIGH-RES_PLOT_[date].png</em> will be generated.</p>
 <p>This plot present the model fit of PRS calculated at all P-value thresholds.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>The model fit here is the R2 of the Full model - the R2 of the Null model</p>
-<p>Assuming Sex is used as the covariate in the PRSice calculation, then the
-R2 reported here, is the R2 of <span class="arithmatex">\(Pheno\sim PRS+Sex\)</span> - R2 of <span class="arithmatex">\(Pheno\sim Sex\)</span></p>
+<p>The model fit is defined as the <span class="arithmatex">\(R^2\)</span> of the Full model - the <span class="arithmatex">\(R^2\)</span> of the Null model</p>
+<p>For example, if Sex is a covariate in the PRSice calculation, then 
+model fit = <span class="arithmatex">\(R^2\)</span> of <span class="arithmatex">\(Pheno\sim PRS+Sex\)</span> - <span class="arithmatex">\(R^2\)</span> of <span class="arithmatex">\(Pheno\sim Sex\)</span></p>
 </div>
 <p>A green line connects points showing the model fit at the broad P-value thresholds used in the corresponding bar plot are also added.
 An example high-resolution plot:</p>
 <p><img alt="High Resolution Plot" src="../img/HIGH-RES_PLOT.png" /></p>
+<h2 id="quantile-plots">Quantile Plots<a class="headerlink" href="#quantile-plots" title="Permanent link">&para;</a></h2>
 <p>If <code>--quantile [number of quantile]</code> is specified, a quantile plot named [Name]_QUANTILE_PLOT_[date].png will be generated.
 The quantile plot provide an illustration of the effect of increasing PRS on predicted risk of phenotype.
 An example quantile plot:</p>
 <p><img alt="Quantile Plot" src="../img/QUANTILES_PLOT.png" /></p>
 <p>Specifically, the quantile plot is generated by the following steps</p>
 <ol>
-<li>Regress out the covariate from the phenotype (if any) and use the standardized residual from
-this regression to represent the phenotype</li>
+<li>Regress out the covariate from the phenotype (if any) and use the <em>standardized</em> residual to represent the phenotype</li>
 <li>Distribute samples into user specified number of quantiles</li>
 <li>Treat the quantiles as a factor, where the <code>--quant-ref</code> is the base factor</li>
 <li>Perform regression with <span class="arithmatex">\(Pheno \sim Quantile\)</span></li>
 <li>Set the reference quantile to have coefficient of 1 (if binary) or 0 (otherwise)</li>
 </ol>
-<p>The point of each quantile is their odds when compared to the reference quantile</p>
+<p>The point of each quantile is their OR (if binary) or coefficient (otherwise) from the regression analysis</p>
+<p>A text file [Name]_QUANTILE\_[date].txt is also produced, which provides all the data used for the plotting. </p>
+<p>Moreover, uneven distribution of quantiles can be specified using the <code>--quant-break</code> function. 
+For example, to replicate the quantile break from Wen et al (2016):</p>
+<table>
+<thead>
+<tr>
+<th align="center">PRS (%)</th>
+<th align="center">Predicted OR</th>
+<th align="center">Observed OR (95% CI)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">0–1</td>
+<td align="center">0.37</td>
+<td align="center">0.39 (0.27–0.57)</td>
+</tr>
+<tr>
+<td align="center">0–10</td>
+<td align="center">0.52</td>
+<td align="center">0.55 (0.49–0.61)</td>
+</tr>
+<tr>
+<td align="center">10–20</td>
+<td align="center">0.67</td>
+<td align="center">0.71 (0.64–0.79)</td>
+</tr>
+<tr>
+<td align="center">20–30</td>
+<td align="center">0.77</td>
+<td align="center">0.74 (0.66–0.82)</td>
+</tr>
+<tr>
+<td align="center">30–40</td>
+<td align="center">0.86</td>
+<td align="center">0.88 (0.80–0.98)</td>
+</tr>
+<tr>
+<td align="center">40–60</td>
+<td align="center">1.00, reference</td>
+<td align="center">1.00, reference</td>
+</tr>
+<tr>
+<td align="center">60–70</td>
+<td align="center">1.16</td>
+<td align="center">1.10 (0.99–1.21)</td>
+</tr>
+<tr>
+<td align="center">70–80</td>
+<td align="center">1.29</td>
+<td align="center">1.24 (1.13–1.37)</td>
+</tr>
+<tr>
+<td align="center">80–90</td>
+<td align="center">1.49</td>
+<td align="center">1.52 (1.38–1.67)</td>
+</tr>
+<tr>
+<td align="center">90–100</td>
+<td align="center">1.97</td>
+<td align="center">1.93 (1.76–2.12)</td>
+</tr>
+</tbody>
+</table>
+<p>The following command can be added to PRSice command:</p>
+<div class="codehilite"><pre><span></span>--quantile 100 \
+--quant-break 1,10,20,30,40,60,70,80,90,100 \
+--quant-ref 60
+</pre></div>
+
+
+<p>Specifically, <code>--quant-break</code> indicates the <strong>upper bound</strong> of each group and <code>--quant-ref</code> specify the <strong>upper bound</strong> of the reference quantiles</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The quantile boundaries are non-overlapping, with the inclusive upper bound and exclusive lower bound </p>
+</div>
 <h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
 <p>A file containing the PRS model fit across thresholds is named <em>[Name].prsice</em>; this is stored as</p>
 <blockquote>
-<p>Threshold, R2, P-value, Coefficient, Stndard Deviation and Number of SNPs at this threshold</p>
+<p>Set, Threshold, <span class="arithmatex">\(R^2\)</span>, P-value, Coefficient, Standard Deviation and Number of SNPs at this threshold</p>
 </blockquote>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>The model fit here is the R2 of the Full model - the R2 of the Null model</p>
-<p>Assuming Sex is used as the covariate in the PRSice calculation, then the
-R2 reported here, is the R2 of <span class="arithmatex">\(Pheno\sim PRS+Sex\)</span> - R2 of <span class="arithmatex">\(Pheno\sim Sex\)</span></p>
+<p><span class="arithmatex">\(R^2\)</span> reported in the prsice file is the <span class="arithmatex">\(R^2\)</span> of the Full model - the <span class="arithmatex">\(R^2\)</span> of the Null model</p>
 </div>
 <h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
 <p>A file containing PRS for each individual at the best-fit PRS named</p>
 <p><em>[Name].best</em> is provide.
 This file has the format of:</p>
 <blockquote>
-<p>FID,IID,PRS at best threshold, Has Phenotype</p>
+<p>FID,IID,In_Regression, PRS at best threshold of first set, PRS at best threshold of second set, ...</p>
 </blockquote>
-<p>Where the has phenotype column indicate whether the sample contain all the required phenotype for PRSice
-analysis
-(e.g. Samples with missing phenotype/covariate will not be included in the regression. These samples will be indicated as "No" under the has phenotype column)</p>
+<p>Where the In_Regression column indicate whether the sample is included in the regression model performed by PRSice.</p>
 <p>If <code>--all-score</code> option is used, a file named <em>[Name].all.score</em> is also generated</p>
-<p>Please note, if <code>--all-score</code> options is used, the PRS for each individual at all threshold will be given.
+<p>This file has the format of </p>
+<blockquote>
+<p>FID, IID, PRS for first set at first threshold, PRS for first set at second threshold, ...</p>
+</blockquote>
+<p>If <code>--all-score</code> is used, the PRS for each individual at all threshold and all sets will be given.
 In the event where the target sample size is large and a lot of threshold are tested, this file can be large.</p>
 <h2 id="summary-information">Summary Information<a class="headerlink" href="#summary-information" title="Permanent link">&para;</a></h2>
 <p>Information of the best model fit of each phenotype and gene set is stored in <em>[Name].summary</em>.
@@ -554,11 +644,11 @@ The summary file contain the following fields:</p>
 <li><strong>Num_SNP</strong> - Number of SNPs included in the model</li>
 <li><strong>Empirical-P</strong> - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting</li>
 </ol>
+<p>Only one summary file will be generated for each PRSice run (disregarding the number of target phenotype used)</p>
 <h2 id="log-file">Log File<a class="headerlink" href="#log-file" title="Permanent link">&para;</a></h2>
-<p>We value reproducible research. Therefore we try our best to make replicating PRSice run easier.
-For every PRSice run, a log file named <em>[Name].log</em> is generated which contain the all the commands
-used for the analysis and information regarding filtering, field selected etc.</p>
-<p>This also allow users to quickly identify problems in the input dataset.</p>
+<p>To allow for easy replication, a log file named <em>[Name].log</em> is generated for each PRSice run, 
+which contain the all the commands used for the analysis and information regarding filtering, field selected etc.</p>
+<p>This also allow easy identification of problems and should always be included in the bug report.</p>
               
             </div>
           </div>

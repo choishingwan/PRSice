@@ -232,7 +232,7 @@
             <div class="section">
               
                 <h1 id="preparation">Preparation<a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h1>
-<p>Before performing PRSice, you should perform quality control on your target samples. <a href="./#quality-control-of-target-samples">See here</a> for an example.</p>
+<p>Before performing PRSice, quality control should be performed on the target samples. <a href="./#quality-control-of-target-samples">See here</a> for an example.</p>
 <h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>PRSice.R file:</strong> A wrapper for the PRSice binary and for plotting</li>
@@ -242,14 +242,18 @@
 Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed">PLINK binary</a> or <a href="http://www.well.ox.ac.uk/~gav/bgen_format/">BGEN</a></li>
 </ul>
 <h1 id="running-prsice">Running PRSice<a class="headerlink" href="#running-prsice" title="Permanent link">&para;</a></h1>
-<p>In most case, you can simply run PRSice using the following command, assuming your
-PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working in <code>($HOME)/PRSice</code></p>
+<p>In most case, PRSice can simply be run using the following command, assuming the
+PRSice executable is located in <code>($HOME)/PRSice/</code> and the working directory is <code>($HOME)/PRSice</code></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For window users, please use <strong>Rscript.exe</strong> instead of <strong>Rscript</strong></p>
 </div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Do not copy codes to Microsoft Word. Word has a tendency to change characters from codes into special characters that cannot be recognized by the terminal</p>
+</div>
 <h2 id="binary-traits">Binary Traits<a class="headerlink" href="#binary-traits" title="Permanent link">&para;</a></h2>
-<p>For binary traits, you can use the following command (commands specific to binary traits are highlighted in yellow)</p>
+<p>For binary traits, the following command can be used (commands specific to binary traits are highlighted in yellow)</p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
     --prsice ./PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
@@ -261,33 +265,37 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and you are working
 
 
 <h2 id="quantitative-traits">Quantitative Traits<a class="headerlink" href="#quantitative-traits" title="Permanent link">&para;</a></h2>
-<p>For quantitative traits, you can use  (commands specific to quantitative traits are highlighted in yellow)</p>
+<p>For quantitative traits, the following can be used instead  (commands specific to quantitative traits are highlighted in yellow)</p>
 <div class="codehilite"><pre><span></span>Rscript PRSice.R --dir . <span class="se">\</span>
     --prsice ./PRSice <span class="se">\</span>
     --base TOY_BASE_GWAS.assoc <span class="se">\</span>
     --target TOY_TARGET_DATA <span class="se">\</span>
     --thread <span class="m">1</span> <span class="se">\</span>
 <span class="hll">    --stat BETA <span class="se">\</span>
+</span><span class="hll">    --beta <span class="se">\</span>
 </span><span class="hll">    --binary-target F
 </span></pre></div>
 
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If you do not provide the PRSice command line with the type of Effect (<code>--stat</code>) or data type (<code>--binary-target</code>) then PRSice will try to work these out from the header of your base file:</p>
+<p>If the type of Effect (<code>--stat</code>) or data type (<code>--binary-target</code>) were not specified, PRSice will try to determine these information based on the header of the base file:</p>
 <ol>
 <li>
-<p>When <em>BETA</em> (case insensitive) is found in the header and <code>--stat</code> was not provided, <code>--beta</code> will be added to your command, and if <code>--binary-target</code> was not provided, <code>--binary-target F</code> will be added to your command </p>
+<p>When <em>BETA</em> (case insensitive) is found in the header and <code>--stat</code> was not provided, <code>--beta</code> will be added to the command, and if <code>--binary-target</code> was not provided, <code>--binary-target F</code> will be added to the command </p>
 </li>
 <li>
-<p>When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to your command</p>
+<p>When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to the command</p>
+</li>
+<li>
+<p>PRSice cannot determine if the type of effect / data type if the base file contains both <em>OR</em> and <em>BETA</em></p>
 </li>
 </ol>
-<p>PRSice will detail all effective options in its log file where you can simply copy and paste it to get the same output</p>
+<p>PRSice will detail all effective options in its log file.</p>
 </div>
 <h1 id="quality-control-of-target-samples">Quality Control of Target Samples<a class="headerlink" href="#quality-control-of-target-samples" title="Permanent link">&para;</a></h1>
-<p>You can perform quality control on the target samples using PLINK. 
-A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of your target binary file)</p>
+<p>Quality controls can be performed on the target samples using PLINK. 
+A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of the target binary file)</p>
 <div class="codehilite"><pre><span></span>plink --bfile <span class="o">(</span><span class="nv">$target</span><span class="o">)</span> <span class="se">\</span>
     --maf <span class="m">0</span>.05 <span class="se">\</span>
     --mind <span class="m">0</span>.1 <span class="se">\</span>
@@ -299,7 +307,7 @@ A good starting point is (assume <strong><em>($target)</em></strong> is the pref
 </pre></div>
 
 
-<p>Then you can add <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> to PRSice command to filter out
+<p>Then, <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> can be added to tje PRSice command to filter out
 the samples and SNPs</p>
               
             </div>

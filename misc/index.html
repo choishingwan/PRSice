@@ -219,10 +219,12 @@
 <h1 id="command">Command<a class="headerlink" href="#command" title="Permanent link">&para;</a></h1>
 <ul>
 <li>
-<p><code>--all-score</code>
-    Output PRS for ALL threshold.
-    !!! warning
-        This will generate a huge file</p>
+<p><code>--all-score</code></p>
+<p>Output PRS for ALL threshold.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This will generate a huge file</p>
+</div>
 </li>
 <li>
 <p><code>--exclude</code></p>
@@ -241,10 +243,15 @@ first column of all file will be assume to
 be IID instead of FID</p>
 </li>
 <li>
+<p><code>--keep-ambig</code></p>
+<p>Keep ambiguous SNPs. Only use this option
+whe base and target has the same A1 and A2 alleles</p>
+</li>
+<li>
 <p><code>--logit-perm</code></p>
-<p>When performing permutation, still use logistic
-regression instead of linear regression. This
-will substantially slow down PRSice.</p>
+<p>When performing permutation on binary phenotypes, 
+use logistic regression instead of linear regression. 
+This will substantially slow down PRSice.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>One problem with using <code>--logit-perm</code> is that some of
@@ -257,10 +264,12 @@ linear model should be similar to the logistic model</p>
 </div>
 </li>
 <li>
-<p><code>--keep-ambig</code></p>
-<p>Keep ambiguous SNPs. Only use this option
-if you are certain that the base and target
-has the same A1 and A2 alleles</p>
+<p><code>--no-default</code></p>
+<p>Disable the default options of PRSice. </p>
+</li>
+<li>
+<p><code>--no-full</code></p>
+<p>Do not include the p-value threshold of 1 unless specified in <code>--bar-levels</code> or <code>--upper</code></p>
 </li>
 <li>
 <p><code>--out</code> | <code>-o</code></p>
@@ -277,11 +286,11 @@ to the output prefix (after the phenotype (if any))</p>
 <p><code>--perm</code></p>
 <p>Number of permutation to perform. This will
 generate the empirical p-value. Recommend to
-use value larger than 10,000</p>
+use value larger than or equal to 10,000</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Essentially, when permutation is required, PRSice will perform the following
-operation (with slight difference in implementation for optimum performance)</p>
+<p>When permutation is required, PRSice will perform the following
+operation</p>
 <ol>
 <li>Perform normal PRSice across all thresholds and obtain p-value of the
 most significant threshold</li>
@@ -292,6 +301,10 @@ the permuted</li>
 </div>
 </li>
 <li>
+<p><code>--print-snp</code></p>
+<p>Print all SNPs used to construct the best PRS</p>
+</li>
+<li>
 <p><code>--seed</code> | <code>-s</code></p>
 <p>Seed used for permutation. If not provided,
 system time will be used as seed. This will
@@ -299,21 +312,15 @@ allow the same results to be generated when
 the same seed and input is used</p>
 </li>
 <li>
-<p><code>--print-snp</code></p>
-<p>Print all SNPs used to construct the best PRS</p>
-</li>
-<li>
 <p><code>--thread</code> | <code>-n</code></p>
 <p>Number of thread use</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>You can ask for maximum number of thread by using <code>--thread max</code></p>
+<p>Maximum number of thread can be specified by using <code>--thread max</code></p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Multi-threading will actually be slower if you require more thread than
-what is available. To avoid this, PRSice will limit the maximum number
-of thread used to the number of core available on the system as detected by PRSice.</p>
+<p>PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.</p>
 </div>
 </li>
 <li>

@@ -224,7 +224,7 @@ for many causal variants, PRS are usually calculated at a set of
 P-value thresholds, e.g.  PT=1×10<sup>−5</sup>,1×10<sup>−4</sup>,…,0.05,0.1,…,0.5</p>
 <p>PRSice will automatically calculate the PRS for different p-value thresholds
 and perform a regression to test the level of association of the PRS with
-the target phenotype. This allow users to identify the PRS that "best" predicts
+the target phenotype. This allow the identification of PRS that "best" predicts
 the phenotype and can be used for downstream analysis.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -273,15 +273,12 @@ Available models include:</p>
 </li>
 <li>
 <p><code>--missing</code></p>
-<p>Method to handle missing genotypes. By default,
-final scores are averages of valid per-allele
-scores with missing genotypes contribute an amount
-proportional to imputed allele frequency. To throw
-out missing observations instead (decreasing the
-denominator in the final average when this happens),
-use the <code>no_mean_imputation</code> modifier. Alternatively,
-you can use the <code>center</code> modifier to shift all scores
-to mean zero.</p>
+<p>Method to handle missing genotypes. 
+Available methods include:
+- <code>MEAN_IMPUTE</code> - Missing genotypes contribute an amount
+proportional to imputed allele frequency (default)
+- <code>no_mean_imputation</code> - To throw out missing observations instead
+- <code>center</code> - shift all scores to mean zero.</p>
 </li>
 <li>
 <p><code>--no-regress</code>            </p>

@@ -216,9 +216,9 @@
               
                 <h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
 <p>PRSice will automatically generate the bar-plot and high-resolution plot
-(if <code>--fastscore</code>) is not set. Quantile plots will also be generated if you
-used the <code>--quantile</code> parameter.</p>
-<p>To see some example of PRSice output, you can refer to <a href="../step_by_step/#output-of-results">here</a></p>
+(if <code>--fastscore</code>) is not set. Quantile plots will also be generated if 
+the <code>--quantile</code> parameter is provided</p>
+<p>To see some example of PRSice output, please refer to <a href="../step_by_step/#output-of-results">here</a></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>These parameters, is not recognized by the PRSice binary</p>
@@ -248,8 +248,8 @@ used the <code>--quantile</code> parameter.</p>
 <ul>
 <li><code>--plot</code></li>
 </ul>
-<p>When set, will only perform plotting using existing PRSice result files.
-  Users will still need to provide all other parameters such that PRSice
+<p>When set, will only perform plotting using existing PRSice result files. 
+  All other parameters are still required such that PRSice
   can correctly locate the required input files for plotting.</p>
 <ul>
 <li><code>--plot-set</code></li>
@@ -265,6 +265,15 @@ used the <code>--quantile</code> parameter.</p>
 No quantile plot will be generated when this is not provided.</p>
 </li>
 <li>
+<p><code>--quant-break</code></p>
+<p>Parameter to indicate an uneven distribution of quantile. Values represent
+the upperbound of each quantile group. </p>
+<p>e.g. With <code>--quantile 10 --quant-break 1,5,10</code>, the quantiles will be grouped into</p>
+<blockquote>
+<p><span class="arithmatex">\(0\lt Q \le 1\)</span>, <span class="arithmatex">\(1\lt Q \le 5\)</span>, <span class="arithmatex">\(5\lt Q \le 10\)</span></p>
+</blockquote>
+</li>
+<li>
 <p><code>--quant-extract</code> | <code>-e</code></p>
 </li>
 </ul>
@@ -275,12 +284,14 @@ No quantile plot will be generated when this is not provided.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This will only work if the base and target has a different
-phenotype f if the target phenotype is quantitative</p>
+phenotype or if the target phenotype is quantitative</p>
 </div>
 <ul>
 <li><code>--quant-ref</code></li>
 </ul>
 <p>Reference quantile for quantile plot. Default is number of quantiles divided by 2</p>
+<p>Or in the event where <code>--quant-break</code> is used, represent the upper bound of the 
+  reference quantile</p>
 <ul>
 <li><code>--scatter-r2</code></li>
 </ul>

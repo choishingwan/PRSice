@@ -218,14 +218,12 @@
             <div class="section">
               
                 <h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
-<p>When we implement PRSice 2, there are some concious choice we have made. 
-Here are some of the decisions we have made during the implementation of PRSice</p>
+<p>Here, we detail some of the decisions we made during the implementatino of PRSice</p>
 <h1 id="support-of-bgen-v13">Support of BGEN v1.3<a class="headerlink" href="#support-of-bgen-v13" title="Permanent link">&para;</a></h1>
-<p>While it is straightforward to support BGEN v1.3 as we are using the bgen library directly,
-we have purposefully disabled its support to avoid the inclusion of the zstd library. 
+<p>We have purposefully disabled support to BGEN v1.3 to avoid the inclusion of the zstd library. 
 This is because
 - UKBB is v1.2
-- We are not familiar with the licensing of zstd library</p>
+- We are not familiar with the licensing of zstd library (developed by facebook)</p>
 <h1 id="removal-of-pca-calculation">Removal of PCA calculation<a class="headerlink" href="#removal-of-pca-calculation" title="Permanent link">&para;</a></h1>
 <p>The main goal of PRSice 2 is to support the polygenic score analysis on large scale data. 
 With such data, the calculation of PCA on the fly will be time consuming and will require specific algorithms
