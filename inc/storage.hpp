@@ -26,17 +26,12 @@ struct Sample
     std::string IID;
     std::string pheno;
     int num_snp;
-    bool included;
-    bool has_pheno;
+    // include is related to founder status
+    bool include;
+    bool in_regression;
     double prs;
 };
 
-struct Sample_lite
-{
-    double prs;
-    int num_snp;
-    bool has_pheno;
-};
 
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP
@@ -120,6 +115,15 @@ enum class GTF
     ATTRIBUTE
 };
 
+enum class BED
+{
+    CHR,
+    START,
+    END,
+    NAME,
+    SCORE,
+    STRAND
+};
 enum class MODEL
 {
     ADDITIVE,
@@ -159,6 +163,10 @@ struct enumeration_traits<FAM> : enumeration_trait_indexing
 };
 template <>
 struct enumeration_traits<BIM> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<BED> : enumeration_trait_indexing
 {
 };
 #endif /* PRSICE_INC_STORAGE_HPP_ */

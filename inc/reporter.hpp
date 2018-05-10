@@ -10,6 +10,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -47,6 +49,7 @@ public:
     void report(const std::string& input, bool wrap = true);
 
 private:
+    bool isNumeric(std::string s);
     std::ofstream m_log_file;
     size_t m_width = 60;
 };

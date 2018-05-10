@@ -48,11 +48,22 @@ public:
         threshold.category = category;
         threshold.p_threshold = p_threshold;
     };
+    void add_reference(const std::string ref_file,
+                       const std::streampos ref_byte_pos)
+    {
+        ref_file_info.file = ref_file;
+        ref_file_info.byte_pos = ref_byte_pos;
+    }
 
     inline void set_flipped() { statistic.flipped = true; };
     std::string get_rs() const { return basic.rs; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
+    static void sort_snp_index(std::vector<size_t>& index,
+                               const std::vector<SNP>& input);
+    static std::vector<size_t> sort_snp_for_perm(std::vector<size_t>& index,
+                                                 const size_t select_size,
+                                                 const std::vector<SNP>& input);
     bool operator==(const SNP& Ref) const
     {
         if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
@@ -145,7 +156,9 @@ public:
     double stat() const { return statistic.stat; };
     double get_threshold() const { return threshold.p_threshold; };
     std::streampos byte_pos() const { return file_info.byte_pos; };
+    std::streampos ref_byte_pos() const { return ref_file_info.byte_pos; };
     std::string file_name() const { return file_info.file; };
+    std::string ref_file_name() const { return ref_file_info.file; };
     std::string rs() const { return basic.rs; };
     std::string ref() const { return basic.ref; };
     std::string alt() const { return basic.alt; };
@@ -211,8 +224,10 @@ public:
 
 private:
     // basic info
-
-    struct
+    /*
+     * Memory size = MAX_ID_SLEN*3 (ref alt rs)+ 4*
+     */
+    struct Clump
     {
         bool clumped;
         std::vector<double> r2;
@@ -220,7 +235,7 @@ private:
         size_t up_bound;
     } clump_info;
 
-    struct
+    struct Basic
     {
         std::string ref;
         std::string alt;
@@ -230,13 +245,19 @@ private:
         bool valid;
     } basic;
 
-    struct
+    struct Target
     {
         std::string file;
         std::streampos byte_pos;
     } file_info;
 
-    struct
+    struct Reference
+    {
+        std::string file;
+        std::streampos byte_pos;
+    } ref_file_info;
+
+    struct Statistic
     {
         double stat;
         double se;
@@ -244,7 +265,7 @@ private:
         bool flipped;
     } statistic;
 
-    struct
+    struct Threshold
     {
         int category;
         double p_threshold;

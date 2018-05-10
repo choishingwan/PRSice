@@ -26,9 +26,11 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
+#include "thread_queue.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <chrono>
+#include <errno.h>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -43,18 +45,25 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <mingw.mutex.h>
+#include <mingw.thread.h>
 #include <process.h>
 #include <windows.h>
-#define pthread_t HANDLE
-#define THREAD_RET_TYPE unsigned __stdcall
-#define THREAD_RETURN return 0
+//#define pthread_t HANDLE
+//#define THREAD_RET_TYPE unsigned __stdcall
+//#define THREAD_RETURN return 0
 #define EOLN_STR "\r\n"
 #else
-#include <pthread.h>
-#define THREAD_RET_TYPE void*
-#define THREAD_RETURN return nullptr
+#include <thread>
+//#include <pthread.h>
 #endif
-
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/mach_init.h>
+#include <mach/mach_types.h>
+#include <mach/vm_statistics.h>
+#endif
 // This should be the class to handle all the procedures
 class PRSice
 {
@@ -71,7 +80,8 @@ public:
         , m_out(commander.out())
         , m_target_binary(commander.is_binary())
     {
-        g_logit_perm = commander.logit_perm();
+
+        m_logit_perm = commander.logit_perm();
         // we calculate the number of permutation we can run at one time
         bool perm = (commander.permutation() > 0);
         m_seed = commander.seed();
@@ -84,37 +94,27 @@ public:
             }
         }
         if (perm) {
-            // first check for ridiculously large sample size
-            // allow 1 GB here
-            if (CHAR_BIT * sample_ct > 100000000) {
-                m_perm_per_slice = 1;
-            }
-            else
-            {
-                // in theory, most of the time, perm_per_slice should be
-                // equal to c_commander.num_permutation();
+            // instead of reserving the required memory, we should just adjust
+            // the thread number, though most likely it will be light on memory
+            // now
 
-                int sample_memory = CHAR_BIT * sample_ct;
-                m_perm_per_slice = 100000000 / sample_memory;
-                m_perm_per_slice = (m_perm_per_slice > m_num_perm)
-                                       ? m_num_perm
-                                       : m_perm_per_slice;
-                // Additional slice to keep
-                m_remain_slice = m_num_perm % m_perm_per_slice;
-            }
+            // gen_perm_memory(commander, sample_ct, reporter);
+
+            // Additional slice to keep
+            // DEBUG here
+            // m_remain_slice = m_num_perm % m_perm_per_slice;
             if (has_binary) {
-                if (!g_logit_perm) {
+                if (!m_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform  linear regression instead of logistic "
                         "regression within the permutation and uses the "
                         "p-value to rank the thresholds. Our assumptions "
                         "are as follow:\n";
-                    message.append("         1. Linear Regression & Logistic "
+                    message.append("1) Linear Regression & Logistic "
                                    "Regression produce similar p-values\n");
-                    message.append(
-                        "         2. P-value is correlated with R2\n\n");
-                    message.append("         If you must, you can run logistic "
+                    message.append("2) P-value is correlated with R2\n\n");
+                    message.append("If you must, you can run logistic "
                                    "regression instead by setting the "
                                    "--logit-perm flag\n\n");
                     reporter.report(message);
@@ -139,9 +139,9 @@ public:
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     };
-    void run_prsice(const Commander& c_commander,
-                    const std::string& region_name, const size_t pheno_index,
-                    const size_t region_index, Genotype& target);
+    void run_prsice(const Commander& c_commander, const Region& region,
+                    const size_t pheno_index, const size_t region_index,
+                    Genotype& target);
     void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t iter_threshold);
 
@@ -150,9 +150,47 @@ public:
     void output(const Commander& c_commander, const Region& region,
                 const size_t pheno_index, const size_t region_index,
                 Genotype& target);
+    void prep_output(const Commander& commander, Genotype& target,
+                     std::vector<std::string> region_name,
+                     const size_t pheno_index);
     void transpose_all(const Commander& c_commander, const Region& c_region,
                        size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
+    void init_process_count(const Commander& commander, size_t num_region,
+                            size_t num_thresholds)
+    {
+        const bool perm = (commander.permutation() > 0);
+        const bool set_perm = (commander.perform_set_perm());
+        // the number of raw PRSice run
+        m_total_process = num_thresholds * num_phenotype()
+                          * ((num_region > 1) ? num_region - 1 : 1);
+        if (perm) {
+            m_total_process *= (commander.permutation() + 1);
+        }
+        if (set_perm) {
+            // the additional permutation we've got to run, num_region -2 as we
+            // don't perform permutation on the background set nor the base set
+            m_total_process +=
+                num_phenotype() * (num_region - 2) * (commander.set_perm());
+        }
+    }
+    PRSice(const PRSice&) = delete;            // disable copying
+    PRSice& operator=(const PRSice&) = delete; // disable assignment
+    void print_progress(bool completed = false)
+    {
+        double cur_progress =
+            ((double) m_analysis_done / (double) m_total_process) * 100.0;
+        // progress bar can be slow when permutation + thresholding is used due
+        // to the huge amount of processing required
+        if (cur_progress - m_previous_percentage > 0.01) {
+            fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
+            m_previous_percentage = cur_progress;
+        }
+
+        if (m_previous_percentage >= 100.0 || completed) {
+            fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
+        }
+    }
 
 protected:
 private:
@@ -165,6 +203,7 @@ private:
         double p;
         double emp_p;
         double se;
+        double competitive_p;
         int num_snp;
     };
 
@@ -191,8 +230,8 @@ private:
 
     bool m_ignore_fid = false;
     bool m_prset = false;
-    static bool g_logit_perm;
-    Eigen::VectorXd m_phenotype;
+    bool m_logit_perm = false;
+
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
     double m_null_se = 0.0;
@@ -207,6 +246,9 @@ private:
     size_t m_all_thresholds = 0;
     size_t m_max_fid_length = 3;
     size_t m_max_iid_length = 3;
+    size_t m_total_process = 0;
+    size_t m_analysis_done = 0;
+    double m_previous_percentage = -1.0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     std::string m_log_file;
@@ -217,37 +259,45 @@ private:
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
     std::vector<double> m_best_sample_score;
-    std::vector<size_t> m_sample_index;
     std::vector<size_t> m_significant_store{0, 0, 0}; // store the number of
                                                       // non-sig, margin sig,
                                                       // and sig pathway &
                                                       // phenotype
-
+    std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
+    static std::mutex lock_guard;
 
-    // pthread mutli_thread require stuff?
-    struct perm_info
+    struct column_file_info
     {
-        size_t start;
-        size_t end;
-        size_t processed;
-        size_t rank;
+        size_t header_length;
+        size_t skip_column_length;
+        size_t line_width;
+        size_t processed_threshold;
     };
 
-    static Eigen::MatrixXd m_independent_variables;
-    static std::vector<double> g_perm_result;
-    static std::unordered_map<uintptr_t, perm_info> g_perm_range;
-    static Eigen::ColPivHouseholderQR<Eigen::MatrixXd> g_perm_pre_decomposed;
-    static std::vector<Eigen::MatrixXd> g_permuted_pheno;
-    static Eigen::VectorXd g_pre_se_calulated;
-
-
+    column_file_info m_all_file, m_best_file, m_snp_output;
+    // As R has a default precision of 7, we will go a bit
+    // higher to ensure we use up all precision
+    size_t m_precision = 9;
+    // the 7 are:
+    // 1 for sign
+    // 1 for dot
+    // 2 for e- (scientific)
+    // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
+    size_t m_numeric_width = m_precision + 7;
+    Eigen::MatrixXd m_independent_variables;
+    Eigen::VectorXd m_phenotype;
+    std::vector<double> m_perm_result;
+    std::vector<double> m_permuted_pheno;
+    std::mutex m_thread_mutex;
+    // Functions
     void thread_score(size_t region_start, size_t region_end, double threshold,
                       size_t thread, const size_t c_pheno_index,
                       const size_t iter_threshold);
-    static THREAD_RET_TYPE thread_perm(void* id);
-
-    void permutation(Genotype& target, const size_t n_thread, bool logit_perm);
+    void thread_perm(Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                     size_t start, size_t end, int rank,
+                     const Eigen::VectorXd& pre_se, size_t processed);
+    void permutation(Genotype& target, const size_t n_thread, bool is_binary);
     void update_sample_included(Genotype& target);
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
@@ -265,6 +315,36 @@ private:
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
+    void gen_perm_memory(const Commander& commander, const size_t sample_ct,
+                         Reporter& reporter);
+    void print_best(Genotype& target, const size_t pheno_index,
+                    const Commander& commander);
+    void run_competitive(Genotype& target, const Commander& commander,
+                         const size_t background_index, const size_t num_snp,
+                         const bool store_null, const bool binary);
+    void produce_null_prs(Thread_Queue<std::vector<double>>& q,
+                          Genotype& target, std::vector<int>& sample_index,
+                          size_t num_consumer, size_t num_perm, size_t set_size,
+                          size_t num_selected_snps, size_t background_index,
+                          double original_p, bool require_standardize);
+    void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
+                     int& num_significant, bool is_binary, bool store_p);
+    void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
+                            int& num_significant, size_t num_perm,
+                            size_t set_size, size_t num_selected_snps,
+                            size_t background_index, double original_p,
+                            bool require_standardize, bool is_binary,
+                            bool store_p);
+    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                        size_t num_consumer);
+
+    void
+    consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                       Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                       int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void run_null_perm_no_thread(
+        Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+        const Eigen::VectorXd& pre_se, bool run_glm);
 };
 
 #endif // PRSICE_H

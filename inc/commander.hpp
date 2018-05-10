@@ -22,6 +22,7 @@
 #include "storage.hpp"
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <getopt.h>
@@ -38,8 +39,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.0.beta";
-const std::string date = "14 Jan 2018";
+const std::string version = "2.1.2.beta";
+const std::string date = "10 April 2018";
 class Commander
 {
 public:
@@ -90,10 +91,17 @@ public:
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
     bool print_snp() const { return misc.print_snp; };
+    bool pearson() const { return misc.pearson; };
     int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-
+    size_t max_memory(const size_t detected) const
+    {
+        if (!misc.provided_memory)
+            return detected;
+        else
+            return (misc.memory > detected) ? detected : misc.memory;
+    }
     // p_thresholds
     double bar_upper() const { return p_thresholds.barlevel.back(); };
     double get_threshold(int i) const
@@ -165,11 +173,14 @@ public:
     std::vector<std::string> feature() const { return prset.feature; };
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
-
+    std::string background() const { return prset.background; };
+    int set_perm() const { return prset.set_perm; };
     // prslice
     bool perform_prslice() const { return prslice.provided; };
+    bool perform_set_perm() const { return prset.perform_set_perm; }
     int prslice_size() const { return prslice.size; };
-
+    int window_5() const { return prset.window_5; };
+    int window_3() const { return prset.window_3; };
     // target
     std::string target_name() const { return target.name; };
     std::string target_type() const { return target.type; };
@@ -193,7 +204,7 @@ private:
     bool process(int argc, char* argv[], const char* optString,
                  const struct option longOpts[], Reporter& reporter);
     std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct
+    struct Base
     {
         std::string name;
         std::string chr;
@@ -225,7 +236,7 @@ private:
         bool provided_info;
     } base;
 
-    struct
+    struct Clump
     {
         int no_clump;
         double proxy;
@@ -235,27 +246,30 @@ private:
         bool provided_proxy;
     } clumping;
 
-    struct
+    struct Covar
     {
         std::string file_name;
         std::vector<std::string> covariates;
         // Numeric factors should be defined with ""
     } covariate;
 
-    struct
+    struct Misc
     {
         std::string out;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;
+        int pearson;
         int permutation;
         int print_snp;
         int thread;
+        size_t memory;
         size_t seed;
         bool provided_seed;
+        bool provided_memory;
     } misc;
 
-    struct
+    struct Reference
     {
         std::string file_name;
         std::string type;
@@ -263,7 +277,7 @@ private:
         std::string remove_file;
     } reference_panel;
 
-    struct
+    struct Ref_filtering
     {
         double geno;
         double hard_threshold;
@@ -274,7 +288,7 @@ private:
         // must be hard coded for reference
     } reference_snp_filtering;
 
-    struct
+    struct Thresholding
     {
         std::vector<double> barlevel;
         double lower;
@@ -282,10 +296,10 @@ private:
         double upper;
         int fastscore;
         int no_full;
-        bool set_thresholds;
+        bool set_use_thresholds;
     } p_thresholds;
 
-    struct
+    struct Calculation
     {
         std::string missing_score;
         std::string model_name;
@@ -294,7 +308,7 @@ private:
         int no_regress;
     } prs_calculation;
 
-    struct
+    struct Filtering
     {
         std::string exclude_file;
         std::string extract_file;
@@ -307,22 +321,27 @@ private:
         int predict_ambig; // PRSoS stuff?
     } prs_snp_filtering;
 
-    struct
+    struct PRSet
     {
         std::vector<std::string> bed;
         std::vector<std::string> feature;
         std::string gtf;
         std::string msigdb;
+        std::string background;
+        int set_perm;
+        int window_5;
+        int window_3;
         bool perform_prset;
+        bool perform_set_perm;
     } prset;
 
-    struct
+    struct PRSlice
     {
         int size;
         bool provided;
     } prslice;
 
-    struct
+    struct Target
     {
         std::string name;
         std::string keep_file;
@@ -361,32 +380,22 @@ private:
                       std::string& error_message);
     void target_check(std::map<std::string, std::string>& message, bool& error,
                       std::string& error_message);
-    /*
-        inline void set_species(int num_auto, bool no_x, bool no_y, bool no_xy,
-                                bool no_mt, bool& error, std::string&
-       error_message, bool& species_error)
-        {
-            if (species.double_set && !species_error) {
-                species_error = true;
-                error = true;
-                error_message.append("ERROR: Can only specify one species\n");
-            }
-            species.num_auto = num_auto;
-            species.no_x = no_x;
-            species.no_y = no_y;
-            species.no_xy = no_xy;
-            species.no_mt = no_mt;
-            species.double_set = true;
-        };
-    */
+
     inline void load_binary_vector(const std::string& input,
                                    std::map<std::string, std::string>& message,
                                    std::string& error_message,
                                    std::vector<bool>& target, bool& error,
                                    const std::string& c)
     {
-
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        // check if the input is ended with , which is usually the case
+        // when someone mixed in the space
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)");
+        }
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
@@ -394,10 +403,10 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Invalid argument passed to " + c + ": "
-                                 + input + "!\n");
+            error = true;
             error_message.append(
-                "       Require binary arguments e.g. T/F, True/False\n");
+                "Error: Invalid argument passed to " + c + ": " + input
+                + "! Require binary arguments e.g. T/F, True/False\n");
         }
     }
 
@@ -408,7 +417,13 @@ private:
                                    std::string& error_message)
     {
 
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(input, ",");
         target.insert(target.end(), token.begin(), token.end());
     }
@@ -420,7 +435,13 @@ private:
                                     std::vector<T>& target, bool& error,
                                     const std::string& c)
     {
+        if (input.empty()) return;
         message[c] = message[c] + input;
+        if (!input.empty() && input.back() == ',') {
+            error_message.append("Warning: , detected at end of input: " + input
+                                 + ". Have you accidentally included space in "
+                                   "your input? (Space is not allowed)\n");
+        }
         std::vector<std::string> token = misc::split(optarg, ",");
         try
         {
@@ -428,7 +449,7 @@ private:
         }
         catch (const std::runtime_error& er)
         {
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
             error = true;
         }
@@ -453,7 +474,7 @@ private:
         catch (const std::runtime_error& er)
         {
             error = true;
-            error_message.append("ERROR: Non numeric argument passed to " + c
+            error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
         }
     }
@@ -464,7 +485,7 @@ private:
     {
         std::string input = in;
         if (input.empty()) {
-            error_message.append("ERROR: Model cannot be empty!\n");
+            error_message.append("Error: Model cannot be empty!\n");
             error = true;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
@@ -490,7 +511,7 @@ private:
         else
         {
             error = true;
-            error_message.append("ERROR: Unrecognized model: " + input + "!\n");
+            error_message.append("Error: Unrecognized model: " + input + "!\n");
         }
         if (message.find("model") != message.end()) {
             error_message.append("Warning: Duplicated argument --model\n");
@@ -509,6 +530,77 @@ private:
         message[c] = input;
         target = input;
         target_boolean = true;
+    }
+
+    inline void set_memory(const std::string& input,
+                           std::map<std::string, std::string>& message,
+                           std::string& error_messages, bool& error)
+    {
+        misc.provided_memory = true;
+        if (message.find("memory") != message.end()) {
+            error_messages.append("Warning: Duplicated argument --memory\n");
+        }
+        try
+        {
+            int memory = misc::convert<int>(input);
+            misc.memory = memory;
+        }
+        catch (const std::runtime_error& er)
+        {
+            // contain MB KB or B here
+            if (input.length() >= 2) {
+                try
+                {
+                    std::string unit = input.substr(input.length() - 2);
+                    std::string value = input.substr(0, input.length() - 2);
+                    std::transform(unit.begin(), unit.end(), unit.begin(),
+                                   ::toupper);
+                    if (unit.compare("KB") == 0) {
+                        misc.memory = misc::convert<size_t>(value) * 1024;
+                    }
+                    else if (unit.compare("MB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024;
+                    }
+                    else if (unit.compare("GB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024 * 1024;
+                    }
+                    else if (unit.compare("TB") == 0)
+                    {
+                        misc.memory = misc::convert<size_t>(value) * 1024 * 1024
+                                      * 1024 * 1024;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(input.length() - 1);
+                        value = input.substr(0, input.length() - 1);
+                        std::transform(unit.begin(), unit.end(), unit.begin(),
+                                       ::toupper);
+                        if (unit.compare("B") == 0) {
+                            misc.memory = misc::convert<size_t>(value);
+                        }
+                    }
+                }
+                catch (const std::runtime_error& er_info)
+                {
+                    error = true;
+                    error_messages.append("Error: Undefined memory input: "
+                                          + input);
+                }
+            }
+            else
+            {
+                error = true;
+                error_messages.append("Error: Undefined memory input: "
+                                      + input);
+            }
+        }
+
+        message["memory"] = input;
     }
 
     inline int index_check(const std::string& target,
@@ -531,13 +623,13 @@ private:
             int index = misc::convert<int>(optarg);
             if (index >= max) {
                 error = true;
-                error_message.append("ERROR: " + name
+                error_message.append("Error: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
             if (index < 0) {
                 error = true;
-                error_message.append("ERROR: Negative " + name + " index!\n");
+                error_message.append("Error: Negative " + name + " index!\n");
                 return -1;
             }
             return index;
@@ -545,7 +637,7 @@ private:
         catch (const std::runtime_error& er)
         {
             error = true;
-            error_message.append("ERROR: " + name + " index is not numeric!\n");
+            error_message.append("Error: " + name + " index is not numeric!\n");
             return -1;
         }
     }
