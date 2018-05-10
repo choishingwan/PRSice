@@ -42,7 +42,7 @@ In_Regression <-
     Group <-
     Threshold <-
     R2 <-
-    print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- NULL
+    print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
 # Help Messages --------------------------------------
 help_message <-
@@ -512,51 +512,40 @@ option_list <- list(
   make_option(c("-s", "--seed"), type = "numeric"),
   make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
   make_option(c("-n", "--thread"), type = "numeric"),
-    #make_option(c("--no-x"), action = "store_true", dest = "no_x"),
-    #make_option(c("--no-y"), action = "store_true", dest = "no_y"),
-    #make_option(c("--no-xy"), action = "store_true", dest = "no_xy"),
-    #make_option(c("--no-mt"), action = "store_true", dest = "no_mt"),
-    #make_option(c("--num-auto"), type = "numeric", dest = "num_auto"),
-    #R Specified options
-    make_option(c("--plot"), action = "store_true"),
-    make_option(c("--quantile", "-q"), type = "numeric"),
-    make_option(c("--multi-plot"), type = "numeric", dest="multi_plot"),
-    make_option(c("--plot-set"), type = "character", dest="plot_set", default="Base"),
-    make_option(c("--quant-pheno"), action = "store_true", dest = "quant_pheno"),
-    make_option(c("--quant-extract", "-e"), type = "character", dest = "quant_extract"),
-    make_option("--quant-ref", type = "numeric", dest = "quant_ref"),
-    make_option(
-        "--scatter-r2",
-        action = "store_true",
-        default = F,
-        dest = "scatter_r2"
-    ),
-    make_option(
-        "--bar-col-p",
-        action = "store_true",
-        default = F,
-        dest = "bar_col_p"
-    ),
-    make_option(
-        "--bar-col-low",
-        type = "character",
-        default = "dodgerblue",
-        dest = "bar_col_low"
-    ),
-    make_option(
-        "--bar-col-high",
-        type = "character",
-        default = "firebrick",
-        dest = "bar_col_high"
-    ),
-    make_option(
-        "--bar-palatte",
-        type = "character",
-        default = "YlOrRd",
-        dest = "bar_palatte"
-    ),
-    make_option("--prsice", type = "character"),
-    make_option("--dir", type = "character")
+  #R Specified options
+  make_option(c("--plot"), action = "store_true"),
+  make_option(c("--quantile", "-q"), type = "numeric"),
+  make_option(c("--quant-break"), type="character", dest="quant_break"),
+  make_option(c("--multi-plot"), type = "numeric", dest = "multi_plot"),
+  make_option(c("--plot-set"),
+              type = "character",
+              dest = "plot_set",
+              default = "Base"),
+  make_option(c("--quant-pheno"), action = "store_true", dest = "quant_pheno"),
+  make_option(c("--quant-extract", "-e"), type = "character", dest = "quant_extract"),
+  make_option("--quant-ref", type = "numeric", dest = "quant_ref"),
+  make_option("--scatter-r2",
+              action = "store_true",
+              default = F,
+              dest = "scatter_r2"),
+  make_option("--bar-col-p",
+              action = "store_true",
+              default = F,
+              dest = "bar_col_p"),
+  make_option("--bar-col-low",
+              type = "character",
+              default = "dodgerblue",
+              dest = "bar_col_low"),
+  make_option("--bar-col-high",
+              type = "character",
+              default = "firebrick",
+              dest = "bar_col_high"),
+  make_option("--bar-palatte",
+              type = "character",
+              default = "YlOrRd",
+              dest = "bar_palatte"),
+  make_option("--prsice", type = "character"),
+  make_option("--dir", type = "character")
 )
 
 
@@ -579,6 +568,7 @@ not_cpp <- c(
     "intermediate",
     "quant-ref",
     "quant-pheno",
+    "quant-break",
     "scatter-r2",
     "bar-col-p",
     "bar-col-low",
@@ -697,35 +687,77 @@ if (!provided("plot", argv)) {
     }
 }
 
-# Read in the commands ----------------------------------------------------
-# Will remove this once we finish with the default handling
+# Helper functions --------------------------------------------------------
+max_length <- function(x) {
+    info <- strsplit(as.character(x), split = "\n")[[1]]
+    max(sapply(info, nchar))
+}
+str_wrap <- function(x) {
+    lapply(strwrap(x, width = 25, simplify = FALSE), paste, collapse = "\n")
+}
+shorten_label <- function(x) {
+    lab <-
+        paste(strsplit(paste(
+            strsplit(as.character(x), split = "\\.")[[1]], collapse = " "
+        ), split = "_")[[1]], collapse = " ")
+    return(str_wrap(lab)[[1]])
+}
 
-#logFile <- paste(argv$out,"log",sep=".")
-#con  <- file(logFile, open = "r")
 
-#c<- NULL
-# Only need to know the information of binary target
-#while (length(oneLine <- readLines(con, n = 1, warn = FALSE)) > 0) {
-#  line <- (trimws(oneLine))
-#  if(startsWith(line, "--")){
-#    commands <- strsplit(line, split=" ")[[1]]
-#    commands <- commands[commands!="" & commands!="\\"]
-#    if(length(commands) == 1){
-      # Flag
-#    }else{
-      # With input
-#      c <- gsub("--", "", commands[1])
-#      i <- commands[2]
-#      if(c=="binary-target"){
-#        argv$binary_target <- commands[2]
-#      }else if(c=="bar-levels"){
-#        argv$bar_levels <- commands[2]
-#      }
-#    }
-#  }
-#} 
-#close(con)
+get_quantile <- function(x, num.quant, quant.ref){
+    quant <- as.numeric(cut(x,
+                            breaks = unique(quantile(
+                                x, probs = seq(0, 1, 1 / num.quant)
+                            )),
+                            include.lowest = T))
+    if(is.na(quant.ref) | is.null(quant.ref)){
+        quant.ref <- ceiling(num.quant / 2)
+    }
+    quant <- factor(quant, levels = c(quant.ref, seq(min(quant), max(quant), 1)[-quant.ref]))
+    return(quant)
+}
 
+set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.index){
+
+    quant <- get_quantile(prs, num.quant, 1)
+    quant <- factor(quant,1:num.quant)
+    quant.cut <- sort(as.numeric(strsplit(quant.cutoff, split=",")[[1]]))
+    if((!is.null(ref.cutoff) & sum(ref.cutoff == quant.cut)==0) | num.quant < max(quant.cut)){
+        stop(
+            "Invalid quant-break. quant-break must be smaller than total number of quantiles and quant-ref must be one of the quant-break"
+        )
+    }
+    prev.name <- 0
+    ref.level <- NULL
+    for(i in 1:length(quant.cut)){
+        up.bound <- max(which(suppressWarnings(as.numeric(levels(quant))) <= quant.cut[i]))
+        cur.name <- levels(quant)[up.bound]
+        name.level <- paste0("(",prev.name, ",", cur.name, "]")
+        
+        if(prev.name==0){
+            name.level <- paste0("[",prev.name, ",", cur.name, "]")
+            
+        }
+        if(!is.null(ref.cutoff)) {
+            if (quant.cut[i] == ref.cutoff) {
+                ref.level <- name.level
+                
+            }
+        }
+        range <- i:up.bound
+        levels(quant)[range] <- rep(name.level, length(range))
+        prev.name <- cur.name
+    }
+    if(is.null(ref.level)){
+        writeLines("Warning: Cannot find required reference level, will use the middle level as reference")
+        ref.level <- levels(quant)[ceiling(length(quant.cut)/2)]
+    }
+    ref.index <- which(levels(quant)==ref.level)
+    quant.index <- c(ref.index,c(1:length(levels(quant)))[-ref.index])
+    quant<- relevel(quant, ref=ref.level)
+    
+    return(list(quant, quant.index))
+}
 # Determine Default -------------------------------------------------------
 # First, determine the bar levels
 if(!provided("bar-levels", argv)){
@@ -818,10 +850,143 @@ if(use.ggplot){
 
 # Quantile Plots----------------------------------------------------------
 
-quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
+call_quantile <-
+    function(pheno.merge,
+             prefix,
+             num_quant,
+             quant.index,
+             pheno.as.quant,
+             use.residual,
+             use.ggplot,
+             binary,
+             extract) {
+        
+    if (!pheno.as.quant) {
+        family <- gaussian
+        if (binary) {
+            if (!use.residual) {
+                family <- binomial
+            }
+        }
+        reg <-
+            summary(glm(Pheno ~ quantile, family, data = pheno.merge))
+        coef.quantiles <- (reg$coefficients[1:num_quant, 1])
+        ci <- (1.96 * reg$coefficients[1:num_quant, 2])
+        
+        ci.quantiles.u <-
+            coef.quantiles + ci
+        ci.quantiles.l <-
+            coef.quantiles - ci
+        if (binary & !use.residual) {
+            ci.quantiles.u <- exp(ci.quantiles.u)
+            ci.quantiles.l <- exp(ci.quantiles.l)
+            coef.quantiles <- exp(coef.quantiles)
+        }
+        
+        coef.quantiles[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        ci.quantiles.u[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        ci.quantiles.l[1] <-
+            ifelse(binary & !use.residual, 1, 0)
+        quantiles.for.table <- levels(pheno.merge$quantile)
+        quantiles.df <-
+            data.frame(
+                Coef = coef.quantiles,
+                CI.U = ci.quantiles.u,
+                CI.L = ci.quantiles.l,
+                DEC = quantiles.for.table
+            )
+        
+        quantiles.df$Group = 0
+        if (!is.null(extract)) {
+            # Last element should be the cases
+            quantiles.df$Group[nrow(quantiles.df)] <- 1
+        }
+        quantiles.df$Group <-
+            factor(quantiles.df$Group, levels = c(0, 1))
+        quantiles.df <- quantiles.df[order(quant.index),]
+        quantiles.df$DEC <- factor(quantiles.df$DEC, levels=quantiles.df$DEC[order(quant.index)])
+        row.names(quantiles.df) <- quantiles.df$DEC
+        quantiles.df <- cbind(Quantile = rownames(quantiles.df), quantiles.df) 
+        quant.out <- quantiles.df[,-5]
+        if(binary & !use.residual){
+            colnames(quant.out)[2] <- "OR"
+        }
+        write.table(
+            quant.out,
+            paste(prefix, "_QUANTILES_", Sys.Date(), ".txt", sep = ""),
+            sep = "\t",
+            quote = F,
+            row.names = F
+        )
+        if (use.ggplot) {
+            plot.quant(quantiles.df,
+                       num_quant,
+                       binary,
+                       extract,
+                       prefix,
+                       use.residual)
+        } else{
+            plot.quant.no.g(quantiles.df,
+                            num_quant,
+                            binary,
+                            extract,
+                            prefix,
+                            use.residual)
+        }
+    } else{
+        # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
+        pheno.sum <-
+            data.frame(
+                mean = numeric(num_quant),
+                quantile = levels(pheno.merge$quantile),
+                UCI = numeric(num_quant),
+                LCI = numeric(num_quant)
+            )
+        for (i in 1:length(levels(pheno.sum$quantile))) {
+            
+            cur.prs <-
+                pheno.merge$PRS[as.character(pheno.merge$quantile) %in% as.character(levels(pheno.sum$quantile))[i]]
+            pheno.sum$mean[i] <- mean(cur.prs, na.rm = T)
+            pheno.sum$UCI[i] <-
+                pheno.sum$mean[i] + sd(cur.prs, na.rm = T)
+            pheno.sum$LCI[i] <-
+                pheno.sum$mean[i] - sd(cur.prs, na.rm = T)
+        }
+        pheno.sum$Group = 0
+        if (!is.null(extract)) {
+            pheno.sum$Group[num_quant] = 1
+        }
+        pheno.sum$Group <-
+            factor(pheno.sum$Group, levels = c(0, 1))
+        write.table(
+            pheno.sum,
+            paste(prefix, "_PHENO_QUANTILES_", Sys.Date(), ".txt", sep = ""),
+            sep = "\t",
+            quote = F,
+            row.names = F
+        )
+        if (use.ggplot) {
+            plot.pheno.quant(pheno.sum,
+                             use.residual,
+                             num_quant,
+                             extract,
+                             prefix)
+        } else{
+            plot.pheno.quant.no.g(pheno.sum,
+                                  use.residual,
+                                  num_quant,
+                                  extract,
+                                  prefix)
+        }
+    }
+    
+}
+uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
     binary <- as.logical(binary)
     writeLines("Plotting the quantile plot")
-    extract = NULL
+    extract <- NULL
     if (provided("quant_extract", argv)) {
         if (use.data.table) {
             extract <- fread(argv$quant_extract,
@@ -864,36 +1029,19 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
         writeLines(paste("Will not generate the quantile plot for ", prefix))
         return()
     }
-    
     quants <- NULL
+    quant.index <- NULL
     if (!pheno.as.quant) {
-        quants <- as.numeric(cut(
-            pheno.merge$PRS,
-            breaks = unique(quantile(
-                pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)
-            )),
-            include.lowest = T
-        ))
-        
+        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$PRS, quant.index)
+        quants <- quant.info[[1]]
+        quant.index <- quant.info[[2]]
     } else{
-        quants <- as.numeric(cut(
-            pheno.merge$Pheno,
-            breaks = unique(quantile(
-                pheno.merge$Pheno, probs = seq(0, 1, 1 / num_quant)
-            )),
-            include.lowest = T
-        ))
+        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$Pheno, quant.index)
+        quants <- quant.info[[1]]
+        quant.index <- quant.info[[2]]
     }
     
-    if (anyDuplicated(quantile(pheno.merge$PRS, probs = seq(0, 1, 1 / num_quant)))) {
-        writeLines(paste(
-            "Duplicate quantiles formed. Will use less quantiles: ",
-            length(unique(quants)),
-            sep = ""
-        ))
-        
-    }
-    num_quant = sum(!is.na(unique(quants)))
+    num_quant <- length(levels(quants))
     if (!is.null(extract)) {
         extract_ID <- NULL
         best_ID <- NULL
@@ -905,10 +1053,71 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
             best_ID <-
                 paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
         }
-        quants[best_ID %in% extract_ID] <-
-            num_quant + 1 # We only matched based on the IID here
+        levels(quants) <- c(levels(quants),"Extracted")
+        quants[best_ID %in% extract_ID] <- "Extracted"
         num_quant <- num_quant + 1
     }
+    pheno.merge$quantile <- quants
+    call_quantile(pheno.merge,
+                  prefix,
+                  num_quant,
+                  quant.index,
+                  pheno.as.quant,
+                  use.residual,
+                  use.ggplot,
+                  binary,
+                  extract)
+}
+
+
+quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
+    binary <- as.logical(binary)
+    writeLines("Plotting the quantile plot")
+    extract <- NULL
+    if (provided("quant_extract", argv)) {
+        if (use.data.table) {
+            extract <- fread(argv$quant_extract,
+                             header = F,
+                             data.table = F)
+        } else{
+            extract <- read.table(argv$quant_extract,
+                                  header = F)
+        }
+        
+    }
+    num_quant <- argv$quantile
+    
+    pheno.merge <- merge(base.prs, pheno)
+    pheno.as.quant <- provided("quant_pheno", argv)
+    if (pheno.as.quant &&
+        length(unique(pheno.merge$Pheno)) < num_quant) {
+        writeLines(
+            paste(
+                "WARNING: There are only ",
+                length(unique(pheno.merge$Pheno)),
+                " unique Phenotype but asked for ",
+                num_quant,
+                " quantiles",
+                sep = ""
+            )
+        )
+        writeLines(paste("Will not generate the quantile plot for ", prefix))
+        return()
+    } else if (length(unique(pheno.merge$PRS)) < num_quant) {
+        writeLines(
+            paste(
+                "WARNING: There are only ",
+                length(unique(pheno.merge$PRS)),
+                " unique PRS but asked for ",
+                num_quant,
+                " quantiles",
+                sep = ""
+            )
+        )
+        writeLines(paste("Will not generate the quantile plot for ", prefix))
+        return()
+    }
+    
     quant.ref <- ceiling(argv$quantile / 2)
     if (provided("quant_ref", argv)) {
         quant.ref <- argv$quant_ref
@@ -925,110 +1134,39 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
             )
         }
     }
-    quants <-
-        factor(quants, levels = c(quant.ref, seq(min(quants), max(quants), 1)[-quant.ref]))
-    pheno.merge$quantile <- quants
+    quants <- NULL
     if (!pheno.as.quant) {
-        family <- gaussian
-        if (binary) {
-            if (!use.residual) {
-                family <- binomial
-            }
-        }
-        
-        reg <-
-            summary(glm(Pheno ~ quantile, family, data = pheno.merge))
-        coef.quantiles <- (reg$coefficients[1:num_quant, 1])
-        ci <- (1.96 * reg$coefficients[1:num_quant, 2])
-        
-        ci.quantiles.u <-
-            coef.quantiles + ci
-        ci.quantiles.l <-
-            coef.quantiles - ci
-        if (binary & !use.residual) {
-            ci.quantiles.u <- exp(ci.quantiles.u)
-            ci.quantiles.l <- exp(ci.quantiles.l)
-            coef.quantiles <- exp(coef.quantiles)
-        }
-        
-        coef.quantiles[1] <-
-            ifelse(binary & !use.residual, 1, 0)
-        ci.quantiles.u[1] <-
-            ifelse(binary & !use.residual, 1, 0)
-        ci.quantiles.l[1] <-
-            ifelse(binary & !use.residual, 1, 0)
-        quantiles.for.table <-
-            c(quant.ref, seq(1, num_quant, 1)[-quant.ref])
-        quantiles.df <-
-            data.frame(
-                Coef = coef.quantiles,
-                CI.U = ci.quantiles.u,
-                CI.L = ci.quantiles.l,
-                DEC = quantiles.for.table
-            )
-        quantiles.df$Group = 0
-        if (!is.null(extract)) {
-            # Because the last quantile is set to be cases
-            quantiles.df$Group[max(quantiles.df$DEC)] = 1
-        }
-        quantiles.df$Group <-
-            factor(quantiles.df$Group, levels = c(0, 1))
-        quantiles.df <- quantiles.df[order(quantiles.df$DEC),]
-        
-        if (use.ggplot) {
-            plot.quant(quantiles.df,
-                       num_quant,
-                       binary,
-                       extract,
-                       prefix,
-                       use.residual)
-        } else{
-            plot.quant.no.g(quantiles.df,
-                            num_quant,
-                            binary,
-                            extract,
-                            prefix,
-                            use.residual)
-        }
+        quants <- get_quantile(pheno.merge$PRS, num_quant, quant.ref)
     } else{
-        # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
-        pheno.sum <-
-            data.frame(
-                mean = numeric(num_quant),
-                quantile = 1:num_quant,
-                UCI = numeric(num_quant),
-                LCI = numeric(num_quant)
-            )
-        for (i in 1:num_quant) {
-            cur.prs <-
-                pheno.merge$PRS[as.numeric(as.character(pheno.merge$quantile)) %in% i]
-            pheno.sum$mean[i] <- mean(cur.prs, na.rm = T)
-            pheno.sum$UCI[i] <-
-                pheno.sum$mean[i] + sd(cur.prs, na.rm = T)
-            pheno.sum$LCI[i] <-
-                pheno.sum$mean[i] - sd(cur.prs, na.rm = T)
-        }
-        pheno.sum$Group = 0
-        if (!is.null(extract)) {
-            pheno.sum$Group[num_quant] = 1
-        }
-        pheno.sum$Group <-
-            factor(pheno.sum$Group, levels = c(0, 1))
-        if (use.ggplot) {
-            plot.pheno.quant(pheno.sum,
-                             use.residual,
-                             num_quant,
-                             extract,
-                             prefix)
-        } else{
-            plot.pheno.quant.no.g(pheno.sum,
-                                  use.residual,
-                                  num_quant,
-                                  extract,
-                                  prefix)
-        }
+        quants <- get_quantile(pheno.merge$Pheno, num_quant, quant.ref)
     }
-    
+    num_quant <- length(levels(quants))
+    if (!is.null(extract)) {
+        extract_ID <- NULL
+        best_ID <- NULL
+        if (provided("ignore_fid", argv)) {
+            extract_ID <- extract$V1
+            best_ID <- pheno.merge$IID
+        } else{
+            extract_ID <- paste(extract$V1, extract$V2, sep = "_")
+            best_ID <-
+                paste(pheno.merge$FID, pheno.merge$IID, sep = "_")
+        }
+        levels(quants) <- c(levels(quants),"Extracted")
+        quants[best_ID %in% extract_ID] <- "Extracted"
+        num_quant <- num_quant + 1
+    }
+    quant.index <- c(quant.ref, c(1:num_quant)[-quant.ref])
+    pheno.merge$quantile <- quants
+    call_quantile(pheno.merge,
+                 prefix,
+                 num_quant,
+                 quant.index,
+                 pheno.as.quant,
+                 use.residual,
+                 use.ggplot,
+                 binary,
+                 extract)
 }
 
 plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix){
@@ -1076,7 +1214,6 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
       ymax = UCI
     ))+ 
     theme_sam+
-    scale_x_continuous(breaks = seq(0, num_quant, 1))+
     ylab("Mean PRS given phenotype in quantiles")
   if(use_residual){
     quantiles.plot <- quantiles.plot+
@@ -1112,7 +1249,6 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
             ymax = CI.U
         )) + 
         theme_sam+
-        scale_x_continuous(breaks = seq(0, num_quant, 1))+
         xlab("Quantiles for Polygenic Score")
     if (binary){
         if(!use_residual) {
@@ -1512,24 +1648,7 @@ if (provided("pheno_col", argv)) {
     }
 }
 
-# From now on, phenos contain the phenotype name (if any) and
-# binary_target contain information as to whether phenotype is binary or not
 
-# Helper functions --------------------------------------------------------
-max_length <- function(x) {
-    info <- strsplit(as.character(x), split = "\n")[[1]]
-    max(sapply(info, nchar))
-}
-str_wrap <- function(x) {
-    lapply(strwrap(x, width = 25, simplify = FALSE), paste, collapse = "\n")
-}
-shorten_label <- function(x) {
-    lab <-
-        paste(strsplit(paste(
-            strsplit(as.character(x), split = "\\.")[[1]], collapse = " "
-        ), split = "_")[[1]], collapse = " ")
-    return(str_wrap(lab)[[1]])
-}
 # Read in covariates ------------------------------------------------------
 update_cov_header <- function(c) {
     res <- NULL
@@ -1871,14 +1990,16 @@ process_plot <-
         }
         best <- subset(best, In_Regression == "Yes")
         # We know the format of the best file, and it will always contain FID and IID
+        
         base.prs <- best[,c(1,2,4)]
         colnames(base.prs)[3] <- "PRS"
 # Generate phenotype matrix -----------------------------------------------
         # extract the phenotype column
         # And only retain samples with phenotype and covariate information
         # They will be found in the best data.frame
+        
         ignore_fid <- provided("ignore_fid", parameters)
-        if (ignore_fid) {
+        if (!ignore_fid) {
             phenotype <- phenotype[, c(1:2, pheno.index)]
             colnames(phenotype) <- c("FID", "IID", "Pheno")
             phenotype <-
@@ -1893,15 +2014,17 @@ process_plot <-
         
         pheno <- phenotype
         use.residual <- F
+        if(is_binary){
+            if(max(pheno$Pheno)==2){
+                pheno$Pheno <- pheno$Pheno-1
+            }
+        }
         if(!is.null(covariance)){
             # We will regress out the residual
             # Can direct merge as we have standardized the header
             temp.pheno <- merge(phenotype, covariance)
             family <- gaussian
             if(is_binary){
-                if(max(temp.pheno$Pheno)==2){
-                    temp.pheno$Pheno <- temp.pheno$Pheno-1
-                }
                 family <- binomial
             }
             residual <-
@@ -1911,11 +2034,15 @@ process_plot <-
             pheno$Pheno <- residual
             use.residual <- T
         }
-
+        
 # Start calling functions -------------------------------------------------
         if (provided("quantile", parameters) && parameters$quantile > 0) {
             # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
-            quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+            if(!provided("quant_break", parameters)){
+                quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+            }else{
+                uneven_quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+            }
         }
         if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
             if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
