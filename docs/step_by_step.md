@@ -253,7 +253,7 @@ the MAF of the SNP (therefore, missing samples will have PRS of 0).
 
 !!! Note
 
-    Hereon,  _[Name]_ is assumed to be the output prefix specified using `--output` and _[date]_ is the date when the analysis was performed.
+    Hereon,  _[Name]_ is assumed to be the output prefix specified using `--out` and _[date]_ is the date when the analysis was performed.
 
 PRSice will always generate a bar plot displaying the model fit of the PRS at P-value threshold as indicated by `--bar-levels`
 
