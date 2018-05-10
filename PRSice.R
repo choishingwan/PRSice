@@ -511,6 +511,7 @@ option_list <- list(
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
   make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
+  make_option(c("--pearson"), action = "store_true"),
   make_option(c("-n", "--thread"), type = "numeric"),
   #R Specified options
   make_option(c("--plot"), action = "store_true"),
@@ -2000,7 +2001,10 @@ process_plot <-
         # We know the format of the best file, and it will always contain FID and IID
         
         base.prs <- best[,c(1,2,4)]
-        colnames(base.prs)[3] <- "PRS"
+        if(provided("plot_set", parameters) & (provided("msigdb", parameters)| provided("bed", parameters) | provided("gtf", parameters))){
+            base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
+            colnames(base.prs)[3] <- "PRS"
+        }
 # Generate phenotype matrix -----------------------------------------------
         # extract the phenotype column
         # And only retain samples with phenotype and covariate information
