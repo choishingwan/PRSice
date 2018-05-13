@@ -1039,11 +1039,11 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
     quants <- NULL
     quant.index <- NULL
     if (!pheno.as.quant) {
-        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$PRS, quant.index)
+        quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$PRS, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
     } else{
-        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$Pheno, quant.index)
+        quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$Pheno, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
     }
