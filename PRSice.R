@@ -2022,7 +2022,6 @@ process_plot <-
             colnames(phenotype) <- c("IID", "Pheno")
             phenotype <- phenotype[phenotype$IID %in% best$IID, ]
         }
-        write.table(phenotype, "phenotypes", quote=F, row.names=F)
         phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
         pheno <- phenotype
         use.residual <- F
