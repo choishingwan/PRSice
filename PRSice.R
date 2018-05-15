@@ -947,7 +947,7 @@ call_quantile <-
         pheno.sum <-
             data.frame(
                 mean = numeric(num_quant),
-                quantile = levels(pheno.merge$quantile),
+                quantile = factor(levels(pheno.merge$quantile), levels(pheno.merge$quantile)[order(quant.index)]),
                 UCI = numeric(num_quant),
                 LCI = numeric(num_quant)
             )
@@ -989,7 +989,9 @@ call_quantile <-
         }
     }
     
-}
+    }
+
+
 uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
     binary <- as.logical(binary)
     writeLines("Plotting the quantile plot")
