@@ -299,26 +299,27 @@ The point of each quantile is their OR (if binary) or coefficient (otherwise) fr
 A text file [Name]\_QUANTILE\\_[date].txt is also produced, which provides all the data used for the plotting. 
 
 Moreover, uneven distribution of quantiles can be specified using the `--quant-break` function. 
-For example, to replicate the quantile break from Wen et al (2016):
+For example, to replicate the quantile break from Natarajan et al (2015):
 
-|PRS (%)| Predicted OR | Observed OR (95% CI) |
-|:-:|:-:|:-:|
-|0–1|0.37| 0.39 (0.27–0.57)|
-|0–10|0.52| 0.55 (0.49–0.61)|
-|10–20|0.67|0.71 (0.64–0.79)|
-|20–30|0.77|0.74 (0.66–0.82)|
-|30–40|0.86|0.88 (0.80–0.98)|
-|40–60|1.00, reference|1.00, reference|
-|60–70|1.16|1.10 (0.99–1.21)|
-|70–80|1.29|1.24 (1.13–1.37)|
-|80–90|1.49|1.52 (1.38–1.67)|
-|90–100|1.97|1.93 (1.76–2.12)|
+|Percentile of PRS, %| 	All studies in iCOGS excluding pKARMA <br> OR (95% CI)| 	pKARMA only <br> OR (95% CI) |
+|:-:|:-:|:-:| 
+|<1| 	0.29 (0.23 to 0.37)| 	0.48 (0.28 to 0.83) |
+|>1–5| 	0.42 (0.37 to 0.47) |	0.48 (0.36 to 0.63) |
+|5–10| 	0.55 (0.50 to 0.61) |	0.58 (0.45 to 0.74) |
+|10–20| 	0.65 (0.60 to 0.70)| 	0.68 (0.57 to 0.81) |
+|20–40| 	0.80 (0.76 to 0.85) |	0.81 (0.71 to 0.94) |
+|40–60| 	1 (referent)| 	1 (referent) |
+|60–80| 	1.18 (1.12 to 1.24)| 	1.35 (1.19 to 1.54) |
+|80–90| 	1.48 (1.39 to 1.57) |	1.56 (1.34 to 1.82) |
+|90–95| 	1.69 (1.56 to 1.82) |	2.05 (1.70 to 2.47) |
+|95–99| 	2.20 (2.03 to 2.38) |	2.12 (1.73 to 2.59) |
+|>99|	2.81 (2.43 to 3.24) |	3.06 (2.16 to 4.34) |
 
 The following command can be added to PRSice command:
 
 ```
 --quantile 100 \
---quant-break 1,10,20,30,40,60,70,80,90,100 \
+--quant-break 1,5,10,20,40,60,80,90,95,99,100 \
 --quant-ref 60
 ```
 
