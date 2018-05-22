@@ -1280,16 +1280,16 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         }
     }
     best_out << header_line << std::endl;
-    m_best_file.header_length = header_line.length() + 1;
+    m_best_file.header_length = header_line.length() + NEW_LENGTH;
     m_best_file.processed_threshold = 0;
     // each numeric output took 12 spaces, then for each output, there is one
     // space next to each
 
     m_best_file.line_width = region_name.size() * m_numeric_width
-                             + region_name.size() + m_max_fid_length + 1
+                             + region_name.size() + m_max_fid_length + NEW_LENGTH
                              + m_max_iid_length + 1 + 4;
     m_best_file.skip_column_length =
-        m_max_fid_length + m_max_iid_length + 3 + 3;
+        m_max_fid_length + m_max_iid_length + 6;
 
 
     // also handle all score here
@@ -1319,12 +1319,12 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
                 }
             }
         }
-        m_all_file.header_length = header_line.length() + 1;
+        m_all_file.header_length = header_line.length() + NEW_LENGTH;
         m_all_file.processed_threshold = 0;
         m_all_file.line_width =
             num_thresholds * region_name.size() * m_numeric_width
             + num_thresholds * region_name.size() + m_max_fid_length + 1
-            + m_max_iid_length + 1;
+            + m_max_iid_length + NEW_LENGTH;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
         all_out << header_line << std::endl;
     }

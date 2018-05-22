@@ -53,8 +53,10 @@
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
 #define EOLN_STR "\r\n"
+#define NEW_LENGTH 2
 #else
 #include <thread>
+#define NEW_LENGTH 1
 //#include <pthread.h>
 #endif
 #ifdef __APPLE__
