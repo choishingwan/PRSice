@@ -314,8 +314,13 @@ inline T convert(const std::string& str)
     if (!iss.eof() || iss.fail()) {
         throw std::runtime_error("Unable to convert the input");
     }
-
     return obj;
+}
+template <typename T>
+inline std::string to_string(T value) {
+    std::stringstream out;
+    out << value;
+    return out.str();
 }
 // trim from start (in place)
 inline void ltrim(std::string& s)

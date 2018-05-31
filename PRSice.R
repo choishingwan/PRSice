@@ -2141,6 +2141,8 @@ if (provided("pheno_file", argv)) {
         }
     }
 }
+# To account for the chromosome number
+pheno.file <- gsub("#", "1", pheno.file)
 if (!is.null(phenos) &
     length(phenos) > 1) {
     for (i in 1:length(phenos)) {

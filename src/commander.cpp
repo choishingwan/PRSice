@@ -587,6 +587,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string time_str(buffer);
     std::string prog_name = argv[0];
     message.append(time_str + "\n" + prog_name);
+
     for (auto&& com : message_store) {
         message.append(" \\\n    --" + com.first + " " + com.second);
     }
@@ -1917,9 +1918,9 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
     std::string bar_message = "";
     for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
-            bar_message.append(std::to_string(b));
+            bar_message.append(misc::to_string(b));
         else
-            bar_message.append("," + std::to_string(b));
+            bar_message.append("," + misc::to_string(b));
     }
     message["bar-levels"] = bar_message;
 }
