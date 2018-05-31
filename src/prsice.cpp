@@ -819,6 +819,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                 all_out << std::setprecision(m_precision) << score;
             }
         }
+        m_all_file.processed_threshold++;
         if (no_regress) {
             iter_threshold++;
             continue;
@@ -830,7 +831,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
             permutation(target, num_thread, m_target_binary[pheno_index]);
         }
         iter_threshold++;
-        m_all_file.processed_threshold++;
     }
 
     if (all_out.is_open()) all_out.close();
