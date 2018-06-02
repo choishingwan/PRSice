@@ -2035,7 +2035,7 @@ process_plot <-
         if(!is.null(covariance)){
             # We will regress out the residual
             # Can direct merge as we have standardized the header
-            temp.pheno <- merge(phenotype, covariance)
+            temp.pheno <- merge(pheno, covariance)
             family <- gaussian
             if(is_binary){
                 family <- binomial
