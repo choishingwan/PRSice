@@ -124,8 +124,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     target.reset_sample_pheno();
     // this includes all samples
 
-    gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
     if (!no_regress) {
+        gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
         std::vector<std::string> cov_header = c_commander.get_cov_header();
         gen_cov_matrix(c_commander.get_cov_file(), cov_header, reporter);
     }
