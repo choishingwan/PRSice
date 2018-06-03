@@ -1783,7 +1783,7 @@ multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
     multipheno <- subset(prs.summary, Set=="Base")
     multipheno$Phenotype <- sapply(multipheno$Phenotype, shorten_label)
     multipheno <- multipheno[order(multipheno$PRS.R2, decreasing=T), ]
-    multipheno$Phenotype <- as.factor(multipheno$Phenotype)
+    multipheno$Phenotype <- factor(multipheno$Phenotype, levels = multipheno$Phenotype)
     if(use.ggplot){
         b <-
             ggplot(multipheno[1:(min(parameters$multi_plot, nrow(multipheno))), ],
@@ -1858,7 +1858,7 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
     overview$Set <- sapply(overview$Set, shorten_label)
     sets <- unique(overview$Set)
     multiset <- overview[order(overview$PRS.R2, decreasing=T), ]
-    multiset$Set <- as.factor(multiset$Set)
+    multiset$Set <- factor(multiset$Set, levels = multiset$Set)
     if(use.ggplot){
         b <-
             ggplot(multiset[1:(min(parameters$multi_plot, nrow(multiset))),], aes(
