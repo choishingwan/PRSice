@@ -949,7 +949,7 @@ call_quantile <-
         pheno.sum <-
             data.frame(
                 mean = numeric(num_quant),
-                quantile = factor(levels(pheno.merge$quantile), levels(pheno.merge$quantile)[order(quant.index)]),
+                quantile = factor(levels(pheno.merge$quantile)[order(quant.index)],levels=levels(pheno.merge$quantile)[order(quant.index)]),
                 UCI = numeric(num_quant),
                 LCI = numeric(num_quant)
             )
