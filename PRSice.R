@@ -33,7 +33,7 @@
 
 
 # Remove annoying messages ------------------------------------------------
-options(error = quote({dump.frames(to.file=TRUE); q()}))
+#options(error = quote({dump.frames(to.file=TRUE); q()}))
 In_Regression <-
     DEC <-
     Coef <-
@@ -1267,6 +1267,8 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
         if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+        }else if(use_residual){
+            quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
         }
     } else if(use_residual){
         quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
@@ -1305,6 +1307,8 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, us
       if(!use_residual) {
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+      }else if(use_residual){
+          quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
       }
   } else if(use_residual){
       quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
