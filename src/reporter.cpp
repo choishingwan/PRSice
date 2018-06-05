@@ -21,12 +21,15 @@ void split(std::vector<std::string>& result, const char* str, char c = ' ')
 
 bool Reporter::isNumeric(std::string s)
 {
-	try{
-		misc::convert<double>(s);
-	}catch(...){
-		return false;
-	}
-	return true;
+    try
+    {
+        misc::convert<double>(s);
+    }
+    catch (...)
+    {
+        return false;
+    }
+    return true;
 }
 
 void Reporter::report(const std::string& input, bool wrap)

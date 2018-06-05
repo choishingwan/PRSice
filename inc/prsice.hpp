@@ -52,11 +52,10 @@
 //#define pthread_t HANDLE
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
-#define EOLN_STR "\r\n"
-#define NEW_LENGTH 2
+#define NEXT_LENGTH 1
 #else
 #include <thread>
-#define NEW_LENGTH 1
+#define NEXT_LENGTH 0
 //#include <pthread.h>
 #endif
 #ifdef __APPLE__

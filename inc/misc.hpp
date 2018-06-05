@@ -317,7 +317,8 @@ inline T convert(const std::string& str)
     return obj;
 }
 template <typename T>
-inline std::string to_string(T value) {
+inline std::string to_string(T value)
+{
     std::stringstream out;
     out << value;
     return out.str();
