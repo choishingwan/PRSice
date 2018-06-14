@@ -320,12 +320,13 @@ libraries <-
       "tools",
       "grDevices",
       "RColorBrewer")
-found <- FALSE
+found.library.dir <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
-dir_loc <- grep("--dir", argv)
-if (length(dir_loc) != 0) {
-    dir_loc <- dir_loc + 1
-    found <- TRUE
+dir.arg.idx <- grep("--dir",argv)
+no.install <- grep("--no-install", argv)
+if (length(dir.arg.idx) != 0) {
+    dir.arg.idx <- dir.arg.idx + 1
+    found.library.dir <- TRUE
 }
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
@@ -350,13 +351,13 @@ CRANChoosen <- function()
     return(getOption("repos")["CRAN"] != "@CRAN@")
 }
 
-UsePackage <- function(package, dir)
+UsePackage <- function(package, dir, no.install)
 {
     if (!InstalledPackage(package))
     {
         dir.create(file.path(dir, "lib"), showWarnings = FALSE)
         .libPaths(c(.libPaths(), paste(dir, "/lib", sep = "")))
-        if (!InstalledPackage(package)) {
+        if (!InstalledPackage(package) & !no.install) {
             if (is.na(dir)) {
                 writeLines("WARNING: dir not provided, cannot install the required packages")
                 return(FALSE)
@@ -390,40 +391,26 @@ use.data.table <- T
 use.ggplot <- T #cerr
 for (library in libraries)
 {
-    if (found)
+    package.directory <- "."
+    if (found.library.dir) {
+        package.directory <- argv[dir.arg.idx]
+    }
+    if (!UsePackage(library, package.directory, no.install))
     {
-        if (!UsePackage(library, argv[dir_loc]))
-        {
-          if(library=="data.table"){
+        if (library == "data.table") {
             use.data.table <- F
             writeLines("Cannot install data.table, will fall back and use read.table instead")
             writeLines("Note: It will be slower when reading large files")
-          }else if(library=="ggplot2"){
+        } else if (library == "ggplot2") {
             use.ggplot <- F
             writeLines("Cannot install ggplot2, will fall back and native plotting devices")
             writeLines("Note: The legends will be uglier")
-          }else{
+        } else{
             stop("Error: ", library, " cannot be load nor install!")
-          }
-        }
-    } else{
-        if (!UsePackage(library, "."))
-        {
-            if(library=="data.table"){
-              use.data.table <- F
-              writeLines("Cannot install data.table, will fall back and use read.table instead")
-              writeLines("Note: It will be slower when reading large files")
-            }else if(library=="ggplot2"){
-              use.ggplot <- F
-              writeLines("Cannot install ggplot2, will fall back and native plotting devices")
-              writeLines("Note: No legend will be displayed for bar-chart")
-            }else{
-              stop("Error: ", library, " cannot be load nor install!")
-            }
         }
     }
+    
 }
-
 
 # Command line arguments --------------------------------------------------
 
