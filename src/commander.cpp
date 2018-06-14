@@ -60,6 +60,7 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
+    misc.exclusion_range ="";
     misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
@@ -74,6 +75,7 @@ Commander::Commander()
 
 
     reference_panel.file_name = "";
+    reference_panel.multi_name = "";
     reference_panel.type = "bed";
     reference_panel.keep_file = "";
     reference_panel.remove_file = "";
@@ -110,6 +112,8 @@ Commander::Commander()
     prset.gtf = "";
     prset.msigdb = "";
     prset.background = "";
+    prset.single_snp_set ="";
+    prset.multi_snp_sets = "";
     prset.perform_prset = false;
     prset.perform_set_perm = false;
     prset.set_perm = 10000;
@@ -121,6 +125,7 @@ Commander::Commander()
 
     target.include_nonfounders = false;
     target.name = "";
+    target.multi_name = "";
     target.pheno_file = "";
     target.type = "bed";
     set_help_message();
@@ -194,6 +199,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"info", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
+        {"ld-list", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
         {"ld-maf", required_argument, NULL, 0},
@@ -213,10 +219,14 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"se", required_argument, NULL, 0},
         {"set-perm", required_argument, NULL, 0},
         {"snp", required_argument, NULL, 0},
+        {"snp-set", required_argument, NULL, 0},
+        {"snp-sets", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
+        {"target-list", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
         {"wind-5", required_argument, NULL, 0},
         {"wind-3", required_argument, NULL, 0},
+        {"x-range", required_argument, NULL, 0},
         {NULL, 0, 0, 0}};
     return process(argc, argv, optString, longOpts, reporter);
 }
@@ -312,9 +322,18 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                     misc.permutation = intpart;
                 }
             }
+            else if (command.compare("x-range") == 0)
+            {
+            		// Require additional processing
+                set_string(optarg, message_store, misc.exclusion_range,
+                           dummy, command, error_messages);
+            }
             // Long opts for reference_panel
             else if (command.compare("ld-keep") == 0)
                 set_string(optarg, message_store, reference_panel.keep_file,
+                           dummy, command, error_messages);
+            else if (command.compare("ld-list") == 0)
+                set_string(optarg, message_store, reference_panel.multi_name,
                            dummy, command, error_messages);
             else if (command.compare("ld-remove") == 0)
                 set_string(optarg, message_store, reference_panel.remove_file,
@@ -386,6 +405,25 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("feature") == 0)
                 load_string_vector(optarg, message_store, prset.feature,
                                    command, error_messages);
+            else if (command.compare("snp-set") == 0)
+            	set_string(optarg, message_store, prset.single_snp_set, dummy,
+            	                           command, error_messages);
+            else if (command.compare("snp-sets") == 0)
+            	set_string(optarg, message_store, prset.multi_snp_sets, dummy,
+                    command, error_messages);
+            else if (command.compare("set-perm") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.set_perm, prset.perform_set_perm, error,
+                                 command);
+            else if (command.compare("background") == 0)
+                set_string(optarg, message_store, prset.background, dummy,
+                           command, error_messages);
+            else if (command.compare("wind-5") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_5, dummy, error, command);
+            else if (command.compare("wind-3") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_3, dummy, error, command);
             // Long opts for PRSlice
             else if (command.compare("prslice") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
@@ -401,23 +439,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, dummy, command,
                            error_messages);
-            else if (command.compare("background") == 0)
-                set_string(optarg, message_store, prset.background, dummy,
-                           command, error_messages);
-            else if (command.compare("set-perm") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.set_perm, prset.perform_set_perm, error,
-                                 command);
+            else if (command.compare("target-list") == 0)
+                set_string(optarg, message_store, target.multi_name, dummy, command,
+                           error_messages);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
-            else if (command.compare("wind-5") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.window_5, dummy, error, command);
-            else if (command.compare("wind-3") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.window_3, dummy, error, command);
-
             else if (command.compare("memory") == 0)
                 set_memory(optarg, message_store, error_messages, error);
             else

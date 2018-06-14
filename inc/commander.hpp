@@ -73,6 +73,7 @@ public:
     };
     // reference panel
     std::string ref_name() const { return reference_panel.file_name; };
+    std::string ref_list() const { return reference_panel.multi_name; };
     std::string ref_type() const { return reference_panel.type; };
     std::string ld_keep_file() const { return reference_panel.keep_file; };
     std::string ld_remove_file() const { return reference_panel.remove_file; };
@@ -87,6 +88,7 @@ public:
 
     // misc
     std::string out() const { return misc.out; };
+    std::string exclusion_range() const { return misc.exclusion_range; };
     bool all_scores() const { return misc.print_all_scores; };
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
@@ -173,6 +175,8 @@ public:
     std::vector<std::string> feature() const { return prset.feature; };
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
+    std::string single_snp_set() const { return prset.single_snp_set; };
+    std::string multi_snp_sets() const { return prset.multi_snp_sets; };
     std::string background() const { return prset.background; };
     int set_perm() const { return prset.set_perm; };
     // prslice
@@ -183,6 +187,7 @@ public:
     int window_3() const { return prset.window_3; };
     // target
     std::string target_name() const { return target.name; };
+    std::string target_list() const { return target.multi_name; };
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };
     std::string pheno_col(size_t index) const
@@ -256,6 +261,7 @@ private:
     struct Misc
     {
         std::string out;
+        std::string exclusion_range;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;
@@ -272,6 +278,7 @@ private:
     struct Reference
     {
         std::string file_name;
+        std::string multi_name;
         std::string type;
         std::string keep_file;
         std::string remove_file;
@@ -328,6 +335,8 @@ private:
         std::string gtf;
         std::string msigdb;
         std::string background;
+        std::string single_snp_set;
+        std::string multi_snp_sets;
         int set_perm;
         int window_5;
         int window_3;
@@ -345,8 +354,9 @@ private:
     {
         std::string name;
         std::string keep_file;
-        std::string remove_file;
+        std::string multi_name;
         std::string pheno_file;
+        std::string remove_file;
         std::string type;
         std::vector<std::string> pheno_col;
         // should equal to number of binary target
