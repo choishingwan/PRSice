@@ -35,7 +35,22 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-
+std::vector<std::string> Genotype::load_genotype_prefix(const std::string& file_name){
+    std::vector<std::string> genotype_files;
+    std::ifstream multi;
+    multi.open(file_name.c_str());
+    if(!multi.is_open()){
+    	throw std::runtime_error(std::string("Error: Cannot open file: "+file_name));
+    }
+    std::string line;
+    while(std::getline(multi, line)){
+    	misc::trim(line);
+    	if(line.empty()) continue;
+    	genotype_files.push_back(line);
+    }
+    multi.close();
+    return genotype_files;
+}
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {

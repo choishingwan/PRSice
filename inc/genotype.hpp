@@ -51,8 +51,9 @@ class Genotype
 public:
     Genotype(){};
     Genotype(const size_t thread, const bool ignore_fid,
-             const bool keep_nonfounder, const bool keep_ambig)
-        : m_thread(thread)
+             const bool keep_nonfounder, const bool keep_ambig, const bool is_ref = false)
+        :  m_is_ref(is_ref)
+    	, m_thread(thread)
         , m_keep_nonfounder(keep_nonfounder)
         , m_ignore_fid(ignore_fid)
         , m_keep_ambig(keep_ambig){};
@@ -78,7 +79,6 @@ public:
                    const double geno, const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
                    bool verbose, Reporter& reporter);
-    void is_reference(const bool is_ref) { m_is_ref = is_ref; }
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -234,7 +234,6 @@ public:
                 m_background_snp_index.push_back(i);
     }
     size_t num_background() const { return m_background_snp_index.size(); };
-
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -294,6 +293,7 @@ protected:
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
+    std::vector<std::string> load_genotype_prefix(const std::string& file_name);
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
     // responsible for reading in the sample

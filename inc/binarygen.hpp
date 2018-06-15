@@ -31,10 +31,10 @@
 class BinaryGen : public Genotype
 {
 public:
-    BinaryGen(const std::string& prefix, const std::string& sample_file,
+    BinaryGen(const std::string& prefix, const std::string& sample_file, const std::string& multi_input,
               const size_t thread = 1, const bool ignore_fid = false,
               const bool keep_nonfounder = false,
-              const bool keep_ambig = false);
+              const bool keep_ambig = false, const bool is_ref = false);
     ~BinaryGen();
 
 private:

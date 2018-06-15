@@ -53,10 +53,9 @@ int main(int argc, char* argv[])
         {
             target_file = factory.createGenotype(
                 commander.target_name(), commander.target_type(),
-                commander.thread(), commander.ignore_fid(),
+				commander.target_list(),commander.thread(), commander.ignore_fid(),
                 commander.nonfounders(), commander.keep_ambig(), reporter,
                 commander);
-            target_file->is_reference(false);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
@@ -106,10 +105,10 @@ int main(int argc, char* argv[])
                                 "panel\n==============================\n");
                 reference_file = factory.createGenotype(
                     commander.ref_name(), commander.ref_type(),
-                    commander.thread(), commander.ignore_fid(),
+					commander.ref_list(), commander.thread(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), reporter,
-                    commander);
-                reference_file->is_reference(true);
+                    commander, true);
+
                 reference_file->load_samples(commander.ld_keep_file(),
                                              commander.ld_remove_file(),
                                              verbose, reporter);

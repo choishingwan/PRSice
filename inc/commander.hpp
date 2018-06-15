@@ -72,7 +72,7 @@ public:
         return covariate.covariates;
     };
     // reference panel
-    std::string ref_name() const { return reference_panel.file_name; };
+    std::string ref_name() const { return (reference_panel.file_name.empty())?"-":reference_panel.file_name; };
     std::string ref_list() const { return reference_panel.multi_name; };
     std::string ref_type() const { return reference_panel.type; };
     std::string ld_keep_file() const { return reference_panel.keep_file; };
@@ -186,7 +186,7 @@ public:
     int window_5() const { return prset.window_5; };
     int window_3() const { return prset.window_3; };
     // target
-    std::string target_name() const { return target.name; };
+    std::string target_name() const { return (target.name.empty())? "-":target.name; };
     std::string target_list() const { return target.multi_name; };
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };

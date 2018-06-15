@@ -16,10 +16,10 @@
 
 #include "binarygen.hpp"
 
-BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
+BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file, const std::string& multi_input,
                      const size_t thread, const bool ignore_fid,
-                     const bool keep_nonfounder, const bool keep_ambig)
-    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig)
+                     const bool keep_nonfounder, const bool keep_ambig, const bool is_ref)
+    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig, is_ref)
 {
     /** setting the chromosome information **/
     m_xymt_codes.resize(XYMT_OFFSET_CT);
@@ -29,7 +29,10 @@ BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
     // place holder. Currently set default to human.
     init_chr();
     // get the bed file names
-    m_genotype_files = set_genotype_files(prefix);
+    if(multi_input.empty())
+		m_genotype_files = set_genotype_files(prefix);
+    else
+    	m_genotype_files = load_genotype_prefix(multi_input);
     m_sample_file = sample_file;
 }
 

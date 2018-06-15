@@ -35,9 +35,10 @@ private:
 
 public:
     Genotype* createGenotype(const std::string& prefix, const std::string& type,
-                             const int thread, const bool ignore_fid,
+    						const std::string &multi_input, const int thread, const bool ignore_fid,
                              const bool keep_nonfounder, const bool keep_ambig,
-                             Reporter& reporter, const Commander& commander)
+							 Reporter& reporter, const Commander& commander,
+							 const bool is_ref=false)
     {
         std::vector<std::string> external_sample = misc::split(prefix, ",");
         std::string sample_file = "";
@@ -54,18 +55,22 @@ public:
         {
             std::string message =
                 "Loading Genotype file: " + binary_file + " (bed)\n";
+            if(!multi_input.empty())
+            	message = "Loading Genotype info from file (bed) \n";
             if (!sample_file.empty()) {
                 message.append("With external fam file: " + sample_file + "\n");
             }
             reporter.report(message);
 
-            return new BinaryPlink(binary_file, sample_file, thread, ignore_fid,
+            return new BinaryPlink(binary_file, sample_file,multi_input, thread, ignore_fid,
                                    keep_nonfounder, keep_ambig);
         }
         case 2:
         {
             std::string message =
                 "Loading Genotype file: " + binary_file + " (bgen)\n";
+            if(!multi_input.empty())
+                        	message = "Loading Genotype info from file (bgen) \n";
             if (!sample_file.empty()) {
                 message.append("With sample file: " + sample_file + "\n");
             }
@@ -77,7 +82,7 @@ public:
                                          "file for bgen format!\n");
             }
             if (sample_file.empty()) sample_file = commander.pheno_file();
-            return new BinaryGen(binary_file, sample_file, thread, ignore_fid,
+            return new BinaryGen(binary_file, sample_file, multi_input, thread, ignore_fid,
                                  keep_nonfounder, keep_ambig);
         }
         default:
