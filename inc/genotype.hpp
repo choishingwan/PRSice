@@ -71,14 +71,9 @@ public:
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter,
+				   Region &exclusion, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
-    void load_snps(const std::string out_prefix,
-                   const std::unordered_map<std::string, size_t>& existed_snps,
-                   const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter);
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -303,7 +298,7 @@ protected:
     };
     virtual std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
+                   const double hard_threshold, const bool hard_coded, Region &exclusion,
                    const std::string& out_prefix, Genotype* target = nullptr)
     {
         return std::vector<SNP>(0);

@@ -37,7 +37,7 @@ private:
 
     std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
+                   const double hard_threshold, const bool hard_coded,Region &exclusion,
                    const std::string& out_prefix, Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);

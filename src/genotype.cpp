@@ -221,61 +221,13 @@ void Genotype::load_samples(const std::string& keep_file,
     m_sample_selection_list.clear();
 }
 
-void Genotype::load_snps(
-    const std::string out_prefix,
-    const std::unordered_map<std::string, size_t>& existed_snps,
-    const double geno, const double maf, const double info,
-    const double hard_threshold, const bool hard_coded, bool verbose,
-    Reporter& reporter)
-{
-    // only include the valid SNPs
-    for (auto&& snp : existed_snps) {
-        m_snp_selection_list.insert(snp.first);
-    }
-    m_exclude_snp = false;
-    m_existed_snps =
-        gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
-    m_marker_ct = m_existed_snps.size();
-    std::string message = "";
-    if (m_num_ambig != 0 && !m_keep_ambig) {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) excluded\n");
-    }
-    else if (m_num_ambig != 0)
-    {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) kept\n");
-    }
-    if (m_num_geno_filter != 0) {
-        message.append(
-            std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold\n");
-    }
-    if (m_num_maf_filter != 0) {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold\n");
-    }
-    if (m_num_info_filter != 0) {
-        message.append(
-            std::to_string(m_num_maf_filter)
-            + " variant(s) excluded based on INFO score threshold\n");
-    }
-    if (m_num_ref_target_mismatch != 0) {
-        message.append("Warning: Mismatched SNPs detected between reference "
-                       "panel and target!");
-        message.append(" You should check the files are based on the "
-                       "same genome build, or that can just be InDels\n");
-    }
-    message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-    if (verbose) reporter.report(message);
-    m_snp_selection_list.clear();
-}
 
 void Genotype::load_snps(const std::string out_prefix,
                          const std::string& extract_file,
                          const std::string& exclude_file, const double geno,
                          const double maf, const double info,
                          const double hard_threshold, const bool hard_coded,
+						 Region &exclusion,
                          bool verbose, Reporter& reporter, Genotype* target)
 {
     if (!m_is_ref) {
@@ -287,7 +239,7 @@ void Genotype::load_snps(const std::string out_prefix,
             m_snp_selection_list = load_snp_list(exclude_file, reporter);
         }
     }
-    m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded,
+    m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, exclusion,
                                     out_prefix, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";

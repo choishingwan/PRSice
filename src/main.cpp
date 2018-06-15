@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
                                    commander.exclude_file(), commander.geno(),
                                    commander.maf(), commander.info(),
                                    commander.hard_threshold(),
-                                   commander.hard_coded(), verbose, reporter);
+                                   commander.hard_coded(), exclusion, verbose, reporter);
         }
         catch (const std::invalid_argument& ia)
         {
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
                     commander.out(), commander.extract_file(),
                     commander.exclude_file(), commander.geno(), commander.maf(),
                     commander.info(), commander.hard_threshold(),
-                    commander.hard_coded(), verbose, reporter, target_file);
+                    commander.hard_coded(), exclusion, verbose, reporter, target_file);
             }
 
             std::string message = "Start processing " + base_name + "\n";

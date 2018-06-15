@@ -185,6 +185,7 @@ std::vector<SNP>
 BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             const double info, const double hard_threshold,
                             const bool hard_coded,
+							Region &exclusion,
                             const std::string& out_prefix, Genotype* target)
 {
     std::unordered_set<std::string> duplicated_snp;
@@ -348,6 +349,11 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 error_message.append("Please check you have the correct input");
                 throw std::runtime_error(error_message);
             }
+
+            if(exclusion.check_exclusion(chr, loc)){
+            	continue;
+            }
+
             if (m_existed_snps_index.find(bim_info[+BIM::RS])
                 != m_existed_snps_index.end())
             {

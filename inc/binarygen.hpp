@@ -45,7 +45,7 @@ private:
     bool check_is_sample_format();
     std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info_score,
-                   const double hard_threshold, const bool hard_coded,
+                   const double hard_threshold, const bool hard_coded, Region &exclusion,
                    const std::string& out_prefix, Genotype* target = nullptr);
     void get_context(std::string& prefix);
     bool check_sample_consistent(const std::string& bgen_name,

@@ -341,6 +341,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                            const double info_score,
                                            const double hard_threshold,
                                            const bool hard_coded,
+										   Region &exclusion,
                                            const std::string& out_prefix,
                                            Genotype* target)
 {
@@ -473,6 +474,9 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                      == target->m_existed_snps_index.end())
             {
                 exclude_snp = true;
+            }
+            if(exclusion.check_exclusion(chromosome, SNP_position)){
+            	exclude_snp =true;
             }
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
