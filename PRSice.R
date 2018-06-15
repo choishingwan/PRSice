@@ -138,6 +138,10 @@ help_message <-
                             automatically replace # with 1-22\n
                             For binary plink format, you can also specify\n
                             a seperate fam file by <prefix>,<fam file>\n
+    --target-list           File containing prefix of target genotype\n
+                            files. Similar to --target but allow more \n
+                            flexibility. Do not support external fam file\n
+                            at the moment\n
     --type                  File type of the target file. Support bed \n
                             (binary plink) and bgen format. Default: bed\n
 \nDosage:\n
@@ -158,6 +162,10 @@ help_message <-
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
                             Please see --target for more information\n
+    --ld-list               File containing prefix of LD reference files.\n
+                            Similar to --ld but allow more \n
+                            flexibility. Do not support external fam file\n
+                            at the moment\n
     --ld-geno               Filter SNPs based on genotype missingness\n
     --ld-info               Filter SNPs based on info score. Only used\n
                             for imputed LD reference\n
@@ -282,12 +290,14 @@ help_message <-
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
-    --logit-perm            When performing permutation, still use logistic\n
-                            regression instead of linear regression. This\n
-                            will substantially slow down PRSice\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
+    --logit-perm            When performing permutation, still use logistic\n
+                            regression instead of linear regression. This\n
+                            will substantially slow down PRSice\n
+    --no-install            Forbid PRSice from automatically installing\n
+                            the required packages (e.g. ggplot2)\n
     --out           | -o    Prefix for all file output\n
     --perm                  Number of permutation to perform. This swill\n
                             generate the empirical p-value. Recommend to\n
@@ -444,6 +454,7 @@ option_list <- list(
   make_option(c("-k", "--prevalence"), type = "numeric"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
+  make_option(c("--target-list"), type = "character", dest="target_list"),
   make_option(c("--type"), type = "character"),
   # Dosage
   make_option(c("--hard-thres"), type = "numeric"),
@@ -453,6 +464,7 @@ option_list <- list(
   make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
   make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
   make_option(c("-L", "--ld"), type = "character"),
+  make_option(c("--ld-list"), type = "character", dest="ld_list"),
   make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
   make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
   make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
@@ -567,7 +579,8 @@ not_cpp <- c(
     "prsice",
     "multi-plot",
     "plot-set",
-    "dir"
+    "dir",
+    "no-install"
 )
 
 if (is.null(argv$cov_col) && !is.null(argv$cov_header))
