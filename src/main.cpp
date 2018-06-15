@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
+        Region exclusion(commander.exclusion_range(), reporter);
         GenomeFactory factory;
         Genotype *target_file, *reference_file;
         try
@@ -76,9 +77,7 @@ int main(int argc, char* argv[])
             return -1;
         }
         // TODO: Revamp Region to make it suitable for prslice too
-        Region region =
-            Region(commander.feature(), target_file->get_chr_order(),
-                   commander.window_5(), commander.window_3());
+        Region region(commander.feature(), commander.window_5(), commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
