@@ -282,6 +282,7 @@ private:
         std::string type;
         std::string keep_file;
         std::string remove_file;
+        int allow_inter;
     } reference_panel;
 
     struct Ref_filtering

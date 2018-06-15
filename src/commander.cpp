@@ -73,7 +73,7 @@ Commander::Commander()
     misc.thread = 1;
     misc.seed = 0;
 
-
+    reference_panel.allow_inter = 0;
     reference_panel.file_name = "";
     reference_panel.multi_name = "";
     reference_panel.type = "bed";
@@ -163,6 +163,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"upper", required_argument, NULL, 'u'},
         {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
+		{"allow-intermediate", no_argument, &reference_panel.allow_inter, 1},
         {"all-score", no_argument, &misc.print_all_scores, 1},
         {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &prs_snp_filtering.is_hard_coded, 1},
