@@ -333,7 +333,7 @@ libraries <-
 found.library.dir <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
 dir.arg.idx <- grep("--dir",argv)
-no.install <- grep("--no-install", argv)
+no.install <- length(grep("--no-install", argv))>0
 if (length(dir.arg.idx) != 0) {
     dir.arg.idx <- dir.arg.idx + 1
     found.library.dir <- TRUE
