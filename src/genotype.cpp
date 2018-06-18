@@ -1567,20 +1567,20 @@ bool Genotype::prepare_prsice(Reporter& reporter)
 
 void Genotype::get_null_score(const size_t& set_size,
                               const size_t& num_selected_snps,
-                              const size_t& background_index,
                               const std::vector<size_t>& selection_list,
                               const bool require_statistic)
 {
+	// selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
 
-    std::vector<size_t> selected_snp_index(selection_list.begin(),
-                                           selection_list.begin() + set_size);
-    // for(size_t i = 0; i < set_size; ++i)
-    // selected_snp_index.push_back(selection_list[i]);
+    std::vector<size_t> selected_snp_index(set_size);
+    for(size_t i = 0; i < set_size; ++i){
+    	selected_snp_index[i] = m_background_snp_index[selection_list[i]];
+    }
+
     std::vector<size_t> use_snp_index = SNP::sort_snp_for_perm(
         selected_snp_index, num_selected_snps, m_existed_snps);
     // SNP::sort_snp_index(selected_snp_index, m_existed_snps);
-
     read_score(use_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;

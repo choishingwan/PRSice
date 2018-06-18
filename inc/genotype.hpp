@@ -218,7 +218,6 @@ public:
     };
 
     void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
-                        const size_t& background_index,
                         const std::vector<size_t>& selection_list,
                         const bool require_standardize);
     void init_background_index(const size_t& background_index)

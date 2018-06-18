@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         {
             target_file->set_info(commander);
             // load reference panel first so that we have updated the target
-            if (!commander.ref_name().empty()) {
+            if (commander.use_ref()) {
                 reporter.report("Loading reference "
                                 "panel\n==============================\n");
                 reference_file = factory.createGenotype(
@@ -142,12 +142,12 @@ int main(int argc, char* argv[])
             region.print_file(region_out_name);
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
-                target_file->efficient_clumping((commander.ref_name().empty())
-                                                    ? *target_file
-                                                    : *reference_file,
+                target_file->efficient_clumping(commander.use_ref()
+                                                    ? *reference_file
+                                                    : *target_file,
                                                 reporter, commander.pearson());
                 // immediately free the memory if needed
-                if (!commander.ref_name().empty()) delete reference_file;
+                if (commander.use_ref()) delete reference_file;
             }
             if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =

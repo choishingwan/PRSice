@@ -839,7 +839,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         print_best(target, pheno_index, c_commander);
         // we don't do competitive for the full set
         if (m_prset && c_commander.perform_set_perm() && region_index != 0) {
-            run_competitive(target, c_commander, region.size() - 1,
+            run_competitive(target, c_commander,
                             region.num_post_clump_snp(region_index),
                             region.duplicated_size(region_index),
                             m_target_binary[pheno_index]);
@@ -1605,7 +1605,7 @@ void PRSice::null_set_no_thread(Genotype& target,
                                 std::vector<int>& sample_index,
                                 int& num_significant, size_t num_perm,
                                 size_t set_size, size_t num_selected_snps,
-                                size_t background_index, double original_p,
+                                double original_p,
                                 bool require_standardize, bool is_binary,
                                 bool store_p)
 {
@@ -1628,7 +1628,8 @@ void PRSice::null_set_no_thread(Genotype& target,
             selection_list[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps, background_index,
+        // num_selected_snps = for if we use multiple threshold
+        target.get_null_score(set_size, num_selected_snps,
                               selection_list, require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
@@ -1662,7 +1663,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
                               size_t set_size, size_t num_selected_snps,
-                              size_t background_index, double original_p,
+                               double original_p,
                               bool require_standardize)
 {
     size_t processed = 0;
@@ -1685,7 +1686,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             selection_list[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps, background_index,
+        target.get_null_score(set_size, num_selected_snps,
                               selection_list, require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
@@ -1757,7 +1758,7 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
     }
 }
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
-                             const size_t background_index,
+
                              const size_t set_size, const bool store_null,
                              const bool is_binary)
 {
@@ -1841,7 +1842,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
                              std::ref(sample_index), num_thread - 1, num_perm,
-                             set_size, num_selected_snps, background_index,
+                             set_size, num_selected_snps,
                              obs_p_value, require_standardize);
 
         std::vector<std::thread> consumer_store;
@@ -1857,7 +1858,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     else
     {
         null_set_no_thread(target, sample_index, num_more_significant, num_perm,
-                           set_size, num_selected_snps, background_index,
+                           set_size, num_selected_snps,
                            obs_p_value, require_standardize, is_binary,
                            store_null);
     }

@@ -20,6 +20,7 @@
 
 Region::Region(const std::string &exclusion_range, Reporter& reporter){
 	// First check if it is a simple range in format of chr:start-end,chr:start-end
+	if(exclusion_range.empty()) return;
 	std::vector<std::string> region_range = misc::split(exclusion_range,",");
 	bool file_input = false;
 	if(region_range.size()==1){
@@ -897,6 +898,9 @@ Region::~Region() {}
 
 bool Region::check_exclusion(const std::string &chr, const size_t loc){
 	int cur_chr = get_chrom_code_raw(chr.c_str());
+	if(m_chr_index.empty()){
+		return false;
+	}
 	// there is only one region, so we can ignore the for loop
 	size_t i_region = 0;
 	size_t cur_region_size = m_region_list.front().size();
