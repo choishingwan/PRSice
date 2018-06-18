@@ -72,7 +72,11 @@ public:
         return covariate.covariates;
     };
     // reference panel
-    std::string ref_name() const { return (reference_panel.file_name.empty())?"-":reference_panel.file_name; };
+    std::string ref_name() const
+    {
+        return (reference_panel.file_name.empty()) ? "-"
+                                                   : reference_panel.file_name;
+    };
     std::string ref_list() const { return reference_panel.multi_name; };
     std::string ref_type() const { return reference_panel.type; };
     std::string ld_keep_file() const { return reference_panel.keep_file; };
@@ -85,7 +89,11 @@ public:
     };
     double ld_maf() const { return reference_snp_filtering.maf; };
     double ld_info() const { return reference_snp_filtering.info_score; };
-    bool use_ref() const {return (!reference_panel.file_name.empty() || !reference_panel.multi_name.empty()); };
+    bool use_ref() const
+    {
+        return (!reference_panel.file_name.empty()
+                || !reference_panel.multi_name.empty());
+    };
     // misc
     std::string out() const { return misc.out; };
     std::string exclusion_range() const { return misc.exclusion_range; };
@@ -186,7 +194,10 @@ public:
     int window_5() const { return prset.window_5; };
     int window_3() const { return prset.window_3; };
     // target
-    std::string target_name() const { return (target.name.empty())? "-":target.name; };
+    std::string target_name() const
+    {
+        return (target.name.empty()) ? "-" : target.name;
+    };
     std::string target_list() const { return target.multi_name; };
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };

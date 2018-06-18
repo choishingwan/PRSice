@@ -40,9 +40,9 @@
 class Region
 {
 public:
-	Region(const std::string &exclusion_range, Reporter& reporter);
-    Region(std::vector<std::string> feature,
-           const int window_5, const int window_3);
+    Region(const std::string& exclusion_range, Reporter& reporter);
+    Region(std::vector<std::string> feature, const int window_5,
+           const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
              const std::vector<std::string>& bed, const std::string& out,
@@ -99,7 +99,8 @@ public:
         return m_region_size_duplicated.at(
             m_region_post_clump_count.at(i_region));
     }
-    bool check_exclusion(const std::string &chr, const size_t loc);
+    bool check_exclusion(const std::string& chr, const size_t loc);
+
 private:
     struct region_bound
     {

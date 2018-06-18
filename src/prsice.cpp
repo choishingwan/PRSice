@@ -1605,9 +1605,8 @@ void PRSice::null_set_no_thread(Genotype& target,
                                 std::vector<int>& sample_index,
                                 int& num_significant, size_t num_perm,
                                 size_t set_size, size_t num_selected_snps,
-                                double original_p,
-                                bool require_standardize, bool is_binary,
-                                bool store_p)
+                                double original_p, bool require_standardize,
+                                bool is_binary, bool store_p)
 {
 
     size_t processed = 0;
@@ -1629,8 +1628,8 @@ void PRSice::null_set_no_thread(Genotype& target,
             ++begin;
         }
         // num_selected_snps = for if we use multiple threshold
-        target.get_null_score(set_size, num_selected_snps,
-                              selection_list, require_standardize);
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 m_independent_variables(sample_index[sample_id], 1) =
@@ -1663,8 +1662,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
                               size_t set_size, size_t num_selected_snps,
-                               double original_p,
-                              bool require_standardize)
+                              double original_p, bool require_standardize)
 {
     size_t processed = 0;
     const size_t num_sample = sample_index.size();
@@ -1686,8 +1684,8 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             selection_list[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps,
-                              selection_list, require_standardize);
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 prs[sample_index[sample_id]] =
@@ -1839,11 +1837,10 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     // if (store_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
-        std::thread producer(&PRSice::produce_null_prs, this,
-                             std::ref(set_perm_queue), std::ref(target),
-                             std::ref(sample_index), num_thread - 1, num_perm,
-                             set_size, num_selected_snps,
-                             obs_p_value, require_standardize);
+        std::thread producer(
+            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
+            std::ref(target), std::ref(sample_index), num_thread - 1, num_perm,
+            set_size, num_selected_snps, obs_p_value, require_standardize);
 
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
@@ -1858,9 +1855,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     else
     {
         null_set_no_thread(target, sample_index, num_more_significant, num_perm,
-                           set_size, num_selected_snps,
-                           obs_p_value, require_standardize, is_binary,
-                           store_null);
+                           set_size, num_selected_snps, obs_p_value,
+                           require_standardize, is_binary, store_null);
     }
     /*
     if (store_null) {

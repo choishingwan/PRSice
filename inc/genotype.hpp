@@ -51,9 +51,10 @@ class Genotype
 public:
     Genotype(){};
     Genotype(const size_t thread, const bool ignore_fid,
-             const bool keep_nonfounder, const bool keep_ambig, const bool is_ref = false)
-        :  m_is_ref(is_ref)
-    	, m_thread(thread)
+             const bool keep_nonfounder, const bool keep_ambig,
+             const bool is_ref = false)
+        : m_is_ref(is_ref)
+        , m_thread(thread)
         , m_keep_nonfounder(keep_nonfounder)
         , m_ignore_fid(ignore_fid)
         , m_keep_ambig(keep_ambig){};
@@ -71,7 +72,7 @@ public:
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-				   Region &exclusion, bool verbose, Reporter& reporter,
+                   Region& exclusion, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
     std::unordered_map<std::string, int> get_chr_order() const
@@ -228,6 +229,7 @@ public:
                 m_background_snp_index.push_back(i);
     }
     size_t num_background() const { return m_background_snp_index.size(); };
+
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -297,8 +299,9 @@ protected:
     };
     virtual std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded, Region &exclusion,
-                   const std::string& out_prefix, Genotype* target = nullptr)
+                   const double hard_threshold, const bool hard_coded,
+                   Region& exclusion, const std::string& out_prefix,
+                   Genotype* target = nullptr)
     {
         return std::vector<SNP>(0);
     };

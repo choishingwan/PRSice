@@ -16,9 +16,10 @@
 
 #include "binarygen.hpp"
 
-BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file, const std::string& multi_input,
-                     const size_t thread, const bool ignore_fid,
-                     const bool keep_nonfounder, const bool keep_ambig, const bool is_ref)
+BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
+                     const std::string& multi_input, const size_t thread,
+                     const bool ignore_fid, const bool keep_nonfounder,
+                     const bool keep_ambig, const bool is_ref)
     : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig, is_ref)
 {
     /** setting the chromosome information **/
@@ -29,10 +30,10 @@ BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file, 
     // place holder. Currently set default to human.
     init_chr();
     // get the bed file names
-    if(multi_input.empty())
-		m_genotype_files = set_genotype_files(prefix);
+    if (multi_input.empty())
+        m_genotype_files = set_genotype_files(prefix);
     else
-    	m_genotype_files = load_genotype_prefix(multi_input);
+        m_genotype_files = load_genotype_prefix(multi_input);
     m_sample_file = sample_file;
 }
 
@@ -337,13 +338,11 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     }
     return true;
 }
-std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
-                                           const double info_score,
-                                           const double hard_threshold,
-                                           const bool hard_coded,
-										   Region &exclusion,
-                                           const std::string& out_prefix,
-                                           Genotype* target)
+std::vector<SNP>
+BinaryGen::gen_snp_vector(const double geno, const double maf,
+                          const double info_score, const double hard_threshold,
+                          const bool hard_coded, Region& exclusion,
+                          const std::string& out_prefix, Genotype* target)
 {
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
@@ -475,8 +474,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             {
                 exclude_snp = true;
             }
-            if(exclusion.check_exclusion(chromosome, SNP_position)){
-            	exclude_snp =true;
+            if (exclusion.check_exclusion(chromosome, SNP_position)) {
+                exclude_snp = true;
             }
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);

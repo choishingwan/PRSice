@@ -35,18 +35,21 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-std::vector<std::string> Genotype::load_genotype_prefix(const std::string& file_name){
+std::vector<std::string>
+Genotype::load_genotype_prefix(const std::string& file_name)
+{
     std::vector<std::string> genotype_files;
     std::ifstream multi;
     multi.open(file_name.c_str());
-    if(!multi.is_open()){
-    	throw std::runtime_error(std::string("Error: Cannot open file: "+file_name));
+    if (!multi.is_open()) {
+        throw std::runtime_error(
+            std::string("Error: Cannot open file: " + file_name));
     }
     std::string line;
-    while(std::getline(multi, line)){
-    	misc::trim(line);
-    	if(line.empty()) continue;
-    	genotype_files.push_back(line);
+    while (std::getline(multi, line)) {
+        misc::trim(line);
+        if (line.empty()) continue;
+        genotype_files.push_back(line);
     }
     multi.close();
     return genotype_files;
@@ -227,8 +230,8 @@ void Genotype::load_snps(const std::string out_prefix,
                          const std::string& exclude_file, const double geno,
                          const double maf, const double info,
                          const double hard_threshold, const bool hard_coded,
-						 Region &exclusion,
-                         bool verbose, Reporter& reporter, Genotype* target)
+                         Region& exclusion, bool verbose, Reporter& reporter,
+                         Genotype* target)
 {
     if (!m_is_ref) {
         if (!extract_file.empty()) {
@@ -239,8 +242,8 @@ void Genotype::load_snps(const std::string out_prefix,
             m_snp_selection_list = load_snp_list(exclude_file, reporter);
         }
     }
-    m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, exclusion,
-                                    out_prefix, target);
+    m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded,
+                                    exclusion, out_prefix, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
@@ -1570,12 +1573,12 @@ void Genotype::get_null_score(const size_t& set_size,
                               const std::vector<size_t>& selection_list,
                               const bool require_statistic)
 {
-	// selection_list = permuted list of SNP index
+    // selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
 
     std::vector<size_t> selected_snp_index(set_size);
-    for(size_t i = 0; i < set_size; ++i){
-    	selected_snp_index[i] = m_background_snp_index[selection_list[i]];
+    for (size_t i = 0; i < set_size; ++i) {
+        selected_snp_index[i] = m_background_snp_index[selection_list[i]];
     }
 
     std::vector<size_t> use_snp_index = SNP::sort_snp_for_perm(

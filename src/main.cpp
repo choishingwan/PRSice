@@ -53,17 +53,17 @@ int main(int argc, char* argv[])
         {
             target_file = factory.createGenotype(
                 commander.target_name(), commander.target_type(),
-				commander.target_list(),commander.thread(), commander.ignore_fid(),
-                commander.nonfounders(), commander.keep_ambig(), reporter,
-                commander);
+                commander.target_list(), commander.thread(),
+                commander.ignore_fid(), commander.nonfounders(),
+                commander.keep_ambig(), reporter, commander);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
-            target_file->load_snps(commander.out(), commander.extract_file(),
-                                   commander.exclude_file(), commander.geno(),
-                                   commander.maf(), commander.info(),
-                                   commander.hard_threshold(),
-                                   commander.hard_coded(), exclusion, verbose, reporter);
+            target_file->load_snps(
+                commander.out(), commander.extract_file(),
+                commander.exclude_file(), commander.geno(), commander.maf(),
+                commander.info(), commander.hard_threshold(),
+                commander.hard_coded(), exclusion, verbose, reporter);
         }
         catch (const std::invalid_argument& ia)
         {
@@ -76,7 +76,8 @@ int main(int argc, char* argv[])
             return -1;
         }
         // TODO: Revamp Region to make it suitable for prslice too
-        Region region(commander.feature(), commander.window_5(), commander.window_3());
+        Region region(commander.feature(), commander.window_5(),
+                      commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
@@ -105,9 +106,9 @@ int main(int argc, char* argv[])
                                 "panel\n==============================\n");
                 reference_file = factory.createGenotype(
                     commander.ref_name(), commander.ref_type(),
-					commander.ref_list(), commander.thread(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), reporter,
-                    commander, true);
+                    commander.ref_list(), commander.thread(),
+                    commander.ignore_fid(), commander.nonfounders(),
+                    commander.keep_ambig(), reporter, commander, true);
 
                 reference_file->load_samples(commander.ld_keep_file(),
                                              commander.ld_remove_file(),
@@ -117,7 +118,8 @@ int main(int argc, char* argv[])
                     commander.out(), commander.extract_file(),
                     commander.exclude_file(), commander.geno(), commander.maf(),
                     commander.info(), commander.hard_threshold(),
-                    commander.hard_coded(), exclusion, verbose, reporter, target_file);
+                    commander.hard_coded(), exclusion, verbose, reporter,
+                    target_file);
             }
 
             std::string message = "Start processing " + base_name + "\n";
@@ -142,10 +144,9 @@ int main(int argc, char* argv[])
             region.print_file(region_out_name);
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
-                target_file->efficient_clumping(commander.use_ref()
-                                                    ? *reference_file
-                                                    : *target_file,
-                                                reporter, commander.pearson());
+                target_file->efficient_clumping(
+                    commander.use_ref() ? *reference_file : *target_file,
+                    reporter, commander.pearson());
                 // immediately free the memory if needed
                 if (commander.use_ref()) delete reference_file;
             }

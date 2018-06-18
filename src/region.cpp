@@ -18,76 +18,89 @@
 #include "region.hpp"
 
 
-Region::Region(const std::string &exclusion_range, Reporter& reporter){
-	// First check if it is a simple range in format of chr:start-end,chr:start-end
-	if(exclusion_range.empty()) return;
-	std::vector<std::string> region_range = misc::split(exclusion_range,",");
-	bool file_input = false;
-	if(region_range.size()==1){
-		// this can either be: 1 range, or an input bed file
-		std::vector<std::string> token = misc::split(region_range[0], ":");
-		if(token.size()==1){
-			file_input= true;
-		}
-	}
-	if(file_input){
-		std::vector<std::string> bed;
-		bed.push_back(exclusion_range);
-		process_bed(bed, reporter);
-	}else{
-		// we will manually insert the regions
-		std::vector<region_bound > current_region;
-		for(auto && range :  region_range){
-			std::vector<std::string> token=misc::split(range, ":");
-			if(token.size() >= 2){
-				int chr = get_chrom_code_raw(token[0].c_str());
-				int temp, start, end;
-				try{
-					std::vector<std::string> coordinates = misc::split(token[1], "-");
-					temp = misc::convert<int>(coordinates[0].c_str());
-					if(temp < 0){
-						std::string error = "Error: Negative Start Coordinate for exclusion range!";
-						throw std::runtime_error(error);
-					}
-					start = temp;
-					temp = misc::convert<int>(coordinates[(coordinates.size()>1)].c_str());
-					if(temp < 0){
-						std::string error = "Error: Negative End Coordinate for exclusion range!";
-						throw std::runtime_error(error);
-					}
-					end = temp+(!(coordinates.size()>1));
-				}catch (const std::runtime_error& error)
-		        {
-					fprintf(stderr, "Error: Non-numeric coordinate(s)!\n");
-		            throw std::runtime_error(error.what());
-		        }
-				region_bound cur_bound;
-				cur_bound.chr=chr;
-				cur_bound.start = start;
-				cur_bound.end = end;
-				current_region.push_back(cur_bound);
-			}else{
-				std::string message = "Error: Invalid exclusion range format. Should be chr:start or chr:start-end";
-				throw std::runtime_error(message);
-			}
-		}
-		m_region_list.push_back(solve_overlap(current_region));
-		int prev_chr = -1;
-		for(size_t i = 0; i < m_region_list.back().size(); ++i){
-			int cur_chr = m_region_list.back()[i].chr;
-			if(prev_chr!=cur_chr){
-				while(m_chr_index[0].size() < cur_chr+1)
-					m_chr_index[0].push_back(-1);
-				m_chr_index[0][cur_chr] = i;
-				prev_chr = cur_chr;
-			}
-		}
-	}
+Region::Region(const std::string& exclusion_range, Reporter& reporter)
+{
+    // First check if it is a simple range in format of
+    // chr:start-end,chr:start-end
+    if (exclusion_range.empty()) return;
+    std::vector<std::string> region_range = misc::split(exclusion_range, ",");
+    bool file_input = false;
+    if (region_range.size() == 1) {
+        // this can either be: 1 range, or an input bed file
+        std::vector<std::string> token = misc::split(region_range[0], ":");
+        if (token.size() == 1) {
+            file_input = true;
+        }
+    }
+    if (file_input) {
+        std::vector<std::string> bed;
+        bed.push_back(exclusion_range);
+        process_bed(bed, reporter);
+    }
+    else
+    {
+        // we will manually insert the regions
+        std::vector<region_bound> current_region;
+        for (auto&& range : region_range) {
+            std::vector<std::string> token = misc::split(range, ":");
+            if (token.size() >= 2) {
+                int chr = get_chrom_code_raw(token[0].c_str());
+                int temp, start, end;
+                try
+                {
+                    std::vector<std::string> coordinates =
+                        misc::split(token[1], "-");
+                    temp = misc::convert<int>(coordinates[0].c_str());
+                    if (temp < 0) {
+                        std::string error = "Error: Negative Start Coordinate "
+                                            "for exclusion range!";
+                        throw std::runtime_error(error);
+                    }
+                    start = temp;
+                    temp = misc::convert<int>(
+                        coordinates[(coordinates.size() > 1)].c_str());
+                    if (temp < 0) {
+                        std::string error = "Error: Negative End Coordinate "
+                                            "for exclusion range!";
+                        throw std::runtime_error(error);
+                    }
+                    end = temp + (!(coordinates.size() > 1));
+                }
+                catch (const std::runtime_error& error)
+                {
+                    fprintf(stderr, "Error: Non-numeric coordinate(s)!\n");
+                    throw std::runtime_error(error.what());
+                }
+                region_bound cur_bound;
+                cur_bound.chr = chr;
+                cur_bound.start = start;
+                cur_bound.end = end;
+                current_region.push_back(cur_bound);
+            }
+            else
+            {
+                std::string message = "Error: Invalid exclusion range format. "
+                                      "Should be chr:start or chr:start-end";
+                throw std::runtime_error(message);
+            }
+        }
+        m_region_list.push_back(solve_overlap(current_region));
+        int prev_chr = -1;
+        for (size_t i = 0; i < m_region_list.back().size(); ++i) {
+            int cur_chr = m_region_list.back()[i].chr;
+            if (prev_chr != cur_chr) {
+                while (m_chr_index[0].size() < cur_chr + 1)
+                    m_chr_index[0].push_back(-1);
+                m_chr_index[0][cur_chr] = i;
+                prev_chr = cur_chr;
+            }
+        }
+    }
     m_snp_check_index = std::vector<size_t>(1, 0);
 }
 
-Region::Region(std::vector<std::string> feature,
-               const int window_5, const int window_3)
+Region::Region(std::vector<std::string> feature, const int window_5,
+               const int window_3)
     : m_5prime(window_5), m_3prime(window_3)
 {
     // Make the base region which includes everything
@@ -118,8 +131,7 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     std::unordered_map<std::string, std::set<std::string>> id_to_name;
     std::unordered_map<std::string, region_bound> gtf_boundary;
     // without the gtf file, we will not process the msigdb file
-    if (!gtf.empty())
-    {
+    if (!gtf.empty()) {
         reporter.report("Processing the GTF file");
         try
         {
@@ -147,31 +159,32 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     }
     m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
-    for(size_t i_region = 0 ; i_region < m_region_list.size(); ++i_region){
-    	auto && gene_set = m_region_list[i_region];
-    	size_t prev_chr=-1;
-    	for(size_t i_bound = 0; i_bound < gene_set.size(); ++i_bound){
-    		int cur_chr = gene_set[i_bound].chr;
-    		if(prev_chr != cur_chr){
-    			/*
-    			 * Might be faster if I invert the index of the map, but that will
-    			 * require me knowing how many chromosomes there are or
-    			 * that I use a nested map
-    			 */
-    			if(m_chr_index.find(i_region)==m_chr_index.end()){
-    				m_chr_index[i_region] = std::vector<int>(cur_chr+1, -1);
-    				m_chr_index[i_region][cur_chr] = i_bound;
-    			}
-    			else{
-    				if(m_chr_index[i_region].size() < cur_chr+1){
-    					while(m_chr_index[i_region].size() < cur_chr+1)
-    						m_chr_index[i_region].push_back(-1);
-    				}
-    				m_chr_index[i_region][cur_chr] = i_bound;
-    			}
-    			prev_chr = cur_chr;
-    		}
-    	}
+    for (size_t i_region = 0; i_region < m_region_list.size(); ++i_region) {
+        auto&& gene_set = m_region_list[i_region];
+        size_t prev_chr = -1;
+        for (size_t i_bound = 0; i_bound < gene_set.size(); ++i_bound) {
+            int cur_chr = gene_set[i_bound].chr;
+            if (prev_chr != cur_chr) {
+                /*
+                 * Might be faster if I invert the index of the map, but that
+                 * will require me knowing how many chromosomes there are or
+                 * that I use a nested map
+                 */
+                if (m_chr_index.find(i_region) == m_chr_index.end()) {
+                    m_chr_index[i_region] = std::vector<int>(cur_chr + 1, -1);
+                    m_chr_index[i_region][cur_chr] = i_bound;
+                }
+                else
+                {
+                    if (m_chr_index[i_region].size() < cur_chr + 1) {
+                        while (m_chr_index[i_region].size() < cur_chr + 1)
+                            m_chr_index[i_region].push_back(-1);
+                    }
+                    m_chr_index[i_region][cur_chr] = i_bound;
+                }
+                prev_chr = cur_chr;
+            }
+        }
     }
     m_duplicated_names.clear();
 }
@@ -194,7 +207,8 @@ void Region::process_bed(const std::vector<std::string>& bed,
             continue;
         }
         if (m_duplicated_names.find(b) != m_duplicated_names.end()) {
-            message = "Warning: " + b + " is duplicated, it will only be read once";
+            message =
+                "Warning: " + b + " is duplicated, it will only be read once";
             reporter.report(message);
             continue;
         }
@@ -271,42 +285,24 @@ void Region::process_bed(const std::vector<std::string>& bed,
                 message.append("start: " + std::to_string(start) + "\n");
                 message.append("end: " + std::to_string(end) + "\n");
             }
-            if (error){
-            	message.append("We will ignore this file");
-            	break;
+            if (error) {
+                message.append("We will ignore this file");
+                break;
             }
             // only include regions that falls into the chromosome of interest
             // ditch m_chr_order as it is not really useful in this new way of
             // handling things
-                if (token.size() > +BED::STRAND) {
-                    if (token[+BED::STRAND].compare("-") == 0) {
-                        if (start - m_3prime < 1) {
-                            start = 1;
-                        }
-                        else
-                            start -= m_3prime;
-                        end += m_5prime;
-                    }
-                    else if (token[+BED::STRAND].compare("+") == 0
-                             || token[+BED::STRAND].compare(".") == 0)
-                    {
-                        if (start - m_5prime < 1) {
-                            start = 1;
-                        }
-                        else
-                            start -= m_5prime;
-                        end += m_3prime;
+            if (token.size() > +BED::STRAND) {
+                if (token[+BED::STRAND].compare("-") == 0) {
+                    if (start - m_3prime < 1) {
+                        start = 1;
                     }
                     else
-                    {
-                        std::string error = "Error: Undefined strand "
-                                            "information. Possibly a malform "
-                                            "BED file: "
-                                            + token[+BED::STRAND];
-                        throw std::runtime_error(error);
-                    }
+                        start -= m_3prime;
+                    end += m_5prime;
                 }
-                else
+                else if (token[+BED::STRAND].compare("+") == 0
+                         || token[+BED::STRAND].compare(".") == 0)
                 {
                     if (start - m_5prime < 1) {
                         start = 1;
@@ -315,12 +311,30 @@ void Region::process_bed(const std::vector<std::string>& bed,
                         start -= m_5prime;
                     end += m_3prime;
                 }
-                region_bound cur_bound;
-                cur_bound.chr = get_chrom_code_raw(token[0].c_str());
-                cur_bound.start = start;
-                cur_bound.end = end;
-                // this should help us to avoid problem
-                current_region.push_back(cur_bound);
+                else
+                {
+                    std::string error = "Error: Undefined strand "
+                                        "information. Possibly a malform "
+                                        "BED file: "
+                                        + token[+BED::STRAND];
+                    throw std::runtime_error(error);
+                }
+            }
+            else
+            {
+                if (start - m_5prime < 1) {
+                    start = 1;
+                }
+                else
+                    start -= m_5prime;
+                end += m_3prime;
+            }
+            region_bound cur_bound;
+            cur_bound.chr = get_chrom_code_raw(token[0].c_str());
+            cur_bound.start = start;
+            cur_bound.end = end;
+            // this should help us to avoid problem
+            current_region.push_back(cur_bound);
         }
 
         if (!error) {
@@ -381,8 +395,7 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
         if (line.empty() || line[0] == '#') continue;
         std::vector<std::string> token = misc::split(line, "\t");
         std::string chr = token[+GTF::CHR];
-        if (in_feature(token[+GTF::FEATURE]))
-        {
+        if (in_feature(token[+GTF::FEATURE])) {
             int temp = 0;
             size_t start = 0, end = 0;
             try
@@ -503,7 +516,8 @@ std::unordered_map<std::string, Region::region_bound> Region::process_gtf(
             }
             // Now add the information to the map using the id
             if (result_boundary.find(id) != result_boundary.end()) {
-                if (result_boundary[id].chr != get_chrom_code_raw(chr.c_str())) {
+                if (result_boundary[id].chr != get_chrom_code_raw(chr.c_str()))
+                {
                     std::string error =
                         "Error: Same gene occur on two separate chromosome!";
                     result_boundary.clear();
@@ -722,37 +736,19 @@ void Region::read_background(
             }
             if (error) break;
             // only include regions that falls into the chromosome of interest
-                int strand_index =
-                    (type->second == 1) ? (+BED::STRAND) : (+BED::END + 1);
-                if (token.size() > strand_index) {
-                    if (token[strand_index].compare("-") == 0) {
-                        if (start - m_3prime < 1) {
-                            start = 1;
-                        }
-                        else
-                            start -= m_3prime;
-                        end += m_5prime;
-                    }
-                    else if (token[strand_index].compare("+") == 0
-                             || token[strand_index].compare(".") == 0)
-                    {
-                        if (start - m_5prime < 1) {
-                            start = 1;
-                        }
-                        else
-                            start -= m_5prime;
-                        end += m_3prime;
+            int strand_index =
+                (type->second == 1) ? (+BED::STRAND) : (+BED::END + 1);
+            if (token.size() > strand_index) {
+                if (token[strand_index].compare("-") == 0) {
+                    if (start - m_3prime < 1) {
+                        start = 1;
                     }
                     else
-                    {
-                        std::string error = "Error: Undefined strand "
-                                            "information. Possibly a malform "
-                                            "BED file: "
-                                            + token[+BED::STRAND];
-                        throw std::runtime_error(error);
-                    }
+                        start -= m_3prime;
+                    end += m_5prime;
                 }
-                else
+                else if (token[strand_index].compare("+") == 0
+                         || token[strand_index].compare(".") == 0)
                 {
                     if (start - m_5prime < 1) {
                         start = 1;
@@ -761,13 +757,30 @@ void Region::read_background(
                         start -= m_5prime;
                     end += m_3prime;
                 }
-                region_bound cur_bound;
-                cur_bound.chr = get_chrom_code_raw(token[0].c_str());
-                cur_bound.start = start;
-                cur_bound.end = end;
-                // this should help us to avoid problem
-                current_bound.push_back(cur_bound);
-
+                else
+                {
+                    std::string error = "Error: Undefined strand "
+                                        "information. Possibly a malform "
+                                        "BED file: "
+                                        + token[+BED::STRAND];
+                    throw std::runtime_error(error);
+                }
+            }
+            else
+            {
+                if (start - m_5prime < 1) {
+                    start = 1;
+                }
+                else
+                    start -= m_5prime;
+                end += m_3prime;
+            }
+            region_bound cur_bound;
+            cur_bound.chr = get_chrom_code_raw(token[0].c_str());
+            cur_bound.start = start;
+            cur_bound.end = end;
+            // this should help us to avoid problem
+            current_bound.push_back(cur_bound);
         }
     }
     else
@@ -896,59 +909,62 @@ void Region::print_file(std::string output) const
 
 Region::~Region() {}
 
-bool Region::check_exclusion(const std::string &chr, const size_t loc){
-	int cur_chr = get_chrom_code_raw(chr.c_str());
-	if(m_chr_index.empty()){
-		return false;
-	}
-	// there is only one region, so we can ignore the for loop
-	size_t i_region = 0;
-	size_t cur_region_size = m_region_list.front().size();
+bool Region::check_exclusion(const std::string& chr, const size_t loc)
+{
+    int cur_chr = get_chrom_code_raw(chr.c_str());
+    if (m_chr_index.empty()) {
+        return false;
+    }
+    // there is only one region, so we can ignore the for loop
+    size_t i_region = 0;
+    size_t cur_region_size = m_region_list.front().size();
     int region_chr_index = m_chr_index[i_region][cur_chr];
-    bool chr_switched=false;
-	while(m_snp_check_index[i_region] < cur_region_size){
-		auto &&current_bound = m_region_list[i_region][m_snp_check_index[i_region]];
-		int region_chr = m_chr_index[i_region][current_bound.chr];
-		size_t region_start = current_bound.start;
-		size_t region_end = current_bound.end;
-		if (region_chr_index != region_chr && !chr_switched)
-		{
-			// only increment if we have passed the chromosome
-			m_snp_check_index[i_region] = region_chr_index;
-			chr_switched=true;
-		}
-		else if(region_chr_index != region_chr){
-			break;
-		}
-		else if (region_chr_index == region_chr) // same chromosome
-		{
-			if (region_start <= loc && region_end >= loc) {
-				return true;
-			}
-			else if (region_start > loc)
-				break;
-			else if (region_end < loc)
-			{
-				m_snp_check_index[i_region]++;
-			}
-		}
-		else
-		{
-			// not the same chromosome
-			break;
-		}
-	}
-	return false;
+    bool chr_switched = false;
+    while (m_snp_check_index[i_region] < cur_region_size) {
+        auto&& current_bound =
+            m_region_list[i_region][m_snp_check_index[i_region]];
+        int region_chr = m_chr_index[i_region][current_bound.chr];
+        size_t region_start = current_bound.start;
+        size_t region_end = current_bound.end;
+        if (region_chr_index != region_chr && !chr_switched) {
+            // only increment if we have passed the chromosome
+            m_snp_check_index[i_region] = region_chr_index;
+            chr_switched = true;
+        }
+        else if (region_chr_index != region_chr)
+        {
+            break;
+        }
+        else if (region_chr_index == region_chr) // same chromosome
+        {
+            if (region_start <= loc && region_end >= loc) {
+                return true;
+            }
+            else if (region_start > loc)
+                break;
+            else if (region_end < loc)
+            {
+                m_snp_check_index[i_region]++;
+            }
+        }
+        else
+        {
+            // not the same chromosome
+            break;
+        }
+    }
+    return false;
 }
 
-void Region::update_flag(std::string chr, size_t loc, std::vector<uintptr_t>& flag)
+void Region::update_flag(std::string chr, size_t loc,
+                         std::vector<uintptr_t>& flag)
 {
     flag[0] |= ONELU;
     m_region_snp_count[0]++;
     int cur_chr = get_chrom_code_raw(chr.c_str());
     // note: the chr is actually the order on the m_chr_order instead of the
     // sactual chromosome
-    bool chr_switched=false;
+    bool chr_switched = false;
     for (size_t i_region = 1; i_region < m_region_name.size(); ++i_region) {
         int region_chr_index = m_chr_index[i_region][cur_chr];
         size_t current_region_size = m_region_list[i_region].size();
@@ -958,14 +974,14 @@ void Region::update_flag(std::string chr, size_t loc, std::vector<uintptr_t>& fl
             int region_chr = m_chr_index[i_region][current_bound.chr];
             size_t region_start = current_bound.start;
             size_t region_end = current_bound.end;
-            if (region_chr_index != region_chr && !chr_switched)
-            {
-            	// only increment if we have passed the chromosome
+            if (region_chr_index != region_chr && !chr_switched) {
+                // only increment if we have passed the chromosome
                 m_snp_check_index[i_region] = region_chr_index;
-                chr_switched=true;
+                chr_switched = true;
             }
-            else if(region_chr_index != region_chr){
-            	break;
+            else if (region_chr_index != region_chr)
+            {
+                break;
             }
             else if (region_chr_index == region_chr) // same chromosome
             {
