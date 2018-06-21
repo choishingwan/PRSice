@@ -1618,7 +1618,7 @@ void PRSice::null_set_no_thread(Genotype& target,
     while (processed < num_perm) {
         std::iota(selection_list.begin(), selection_list.end(), 0);
         size_t begin = 0;
-        size_t num_snp = set_size;
+        size_t num_snp = num_selected_snps;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             size_t r = selection_list[begin];

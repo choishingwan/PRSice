@@ -1576,15 +1576,14 @@ void Genotype::get_null_score(const size_t& set_size,
     // selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
 
-    std::vector<size_t> selected_snp_index(set_size);
-    for (size_t i = 0; i < set_size; ++i) {
+    std::vector<size_t> selected_snp_index(num_selected_snps);
+    for (size_t i = 0; i < num_selected_snps; ++i) {
         selected_snp_index[i] = m_background_snp_index[selection_list[i]];
     }
 
-    std::vector<size_t> use_snp_index = SNP::sort_snp_for_perm(
-        selected_snp_index, num_selected_snps, m_existed_snps);
+    SNP::sort_snp_for_perm(selected_snp_index, m_existed_snps);
     // SNP::sort_snp_index(selected_snp_index, m_existed_snps);
-    read_score(use_snp_index);
+    read_score(selected_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;
         for (auto&& sample : m_sample_names) {
