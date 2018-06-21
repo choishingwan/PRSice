@@ -2066,11 +2066,15 @@ process_plot <-
         if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
             if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
                 bar_plot(prsice.result, prefix, parameters, use.ggplot) 
-                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+                if(!provided("fastscore", parameters)){
+                    high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+                }
             }
         }else{
             bar_plot(prsice.result, prefix, parameters, use.ggplot)
-            high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+            if(!provided("fastscore", parameters)){
+                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+            }
         }
         if(provided("multi_plot", parameters)){
             multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
