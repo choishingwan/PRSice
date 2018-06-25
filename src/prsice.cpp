@@ -182,6 +182,7 @@ void PRSice::update_sample_included(Genotype& target)
                                ? m_max_iid_length
                                : target.iid(i_sample).length();
 
+        // update the in regression flag according to covariate
         if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
             == m_sample_with_phenotypes.end())
         {

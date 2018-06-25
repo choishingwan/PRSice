@@ -497,6 +497,7 @@ option_list <- list(
   make_option(c("--feature"), type = "character"),
   make_option(c("-g", "--gtf"), type = "character"),
   make_option(c("-m", "--msigdb"), type = "character"),
+  make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
   make_option(c("--wind-5"), type = "character", dest="wind_5"),
   make_option(c("--wind-3"), type = "character", dest="wind_3"),
   # PRSlice 
