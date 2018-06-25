@@ -208,10 +208,12 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     size_t sample_index_ct = 0;
     size_t num_included = 0;
     std::unordered_set<double> input_sanity_check; // check if input is sensible
-    if (pheno_info.use_pheno)                      // use phenotype file
+    std::string pheno_name = "Phenotype";
+    if (pheno_info.use_pheno) // use phenotype file
     {
         int pheno_col_index =
             pheno_info.col[pheno_index]; // obtain the phenotype index
+        pheno_name = pheno_info.name[pheno_index];
         std::ifstream pheno_file;
         pheno_file.open(pheno_file_name.c_str());
         if (!pheno_file.is_open()) {
@@ -336,6 +338,14 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     }
 
     std::string message = "";
+    message = pheno_name + " is a ";
+    if (binary) {
+        message.append("binary phenotype\n");
+    }
+    else
+    {
+        message.append("continuous phenotype\n");
+    }
     if (num_not_found != 0) {
         message.append(std::to_string(num_not_found)
                        + " sample(s) without phenotype\n");
