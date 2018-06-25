@@ -17,10 +17,11 @@
 #include "binaryplink.hpp"
 
 BinaryPlink::BinaryPlink(const std::string& prefix,
-                         const std::string& sample_file, const size_t thread,
+                         const std::string& sample_file,
+                         const std::string& multi_input, const size_t thread,
                          const bool ignore_fid, const bool keep_nonfounder,
-                         const bool keep_ambig)
-    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig)
+                         const bool keep_ambig, const bool is_ref)
+    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig, is_ref)
 {
     // place holder. Currently set default to human.
     /** setting the chromosome information **/
@@ -30,7 +31,10 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
     m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     init_chr();
     // get the bed file names
-    m_genotype_files = set_genotype_files(prefix);
+    if (multi_input.empty())
+        m_genotype_files = set_genotype_files(prefix);
+    else
+        m_genotype_files = load_genotype_prefix(multi_input);
     m_sample_file =
         sample_file.empty() ? m_genotype_files.front() + ".fam" : sample_file;
 }
@@ -181,7 +185,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
 std::vector<SNP>
 BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             const double info, const double hard_threshold,
-                            const bool hard_coded,
+                            const bool hard_coded, Region& exclusion,
                             const std::string& out_prefix, Genotype* target)
 {
     std::unordered_set<std::string> duplicated_snp;
@@ -345,6 +349,11 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 error_message.append("Please check you have the correct input");
                 throw std::runtime_error(error_message);
             }
+
+            if (exclusion.check_exclusion(chr, loc)) {
+                continue;
+            }
+
             if (m_existed_snps_index.find(bim_info[+BIM::RS])
                 != m_existed_snps_index.end())
             {

@@ -60,6 +60,7 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
+    misc.exclusion_range = "";
     misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
@@ -72,8 +73,9 @@ Commander::Commander()
     misc.thread = 1;
     misc.seed = 0;
 
-
+    reference_panel.allow_inter = 0;
     reference_panel.file_name = "";
+    reference_panel.multi_name = "";
     reference_panel.type = "bed";
     reference_panel.keep_file = "";
     reference_panel.remove_file = "";
@@ -110,6 +112,8 @@ Commander::Commander()
     prset.gtf = "";
     prset.msigdb = "";
     prset.background = "";
+    prset.single_snp_set = "";
+    prset.multi_snp_sets = "";
     prset.perform_prset = false;
     prset.perform_set_perm = false;
     prset.set_perm = 10000;
@@ -121,6 +125,7 @@ Commander::Commander()
 
     target.include_nonfounders = false;
     target.name = "";
+    target.multi_name = "";
     target.pheno_file = "";
     target.type = "bed";
     set_help_message();
@@ -158,6 +163,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"upper", required_argument, NULL, 'u'},
         {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
+        {"allow-intermediate", no_argument, &reference_panel.allow_inter, 1},
         {"all-score", no_argument, &misc.print_all_scores, 1},
         {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &prs_snp_filtering.is_hard_coded, 1},
@@ -194,6 +200,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"info", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
+        {"ld-list", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
         {"ld-maf", required_argument, NULL, 0},
@@ -213,10 +220,14 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"se", required_argument, NULL, 0},
         {"set-perm", required_argument, NULL, 0},
         {"snp", required_argument, NULL, 0},
+        {"snp-set", required_argument, NULL, 0},
+        {"snp-sets", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
+        {"target-list", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
         {"wind-5", required_argument, NULL, 0},
         {"wind-3", required_argument, NULL, 0},
+        {"x-range", required_argument, NULL, 0},
         {NULL, 0, 0, 0}};
     return process(argc, argv, optString, longOpts, reporter);
 }
@@ -312,9 +323,18 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                     misc.permutation = intpart;
                 }
             }
+            else if (command.compare("x-range") == 0)
+            {
+                // Require additional processing
+                set_string(optarg, message_store, misc.exclusion_range, dummy,
+                           command, error_messages);
+            }
             // Long opts for reference_panel
             else if (command.compare("ld-keep") == 0)
                 set_string(optarg, message_store, reference_panel.keep_file,
+                           dummy, command, error_messages);
+            else if (command.compare("ld-list") == 0)
+                set_string(optarg, message_store, reference_panel.multi_name,
                            dummy, command, error_messages);
             else if (command.compare("ld-remove") == 0)
                 set_string(optarg, message_store, reference_panel.remove_file,
@@ -386,6 +406,25 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("feature") == 0)
                 load_string_vector(optarg, message_store, prset.feature,
                                    command, error_messages);
+            else if (command.compare("snp-set") == 0)
+                set_string(optarg, message_store, prset.single_snp_set, dummy,
+                           command, error_messages);
+            else if (command.compare("snp-sets") == 0)
+                set_string(optarg, message_store, prset.multi_snp_sets, dummy,
+                           command, error_messages);
+            else if (command.compare("set-perm") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.set_perm, prset.perform_set_perm, error,
+                                 command);
+            else if (command.compare("background") == 0)
+                set_string(optarg, message_store, prset.background, dummy,
+                           command, error_messages);
+            else if (command.compare("wind-5") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_5, dummy, error, command);
+            else if (command.compare("wind-3") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_3, dummy, error, command);
             // Long opts for PRSlice
             else if (command.compare("prslice") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
@@ -401,23 +440,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, dummy, command,
                            error_messages);
-            else if (command.compare("background") == 0)
-                set_string(optarg, message_store, prset.background, dummy,
+            else if (command.compare("target-list") == 0)
+                set_string(optarg, message_store, target.multi_name, dummy,
                            command, error_messages);
-            else if (command.compare("set-perm") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.set_perm, prset.perform_set_perm, error,
-                                 command);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
-            else if (command.compare("wind-5") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.window_5, dummy, error, command);
-            else if (command.compare("wind-3") == 0)
-                set_numeric<int>(optarg, message_store, error_messages,
-                                 prset.window_3, dummy, error, command);
-
             else if (command.compare("memory") == 0)
                 set_memory(optarg, message_store, error_messages, error);
             else
@@ -587,6 +615,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string time_str(buffer);
     std::string prog_name = argv[0];
     message.append(time_str + "\n" + prog_name);
+
     for (auto&& com : message_store) {
         message.append(" \\\n    --" + com.first + " " + com.second);
     }
@@ -612,7 +641,7 @@ Commander::~Commander()
 // avoid having large chunk of un-foldable code
 void Commander::set_help_message()
 {
-    help_message =
+    help_message = help_message =
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"
         // Base file
         "\nBase File:\n"
@@ -752,6 +781,13 @@ void Commander::set_help_message()
         "specify\n"
         "                            a seperate fam file by <prefix>,<fam "
         "file>\n"
+        "    --target-list           File containing prefix of target "
+        "genotype\n"
+        "                            files. Similar to --target but allow more "
+        "\n"
+        "                            flexibility. Do not support external fam "
+        "file\n"
+        "                            at the moment\n"
         "    --type                  File type of the target file. Support bed "
         "\n"
         "                            (binary plink) and bgen format. Default: "
@@ -792,6 +828,12 @@ void Commander::set_help_message()
           "chromosome input\n"
           "                            Please see --target for more "
           "information\n"
+          "    --ld-list               File containing prefix of LD reference "
+          "files.\n"
+          "                            Similar to --ld but allow more \n"
+          "                            flexibility. Do not support external "
+          "fam file\n"
+          "                            at the moment\n"
           "    --ld-geno               Filter SNPs based on genotype "
           "missingness\n"
           "    --ld-info               Filter SNPs based on info score. Only "
@@ -914,7 +956,6 @@ void Commander::set_help_message()
           "    --no-regress            Do not perform the regression analysis "
           "and simply\n"
           "                            output all PRS.\n"
-
           "    --score                 Method to calculate the polygenic "
           "score.\n"
           "                            Available methods include:\n"
@@ -994,7 +1035,7 @@ void Commander::set_help_message()
           "but\n"
           "                            should increase the speed of clumping\n"
           "    --perm                  Number of permutation to perform. This "
-          "will\n"
+          "swill\n"
           "                            generate the empirical p-value. "
           "Recommend to\n"
           "                            use value larger than 10,000\n"
@@ -1521,6 +1562,7 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
         }
         if (reference_panel.type.compare("bgen") == 0
             || (reference_panel.file_name.empty()
+                && reference_panel.multi_name.empty()
                 && target.type.compare("bgen") == 0))
         {
             if (reference_snp_filtering.hard_threshold > 1
@@ -1530,7 +1572,8 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
                 error_message.append("Error: LD hard threshold must be larger "
                                      "than 0 and smaller than 1!\n");
             }
-            else if (!reference_panel.file_name.empty())
+            else if (!reference_panel.file_name.empty()
+                     || !reference_panel.multi_name.empty())
             {
                 // this is to be consistent where ld parameter won't
                 // apply to target file
@@ -1917,9 +1960,9 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
     std::string bar_message = "";
     for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
-            bar_message.append(std::to_string(b));
+            bar_message.append(misc::to_string(b));
         else
-            bar_message.append("," + std::to_string(b));
+            bar_message.append("," + misc::to_string(b));
     }
     message["bar-levels"] = bar_message;
 }
@@ -1943,9 +1986,10 @@ void Commander::prslice_check(bool& error, std::string& error_message)
 void Commander::target_check(std::map<std::string, std::string>& message,
                              bool& error, std::string& error_message)
 {
-    if (target.name.empty()) {
+    if (target.name.empty() && target.multi_name.empty()) {
         error = true;
-        error_message.append("Error: You must provide a target file!\n");
+        error_message.append("Error: You must provide a target file or a file "
+                             "containing all target prefixs!\n");
     }
     if (!target.keep_file.empty() && !target.remove_file.empty()) {
         error = true;

@@ -35,7 +35,25 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-
+std::vector<std::string>
+Genotype::load_genotype_prefix(const std::string& file_name)
+{
+    std::vector<std::string> genotype_files;
+    std::ifstream multi;
+    multi.open(file_name.c_str());
+    if (!multi.is_open()) {
+        throw std::runtime_error(
+            std::string("Error: Cannot open file: " + file_name));
+    }
+    std::string line;
+    while (std::getline(multi, line)) {
+        misc::trim(line);
+        if (line.empty()) continue;
+        genotype_files.push_back(line);
+    }
+    multi.close();
+    return genotype_files;
+}
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
@@ -206,62 +224,14 @@ void Genotype::load_samples(const std::string& keep_file,
     m_sample_selection_list.clear();
 }
 
-void Genotype::load_snps(
-    const std::string out_prefix,
-    const std::unordered_map<std::string, size_t>& existed_snps,
-    const double geno, const double maf, const double info,
-    const double hard_threshold, const bool hard_coded, bool verbose,
-    Reporter& reporter)
-{
-    // only include the valid SNPs
-    for (auto&& snp : existed_snps) {
-        m_snp_selection_list.insert(snp.first);
-    }
-    m_exclude_snp = false;
-    m_existed_snps =
-        gen_snp_vector(geno, maf, info, hard_threshold, hard_coded, out_prefix);
-    m_marker_ct = m_existed_snps.size();
-    std::string message = "";
-    if (m_num_ambig != 0 && !m_keep_ambig) {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) excluded\n");
-    }
-    else if (m_num_ambig != 0)
-    {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) kept\n");
-    }
-    if (m_num_geno_filter != 0) {
-        message.append(
-            std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold\n");
-    }
-    if (m_num_maf_filter != 0) {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold\n");
-    }
-    if (m_num_info_filter != 0) {
-        message.append(
-            std::to_string(m_num_maf_filter)
-            + " variant(s) excluded based on INFO score threshold\n");
-    }
-    if (m_num_ref_target_mismatch != 0) {
-        message.append("Warning: Mismatched SNPs detected between reference "
-                       "panel and target!");
-        message.append(" You should check the files are based on the "
-                       "same genome build, or that can just be InDels\n");
-    }
-    message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-    if (verbose) reporter.report(message);
-    m_snp_selection_list.clear();
-}
 
 void Genotype::load_snps(const std::string out_prefix,
                          const std::string& extract_file,
                          const std::string& exclude_file, const double geno,
                          const double maf, const double info,
                          const double hard_threshold, const bool hard_coded,
-                         bool verbose, Reporter& reporter, Genotype* target)
+                         Region& exclusion, bool verbose, Reporter& reporter,
+                         Genotype* target)
 {
     if (!m_is_ref) {
         if (!extract_file.empty()) {
@@ -273,7 +243,7 @@ void Genotype::load_snps(const std::string out_prefix,
         }
     }
     m_existed_snps = gen_snp_vector(geno, maf, info, hard_threshold, hard_coded,
-                                    out_prefix, target);
+                                    exclusion, out_prefix, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
@@ -1600,21 +1570,20 @@ bool Genotype::prepare_prsice(Reporter& reporter)
 
 void Genotype::get_null_score(const size_t& set_size,
                               const size_t& num_selected_snps,
-                              const size_t& background_index,
                               const std::vector<size_t>& selection_list,
                               const bool require_statistic)
 {
+    // selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
 
-    std::vector<size_t> selected_snp_index(selection_list.begin(),
-                                           selection_list.begin() + set_size);
-    // for(size_t i = 0; i < set_size; ++i)
-    // selected_snp_index.push_back(selection_list[i]);
-    std::vector<size_t> use_snp_index = SNP::sort_snp_for_perm(
-        selected_snp_index, num_selected_snps, m_existed_snps);
-    // SNP::sort_snp_index(selected_snp_index, m_existed_snps);
+    std::vector<size_t> selected_snp_index(num_selected_snps);
+    for (size_t i = 0; i < num_selected_snps; ++i) {
+        selected_snp_index[i] = m_background_snp_index[selection_list[i]];
+    }
 
-    read_score(use_snp_index);
+    SNP::sort_snp_for_perm(selected_snp_index, m_existed_snps);
+    // SNP::sort_snp_index(selected_snp_index, m_existed_snps);
+    read_score(selected_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;
         for (auto&& sample : m_sample_names) {

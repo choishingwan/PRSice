@@ -40,9 +40,9 @@
 class Region
 {
 public:
-    Region(std::vector<std::string> feature,
-           const std::unordered_map<std::string, int>& chr_order,
-           const int window_5, const int window_3);
+    Region(const std::string& exclusion_range, Reporter& reporter);
+    Region(std::vector<std::string> feature, const int window_5,
+           const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
              const std::vector<std::string>& bed, const std::string& out,
@@ -53,7 +53,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    void check(std::string chr, size_t loc, std::vector<uintptr_t>& flag);
+    void update_flag(std::string chr, size_t loc, std::vector<uintptr_t>& flag);
     size_t size() const { return m_region_name.size(); };
     std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
@@ -99,6 +99,7 @@ public:
         return m_region_size_duplicated.at(
             m_region_post_clump_count.at(i_region));
     }
+    bool check_exclusion(const std::string& chr, const size_t loc);
 
 private:
     struct region_bound
@@ -112,8 +113,6 @@ private:
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
     std::unordered_set<std::string> m_duplicated_names;
-    // the order of chromosome, use for sorting the regions
-    std::unordered_map<std::string, int> m_chr_order;
     // the name of the regions
     std::vector<std::string> m_region_name;
     // features that we'd like to capture
@@ -131,6 +130,7 @@ private:
     // this is use for informing us if we would bother to store the permutation
     // results
     std::unordered_map<int, bool> m_region_size_duplicated;
+    std::unordered_map<int, std::vector<int>> m_chr_index;
     int m_5prime = 0;
     int m_3prime = 0;
 

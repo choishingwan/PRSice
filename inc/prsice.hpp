@@ -52,9 +52,10 @@
 //#define pthread_t HANDLE
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
-#define EOLN_STR "\r\n"
+#define NEXT_LENGTH 1
 #else
 #include <thread>
+#define NEXT_LENGTH 0
 //#include <pthread.h>
 #endif
 #ifdef __APPLE__
@@ -320,21 +321,20 @@ private:
     void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
     void run_competitive(Genotype& target, const Commander& commander,
-                         const size_t background_index, const size_t num_snp,
-                         const bool store_null, const bool binary);
+                         const size_t num_snp, const bool store_null,
+                         const bool binary);
     void produce_null_prs(Thread_Queue<std::vector<double>>& q,
                           Genotype& target, std::vector<int>& sample_index,
                           size_t num_consumer, size_t num_perm, size_t set_size,
-                          size_t num_selected_snps, size_t background_index,
-                          double original_p, bool require_standardize);
+                          size_t num_selected_snps, double original_p,
+                          bool require_standardize);
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, bool is_binary, bool store_p);
     void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
                             int& num_significant, size_t num_perm,
                             size_t set_size, size_t num_selected_snps,
-                            size_t background_index, double original_p,
-                            bool require_standardize, bool is_binary,
-                            bool store_p);
+                            double original_p, bool require_standardize,
+                            bool is_binary, bool store_p);
     void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
                         size_t num_consumer);
 

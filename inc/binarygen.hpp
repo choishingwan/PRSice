@@ -32,9 +32,9 @@ class BinaryGen : public Genotype
 {
 public:
     BinaryGen(const std::string& prefix, const std::string& sample_file,
-              const size_t thread = 1, const bool ignore_fid = false,
-              const bool keep_nonfounder = false,
-              const bool keep_ambig = false);
+              const std::string& multi_input, const size_t thread = 1,
+              const bool ignore_fid = false, const bool keep_nonfounder = false,
+              const bool keep_ambig = false, const bool is_ref = false);
     ~BinaryGen();
 
 private:
@@ -43,10 +43,12 @@ private:
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
     bool check_is_sample_format();
-    std::vector<SNP>
-    gen_snp_vector(const double geno, const double maf, const double info_score,
-                   const double hard_threshold, const bool hard_coded,
-                   const std::string& out_prefix, Genotype* target = nullptr);
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info_score,
+                                    const double hard_threshold,
+                                    const bool hard_coded, Region& exclusion,
+                                    const std::string& out_prefix,
+                                    Genotype* target = nullptr);
     void get_context(std::string& prefix);
     bool check_sample_consistent(const std::string& bgen_name,
                                  const genfile::bgen::Context& context);

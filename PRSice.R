@@ -33,7 +33,7 @@
 
 
 # Remove annoying messages ------------------------------------------------
-options(error = quote({dump.frames(to.file=TRUE); q()}))
+#options(error = quote({dump.frames(to.file=TRUE); q()}))
 In_Regression <-
     DEC <-
     Coef <-
@@ -138,6 +138,10 @@ help_message <-
                             automatically replace # with 1-22\n
                             For binary plink format, you can also specify\n
                             a seperate fam file by <prefix>,<fam file>\n
+    --target-list           File containing prefix of target genotype\n
+                            files. Similar to --target but allow more \n
+                            flexibility. Do not support external fam file\n
+                            at the moment\n
     --type                  File type of the target file. Support bed \n
                             (binary plink) and bgen format. Default: bed\n
 \nDosage:\n
@@ -158,6 +162,10 @@ help_message <-
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
                             Please see --target for more information\n
+    --ld-list               File containing prefix of LD reference files.\n
+                            Similar to --ld but allow more \n
+                            flexibility. Do not support external fam file\n
+                            at the moment\n
     --ld-geno               Filter SNPs based on genotype missingness\n
     --ld-info               Filter SNPs based on info score. Only used\n
                             for imputed LD reference\n
@@ -282,12 +290,14 @@ help_message <-
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
-    --logit-perm            When performing permutation, still use logistic\n
-                            regression instead of linear regression. This\n
-                            will substantially slow down PRSice\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
+    --logit-perm            When performing permutation, still use logistic\n
+                            regression instead of linear regression. This\n
+                            will substantially slow down PRSice\n
+    --no-install            Forbid PRSice from automatically installing\n
+                            the required packages (e.g. ggplot2)\n
     --out           | -o    Prefix for all file output\n
     --perm                  Number of permutation to perform. This swill\n
                             generate the empirical p-value. Recommend to\n
@@ -320,12 +330,13 @@ libraries <-
       "tools",
       "grDevices",
       "RColorBrewer")
-found <- FALSE
+found.library.dir <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
-dir_loc <- grep("--dir", argv)
-if (length(dir_loc) != 0) {
-    dir_loc <- dir_loc + 1
-    found <- TRUE
+dir.arg.idx <- grep("--dir",argv)
+no.install <- length(grep("--no-install", argv))>0
+if (length(dir.arg.idx) != 0) {
+    dir.arg.idx <- dir.arg.idx + 1
+    found.library.dir <- TRUE
 }
 
 # INSTALL_PACKAGE: Functions for automatically install all required packages
@@ -350,13 +361,13 @@ CRANChoosen <- function()
     return(getOption("repos")["CRAN"] != "@CRAN@")
 }
 
-UsePackage <- function(package, dir)
+UsePackage <- function(package, dir, no.install)
 {
     if (!InstalledPackage(package))
     {
         dir.create(file.path(dir, "lib"), showWarnings = FALSE)
         .libPaths(c(.libPaths(), paste(dir, "/lib", sep = "")))
-        if (!InstalledPackage(package)) {
+        if (!InstalledPackage(package) & !no.install) {
             if (is.na(dir)) {
                 writeLines("WARNING: dir not provided, cannot install the required packages")
                 return(FALSE)
@@ -390,40 +401,26 @@ use.data.table <- T
 use.ggplot <- T #cerr
 for (library in libraries)
 {
-    if (found)
+    package.directory <- "."
+    if (found.library.dir) {
+        package.directory <- argv[dir.arg.idx]
+    }
+    if (!UsePackage(library, package.directory, no.install))
     {
-        if (!UsePackage(library, argv[dir_loc]))
-        {
-          if(library=="data.table"){
+        if (library == "data.table") {
             use.data.table <- F
             writeLines("Cannot install data.table, will fall back and use read.table instead")
             writeLines("Note: It will be slower when reading large files")
-          }else if(library=="ggplot2"){
+        } else if (library == "ggplot2") {
             use.ggplot <- F
             writeLines("Cannot install ggplot2, will fall back and native plotting devices")
             writeLines("Note: The legends will be uglier")
-          }else{
+        } else{
             stop("Error: ", library, " cannot be load nor install!")
-          }
-        }
-    } else{
-        if (!UsePackage(library, "."))
-        {
-            if(library=="data.table"){
-              use.data.table <- F
-              writeLines("Cannot install data.table, will fall back and use read.table instead")
-              writeLines("Note: It will be slower when reading large files")
-            }else if(library=="ggplot2"){
-              use.ggplot <- F
-              writeLines("Cannot install ggplot2, will fall back and native plotting devices")
-              writeLines("Note: No legend will be displayed for bar-chart")
-            }else{
-              stop("Error: ", library, " cannot be load nor install!")
-            }
         }
     }
+    
 }
-
 
 # Command line arguments --------------------------------------------------
 
@@ -457,6 +454,7 @@ option_list <- list(
   make_option(c("-k", "--prevalence"), type = "numeric"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
+  make_option(c("--target-list"), type = "character", dest="target_list"),
   make_option(c("--type"), type = "character"),
   # Dosage
   make_option(c("--hard-thres"), type = "numeric"),
@@ -466,6 +464,7 @@ option_list <- list(
   make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
   make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
   make_option(c("-L", "--ld"), type = "character"),
+  make_option(c("--ld-list"), type = "character", dest="ld_list"),
   make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
   make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
   make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
@@ -498,6 +497,9 @@ option_list <- list(
   make_option(c("--feature"), type = "character"),
   make_option(c("-g", "--gtf"), type = "character"),
   make_option(c("-m", "--msigdb"), type = "character"),
+  make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
+  make_option(c("--wind-5"), type = "character", dest="wind_5"),
+  make_option(c("--wind-3"), type = "character", dest="wind_3"),
   # PRSlice 
   make_option(c("--prslice"), type = "numeric"),
   # Misc
@@ -578,7 +580,8 @@ not_cpp <- c(
     "prsice",
     "multi-plot",
     "plot-set",
-    "dir"
+    "dir",
+    "no-install"
 )
 
 if (is.null(argv$cov_col) && !is.null(argv$cov_header))
@@ -947,7 +950,7 @@ call_quantile <-
         pheno.sum <-
             data.frame(
                 mean = numeric(num_quant),
-                quantile = levels(pheno.merge$quantile),
+                quantile = factor(levels(pheno.merge$quantile)[order(quant.index)],levels=levels(pheno.merge$quantile)[order(quant.index)]),
                 UCI = numeric(num_quant),
                 LCI = numeric(num_quant)
             )
@@ -989,7 +992,9 @@ call_quantile <-
         }
     }
     
-}
+    }
+
+
 uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
     binary <- as.logical(binary)
     writeLines("Plotting the quantile plot")
@@ -1039,11 +1044,11 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
     quants <- NULL
     quant.index <- NULL
     if (!pheno.as.quant) {
-        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$PRS, quant.index)
+        quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$PRS, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
     } else{
-        quant.info <- set_uneven_quant(argv$quant_break, quant.ref, num_quant, pheno.merge$Pheno, quant.index)
+        quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$Pheno, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
     }
@@ -1263,6 +1268,8 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
         if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+        }else if(use_residual){
+            quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
         }
     } else if(use_residual){
         quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
@@ -1301,6 +1308,8 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, us
       if(!use_residual) {
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
+      }else if(use_residual){
+          quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
       }
   } else if(use_residual){
       quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
@@ -1775,7 +1784,7 @@ multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
     multipheno <- subset(prs.summary, Set=="Base")
     multipheno$Phenotype <- sapply(multipheno$Phenotype, shorten_label)
     multipheno <- multipheno[order(multipheno$PRS.R2, decreasing=T), ]
-    multipheno$Phenotype <- as.factor(multipheno$Phenotype)
+    multipheno$Phenotype <- factor(multipheno$Phenotype, levels = multipheno$Phenotype)
     if(use.ggplot){
         b <-
             ggplot(multipheno[1:(min(parameters$multi_plot, nrow(multipheno))), ],
@@ -1850,7 +1859,7 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
     overview$Set <- sapply(overview$Set, shorten_label)
     sets <- unique(overview$Set)
     multiset <- overview[order(overview$PRS.R2, decreasing=T), ]
-    multiset$Set <- as.factor(multiset$Set)
+    multiset$Set <- factor(multiset$Set, levels = multiset$Set)
     if(use.ggplot){
         b <-
             ggplot(multiset[1:(min(parameters$multi_plot, nrow(multiset))),], aes(
@@ -2022,7 +2031,6 @@ process_plot <-
             colnames(phenotype) <- c("IID", "Pheno")
             phenotype <- phenotype[phenotype$IID %in% best$IID, ]
         }
-        write.table(phenotype, "phenotypes", quote=F, row.names=F)
         phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
         pheno <- phenotype
         use.residual <- F
@@ -2034,7 +2042,7 @@ process_plot <-
         if(!is.null(covariance)){
             # We will regress out the residual
             # Can direct merge as we have standardized the header
-            temp.pheno <- merge(phenotype, covariance)
+            temp.pheno <- merge(pheno, covariance)
             family <- gaussian
             if(is_binary){
                 family <- binomial
@@ -2059,11 +2067,15 @@ process_plot <-
         if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
             if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
                 bar_plot(prsice.result, prefix, parameters, use.ggplot) 
-                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+                if(!provided("fastscore", parameters)){
+                    high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+                }
             }
         }else{
             bar_plot(prsice.result, prefix, parameters, use.ggplot)
-            high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+            if(!provided("fastscore", parameters)){
+                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+            }
         }
         if(provided("multi_plot", parameters)){
             multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
@@ -2140,6 +2152,8 @@ if (provided("pheno_file", argv)) {
         }
     }
 }
+# To account for the chromosome number
+pheno.file <- gsub("#", "1", pheno.file)
 if (!is.null(phenos) &
     length(phenos) > 1) {
     for (i in 1:length(phenos)) {

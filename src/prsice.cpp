@@ -124,8 +124,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     target.reset_sample_pheno();
     // this includes all samples
 
-    gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
     if (!no_regress) {
+        gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
         std::vector<std::string> cov_header = c_commander.get_cov_header();
         gen_cov_matrix(c_commander.get_cov_file(), cov_header, reporter);
     }
@@ -182,6 +182,7 @@ void PRSice::update_sample_included(Genotype& target)
                                ? m_max_iid_length
                                : target.iid(i_sample).length();
 
+        // update the in regression flag according to covariate
         if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
             == m_sample_with_phenotypes.end())
         {
@@ -811,14 +812,15 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 double score = target.calculate_score(m_score, sample);
                 size_t loc = m_all_file.header_length
-                             + sample * m_all_file.line_width
-                             + m_all_file.skip_column_length
+                             + sample * (m_all_file.line_width + NEXT_LENGTH)
+                             + NEXT_LENGTH + m_all_file.skip_column_length
                              + m_all_file.processed_threshold
                              + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
                 all_out << std::setprecision(m_precision) << score;
             }
         }
+        m_all_file.processed_threshold++;
         if (no_regress) {
             iter_threshold++;
             continue;
@@ -830,7 +832,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
             permutation(target, num_thread, m_target_binary[pheno_index]);
         }
         iter_threshold++;
-        m_all_file.processed_threshold++;
     }
 
     if (all_out.is_open()) all_out.close();
@@ -839,7 +840,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         print_best(target, pheno_index, c_commander);
         // we don't do competitive for the full set
         if (m_prset && c_commander.perform_set_perm() && region_index != 0) {
-            run_competitive(target, c_commander, region.size() - 1,
+            run_competitive(target, c_commander,
                             region.num_post_clump_snp(region_index),
                             region.duplicated_size(region_index),
                             m_target_binary[pheno_index]);
@@ -872,10 +873,11 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
             std::string has_pheno =
                 target.sample_in_regression(sample) ? "Yes" : "No";
             size_t loc = m_best_file.header_length
-                         + sample * m_best_file.line_width
-                         + m_best_file.skip_column_length
+                         + sample * (m_best_file.line_width + NEXT_LENGTH)
+                         + NEXT_LENGTH + m_best_file.skip_column_length
                          + m_best_file.processed_threshold
                          + m_best_file.processed_threshold * m_numeric_width;
+
             best_out.seekp(loc);
             best_out << std::setprecision(m_precision)
                      << m_best_sample_score[sample];
@@ -1285,11 +1287,11 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
     // each numeric output took 12 spaces, then for each output, there is one
     // space next to each
 
-    m_best_file.line_width = region_name.size() * m_numeric_width
-                             + region_name.size() + m_max_fid_length + 1
-                             + m_max_iid_length + 1 + 4;
+    m_best_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1
+                             + region_name.size() * (m_numeric_width + 1) + 1;
+
     m_best_file.skip_column_length =
-        m_max_fid_length + m_max_iid_length + 3 + 3;
+        m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
 
 
     // also handle all score here
@@ -1322,9 +1324,8 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         m_all_file.header_length = header_line.length() + 1;
         m_all_file.processed_threshold = 0;
         m_all_file.line_width =
-            num_thresholds * region_name.size() * m_numeric_width
-            + num_thresholds * region_name.size() + m_max_fid_length + 1
-            + m_max_iid_length + 1;
+            m_max_fid_length + 1 + m_max_iid_length + 1
+            + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
         all_out << header_line << std::endl;
     }
@@ -1605,9 +1606,8 @@ void PRSice::null_set_no_thread(Genotype& target,
                                 std::vector<int>& sample_index,
                                 int& num_significant, size_t num_perm,
                                 size_t set_size, size_t num_selected_snps,
-                                size_t background_index, double original_p,
-                                bool require_standardize, bool is_binary,
-                                bool store_p)
+                                double original_p, bool require_standardize,
+                                bool is_binary, bool store_p)
 {
 
     size_t processed = 0;
@@ -1619,7 +1619,7 @@ void PRSice::null_set_no_thread(Genotype& target,
     while (processed < num_perm) {
         std::iota(selection_list.begin(), selection_list.end(), 0);
         size_t begin = 0;
-        size_t num_snp = set_size;
+        size_t num_snp = num_selected_snps;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             size_t r = selection_list[begin];
@@ -1628,8 +1628,9 @@ void PRSice::null_set_no_thread(Genotype& target,
             selection_list[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps, background_index,
-                              selection_list, require_standardize);
+        // num_selected_snps = for if we use multiple threshold
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 m_independent_variables(sample_index[sample_id], 1) =
@@ -1662,8 +1663,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
                               size_t set_size, size_t num_selected_snps,
-                              size_t background_index, double original_p,
-                              bool require_standardize)
+                              double original_p, bool require_standardize)
 {
     size_t processed = 0;
     const size_t num_sample = sample_index.size();
@@ -1685,8 +1685,8 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             selection_list[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps, background_index,
-                              selection_list, require_standardize);
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 prs[sample_index[sample_id]] =
@@ -1757,7 +1757,7 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
     }
 }
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
-                             const size_t background_index,
+
                              const size_t set_size, const bool store_null,
                              const bool is_binary)
 {
@@ -1838,11 +1838,10 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     // if (store_null) null_p_value.reserve(num_perm);
 
     if (num_thread > 1) {
-        std::thread producer(&PRSice::produce_null_prs, this,
-                             std::ref(set_perm_queue), std::ref(target),
-                             std::ref(sample_index), num_thread - 1, num_perm,
-                             set_size, num_selected_snps, background_index,
-                             obs_p_value, require_standardize);
+        std::thread producer(
+            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
+            std::ref(target), std::ref(sample_index), num_thread - 1, num_perm,
+            set_size, num_selected_snps, obs_p_value, require_standardize);
 
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
@@ -1857,9 +1856,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     else
     {
         null_set_no_thread(target, sample_index, num_more_significant, num_perm,
-                           set_size, num_selected_snps, background_index,
-                           obs_p_value, require_standardize, is_binary,
-                           store_null);
+                           set_size, num_selected_snps, obs_p_value,
+                           require_standardize, is_binary, store_null);
     }
     /*
     if (store_null) {

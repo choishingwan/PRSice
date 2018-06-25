@@ -46,24 +46,24 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
+        Region exclusion(commander.exclusion_range(), reporter);
         GenomeFactory factory;
         Genotype *target_file, *reference_file;
         try
         {
             target_file = factory.createGenotype(
                 commander.target_name(), commander.target_type(),
-                commander.thread(), commander.ignore_fid(),
-                commander.nonfounders(), commander.keep_ambig(), reporter,
-                commander);
-            target_file->is_reference(false);
+                commander.target_list(), commander.thread(),
+                commander.ignore_fid(), commander.nonfounders(),
+                commander.keep_ambig(), reporter, commander);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
-            target_file->load_snps(commander.out(), commander.extract_file(),
-                                   commander.exclude_file(), commander.geno(),
-                                   commander.maf(), commander.info(),
-                                   commander.hard_threshold(),
-                                   commander.hard_coded(), verbose, reporter);
+            target_file->load_snps(
+                commander.out(), commander.extract_file(),
+                commander.exclude_file(), commander.geno(), commander.maf(),
+                commander.info(), commander.hard_threshold(),
+                commander.hard_coded(), exclusion, verbose, reporter);
         }
         catch (const std::invalid_argument& ia)
         {
@@ -76,9 +76,8 @@ int main(int argc, char* argv[])
             return -1;
         }
         // TODO: Revamp Region to make it suitable for prslice too
-        Region region =
-            Region(commander.feature(), target_file->get_chr_order(),
-                   commander.window_5(), commander.window_3());
+        Region region(commander.feature(), commander.window_5(),
+                      commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
@@ -102,15 +101,15 @@ int main(int argc, char* argv[])
         {
             target_file->set_info(commander);
             // load reference panel first so that we have updated the target
-            if (!commander.ref_name().empty()) {
+            if (commander.use_ref()) {
                 reporter.report("Loading reference "
                                 "panel\n==============================\n");
                 reference_file = factory.createGenotype(
                     commander.ref_name(), commander.ref_type(),
-                    commander.thread(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), reporter,
-                    commander);
-                reference_file->is_reference(true);
+                    commander.ref_list(), commander.thread(),
+                    commander.ignore_fid(), commander.nonfounders(),
+                    commander.keep_ambig(), reporter, commander, true);
+
                 reference_file->load_samples(commander.ld_keep_file(),
                                              commander.ld_remove_file(),
                                              verbose, reporter);
@@ -119,7 +118,8 @@ int main(int argc, char* argv[])
                     commander.out(), commander.extract_file(),
                     commander.exclude_file(), commander.geno(), commander.maf(),
                     commander.info(), commander.hard_threshold(),
-                    commander.hard_coded(), verbose, reporter, target_file);
+                    commander.hard_coded(), exclusion, verbose, reporter,
+                    target_file);
             }
 
             std::string message = "Start processing " + base_name + "\n";
@@ -144,12 +144,11 @@ int main(int argc, char* argv[])
             region.print_file(region_out_name);
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
-                target_file->efficient_clumping((commander.ref_name().empty())
-                                                    ? *target_file
-                                                    : *reference_file,
-                                                reporter, commander.pearson());
+                target_file->efficient_clumping(
+                    commander.use_ref() ? *reference_file : *target_file,
+                    reporter, commander.pearson());
                 // immediately free the memory if needed
-                if (!commander.ref_name().empty()) delete reference_file;
+                if (commander.use_ref()) delete reference_file;
             }
             if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =

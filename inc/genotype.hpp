@@ -51,8 +51,10 @@ class Genotype
 public:
     Genotype(){};
     Genotype(const size_t thread, const bool ignore_fid,
-             const bool keep_nonfounder, const bool keep_ambig)
-        : m_thread(thread)
+             const bool keep_nonfounder, const bool keep_ambig,
+             const bool is_ref = false)
+        : m_is_ref(is_ref)
+        , m_thread(thread)
         , m_keep_nonfounder(keep_nonfounder)
         , m_ignore_fid(ignore_fid)
         , m_keep_ambig(keep_ambig){};
@@ -70,15 +72,9 @@ public:
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter,
+                   Region& exclusion, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
-    void load_snps(const std::string out_prefix,
-                   const std::unordered_map<std::string, size_t>& existed_snps,
-                   const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter);
-    void is_reference(const bool is_ref) { m_is_ref = is_ref; }
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -223,7 +219,6 @@ public:
     };
 
     void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
-                        const size_t& background_index,
                         const std::vector<size_t>& selection_list,
                         const bool require_standardize);
     void init_background_index(const size_t& background_index)
@@ -294,6 +289,7 @@ protected:
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
+    std::vector<std::string> load_genotype_prefix(const std::string& file_name);
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
     // responsible for reading in the sample
@@ -304,7 +300,8 @@ protected:
     virtual std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   const std::string& out_prefix, Genotype* target = nullptr)
+                   Region& exclusion, const std::string& out_prefix,
+                   Genotype* target = nullptr)
     {
         return std::vector<SNP>(0);
     };
