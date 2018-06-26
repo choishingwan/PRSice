@@ -60,7 +60,7 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
-    misc.non_cumulate  = 1;
+    misc.non_cumulate  = 0;
     misc.exclusion_range = "";
     misc.print_all_scores = false;
     misc.ignore_fid = false;

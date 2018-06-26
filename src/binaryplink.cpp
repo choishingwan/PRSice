@@ -366,25 +366,22 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 // to keep this SNP
                 // only do the filtering if we need to as my current
                 // implementation isn't as efficient as PLINK
-                if (num_snp_read - prev_snp_processed > 1) {
-                    // skip unread lines
-                    if (!bed.seekg(m_bed_offset
-                                       + ((num_snp_read - 1)
-                                          * ((uint64_t) unfiltered_sample_ct4)),
-                                   std::ios_base::beg))
-                    {
-                        std::string error_message =
-                            "Error: Cannot read the bed file(seek): "
-                            + bed_name;
-                        throw std::runtime_error(error_message);
-                    }
-                }
-                prev_snp_processed = (num_snp_read - 1);
-                // get the location of the SNP in the binary file
-                // this is used in clumping and PRS calculation which
-                // allow us to jump directly to the SNP of interest
-                std::streampos byte_pos = bed.tellg();
+            	std::streampos byte_pos = m_bed_offset + ((num_snp_read - 1) * ((uint64_t) unfiltered_sample_ct4));
                 if (maf > 0 || geno < 1) {
+                	if (num_snp_read - prev_snp_processed > 1) {
+                		// skip unread lines
+                		if (!bed.seekg(byte_pos, std::ios_base::beg))
+                		{
+                			std::string error_message =
+                					"Error: Cannot read the bed file(seek): "
+                					+ bed_name;
+                			throw std::runtime_error(error_message);
+                		}
+                	}
+                	prev_snp_processed = (num_snp_read - 1);
+                	// get the location of the SNP in the binary file
+                	// this is used in clumping and PRS calculation which
+                	// allow us to jump directly to the SNP of interest
                     // only load in all included samples (including
                     // non-founders)
                     if (load_and_collapse_incl(
@@ -464,9 +461,6 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     m_existed_snps_index[bim_info[+BIM::RS]] = snp_info.size();
                     // TODO: When working with SNP class, we need to add in the
                     // aA AA aa variable to avoid re-calculating the mean
-                    // need to use push_back here as we don't know the
-                    // total number of SNPs in all the bim file ('we procedss
-                    // each one after another)
                     snp_info.push_back(SNP(
                         bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos));
@@ -505,13 +499,13 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             std::string error_message = "Error: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for (auto&& snp : m_existed_snps) {
+        for (auto&& snp : snp_info) {
             if (duplicated_snp.find(snp.rs()) != duplicated_snp.end()) continue;
             log_file_stream << snp.rs() << std::endl;
         }
         log_file_stream.close();
         std::string error_message =
-            "Error: A total of "+std::to_string(duplicated_snp.size())+" duplicated SNP ID detected out of "+std::to_string(m_existed_snps.size())+" input SNPs! Valid SNP ID (post --extract / "
+            "Error: A total of "+std::to_string(duplicated_snp.size())+" duplicated SNP ID detected out of "+std::to_string(snp_info.size())+" input SNPs! Valid SNP ID (post --extract / "
             "--exclude, non-duplicated SNPs) stored at "
             + dup_name + ". You can avoid this error by using --extract "
             + dup_name;
