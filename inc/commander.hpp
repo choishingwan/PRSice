@@ -98,6 +98,7 @@ public:
     std::string out() const { return misc.out; };
     std::string exclusion_range() const { return misc.exclusion_range; };
     bool all_scores() const { return misc.print_all_scores; };
+    bool cumulate() const { return !misc.non_cumulate;};
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
     bool print_snp() const { return misc.print_snp; };
@@ -273,6 +274,7 @@ private:
     {
         std::string out;
         std::string exclusion_range;
+        int non_cumulate;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;

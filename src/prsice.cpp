@@ -769,6 +769,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     const int num_thread = c_commander.thread();
     const bool multi = pheno_info.name.size() > 1;
     const size_t num_samples_included = target.num_sample();
+    const bool cumulate = c_commander.cumulate();
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
@@ -811,7 +812,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     bool require_standardize = (m_score == SCORING::STANDARDIZE);
     print_progress();
     while (target.get_score(cur_index, cur_category, cur_threshold,
-                            m_num_snp_included, region_index,
+                            m_num_snp_included, region_index,cumulate,
                             require_standardize))
     {
         m_analysis_done++;

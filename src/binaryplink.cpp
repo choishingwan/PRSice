@@ -511,7 +511,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         }
         log_file_stream.close();
         std::string error_message =
-            "Error: Duplicated SNP ID detected! Valid SNP ID (post --extract / "
+            "Error: A total of "+std::to_string(duplicated_snp.size())+" duplicated SNP ID detected out of "+std::to_string(m_existed_snps.size())+" input SNPs! Valid SNP ID (post --extract / "
             "--exclude, non-duplicated SNPs) stored at "
             + dup_name + ". You can avoid this error by using --extract "
             + dup_name;

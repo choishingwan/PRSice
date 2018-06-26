@@ -60,6 +60,7 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
+    misc.non_cumulate  = 1;
     misc.exclusion_range = "";
     misc.print_all_scores = false;
     misc.ignore_fid = false;
@@ -172,6 +173,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"keep-ambig", no_argument, &prs_snp_filtering.keep_ambig, 1},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
+        {"non-cumulative", no_argument, &misc.non_cumulate, 1},
         {"no-default", no_argument, &base.no_default, 1},
         {"no-full", no_argument, &p_thresholds.no_full, 1},
         {"no-regress", no_argument, &prs_calculation.no_regress, 1},

@@ -90,7 +90,7 @@ public:
     size_t num_sample() const { return m_sample_names.size(); }
 
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
-                   size_t& num_snp_included, const size_t region_index,
+                   size_t& num_snp_included, const size_t region_index, const bool cumulate,
                    const bool require_statistic);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,

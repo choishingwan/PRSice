@@ -1602,13 +1602,17 @@ void Genotype::get_null_score(const size_t& set_size,
 }
 bool Genotype::get_score(int& cur_index, int& cur_category,
                          double& cur_threshold, size_t& num_snp_included,
-                         const size_t region_index,
+                         const size_t region_index, const bool cumulate,
                          const bool require_statistic)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
     int end_index = 0;
     bool ended = false;
+    if(!cumulate){
+    	reset_sample_prs();
+    }
+
     if (cur_index == -1) // first run
     {
         cur_index = 0;
