@@ -555,9 +555,11 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
         }
         log_file_stream.close();
         std::string error_message =
-        		"Error: A total of "+std::to_string(duplicated_snps.size())+" duplicated SNP ID detected out of "+std::to_string(snp_res.size())+" input SNPs!. Valid SNP ID stored at "
-            + dup_name + ". You can avoid this error by using --extract "
-            + dup_name;
+            "Error: A total of " + std::to_string(duplicated_snps.size())
+            + " duplicated SNP ID detected out of "
+            + std::to_string(snp_res.size())
+            + " input SNPs!. Valid SNP ID stored at " + dup_name
+            + ". You can avoid this error by using --extract " + dup_name;
         throw std::runtime_error(error_message);
     }
     if (hard_coded) {

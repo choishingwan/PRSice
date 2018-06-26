@@ -1609,8 +1609,8 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
         return false;
     int end_index = 0;
     bool ended = false;
-    if(!cumulate){
-    	reset_sample_prs();
+    if (!cumulate) {
+        reset_sample_prs();
     }
 
     if (cur_index == -1) // first run

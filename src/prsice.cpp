@@ -812,7 +812,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     bool require_standardize = (m_score == SCORING::STANDARDIZE);
     print_progress();
     while (target.get_score(cur_index, cur_category, cur_threshold,
-                            m_num_snp_included, region_index,cumulate,
+                            m_num_snp_included, region_index, cumulate,
                             require_standardize))
     {
         m_analysis_done++;
