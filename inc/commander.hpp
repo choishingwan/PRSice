@@ -466,7 +466,7 @@ private:
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
         }
-        std::vector<std::string> token = misc::split(optarg, ",");
+        std::vector<std::string> token = misc::split(target, ",");
         try
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
