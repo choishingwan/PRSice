@@ -533,7 +533,7 @@ private:
     {
         try
         {
-            int index = misc::convert<int>(optarg);
+            int index = misc::convert<int>(target);
             if (index >= max) {
                 error = true;
                 error_message.append("Error: " + name
