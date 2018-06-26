@@ -32,6 +32,7 @@
 #include <deque>
 #include <fstream>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -50,8 +51,10 @@ class Genotype
 public:
     Genotype(){};
     Genotype(const size_t thread, const bool ignore_fid,
-             const bool keep_nonfounder, const bool keep_ambig)
-        : m_thread(thread)
+             const bool keep_nonfounder, const bool keep_ambig,
+             const bool is_ref = false)
+        : m_is_ref(is_ref)
+        , m_thread(thread)
         , m_keep_nonfounder(keep_nonfounder)
         , m_ignore_fid(ignore_fid)
         , m_keep_ambig(keep_ambig){};
@@ -69,15 +72,9 @@ public:
                    const std::string& exclude_file, const double geno,
                    const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter,
+                   Region& exclusion, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
-    void load_snps(const std::string out_prefix,
-                   const std::unordered_map<std::string, size_t>& existed_snps,
-                   const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   bool verbose, Reporter& reporter);
-    void is_reference(const bool is_ref) { m_is_ref = is_ref; }
     std::unordered_map<std::string, int> get_chr_order() const
     {
         return m_chr_order;
@@ -91,9 +88,9 @@ public:
     std::vector<Sample> sample_names() const { return m_sample_names; };
     size_t max_category() const { return m_max_category; };
     size_t num_sample() const { return m_sample_names.size(); }
-    size_t num_include_samples() const { return m_sample_ct; };
+
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
-                   size_t& num_snp_included, const size_t region_index,
+                   size_t& num_snp_included, const size_t region_index, const bool cumulate,
                    const bool require_statistic);
     bool sort_by_p();
     void print_snp(std::string& output, double threshold,
@@ -105,12 +102,13 @@ public:
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
-    void reset_sample()
+
+    void reset_sample_pheno()
     {
         for (auto&& sample : m_sample_names) {
             sample.num_snp = 0;
             sample.prs = 0.0;
-            sample.has_pheno = false;
+            sample.in_regression = false;
         }
     };
 
@@ -121,27 +119,7 @@ public:
             sample.num_snp = 0.0;
         }
     };
-    void reset_prs()
-    {
-        m_cur_category_index = 0;
-        for (auto&& sample : m_sample_names) {
-            sample.prs = 0.0;
-            sample.num_snp = 0.0;
-        }
-    }
     bool prepare_prsice(Reporter& reporter);
-    bool has_category(size_t i) const
-    {
-        return (m_cur_category_index + i < m_categories.size());
-    }
-    double get_thresholds(size_t i) const
-    {
-        return m_thresholds.at(m_cur_category_index + i);
-    }
-    int get_category(size_t i) const
-    {
-        return m_categories.at(m_cur_category_index + i);
-    }
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_names.size())
@@ -151,18 +129,21 @@ public:
         else
             return m_sample_names[i].FID + "_" + m_sample_names[i].IID;
     }
-    bool sample_included(size_t i) const
-    {
-        return m_sample_names.at(i).included;
-    };
 
-    bool sample_is_founder(size_t i) const
+
+    bool sample_in_regression(size_t i) const
     {
-        return m_sample_names.at(i).founder;
+        return m_sample_names.at(i).in_regression;
     }
-    void got_pheno(size_t i) { m_sample_names.at(i).has_pheno = true; }
-    void invalid_pheno(size_t i) { m_sample_names.at(i).has_pheno = false; }
-    bool has_pheno(size_t i) const { return m_sample_names.at(i).has_pheno; }
+    bool is_include(size_t i) const { return m_sample_names.at(i).include; }
+    void set_in_regression(size_t i, bool within)
+    {
+        m_sample_names.at(i).in_regression = within;
+    }
+    bool include_for_regression(size_t i) const
+    {
+        return m_sample_names.at(i).in_regression;
+    };
     std::string pheno(size_t i) const { return m_sample_names.at(i).pheno; }
     bool pheno_is_na(size_t i) const
     {
@@ -204,6 +185,50 @@ public:
     }
     uintptr_t founder_ct() const { return m_founder_ct; }
     uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
+    void count_snp_in_region(Region& region, const std::string& name,
+                             const bool print_snp) const
+    {
+        std::string snp_file_name = name + ".snp";
+        std::ofstream print_file;
+        if (print_snp) {
+            print_file.open(snp_file_name.c_str());
+            if (!print_file.is_open()) {
+                throw std::runtime_error(
+                    "Error: Cannot open snp file to write: " + snp_file_name);
+            }
+            print_file << "SNP\tCHR\tBP\tP";
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+                print_file << "\t" << region.get_name(i_region);
+            }
+            print_file << std::endl;
+        }
+        std::vector<int> result(region.size(), 0);
+        for (auto&& snp : m_existed_snps) {
+            if (print_snp)
+                print_file << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
+                           << "\t" << snp.p_value();
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+                result[i_region] += snp.in(i_region);
+                if (print_snp)
+                    print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
+            }
+            if (print_snp) print_file << std::endl;
+        }
+        if (print_snp) print_file.close();
+        region.post_clump_count(result);
+    };
+
+    void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
+                        const std::vector<size_t>& selection_list,
+                        const bool require_standardize);
+    void init_background_index(const size_t& background_index)
+    {
+        m_background_snp_index.clear();
+        for (size_t i = 0; i < m_existed_snps.size(); ++i)
+            if (m_existed_snps[i].in(background_index))
+                m_background_snp_index.push_back(i);
+    }
+    size_t num_background() const { return m_background_snp_index.size(); };
 
 protected:
     friend class BinaryPlink;
@@ -260,9 +285,11 @@ protected:
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, int> m_chr_order;
     std::vector<uintptr_t> m_tmp_genotype;
+    std::vector<size_t> m_background_snp_index;
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
+    std::vector<std::string> load_genotype_prefix(const std::string& file_name);
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
     // responsible for reading in the sample
@@ -273,7 +300,8 @@ protected:
     virtual std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
                    const double hard_threshold, const bool hard_coded,
-                   const std::string& out_prefix, Genotype* target = nullptr)
+                   Region& exclusion, const std::string& out_prefix,
+                   Genotype* target = nullptr)
     {
         return std::vector<SNP>(0);
     };
@@ -292,6 +320,7 @@ protected:
                   std::vector<uintptr_t>& index_data,
                   std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
+    unsigned int m_seed;
     size_t m_max_category = 0;
     size_t m_region_size = 1;
     size_t m_num_threshold = 0;
@@ -325,6 +354,7 @@ protected:
                                       const std::string& file_name){};
     virtual void read_score(size_t start_index, size_t end_bound,
                             const size_t region_index){};
+    virtual void read_score(std::vector<size_t>& index){};
 
 
     // hh_exists

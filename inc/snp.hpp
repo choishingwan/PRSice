@@ -59,6 +59,10 @@ public:
     std::string get_rs() const { return basic.rs; };
     static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
+    static void sort_snp_index(std::vector<size_t>& index,
+                               const std::vector<SNP>& input);
+    static void sort_snp_for_perm(std::vector<size_t>& index,
+                                  const std::vector<SNP>& input);
     bool operator==(const SNP& Ref) const
     {
         if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
@@ -173,7 +177,7 @@ public:
         m_max_flag_index = BITCT_TO_WORDCT(region.size());
         m_flags.resize(m_max_flag_index);
         // m_flag = new uintptr_t[m_max_flag_index];
-        region.check(std::to_string(basic.chr), basic.loc, m_flags);
+        region.update_flag(std::to_string(basic.chr), basic.loc, m_flags);
     };
 
     void set_clumped() { clump_info.clumped = true; };
@@ -219,7 +223,9 @@ public:
 
 private:
     // basic info
-
+    /*
+     * Memory size = MAX_ID_SLEN*3 (ref alt rs)+ 4*
+     */
     struct Clump
     {
         bool clumped;

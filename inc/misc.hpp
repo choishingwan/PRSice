@@ -26,9 +26,35 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#if defined __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/mach_init.h>
+#include <mach/mach_types.h>
+#include <mach/vm_statistics.h>
+#include <sys/sysctl.h>
+#elif defined _WIN32
+#include <windows.h>
+// psapi must go after windows, or will generate error
+#include "psapi.h"
+#else
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
+#define BIGSTACK_MIN_MB 64
+#define BIGSTACK_DEFAULT_MB 2048
+
 
 namespace misc
 {
@@ -79,6 +105,7 @@ private:
     std::vector<T> m_storage;
 };
 
+
 inline bool to_bool(const std::string& input)
 {
     std::string str = input;
@@ -96,6 +123,136 @@ inline bool to_bool(const std::string& input)
     }
 }
 
+inline int parseLine(char* line)
+{
+    // This assumes that a digit will be found and the line ends in " Kb".
+    int i = strlen(line);
+    const char* p = line;
+    while (*p < '0' || *p > '9') p++;
+    line[i - 3] = '\0';
+    i = atoi(p);
+    return i;
+}
+
+inline int getValue()
+{ // Note: this value is in KB!
+    FILE* file = fopen("/proc/self/status", "r");
+    int result = -1;
+    char line[128];
+
+    while (fgets(line, 128, file) != NULL) {
+        if (strncmp(line, "VmSize:", 7) == 0) {
+            result = parseLine(line);
+            break;
+        }
+    }
+    fclose(file);
+    return result;
+}
+
+// this works on MAC and Linux
+inline size_t current_ram_usage()
+{
+#if defined __APPLE__
+    // From https://stackoverflow.com/a/1911863
+    struct task_basic_info t_info;
+    mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+
+    if (KERN_SUCCESS
+        != task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info,
+                     &t_info_count))
+    {
+        throw std::runtime_error("Unable to determine memory used");
+    }
+    return t_info.resident_size;
+#elif defined _WIN32
+    PROCESS_MEMORY_COUNTERS_EX memCounter;
+    GetProcessMemoryInfo(
+        GetCurrentProcess(),
+        reinterpret_cast<PPROCESS_MEMORY_COUNTERS>(&memCounter),
+        sizeof(memCounter));
+    // SIZE_T virtualMemUsedByMe = memCounter.PrivateUsage;
+    SIZE_T physMemUsedByMe = memCounter.WorkingSetSize;
+    return physMemUsedByMe;
+#else
+    return getValue() * 1024;
+#endif
+}
+
+inline size_t total_ram_available()
+{
+#ifdef __APPLE__
+    int32_t mib[2];
+    size_t sztmp;
+#endif
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    int64_t llxx;
+    intptr_t default_alloc_mb;
+    intptr_t malloc_size_mb = 0;
+#ifdef __APPLE__
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    llxx = 0;
+
+    sztmp = sizeof(int64_t);
+    sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
+    llxx /= 1048576;
+#else
+#ifdef _WIN32
+    MEMORYSTATUSEX memstatus;
+    memstatus.dwLength = sizeof(memstatus);
+    GlobalMemoryStatusEx(&memstatus);
+    llxx = memstatus.ullTotalPhys / 1048576;
+#else
+    llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
+           * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
+#endif
+#endif
+    if (!llxx) {
+        default_alloc_mb = BIGSTACK_DEFAULT_MB;
+    }
+    else if (llxx < (BIGSTACK_MIN_MB * 2))
+    {
+        default_alloc_mb = BIGSTACK_MIN_MB;
+    }
+    else
+    {
+        default_alloc_mb = llxx / 2;
+    }
+    if (!malloc_size_mb) {
+        malloc_size_mb = default_alloc_mb;
+    }
+    else if (malloc_size_mb < BIGSTACK_MIN_MB)
+    {
+        malloc_size_mb = BIGSTACK_MIN_MB;
+    }
+    std::string message = "";
+#ifndef __LP64__
+    if (malloc_size_mb > 2047) {
+        malloc_size_mb = 2047;
+    }
+#endif
+    bigstack_ua =
+        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+    // if fail, return nullptr which will then get into the while loop
+    while (!bigstack_ua) {
+        malloc_size_mb = (malloc_size_mb * 3) / 4;
+        if (malloc_size_mb < BIGSTACK_MIN_MB) {
+            malloc_size_mb = BIGSTACK_MIN_MB;
+        }
+        bigstack_ua =
+            (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
+        if (bigstack_ua) {
+        }
+        else if (malloc_size_mb == BIGSTACK_MIN_MB)
+        {
+            throw std::runtime_error("Failed to allocate required memory");
+        }
+    }
+    free(bigstack_ua);
+    bigstack_ua = nullptr;
+    return malloc_size_mb * 1024 * 1024;
+}
 // function from John D.Cook
 // https://www.johndcook.com/blog/standard_deviation/
 class RunningStat
@@ -152,10 +309,19 @@ inline T convert(const std::string& str)
 {
     std::istringstream iss(str);
     T obj;
-    iss >> std::ws >> obj >> std::ws;
-    if (!iss.eof()) throw std::runtime_error("Unable to convert the input");
+    iss >> obj;
 
+    if (!iss.eof() || iss.fail()) {
+        throw std::runtime_error("Unable to convert the input");
+    }
     return obj;
+}
+template <typename T>
+inline std::string to_string(T value)
+{
+    std::stringstream out;
+    out << value;
+    return out.str();
 }
 // trim from start (in place)
 inline void ltrim(std::string& s)

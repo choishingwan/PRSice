@@ -1,7 +1,7 @@
 # Introduction
 Systematic ancestry difference among samples can cause spurious associations and
-can lead to invalid PRS results. Similarly, one can also increase the power of their
-PRS analysis by controlling for other confounders. To account for that,
+can lead to invalid PRS results. Similarly, power of the PRS analysis can be 
+improved by controlling for other confounders. To account for that,
 PRSice allow the incorporation of covariates into the analysis.
 
 !!! note
@@ -9,9 +9,14 @@ PRSice allow the incorporation of covariates into the analysis.
     When large number of covariates are included in the model, missing
     data might poses a problem. PRSice will automatically exclude any
     samples with missing covariates from the regression model but will
-    still calculate the PRS for that sample. The **Has_Phenotype** column
+    still calculate the PRS for that sample. The **In_Regression** column
     in the best score output is used to indicate whether the sample is
     included in the regression model (*Yes* for included; *No* for excluded)
+
+!!! Important
+
+    PRSice currently only support numeric covariates. To include non-numeric
+    covariates, dummy variable must be generated beforehand.
 
 # Comamnds
 - `--cov-col` | `-c`

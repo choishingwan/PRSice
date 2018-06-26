@@ -8,6 +8,7 @@
 #ifndef REPORTER_HPP_
 #define REPORTER_HPP_
 
+#include "misc.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>

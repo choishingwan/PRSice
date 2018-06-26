@@ -16,18 +16,7 @@
 
 #include "prsice.hpp"
 
-
-// ARG!! THIS IS UGLY!!
-// But I don't want to pass a void package to the function containing all this
-// that'd be a nigtmare to backware convert them back...
-bool PRSice::g_logit_perm = false;
-Eigen::MatrixXd PRSice::g_independent_variables;
-std::vector<double> PRSice::g_perm_result;
-std::unordered_map<uintptr_t, PRSice::perm_info> PRSice::g_perm_range;
-Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PRSice::g_perm_pre_decomposed;
-Eigen::MatrixXd PRSice::g_permuted_pheno;
-Eigen::VectorXd PRSice::g_pre_se_calulated;
-
+std::mutex PRSice::lock_guard;
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 {
     std::vector<std::string> pheno_header = c_commander.pheno_col();
@@ -55,9 +44,9 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         pheno.close();
         misc::trim(line);
         std::vector<std::string> col = misc::split(line);
-        if (col.size() < (size_t)(1 + !m_ignore_fid)) {
+        if (col.size() < (size_t)(2 + !m_ignore_fid)) {
             throw std::runtime_error(
-                "Error: Not enough column in Phenotype file."
+                "Error: Not enough column in Phenotype file. "
                 "Have you use the --ignore-fid option");
         }
         std::string sample_id = col[0];
@@ -109,7 +98,8 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             }
         }
     }
-
+    // TODO: Might want to error out when duplicated column is detected within
+    // the phenotype file
     size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
     message.append("There are a total of " + std::to_string(num_pheno)
                    + " phenotype to process\n");
@@ -122,18 +112,20 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
 {
     m_null_r2 = 0.0;
     m_phenotype = Eigen::VectorXd::Zero(0);
-    g_independent_variables.resize(0, 0);
+    m_independent_variables.resize(0, 0);
     m_sample_with_phenotypes.clear();
-
+    m_null_store.clear();
 
     const bool no_regress = c_commander.no_regress();
     const std::string pheno_file = c_commander.pheno_file();
     const std::string output_name = c_commander.out();
-    target.reset_sample();
+
+    // this reset the in_regression flag of all samples
+    target.reset_sample_pheno();
     // this includes all samples
 
-    gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
     if (!no_regress) {
+        gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
         std::vector<std::string> cov_header = c_commander.get_cov_header();
         gen_cov_matrix(c_commander.get_cov_file(), cov_header, reporter);
     }
@@ -146,16 +138,16 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     // get the null r2
     double null_r2_adjust = 0.0;
     int n_thread = c_commander.thread();
-    if (g_independent_variables.cols() > 2 && !no_regress) {
-        assert(g_independent_variables.rows() == m_phenotype.rows());
+    if (m_independent_variables.cols() > 2 && !no_regress) {
+        assert(m_independent_variables.rows() == m_phenotype.rows());
         if (c_commander.is_binary(pheno_index)) {
             // ignore the first column
             // this is ok as both the first column (intercept) and the
             // second column (PRS) is currently 1
             Regression::glm(m_phenotype,
-                            g_independent_variables.topRightCorner(
-                                g_independent_variables.rows(),
-                                g_independent_variables.cols() - 1),
+                            m_independent_variables.topRightCorner(
+                                m_independent_variables.rows(),
+                                m_independent_variables.cols() - 1),
                             m_null_p, m_null_r2, m_null_coeff, m_null_se, 25,
                             n_thread, true);
         }
@@ -164,9 +156,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
             // ignore the first column
             Regression::linear_regression(
                 m_phenotype,
-                g_independent_variables.topRightCorner(
-                    g_independent_variables.rows(),
-                    g_independent_variables.cols() - 1),
+                m_independent_variables.topRightCorner(
+                    m_independent_variables.rows(),
+                    m_independent_variables.cols() - 1),
                 m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se,
                 n_thread, true);
         }
@@ -177,12 +169,11 @@ void PRSice::update_sample_included(Genotype& target)
 {
     m_max_fid_length = 3;
     m_max_iid_length = 3;
-    m_sample_index.clear();
     // anyone that's included in the study are considered
     // therefore, it should work even for multiple different
     // phenotypes
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-        bool included = target.sample_included(i_sample);
+        bool included = target.is_include(i_sample);
         if (!included) continue;
         m_max_fid_length = (m_max_fid_length > target.fid(i_sample).length())
                                ? m_max_fid_length
@@ -191,14 +182,12 @@ void PRSice::update_sample_included(Genotype& target)
                                ? m_max_iid_length
                                : target.iid(i_sample).length();
 
+        // update the in regression flag according to covariate
         if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
             == m_sample_with_phenotypes.end())
         {
-            target.invalid_pheno(i_sample);
+            target.set_in_regression(i_sample, false);
         }
-        // sample index store the index of samples that we need on from the
-        // m_sample_names of target
-        m_sample_index.push_back(i_sample);
     }
 }
 
@@ -219,10 +208,12 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     size_t sample_index_ct = 0;
     size_t num_included = 0;
     std::unordered_set<double> input_sanity_check; // check if input is sensible
-    if (pheno_info.use_pheno)                      // use phenotype file
+    std::string pheno_name = "Phenotype";
+    if (pheno_info.use_pheno) // use phenotype file
     {
         int pheno_col_index =
             pheno_info.col[pheno_index]; // obtain the phenotype index
+        pheno_name = pheno_info.name[pheno_index];
         std::ifstream pheno_file;
         pheno_file.open(pheno_file_name.c_str());
         if (!pheno_file.is_open()) {
@@ -256,7 +247,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         pheno_file.close();
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
             std::string id = target.sample_id(i_sample);
-            bool included = target.sample_is_founder(i_sample);
+            bool included = target.is_include(i_sample);
             if (included) num_included++;
             if (phenotype_info.find(id) != phenotype_info.end() && included
                 && phenotype_info[id].compare("NA") != 0)
@@ -274,7 +265,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                         else
                         {
                             // so that it will add invalid
-                            throw std::runtime_error("");
+                            throw std::runtime_error(
+                                "Invalid binary phenotype format!");
                         }
                     }
                     else
@@ -286,7 +278,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                         }
                     }
                     m_sample_with_phenotypes[id] = sample_index_ct++;
-                    target.got_pheno(i_sample);
+                    target.set_in_regression(i_sample, true);
                 }
                 catch (const std::runtime_error& error)
                 {
@@ -304,7 +296,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // No phenotype file is provided
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-            bool included = target.sample_is_founder(i_sample);
+            bool included = target.is_include(i_sample);
             if (included) num_included++;
             if (target.pheno_is_na(i_sample) || !included) {
                 // it is ok to skip NA as default = sample.has_pheno = false
@@ -336,7 +328,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 }
                 m_sample_with_phenotypes[target.sample_id(i_sample)] =
                     sample_index_ct++;
-                target.got_pheno(i_sample);
+                target.set_in_regression(i_sample, true);
             }
             catch (const std::runtime_error& error)
             {
@@ -346,6 +338,14 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     }
 
     std::string message = "";
+    message = pheno_name + " is a ";
+    if (binary) {
+        message.append("binary phenotype\n");
+    }
+    else
+    {
+        message.append("continuous phenotype\n");
+    }
     if (num_not_found != 0) {
         message.append(std::to_string(num_not_found)
                        + " sample(s) without phenotype\n");
@@ -594,7 +594,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     size_t num_sample = m_sample_with_phenotypes.size();
     if (c_cov_file.empty()) {
         // if no covariates, just return a matrix of 1
-        g_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
+        m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
         return;
     }
     // obtain the index of each covariate
@@ -612,7 +612,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // std::vector<std::unordered_map<std::string, int>> factor_levels;
     // check_factor_cov( c_cov_file,c_cov_header, cov_index, factor_levels);
 
-    g_independent_variables =
+    m_independent_variables =
         Eigen::MatrixXd::Ones(num_sample, cov_index.size() + 2);
     bool valid = true;
     size_t num_valid = 0;
@@ -646,9 +646,13 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             // sample is found in the phenotype vector
             int index = m_sample_with_phenotypes[id]; // index on vector
             for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                if (token[cov_index[i_cov]].compare("NA") == 0) {
+                if (token[cov_index[i_cov]].compare("NA") == 0
+                    || token[cov_index[i_cov]].compare("Na") == 0
+                    || token[cov_index[i_cov]].compare("na") == 0
+                    || token[cov_index[i_cov]].compare("nA") == 0)
+                {
                     valid = false;
-                    g_independent_variables(index, i_cov + 2) = 0;
+                    m_independent_variables(index, i_cov + 2) = 0;
                     missing_count[i_cov]++;
                 }
                 else
@@ -657,15 +661,15 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     {
                         double temp =
                             misc::convert<double>(token[cov_index[i_cov]]);
-                        g_independent_variables(index, i_cov + 2) =
-                            temp; // + 2 because first line = intercept, second
-                                  // line = PRS
+                        m_independent_variables(index, i_cov + 2) = temp;
+                        // + 2 because first line = intercept, second
+                        // line = PRS
                     }
                     catch (const std::runtime_error& error)
                     {
                         valid = false;
                         // place holder as 0, will remove it later
-                        g_independent_variables(index, i_cov + 2) = 0;
+                        m_independent_variables(index, i_cov + 2) = 0;
                         missing_count[i_cov]++;
                     }
                 }
@@ -700,14 +704,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     // we sorted the column index so we can't tell what the
                     // column name is useless we also store the head of the file
                     // (too troublesome)
-                    message.append("Column " + std::to_string(miss)
+                    message.append("Error: Column " + std::to_string(miss)
                                    + " is invalid, please check it is of the "
                                      "correct format\n");
                 }
             }
             reporter.report(message);
-            throw std::runtime_error(
-                "All samples removed due to missingness in covariate file!");
+            throw std::runtime_error("Error: All samples removed due to "
+                                     "missingness in covariate file!");
         }
         if (portion > 0.05) {
             message.append(
@@ -726,7 +730,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                           return std::get<1>(t1) < std::get<1>(t2);
                   });
 
-        // update the m_phenotype and g_independent
+        // update the m_phenotype and m_independent
         m_sample_with_phenotypes.clear();
         for (size_t cur_index = 0; cur_index < valid_sample_index.size();
              ++cur_index)
@@ -737,13 +741,13 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             if (original_index != cur_index) {
                 m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
                 for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                    g_independent_variables(cur_index, i_cov + 2) =
-                        g_independent_variables(original_index, i_cov + 2);
+                    m_independent_variables(cur_index, i_cov + 2) =
+                        m_independent_variables(original_index, i_cov + 2);
                 }
             }
         }
-        g_independent_variables.conservativeResize(
-            valid_sample_index.size(), g_independent_variables.cols());
+        m_independent_variables.conservativeResize(
+            valid_sample_index.size(), m_independent_variables.cols());
         m_phenotype.conservativeResize(valid_sample_index.size(), 1);
     }
     message = "After reading the covariate file, "
@@ -752,29 +756,30 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     reporter.report(message);
 }
 
-void PRSice::run_prsice(const Commander& c_commander,
-                        const std::string& region_name,
+void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-    // target.reset_sample_prs();
-    target.reset_prs();
+
+    target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
     const bool print_all_scores = c_commander.all_scores();
     const int num_thread = c_commander.thread();
+    const bool multi = pheno_info.name.size() > 1;
+    const size_t num_samples_included = target.num_sample();
+    const bool cumulate = c_commander.cumulate();
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
     m_num_snp_included = 0;
-    g_perm_result.resize(m_num_perm, 2);
+    m_perm_result.resize(m_num_perm, 2);
     m_prs_results.clear();
     m_best_sample_score.clear();
     m_prs_results.resize(target.num_threshold());
-    // set to -1 to indicate not don
+    // set to -1 to indicate not done
     for (auto&& p : m_prs_results) p.threshold = -1;
-    const bool multi = pheno_info.name.size() > 1;
     // initialize score vector
     m_best_sample_score.resize(target.num_sample());
 
@@ -782,78 +787,51 @@ void PRSice::run_prsice(const Commander& c_commander,
     // in theory, we only need to calulate it once for every phenotype + sets
     // but it is easier to do it this way
     std::fstream all_out;
-    size_t width_of_line = 0;
-    size_t num_thresholds = 0;
-    size_t header_length = 0;
     if (print_all_scores) {
-        std::vector<double> avail_thresholds = target.get_thresholds();
-        std::sort(avail_thresholds.begin(), avail_thresholds.end());
-        num_thresholds = avail_thresholds.size();
-        // Most of the length below are hard coded. Not sure if
-        // they will mess up in some crazy machine
-        // i.e if those machine output numbers larger than
-        // 12 digits...
-        width_of_line = num_thresholds + num_thresholds * 12 + 1
-                        + m_max_fid_length + m_max_iid_length;
-        std::string header = "FID IID";
-        for (auto& thres : avail_thresholds) {
-            header.append(" " + std::to_string(thres));
-        }
-        header_length = header.length() + 1; // +1 for newline
         std::string all_out_name = c_commander.out();
         if (multi) {
             all_out_name.append("." + pheno_info.name[pheno_index]);
         }
-        if (m_prset) all_out_name.append("." + region_name);
         all_out_name.append(".all.score");
-        all_out.open(all_out_name.c_str(), std::fstream::out | std::fstream::in
-                                               | std::fstream::trunc);
-
+        all_out.open(all_out_name.c_str(),
+                     std::fstream::out | std::fstream::in | std::fstream::ate);
         if (!all_out.is_open()) {
             std::string error_message =
                 "Cannot open file " + all_out_name + " for write";
             throw std::runtime_error(error_message);
         }
-        all_out << header << std::endl;
-
-        for (auto&& sample : m_sample_index) {
-            std::string name = target.fid(sample) + " " + target.iid(sample);
-            all_out << std::setfill(' ') << std::setw(width_of_line)
-                    << std::left << name << std::endl;
-        }
-        width_of_line++; // to account for the new line
     }
 
 
     // current threshold iteration
     size_t iter_threshold = 0;
     // +1 such that only 100% when finished
-    size_t max_category = target.max_category() + 1;
+
     int cur_category = 0, cur_index = -1;
-    double cur_threshold = 0.0, prev_progress = 0.0;
+    double cur_threshold = 0.0;
     bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    print_progress();
     while (target.get_score(cur_index, cur_category, cur_threshold,
-                            m_num_snp_included, region_index,
+                            m_num_snp_included, region_index,cumulate,
                             require_standardize))
     {
-        double progress =
-            (double) cur_category / (double) (max_category) *100.0;
-        if (progress - prev_progress > 0.01 && !m_prset) {
-            fprintf(stderr, "\rProcessing %03.2f%%", progress);
-            prev_progress = progress;
-        }
+        m_analysis_done++;
+
+        print_progress();
 
         if (print_all_scores) {
-            for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
-                double score =
-                    target.calculate_score(m_score, m_sample_index[sample]);
-                size_t loc = header_length + sample * width_of_line
-                             + m_max_fid_length + 1 + m_max_iid_length + 1
-                             + iter_threshold + iter_threshold * 12;
+            for (size_t sample = 0; sample < num_samples_included; ++sample) {
+                double score = target.calculate_score(m_score, sample);
+                size_t loc = m_all_file.header_length
+                             + sample * (m_all_file.line_width + NEXT_LENGTH)
+                             + NEXT_LENGTH + m_all_file.skip_column_length
+                             + m_all_file.processed_threshold
+                             + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
-                all_out << score;
+                all_out << std::setprecision(m_precision) << score;
             }
         }
+        m_all_file.processed_threshold++;
         if (no_regress) {
             iter_threshold++;
             continue;
@@ -862,15 +840,62 @@ void PRSice::run_prsice(const Commander& c_commander,
                       iter_threshold);
 
         if (c_commander.permutation() != 0) {
-            permutation(target, num_thread,
-                        c_commander.logit_perm()
-                            && m_target_binary[pheno_index]);
+            permutation(target, num_thread, m_target_binary[pheno_index]);
         }
         iter_threshold++;
     }
+
     if (all_out.is_open()) all_out.close();
-    if (!m_prset) fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
     process_permutations();
+    if (!no_regress) {
+        print_best(target, pheno_index, c_commander);
+        // we don't do competitive for the full set
+        if (m_prset && c_commander.perform_set_perm() && region_index != 0) {
+            run_competitive(target, c_commander,
+                            region.num_post_clump_snp(region_index),
+                            region.duplicated_size(region_index),
+                            m_target_binary[pheno_index]);
+        }
+    }
+}
+
+void PRSice::print_best(Genotype& target, const size_t pheno_index,
+                        const Commander& commander)
+{
+
+    std::string pheno_name =
+        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
+    std::string output_prefix = commander.out();
+    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
+    std::string out_best = output_prefix + ".best";
+    std::fstream best_out(out_best.c_str(), std::fstream::out | std::fstream::in
+                                                | std::fstream::ate);
+    auto&& best_info = m_prs_results[m_best_index];
+    int best_snp_size = best_info.num_snp;
+    if (best_snp_size == 0) {
+        fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
+        fprintf(stderr, "       Cannot output the best PRS score\n");
+    }
+    else
+    {
+        for (size_t sample = 0; sample < target.num_sample(); ++sample) {
+            // samples that are extracted are ignored
+            // sample excluded will not be output here
+            std::string has_pheno =
+                target.sample_in_regression(sample) ? "Yes" : "No";
+            size_t loc = m_best_file.header_length
+                         + sample * (m_best_file.line_width + NEXT_LENGTH)
+                         + NEXT_LENGTH + m_best_file.skip_column_length
+                         + m_best_file.processed_threshold
+                         + m_best_file.processed_threshold * m_numeric_width;
+
+            best_out.seekp(loc);
+            best_out << std::setprecision(m_precision)
+                     << m_best_sample_score[sample];
+        }
+    }
+    best_out.close();
+    m_best_file.processed_threshold++;
 }
 
 void PRSice::regress_score(Genotype& target, const double threshold,
@@ -879,7 +904,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
 {
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
            se = 0.0;
-    size_t num_include_samples = target.num_sample();
+    const size_t num_include_samples = target.num_sample();
     if (m_num_snp_included == 0
         || (m_num_snp_included == m_prs_results[iter_threshold].num_snp))
     {
@@ -891,16 +916,15 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         if (m_sample_with_phenotypes.find(sample)
             != m_sample_with_phenotypes.end())
         {
-            g_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
+            m_independent_variables(m_sample_with_phenotypes.at(sample), 1) =
                 target.calculate_score(m_score, sample_id);
         }
     }
 
-
     if (m_target_binary[pheno_index]) {
         try
         {
-            Regression::glm(m_phenotype, g_independent_variables, p_value, r2,
+            Regression::glm(m_phenotype, m_independent_variables, p_value, r2,
                             coefficient, se, 25, thread, true);
         }
         catch (const std::runtime_error& error)
@@ -911,7 +935,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
             fprintf(stderr, "       Please send me the DEBUG files\n");
             std::ofstream debug;
             debug.open("DEBUG");
-            debug << g_independent_variables << std::endl;
+            debug << m_independent_variables << std::endl;
             debug.close();
             debug.open("DEBUG.y");
             debug << m_phenotype << std::endl;
@@ -921,7 +945,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     }
     else
     {
-        Regression::linear_regression(m_phenotype, g_independent_variables,
+        Regression::linear_regression(m_phenotype, m_independent_variables,
                                       p_value, r2, r2_adjust, coefficient, se,
                                       thread, true);
     }
@@ -949,6 +973,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     cur_result.emp_p = -1.0;
     cur_result.num_snp = m_num_snp_included;
     cur_result.se = se;
+    cur_result.competitive_p = -1.0;
     m_prs_results[iter_threshold] = cur_result;
 }
 
@@ -959,158 +984,179 @@ void PRSice::process_permutations()
     if (m_best_index == -1) return;
     double best_p = m_prs_results[m_best_index].p;
     size_t num_better = 0;
-    for (auto&& p : g_perm_result) num_better += (p <= best_p);
+    for (auto&& p : m_perm_result) num_better += (p <= best_p);
     m_prs_results[m_best_index].emp_p =
         (double) (num_better + 1.0) / (double) (m_num_perm + 1.0);
 }
 
 void PRSice::permutation(Genotype& target, const size_t n_thread,
-                         bool logit_perm)
+                         bool is_binary)
 {
-
-    int num_iter = m_num_perm / m_perm_per_slice;
 
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
-    size_t num_include_samples = target.num_sample();
     Eigen::setNbThreads(n_thread);
-    for (size_t sample_id = 0; sample_id < num_include_samples; ++sample_id) {
-        std::string sample = target.sample_id(sample_id);
-
-        if (m_sample_with_phenotypes.find(sample)
-            != m_sample_with_phenotypes.end())
-        {
-            g_independent_variables(m_sample_with_phenotypes[sample], 1) =
-                target.calculate_score(m_score, sample_id);
-        }
-    }
     int rank = 0;
     // logit_perm can only be true if it is binary trait and user used the
     // --logit-perm flag
-    if (!logit_perm) {
-        g_perm_pre_decomposed.compute(g_independent_variables);
-        rank = g_perm_pre_decomposed.rank();
-        Eigen::MatrixXd R = g_perm_pre_decomposed.matrixR()
+    // can always do the following if
+    // 1. QT trait (!is_binary)
+    // 2. Not require logit perm
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> decomposed;
+    Eigen::VectorXd pre_se_calulated;
+    bool run_glm = true;
+    if (!is_binary || !m_logit_perm) {
+        decomposed.compute(m_independent_variables);
+        rank = decomposed.rank();
+        Eigen::MatrixXd R = decomposed.matrixR()
                                 .topLeftCorner(rank, rank)
                                 .triangularView<Eigen::Upper>();
-        g_pre_se_calulated = (R.transpose() * R).inverse().diagonal();
+        pre_se_calulated = (R.transpose() * R).inverse().diagonal();
+        run_glm = false;
     }
-    int cur_remain = m_remain_slice;
-    // we reseed the random number generator in each iteration so that
-    // we will always get the same pheontype permutation
-    std::mt19937 rand_gen{m_seed};
-    // need to do the permutation of phenotype without threading
-    // so that we can reserve the sequence
-    size_t processed = 0;
-    // +1 so that we will also procdess the last slice
-    for (int iter = 0; iter < num_iter + 1; ++iter) {
 
-        Eigen::setNbThreads(n_thread);
-        size_t cur_perm = m_perm_per_slice;
-        cur_perm += (cur_remain > 0) ? 1 : 0;
-        cur_remain--;
-        if (cur_perm + processed > m_num_perm) {
-            cur_perm = m_num_perm - processed;
-        }
-        if (cur_perm < 1) break;
-        // g_permuted_pheno.resize(cur_perm);
-        for (size_t p = 0; p < cur_perm; ++p) {
-            perm_matrix.setIdentity();
-            std::shuffle(perm_matrix.indices().data(),
-                         perm_matrix.indices().data()
-                             + perm_matrix.indices().size(),
-                         rand_gen);
-            g_permuted_pheno.col(p) =
-                perm_matrix * m_phenotype; // permute columns
-        }
-        Eigen::setNbThreads(1);
-        // if want to use windows, we need to ditch the use of std::thread
-        // now multithread it and get the corresponding p-values
-
-        std::vector<pthread_t> pthread_store(n_thread);
-        int job_size = cur_perm / n_thread;
-        int remain = cur_perm % n_thread;
-        size_t start = 0;
-        g_perm_range.clear();
-
-        for (uintptr_t ulii = 0; ulii < n_thread; ulii++) {
-            size_t ending = start + job_size + (remain > 0);
-            ending = (ending > cur_perm) ? cur_perm : ending;
-            perm_info cur_info;
-            cur_info.start = start;
-            cur_info.end = ending;
-            cur_info.rank = rank;
-            cur_info.processed = processed;
-            g_perm_range[ulii] = cur_info;
-            start = ending;
-            remain--;
-            try
-            {
-#ifdef _WIN32
-                pthread_store[ulii] = (HANDLE) _beginthreadex(
-                    nullptr, 4096, thread_perm, (void*) ulii, 0, nullptr);
-                if (!pthread_store[ulii]) {
-                    join_all_threads(pthread_store.data(), ulii);
-                    throw std::runtime_error(
-                        "Error: Cannot create thread for permutation!");
-                }
-#else
-                int error_code =
-                    pthread_create(&(pthread_store[ulii]), nullptr,
-                                   &PRSice::thread_perm, (void*) ulii);
-                if (error_code) {
-
-                    std::string error_message =
-                        "Error: Cannot create thread for permutation! ("
-                        + std::string(strerror(error_code)) + ")";
-                    // join_threads(pthread_store.data(), ulii);
-                    throw std::runtime_error(error_message);
-                }
-#endif
-            }
-            catch (std::exception& ex)
-            {
-                std::string error_message =
-                    "Error: Cannot create thread for permutation!\n";
-                error_message.append(ex.what());
-                throw std::runtime_error(error_message);
-            }
-        }
-        join_all_threads(pthread_store.data(), n_thread);
-
-
-        processed += cur_perm;
+    if (n_thread == 1) {
+        run_null_perm_no_thread(decomposed, rank, pre_se_calulated, run_glm);
     }
-    exit(-1);
+    else
+    {
+
+        Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
+        std::thread producer(&PRSice::gen_null_pheno, this,
+                             std::ref(set_perm_queue), n_thread - 1);
+        std::vector<std::thread> consume_store;
+        for (size_t i = 0; i < n_thread - 1; ++i) {
+            consume_store.push_back(
+                std::thread(&PRSice::consume_null_pheno, this,
+                            std::ref(set_perm_queue), std::ref(decomposed),
+                            rank, std::cref(pre_se_calulated), run_glm));
+        }
+        producer.join();
+        for (auto&& consume : consume_store) consume.join();
+    }
 }
 
-THREAD_RET_TYPE PRSice::thread_perm(void* id)
+void PRSice::run_null_perm_no_thread(
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+    const Eigen::VectorXd& pre_se, bool run_glm)
 {
-    size_t i_thread = (size_t) id;
-    perm_info pi = g_perm_range[i_thread];
-    size_t start = pi.start;
-    size_t end = pi.end;
-    size_t processed = pi.processed;
-    size_t rank = pi.rank;
-    bool intercept = true;
-    size_t n = g_independent_variables.rows();
-    std::vector<double> temp_store;
-    temp_store.reserve(end - start);
+    size_t processed = 0;
 
-    for (size_t i = start; i < end; ++i) {
+    std::mt19937 rand_gen{m_seed};
+    Eigen::setNbThreads(1);
+    const size_t num_regress_sample = m_phenotype.rows();
+    const bool intercept = true;
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
+        m_phenotype.rows());
+    while (processed < m_num_perm) {
+        Eigen::VectorXd perm_pheno(num_regress_sample);
+        perm_matrix.setIdentity();
+        std::shuffle(perm_matrix.indices().data(),
+                     perm_matrix.indices().data()
+                         + perm_matrix.indices().size(),
+                     rand_gen);
+        perm_pheno = perm_matrix * m_phenotype;
+        m_analysis_done++;
+        print_progress();
+        double coefficient, se, r2;
         double obs_p = 2.0; // for safety reason, make sure it is out bound
-        if (g_logit_perm) {
-            double r2, coefficient, se;
-            Regression::glm(g_permuted_pheno.col(i), g_independent_variables,
-                            obs_p, r2, coefficient, se, 25, 1, true);
+        if (run_glm) {
+            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+                            coefficient, se, 25, 1, true);
         }
         else
         {
-            Eigen::VectorXd beta =
-                g_perm_pre_decomposed.solve(g_permuted_pheno.col(i));
-            Eigen::MatrixXd fitted = g_independent_variables * beta;
+            Eigen::VectorXd beta = decomposed.solve(perm_pheno);
+            Eigen::MatrixXd fitted = m_independent_variables * beta;
 
-            Eigen::VectorXd residual = g_permuted_pheno.col(i) - fitted;
+            Eigen::VectorXd residual = perm_pheno - fitted;
+            int rdf = num_regress_sample - rank;
+            double rss = 0.0;
+            for (size_t r = 0; r < num_regress_sample; ++r) {
+                rss += residual(r) * residual(r);
+            }
+            size_t se_index = intercept;
+            for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
+                if (decomposed.colsPermutation().indices()(ind) == intercept) {
+                    se_index = ind;
+                    break;
+                }
+            }
+            double resvar = rss / (double) rdf;
+            Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
+            double tval = beta(intercept) / se(se_index);
+            obs_p = misc::calc_tprob(tval, num_regress_sample);
+        }
+
+        double ori_p = m_perm_result[processed];
+        m_perm_result[processed] = (ori_p > obs_p) ? obs_p : ori_p;
+        processed++;
+    }
+}
+
+void PRSice::gen_null_pheno(
+    Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    size_t num_consumer)
+{
+    size_t processed = 0;
+    std::mt19937 rand_gen{m_seed};
+    Eigen::setNbThreads(1);
+    const size_t num_regress_sample = m_phenotype.rows();
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
+        m_phenotype.rows());
+    while (processed < m_num_perm) {
+        std::vector<double> null_pheno(num_regress_sample);
+        Eigen::Map<Eigen::VectorXd> perm_vec(null_pheno.data(),
+                                             num_regress_sample);
+        perm_matrix.setIdentity();
+        std::shuffle(perm_matrix.indices().data(),
+                     perm_matrix.indices().data()
+                         + perm_matrix.indices().size(),
+                     rand_gen);
+        // key point here: g_permuted_pheno is a vector
+        perm_vec = perm_matrix * m_phenotype; // permute columns
+        std::pair<std::vector<double>, size_t> p =
+            std::make_pair(null_pheno, processed);
+        q.push(p, num_consumer);
+        m_analysis_done++;
+        print_progress();
+        processed++;
+    }
+    // send termination signal to the consumers
+    for (size_t i = 0; i < num_consumer; ++i) {
+        q.push(std::pair<std::vector<double>, size_t>(std::vector<double>(), 0),
+               num_consumer);
+    }
+}
+
+void PRSice::consume_null_pheno(
+    Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+    const Eigen::VectorXd& pre_se, bool run_glm)
+{
+    const size_t n = m_phenotype.rows();
+    const bool intercept = true;
+    std::vector<double> temp_store;
+    std::vector<size_t> temp_index;
+    while (true) {
+        std::pair<std::vector<double>, size_t> input;
+        q.pop(input);
+        // all job finished
+
+        if (std::get<0>(input).empty()) break;
+        Eigen::Map<Eigen::VectorXd> perm_pheno(std::get<0>(input).data(), n);
+        double coefficient, se, r2;
+        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        if (run_glm) {
+            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+                            coefficient, se, 25, 1, true);
+        }
+        else
+        {
+            Eigen::VectorXd beta = decomposed.solve(perm_pheno);
+            Eigen::MatrixXd fitted = m_independent_variables * beta;
+
+            Eigen::VectorXd residual = perm_pheno - fitted;
             int rdf = n - rank;
             double rss = 0.0;
             for (size_t r = 0; r < n; ++r) {
@@ -1118,15 +1164,67 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
             }
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
-                if (g_perm_pre_decomposed.colsPermutation().indices()(ind)
-                    == intercept)
-                {
+                if (decomposed.colsPermutation().indices()(ind) == intercept) {
                     se_index = ind;
                     break;
                 }
             }
             double resvar = rss / (double) rdf;
-            Eigen::VectorXd se = (g_pre_se_calulated * resvar).array().sqrt();
+            Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
+            double tval = beta(intercept) / se(se_index);
+            obs_p = misc::calc_tprob(tval, n);
+        }
+        temp_store.push_back(obs_p);
+        temp_index.push_back(std::get<1>(input));
+    }
+
+    std::lock_guard<std::mutex> lock(lock_guard);
+    for (size_t i = 0; i < temp_store.size(); ++i) {
+        double obs_p = temp_store[i];
+        auto&& index = temp_index[i];
+        double ori_p = m_perm_result[index];
+        m_perm_result[index] = (ori_p > obs_p) ? obs_p : ori_p;
+    }
+}
+void PRSice::thread_perm(
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, size_t start,
+    size_t end, int rank, const Eigen::VectorXd& pre_se, size_t processed)
+{
+    bool intercept = true;
+    size_t n = m_independent_variables.rows();
+    std::vector<double> temp_store;
+    temp_store.reserve(end - start);
+
+    for (size_t i = start; i < end; ++i) {
+        double* perm_pheno_ptr = m_permuted_pheno.data();
+        perm_pheno_ptr = &(perm_pheno_ptr[i * n]);
+        Eigen::Map<Eigen::VectorXd> perm_pheno(perm_pheno_ptr, n);
+        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        if (m_logit_perm) {
+            double r2, coefficient, se;
+            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+                            coefficient, se, 25, 1, true);
+        }
+        else
+        {
+            Eigen::VectorXd beta = decomposed.solve(perm_pheno);
+            Eigen::MatrixXd fitted = m_independent_variables * beta;
+
+            Eigen::VectorXd residual = perm_pheno - fitted;
+            int rdf = n - rank;
+            double rss = 0.0;
+            for (size_t r = 0; r < n; ++r) {
+                rss += residual(r) * residual(r);
+            }
+            size_t se_index = intercept;
+            for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
+                if (decomposed.colsPermutation().indices()(ind) == intercept) {
+                    se_index = ind;
+                    break;
+                }
+            }
+            double resvar = rss / (double) rdf;
+            Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
             double tval = beta(intercept) / se(se_index);
             obs_p = misc::calc_tprob(tval, n);
         }
@@ -1138,15 +1236,130 @@ THREAD_RET_TYPE PRSice::thread_perm(void* id)
     int index = 0;
     // this might seems odd, but we put it here to minimize false sharing (best
     // if mutex)
+    std::lock_guard<std::mutex> lock(lock_guard);
     for (size_t i = start; i < end; ++i) {
         double obs_p = temp_store[index++];
-        double ori_p = g_perm_result[processed + i];
-        g_perm_result[processed + i] = (ori_p > obs_p) ? obs_p : ori_p;
+        double ori_p = m_perm_result[processed + i];
+        m_perm_result[processed + i] = (ori_p > obs_p) ? obs_p : ori_p;
     }
-    THREAD_RETURN;
 }
 
 
+void PRSice::prep_output(const Commander& c_commander, Genotype& target,
+                         std::vector<std::string> region_name,
+                         const size_t pheno_index)
+{
+    // As R has a default precision of 7, we will go a bit
+    // higher to ensure we use up all precision
+    std::string pheno_name =
+        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
+    std::string output_prefix = c_commander.out();
+    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
+    const bool perm = (c_commander.permutation() != 0);
+    std::string output_name = output_prefix;
+    std::string out_prsice = output_name + ".prsice";
+    std::string out_all = output_name + ".all.score";
+    std::string out_best = output_name + ".best";
+    std::ofstream prsice_out, best_out, all_out;
+
+    // .prsice output
+    prsice_out.open(out_prsice.c_str());
+    if (!prsice_out.is_open()) {
+        std::string error_message =
+            "Error: Cannot open file: " + out_prsice + " to write";
+        throw std::runtime_error(error_message);
+    }
+    prsice_out << "Set\tThreshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
+    if (m_prset) prsice_out << "\tCompetitive.P";
+    if (perm) prsice_out << "\tEmpirical_P";
+    prsice_out << std::endl;
+    prsice_out.close();
+
+    // .best output
+    best_out.open(out_best.c_str());
+    if (!best_out.is_open()) {
+        std::string error_message =
+            "Error: Cannot open file: " + out_best + " to write";
+        throw std::runtime_error(error_message);
+    }
+    std::string header_line = "FID IID In_Regression";
+    // if not preset, then it is PRS,otherwise, it will be the
+    if (!m_prset)
+        header_line.append(" PRS");
+    else
+    {
+        for (size_t i = 0; i < region_name.size() - 1; ++i) {
+            header_line.append(" " + region_name[i]);
+        }
+    }
+    best_out << header_line << std::endl;
+    m_best_file.header_length = header_line.length() + 1;
+    m_best_file.processed_threshold = 0;
+    // each numeric output took 12 spaces, then for each output, there is one
+    // space next to each
+
+    m_best_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1
+                             + region_name.size() * (m_numeric_width + 1) + 1;
+
+    m_best_file.skip_column_length =
+        m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
+
+
+    // also handle all score here
+    const bool all_scores = c_commander.all_scores();
+    if (all_scores) {
+        all_out.open(out_all.c_str());
+        if (!all_out.is_open()) {
+            std::string error_message =
+                "Cannot open file " + out_all + " for write";
+            throw std::runtime_error(error_message);
+        }
+        std::vector<double> avail_thresholds = target.get_thresholds();
+        std::sort(avail_thresholds.begin(), avail_thresholds.end());
+        size_t num_thresholds = avail_thresholds.size();
+        header_line = "FID IID";
+        if (!m_prset) {
+            for (auto& thres : avail_thresholds) {
+                header_line.append(" " + std::to_string(thres));
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < region_name.size() - 1; ++i) {
+                for (auto& thres : avail_thresholds) {
+                    header_line.append(" " + region_name[i] + "_"
+                                       + std::to_string(thres));
+                }
+            }
+        }
+        m_all_file.header_length = header_line.length() + 1;
+        m_all_file.processed_threshold = 0;
+        m_all_file.line_width =
+            m_max_fid_length + 1 + m_max_iid_length + 1
+            + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
+        m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
+        all_out << header_line << std::endl;
+    }
+
+    // output sample IDs
+    size_t num_samples_included = target.num_sample();
+    for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample) {
+        std::string name = target.fid(i_sample) + " " + target.iid(i_sample);
+        std::string best_line =
+            name + " "
+            + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+        best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
+                 << std::left << best_line << std::endl;
+        if (all_scores) {
+            all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
+                    << std::left << name << std::endl;
+        }
+    }
+    m_all_file.line_width++;
+    m_best_file.line_width++; // now account for new line
+    best_out.close();
+    if (all_out.is_open()) all_out.close();
+}
 void PRSice::output(const Commander& c_commander, const Region& region,
                     const size_t pheno_index, const size_t region_index,
                     Genotype& target)
@@ -1186,13 +1399,13 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         top = cc * e;
         bottom = cc * e * theta;
     }
+
     std::string pheno_name =
         (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
 
     const bool perm = (c_commander.permutation() != 0);
-    std::string output_name = output_prefix;
 
     bool valid = m_best_index != -1;
     if (!valid
@@ -1208,22 +1421,17 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         }
         return;
     }
-    if (m_prset)
-        output_name = output_prefix + "." + region.get_name(region_index);
-    std::string out_best = output_name + ".best";
-    std::string out_prsice = output_name + ".prsice";
-    std::string out_snp = output_name + ".snps";
+    std::string out_prsice = output_prefix + ".prsice";
+    std::string out_snp = output_prefix + ".snps";
     // std::string out_summary = output_name + ".summary";
-    std::ofstream best_out, prsice_out, snp_out, summary_out;
-    prsice_out.open(out_prsice.c_str());
+    std::ofstream prsice_out, snp_out;
+    prsice_out.open(out_prsice.c_str(), std::fstream::app);
     if (!prsice_out.is_open()) {
         std::string error_message =
             "Error: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
     }
-    prsice_out << "Threshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
-    if (perm) prsice_out << "\tEmpirical_P";
-    prsice_out << std::endl;
+
     for (size_t i = 0; i < m_prs_results.size(); ++i) {
         if (m_prs_results[i].threshold < 0 || m_prs_results[i].p < 0) continue;
         double full = m_prs_results[i].r2;
@@ -1233,10 +1441,16 @@ void PRSice::output(const Commander& c_commander, const Region& region,
             null = top * null / (1 + bottom * null);
         }
         double r2 = full - null;
-        prsice_out << m_prs_results[i].threshold << "\t" << r2 << "\t"
+        prsice_out << region.get_name(region_index) << "\t"
+                   << m_prs_results[i].threshold << "\t" << r2 << "\t"
                    << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
                    << "\t" << m_prs_results[i].se << "\t"
                    << m_prs_results[i].num_snp;
+        if (m_prset)
+            prsice_out << "\t"
+                       << ((m_prs_results[i].competitive_p >= 0)
+                               ? std::to_string(m_prs_results[i].competitive_p)
+                               : "-");
         if (perm)
             prsice_out << "\t"
                        << ((m_prs_results[i].emp_p >= 0.0)
@@ -1245,23 +1459,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         prsice_out << std::endl;
     }
     prsice_out.close();
-
-    best_out.open(out_best.c_str());
-    if (!best_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_best + " to write";
-        throw std::runtime_error(error_message);
-    }
-    /*
-    summary_out.open(out_summary.c_str());
-    if (!summary_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_summary + " to write";
-        throw std::runtime_error(error_message);
-    }
-    */
     auto&& best_info = m_prs_results[m_best_index];
-    // summary_out << "Best Threshold:   " << best_info.threshold << std::endl;
 
 
     prsice_summary prs_sum;
@@ -1269,45 +1467,26 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prs_sum.set = region.get_name(region_index);
     prs_sum.result = best_info;
     prs_sum.result.r2 = best_info.r2;
+
+    prs_sum.result.competitive_p = best_info.competitive_p;
     prs_sum.r2_null = m_null_r2;
     prs_sum.top = top;
     prs_sum.bottom = bottom;
     prs_sum.prevalence = prevalence;
-
     m_prs_summary.push_back(prs_sum);
+
     if (best_info.p > 0.1)
         m_significant_store[0]++;
     else if (best_info.p > 1e-5)
         m_significant_store[1]++;
     else
         m_significant_store[2]++;
-    best_out << "FID\tIID\tPRS\tHas_Phenotype" << std::endl;
-    int best_snp_size = best_info.num_snp;
-    if (best_snp_size == 0) {
-        fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
-        fprintf(stderr, "       Cannot output the best PRS score\n");
-    }
-    else
-    {
-        for (size_t sample = 0; sample < m_sample_index.size(); ++sample) {
-            // samples that are extracted are ignored
-            // sample excluded will not be output here
-            auto sample_index = m_sample_index[sample];
-            if (!target.sample_included(sample_index)) continue;
-            std::string has_pheno =
-                target.has_pheno(sample_index) ? "Yes" : "No";
-            best_out << target.fid(sample_index) << "\t"
-                     << target.iid(sample_index) << "\t"
-                     << m_best_sample_score[sample_index] << "\t" << has_pheno
-                     << std::endl;
+    /*
+        if (c_commander.print_snp()) {
+            target.print_snp(out_snp, m_prs_results[m_best_index].threshold,
+                             region_index);
         }
-    }
-    best_out.close();
-
-    if (c_commander.print_snp()) {
-        target.print_snp(out_snp, m_prs_results[m_best_index].threshold,
-                         region_index);
-    }
+        */
 }
 
 void PRSice::summarize(const Commander& commander, Reporter& reporter)
@@ -1356,6 +1535,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     }
     out << "Phenotype\tSet\tThreshold\tPRS.R2\tFull.R2\tNull."
            "R2\tPrevalence\tCoefficient\tStandard.Error\tP\tNum_SNP";
+    if (m_prset) out << "\tCompetitive.P";
     if (perm) out << "\tEmpirical-P";
     out << std::endl;
     for (auto&& sum : m_prs_summary) {
@@ -1376,6 +1556,12 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
         }
         out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t"
             << sum.result.p << "\t" << sum.result.num_snp;
+        if (m_prset) {
+            out << "\t"
+                << ((sum.result.competitive_p >= 0.0)
+                        ? std::to_string(sum.result.competitive_p)
+                        : "-");
+        }
         if (perm) out << "\t" << sum.result.emp_p;
         out << std::endl;
     }
@@ -1387,101 +1573,310 @@ PRSice::~PRSice()
     // dtor
 }
 
-void PRSice::gen_perm_memory(const size_t sample_ct, Reporter& reporter)
+void PRSice::gen_perm_memory(const Commander& commander, const size_t sample_ct,
+                             Reporter& reporter)
 {
     intptr_t min_memory_byte = 8 * sample_ct;
     intptr_t max_req_memory = min_memory_byte * m_num_perm;
-#ifdef __APPLE__
-    int32_t mib[2];
-    size_t sztmp;
-#endif
-    unsigned char* bigstack_ua = nullptr; // ua = unaligned
-    int64_t llxx;
-    intptr_t default_alloc_mb;
-    intptr_t malloc_size_mb = 0;
-#ifdef __APPLE__
-    mib[0] = CTL_HW;
-    mib[1] = HW_MEMSIZE;
-    llxx = 0;
-
-    sztmp = sizeof(int64_t);
-    sysctl(mib, 2, &llxx, &sztmp, nullptr, 0);
-    llxx /= 1048576;
-#else
-#ifdef _WIN32
-    MEMORYSTATUSEX memstatus;
-    memstatus.dwLength = sizeof(memstatus);
-    GlobalMemoryStatusEx(&memstatus);
-    llxx = memstatus.ullTotalPhys / 1048576;
-#else
-    llxx = ((uint64_t) sysconf(_SC_PHYS_PAGES))
-           * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
-#endif
-#endif
-    if (!llxx) {
-        default_alloc_mb = BIGSTACK_DEFAULT_MB;
-    }
-    else if (llxx < (BIGSTACK_MIN_MB * 2))
-    {
-        default_alloc_mb = BIGSTACK_MIN_MB;
-    }
-    else
-    {
-        default_alloc_mb = llxx / 2;
-    }
-    if (!malloc_size_mb) {
-        malloc_size_mb = default_alloc_mb;
-    }
-    else if (malloc_size_mb < BIGSTACK_MIN_MB)
-    {
-        malloc_size_mb = BIGSTACK_MIN_MB;
-    }
-    std::string message = "";
-#ifndef __LP64__
-    if (malloc_size_mb > 2047) {
-        malloc_size_mb = 2047;
-    }
-#endif
-    bigstack_ua =
-        (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
-    // if fail, return nullptr which will then get into the while loop
-    while (!bigstack_ua) {
-        malloc_size_mb = (malloc_size_mb * 3) / 4;
-        if (malloc_size_mb < BIGSTACK_MIN_MB) {
-            malloc_size_mb = BIGSTACK_MIN_MB;
-        }
-        bigstack_ua =
-            (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
-        if (bigstack_ua) {
-        }
-        else if (malloc_size_mb == BIGSTACK_MIN_MB)
-        {
-            throw std::runtime_error(
-                "Failed to allocate required memory for permutation storage");
-        }
-    }
-    if (malloc_size_mb * 1048576 < min_memory_byte) {
-        throw std::runtime_error(
-            "Failed to allocate required memory for permutation storage");
-    }
-    delete[] bigstack_ua;
-    bigstack_ua = nullptr;
-    // use only a third of the memory so that we should have enough left
-    // though there is no guarantee
-    intptr_t final_mb = malloc_size_mb / 3;
+    size_t malloc_size = misc::total_ram_available();
+    // * 0.5 to provide room of error
+    size_t valid_memory = commander.max_memory(malloc_size);
+    intptr_t final_mb = (valid_memory - misc::current_ram_usage()) * 0.5;
     // start update here
-    if (final_mb * 1048576 < min_memory_byte) {
+    if (final_mb < 0) {
+        throw std::runtime_error("Error: Insufficient memory for permutation!");
+    }
+    if (final_mb < min_memory_byte) {
         m_perm_per_slice = 1;
     }
-    else if (final_mb * 1048576 > max_req_memory)
+    else if (final_mb > max_req_memory)
     {
         m_perm_per_slice = m_num_perm;
     }
     else
     {
-        m_perm_per_slice = final_mb * 1048576 / min_memory_byte;
+        m_perm_per_slice = final_mb / min_memory_byte;
     }
-    g_permuted_pheno = Eigen::MatrixXd::Zero(sample_ct, m_perm_per_slice);
+    if (m_perm_per_slice * sample_ct > m_permuted_pheno.max_size()) {
+        m_perm_per_slice = m_permuted_pheno.max_size() / sample_ct;
+    }
+    std::string message =
+        std::to_string(((final_mb > max_req_memory) ? max_req_memory : final_mb)
+                       / 1048576.0)
+        + " MB RAM reserved for permutation\n";
+    reporter.report(message);
+    // wanna use double vector here as the sample size here might not be
+    // the one used in the permutation. This might then lead to problem
+    // in the permutation (segmentation fault, etc)
+    m_permuted_pheno.resize(sample_ct * m_perm_per_slice);
     // g_num_snps.resize(g_max_threshold_store * m_sample_names.size(), 0);
     // g_prs_storage.resize(g_max_threshold_store * m_sample_names.size(), 0.0);
+}
+
+void PRSice::null_set_no_thread(Genotype& target,
+                                std::vector<int>& sample_index,
+                                int& num_significant, size_t num_perm,
+                                size_t set_size, size_t num_selected_snps,
+                                double original_p, bool require_standardize,
+                                bool is_binary, bool store_p)
+{
+
+    size_t processed = 0;
+    const size_t num_sample = sample_index.size();
+    double coefficient, se, r2, r2_adjust;
+    std::mt19937 g(m_seed);
+    const size_t num_background = target.num_background();
+    std::vector<size_t> selection_list(num_background);
+    while (processed < num_perm) {
+        std::iota(selection_list.begin(), selection_list.end(), 0);
+        size_t begin = 0;
+        size_t num_snp = num_selected_snps;
+        while (num_snp--) {
+            std::uniform_int_distribution<int> dist(begin, num_background - 1);
+            size_t r = selection_list[begin];
+            size_t advance_index = dist(g);
+            selection_list[begin] = selection_list[advance_index];
+            selection_list[advance_index] = r;
+            ++begin;
+        }
+        // num_selected_snps = for if we use multiple threshold
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
+        for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
+            if (sample_index[sample_id] != -1) {
+                m_independent_variables(sample_index[sample_id], 1) =
+                    target.calculate_score(m_score, sample_id);
+            }
+        }
+        m_analysis_done++;
+
+        print_progress();
+        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        if (is_binary) {
+            Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
+                            coefficient, se, 25, 1, true);
+        }
+        else
+        {
+            Regression::linear_regression(m_phenotype, m_independent_variables,
+                                          obs_p, r2, r2_adjust, coefficient, se,
+                                          1, true);
+        }
+        // thread_mutex
+        num_significant += (original_p > obs_p);
+        // if (store_p) null_p_value.push_back(obs_p);
+        processed++;
+    }
+}
+
+
+void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
+                              Genotype& target, std::vector<int>& sample_index,
+                              size_t num_consumer, size_t num_perm,
+                              size_t set_size, size_t num_selected_snps,
+                              double original_p, bool require_standardize)
+{
+    size_t processed = 0;
+    const size_t num_sample = sample_index.size();
+    const size_t num_regress_sample = m_independent_variables.rows();
+
+    std::mt19937 g(m_seed);
+    const size_t num_background = target.num_background();
+    std::vector<size_t> selection_list(num_background);
+    while (processed < num_perm) {
+        std::vector<double> prs(num_regress_sample, 0);
+        std::iota(selection_list.begin(), selection_list.end(), 0);
+        size_t begin = 0;
+        size_t num_snp = set_size;
+        while (num_snp--) {
+            std::uniform_int_distribution<int> dist(begin, num_background - 1);
+            size_t r = selection_list[begin];
+            size_t advance_index = dist(g);
+            selection_list[begin] = selection_list[advance_index];
+            selection_list[advance_index] = r;
+            ++begin;
+        }
+        target.get_null_score(set_size, num_selected_snps, selection_list,
+                              require_standardize);
+        for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
+            if (sample_index[sample_id] != -1) {
+                prs[sample_index[sample_id]] =
+                    target.calculate_score(m_score, sample_id);
+            }
+        }
+
+        q.push(prs, num_consumer);
+
+        m_analysis_done++;
+
+        print_progress();
+        processed++;
+    }
+    // send termination signal to the consumers
+    for (size_t i = 0; i < num_consumer; ++i) {
+        q.push(std::vector<double>(), num_consumer);
+    }
+}
+
+
+void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
+                         double original_p, int& num_significant,
+                         bool is_binary, bool store_p)
+{
+    int cur_num_significant = 0;
+    std::vector<double> cur_null_p;
+    Eigen::MatrixXd independent = m_independent_variables;
+    const size_t num_regress_sample = m_independent_variables.rows();
+    while (true) {
+        std::vector<double> prs;
+        q.pop(prs);
+
+        if (prs.empty()) {
+
+            // all job finished
+            break;
+        }
+        for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
+            independent(i_sample, 1) = prs[i_sample];
+        }
+        double coefficient, se, r2, r2_adjust;
+        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        if (is_binary) {
+            Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
+                            se, 25, 1, true);
+        }
+        else
+        {
+            Regression::linear_regression(m_phenotype, independent, obs_p, r2,
+                                          r2_adjust, coefficient, se, 1, true);
+        }
+        // thread_mutex
+        cur_num_significant += (original_p > obs_p);
+        cur_null_p.push_back(obs_p);
+    }
+
+    {
+        std::unique_lock<std::mutex> locker(m_thread_mutex);
+
+        num_significant += cur_num_significant;
+        /*
+        if (store_p) {
+            null_p_value.insert(null_p_value.end(),
+                               cur_null_p.begin(),
+                                cur_null_p.end());
+        }*/
+    }
+}
+void PRSice::run_competitive(Genotype& target, const Commander& commander,
+
+                             const size_t set_size, const bool store_null,
+                             const bool is_binary)
+{
+    const size_t num_perm = commander.set_perm();
+    const bool require_standardize = (m_score == SCORING::STANDARDIZE);
+
+    const double obs_p_value = m_prs_results[m_best_index].p;
+    const size_t num_selected_snps = m_prs_results[m_best_index].num_snp;
+    // optain result directly from the map
+    // for now, scrap this as it is unlikely for two pathway
+    // to have the same number of post clump SNPs AND the
+    // same number of SNPs included in the best score
+    /*
+    if (m_null_store.find(set_size) != m_null_store.end()) {
+        if (m_best_index < 0) {
+            // no best score for us to get the empirical p-value on
+            return;
+        }
+        auto&& null = m_null_store[set_size];
+        // we assume the null is sorted
+        int num_more_significant =
+            std::upper_bound(null.begin(), null.end(), obs_p_value)
+            - null.begin();
+        double competitive_p =
+            ((double) num_more_significant + 1.0) / ((double) num_perm + 1.0);
+        m_prs_results[m_best_index].competitive_p = competitive_p;
+
+        return;
+    }
+     */
+    // We want to know if we have sufficient memory for the number of thread
+    // specified
+    size_t num_thread = commander.thread();
+    // resize the result
+    // m_perm_result.resize(num_perm, 2);
+    const size_t num_sample = target.num_sample();
+    const size_t num_regress_sample = m_independent_variables.rows();
+    // a super over estimation of the amount of memory we need per thread
+    const size_t basic_memory_required_per_thread =
+        num_regress_sample * sizeof(double)
+        * (m_independent_variables.cols() * 6 + 15);
+
+    // read in the sample index to avoid repeated find
+    std::vector<int> sample_index(num_sample, -1);
+    for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
+        std::string sample = target.sample_id(sample_id);
+        if (m_sample_with_phenotypes.find(sample)
+            != m_sample_with_phenotypes.end())
+        {
+            sample_index[sample_id] = m_sample_with_phenotypes.at(sample);
+        }
+    }
+
+    const size_t total_memory = misc::total_ram_available();
+    const size_t valid_memory = commander.max_memory(total_memory);
+    const size_t used_memory = misc::current_ram_usage();
+    if (valid_memory <= used_memory) {
+        fprintf(stderr, "\n");
+        throw std::runtime_error("Error: Not enough memory for permutation");
+    }
+    // artificially reduce available memory to avoid memory overflow
+    // ideally, if whole PRSice is within the same memory pool, we will
+    // not need to do this reduction
+    const size_t available_memory = (valid_memory - used_memory) * 0.5;
+
+    if (available_memory < basic_memory_required_per_thread) {
+        fprintf(stderr, "\n");
+        throw std::runtime_error("Error: Not enough memory for permutation");
+    }
+    if (available_memory / basic_memory_required_per_thread < num_thread) {
+        num_thread = available_memory / basic_memory_required_per_thread;
+    }
+
+    Thread_Queue<std::vector<double>> set_perm_queue;
+
+    // std::vector<double> null_p_value;
+    int num_more_significant = 0;
+    // if (store_null) null_p_value.reserve(num_perm);
+
+    if (num_thread > 1) {
+        std::thread producer(
+            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
+            std::ref(target), std::ref(sample_index), num_thread - 1, num_perm,
+            set_size, num_selected_snps, obs_p_value, require_standardize);
+
+        std::vector<std::thread> consumer_store;
+        for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
+            consumer_store.push_back(std::thread(
+                &PRSice::consume_prs, this, std::ref(set_perm_queue),
+                obs_p_value, std::ref(num_more_significant), is_binary,
+                store_null));
+        }
+        producer.join();
+        for (auto&& thread : consumer_store) thread.join();
+    }
+    else
+    {
+        null_set_no_thread(target, sample_index, num_more_significant, num_perm,
+                           set_size, num_selected_snps, obs_p_value,
+                           require_standardize, is_binary, store_null);
+    }
+    /*
+    if (store_null) {
+        std::sort(null_p_value.begin(), null_p_value.end());
+        m_null_store[set_size] = null_p_value;
+    }
+    */
+    double competitive_p =
+        ((double) num_more_significant + 1.0) / ((double) num_perm + 1.0);
+    m_prs_results[m_best_index].competitive_p = competitive_p;
 }

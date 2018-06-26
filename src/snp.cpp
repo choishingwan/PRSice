@@ -36,9 +36,10 @@ SNP::SNP(const std::string& rs_id, const int chr, const int loc,
          const std::string& ref_allele, const std::string& alt_allele,
          const std::string& file_name, const std::streampos byte_pos)
 {
+
+    basic.rs = rs_id;
     basic.ref = ref_allele;
     basic.alt = alt_allele;
-    basic.rs = rs_id;
     basic.chr = chr;
     basic.loc = loc;
     basic.valid = true;
@@ -117,4 +118,32 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
             return input[i1].basic.chr < input[i2].basic.chr;
     });
     return idx;
+}
+
+void SNP::sort_snp_index(std::vector<size_t>& index,
+                         const std::vector<SNP>& input)
+{
+    std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
+        if (input[i1].file_info.file.compare(input[i2].file_info.file) == 0) {
+            return input[i1].file_info.byte_pos < input[i2].file_info.byte_pos;
+        }
+        else
+            return input[i1].file_info.file.compare(input[i2].file_info.file)
+                   < 0;
+    });
+}
+
+void SNP::sort_snp_for_perm(std::vector<size_t>& index,
+                            const std::vector<SNP>& input)
+{
+    // now index is sorted, we want to sort the top select_size entry of index
+    // by the file info
+    std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
+        if (input[i1].file_info.file.compare(input[i2].file_info.file) == 0) {
+            return input[i1].file_info.byte_pos < input[i2].file_info.byte_pos;
+        }
+        else
+            return input[i1].file_info.file.compare(input[i2].file_info.file)
+                   < 0;
+    });
 }

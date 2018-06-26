@@ -26,19 +26,22 @@ class BinaryPlink : public Genotype
 {
 public:
     BinaryPlink(const std::string& prefix, const std::string& sample_file,
-                const size_t thread = 1, const bool ignore_fid = false,
+                const std::string& multi_input, const size_t thread = 1,
+                const bool ignore_fid = false,
                 const bool keep_nonfounder = false,
-                const bool keep_ambig = false);
+                const bool keep_ambig = false, const bool is_ref = false);
     ~BinaryPlink();
 
 private:
     uintptr_t m_bed_offset = 3;
     std::vector<Sample> gen_sample_vector();
 
-    std::vector<SNP>
-    gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   const std::string& out_prefix, Genotype* target = nullptr);
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info,
+                                    const double hard_threshold,
+                                    const bool hard_coded, Region& exclusion,
+                                    const std::string& out_prefix,
+                                    Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);
 
@@ -74,6 +77,7 @@ private:
         }
     };
 
+    void read_score(std::vector<size_t>& index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index);
 
