@@ -62,7 +62,7 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             pheno_info.use_pheno = true;
             pheno_info.col.push_back(1 + !m_ignore_fid);
 
-            pheno_info.name.push_back("");
+            pheno_info.name.push_back("Phenotype");
             pheno_info.order.push_back(0);
             pheno_info.binary.push_back(c_commander.is_binary(0));
             message.append("Phenotype Name: " + col[pheno_info.col.back()]
@@ -1626,21 +1626,20 @@ void PRSice::null_set_no_thread(Genotype& target,
     double coefficient, se, r2, r2_adjust;
     std::mt19937 g(m_seed);
     const size_t num_background = target.num_background();
-    std::vector<size_t> selection_list(num_background);
+    std::vector<size_t> background = target.background_index();
     while (processed < num_perm) {
-        std::iota(selection_list.begin(), selection_list.end(), 0);
         size_t begin = 0;
         size_t num_snp = num_selected_snps;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
-            size_t r = selection_list[begin];
+            size_t r = background[begin];
             size_t advance_index = dist(g);
-            selection_list[begin] = selection_list[advance_index];
-            selection_list[advance_index] = r;
+            background[begin] = background[advance_index];
+            background[advance_index] = r;
             ++begin;
         }
         // num_selected_snps = for if we use multiple threshold
-        target.get_null_score(set_size, num_selected_snps, selection_list,
+        target.get_null_score(set_size, num_selected_snps, background,
                               require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
@@ -1669,7 +1668,7 @@ void PRSice::null_set_no_thread(Genotype& target,
     }
 }
 
-
+// might want to remove num_selected_snps?
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, std::vector<int>& sample_index,
                               size_t num_consumer, size_t num_perm,
@@ -1682,21 +1681,21 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
 
     std::mt19937 g(m_seed);
     const size_t num_background = target.num_background();
-    std::vector<size_t> selection_list(num_background);
+    std::vector<size_t> background = target.background_index();
     while (processed < num_perm) {
         std::vector<double> prs(num_regress_sample, 0);
-        std::iota(selection_list.begin(), selection_list.end(), 0);
         size_t begin = 0;
-        size_t num_snp = set_size;
+        //size_t num_snp = set_size;
+        size_t num_snp = num_selected_snps;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
-            size_t r = selection_list[begin];
+            size_t r = background[begin];
             size_t advance_index = dist(g);
-            selection_list[begin] = selection_list[advance_index];
-            selection_list[advance_index] = r;
+            background[begin] = background[advance_index];
+            background[advance_index] = r;
             ++begin;
         }
-        target.get_null_score(set_size, num_selected_snps, selection_list,
+        target.get_null_score(set_size, num_selected_snps, background,
                               require_standardize);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {

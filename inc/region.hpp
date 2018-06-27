@@ -74,8 +74,9 @@ public:
     {
         int max = 0;
         m_region_post_clump_count.resize(count.size());
+        const size_t last_region_index = count.size()-1;
         for (size_t i = 0; i < count.size(); ++i) {
-            max = (count[i] > max && i != count.size() - 1 && i != 0) ? count[i]
+            max = (count[i] > max && i != last_region_index && i != 0) ? count[i]
                                                                       : max;
             m_region_post_clump_count[i] = count[i];
             if (m_region_size_duplicated.find(count[i])

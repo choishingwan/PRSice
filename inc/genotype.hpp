@@ -92,7 +92,12 @@ public:
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
                    const bool cumulate, const bool require_statistic);
-    bool sort_by_p();
+    // this is to prepare the genotypes for clumping
+    bool sort_by_p(){
+        if (m_existed_snps.size() == 0) return false;
+        m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
+        return true;
+    }
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
     size_t num_threshold() const { return m_num_threshold; };
@@ -100,7 +105,7 @@ public:
                    Reporter& reporter);
     // void clump(Genotype& reference);
     void efficient_clumping(Genotype& reference, Reporter& reporter,
-                            bool const pearson);
+                            bool const use_pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
 
     void reset_sample_pheno()
@@ -175,21 +180,16 @@ public:
         }
         return score;
     }
-    void update_index(size_t i)
-    {
-        if (i == m_existed_snps.size())
-            m_cur_category_index = m_categories.size();
-        else
-            m_cur_category_index =
-                m_categories_index[m_existed_snps[i].category()];
-    }
+
     uintptr_t founder_ct() const { return m_founder_ct; }
     uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
     void count_snp_in_region(Region& region, const std::string& name,
-                             const bool print_snp) const
+                             const bool print_snp)
     {
         std::string snp_file_name = name + ".snp";
         std::ofstream print_file;
+        m_background_snp_index.clear();
+        const bool prset = region.size() > 1;
         if (print_snp) {
             print_file.open(snp_file_name.c_str());
             if (!print_file.is_open()) {
@@ -203,6 +203,7 @@ public:
             print_file << std::endl;
         }
         std::vector<int> result(region.size(), 0);
+        size_t snp_index = 0;
         for (auto&& snp : m_existed_snps) {
             if (print_snp)
                 print_file << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
@@ -212,23 +213,22 @@ public:
                 if (print_snp)
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
+            if(prset && snp.in(region.size()-1)){
+            	m_background_snp_index.push_back(snp_index);
+            }
             if (print_snp) print_file << std::endl;
+            snp_index++;
         }
         if (print_snp) print_file.close();
+        // this is use for skipping permutation for sets with same size
         region.post_clump_count(result);
     };
 
     void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
-                        const std::vector<size_t>& selection_list,
+                        const std::vector<size_t>& background_list,
                         const bool require_standardize);
-    void init_background_index(const size_t& background_index)
-    {
-        m_background_snp_index.clear();
-        for (size_t i = 0; i < m_existed_snps.size(); ++i)
-            if (m_existed_snps[i].in(background_index))
-                m_background_snp_index.push_back(i);
-    }
     size_t num_background() const { return m_background_snp_index.size(); };
+    std::vector<size_t> background_index() const { return m_background_snp_index; };
 
 protected:
     friend class BinaryPlink;
@@ -341,9 +341,6 @@ protected:
 
 
     std::vector<double> m_thresholds;
-    std::vector<int> m_categories;
-    std::unordered_map<int, int> m_categories_index;
-    int m_cur_category_index = 0;
 
     uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;

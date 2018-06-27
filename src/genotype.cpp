@@ -634,7 +634,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 {
                     unique_thresholds.insert(category);
                     m_thresholds.push_back(pthres);
-                    m_categories.push_back(category);
+                    //m_categories.push_back(category);
                 }
                 m_max_category =
                     (m_max_category < category) ? category : m_max_category;
@@ -931,9 +931,8 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
     return r2;
 }
 
-
 void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
-                                  bool const pearson)
+                                  bool const use_pearson)
 {
     /*
      *	Threading doesn't speed things up too much
@@ -987,7 +986,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     const uintptr_t founder_ct_192_long =
         founder_ct_mld_m1 * (MULTIPLEX_LD / BITCT2)
         + founder_ct_mld_rem * (192 / BITCT2);
-    const int num_snp = m_existed_snps.size();
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
     std::vector<int> remain_core_snps;
     int32_t dp_result[5];
@@ -995,7 +993,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
     bool is_x = false;
-    const bool use_pearson = pearson;
     double freq11;
     double freq11_expected;
     double freq1x;
@@ -1137,7 +1134,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     bigstack_initial_base =
         (unsigned char*) round_up_pow2((uintptr_t) bigstack_ua, CACHELINE);
 
-    // we need this as for pearson ld calculation
+    // we need this for pearson ld calculation
     uintptr_t* index_geno = nullptr;
     uintptr_t* index_mask = nullptr;
     uintptr_t* window_data = nullptr;
@@ -1184,298 +1181,347 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     }
     // point to the middle of the bigstack?
     double prev_progress = -1.0;
-    for (size_t i_snp = 0; i_snp < m_sort_by_p_index.size(); ++i_snp) {
-        double progress = (double) i_snp / (double) num_snp * 100;
-        if (progress - prev_progress > 0.01) {
-            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
-            prev_progress = progress;
-        }
-        auto&& cur_snp_index = m_sort_by_p_index[i_snp];
-        // skip any SNPs that are clumped
-        auto&& cur_target_snp = m_existed_snps[cur_snp_index];
-        if (cur_target_snp.clumped()
-            || cur_target_snp.p_value() > clump_info.p_value)
-            continue;
-        // with the new change, all SNPs are stored in target
-        // so we can safely ignore the finding in reference
-        // though we still need to get the sample size information
-        // from the reference panel
-        // Any SNP with p-value less than clump-p will be ignored
-        // because they can never be an index SNP and thus are not of our
-        // interested
+    const size_t num_snp = m_existed_snps.size();
+    // to improve performance, separate out pearson and non-pearson out
+    if(use_pearson){
+    	for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
+    		// print progress
+    		double progress = (double) i_snp / (double) num_snp * 100;
+    		if (progress - prev_progress > 0.01) {
+    			fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+    			prev_progress = progress;
+    		}
+    		// get the index
+    		auto&& cur_snp_index = m_sort_by_p_index[i_snp];
+    		// skip any SNPs that are clumped
+    		auto&& cur_target_snp = m_existed_snps[cur_snp_index];
+    		if (cur_target_snp.clumped()
+    				|| cur_target_snp.p_value() > clump_info.p_value)
+    			continue;
+    		size_t start = cur_target_snp.low_bound();
+    		size_t end = cur_target_snp.up_bound();
+    		window_data_ptr = window_data;
+    		ld_missing_ct_ptr = ld_missing_count.data();
+    		geno_mask_ptr = geno_mask;
+    		cur_window_size = 0;
+    		// transversing on TARGET
+    		for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
+    			auto&& pair_target_snp = m_existed_snps[i_pair];
+    			if (pair_target_snp.clumped()
+    					|| pair_target_snp.p_value() > clump_info.p_value)
+    				continue;
+    			fill_ulong_zero(founder_ct_192_long, window_data_ptr);
+    			if (++cur_window_size == max_window_size) {
+    				throw std::runtime_error("Error: Out of memory!");
+    			}
+    			reference.read_genotype(window_data_ptr,
+    					pair_target_snp.ref_byte_pos(),
+						pair_target_snp.ref_file_name());
+    			fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
+    			ld_process_load2(window_data_ptr, geno_mask_ptr,
+    					ld_missing_ct_ptr, reference.founder_ct(),
+						is_x, nullptr);
+    			ld_missing_ct_ptr++;
+    			geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
+    			window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
+    		}
+    		if (++cur_window_size == max_window_size) {
+    			throw std::runtime_error("Error: Out of memory!");
+    		}
+    		window_data_ptr[founder_ctv2 - 2] = 0;
+    		window_data_ptr[founder_ctv2 - 1] = 0;
+    		std::fill(index_data.begin(), index_data.end(), 0);
+    		fill_ulong_zero(founder_ct_192_long, index_geno);
+    		reference.read_genotype(index_geno, cur_target_snp.ref_byte_pos(),
+    				cur_target_snp.ref_file_name());
+    		fill_ulong_zero(founder_ct_192_long, index_mask);
+    		ld_process_load2(index_geno, index_mask, &index_missing_ct,
+    				reference.founder_ct(), is_x, nullptr);
+    		window_data_ptr = window_data;
+    		geno_mask_ptr = geno_mask;
+    		size_t cur_index = 0;
+    		for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
+    			auto&& pair_target_snp = m_existed_snps[i_pair];
+    			if (pair_target_snp.clumped()
+    					|| pair_target_snp.p_value() > clump_info.p_value)
+    				continue;
+    			r2 = -1;
+    			// taking risk here, we don't know if this is what PLINK
+    			// acutally wants as they have a complete different structure
+    			// here (for their multi-thread)
+    			fixed_non_missing_ct =
+    					reference.founder_ct() - index_missing_ct;
+    			non_missing_ct =
+    					fixed_non_missing_ct - ld_missing_count[cur_index];
+    			if (index_missing_ct && ld_missing_count[cur_index]) {
+    				non_missing_ct += ld_missing_ct_intersect(
+    						geno_mask_ptr, index_mask, founder_ctwd12,
+							founder_ctwd12_rem, lshift_last);
+    			}
+    			dp_result[0] = reference.founder_ct();
+    			dp_result[1] = -fixed_non_missing_ct;
+    			dp_result[2] =
+    					ld_missing_count[cur_index] - reference.founder_ct();
+    			dp_result[3] = dp_result[1];
+    			dp_result[4] = dp_result[2];
+    			ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
+    					index_mask, dp_result, founder_ct_mld_m1,
+						founder_ct_mld_rem);
+    			non_missing_ctd = (double) ((int32_t) non_missing_ct);
+    			dxx = dp_result[1];
+    			dyy = dp_result[2];
+    			cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
+    			dxx = (dp_result[3] * non_missing_ctd + dxx * dxx)
+    		                    		  * (dp_result[4] * non_missing_ctd + dyy * dyy);
+    			r2 = (cov12 * cov12) / dxx;
+    			cur_index++;
+    			geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
+    			window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
+    			if (r2 >= min_r2) {
+    				cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+    			}
+    		}
+    		for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
+    			window_data_ptr = window_data;
+    			auto&& pair_target_snp = m_existed_snps[i_pair];
+    			if (pair_target_snp.clumped()
+    					|| pair_target_snp.p_value() > clump_info.p_value)
+    				continue;
+    			fill_ulong_zero(founder_ct_192_long, window_data_ptr);
+    			reference.read_genotype(window_data_ptr,
+    					pair_target_snp.ref_byte_pos(),
+						pair_target_snp.ref_file_name());
+    			r2 = -1;
+    			geno_mask_ptr = geno_mask;
+    			ld_missing_ct_ptr = ld_missing_count.data();
+    			fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
+    			ld_process_load2(window_data_ptr, geno_mask_ptr,
+    					ld_missing_ct_ptr, reference.founder_ct(),
+						is_x, nullptr);
+    			// taking risk here, we don't know if this is what PLINK
+    			// acutally wants as they have a complete different structure
+    			// here (for their multi-thread)
+    			fixed_non_missing_ct =
+    					reference.founder_ct() - index_missing_ct;
+    			non_missing_ct =
+    					fixed_non_missing_ct - ld_missing_count[cur_index];
+    			if (index_missing_ct && ld_missing_count[cur_index]) {
+    				non_missing_ct += ld_missing_ct_intersect(
+    						geno_mask_ptr, index_mask, founder_ctwd12,
+							founder_ctwd12_rem, lshift_last);
+    			}
+    			dp_result[0] = reference.founder_ct();
+    			dp_result[1] = -fixed_non_missing_ct;
+    			dp_result[2] = ld_missing_count[0] - reference.founder_ct();
+    			dp_result[3] = dp_result[1];
+    			dp_result[4] = dp_result[2];
+    			ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
+    					index_mask, dp_result, founder_ct_mld_m1,
+						founder_ct_mld_rem);
+    			non_missing_ctd = (double) ((int32_t) non_missing_ct);
+    			dxx = dp_result[1];
+    			dyy = dp_result[2];
+    			cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
+    			dxx = (dp_result[3] * non_missing_ctd + dxx * dxx)
+    		                    		  * (dp_result[4] * non_missing_ctd + dyy * dyy);
+    			r2 = (cov12 * cov12) / dxx;
+    			if (r2 >= min_r2) {
+    				cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+    			}
+    		}
+    		cur_target_snp.set_clumped();
+    		remain_core_snps.push_back(cur_snp_index);
+    		double thres = cur_target_snp.get_threshold();
+    		if (used_thresholds.find(thres) == used_thresholds.end()) {
+    			used_thresholds.insert(thres);
+    			m_thresholds.push_back(thres);
+    			//m_categories.push_back(cur_target_snp.category());
+    		}
+    		if (unique_threshold.find(cur_target_snp.category())
+    				== unique_threshold.end())
+    		{
+    			unique_threshold.insert(cur_target_snp.category());
+    		}
+    	}
+    }
+    else{
 
-        // set the missing information
-        // contain_missing == 3 = has missing
-        size_t start = cur_target_snp.low_bound();
-        size_t end = cur_target_snp.up_bound();
-        window_data_ptr = window_data;
-        ld_missing_ct_ptr = ld_missing_count.data();
-        geno_mask_ptr = geno_mask;
-        cur_window_size = 0;
-        // transversing on TARGET
-        for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.p_value)
-                continue;
-            if (!use_pearson) {
-                window_data_ptr[founder_ctv2 - 2] = 0;
-                window_data_ptr[founder_ctv2 - 1] = 0;
-            }
-            else
-            {
-                fill_ulong_zero(founder_ct_192_long, window_data_ptr);
-            }
-            if (++cur_window_size == max_window_size) {
-                throw std::runtime_error("Error: Out of memory!");
-            }
-            reference.read_genotype(window_data_ptr,
-                                    pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_name());
-            if (use_pearson) {
-                // geno_mask_ptr[founder_ctv2 - 2] = 0;
-                // geno_mask_ptr[founder_ctv2 - 1] = 0;
-                fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
-                ld_process_load2(window_data_ptr, geno_mask_ptr,
-                                 ld_missing_ct_ptr, reference.founder_ct(),
-                                 is_x, nullptr);
-                ld_missing_ct_ptr++;
-                geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
-                window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
-            }
-            else
-            {
-                window_data_ptr = &(window_data_ptr[founder_ctv2]);
-            }
-        }
+		for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
+			double progress = (double) i_snp / (double) num_snp * 100;
+			if (progress - prev_progress > 0.01) {
+				fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+				prev_progress = progress;
+			}
+			auto&& cur_snp_index = m_sort_by_p_index[i_snp];
+			// skip any SNPs that are clumped
+			auto&& cur_target_snp = m_existed_snps[cur_snp_index];
+			if (cur_target_snp.clumped()
+				|| cur_target_snp.p_value() > clump_info.p_value)
+				continue;
+			// with the new change, all SNPs are stored in target
+			// so we can safely ignore the finding in reference
+			// though we still need to get the sample size information
+			// from the reference panel
+			// Any SNP with p-value less than clump-p will be ignored
+			// because they can never be an index SNP and thus are not of our
+			// interested
 
-        if (++cur_window_size == max_window_size) {
-            throw std::runtime_error("Error: Out of memory!");
-        }
-        window_data_ptr[founder_ctv2 - 2] = 0;
-        window_data_ptr[founder_ctv2 - 1] = 0;
-        std::fill(index_data.begin(), index_data.end(), 0);
-        if (!use_pearson) {
-            reference.read_genotype(window_data_ptr,
-                                    cur_target_snp.ref_byte_pos(),
-                                    cur_target_snp.ref_file_name());
-            vec_datamask(reference.founder_ct(), 0, window_data_ptr,
-                         founder_include2.data(), index_data.data());
-            index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-            vec_datamask(reference.founder_ct(), 2, window_data_ptr,
-                         founder_include2.data(), &(index_data[founder_ctv2]));
-            index_tots[1] =
-                popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-            vec_datamask(reference.founder_ct(), 3, window_data_ptr,
-                         founder_include2.data(),
-                         &(index_data[2 * founder_ctv2]));
-            index_tots[2] =
-                popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
-        }
-        else
-        {
+			// set the missing information
+			// contain_missing == 3 = has missing
+			size_t start = cur_target_snp.low_bound();
+			size_t end = cur_target_snp.up_bound();
+			window_data_ptr = window_data;
+			ld_missing_ct_ptr = ld_missing_count.data();
+			geno_mask_ptr = geno_mask;
+			cur_window_size = 0;
+			// transversing on TARGET
+			for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
+				auto&& pair_target_snp = m_existed_snps[i_pair];
+				if (pair_target_snp.clumped()
+					|| pair_target_snp.p_value() > clump_info.p_value)
+					continue;
+				window_data_ptr[founder_ctv2 - 2] = 0;
+				window_data_ptr[founder_ctv2 - 1] = 0;
+				if (++cur_window_size == max_window_size) {
+					throw std::runtime_error("Error: Out of memory!");
+				}
+				reference.read_genotype(window_data_ptr,
+										pair_target_snp.ref_byte_pos(),
+										pair_target_snp.ref_file_name());
+				window_data_ptr = &(window_data_ptr[founder_ctv2]);
+			}
 
-            fill_ulong_zero(founder_ct_192_long, index_geno);
-            reference.read_genotype(index_geno, cur_target_snp.ref_byte_pos(),
-                                    cur_target_snp.ref_file_name());
-            fill_ulong_zero(founder_ct_192_long, index_mask);
-            ld_process_load2(index_geno, index_mask, &index_missing_ct,
-                             reference.founder_ct(), is_x, nullptr);
-        }
+			if (++cur_window_size == max_window_size) {
+				throw std::runtime_error("Error: Out of memory!");
+			}
+			window_data_ptr[founder_ctv2 - 2] = 0;
+			window_data_ptr[founder_ctv2 - 1] = 0;
+			std::fill(index_data.begin(), index_data.end(), 0);
+			reference.read_genotype(window_data_ptr,
+					cur_target_snp.ref_byte_pos(),
+					cur_target_snp.ref_file_name());
+			vec_datamask(reference.founder_ct(), 0, window_data_ptr,
+					founder_include2.data(), index_data.data());
+			index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
+			vec_datamask(reference.founder_ct(), 2, window_data_ptr,
+					founder_include2.data(), &(index_data[founder_ctv2]));
+			index_tots[1] =
+					popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
+			vec_datamask(reference.founder_ct(), 3, window_data_ptr,
+					founder_include2.data(),
+					&(index_data[2 * founder_ctv2]));
+			index_tots[2] =
+					popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
+			window_data_ptr = window_data;
+			for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
+				auto&& pair_target_snp = m_existed_snps[i_pair];
+				if (pair_target_snp.clumped()
+					|| pair_target_snp.p_value() > clump_info.p_value)
+					continue;
+				r2 = -1;
+				uint32_t counts[18];
+				genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+						&(counts[0]), &(counts[1]), &(counts[2]));
+				counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+				genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
+						founder_ctl2, &(counts[3]), &(counts[4]),
+						&(counts[5]));
+				counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+				genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
+						founder_ctl2, &(counts[6]), &(counts[7]),
+						&(counts[8]));
+				counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+				if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x,
+						&freq2x, &freqx1, &freqx2, &freq11))
+				{
+					freq11_expected = freqx1 * freq1x;
+					dxx = freq11 - freq11_expected;
+					// if r^2 threshold is 0, let everything else through but
+					// exclude the apparent zeroes.  Zeroes *are* included if
+					// r2_thresh is negative,
+					// though (only nans are rejected then).
+					if (fabs(dxx) < SMALL_EPSILON
+							|| fabs(freq11_expected * freq2x * freqx2)
+							< SMALL_EPSILON)
+					{
+						r2 = 0.0;
+					}
+					else
+					{
+						r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+					}
+				}
+				window_data_ptr = &(window_data_ptr[founder_ctv2]);
 
-        window_data_ptr = window_data;
-        if (use_pearson) {
-            geno_mask_ptr = geno_mask;
-        }
-        size_t cur_index = 0;
-        for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.p_value)
-                continue;
-            r2 = -1;
-            if (!use_pearson) {
-                uint32_t counts[18];
-                genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                              &(counts[0]), &(counts[1]), &(counts[2]));
-                counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-                genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                              founder_ctl2, &(counts[3]), &(counts[4]),
-                              &(counts[5]));
-                counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-                genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                              founder_ctl2, &(counts[6]), &(counts[7]),
-                              &(counts[8]));
-                counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-                if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x,
-                                            &freq2x, &freqx1, &freqx2, &freq11))
-                {
-                    freq11_expected = freqx1 * freq1x;
-                    dxx = freq11 - freq11_expected;
-                    // if r^2 threshold is 0, let everything else through but
-                    // exclude the apparent zeroes.  Zeroes *are* included if
-                    // r2_thresh is negative,
-                    // though (only nans are rejected then).
-                    if (fabs(dxx) < SMALL_EPSILON
-                        || fabs(freq11_expected * freq2x * freqx2)
-                               < SMALL_EPSILON)
-                    {
-                        r2 = 0.0;
-                    }
-                    else
-                    {
-                        r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                    }
-                }
-                window_data_ptr = &(window_data_ptr[founder_ctv2]);
-            }
-            else
-            {
-                // taking risk here, we don't know if this is what PLINK
-                // acutally wants as they have a complete different structure
-                // here (for their multi-thread)
-                fixed_non_missing_ct =
-                    reference.founder_ct() - index_missing_ct;
-                non_missing_ct =
-                    fixed_non_missing_ct - ld_missing_count[cur_index];
-                if (index_missing_ct && ld_missing_count[cur_index]) {
-                    non_missing_ct += ld_missing_ct_intersect(
-                        geno_mask_ptr, index_mask, founder_ctwd12,
-                        founder_ctwd12_rem, lshift_last);
-                }
-                dp_result[0] = reference.founder_ct();
-                dp_result[1] = -fixed_non_missing_ct;
-                dp_result[2] =
-                    ld_missing_count[cur_index] - reference.founder_ct();
-                dp_result[3] = dp_result[1];
-                dp_result[4] = dp_result[2];
-                ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
-                            index_mask, dp_result, founder_ct_mld_m1,
-                            founder_ct_mld_rem);
-                non_missing_ctd = (double) ((int32_t) non_missing_ct);
-                dxx = dp_result[1];
-                dyy = dp_result[2];
-                cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
-                dxx = (dp_result[3] * non_missing_ctd + dxx * dxx)
-                      * (dp_result[4] * non_missing_ctd + dyy * dyy);
-                r2 = (cov12 * cov12) / dxx;
-                cur_index++;
-                geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
-                window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
-            }
-            if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
-            }
-        }
+				if (r2 >= min_r2) {
+					cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+				}
+			}
+			for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
+				window_data_ptr = window_data;
+				auto&& pair_target_snp = m_existed_snps[i_pair];
+				if (pair_target_snp.clumped()
+					|| pair_target_snp.p_value() > clump_info.p_value)
+					continue;
+				window_data_ptr[founder_ctv2 - 2] = 0;
+				window_data_ptr[founder_ctv2 - 1] = 0;
 
+				reference.read_genotype(window_data_ptr,
+										pair_target_snp.ref_byte_pos(),
+										pair_target_snp.ref_file_name());
 
-        for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
-            window_data_ptr = window_data;
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.p_value)
-                continue;
-            if (!use_pearson) {
-                window_data_ptr[founder_ctv2 - 2] = 0;
-                window_data_ptr[founder_ctv2 - 1] = 0;
-            }
-            else
-            {
-                fill_ulong_zero(founder_ct_192_long, window_data_ptr);
-            }
-            reference.read_genotype(window_data_ptr,
-                                    pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_name());
+				r2 = -1;
+				uint32_t counts[18];
+				genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+						&(counts[0]), &(counts[1]), &(counts[2]));
+				counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+				genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
+						founder_ctl2, &(counts[3]), &(counts[4]),
+						&(counts[5]));
+				counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+				genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
+						founder_ctl2, &(counts[6]), &(counts[7]),
+						&(counts[8]));
+				counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+				if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x,
+						&freq2x, &freqx1, &freqx2, &freq11))
+				{
+					freq11_expected = freqx1 * freq1x;
+					dxx = freq11 - freq11_expected;
+					// if r^2 threshold is 0, let everything else through but
+					// exclude the apparent zeroes.  Zeroes *are* included if
+					// r2_thresh is negative,
+					// though (only nans are rejected then).
+					if (fabs(dxx) < SMALL_EPSILON
+							|| fabs(freq11_expected * freq2x * freqx2)
+							< SMALL_EPSILON)
+					{
+						r2 = 0.0;
+					}
+					else
+					{
+						r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
+					}
+				}
 
-            r2 = -1;
-            if (!use_pearson) {
-                uint32_t counts[18];
-                genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                              &(counts[0]), &(counts[1]), &(counts[2]));
-                counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-                genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                              founder_ctl2, &(counts[3]), &(counts[4]),
-                              &(counts[5]));
-                counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-                genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                              founder_ctl2, &(counts[6]), &(counts[7]),
-                              &(counts[8]));
-                counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-                if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x,
-                                            &freq2x, &freqx1, &freqx2, &freq11))
-                {
-                    freq11_expected = freqx1 * freq1x;
-                    dxx = freq11 - freq11_expected;
-                    // if r^2 threshold is 0, let everything else through but
-                    // exclude the apparent zeroes.  Zeroes *are* included if
-                    // r2_thresh is negative,
-                    // though (only nans are rejected then).
-                    if (fabs(dxx) < SMALL_EPSILON
-                        || fabs(freq11_expected * freq2x * freqx2)
-                               < SMALL_EPSILON)
-                    {
-                        r2 = 0.0;
-                    }
-                    else
-                    {
-                        r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                    }
-                }
-            }
-            else
-            {
-                geno_mask_ptr = geno_mask;
-                ld_missing_ct_ptr = ld_missing_count.data();
-
-                fill_ulong_zero(founder_ct_192_long, geno_mask_ptr);
-                ld_process_load2(window_data_ptr, geno_mask_ptr,
-                                 ld_missing_ct_ptr, reference.founder_ct(),
-                                 is_x, nullptr);
-                // taking risk here, we don't know if this is what PLINK
-                // acutally wants as they have a complete different structure
-                // here (for their multi-thread)
-                fixed_non_missing_ct =
-                    reference.founder_ct() - index_missing_ct;
-                non_missing_ct =
-                    fixed_non_missing_ct - ld_missing_count[cur_index];
-                if (index_missing_ct && ld_missing_count[cur_index]) {
-                    non_missing_ct += ld_missing_ct_intersect(
-                        geno_mask_ptr, index_mask, founder_ctwd12,
-                        founder_ctwd12_rem, lshift_last);
-                }
-                dp_result[0] = reference.founder_ct();
-                dp_result[1] = -fixed_non_missing_ct;
-                dp_result[2] = ld_missing_count[0] - reference.founder_ct();
-                dp_result[3] = dp_result[1];
-                dp_result[4] = dp_result[2];
-                ld_dot_prod(window_data_ptr, index_geno, geno_mask_ptr,
-                            index_mask, dp_result, founder_ct_mld_m1,
-                            founder_ct_mld_rem);
-                non_missing_ctd = (double) ((int32_t) non_missing_ct);
-                dxx = dp_result[1];
-                dyy = dp_result[2];
-                cov12 = dp_result[0] * non_missing_ctd - dxx * dyy;
-                dxx = (dp_result[3] * non_missing_ctd + dxx * dxx)
-                      * (dp_result[4] * non_missing_ctd + dyy * dyy);
-                r2 = (cov12 * cov12) / dxx;
-            }
-            if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
-            }
-        }
-        cur_target_snp.set_clumped();
-        remain_core_snps.push_back(cur_snp_index);
-        double thres = cur_target_snp.get_threshold();
-        if (used_thresholds.find(thres) == used_thresholds.end()) {
-            used_thresholds.insert(thres);
-            m_thresholds.push_back(thres);
-            m_categories.push_back(cur_target_snp.category());
-        }
-        if (unique_threshold.find(cur_target_snp.category())
-            == unique_threshold.end())
-        {
-            unique_threshold.insert(cur_target_snp.category());
-        }
+				if (r2 >= min_r2) {
+					cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+				}
+			}
+			cur_target_snp.set_clumped();
+			remain_core_snps.push_back(cur_snp_index);
+			double thres = cur_target_snp.get_threshold();
+			if (used_thresholds.find(thres) == used_thresholds.end()) {
+				used_thresholds.insert(thres);
+				m_thresholds.push_back(thres);
+				//m_categories.push_back(cur_target_snp.category());
+			}
+			if (unique_threshold.find(cur_target_snp.category())
+				== unique_threshold.end())
+			{
+				unique_threshold.insert(cur_target_snp.category());
+			}
+		}
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     window_data = nullptr;
@@ -1487,13 +1533,12 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     m_existed_snps_index.clear();
     m_num_threshold = unique_threshold.size();
     if (remain_core_snps.size() != m_existed_snps.size()) {
-        // only do this if we need to remove some SNPs
-        // we assume exist_index doesn't have any duplicated index
+    	// remain_core_snps' follow the post sorted order (p-value sorted) instead of m_existed_snps' index
+    	// so we need to sort it first
         std::sort(remain_core_snps.begin(), remain_core_snps.end());
         int start = (remain_core_snps.empty()) ? -1 : remain_core_snps.front();
         int end = start;
         std::vector<SNP>::iterator last = m_existed_snps.begin();
-
         for (auto&& ind : remain_core_snps) {
             if (ind == start || ind - end == 1)
                 end = ind; // try to perform the copy as a block
@@ -1528,33 +1573,16 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     reporter.report(message);
 }
 
-bool Genotype::sort_by_p()
-{
-    if (m_existed_snps.size() == 0) return false;
-    m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
-    return true;
-}
+
 
 bool Genotype::prepare_prsice(Reporter& reporter)
 {
-    // thing is, the category might not be continuous,
-    // and we want SNPs within the same process to be
-    // sorted together (e.g. if we can only do
-    // 2 thresholds in one go, we will want to sort
-    // the SNPs where every 2 category (doesn't matter
-    // if they are continuous or not) should have the
-    // same ID)
-
     if (m_existed_snps.size() == 0) return false;
-    // first, sort the threshold and update the sort ID
-    std::sort(m_categories.begin(), m_categories.end());
+    // first, sort the threshold
     std::sort(m_thresholds.begin(), m_thresholds.end());
-    for (size_t i = 0; i < m_categories.size(); ++i)
-        m_categories_index[m_categories[i]] = i;
-    std::unordered_map<int, int> tmp_cat = m_categories_index;
     std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [&tmp_cat](SNP const& t1, SNP const& t2) {
-                  if (tmp_cat[t1.category()] == tmp_cat[t2.category()]) {
+              [](SNP const& t1, SNP const& t2) {
+                  if (t1.category() == t2.category()) {
                       if (t1.file_name().compare(t2.file_name()) == 0) {
                           return t1.byte_pos() < t2.byte_pos();
                       }
@@ -1562,7 +1590,7 @@ bool Genotype::prepare_prsice(Reporter& reporter)
                           return t1.file_name().compare(t2.file_name()) < 0;
                   }
                   else
-                      return tmp_cat[t1.category()] < tmp_cat[t2.category()];
+                      return t1.category() < t2.category();
               });
     return true;
 }
@@ -1570,19 +1598,14 @@ bool Genotype::prepare_prsice(Reporter& reporter)
 
 void Genotype::get_null_score(const size_t& set_size,
                               const size_t& num_selected_snps,
-                              const std::vector<size_t>& selection_list,
+                              //const std::vector<size_t>& selection_list,
+							  const std::vector<size_t> & background_list,
                               const bool require_statistic)
 {
     // selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
-
-    std::vector<size_t> selected_snp_index(num_selected_snps);
-    for (size_t i = 0; i < num_selected_snps; ++i) {
-        selected_snp_index[i] = m_background_snp_index[selection_list[i]];
-    }
-
-    SNP::sort_snp_for_perm(selected_snp_index, m_existed_snps);
-    // SNP::sort_snp_index(selected_snp_index, m_existed_snps);
+    std::vector<size_t> selected_snp_index(background_list.begin(), background_list.begin()+num_selected_snps);
+    std::sort(selected_snp_index.begin(), selected_snp_index.end());
     read_score(selected_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;
