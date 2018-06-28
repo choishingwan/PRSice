@@ -156,6 +156,7 @@ public:
     }
     std::string fid(size_t i) const { return m_sample_names.at(i).FID; }
     std::string iid(size_t i) const { return m_sample_names.at(i).IID; }
+
     double calculate_score(SCORING score_type, size_t i) const
     {
         if (i > m_sample_names.size())
