@@ -985,6 +985,12 @@ void Commander::set_help_message()
           "    --msigdb        | -m    MSIGDB file containing the pathway "
           "information.\n"
           "                            Require the gtf file\n"
+	       "    --snp-set               Provide a SNP set file containing a single snp set.\n"
+	       "                            Name of SNP set file will be used as the region\n"
+	       "                            identifier. This file should contain only one column.\n"
+	       "    --snp-sets              Provide a SNP set file containing multiple snp sets.\n"
+	       "                            Each row represent a single SNP set with the first\n"
+	       "                            column containing name of the SNP set.\n"
           // PRSlice
           "\nPRSlice:\n"
           "    --prslice               Perform PRSlice where the whole genome "
