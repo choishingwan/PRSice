@@ -45,7 +45,8 @@ public:
            const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
-             const std::vector<std::string>& bed, const std::string& out,
+             const std::vector<std::string>& bed, const std::string &snp_set,
+			 const std::string &multi_snp_sets, const std::string& out,
              const std::string& background, Reporter& reporter);
     void reset()
     {
@@ -53,7 +54,7 @@ public:
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    void update_flag(std::string chr, size_t loc, std::vector<uintptr_t>& flag);
+    void update_flag(const int chr, const std::string &rs, size_t loc, std::vector<uintptr_t>& flag);
     size_t size() const { return m_region_name.size(); };
     std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
@@ -114,6 +115,7 @@ private:
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
     std::unordered_set<std::string> m_duplicated_names;
+    std::vector<std::unordered_set<std::string>> m_snp_sets;
     // the name of the regions
     std::vector<std::string> m_region_name;
     // features that we'd like to capture

@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
+            			commander.single_snp_set(), commander.multi_snp_sets(),
                        commander.out(), commander.background(), reporter);
         }
         catch (const std::runtime_error& error)

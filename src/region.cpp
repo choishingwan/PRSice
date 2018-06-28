@@ -111,7 +111,8 @@ Region::Region(std::vector<std::string> feature, const int window_5,
 }
 
 void Region::run(const std::string& gtf, const std::string& msigdb,
-                 const std::vector<std::string>& bed, const std::string& out,
+                 const std::vector<std::string>& bed, const std::string &snp_set,
+				 const std::string &multi_snp_sets, const std::string& out,
                  const std::string& background, Reporter& reporter)
 {
     if (gtf.empty() && bed.size() == 0) {
@@ -956,17 +957,16 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
     return false;
 }
 
-void Region::update_flag(std::string chr, size_t loc,
+void Region::update_flag(const int chr, const std::string &rs, size_t loc,
                          std::vector<uintptr_t>& flag)
 {
     flag[0] |= ONELU;
     m_region_snp_count[0]++;
-    int cur_chr = get_chrom_code_raw(chr.c_str());
     // note: the chr is actually the order on the m_chr_order instead of the
     // sactual chromosome
     bool chr_switched = false;
     for (size_t i_region = 1; i_region < m_region_name.size(); ++i_region) {
-        int region_chr_index = m_chr_index[i_region][cur_chr];
+        int region_chr_index = m_chr_index[i_region][chr];
         size_t current_region_size = m_region_list[i_region].size();
         while (m_snp_check_index[i_region] < current_region_size) {
             auto&& current_bound =
