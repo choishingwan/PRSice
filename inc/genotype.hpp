@@ -107,7 +107,13 @@ public:
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
-
+    bool get_snp_loc(const std::string& rs_id, int &chr, int& loc) const {
+    	auto &&snp_index = m_existed_snps_index.find(rs_id);
+    	if(snp_index==m_existed_snps_index.end()) return false;
+    	chr = m_existed_snps[snp_index->second].chr();
+    	loc = m_existed_snps[snp_index->second].loc();
+    	return true;
+    }
     void reset_sample_pheno()
     {
         for (auto&& sample : m_sample_names) {

@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+class Genotype;
 class Region
 {
 public:
@@ -46,7 +47,8 @@ public:
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
              const std::vector<std::string>& bed, const std::string &snp_set,
-			 const std::string &multi_snp_sets, const std::string& out,
+			 const std::string &multi_snp_sets, const Genotype &target,
+			 const std::string& out,
              const std::string& background, Reporter& reporter);
     void reset()
     {
@@ -147,7 +149,7 @@ private:
         return false;
     }
 
-
+    void process_snp_sets(const std::string& single_snp_set, const std::string& multi_snp_set, const Genotype &target, Reporter &reporter);
     void process_bed(const std::vector<std::string>& bed, Reporter& reporter);
 
     std::unordered_map<std::string, region_bound> process_gtf(
