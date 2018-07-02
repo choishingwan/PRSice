@@ -203,7 +203,7 @@ public:
                 throw std::runtime_error(
                     "Error: Cannot open snp file to write: " + snp_file_name);
             }
-            print_file << "SNP\tCHR\tBP\tP";
+            print_file << "CHR\tSNP\tBP\tP";
             for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 print_file << "\t" << region.get_name(i_region);
             }
@@ -213,7 +213,7 @@ public:
         size_t snp_index = 0;
         for (auto&& snp : m_existed_snps) {
             if (print_snp)
-                print_file << snp.rs() << "\t" << snp.chr() << "\t" << snp.loc()
+                print_file << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
                            << "\t" << snp.p_value();
             for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 result[i_region] += snp.in(i_region);

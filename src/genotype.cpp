@@ -134,30 +134,64 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     std::string line;
     std::unordered_set<std::string> result;
     bool error = false;
+    std::string message;
+    // allow the input to be slightly more flexible
+    // determined by Header
+    std::getline(in, line);
+    misc::trim(line);
+    std::vector<std::string> token = misc::split(line);
+    bool has_three_columns = (token.size()>=3);
+    size_t rs_index = 0;
+    if(token.size() != 1){
+    	bool has_snp_colname = false;
+    	for(auto && name : token){
+            std::transform(name.begin(), name.end(),
+            		name.begin(), ::toupper);
+            if(name.compare("SNP") == 0 || name.compare("RS")==0 || name.compare("RS_ID")==0 || name.compare("RS.ID")==0){
+            	has_snp_colname = true;
+    			message = name+" assume to be column containing SNP ID";
+    			reporter.report(message);
+            	break;
+            }
+            rs_index++;
+    	}
+    	if(!has_snp_colname){
+    		// did not find the colnames, then we will assume this is a bim file
+    		if(token.size() == 6){
+    			message = "SNP extraction/exclusion list contain 6 column, will assume second column contains the SNP ID";
+    			reporter.report(message);
+    		}
+    	}
+    }else{
+    	message = "Only one column detected, will assume only SNP ID is provided";
+    	reporter.report(message);
+    }
+    in.clear();
+    in.seekg(0, std::ios::beg);
     while (std::getline(in, line)) {
         misc::trim(line);
         if (line.empty()) continue;
         std::vector<std::string> token = misc::split(line);
-        if (token[0].compare(".") == 0) {
+        if (has_three_columns && rs_index==1 && token[rs_index].compare(".") == 0) {
             if (!error) {
                 error = true;
-                std::string message =
+                message =
                     "Warning: Some SNPs from the "
                     "extraction/exclusion list has rs-id of . "
                     "They will be excluded unless the file contains at least 3 "
                     "columns."
                     "When 3 columns is provided, we will assume the "
-                    "second and third columns are the chromosome and "
+                    "first and third columns are the chromosome and "
                     "coordinates "
                     "respectively and will generate an rsid as chr:loc\n";
                 reporter.report(message);
             }
             if (token.size() >= 3) {
-                token[0] = token[1] + ":" + token[2];
+                token[rs_index] = token[0] + ":" + token[2];
             }
         }
-        if (result.find(token[0]) == result.end()) {
-            result.insert(token[0]);
+        if (result.find(token[rs_index]) == result.end()) {
+            result.insert(token[rs_index]);
         }
     }
     return result;
