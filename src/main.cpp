@@ -81,8 +81,9 @@ int main(int argc, char* argv[])
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
-            			commander.single_snp_set(), commander.multi_snp_sets(), *target_file,
-                       commander.out(), commander.background(), reporter);
+                       commander.single_snp_set(), commander.multi_snp_sets(),
+                       *target_file, commander.out(), commander.background(),
+                       reporter);
         }
         catch (const std::runtime_error& error)
         {
@@ -140,7 +141,8 @@ int main(int argc, char* argv[])
             // we no longer need the region boundaries
             // as we don't allow multiple base file input
             region.clean();
-            // TODO: This is no longer useful and can be deleted in next release, once Yunfeng has completed her analysis
+            // TODO: This is no longer useful and can be deleted in next
+            // release, once Yunfeng has completed her analysis
             std::string region_out_name = commander.out() + ".region";
             // output the number of SNPs observed in each sets
             region.print_file(region_out_name);
@@ -169,7 +171,8 @@ int main(int argc, char* argv[])
                                       target_file->num_threshold());
             const size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
-            	const size_t num_region_process = region.size() - (region.size() > 1 ? 1 : 0);
+                const size_t num_region_process =
+                    region.size() - (region.size() > 1 ? 1 : 0);
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
                     fprintf(stderr, "\nProcessing the %zu th phenotype\n",
@@ -180,7 +183,8 @@ int main(int argc, char* argv[])
                                        i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
-                    for (size_t i_region = 0; i_region < num_region_process; ++i_region)
+                    for (size_t i_region = 0; i_region < num_region_process;
+                         ++i_region)
                     {
                         prsice.run_prsice(commander, region, i_pheno, i_region,
                                           *target_file);

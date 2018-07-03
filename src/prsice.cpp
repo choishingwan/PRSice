@@ -580,7 +580,8 @@ void PRSice::check_factor_cov(
         factor_levels[i_cov] = current_factors[i_cov];
         log_file_stream << c_cov_header[cov_index[i_cov]]
                         << " is a factor with " << factor_levels[i_cov].size()
-                        << " levels" << "\n";
+                        << " levels"
+                        << "\n";
     }
     log_file_stream << "\n";
     log_file_stream.close();
@@ -1685,7 +1686,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     while (processed < num_perm) {
         std::vector<double> prs(num_regress_sample, 0);
         size_t begin = 0;
-        //size_t num_snp = set_size;
+        // size_t num_snp = set_size;
         size_t num_snp = num_selected_snps;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);

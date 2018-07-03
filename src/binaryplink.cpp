@@ -239,7 +239,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 "Error: Cannot open bed file: " + bed_name;
             throw std::runtime_error(error_message);
         }
-        //bed.seekg(m_bed_offset, std::ios_base::beg);
+        // bed.seekg(m_bed_offset, std::ios_base::beg);
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
         int prev_snp_processed = 0;
@@ -304,8 +304,8 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             + " They will be ignored!\n";
                         std::cerr << error_message
                                   << "\n"; // currently avoid passing
-                                                // in reporter here so that
-                                                // I don't need
+                                           // in reporter here so that
+                                           // I don't need
                         // to pass the reporter as a parameter
                         chr_error = true;
                         continue;
@@ -799,7 +799,7 @@ void BinaryPlink::read_score(std::vector<size_t>& index)
                 else
                 {
                     sample.prs = g * stat * 0.5;
-                    sample.num_snp=1;
+                    sample.num_snp = 1;
                 }
             }
             actual_index++;
