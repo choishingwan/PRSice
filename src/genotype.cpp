@@ -1699,7 +1699,7 @@ void Genotype::print_snp(std::string& output, double threshold,
         {
             snp_out << "\tN";
         }
-        snp_out << std::endl;
+        snp_out << "\n";
     }
     snp_out.close();
 }

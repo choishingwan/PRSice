@@ -580,9 +580,9 @@ void PRSice::check_factor_cov(
         factor_levels[i_cov] = current_factors[i_cov];
         log_file_stream << c_cov_header[cov_index[i_cov]]
                         << " is a factor with " << factor_levels[i_cov].size()
-                        << " levels" << std::endl;
+                        << " levels" << "\n";
     }
-    log_file_stream << std::endl;
+    log_file_stream << "\n";
     log_file_stream.close();
 }
 
@@ -935,10 +935,10 @@ void PRSice::regress_score(Genotype& target, const double threshold,
             fprintf(stderr, "       Please send me the DEBUG files\n");
             std::ofstream debug;
             debug.open("DEBUG");
-            debug << m_independent_variables << std::endl;
+            debug << m_independent_variables << "\n";
             debug.close();
             debug.open("DEBUG.y");
-            debug << m_phenotype << std::endl;
+            debug << m_phenotype << "\n";
             debug.close();
             fprintf(stderr, "Error: %s\n", error.what());
         }
@@ -1272,7 +1272,7 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
     prsice_out << "Set\tThreshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
     if (m_prset) prsice_out << "\tCompetitive.P";
     if (perm) prsice_out << "\tEmpirical_P";
-    prsice_out << std::endl;
+    prsice_out << "\n";
     prsice_out.close();
 
     // .best output
@@ -1292,7 +1292,7 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
             header_line.append(" " + region_name[i]);
         }
     }
-    best_out << header_line << std::endl;
+    best_out << header_line << "\n";
     m_best_file.header_length = header_line.length() + 1;
     m_best_file.processed_threshold = 0;
     // each numeric output took 12 spaces, then for each output, there is one
@@ -1338,7 +1338,7 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
             m_max_fid_length + 1 + m_max_iid_length + 1
             + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-        all_out << header_line << std::endl;
+        all_out << header_line << "\n";
     }
 
     // output sample IDs
@@ -1349,10 +1349,10 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
             name + " "
             + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
         best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
-                 << std::left << best_line << std::endl;
+                 << std::left << best_line << "\n";
         if (all_scores) {
             all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
-                    << std::left << name << std::endl;
+                    << std::left << name << "\n";
         }
     }
     m_all_file.line_width++;
@@ -1456,7 +1456,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                        << ((m_prs_results[i].emp_p >= 0.0)
                                ? std::to_string(m_prs_results[i].emp_p)
                                : "-");
-        prsice_out << std::endl;
+        prsice_out << "\n";
     }
     prsice_out.close();
     auto&& best_info = m_prs_results[m_best_index];
@@ -1537,7 +1537,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
            "R2\tPrevalence\tCoefficient\tStandard.Error\tP\tNum_SNP";
     if (m_prset) out << "\tCompetitive.P";
     if (perm) out << "\tEmpirical-P";
-    out << std::endl;
+    out << "\n";
     for (auto&& sum : m_prs_summary) {
         out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
             << "\t" << sum.result.threshold;
@@ -1563,7 +1563,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
                         : "-");
         }
         if (perm) out << "\t" << sum.result.emp_p;
-        out << std::endl;
+        out << "\n";
     }
     out.close();
 }

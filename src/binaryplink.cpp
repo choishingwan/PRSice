@@ -303,7 +303,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             + std::to_string(m_max_code) + "."
                             + " They will be ignored!\n";
                         std::cerr << error_message
-                                  << std::endl; // currently avoid passing
+                                  << "\n"; // currently avoid passing
                                                 // in reporter here so that
                                                 // I don't need
                         // to pass the reporter as a parameter
@@ -502,7 +502,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         }
         for (auto&& snp : snp_info) {
             if (duplicated_snp.find(snp.rs()) != duplicated_snp.end()) continue;
-            log_file_stream << snp.rs() << std::endl;
+            log_file_stream << snp.rs() << "\n";
         }
         log_file_stream.close();
         std::string error_message =

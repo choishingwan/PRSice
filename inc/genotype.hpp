@@ -207,7 +207,7 @@ public:
             for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 print_file << "\t" << region.get_name(i_region);
             }
-            print_file << std::endl;
+            print_file << "\n";
         }
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
@@ -223,7 +223,7 @@ public:
             if(prset && snp.in(region.size()-1)){
             	m_background_snp_index.push_back(snp_index);
             }
-            if (print_snp) print_file << std::endl;
+            if (print_snp) print_file << "\n";
             snp_index++;
         }
         if (print_snp) print_file.close();
