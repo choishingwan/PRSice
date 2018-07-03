@@ -239,7 +239,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 "Error: Cannot open bed file: " + bed_name;
             throw std::runtime_error(error_message);
         }
-        //bed.seekg(m_bed_offset, std::ios_base::beg);
+        // bed.seekg(m_bed_offset, std::ios_base::beg);
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
         int prev_snp_processed = 0;
@@ -303,9 +303,9 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             + std::to_string(m_max_code) + "."
                             + " They will be ignored!\n";
                         std::cerr << error_message
-                                  << std::endl; // currently avoid passing
-                                                // in reporter here so that
-                                                // I don't need
+                                  << "\n"; // currently avoid passing
+                                           // in reporter here so that
+                                           // I don't need
                         // to pass the reporter as a parameter
                         chr_error = true;
                         continue;
@@ -502,7 +502,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         }
         for (auto&& snp : snp_info) {
             if (duplicated_snp.find(snp.rs()) != duplicated_snp.end()) continue;
-            log_file_stream << snp.rs() << std::endl;
+            log_file_stream << snp.rs() << "\n";
         }
         log_file_stream.close();
         std::string error_message =
@@ -799,7 +799,7 @@ void BinaryPlink::read_score(std::vector<size_t>& index)
                 else
                 {
                     sample.prs = g * stat * 0.5;
-                    sample.num_snp=1;
+                    sample.num_snp = 1;
                 }
             }
             actual_index++;

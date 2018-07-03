@@ -111,12 +111,14 @@ Region::Region(std::vector<std::string> feature, const int window_5,
 }
 
 void Region::run(const std::string& gtf, const std::string& msigdb,
-                 const std::vector<std::string>& bed, const std::string &snp_set,
-				 const std::string &multi_snp_sets, const Genotype &target,
-				 const std::string& out,
+                 const std::vector<std::string>& bed,
+                 const std::string& snp_set, const std::string& multi_snp_sets,
+                 const Genotype& target, const std::string& out,
                  const std::string& background, Reporter& reporter)
 {
-    if (gtf.empty() && bed.size() == 0 && snp_set.empty() && multi_snp_sets.empty()) {
+    if (gtf.empty() && bed.size() == 0 && snp_set.empty()
+        && multi_snp_sets.empty())
+    {
         m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
         m_region_snp_count = std::vector<int>(m_region_name.size());
         return;
@@ -191,81 +193,90 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     }
     m_duplicated_names.clear();
 }
-void Region::process_snp_sets(const std::string& single_snp_set, const std::string& multi_snp_set, const Genotype &target, Reporter &reporter){
-	std::string message ="";
-	if(!single_snp_set.empty()){
-		std::ifstream input;
-		input.open(single_snp_set.c_str());
-		if(!input.is_open()){
-			message = "Error: "+single_snp_set+" cannot be open!";
-			throw std::runtime_error(message);
-		}
-		if(m_duplicated_names.find(single_snp_set)!=m_duplicated_names.end()){
-			message = "Warning: Set name of "+single_snp_set+" is duplicated, it will be ignored";
-			reporter.report(message);
-		}else{
-			std::vector<region_bound> current_region;
-			std::string line;
-			while(std::getline(input, line)){
-				misc::trim(line);
-				int chr, loc;
-				if(target.get_snp_loc(line, chr, loc)){
-					region_bound cur_bound;
-					cur_bound.chr = chr;
-					cur_bound.start = loc;
-					cur_bound.end = loc;
-					current_region.push_back(cur_bound);
-				}
-			}
-			input.close();
-			if(current_region.size()> 0){
-				m_region_list.push_back(solve_overlap(current_region));
-				m_region_name.push_back(single_snp_set);
-				m_duplicated_names.insert(single_snp_set);
-			}
-		}
-	}
-	if(!multi_snp_set.empty()){
-		std::ifstream input;
-		input.open(multi_snp_set.c_str());
-		if(!input.is_open()){
-			message = "Error: "+multi_snp_set+" cannot be open!";
-			throw std::runtime_error(message);
-		}
-		std::string line;
-		while(std::getline(input, line)){
-			misc::trim(line);
-			if(line.empty()) continue;
-			std::vector<std::string> token = misc::split(line);
-			if(token.size()<=1){
-				message = "Error: Multi-set file should contain at least 2 columns. Did you want to use --snp-set instead?";
-				//can be less stringent
-				throw std::runtime_error(message);
-			}
-			if(m_duplicated_names.find(token[0])!=m_duplicated_names.end()){
-				message = "Warning: Set name of "+token[0]+" is duplicated, it will be ignored";
-				reporter.report(message);
-				continue;
-			}
-			std::vector<region_bound> current_region;
-			for( auto &&snp : token){
-				int chr, loc;
-				if(target.get_snp_loc(snp, chr, loc)){
-					region_bound cur_bound;
-					cur_bound.chr = chr;
-					cur_bound.start = loc;
-					cur_bound.end = loc;
-					current_region.push_back(cur_bound);
-				}
-			}
-			if(current_region.size()> 0){
-				m_region_list.push_back(solve_overlap(current_region));
-				m_region_name.push_back(token[0]);
-				m_duplicated_names.insert(token[0]);
-			}
-		}
-		input.close();
-	}
+void Region::process_snp_sets(const std::string& single_snp_set,
+                              const std::string& multi_snp_set,
+                              const Genotype& target, Reporter& reporter)
+{
+    std::string message = "";
+    if (!single_snp_set.empty()) {
+        std::ifstream input;
+        input.open(single_snp_set.c_str());
+        if (!input.is_open()) {
+            message = "Error: " + single_snp_set + " cannot be open!";
+            throw std::runtime_error(message);
+        }
+        if (m_duplicated_names.find(single_snp_set) != m_duplicated_names.end())
+        {
+            message = "Warning: Set name of " + single_snp_set
+                      + " is duplicated, it will be ignored";
+            reporter.report(message);
+        }
+        else
+        {
+            std::vector<region_bound> current_region;
+            std::string line;
+            while (std::getline(input, line)) {
+                misc::trim(line);
+                int chr, loc;
+                if (target.get_snp_loc(line, chr, loc)) {
+                    region_bound cur_bound;
+                    cur_bound.chr = chr;
+                    cur_bound.start = loc;
+                    cur_bound.end = loc;
+                    current_region.push_back(cur_bound);
+                }
+            }
+            input.close();
+            if (current_region.size() > 0) {
+                m_region_list.push_back(solve_overlap(current_region));
+                m_region_name.push_back(single_snp_set);
+                m_duplicated_names.insert(single_snp_set);
+            }
+        }
+    }
+    if (!multi_snp_set.empty()) {
+        std::ifstream input;
+        input.open(multi_snp_set.c_str());
+        if (!input.is_open()) {
+            message = "Error: " + multi_snp_set + " cannot be open!";
+            throw std::runtime_error(message);
+        }
+        std::string line;
+        while (std::getline(input, line)) {
+            misc::trim(line);
+            if (line.empty()) continue;
+            std::vector<std::string> token = misc::split(line);
+            if (token.size() <= 1) {
+                message = "Error: Multi-set file should contain at least 2 "
+                          "columns. Did you want to use --snp-set instead?";
+                // can be less stringent
+                throw std::runtime_error(message);
+            }
+            if (m_duplicated_names.find(token[0]) != m_duplicated_names.end()) {
+                message = "Warning: Set name of " + token[0]
+                          + " is duplicated, it will be ignored";
+                reporter.report(message);
+                continue;
+            }
+            std::vector<region_bound> current_region;
+            for (auto&& snp : token) {
+                int chr, loc;
+                if (target.get_snp_loc(snp, chr, loc)) {
+                    region_bound cur_bound;
+                    cur_bound.chr = chr;
+                    cur_bound.start = loc;
+                    cur_bound.end = loc;
+                    current_region.push_back(cur_bound);
+                }
+            }
+            if (current_region.size() > 0) {
+                m_region_list.push_back(solve_overlap(current_region));
+                m_region_name.push_back(token[0]);
+                m_duplicated_names.insert(token[0]);
+            }
+        }
+        input.close();
+    }
 }
 
 void Region::process_bed(const std::vector<std::string>& bed,
@@ -342,7 +353,7 @@ void Region::process_bed(const std::vector<std::string>& bed,
             {
                 temp = misc::convert<int>(token[+BED::END]);
                 if (temp >= 0)
-                    end = temp ;
+                    end = temp;
                 else
                 {
                     message.append("Error: Negative End Coordinate at line "
@@ -1034,7 +1045,7 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
     return false;
 }
 
-void Region::update_flag(const int chr, const std::string &rs, size_t loc,
+void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                          std::vector<uintptr_t>& flag)
 {
     flag[0] |= ONELU;
@@ -1092,8 +1103,9 @@ void Region::info(Reporter& reporter) const
     }
     else if (m_region_name.size() > 1)
     {
-    	// -1 to remove the background count, as we are not going to print the background anyway
-        message = "A total of " + std::to_string(m_region_name.size()-1)
+        // -1 to remove the background count, as we are not going to print the
+        // background anyway
+        message = "A total of " + std::to_string(m_region_name.size() - 1)
                   + " regions are included";
     }
     reporter.report(message);

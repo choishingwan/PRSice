@@ -551,7 +551,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                 continue;
             log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                             << snp.loc() << "\t" << snp.ref() << "\t"
-                            << snp.alt() << std::endl;
+                            << snp.alt() << "\n";
         }
         log_file_stream.close();
         std::string error_message =

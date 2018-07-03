@@ -93,7 +93,8 @@ public:
                    size_t& num_snp_included, const size_t region_index,
                    const bool cumulate, const bool require_statistic);
     // this is to prepare the genotypes for clumping
-    bool sort_by_p(){
+    bool sort_by_p()
+    {
         if (m_existed_snps.size() == 0) return false;
         m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
         return true;
@@ -107,12 +108,13 @@ public:
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
     void set_info(const Commander& c_commander, const bool ld = false);
-    bool get_snp_loc(const std::string& rs_id, int &chr, int& loc) const {
-    	auto &&snp_index = m_existed_snps_index.find(rs_id);
-    	if(snp_index==m_existed_snps_index.end()) return false;
-    	chr = m_existed_snps[snp_index->second].chr();
-    	loc = m_existed_snps[snp_index->second].loc();
-    	return true;
+    bool get_snp_loc(const std::string& rs_id, int& chr, int& loc) const
+    {
+        auto&& snp_index = m_existed_snps_index.find(rs_id);
+        if (snp_index == m_existed_snps_index.end()) return false;
+        chr = m_existed_snps[snp_index->second].chr();
+        loc = m_existed_snps[snp_index->second].loc();
+        return true;
     }
     void reset_sample_pheno()
     {
@@ -207,7 +209,7 @@ public:
             for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 print_file << "\t" << region.get_name(i_region);
             }
-            print_file << std::endl;
+            print_file << "\n";
         }
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
@@ -220,10 +222,10 @@ public:
                 if (print_snp)
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
-            if(prset && snp.in(region.size()-1)){
-            	m_background_snp_index.push_back(snp_index);
+            if (prset && snp.in(region.size() - 1)) {
+                m_background_snp_index.push_back(snp_index);
             }
-            if (print_snp) print_file << std::endl;
+            if (print_snp) print_file << "\n";
             snp_index++;
         }
         if (print_snp) print_file.close();
@@ -235,7 +237,10 @@ public:
                         const std::vector<size_t>& background_list,
                         const bool require_standardize);
     size_t num_background() const { return m_background_snp_index.size(); };
-    std::vector<size_t> background_index() const { return m_background_snp_index; };
+    std::vector<size_t> background_index() const
+    {
+        return m_background_snp_index;
+    };
 
 protected:
     friend class BinaryPlink;

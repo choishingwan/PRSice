@@ -46,17 +46,18 @@ public:
            const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
-             const std::vector<std::string>& bed, const std::string &snp_set,
-			 const std::string &multi_snp_sets, const Genotype &target,
-			 const std::string& out,
-             const std::string& background, Reporter& reporter);
+             const std::vector<std::string>& bed, const std::string& snp_set,
+             const std::string& multi_snp_sets, const Genotype& target,
+             const std::string& out, const std::string& background,
+             Reporter& reporter);
     void reset()
     {
         m_snp_check_index = std::vector<size_t>(m_region_name.size());
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    void update_flag(const int chr, const std::string &rs, size_t loc, std::vector<uintptr_t>& flag);
+    void update_flag(const int chr, const std::string& rs, size_t loc,
+                     std::vector<uintptr_t>& flag);
     size_t size() const { return m_region_name.size(); };
     std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
@@ -77,10 +78,11 @@ public:
     {
         int max = 0;
         m_region_post_clump_count.resize(count.size());
-        const size_t last_region_index = count.size()-1;
+        const size_t last_region_index = count.size() - 1;
         for (size_t i = 0; i < count.size(); ++i) {
-            max = (count[i] > max && i != last_region_index && i != 0) ? count[i]
-                                                                      : max;
+            max = (count[i] > max && i != last_region_index && i != 0)
+                      ? count[i]
+                      : max;
             m_region_post_clump_count[i] = count[i];
             if (m_region_size_duplicated.find(count[i])
                 != m_region_size_duplicated.end())
@@ -149,7 +151,9 @@ private:
         return false;
     }
 
-    void process_snp_sets(const std::string& single_snp_set, const std::string& multi_snp_set, const Genotype &target, Reporter &reporter);
+    void process_snp_sets(const std::string& single_snp_set,
+                          const std::string& multi_snp_set,
+                          const Genotype& target, Reporter& reporter);
     void process_bed(const std::vector<std::string>& bed, Reporter& reporter);
 
     std::unordered_map<std::string, region_bound> process_gtf(
