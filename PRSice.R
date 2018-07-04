@@ -250,6 +250,12 @@ help_message <-
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
                             Require the gtf file\n
+    --snp-set               Provide a SNP set file containing a single snp set.\n
+                            Name of SNP set file will be used as the region\n
+                            identifier. This file should contain only one column.\n
+    --snp-sets              Provide a SNP set file containing multiple snp sets.\n
+                            Each row represent a single SNP set with the first\n
+                            column containing name of the SNP set.\n    
 \nPRSlice:\n
     --prslice               Perform PRSlice where the whole genome is first cut\n
                             into bin size specified by this option. PRSice will\n
@@ -500,6 +506,8 @@ option_list <- list(
   make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
   make_option(c("--wind-5"), type = "character", dest="wind_5"),
   make_option(c("--wind-3"), type = "character", dest="wind_3"),
+  make_option(c("--snp-set"), type = "character", dest="snp_set"),
+  make_option(c("--snp-sets"), type = "character", dest="snp_sets"),
   # PRSlice 
   make_option(c("--prslice"), type = "numeric"),
   # Misc
