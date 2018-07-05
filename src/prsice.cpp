@@ -1049,6 +1049,7 @@ void PRSice::run_null_perm_no_thread(
     const bool intercept = true;
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
+
     while (processed < m_num_perm) {
         Eigen::VectorXd perm_pheno(num_regress_sample);
         perm_matrix.setIdentity();
@@ -1114,7 +1115,6 @@ void PRSice::gen_null_pheno(
                      perm_matrix.indices().data()
                          + perm_matrix.indices().size(),
                      rand_gen);
-        // key point here: g_permuted_pheno is a vector
         perm_vec = perm_matrix * m_phenotype; // permute columns
         std::pair<std::vector<double>, size_t> p =
             std::make_pair(null_pheno, processed);
@@ -1154,15 +1154,11 @@ void PRSice::consume_null_pheno(
         }
         else
         {
+
             Eigen::VectorXd beta = decomposed.solve(perm_pheno);
             Eigen::MatrixXd fitted = m_independent_variables * beta;
-
-            Eigen::VectorXd residual = perm_pheno - fitted;
+            double rss = (m_independent_variables * beta - perm_pheno).squaredNorm();
             int rdf = n - rank;
-            double rss = 0.0;
-            for (size_t r = 0; r < n; ++r) {
-                rss += residual(r) * residual(r);
-            }
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
