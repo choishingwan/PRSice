@@ -1157,7 +1157,8 @@ void PRSice::consume_null_pheno(
 
             Eigen::VectorXd beta = decomposed.solve(perm_pheno);
             Eigen::MatrixXd fitted = m_independent_variables * beta;
-            double rss = (m_independent_variables * beta - perm_pheno).squaredNorm();
+            double rss =
+                (m_independent_variables * beta - perm_pheno).squaredNorm();
             int rdf = n - rank;
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
@@ -1443,16 +1444,14 @@ void PRSice::output(const Commander& c_commander, const Region& region,
                    << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
                    << "\t" << m_prs_results[i].se << "\t"
                    << m_prs_results[i].num_snp;
-        if (m_prset)
-            prsice_out << "\t"
-                       << ((m_prs_results[i].competitive_p >= 0)
-                               ? std::to_string(m_prs_results[i].competitive_p)
-                               : "-");
-        if (perm)
-            prsice_out << "\t"
-                       << ((m_prs_results[i].emp_p >= 0.0)
-                               ? std::to_string(m_prs_results[i].emp_p)
-                               : "-");
+        if (m_prset && (m_prs_results[i].competitive_p >= 0))
+            prsice_out << "\t" << m_prs_results[i].competitive_p;
+        else if (m_prset)
+            prsice_out << "\t-";
+        if (perm && (m_prs_results[i].emp_p >= 0.0))
+            prsice_out << "\t" << m_prs_results[i].emp_p;
+        else if (perm)
+            prsice_out << "\t-";
         prsice_out << "\n";
     }
     prsice_out.close();
@@ -1553,11 +1552,12 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
         }
         out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t"
             << sum.result.p << "\t" << sum.result.num_snp;
-        if (m_prset) {
-            out << "\t"
-                << ((sum.result.competitive_p >= 0.0)
-                        ? std::to_string(sum.result.competitive_p)
-                        : "-");
+        if (m_prset && (sum.result.competitive_p >= 0.0)) {
+            out << "\t" << sum.result.competitive_p;
+        }
+        else if (m_prset)
+        {
+            out << "\t-";
         }
         if (perm) out << "\t" << sum.result.emp_p;
         out << "\n";

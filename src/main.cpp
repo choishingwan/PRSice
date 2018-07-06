@@ -146,6 +146,12 @@ int main(int argc, char* argv[])
             std::string region_out_name = commander.out() + ".region";
             // output the number of SNPs observed in each sets
             region.print_file(region_out_name);
+            // initialize PRSice class
+            PRSice prsice(base_name, commander, region.size() > 1,
+                          target_file->num_sample(), reporter);
+            // check the phenotype input columns
+            prsice.pheno_check(commander, reporter);
+
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
                 target_file->efficient_clumping(
@@ -162,11 +168,8 @@ int main(int argc, char* argv[])
             }
             target_file->count_snp_in_region(region, commander.out(),
                                              commander.print_snp());
-            // initialize PRSice class
-            PRSice prsice(base_name, commander, region.size() > 1,
-                          target_file->num_sample(), reporter);
-            // check the phenotype input columns
-            prsice.pheno_check(commander, reporter);
+
+
             prsice.init_process_count(commander, region.size(),
                                       target_file->num_threshold());
             const size_t num_pheno = prsice.num_phenotype();
