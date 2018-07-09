@@ -807,22 +807,29 @@ void BinaryPlink::read_score(std::vector<size_t>& index)
         first = false;
     }
 }
+
 void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
     uintptr_t final_mask = get_final_mask(m_sample_ct);
+    uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     // for array size
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     size_t num_samples_read = m_sample_names.size();
-
+    uint32_t homrar_ct;
+    uint32_t missing_ct;
+    uint32_t het_ct;
+    uint32_t homcom_ct;
+    intptr_t nanal;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
     }
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-
+    std::vector<uintptr_t> sample_include2(pheno_nm_ctv2);
+    fill_quatervec_55(m_sample_ct, sample_include2.data());
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
@@ -864,7 +871,11 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
-
+        // try to calculate MAF here
+        genovec_3freq(genotype.data(), sample_include2.data(), pheno_nm_ctv2, &missing_ct, &het_ct, &homcom_ct);
+        nanal = m_sample_ct - missing_ct;
+    	homrar_ct = nanal - het_ct - homcom_ct;
+    	// we can get the MAF here already
         uintptr_t* lbptr = genotype.data();
         uint32_t uii = 0;
         uintptr_t ulii = 0;
