@@ -33,112 +33,78 @@ class Genotype;
 class SNP
 {
 public:
-    SNP();
-    SNP(const std::string& rs_id, const int chr, const int loc,
+    SNP(){};
+    SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const std::string& file_name, const std::streampos byte_pos);
+        const std::string& file_name, const std::streampos byte_pos,
+        const intptr_t homcom_ct, const intptr_t het_ct,
+        const intptr_t homrar_ct)
+        : m_alt(alt_allele)
+        , m_ref(ref_allele)
+        , m_rs(rs_id)
+        , m_target_file(file_name)
+        , m_ref_file(file_name)
+        , m_target_byte_pos(byte_pos)
+        , m_ref_byte_pos(byte_pos)
+        , m_chr(chr)
+        , m_loc(loc)
+        , m_homcom(homcom_ct)
+        , m_het(het_ct)
+        , m_homrar(homrar_ct){};
     virtual ~SNP();
 
-    void set_statistic(const double stat, const double se, const double p_value,
-                       const int category, const double p_threshold)
+    void set_statistic(const double stat, const double p_value,
+                       const intptr_t category, const double p_threshold)
     {
-        statistic.stat = stat;
-        statistic.se = se;
-        statistic.p_value = p_value;
-        threshold.category = category;
-        threshold.p_threshold = p_threshold;
+        m_stat = stat;
+        m_p_value = p_value;
+        m_category = category;
+        m_p_threshold = p_threshold;
     };
-    void add_reference(const std::string ref_file,
+    void add_reference(const std::string& ref_file,
                        const std::streampos ref_byte_pos)
     {
-        ref_file_info.file = ref_file;
-        ref_file_info.byte_pos = ref_byte_pos;
+        m_ref_file = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
     }
 
-    inline void set_flipped() { statistic.flipped = true; };
-    std::string get_rs() const { return basic.rs; };
-    static std::vector<size_t> sort_by_p(const std::vector<SNP>& input);
+    inline void set_flipped() { m_flipped = true; };
+    std::string get_rs() const { return m_rs; };
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
-    static void sort_snp_index(std::vector<size_t>& index,
-                               const std::vector<SNP>& input);
     static void sort_snp_for_perm(std::vector<size_t>& index,
                                   const std::vector<SNP>& input);
-    bool operator==(const SNP& Ref) const
-    {
-        if (basic.chr == Ref.basic.chr && basic.loc == Ref.basic.loc
-            && basic.rs.compare(Ref.basic.rs) == 0)
-        {
-            if (basic.ref.compare(Ref.basic.ref) == 0) {
-                if (!basic.alt.empty() && !Ref.basic.alt.empty()) {
-                    return basic.alt.compare(Ref.basic.alt) == 0;
-                }
-                else
-                    return true;
-            }
-            else if (complement(basic.ref).compare(Ref.basic.ref) == 0)
-            {
-                if (!basic.alt.empty() && !Ref.basic.alt.empty()) {
-                    return complement(basic.alt).compare(Ref.basic.alt) == 0;
-                }
-                else
-                    return true;
-            }
-            else if (!basic.alt.empty() && !Ref.basic.alt.empty())
-            {
-                if (basic.ref.compare(Ref.basic.alt) == 0
-                    && basic.alt.compare(Ref.basic.ref) == 0)
-                {
-                    return true;
-                }
-                if (complement(basic.ref).compare(Ref.basic.alt) == 0
-                    && complement(basic.alt).compare(Ref.basic.alt) == 0)
-                {
-                    return true;
-                }
-                return false;
-            }
-            else
-                return false; // cannot flip nor match
-        }
-        else
-        {
-            return false;
-        }
-    };
 
-    inline bool matching(int chr, int loc, std::string ref, std::string alt,
-                         bool& flipped)
+    inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
+                         std::string& alt, bool& flipped)
     {
         misc::trim(ref);
         misc::trim(alt);
-        misc::trim(basic.ref);
-        misc::trim(basic.alt);
-        if (chr != -1 && basic.chr != -1 && chr != basic.chr) return false;
-        if (loc != -1 && basic.loc != -1 && loc != basic.loc) return false;
-        if (basic.ref.compare(ref) == 0) {
-            if (!basic.alt.empty() && !alt.empty()) {
-                return basic.alt.compare(alt) == 0;
+        misc::trim(m_ref);
+        misc::trim(m_alt);
+        if (chr != -1 && m_chr != -1 && chr != m_chr) return false;
+        if (loc != -1 && m_loc != -1 && loc != m_loc) return false;
+        if (m_ref == m_ref) {
+            if (!m_alt.empty() && !alt.empty()) {
+                return (m_alt == alt);
             }
             else
                 return true;
         }
-        else if (complement(basic.ref).compare(ref) == 0)
+        else if (complement(m_ref) == ref)
         {
-            if (!basic.alt.empty() && !alt.empty()) {
-                return complement(basic.alt).compare(alt) == 0;
+            if (!m_alt.empty() && !alt.empty()) {
+                return (complement(m_alt) == alt);
             }
             else
                 return true;
         }
-        else if (!basic.alt.empty() && !alt.empty())
+        else if (!m_alt.empty() && !alt.empty())
         {
-            if (basic.ref.compare(alt) == 0 && basic.alt.compare(ref) == 0) {
+            if ((m_ref == alt) && (m_alt == ref)) {
                 flipped = true;
                 return true;
             }
-            if (complement(basic.ref).compare(alt) == 0
-                && complement(basic.alt).compare(ref) == 0)
-            {
+            if ((complement(m_ref) == alt) && (complement(m_alt) == ref)) {
                 flipped = true;
                 return true;
             }
@@ -148,20 +114,20 @@ public:
             return false; // cannot flip nor match
     };
 
-    int chr() const { return basic.chr; };
-    int loc() const { return basic.loc; };
-    int category() const { return threshold.category; };
-    double p_value() const { return statistic.p_value; };
-    double stat() const { return statistic.stat; };
-    double get_threshold() const { return threshold.p_threshold; };
-    std::streampos byte_pos() const { return file_info.byte_pos; };
-    std::streampos ref_byte_pos() const { return ref_file_info.byte_pos; };
-    std::string file_name() const { return file_info.file; };
-    std::string ref_file_name() const { return ref_file_info.file; };
-    std::string rs() const { return basic.rs; };
-    std::string ref() const { return basic.ref; };
-    std::string alt() const { return basic.alt; };
-    bool is_flipped() { return statistic.flipped; };
+    intptr_t chr() const { return m_chr; };
+    intptr_t loc() const { return m_loc; };
+    intptr_t category() const { return m_category; };
+    double p_value() const { return m_p_value; };
+    double stat() const { return m_stat; };
+    double get_threshold() const { return m_p_threshold; };
+    std::streampos byte_pos() const { return m_target_byte_pos; };
+    std::streampos ref_byte_pos() const { return m_ref_byte_pos; };
+    std::string file_name() const { return m_target_file; };
+    std::string ref_file_name() const { return m_ref_file; };
+    std::string rs() const { return m_rs; };
+    std::string ref() const { return m_ref; };
+    std::string alt() const { return m_alt; };
+    bool is_flipped() { return m_flipped; };
 
     inline bool in(size_t i) const
     {
@@ -169,18 +135,14 @@ public:
             throw std::out_of_range("Out of range for flag");
         return ((m_flags[i / BITCT] >> (i % BITCT)) & 1);
     }
-
-    // void set_flag(std::vector<long_type> flag) { m_flags = flag; };
-
     void set_flag(Region& region)
     {
         m_max_flag_index = BITCT_TO_WORDCT(region.size());
         m_flags.resize(m_max_flag_index);
-        // m_flag = new uintptr_t[m_max_flag_index];
-        region.update_flag(basic.chr, basic.rs, basic.loc, m_flags);
+        region.update_flag(m_chr, m_rs, m_loc, m_flags);
     };
 
-    void set_clumped() { clump_info.clumped = true; };
+    void set_clumped() { m_clumped = true; };
     void clump(SNP& target, double r2, double proxy = 2)
     {
         // when proxy = 2, we will not perform proxy
@@ -207,71 +169,47 @@ public:
             }
         }
         if (completed) target.set_clumped();
-        clump_info.clumped = true;
+        m_clumped = true;
         // protect from other SNPs tempering its flags
     }
 
 
-    bool clumped() const { return clump_info.clumped; };
+    bool clumped() const { return m_clumped; };
 
-    bool valid() const { return basic.valid; };
-    void invalidate() { basic.valid = false; };
-    void set_low_bound(size_t low) { clump_info.low_bound = low; };
-    void set_maf(double maf) { basic.maf = maf; };
-    void set_up_bound(size_t up) { clump_info.up_bound = up; };
-    size_t up_bound() const { return clump_info.up_bound; };
-    size_t low_bound() const { return clump_info.low_bound; };
+    bool valid() const { return m_valid; };
+    void invalidate() { m_valid = false; };
+    void set_low_bound(uintptr_t low) { m_low_bound = low; };
+
+    void set_up_bound(uintptr_t up) { m_up_bound = up; };
+    uintptr_t up_bound() const { return m_up_bound; };
+    uintptr_t low_bound() const { return m_low_bound; };
 
 private:
     // basic info
-    /*
-     * Memory size = MAX_ID_SLEN*3 (ref alt rs)+ 4*
-     */
-    struct Clump
-    {
-        bool clumped;
-        std::vector<double> r2;
-        size_t low_bound;
-        size_t up_bound;
-    } clump_info;
-
-    struct Basic
-    {
-        std::string ref;
-        std::string alt;
-        std::string rs;
-        int chr;
-        int loc;
-        bool valid;
-        double maf;
-    } basic;
-
-    struct Target
-    {
-        std::string file;
-        std::streampos byte_pos;
-    } file_info;
-
-    struct Reference
-    {
-        std::string file;
-        std::streampos byte_pos;
-    } ref_file_info;
-
-    struct Statistic
-    {
-        double stat;
-        double se;
-        double p_value;
-        bool flipped;
-    } statistic;
-
-    struct Threshold
-    {
-        int category;
-        double p_threshold;
-    } threshold;
-
+    // actually, the packing of the data is problematic and to enhance
+    // performance we might want to organize the data into way where it is
+    // easier to "cache" also use data types that are more friendly?
+    std::string m_alt;
+    std::string m_ref;
+    std::string m_rs;
+    std::string m_target_file;
+    std::string m_ref_file;
+    std::streampos m_target_byte_pos;
+    std::streampos m_ref_byte_pos;
+    double m_stat = 0.0;
+    double m_p_value = 2.0;
+    double m_p_threshold = 0;
+    intptr_t m_chr = -1;
+    intptr_t m_category = -1;
+    intptr_t m_loc = -1;
+    intptr_t m_homcom = -1;
+    intptr_t m_het = -1;
+    intptr_t m_homrar = -1;
+    uintptr_t m_low_bound = 0;
+    uintptr_t m_up_bound = 0;
+    bool m_clumped = false;
+    bool m_valid = true;
+    bool m_flipped = false;
     // This indicate where this SNP's bound is at
     // useful for PRSlice and also clumping
     // thinking about it. Even if the location isn't given for

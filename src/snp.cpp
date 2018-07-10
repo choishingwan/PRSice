@@ -16,76 +16,7 @@
 
 #include "snp.hpp"
 
-SNP::SNP()
-{
-    basic.chr = -1;
-    basic.loc = -1; // default is -1 to indicate that it is not provided
-    basic.valid = true;
-    statistic.flipped = false;
-    statistic.stat = 0.0;
-    statistic.se = 0.0;
-    statistic.p_value = 2.0; // set this to 2 such that only SNPs in base file
-                             // have valid P-value
-    threshold.p_threshold = 0.0;
-    threshold.category = 0;
-    clump_info.clumped = false;
-}
-
-
-SNP::SNP(const std::string& rs_id, const int chr, const int loc,
-         const std::string& ref_allele, const std::string& alt_allele,
-         const std::string& file_name, const std::streampos byte_pos)
-{
-
-    basic.rs = rs_id;
-    basic.ref = ref_allele;
-    basic.alt = alt_allele;
-    basic.chr = chr;
-    basic.loc = loc;
-    basic.valid = true;
-    statistic.se = 0.0;
-    statistic.p_value = 0.0;
-    statistic.stat = 0.0;
-    statistic.flipped = false;
-    threshold.p_threshold = 0.0;
-    threshold.category = 0;
-    clump_info.clumped = false;
-    file_info.file = file_name;
-    file_info.byte_pos = byte_pos;
-    ref_file_info.file = file_name;
-    ref_file_info.byte_pos = byte_pos;
-}
 SNP::~SNP() {}
-
-std::vector<size_t> SNP::sort_by_p(const std::vector<SNP>& input)
-{
-    std::vector<size_t> idx(input.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
-        // plink do it with respect to the location instead of statistic
-        if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
-            if (input[i1].basic.chr == input[i2].basic.chr) {
-                if (input[i1].basic.loc == input[i2].basic.loc) {
-                    if (fabs(input[i1].statistic.stat)
-                        == fabs(input[i2].statistic.stat))
-                    {
-                        return input[i1].statistic.se < input[i2].statistic.se;
-                    }
-                    else
-                        return fabs(input[i1].statistic.stat)
-                               > fabs(input[2].statistic.stat);
-                }
-                else
-                    return input[i1].basic.loc < input[i2].basic.loc;
-            }
-            else
-                return input[i1].basic.chr < input[i2].basic.chr;
-        }
-        else
-            return input[i1].statistic.p_value < input[i2].statistic.p_value;
-    });
-    return idx;
-}
 
 std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
 {
@@ -95,42 +26,23 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
         // plink do it with respect to the location instead of statistic
         // chr first such that SNPs within the same chromosome will
         // be processed together
-        if (input[i1].basic.chr == input[i2].basic.chr) {
-            if (input[i1].statistic.p_value == input[i2].statistic.p_value) {
-                if (input[i1].basic.loc == input[i2].basic.loc) {
-                    if (fabs(input[i1].statistic.stat)
-                        == fabs(input[i2].statistic.stat))
-                    {
-                        return input[i1].statistic.se < input[i2].statistic.se;
-                    }
-                    else
-                        return fabs(input[i1].statistic.stat)
-                               > fabs(input[2].statistic.stat);
+        if (input[i1].m_chr == input[i2].m_chr) {
+            if (input[i1].m_p_value == input[i2].m_p_value) {
+                if (input[i1].m_loc == input[i2].m_loc) {
+                    // assume it is impossible for non-duplicated SNPs to have
+                    // same everything
+                    return std::abs(input[i1].m_stat) > fabs(input[2].m_stat);
                 }
                 else
-                    return input[i1].basic.loc < input[i2].basic.loc;
+                    return input[i1].m_loc < input[i2].m_loc;
             }
             else
-                return input[i1].statistic.p_value
-                       < input[i2].statistic.p_value;
+                return input[i1].m_p_value < input[i2].m_p_value;
         }
         else
-            return input[i1].basic.chr < input[i2].basic.chr;
+            return input[i1].m_chr < input[i2].m_chr;
     });
     return idx;
-}
-
-void SNP::sort_snp_index(std::vector<size_t>& index,
-                         const std::vector<SNP>& input)
-{
-    std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
-        if (input[i1].file_info.file.compare(input[i2].file_info.file) == 0) {
-            return input[i1].file_info.byte_pos < input[i2].file_info.byte_pos;
-        }
-        else
-            return input[i1].file_info.file.compare(input[i2].file_info.file)
-                   < 0;
-    });
 }
 
 void SNP::sort_snp_for_perm(std::vector<size_t>& index,
@@ -139,11 +51,10 @@ void SNP::sort_snp_for_perm(std::vector<size_t>& index,
     // now index is sorted, we want to sort the top select_size entry of index
     // by the file info
     std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
-        if (input[i1].file_info.file.compare(input[i2].file_info.file) == 0) {
-            return input[i1].file_info.byte_pos < input[i2].file_info.byte_pos;
+        if (input[i1].m_target_file == input[i2].m_target_file) {
+            return input[i1].m_target_byte_pos < input[i2].m_target_byte_pos;
         }
         else
-            return input[i1].file_info.file.compare(input[i2].file_info.file)
-                   < 0;
+            return (input[i1].m_target_file == input[i2].m_target_file);
     });
 }
