@@ -811,17 +811,33 @@ void BinaryPlink::read_score(std::vector<size_t>& index)
 void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
-    uintptr_t final_mask = get_final_mask(m_sample_ct);
-    uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+
+    const size_t num_samples_read = m_sample_names.size();
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     // for array size
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    size_t num_samples_read = m_sample_names.size();
+    const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    uintptr_t* lbptr;
+    uintptr_t ulii;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
     uint32_t homrar_ct;
     uint32_t missing_ct;
     uint32_t het_ct;
     uint32_t homcom_ct;
+    uint32_t homcom_weight = 0;
+    uint32_t het_weight = 1;
+    uint32_t homrar_weight = 2;
+    uint32_t temp_weight = 0;
+    // For set zero, miss_count will become 0
+    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const uint32_t homcom_code = 0;
+    const uint32_t het_code = 1;
+    const uint32_t homrar_code = 3;
     intptr_t nanal;
+    double stat, maf, adj_score, miss_score;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
@@ -874,21 +890,62 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         // try to calculate MAF here
         genovec_3freq(genotype.data(), sample_include2.data(), pheno_nm_ctv2, &missing_ct, &het_ct, &homcom_ct);
         nanal = m_sample_ct - missing_ct;
+        if (nanal== 0) {
+            cur_snp.invalidate();
+            continue;
+        }
     	homrar_ct = nanal - het_ct - homcom_ct;
-    	// we can get the MAF here already
-        uintptr_t* lbptr = genotype.data();
-        uint32_t uii = 0;
-        uintptr_t ulii = 0;
-        uint32_t ujj;
-        uint32_t ukk;
-        std::vector<size_t> missing_samples;
-        std::vector<double> sample_genotype(num_samples_read);
-        double stat = cur_snp.stat() * 2; // Multiply by ploidy
-        bool flipped = cur_snp.is_flipped();
-        uint32_t sample_idx = 0;
+    	switch(m_model){
+    		case MODEL::HETEROZYGOUS:
+    			maf = (double)het_ct/(double)(nanal*2.0);
+    			homcom_weight = 0;
+    			het_weight = 1;
+    			homrar_weight = 0;
+    			break;
+    		case MODEL::DOMINANT:
+    			homcom_weight = 0;
+    			het_weight = 1;
+    			homrar_weight = 1;
+    			maf = (double)(het_ct+homrar_ct)/(double)(nanal*2.0);
+    			break;
+    		case MODEL::RECESSIVE:
+    			homcom_weight = 0;
+    			het_weight = 0;
+    			homrar_weight = 1;
+    			maf = (double)(homrar_ct)/(double)(nanal*2.0);
+    			break;
+    		default:
+    			homcom_weight = 0;
+    			het_weight = 1;
+    			homrar_weight = 2;
+    			maf = (double)(het_ct+2.0*homrar_ct)/(double)(nanal*2.0);
+    			break;
+    	}
+    	if( cur_snp.is_flipped()){
+    		// change the mean to reflect flipping
+    		maf = 1.0-maf;
+    		// swap the weighting
+    		temp_weight = homcom_weight;
+    		homcom_weight = homrar_weight;
+    		homrar_weight = temp_weight;
 
-        int aa = 0, aA = 0, AA = 0;
-        size_t nmiss = 0;
+    	}
+        stat = cur_snp.stat() * 2; // Multiply by ploidy
+
+        adj_score = 0.0;
+        miss_score = 0.0;
+        // we don't allow the use of center and mean impute together
+        // if centre, missing = 0 anyway (kinda like mean imputed)
+        if(m_missing_score == MISSING_SCORE::CENTER) adj_score = stat * maf;
+        else if(m_missing_score == MISSING_SCORE::MEAN_IMPUTE) miss_score = stat * maf;
+
+
+        // now we go through the SNP vector
+
+        lbptr = genotype.data();
+        uii = 0;
+        ulii = 0;
+        uint32_t sample_idx = 0;
         do
         {
             ulii = ~(*lbptr++);
@@ -896,69 +953,40 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
                         - ONELU;
             }
+            ujj = 0;
             while (ulii) {
-                ujj = CTZLU(ulii) & (BITCT - 2);
                 ukk = (ulii >> ujj) & 3;
                 sample_idx = uii + (ujj / 2);
-                if (ukk == 1 || ukk == 3) // Because 10 is coded as missing
-                {
-                    // 3 is homo alternative
-                    // int flipped_geno = snp_list[snp_index].geno(ukk);
-                    if (sample_idx < num_samples_read) {
-                        int g = (ukk == 3) ? 2 : ukk;
-                        switch (g)
-                        {
-                        case 0: aa++; break;
-                        case 1: aA++; break;
-                        case 2: AA++; break;
-                        }
-                        sample_genotype[sample_idx] = g;
-                    }
-                }
-                else // this should be 2
-                {
-                    missing_samples.push_back(sample_idx);
-                    nmiss++;
+                auto&& sample = m_sample_names[sample_idx];
+                // now we will get all genotypes (0, 1, 2, 3)
+                switch(ukk){
+                	case homcom_code:
+                        sample.num_snp++;
+                		sample.prs += homcom_weight * stat * 0.5-adj_score;
+                		break;
+                	case het_code:
+                        sample.num_snp++;
+                		sample.prs += het_weight * stat * 0.5-adj_score;
+                		break;
+                	case homrar_code:
+                        sample.num_snp++;
+                		sample.prs += homrar_weight * stat * 0.5-adj_score;
+                		break;
+                	default:
+                		//missing
+                		// we don't allow use of centre together with mean impute
+                		// so this use should be fine
+                		sample.prs += miss_score;
+                		sample.num_snp+=miss_count;
+                		break;
+
                 }
                 ulii &= ~((3 * ONELU) << ujj);
+                ujj+=2;
             }
             uii += BITCT2;
         } while (uii < num_samples_read);
-
-        if (num_samples_read - nmiss == 0) {
-            cur_snp.invalidate();
-            continue;
-        }
-        // due to the way the binary code works, the aa will always be 0
-        // added there just for fun tbh
-        aa = num_samples_read - nmiss - aA - AA;
-        assert(aa >= 0);
-        if (flipped) {
-            int temp = aa;
-            aa = AA;
-            AA = temp;
-        }
-        if (m_model == MODEL::HETEROZYGOUS) {
-            // 010
-            aa += AA;
-            AA = 0;
-        }
-        else if (m_model == MODEL::DOMINANT)
-        {
-            // 011;
-            aA += AA;
-            AA = 0;
-        }
-        else if (m_model == MODEL::RECESSIVE)
-        {
-            // 001
-            aa += aA;
-            aA = AA;
-            AA = 0;
-        }
-        double maf = ((double) (aA + AA * 2)
-                      / ((double) (num_samples_read - nmiss)
-                         * 2.0)); // MAF does not count missing
+        /*
         double center_score = stat * maf;
         size_t num_miss = missing_samples.size();
         size_t i_missing = 0;
@@ -1006,5 +1034,6 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             }
             actual_index++;
         }
+        */
     }
 }

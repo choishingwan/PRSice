@@ -108,7 +108,7 @@ public:
                 if (!m_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
-                        "we perform  linear regression instead of logistic "
+                        "we perform linear regression instead of logistic "
                         "regression within the permutation and uses the "
                         "p-value to rank the thresholds. Our assumptions "
                         "are as follow:\n";
