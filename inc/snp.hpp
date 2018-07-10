@@ -37,8 +37,8 @@ public:
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
-        const uint32_t homcom_ct=0, const uint32_t het_ct=0,
-        const uint32_t homrar_ct=0, const uint32_t missing=0)
+        const uint32_t homcom_ct = 0, const uint32_t het_ct = 0,
+        const uint32_t homrar_ct = 0, const uint32_t missing = 0)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -50,8 +50,8 @@ public:
         , m_loc(loc)
         , m_homcom(homcom_ct)
         , m_het(het_ct)
-    , m_homrar(homrar_ct)
-    , m_missing(missing){};
+        , m_homrar(homrar_ct)
+        , m_missing(missing){};
     virtual ~SNP();
 
     void set_statistic(const double stat, const double p_value,
