@@ -335,11 +335,11 @@ private:
                             size_t set_size, size_t num_selected_snps,
                             double original_p, bool require_standardize,
                             bool is_binary, bool store_p);
-    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    void gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                         size_t num_consumer);
 
     void
-    consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                        Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
                        int rank, const Eigen::VectorXd& pre_se, bool run_glm);
     void run_null_perm_no_thread(

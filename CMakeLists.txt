@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(PRSice)
 include(ExternalProject)
 
-set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall" )
-# To compile a static library on Rosalind, we can use 
-# g++ --std=c++11 -I ../inc/ -isystem ../lib/ -L /usr/lib/x86_64-redhat-linux5E/lib64 -DNDEBUG -Wl,--whole-archive -lpthread -Wl,--no-whole-archive  -static-libstdc++  -static-libgcc -static ../src/*.cpp -o PRSice
+set(CMAKE_CXX_FLAGS "-Wall -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
 # Eigen from http://bitbucket.org/eigen/eigen/get/3.2.9.tar.bz2
@@ -16,7 +18,7 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 # Header files
 include_directories(inc)
 
-file(GLOB SOURCES "src/*.c*")
+file(GLOB SOURCES "src/*.cpp")
 find_package (Threads)
 
 add_executable(PRSice ${SOURCES})

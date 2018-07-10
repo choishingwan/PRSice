@@ -983,9 +983,11 @@ void PRSice::process_permutations()
 {
     // can't generate an empirical p-value if there is no observed p-value
     if (m_best_index == -1) return;
-    double best_p = m_prs_results[m_best_index].p;
+    //double best_p = m_prs_results[m_best_index].p;
+    double best_t = m_prs_results[m_best_index].coefficient/m_prs_results[m_best_index].se;
     size_t num_better = 0;
-    for (auto&& p : m_perm_result) num_better += (p <= best_p);
+    num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(), [&best_t](double t){return t > best_t;});
+    //for (auto&& p : m_perm_result) num_better += (p <= best_p);
     m_prs_results[m_best_index].emp_p =
         (double) (num_better + 1.0) / (double) (m_num_perm + 1.0);
 }
@@ -1022,7 +1024,7 @@ void PRSice::permutation(Genotype& target, const size_t n_thread,
     else
     {
 
-        Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
+        Thread_Queue<std::pair<Eigen::VectorXd, size_t>> set_perm_queue;
         std::thread producer(&PRSice::gen_null_pheno, this,
                              std::ref(set_perm_queue), n_thread - 1);
         std::vector<std::thread> consume_store;
@@ -1047,36 +1049,24 @@ void PRSice::run_null_perm_no_thread(
     Eigen::setNbThreads(1);
     const size_t num_regress_sample = m_phenotype.rows();
     const bool intercept = true;
-    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
-        m_phenotype.rows());
-
     while (processed < m_num_perm) {
-        Eigen::VectorXd perm_pheno(num_regress_sample);
-        perm_matrix.setIdentity();
-        std::shuffle(perm_matrix.indices().data(),
-                     perm_matrix.indices().data()
-                         + perm_matrix.indices().size(),
-                     rand_gen);
-        perm_pheno = perm_matrix * m_phenotype;
+        Eigen::VectorXd perm_pheno = m_phenotype;
+        std::shuffle(perm_pheno.data(), perm_pheno.data()+num_regress_sample, rand_gen);
         m_analysis_done++;
         print_progress();
-        double coefficient, se, r2;
-        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        double coefficient, se, r2, obs_p;
+        //double obs_p = 2.0; // for safety reason, make sure it is out bound
+        double obs_t = -1;
         if (run_glm) {
             Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
                             coefficient, se, 25, 1, true);
+            obs_t = coefficient/se;
         }
         else
         {
             Eigen::VectorXd beta = decomposed.solve(perm_pheno);
-            Eigen::MatrixXd fitted = m_independent_variables * beta;
-
-            Eigen::VectorXd residual = perm_pheno - fitted;
             int rdf = num_regress_sample - rank;
-            double rss = 0.0;
-            for (size_t r = 0; r < num_regress_sample; ++r) {
-                rss += residual(r) * residual(r);
-            }
+            double rss = (m_independent_variables * beta - perm_pheno).squaredNorm();
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
@@ -1086,18 +1076,17 @@ void PRSice::run_null_perm_no_thread(
             }
             double resvar = rss / (double) rdf;
             Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
-            double tval = beta(intercept) / se(se_index);
-            obs_p = misc::calc_tprob(tval, num_regress_sample);
+            obs_t = std::fabs(beta(intercept) / se(se_index));
         }
-
-        double ori_p = m_perm_result[processed];
-        m_perm_result[processed] = (ori_p > obs_p) ? obs_p : ori_p;
+        if(m_perm_result[processed] < obs_t){
+        	m_perm_result[processed] = obs_t;
+        }
         processed++;
     }
 }
 
 void PRSice::gen_null_pheno(
-    Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     size_t num_consumer)
 {
     size_t processed = 0;
@@ -1107,16 +1096,10 @@ void PRSice::gen_null_pheno(
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     while (processed < m_num_perm) {
-        std::vector<double> null_pheno(num_regress_sample);
-        Eigen::Map<Eigen::VectorXd> perm_vec(null_pheno.data(),
-                                             num_regress_sample);
-        perm_matrix.setIdentity();
-        std::shuffle(perm_matrix.indices().data(),
-                     perm_matrix.indices().data()
-                         + perm_matrix.indices().size(),
-                     rand_gen);
-        perm_vec = perm_matrix * m_phenotype; // permute columns
-        std::pair<std::vector<double>, size_t> p =
+    	Eigen::VectorXd null_pheno = m_phenotype;
+    	std::shuffle(null_pheno.data(),
+    			null_pheno.data()+num_regress_sample, rand_gen);
+        std::pair<Eigen::VectorXd, size_t> p =
             std::make_pair(null_pheno, processed);
         q.push(p, num_consumer);
         m_analysis_done++;
@@ -1125,13 +1108,13 @@ void PRSice::gen_null_pheno(
     }
     // send termination signal to the consumers
     for (size_t i = 0; i < num_consumer; ++i) {
-        q.push(std::pair<std::vector<double>, size_t>(std::vector<double>(), 0),
+        q.push(std::pair<Eigen::VectorXd, size_t>(Eigen::VectorXd(1), 0),
                num_consumer);
     }
 }
 
 void PRSice::consume_null_pheno(
-    Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
     const Eigen::VectorXd& pre_se, bool run_glm)
 {
@@ -1140,25 +1123,26 @@ void PRSice::consume_null_pheno(
     std::vector<double> temp_store;
     std::vector<size_t> temp_index;
     while (true) {
-        std::pair<std::vector<double>, size_t> input;
+        std::pair<Eigen::VectorXd, size_t> input;
         q.pop(input);
         // all job finished
 
-        if (std::get<0>(input).empty()) break;
-        Eigen::Map<Eigen::VectorXd> perm_pheno(std::get<0>(input).data(), n);
-        double coefficient, se, r2;
-        double obs_p = 2.0; // for safety reason, make sure it is out bound
+        if (std::get<0>(input).rows()==1) break;
+        double coefficient, se, r2, obs_p;
+        //double obs_p = 2.0; // for safety reason, make sure it is out bound
+        double obs_t = -1;
         if (run_glm) {
-            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+            Regression::glm(std::get<0>(input), m_independent_variables, obs_p, r2,
                             coefficient, se, 25, 1, true);
+            obs_t = coefficient / se;
         }
         else
         {
 
-            Eigen::VectorXd beta = decomposed.solve(perm_pheno);
-            Eigen::MatrixXd fitted = m_independent_variables * beta;
+            Eigen::VectorXd beta = decomposed.solve(std::get<0>(input));
+            //Eigen::MatrixXd fitted = m_independent_variables * beta;
             double rss =
-                (m_independent_variables * beta - perm_pheno).squaredNorm();
+                (m_independent_variables * beta - std::get<0>(input)).squaredNorm();
             int rdf = n - rank;
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
@@ -1169,19 +1153,20 @@ void PRSice::consume_null_pheno(
             }
             double resvar = rss / (double) rdf;
             Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
-            double tval = beta(intercept) / se(se_index);
-            obs_p = misc::calc_tprob(tval, n);
+            obs_t = std::fabs(beta(intercept) / se(se_index));
+            //obs_p = misc::calc_tprob(tval, n);
         }
-        temp_store.push_back(obs_p);
+        temp_store.push_back(obs_t);
         temp_index.push_back(std::get<1>(input));
     }
 
     std::lock_guard<std::mutex> lock(lock_guard);
     for (size_t i = 0; i < temp_store.size(); ++i) {
-        double obs_p = temp_store[i];
+        double obs_t = temp_store[i];
         auto&& index = temp_index[i];
-        double ori_p = m_perm_result[index];
-        m_perm_result[index] = (ori_p > obs_p) ? obs_p : ori_p;
+        if(m_perm_result[index] < obs_t){
+        	m_perm_result[index] = obs_t;
+        }
     }
 }
 void PRSice::thread_perm(
