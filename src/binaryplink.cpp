@@ -200,6 +200,13 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     int chr_index = 0;
     int chr_code = 0;
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+
+
+    // initialize the mask for read score
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    std::vector<uintptr_t> sample_include2(pheno_nm_ctv2);
+    fill_quatervec_55(m_sample_ct, sample_include2.data());
+
     for (auto prefix : m_genotype_files) {
         std::string bim_name = prefix + ".bim";
         std::string bed_name = prefix + ".bed";
@@ -369,6 +376,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 std::streampos byte_pos =
                     m_bed_offset
                     + ((num_snp_read - 1) * ((uint64_t) unfiltered_sample_ct4));
+                // calculate maf no matter what
                 if (maf > 0 || geno < 1) {
                     if (num_snp_read - prev_snp_processed > 1) {
                         // skip unread lines
@@ -515,6 +523,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             + dup_name;
         throw std::runtime_error(error_message);
     }
+
     return snp_info;
 }
 
@@ -844,8 +853,6 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     }
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-    std::vector<uintptr_t> sample_include2(pheno_nm_ctv2);
-    fill_quatervec_55(m_sample_ct, sample_include2.data());
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
@@ -945,7 +952,6 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         lbptr = genotype.data();
         uii = 0;
         ulii = 0;
-        uint32_t sample_idx = 0;
         do
         {
             ulii = ~(*lbptr++);
@@ -956,8 +962,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             ujj = 0;
             while (ulii) {
                 ukk = (ulii >> ujj) & 3;
-                sample_idx = uii + (ujj / 2);
-                auto&& sample = m_sample_names[sample_idx];
+                auto&& sample = m_sample_names[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch(ukk){
                 	case homcom_code:
@@ -986,54 +991,5 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
             }
             uii += BITCT2;
         } while (uii < num_samples_read);
-        /*
-        double center_score = stat * maf;
-        size_t num_miss = missing_samples.size();
-        size_t i_missing = 0;
-        // actual index should differ due to PLINK automatically remove samples
-        // that are not included
-        size_t actual_index = 0;
-        for (size_t i_sample = 0; i_sample < num_samples_read; ++i_sample) {
-            auto&& sample = m_sample_names[i_sample];
-            if (i_missing < num_miss
-                && actual_index == missing_samples[i_missing])
-            {
-                if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    sample.prs += center_score;
-                // g_prs_storage[vector_pad + i_sample] += center_score;
-                if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    sample.num_snp++;
-                // g_num_snps[vector_pad + i_sample]++;
-
-                i_missing++;
-            }
-            else
-            { // not missing sample
-                if (m_missing_score == MISSING_SCORE::CENTER) {
-                    // if centering, we want to keep missing at 0
-                    sample.prs -= center_score;
-                    // g_prs_storage[vector_pad + i_sample] -= center_score;
-                }
-                int g = (flipped) ? fabs(sample_genotype[actual_index] - 2)
-                                  : sample_genotype[actual_index];
-                if (m_model == MODEL::HETEROZYGOUS) {
-                    g = (g == 2) ? 0 : g;
-                }
-                else if (m_model == MODEL::RECESSIVE)
-                {
-                    g = std::max(0, g - 1);
-                }
-                else if (m_model == MODEL::DOMINANT)
-                {
-                    g = (g == 2) ? 1 : g;
-                }
-                sample.prs += g * stat * 0.5;
-                // g_prs_storage[vector_pad + i_sample] += g * stat * 0.5;
-                sample.num_snp++;
-                // g_num_snps[vector_pad + i_sample]++;
-            }
-            actual_index++;
-        }
-        */
     }
 }

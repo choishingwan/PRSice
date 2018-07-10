@@ -1067,8 +1067,8 @@ void PRSice::run_null_perm_no_thread(
             Eigen::VectorXd beta = decomposed.solve(perm_pheno);
             int rdf = num_regress_sample - rank;
             double rss = (m_independent_variables * beta - perm_pheno).squaredNorm();
-            size_t se_index = intercept;
-            for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
+            int se_index = intercept;
+            for (int ind = 0; ind < beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
                     se_index = ind;
                     break;

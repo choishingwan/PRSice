@@ -217,6 +217,7 @@ public:
     bool valid() const { return basic.valid; };
     void invalidate() { basic.valid = false; };
     void set_low_bound(size_t low) { clump_info.low_bound = low; };
+    void set_maf(double maf) { basic.maf = maf; };
     void set_up_bound(size_t up) { clump_info.up_bound = up; };
     size_t up_bound() const { return clump_info.up_bound; };
     size_t low_bound() const { return clump_info.low_bound; };
@@ -242,6 +243,7 @@ private:
         int chr;
         int loc;
         bool valid;
+        double maf;
     } basic;
 
     struct Target
