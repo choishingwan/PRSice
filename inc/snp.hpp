@@ -77,10 +77,7 @@ public:
     inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
-        misc::trim(ref);
-        misc::trim(alt);
-        misc::trim(m_ref);
-        misc::trim(m_alt);
+    	// should be trimmed
         if (chr != -1 && m_chr != -1 && chr != m_chr) return false;
         if (loc != -1 && m_loc != -1 && loc != m_loc) return false;
         if (m_ref == m_ref) {
@@ -168,14 +165,25 @@ public:
                 completed = (target.m_flags[i_flag] == 0);
             }
         }
-        if (completed) target.set_clumped();
+        if (completed){
+        	target.set_clumped();
+        	target.m_remove =true;
+        }
         m_clumped = true;
         // protect from other SNPs tempering its flags
     }
 
-
+    bool remove() const { return m_remove; };
     bool clumped() const { return m_clumped; };
-
+    bool retained() {
+    	if(m_retain){
+    		m_retain = false;
+    		return true;
+    	}
+    	return m_retain;
+    };
+    void set_retain() { m_retain = true;};
+    void reset_retain() { m_retain = false;};
     bool valid() const { return m_valid; };
     void invalidate() { m_valid = false; };
     void set_low_bound(uintptr_t low) { m_low_bound = low; };
@@ -197,6 +205,7 @@ private:
     // actually, the packing of the data is problematic and to enhance
     // performance we might want to organize the data into way where it is
     // easier to "cache" also use data types that are more friendly?
+    std::vector<uintptr_t> m_flags;
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;
@@ -218,6 +227,9 @@ private:
     uint32_t m_missing = 0;
     bool m_clumped = false;
     bool m_valid = true;
+    bool m_remove = false;
+    // should maintain it as false between functions, only use within
+    bool m_retain = false;
     bool m_flipped = false;
     // This indicate where this SNP's bound is at
     // useful for PRSlice and also clumping
@@ -227,7 +239,6 @@ private:
     // the bound is [ )
     // prset related
     size_t m_max_flag_index = 0;
-    std::vector<uintptr_t> m_flags;
 
     inline std::string complement(const std::string& allele) const
     {
