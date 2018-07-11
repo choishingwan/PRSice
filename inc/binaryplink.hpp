@@ -82,7 +82,8 @@ private:
     void read_score(std::vector<size_t>& index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index);
-    void read_additive_score(size_t start_index, size_t end_bound,
+    void read_score(std::vector<size_t> &index_bound, uint32_t homcom_weight,
+    		uint32_t het_weight, uint32_t homrar_weight,
                              const size_t region_index);
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
