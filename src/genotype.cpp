@@ -299,15 +299,16 @@ void Genotype::load_snps(const std::string out_prefix,
     if (m_num_geno_filter != 0) {
         message.append(
             std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold");
+            + " variant(s) excluded based on genotype missingness threshold\n");
     }
     if (m_num_maf_filter != 0) {
         message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold");
+                       + " variant(s) excluded based on MAF threshold\n");
     }
     if (m_num_info_filter != 0) {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on INFO score threshold");
+        message.append(
+            std::to_string(m_num_maf_filter)
+            + " variant(s) excluded based on INFO score threshold\n");
     }
     if (!m_is_ref) {
         message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
