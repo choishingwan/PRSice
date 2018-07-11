@@ -983,11 +983,13 @@ void PRSice::process_permutations()
 {
     // can't generate an empirical p-value if there is no observed p-value
     if (m_best_index == -1) return;
-    //double best_p = m_prs_results[m_best_index].p;
-    double best_t = m_prs_results[m_best_index].coefficient/m_prs_results[m_best_index].se;
+    // double best_p = m_prs_results[m_best_index].p;
+    double best_t = m_prs_results[m_best_index].coefficient
+                    / m_prs_results[m_best_index].se;
     size_t num_better = 0;
-    num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(), [&best_t](double t){return t > best_t;});
-    //for (auto&& p : m_perm_result) num_better += (p <= best_p);
+    num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(),
+                               [&best_t](double t) { return t > best_t; });
+    // for (auto&& p : m_perm_result) num_better += (p <= best_p);
     m_prs_results[m_best_index].emp_p =
         (double) (num_better + 1.0) / (double) (m_num_perm + 1.0);
 }
@@ -1051,22 +1053,24 @@ void PRSice::run_null_perm_no_thread(
     const bool intercept = true;
     while (processed < m_num_perm) {
         Eigen::VectorXd perm_pheno = m_phenotype;
-        std::shuffle(perm_pheno.data(), perm_pheno.data()+num_regress_sample, rand_gen);
+        std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
+                     rand_gen);
         m_analysis_done++;
         print_progress();
         double coefficient, se, r2, obs_p;
-        //double obs_p = 2.0; // for safety reason, make sure it is out bound
+        // double obs_p = 2.0; // for safety reason, make sure it is out bound
         double obs_t = -1;
         if (run_glm) {
             Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
                             coefficient, se, 25, 1, true);
-            obs_t = coefficient/se;
+            obs_t = coefficient / se;
         }
         else
         {
             Eigen::VectorXd beta = decomposed.solve(perm_pheno);
             int rdf = num_regress_sample - rank;
-            double rss = (m_independent_variables * beta - perm_pheno).squaredNorm();
+            double rss =
+                (m_independent_variables * beta - perm_pheno).squaredNorm();
             int se_index = intercept;
             for (int ind = 0; ind < beta.rows(); ++ind) {
                 if (decomposed.colsPermutation().indices()(ind) == intercept) {
@@ -1078,16 +1082,15 @@ void PRSice::run_null_perm_no_thread(
             Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
             obs_t = std::fabs(beta(intercept) / se(se_index));
         }
-        if(m_perm_result[processed] < obs_t){
-        	m_perm_result[processed] = obs_t;
+        if (m_perm_result[processed] < obs_t) {
+            m_perm_result[processed] = obs_t;
         }
         processed++;
     }
 }
 
-void PRSice::gen_null_pheno(
-    Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-    size_t num_consumer)
+void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
+                            size_t num_consumer)
 {
     size_t processed = 0;
     std::mt19937 rand_gen{m_seed};
@@ -1096,9 +1099,9 @@ void PRSice::gen_null_pheno(
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     while (processed < m_num_perm) {
-    	Eigen::VectorXd null_pheno = m_phenotype;
-    	std::shuffle(null_pheno.data(),
-    			null_pheno.data()+num_regress_sample, rand_gen);
+        Eigen::VectorXd null_pheno = m_phenotype;
+        std::shuffle(null_pheno.data(), null_pheno.data() + num_regress_sample,
+                     rand_gen);
         std::pair<Eigen::VectorXd, size_t> p =
             std::make_pair(null_pheno, processed);
         q.push(p, num_consumer);
@@ -1127,22 +1130,22 @@ void PRSice::consume_null_pheno(
         q.pop(input);
         // all job finished
 
-        if (std::get<0>(input).rows()==1) break;
+        if (std::get<0>(input).rows() == 1) break;
         double coefficient, se, r2, obs_p;
-        //double obs_p = 2.0; // for safety reason, make sure it is out bound
+        // double obs_p = 2.0; // for safety reason, make sure it is out bound
         double obs_t = -1;
         if (run_glm) {
-            Regression::glm(std::get<0>(input), m_independent_variables, obs_p, r2,
-                            coefficient, se, 25, 1, true);
+            Regression::glm(std::get<0>(input), m_independent_variables, obs_p,
+                            r2, coefficient, se, 25, 1, true);
             obs_t = coefficient / se;
         }
         else
         {
 
             Eigen::VectorXd beta = decomposed.solve(std::get<0>(input));
-            //Eigen::MatrixXd fitted = m_independent_variables * beta;
-            double rss =
-                (m_independent_variables * beta - std::get<0>(input)).squaredNorm();
+            // Eigen::MatrixXd fitted = m_independent_variables * beta;
+            double rss = (m_independent_variables * beta - std::get<0>(input))
+                             .squaredNorm();
             int rdf = n - rank;
             size_t se_index = intercept;
             for (size_t ind = 0; ind < (size_t) beta.rows(); ++ind) {
@@ -1154,7 +1157,7 @@ void PRSice::consume_null_pheno(
             double resvar = rss / (double) rdf;
             Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
             obs_t = std::fabs(beta(intercept) / se(se_index));
-            //obs_p = misc::calc_tprob(tval, n);
+            // obs_p = misc::calc_tprob(tval, n);
         }
         temp_store.push_back(obs_t);
         temp_index.push_back(std::get<1>(input));
@@ -1164,8 +1167,8 @@ void PRSice::consume_null_pheno(
     for (size_t i = 0; i < temp_store.size(); ++i) {
         double obs_t = temp_store[i];
         auto&& index = temp_index[i];
-        if(m_perm_result[index] < obs_t){
-        	m_perm_result[index] = obs_t;
+        if (m_perm_result[index] < obs_t) {
+            m_perm_result[index] = obs_t;
         }
     }
 }

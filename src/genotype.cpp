@@ -670,7 +670,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 if (flipped) cur_snp.set_flipped();
                 // ignore the SE as it currently serves no purpose
                 exist_index.push_back(m_existed_snps_index[rs_id]);
-                cur_snp.set_statistic(stat, 0.0, pvalue, category, pthres);
+                cur_snp.set_statistic(stat, pvalue, category, pthres);
                 if (unique_thresholds.find(category) == unique_thresholds.end())
                 {
                     unique_thresholds.insert(category);

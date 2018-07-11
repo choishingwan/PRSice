@@ -33,9 +33,12 @@ public:
     ~BinaryPlink();
 
 private:
+    std::string m_cur_file;
+    std::ifstream m_bed_file;
+    std::streampos m_prev_loc = 0;
     uintptr_t m_bed_offset = 3;
-    std::vector<Sample> gen_sample_vector();
 
+    std::vector<Sample> gen_sample_vector();
     std::vector<SNP> gen_snp_vector(const double geno, const double maf,
                                     const double info,
                                     const double hard_threshold,
@@ -44,7 +47,6 @@ private:
                                     Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);
-
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype,
                               const std::streampos byte_pos,
@@ -80,11 +82,8 @@ private:
     void read_score(std::vector<size_t>& index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index);
-
-    std::ifstream m_bed_file;
-    std::string m_cur_file;
-    std::streampos m_prev_loc = 0;
-
+    void read_additive_score(size_t start_index, size_t end_bound,
+                             const size_t region_index);
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
                                     const uintptr_t* __restrict sample_include,
