@@ -22,14 +22,14 @@
 // From http://stackoverflow.com/a/12927952/1441789
 struct Sample
 {
+    double prs;
+    int num_snp;
     std::string FID;
     std::string IID;
     std::string pheno;
-    int num_snp;
     // include is related to founder status
     bool include;
     bool in_regression;
-    double prs;
 };
 
 
