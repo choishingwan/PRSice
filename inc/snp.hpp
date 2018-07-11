@@ -78,9 +78,13 @@ public:
                          std::string& alt, bool& flipped)
     {
     	// should be trimmed
-        if (chr != -1 && m_chr != -1 && chr != m_chr) return false;
-        if (loc != -1 && m_loc != -1 && loc != m_loc) return false;
-        if (m_ref == m_ref) {
+        if (chr != -1 && m_chr != -1 && chr != m_chr){
+        	return false;
+        }
+        if (loc != -1 && m_loc != -1 && loc != m_loc){
+        	return false;
+        }
+        if (m_ref == ref) {
             if (!m_alt.empty() && !alt.empty()) {
                 return (m_alt == alt);
             }
