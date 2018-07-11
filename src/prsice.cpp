@@ -1046,46 +1046,55 @@ void PRSice::run_null_perm_no_thread(
     const Eigen::VectorXd& pre_se, bool run_glm)
 {
     size_t processed = 0;
-
     std::mt19937 rand_gen{m_seed};
     Eigen::setNbThreads(1);
     const size_t num_regress_sample = m_phenotype.rows();
     const bool intercept = true;
-    while (processed < m_num_perm) {
-        Eigen::VectorXd perm_pheno = m_phenotype;
-        std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
-                     rand_gen);
-        m_analysis_done++;
-        print_progress();
-        double coefficient, se, r2, obs_p;
-        // double obs_p = 2.0; // for safety reason, make sure it is out bound
-        double obs_t = -1;
-        if (run_glm) {
-            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
-                            coefficient, se, 25, 1, true);
-            obs_t = coefficient / se;
-        }
-        else
-        {
-            Eigen::VectorXd beta = decomposed.solve(perm_pheno);
-            int rdf = num_regress_sample - rank;
-            double rss =
-                (m_independent_variables * beta - perm_pheno).squaredNorm();
-            int se_index = intercept;
-            for (int ind = 0; ind < beta.rows(); ++ind) {
-                if (decomposed.colsPermutation().indices()(ind) == intercept) {
-                    se_index = ind;
-                    break;
-                }
-            }
-            double resvar = rss / (double) rdf;
-            Eigen::VectorXd se = (pre_se * resvar).array().sqrt();
-            obs_t = std::fabs(beta(intercept) / se(se_index));
-        }
-        if (m_perm_result[processed] < obs_t) {
-            m_perm_result[processed] = obs_t;
-        }
-        processed++;
+    Eigen::VectorXd perm_pheno;
+    if(run_glm){
+    	while(processed < m_num_perm){
+    		perm_pheno = m_phenotype;
+    		std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
+    				rand_gen);
+    		m_analysis_done++;
+    		print_progress();
+    		double coefficient, se, r2, obs_p;
+    		// double obs_p = 2.0; // for safety reason, make sure it is out bound
+    		double obs_t = -1;
+    		Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+    				coefficient, se, 25, 1, true);
+    		obs_t = coefficient / se;
+    		m_perm_result[processed] =std::min(obs_t, m_perm_result[processed]);
+    		processed++;
+    	}
+    }else{
+    	Eigen::VectorXd beta;
+    	Eigen::VectorXd se;
+		while (processed < m_num_perm) {
+			perm_pheno = m_phenotype;
+			std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
+						 rand_gen);
+			m_analysis_done++;
+			print_progress();
+			// double obs_p = 2.0; // for safety reason, make sure it is out bound
+			double obs_t = -1;
+			beta = decomposed.solve(perm_pheno);
+			int rdf = num_regress_sample - rank;
+			double rss =
+					(m_independent_variables * beta - perm_pheno).squaredNorm();
+			int se_index = intercept;
+			for (int ind = 0; ind < beta.rows(); ++ind) {
+				if (decomposed.colsPermutation().indices()(ind) == intercept) {
+					se_index = ind;
+					break;
+				}
+			}
+			double resvar = rss / (double) rdf;
+			se = (pre_se * resvar).array().sqrt();
+			obs_t = std::abs(beta(intercept) / se(se_index));
+			m_perm_result[processed] =std::min(obs_t, m_perm_result[processed]);
+			processed++;
+		}
     }
 }
 
@@ -1104,7 +1113,8 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                      rand_gen);
         std::pair<Eigen::VectorXd, size_t> p =
             std::make_pair(null_pheno, processed);
-        q.push(p, num_consumer);
+        //q.push(p, num_consumer);
+        q.emplace(std::move(p), num_consumer);
         m_analysis_done++;
         print_progress();
         processed++;
@@ -1668,7 +1678,6 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
     const size_t num_background = target.num_background();
     std::vector<size_t> background = target.background_index();
     while (processed < num_perm) {
-        std::vector<double> prs(num_regress_sample, 0);
         size_t begin = 0;
         // size_t num_snp = set_size;
         size_t num_snp = num_selected_snps;
@@ -1682,6 +1691,7 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
         }
         target.get_null_score(set_size, num_selected_snps, background,
                               require_standardize);
+        std::vector<double> prs(num_regress_sample, 0);
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             if (sample_index[sample_id] != -1) {
                 prs[sample_index[sample_id]] =
@@ -1689,10 +1699,8 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             }
         }
 
-        q.push(prs, num_consumer);
-
+        q.push(std::move(prs), num_consumer);
         m_analysis_done++;
-
         print_progress();
         processed++;
     }
