@@ -26,7 +26,7 @@ BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
-    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+    //m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     // place holder. Currently set default to human.
     init_chr();
     // get the bed file names

@@ -53,10 +53,10 @@ public:
     Genotype(const size_t thread, const bool ignore_fid,
              const bool keep_nonfounder, const bool keep_ambig,
              const bool is_ref = false)
-        : m_is_ref(is_ref)
-        , m_thread(thread)
-        , m_keep_nonfounder(keep_nonfounder)
-        , m_ignore_fid(ignore_fid)
+        : m_thread(thread)
+    	, m_ignore_fid(ignore_fid)
+    	, m_is_ref(is_ref)
+    	, m_keep_nonfounder(keep_nonfounder)
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 
@@ -230,6 +230,7 @@ public:
         }
         if (print_snp) print_file.close();
         // this is use for skipping permutation for sets with same size
+        m_background_region_index = region.size() - 1;
         region.post_clump_count(result);
     };
 
@@ -245,59 +246,72 @@ public:
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
-    // variable storages
-    // vector storing all the genotype files
-    std::vector<std::string> m_genotype_files;
-    // sample file name. Fam for plink
-    std::string m_sample_file;
+    // need to consider cacheline efficiency, so we need to organize the member variable in most efficient way
 
-    bool m_is_ref = false;
-    /** chromosome information **/
-    // here such that we can extend PRSice to other organism if we have time
-    // also use for handling sex chromosome (which is something that require
-    // further research)
-    std::vector<int32_t> m_xymt_codes;
-    std::vector<int32_t> m_chrom_start;
-    uint32_t m_autosome_ct;
-    uint32_t m_max_code;
-    std::vector<uintptr_t> m_haploid_mask;
-    std::vector<uintptr_t> m_chrom_mask;
-    // misc variables
-    uint32_t m_thread = 1;
-    bool m_keep_nonfounder = false;
-    bool m_ignore_fid = false;
-    bool m_keep_ambig = false;
-    // sample information
+
+    // vector storing all the genotype files
     std::vector<Sample> m_sample_names;
-    bool m_remove_sample = true;
+    std::vector<SNP> m_existed_snps;
+    std::unordered_map<std::string, size_t> m_existed_snps_index;
+    std::unordered_map<std::string, int> m_chr_order;
     std::unordered_set<std::string> m_sample_selection_list;
-    uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
-    uintptr_t m_sample_ct = 0;            // number of final samples
+    std::unordered_set<std::string> m_snp_selection_list;
+    std::vector<std::string> m_genotype_files;
+    std::vector<double> m_thresholds;
+    std::vector<uintptr_t> m_tmp_genotype;
+    //std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
     std::vector<uintptr_t> m_sample_include;
-    std::vector<uintptr_t> m_sex_male;
-    size_t m_num_male = 0;
-    size_t m_num_female = 0;
-    size_t m_num_ambig_sex = 0;
-    size_t m_num_non_founder = 0;
+    std::vector<uintptr_t> m_haploid_mask;
+    std::vector<size_t> m_sort_by_p_index;
+    std::vector<size_t> m_background_snp_index;
+    //std::vector<uintptr_t> m_sex_male;
+    std::vector<int32_t> m_xymt_codes;
+    //std::vector<int32_t> m_chrom_start;
+    // sample file name. Fam for plink
+    std::string m_sample_file;
+    double m_mean_score = 0.0;
+    double m_score_sd = 0.0;
+    double m_hard_threshold =0.0;
+    double m_clump_r2=0.0;
+    double m_clump_proxy = 0.0;
+    double m_clump_p = 0.0;
+    uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
+    uintptr_t m_unfiltered_marker_ct = 0;
+    uintptr_t m_clump_distance = 0;
+    uintptr_t m_sample_ct = 0;
     uintptr_t m_founder_ct = 0;
-    // snp information
-    bool m_exclude_snp = true;
-    std::unordered_set<std::string> m_snp_selection_list;
+    intptr_t m_background_region_index = -1;
+    uint32_t m_max_category = 0;
+    uint32_t m_region_size = 1;
+    uint32_t m_num_threshold = 0;
+    uint32_t m_max_window_size = 0;
+    uint32_t m_thread = 1;         // number of final samples
+    uint32_t m_autosome_ct=0;
+    uint32_t m_max_code=0;
     uintptr_t m_marker_ct = 0;
+    unsigned int m_seed=0;
     uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;
     uint32_t m_num_maf_filter = 0;
     uint32_t m_num_geno_filter = 0;
     uint32_t m_num_info_filter = 0;
-    double m_hard_threshold;
+    uint32_t m_num_male = 0;
+    uint32_t m_num_female = 0;
+    uint32_t m_num_ambig_sex = 0;
+    uint32_t m_num_non_founder = 0;
+    bool m_use_proxy = false;
+    bool m_ignore_fid = false;
+    bool m_is_ref = false;
+    bool m_keep_nonfounder = false;
+    bool m_keep_ambig = false;
+    bool m_remove_sample = true;
+    bool m_exclude_snp = true;
     bool m_hard_coded = false;
-    std::unordered_map<std::string, size_t> m_existed_snps_index;
-    std::vector<size_t> m_sort_by_p_index;
-    std::vector<SNP> m_existed_snps;
-    std::unordered_map<std::string, int> m_chr_order;
-    std::vector<uintptr_t> m_tmp_genotype;
-    std::vector<size_t> m_background_snp_index;
+    MODEL m_model = MODEL::ADDITIVE;
+    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    SCORING m_scoring = SCORING::AVERAGE;
+
     // functions
     // function to substitute the # in the sample name
     std::vector<std::string> set_genotype_files(const std::string& prefix);
@@ -332,29 +346,6 @@ protected:
                   std::vector<uintptr_t>& index_data,
                   std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
-    unsigned int m_seed;
-    size_t m_max_category = 0;
-    size_t m_region_size = 1;
-    size_t m_num_threshold = 0;
-    size_t m_max_window_size = 0;
-    MODEL m_model = MODEL::ADDITIVE;
-    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
-    SCORING m_scoring = SCORING::AVERAGE;
-    double m_mean_score = 0.0;
-    double m_score_sd = 0.0;
-    struct
-    {
-        double r2;
-        double proxy;
-        double p_value;
-        int distance;
-        bool use_proxy;
-    } clump_info;
-
-
-    std::vector<double> m_thresholds;
-
-    uintptr_t m_unfiltered_marker_ct = 0;
     // uint32_t m_hh_exists;
 
     void update_snps(std::vector<int>& retained_index);
@@ -380,14 +371,6 @@ protected:
                || (alt_allele == "g" && ref_allele == "c");
     };
 
-    /*
-    void perform_clump(size_t& core_genotype_index, int& begin_index,
-                       int current_index, bool require_clump);
-    void clump_thread(const size_t c_core_genotype_index,
-                      const size_t c_begin_index, const size_t c_current_index);
-    void compute_clump(size_t core_genotype_index, size_t i_start, size_t i_end,
-                       bool nm_fixed, uint32_t* tot1);
-*/
 
     // no touchy area (PLINK Code)
     uint32_t em_phase_hethet(double known11, double known12, double known21,

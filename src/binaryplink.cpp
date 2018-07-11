@@ -581,24 +581,23 @@ void BinaryPlink::read_score(std::vector<size_t>& index)
 	// region_index should be the background index
 	switch(m_model){
 		    case MODEL::HETEROZYGOUS:
-		    	read_score(index, 0,1,0, m_background_region_index);
+		    	read_score(index, 0,1,0);
 		        break;
 		    case MODEL::DOMINANT:
-		    	read_score(index, 0,1,1, m_background_region_index);
+		    	read_score(index, 0,1,1);
 		        break;
 		    case MODEL::RECESSIVE:
-		    	read_score(index, 0,0,1, m_background_region_index);
+		    	read_score(index, 0,0,1);
 		    	break;
 		    default:
-				read_score(index, 0,1,2, m_background_region_index);
+				read_score(index, 0,1,2);
 				break;
 			}
 }
 
-// this will be used most, so maybe write a function to do this to minimize
-// branching?
+
 void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_wt,
-		uint32_t het_wt, uint32_t homrar_wt, const size_t region_index)
+		uint32_t het_wt, uint32_t homrar_wt)
 {
 
     const size_t num_samples_read = m_sample_names.size();
@@ -633,6 +632,157 @@ void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_w
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     for (auto &&i_snp : index_bound) {
+        // for each SNP
+        auto&& cur_snp = m_existed_snps[i_snp];
+        if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
+        {
+            // If we are processing a new file
+            if (m_bed_file.is_open()) {
+                m_bed_file.close();
+            }
+            m_cur_file = cur_snp.file_name();
+            std::string bedname = m_cur_file + ".bed";
+            m_bed_file.open(bedname.c_str(), std::ios::binary);
+            if (!m_bed_file.is_open()) {
+                std::string error_message =
+                    "Error: Cannot open bed file: " + bedname;
+                throw std::runtime_error(error_message);
+            }
+            m_prev_loc = 0;
+        }
+        // current location of the snp in the bed file
+        // allow for quick jumping
+        // very useful for read score as most SNPs might not
+        // be next to each other
+        std::streampos cur_line = cur_snp.byte_pos();
+        if (m_prev_loc != cur_line
+            && !m_bed_file.seekg(cur_line, std::ios_base::beg))
+        {
+            throw std::runtime_error("Error: Cannot read the bed file!");
+        }
+        m_prev_loc = cur_line + (std::streampos) unfiltered_sample_ct4;
+        // loadbuf_raw is the temporary
+        // loadbuff is where the genotype will be located
+        if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
+                                   m_sample_include.data(), final_mask, false,
+                                   m_bed_file, m_tmp_genotype.data(),
+                                   genotype.data()))
+        {
+            throw std::runtime_error("Error: Cannot read the bed file!");
+        }
+        // try to calculate MAF here
+        /*
+        genovec_3freq(genotype.data(), sample_include2.data(), pheno_nm_ctv2,
+                      &missing_ct, &het_ct, &homcom_ct);
+                      */
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        nanal = m_sample_ct - missing_ct;
+        if (nanal == 0) {
+            cur_snp.invalidate();
+            continue;
+        }
+        homcom_weight = homcom_wt;
+        het_weight = het_wt;
+        homrar_weight = homrar_wt;
+        maf = (double) (het_ct*het_weight + homrar_weight * homrar_ct) / (double) (nanal * 2.0);
+        if (cur_snp.is_flipped()) {
+            // change the mean to reflect flipping
+            maf = 1.0 - maf;
+            // swap the weighting
+            temp_weight = homcom_weight;
+            homcom_weight = homrar_weight;
+            homrar_weight = temp_weight;
+        }
+        stat = cur_snp.stat() * 2; // Multiply by ploidy
+        // we don't allow the use of center and mean impute together
+        // if centre, missing = 0 anyway (kinda like mean imputed)
+        // centre is 0 if false
+        adj_score = stat * maf * is_centre;
+        miss_score = stat * maf * mean_impute;
+
+
+        // now we go through the SNP vector
+
+        lbptr = genotype.data();
+        uii = 0;
+        ulii = 0;
+        do
+        {
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            ujj = 0;
+            while (ulii) {
+                ukk = (ulii >> ujj) & 3;
+                auto&& sample = m_sample_names[uii + (ujj / 2)];
+                // now we will get all genotypes (0, 1, 2, 3)
+                switch (ukk)
+                {
+                default:
+                    sample.num_snp++;
+                    sample.prs += homcom_weight * stat * 0.5 - adj_score;
+                    break;
+                case 1:
+                    sample.num_snp++;
+                    sample.prs += het_weight * stat * 0.5 - adj_score;
+                    break;
+                case 3:
+                    sample.num_snp++;
+                    sample.prs += homrar_weight * stat * 0.5 - adj_score;
+                    break;
+                case 2:
+                    sample.prs += miss_score;
+                    sample.num_snp += miss_count;
+                    break;
+                }
+                ulii &= ~((3 * ONELU) << ujj);
+                ujj += 2;
+            }
+            uii += BITCT2;
+        } while (uii < num_samples_read);
+    }
+}
+
+
+
+void BinaryPlink::read_score(size_t start_index, size_t end_bound, uint32_t homcom_wt,
+		uint32_t het_wt, uint32_t homrar_wt, const size_t region_index)
+{
+
+    const size_t num_samples_read = m_sample_names.size();
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    // for array size
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    uintptr_t* lbptr;
+    uintptr_t ulii;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uint32_t homrar_ct;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
+    uint32_t homcom_weight = homcom_wt;
+    uint32_t het_weight = het_wt;
+    uint32_t homrar_weight = homrar_wt;
+    uint32_t temp_weight = 0;
+    // For set zero, miss_count will become 0
+    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
+    const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
+    intptr_t nanal;
+    double stat, maf, adj_score, miss_score;
+    m_cur_file = ""; // just close it
+    if (m_bed_file.is_open()) {
+        m_bed_file.close();
+    }
+    // index is w.r.t. partition, which contain all the information
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
         if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
@@ -750,21 +900,21 @@ void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_w
 void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
-	std::vector<size_t> index_bound(end_bound-start_index);
-	std::iota(index_bound.begin(), index_bound.end(), start_index);
+//	std::vector<size_t> index_bound(end_bound-start_index);
+//  std::iota(index_bound.begin(), index_bound.end(), start_index);
 
 	switch(m_model){
     case MODEL::HETEROZYGOUS:
-    	read_score(index_bound, 0,1,0, region_index);
+    	read_score(start_index, end_bound, 0,1,0, region_index);
         break;
     case MODEL::DOMINANT:
-    	read_score(index_bound, 0,1,1, region_index);
+    	read_score(start_index, end_bound, 0,1,1, region_index);
         break;
     case MODEL::RECESSIVE:
-    	read_score(index_bound, 0,0,1, region_index);
+    	read_score(start_index, end_bound, 0,0,1, region_index);
     	break;
     default:
-		read_score(index_bound, 0,1,2, region_index);
+		read_score(start_index, end_bound, 0,1,2, region_index);
 		break;
 	}
 }

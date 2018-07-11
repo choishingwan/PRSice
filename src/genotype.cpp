@@ -112,6 +112,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
             m_max_code = num_auto;
         }
     }
+    /*
     fill_all_bits(m_autosome_ct + 1, m_chrom_mask.data());
     for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
         int32_t cur_code = m_xymt_codes[xymt_idx];
@@ -120,6 +121,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         }
     }
     m_chrom_start.resize(m_max_code); // 1 extra for the info
+    */
 }
 
 std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
@@ -409,8 +411,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     std::vector<std::string> token;
 
     // exclude indicates we don't want this SNP
-    bool exclude = false;
     // Some QC counts
+    std::string rs_id;
+    std::string ref_allele;
+	std::string alt_allele;
+    double maf = 1;
+    double info_score = 1;
+    double pvalue = 2.0;
+    double stat = 0.0;
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
     size_t num_ambiguous = 0;
@@ -423,9 +431,15 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
     size_t num_maf_filter = 0;
-
+    size_t num_retained = 0;
+    bool maf_filtered = false;
+    bool exclude = false;
+    bool flipped = false;
+    int category = -1;
+    double pthres = 0.0;
+    int32_t chr_code;
     std::unordered_set<std::string> dup_index;
-    std::vector<int> exist_index; // try to use this as quick search
+
     // Actual reading the file, will do a bunch of QC
     size_t file_length = 0;
     if (gz_input) {
@@ -474,13 +488,13 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             throw std::runtime_error(error_message);
         }
 
-        std::string rs_id = token[index[+BASE_INDEX::RS]];
+        rs_id = token[index[+BASE_INDEX::RS]];
         if (m_existed_snps_index.find(rs_id) != m_existed_snps_index.end()
             && dup_index.find(rs_id) == dup_index.end())
         {
             dup_index.insert(rs_id);
             auto&& cur_snp = m_existed_snps[m_existed_snps_index[rs_id]];
-            int32_t chr_code = -1;
+            chr_code = -1;
             if (index[+BASE_INDEX::CHR] >= 0) {
                 chr_code =
                     get_chrom_code_raw(token[index[+BASE_INDEX::CHR]].c_str());
@@ -511,10 +525,10 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     num_haploid++;
                 }
             }
-            std::string ref_allele = (index[+BASE_INDEX::REF] >= 0)
+            ref_allele = (index[+BASE_INDEX::REF] >= 0)
                                          ? token[index[+BASE_INDEX::REF]]
                                          : "";
-            std::string alt_allele = (index[+BASE_INDEX::ALT] >= 0)
+            alt_allele = (index[+BASE_INDEX::ALT] >= 0)
                                          ? token[index[+BASE_INDEX::ALT]]
                                          : "";
             std::transform(ref_allele.begin(), ref_allele.end(),
@@ -541,8 +555,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     throw std::runtime_error(error_message);
                 }
             }
-            double maf = 1;
-            bool maf_filtered = false;
+            maf = 1;
+            maf_filtered = false;
             if (index[+BASE_INDEX::MAF] >= 0) {
                 try
                 {
@@ -577,7 +591,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     exclude = true;
                 }
             }
-            double info_score = 1;
+            info_score = 1;
             if (index[+BASE_INDEX::INFO] >= 0) {
                 // obtain the INFO score
                 try
@@ -596,7 +610,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     exclude = true;
                 }
             }
-            bool flipped = false;
+            flipped = false;
             if (!cur_snp.matching(chr_code, loc, ref_allele, alt_allele,
                                   flipped))
             {
@@ -604,7 +618,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 num_mismatched++;
                 exclude = true;
             }
-            double pvalue = 2.0;
+            pvalue = 2.0;
             try
             {
                 pvalue = misc::convert<double>(token[index[+BASE_INDEX::P]]);
@@ -624,7 +638,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 exclude = true;
                 num_not_converted++;
             }
-            double stat = 0.0;
+            stat = 0.0;
             try
             {
                 stat = misc::convert<double>(token[index[+BASE_INDEX::STAT]]);
@@ -646,8 +660,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 exclude = !m_keep_ambig;
             }
             if (!exclude) {
-                int category = -1;
-                double pthres = 0.0;
+                category = -1;
+                pthres = 0.0;
                 if (fastscore) {
                     category = c_commander.get_category(pvalue);
                     pthres = c_commander.get_threshold(category);
@@ -670,7 +684,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 }
                 if (flipped) cur_snp.set_flipped();
                 // ignore the SE as it currently serves no purpose
-                exist_index.push_back(m_existed_snps_index[rs_id]);
+                cur_snp.set_retain();
+                num_retained++;
                 cur_snp.set_statistic(stat, pvalue, category, pthres);
                 if (unique_thresholds.find(category) == unique_thresholds.end())
                 {
@@ -697,33 +712,15 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         snp_file.close();
 
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
-    if (exist_index.size() != m_existed_snps.size())
-    { // only do this if we need to remove some SNPs
-        // we assume exist_index doesn't have any duplicated index
-        std::sort(exist_index.begin(), exist_index.end());
-        int start = (exist_index.empty()) ? -1 : exist_index.front();
-        int end = start;
-        std::vector<SNP>::iterator last = m_existed_snps.begin();
-        ;
-        for (auto&& ind : exist_index) {
-            if (ind == start || ind - end == 1)
-                end = ind; // try to perform the copy as a block
-            else
-            {
-                std::copy(m_existed_snps.begin() + start,
-                          m_existed_snps.begin() + end + 1, last);
-                last += end + 1 - start;
-                start = ind;
-                end = ind;
-            }
-        }
-        if (!exist_index.empty()) {
-            std::copy(m_existed_snps.begin() + start,
-                      m_existed_snps.begin() + end + 1, last);
-            last += end + 1 - start;
-        }
-        m_existed_snps.erase(last, m_existed_snps.end());
+
+
+    if(num_retained != m_existed_snps.size()){
+    	// remove all SNPs that we don't want to retain
+    	m_existed_snps.erase(std::remove_if(m_existed_snps.begin(),
+    			m_existed_snps.end(),
+				[](SNP& s){return !s.retained();}),m_existed_snps.end());
     }
+
     m_existed_snps_index.clear();
     // now m_existed_snps is ok and can be used directly
     size_t vector_index = 0;
@@ -737,9 +734,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             prev_loc = cur_snp.loc();
             low_bound = vector_index;
         }
-        else if (cur_snp.loc() - prev_loc > clump_info.distance)
+        else if (cur_snp.loc() - prev_loc > m_clump_distance)
         {
-            while (cur_snp.loc() - prev_loc > clump_info.distance
+            while (cur_snp.loc() - prev_loc > m_clump_distance
                    && low_bound < vector_index)
             {
                 low_bound++;
@@ -754,7 +751,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         // update all previous SNPs that are out bounud
         while (m_existed_snps[last_snp].chr() != cur_snp.chr()
                || cur_snp.loc() - m_existed_snps[last_snp].loc()
-                      > clump_info.distance)
+                      > m_clump_distance)
         {
             int low_bound = m_existed_snps[last_snp].low_bound();
             m_existed_snps[last_snp++].set_up_bound(vector_index);
@@ -848,11 +845,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
 
 void Genotype::set_info(const Commander& c_commander, const bool ld)
 {
-    clump_info.p_value = c_commander.clump_p();
-    clump_info.r2 = c_commander.clump_r2();
-    clump_info.proxy = c_commander.proxy();
-    clump_info.use_proxy = c_commander.use_proxy();
-    clump_info.distance = c_commander.clump_dist();
+    m_clump_p = c_commander.clump_p();
+    m_clump_r2 = c_commander.clump_r2();
+    m_clump_proxy = c_commander.proxy();
+    m_use_proxy = c_commander.use_proxy();
+    m_clump_distance = c_commander.clump_dist();
     m_model = c_commander.model();
     m_missing_score = c_commander.get_missing_score();
     m_scoring = c_commander.get_score();
@@ -1031,9 +1028,9 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
     std::vector<int> remain_core_snps;
     int32_t dp_result[5];
-    const double min_r2 = (clump_info.use_proxy)
-                              ? std::min(clump_info.proxy, clump_info.r2)
-                              : clump_info.r2;
+    const double min_r2 = (m_use_proxy)
+                              ? std::min(m_clump_proxy, m_clump_r2)
+                              : m_clump_r2;
     bool is_x = false;
     double freq11;
     double freq11_expected;
@@ -1182,6 +1179,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     uintptr_t* window_data = nullptr;
     uintptr_t* geno_mask = nullptr;
     uintptr_t* geno_mask_ptr = nullptr;
+    uintptr_t num_core_snps = 0;
     if (use_pearson) {
         index_geno = (uintptr_t*) bigstack_initial_base;
         size_t require_size = founder_ct_192_long * sizeof(intptr_t);
@@ -1238,7 +1236,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             // skip any SNPs that are clumped
             auto&& cur_target_snp = m_existed_snps[cur_snp_index];
             if (cur_target_snp.clumped()
-                || cur_target_snp.p_value() > clump_info.p_value)
+                || cur_target_snp.p_value() > m_clump_p)
                 continue;
             size_t start = cur_target_snp.low_bound();
             size_t end = cur_target_snp.up_bound();
@@ -1250,7 +1248,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 fill_ulong_zero(founder_ct_192_long, window_data_ptr);
                 if (++cur_window_size == max_window_size) {
@@ -1285,7 +1283,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 r2 = -1;
                 // taking risk here, we don't know if this is what PLINK
@@ -1320,14 +1318,14 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
                 window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
                 if (r2 >= min_r2) {
-                    cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+                    cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
                 }
             }
             for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
                 window_data_ptr = window_data;
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 fill_ulong_zero(founder_ct_192_long, window_data_ptr);
                 reference.read_genotype(window_data_ptr,
@@ -1368,22 +1366,19 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                       * (dp_result[4] * non_missing_ctd + dyy * dyy);
                 r2 = (cov12 * cov12) / dxx;
                 if (r2 >= min_r2) {
-                    cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+                    cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
                 }
             }
             cur_target_snp.set_clumped();
-            remain_core_snps.push_back(cur_snp_index);
+            //remain_core_snps.push_back(cur_snp_index);
+            num_core_snps++;
             double thres = cur_target_snp.get_threshold();
             if (used_thresholds.find(thres) == used_thresholds.end()) {
                 used_thresholds.insert(thres);
                 m_thresholds.push_back(thres);
                 // m_categories.push_back(cur_target_snp.category());
             }
-            if (unique_threshold.find(cur_target_snp.category())
-                == unique_threshold.end())
-            {
-                unique_threshold.insert(cur_target_snp.category());
-            }
+            unique_threshold.insert(cur_target_snp.category());
         }
     }
     else
@@ -1399,7 +1394,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             // skip any SNPs that are clumped
             auto&& cur_target_snp = m_existed_snps[cur_snp_index];
             if (cur_target_snp.clumped()
-                || cur_target_snp.p_value() > clump_info.p_value)
+                || cur_target_snp.p_value() > m_clump_p)
                 continue;
             // with the new change, all SNPs are stored in target
             // so we can safely ignore the finding in reference
@@ -1421,7 +1416,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 window_data_ptr[founder_ctv2 - 2] = 0;
                 window_data_ptr[founder_ctv2 - 1] = 0;
@@ -1459,7 +1454,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 r2 = -1;
                 uint32_t counts[18];
@@ -1497,14 +1492,14 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 window_data_ptr = &(window_data_ptr[founder_ctv2]);
 
                 if (r2 >= min_r2) {
-                    cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+                    cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
                 }
             }
             for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
                 window_data_ptr = window_data;
                 auto&& pair_target_snp = m_existed_snps[i_pair];
                 if (pair_target_snp.clumped()
-                    || pair_target_snp.p_value() > clump_info.p_value)
+                    || pair_target_snp.p_value() > m_clump_p)
                     continue;
                 window_data_ptr[founder_ctv2 - 2] = 0;
                 window_data_ptr[founder_ctv2 - 1] = 0;
@@ -1548,22 +1543,19 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 }
 
                 if (r2 >= min_r2) {
-                    cur_target_snp.clump(pair_target_snp, r2, clump_info.proxy);
+                    cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
                 }
             }
             cur_target_snp.set_clumped();
-            remain_core_snps.push_back(cur_snp_index);
+            //remain_core_snps.push_back(cur_snp_index);
+            num_core_snps++;
             double thres = cur_target_snp.get_threshold();
             if (used_thresholds.find(thres) == used_thresholds.end()) {
                 used_thresholds.insert(thres);
                 m_thresholds.push_back(thres);
                 // m_categories.push_back(cur_target_snp.category());
             }
-            if (unique_threshold.find(cur_target_snp.category())
-                == unique_threshold.end())
-            {
-                unique_threshold.insert(cur_target_snp.category());
-            }
+            unique_threshold.insert(cur_target_snp.category());
         }
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
@@ -1575,6 +1567,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 
     m_existed_snps_index.clear();
     m_num_threshold = unique_threshold.size();
+    /*
     if (remain_core_snps.size() != m_existed_snps.size()) {
         // remain_core_snps' follow the post sorted order (p-value sorted)
         // instead of m_existed_snps' index so we need to sort it first
@@ -1600,6 +1593,21 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             last += end + 1 - start;
         }
         m_existed_snps.erase(last, m_existed_snps.end());
+    }
+    */
+    // ordering doesn't matter, so we can just swap every remove SNPs to the back and this
+    // should be at most o(n)?
+    if(num_core_snps != m_existed_snps.size()){
+    	for(size_t i=0; i<m_existed_snps.size();)
+    	{
+    	    if( m_existed_snps[i].remove() )
+    	    {
+    	        std::swap(m_existed_snps[i], m_existed_snps.back());
+    	        m_existed_snps.pop_back();
+    	    }
+    	    else
+    	      ++i;
+    	}
     }
     m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
