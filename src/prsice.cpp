@@ -1699,14 +1699,14 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
             }
         }
 
-        q.push(std::move(prs), num_consumer);
+        q.emplace(std::move(prs), num_consumer);
         m_analysis_done++;
         print_progress();
         processed++;
     }
     // send termination signal to the consumers
     for (size_t i = 0; i < num_consumer; ++i) {
-        q.push(std::vector<double>(), num_consumer);
+        q.emplace(std::vector<double>(), num_consumer);
     }
 }
 
