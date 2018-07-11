@@ -28,13 +28,10 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
         // be processed together
         if (input[i1].m_chr == input[i2].m_chr) {
             if (input[i1].m_p_value == input[i2].m_p_value) {
-                if (input[i1].m_loc == input[i2].m_loc) {
-                    // assume it is impossible for non-duplicated SNPs to have
-                    // same everything
-                    return std::abs(input[i1].m_stat) > fabs(input[2].m_stat);
-                }
-                else
-                    return input[i1].m_loc < input[i2].m_loc;
+                // in theory, we can also add in the stat and se,
+                // but as they are double, there might be problem
+                // (have tried to use stat and that cause seg fault)
+                return input[i1].m_loc < input[i2].m_loc;
             }
             else
                 return input[i1].m_p_value < input[i2].m_p_value;
@@ -55,6 +52,6 @@ void SNP::sort_snp_for_perm(std::vector<size_t>& index,
             return input[i1].m_target_byte_pos < input[i2].m_target_byte_pos;
         }
         else
-            return (input[i1].m_target_file == input[i2].m_target_file);
+            return (input[i1].m_target_file < input[i2].m_target_file);
     });
 }

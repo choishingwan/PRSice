@@ -509,7 +509,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                 if (!m_is_ref) {
                     m_existed_snps_index[RSID] = snp_res.size();
                     // TODO: Update SNP constructor
-
+                    // for now, we focus on PLINK optimization and ignore bgen
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.front(), alleles.back(),
                                              prefix, byte_pos));

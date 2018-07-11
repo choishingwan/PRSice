@@ -28,7 +28,6 @@
 #include <stdexcept>
 #include <string>
 
-
 class Genotype;
 class SNP
 {
@@ -182,6 +181,14 @@ public:
     void set_low_bound(uintptr_t low) { m_low_bound = low; };
 
     void set_up_bound(uintptr_t up) { m_up_bound = up; };
+    void get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
+                    uint32_t missing)
+    {
+        homcom = m_homcom;
+        het = m_het;
+        homrar = m_homrar;
+        missing = m_missing;
+    }
     uintptr_t up_bound() const { return m_up_bound; };
     uintptr_t low_bound() const { return m_low_bound; };
 
