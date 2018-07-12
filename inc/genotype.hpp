@@ -91,7 +91,7 @@ public:
 
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
-                   const bool cumulate, const bool require_statistic);
+                   const bool cumulate, const bool require_statistic, const bool first_run);
     // this is to prepare the genotypes for clumping
     bool sort_by_p()
     {
@@ -248,6 +248,7 @@ protected:
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
     std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_sample_mask;
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
@@ -340,8 +341,8 @@ protected:
                                       const std::streampos byte_pos,
                                       const std::string& file_name){};
     virtual void read_score(size_t start_index, size_t end_bound,
-                            const size_t region_index){};
-    virtual void read_score(std::vector<size_t>& index){};
+                            const size_t region_index, bool reset_zero){};
+    virtual void read_score(std::vector<size_t>& index, bool reset_zero){};
 
 
     // hh_exists

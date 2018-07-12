@@ -43,6 +43,7 @@ struct PRS
             return prs / (double) num_snp;
     };
 };
+
 struct Sample_ID
 {
     std::string FID;

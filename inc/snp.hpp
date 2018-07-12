@@ -196,12 +196,19 @@ public:
 
     void set_up_bound(uintptr_t up) { m_up_bound = up; };
     void get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t missing)
+                    uint32_t& missing)
     {
         homcom = m_homcom;
         het = m_het;
         homrar = m_homrar;
         missing = m_missing;
+    }
+    void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
+            uint32_t& missing){
+        m_homcom = homcom;
+        m_het = het;
+        m_homrar = homrar;
+        m_missing = missing;
     }
     uintptr_t up_bound() const { return m_up_bound; };
     uintptr_t low_bound() const { return m_low_bound; };

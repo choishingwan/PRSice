@@ -1637,7 +1637,7 @@ void Genotype::get_null_score(const size_t& set_size,
     std::vector<size_t> selected_snp_index(
         background_list.begin(), background_list.begin() + num_selected_snps);
     std::sort(selected_snp_index.begin(), selected_snp_index.end());
-    read_score(selected_snp_index);
+    read_score(selected_snp_index, true);
     if (require_statistic) {
         misc::RunningStat rs;
         size_t num_prs = m_prs_info.size();
@@ -1658,7 +1658,7 @@ void Genotype::get_null_score(const size_t& set_size,
 bool Genotype::get_score(int& cur_index, int& cur_category,
                          double& cur_threshold, size_t& num_snp_included,
                          const size_t region_index, const bool cumulate,
-                         const bool require_statistic)
+                         const bool require_statistic, const bool first_run)
 {
     if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
         return false;
@@ -1691,7 +1691,7 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
     }
     else
         cur_category = m_existed_snps[end_index].category();
-    read_score(cur_index, end_index, region_index);
+    read_score(cur_index, end_index, region_index, first_run);
     cur_index = end_index;
     if (require_statistic) {
         misc::RunningStat rs;

@@ -969,7 +969,7 @@ void BinaryGen::hard_code_score(std::vector<size_t>& index)
 
 
 void BinaryGen::read_score(size_t start_index, size_t end_bound,
-                           const size_t region_index)
+                           const size_t region_index, bool reset_zero)
 {
     if (m_hard_coded) {
         hard_code_score(start_index, end_bound, region_index);
@@ -979,7 +979,7 @@ void BinaryGen::read_score(size_t start_index, size_t end_bound,
         dosage_score(start_index, end_bound, region_index);
 }
 
-void BinaryGen::read_score(std::vector<size_t>& index)
+void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
 {
     // because I don't want to touch the code in dosage_score, we will reset the
     // sample here

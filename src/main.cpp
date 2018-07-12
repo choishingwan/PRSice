@@ -129,15 +129,7 @@ int main(int argc, char* argv[])
             reporter.report(message);
             target_file->read_base(commander, region, reporter);
 
-            // get the sort by p index vector for target
-            // so that we can still find out the relative coordinates of each
-            // SNPs
-            if (!target_file->sort_by_p()) {
-                std::string error_message =
-                    "No SNPs left for PRSice processing";
-                reporter.report(error_message);
-                return -1;
-            }
+
             // we no longer need the region boundaries
             // as we don't allow multiple base file input
             region.clean();
@@ -154,6 +146,16 @@ int main(int argc, char* argv[])
 
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
+            	// get the sort by p index vector for target
+                // so that we can still find out the relative coordinates of each
+                // SNPs
+            	// This is only required for clumping
+                if (!target_file->sort_by_p()) {
+                    std::string error_message =
+                        "No SNPs left for PRSice processing";
+                    reporter.report(error_message);
+                    return -1;
+                }
                 target_file->efficient_clumping(
                     commander.use_ref() ? *reference_file : *target_file,
                     reporter, commander.pearson());
