@@ -28,7 +28,7 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
-    //m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+    // m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     init_chr();
     // get the bed file names
     if (multi_input.empty())
@@ -40,7 +40,7 @@ BinaryPlink::BinaryPlink(const std::string& prefix,
 }
 
 
-std::vector<Sample> BinaryPlink::gen_sample_vector()
+std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 {
     assert(m_genotype_files.size() > 0);
     std::ifstream famfile;
@@ -90,7 +90,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
 
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
-    std::vector<Sample> sample_name;
+    std::vector<Sample_ID> sample_name;
     std::unordered_set<std::string> duplicated_samples;
     std::vector<std::string> duplicated_sample_id;
     uintptr_t sample_index = 0; // this is just for error message
@@ -105,16 +105,15 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
                 + std::to_string(sample_index + 1);
             throw std::runtime_error(error_message);
         }
-        Sample cur_sample;
+        Sample_ID cur_sample;
         cur_sample.FID = token[+FAM::FID];
         cur_sample.IID = token[+FAM::IID];
         std::string id = (m_ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
         cur_sample.pheno = token[+FAM::PHENOTYPE];
-        cur_sample.in_regression = false;
+        // cur_sample.in_regression = false;
         // false as we have not check if the pheno information is valid
-        cur_sample.include = true;
         if (!m_remove_sample) {
             inclusion = (m_sample_selection_list.find(id)
                          != m_sample_selection_list.end());
@@ -131,7 +130,6 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
         {
             // only set this if no parents were found in the fam file
             m_founder_ct++;
-            cur_sample.include = true;
             // so m_founder_info is a subset of m_sample_include
             SET_BIT(sample_index, m_founder_info.data());
             SET_BIT(sample_index, m_sample_include.data());
@@ -141,7 +139,6 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
             SET_BIT(sample_index, m_sample_include.data());
             m_num_non_founder++;
             // cur_sample.founder = m_keep_nonfounder;
-            cur_sample.include = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
 
@@ -166,6 +163,7 @@ std::vector<Sample> BinaryPlink::gen_sample_vector()
         }
         duplicated_samples.insert(id);
     }
+
     if (!duplicated_sample_id.empty()) {
         // TODO: Produce a file containing id of all valid samples
         std::string error_message =
@@ -191,7 +189,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     std::unordered_set<std::string> duplicated_snp;
     std::vector<SNP> snp_info;
 
-    std::vector<int> ref_target_overlap_index;
+
     std::string line;
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
@@ -208,6 +206,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     uint32_t missing_ct;
     uint32_t het_ct;
     uint32_t homcom_ct;
+    uint32_t num_ref_target_match = 0;
     intptr_t nanal;
     double cur_maf;
     bool chr_error = false, chr_sex_error = false,
@@ -449,9 +448,12 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     {
                         m_num_ref_target_mismatch++;
                     }
-                    target->m_existed_snps[target_index].add_reference(
-                        prefix, byte_pos);
-                    ref_target_overlap_index.push_back(target_index);
+                    else
+                    {
+                        target->m_existed_snps[target_index].add_reference(
+                            prefix, byte_pos);
+                        num_ref_target_match++;
+                    }
                 }
             }
             else if (!m_keep_ambig)
@@ -461,8 +463,8 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         }
     }
     snp_info.shrink_to_fit();
-    if (m_is_ref) {
-        target->update_snps(ref_target_overlap_index);
+    if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
+        target->update_snps();
     }
     if (duplicated_snp.size() != 0) {
         std::ofstream log_file_stream;
@@ -575,32 +577,23 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker)
 BinaryPlink::~BinaryPlink() {}
 
 
-
 void BinaryPlink::read_score(std::vector<size_t>& index)
 {
-	// region_index should be the background index
-	switch(m_model){
-		    case MODEL::HETEROZYGOUS:
-		    	read_score(index, 0,1,0);
-		        break;
-		    case MODEL::DOMINANT:
-		    	read_score(index, 0,1,1);
-		        break;
-		    case MODEL::RECESSIVE:
-		    	read_score(index, 0,0,1);
-		    	break;
-		    default:
-				read_score(index, 0,1,2);
-				break;
-			}
+    // region_index should be the background index
+    switch (m_model)
+    {
+    case MODEL::HETEROZYGOUS: read_score(index, 0, 1, 0); break;
+    case MODEL::DOMINANT: read_score(index, 0, 1, 1); break;
+    case MODEL::RECESSIVE: read_score(index, 0, 0, 1); break;
+    default: read_score(index, 0, 1, 2); break;
+    }
 }
 
 
-void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_wt,
-		uint32_t het_wt, uint32_t homrar_wt)
+void BinaryPlink::read_score(std::vector<size_t>& index_bound,
+                             uint32_t homcom_wt, uint32_t het_wt,
+                             uint32_t homrar_wt)
 {
-
-    const size_t num_samples_read = m_sample_names.size();
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     const uintptr_t unfiltered_sample_ctl =
@@ -631,7 +624,7 @@ void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_w
     }
     // index is w.r.t. partition, which contain all the information
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-    for (auto &&i_snp : index_bound) {
+    for (auto&& i_snp : index_bound) {
         // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
         if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
@@ -684,7 +677,8 @@ void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_w
         homcom_weight = homcom_wt;
         het_weight = het_wt;
         homrar_weight = homrar_wt;
-        maf = (double) (het_ct*het_weight + homrar_weight * homrar_ct) / (double) (nanal * 2.0);
+        maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
+              / (double) (nanal * 2.0);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -716,42 +710,40 @@ void BinaryPlink::read_score(std::vector<size_t> &index_bound, uint32_t homcom_w
             ujj = 0;
             while (ulii) {
                 ukk = (ulii >> ujj) & 3;
-                auto&& sample = m_sample_names[uii + (ujj / 2)];
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
                 {
                 default:
-                    sample.num_snp++;
-                    sample.prs += homcom_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += homcom_weight * stat * 0.5 - adj_score;
                     break;
                 case 1:
-                    sample.num_snp++;
-                    sample.prs += het_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += het_weight * stat * 0.5 - adj_score;
                     break;
                 case 3:
-                    sample.num_snp++;
-                    sample.prs += homrar_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += homrar_weight * stat * 0.5 - adj_score;
                     break;
                 case 2:
-                    sample.prs += miss_score;
-                    sample.num_snp += miss_count;
+                    sample_prs.prs += miss_score;
+                    sample_prs.num_snp += miss_count;
                     break;
                 }
                 ulii &= ~((3 * ONELU) << ujj);
                 ujj += 2;
             }
             uii += BITCT2;
-        } while (uii < num_samples_read);
+        } while (uii < m_sample_ct);
     }
 }
 
 
-
-void BinaryPlink::read_score(size_t start_index, size_t end_bound, uint32_t homcom_wt,
-		uint32_t het_wt, uint32_t homrar_wt, const size_t region_index)
+void BinaryPlink::read_score(size_t start_index, size_t end_bound,
+                             uint32_t homcom_wt, uint32_t het_wt,
+                             uint32_t homrar_wt, const size_t region_index)
 {
-
-    const size_t num_samples_read = m_sample_names.size();
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
     const uintptr_t unfiltered_sample_ctl =
@@ -837,7 +829,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound, uint32_t homc
         homcom_weight = homcom_wt;
         het_weight = het_wt;
         homrar_weight = homrar_wt;
-        maf = (double) (het_ct*het_weight + homrar_weight * homrar_ct) / (double) (nanal * 2.0);
+        maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
+              / (double) (nanal * 2.0);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -869,52 +862,51 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound, uint32_t homc
             ujj = 0;
             while (ulii) {
                 ukk = (ulii >> ujj) & 3;
-                auto&& sample = m_sample_names[uii + (ujj / 2)];
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
                 {
                 default:
-                    sample.num_snp++;
-                    sample.prs += homcom_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += homcom_weight * stat * 0.5 - adj_score;
                     break;
                 case 1:
-                    sample.num_snp++;
-                    sample.prs += het_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += het_weight * stat * 0.5 - adj_score;
                     break;
                 case 3:
-                    sample.num_snp++;
-                    sample.prs += homrar_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp++;
+                    sample_prs.prs += homrar_weight * stat * 0.5 - adj_score;
                     break;
                 case 2:
-                    sample.prs += miss_score;
-                    sample.num_snp += miss_count;
+                    sample_prs.prs += miss_score;
+                    sample_prs.num_snp += miss_count;
                     break;
                 }
                 ulii &= ~((3 * ONELU) << ujj);
                 ujj += 2;
             }
             uii += BITCT2;
-        } while (uii < num_samples_read);
+        } while (uii < m_sample_ct);
     }
 }
 void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              const size_t region_index)
 {
-//	std::vector<size_t> index_bound(end_bound-start_index);
-//  std::iota(index_bound.begin(), index_bound.end(), start_index);
+    //	std::vector<size_t> index_bound(end_bound-start_index);
+    //  std::iota(index_bound.begin(), index_bound.end(), start_index);
 
-	switch(m_model){
+    switch (m_model)
+    {
     case MODEL::HETEROZYGOUS:
-    	read_score(start_index, end_bound, 0,1,0, region_index);
+        read_score(start_index, end_bound, 0, 1, 0, region_index);
         break;
     case MODEL::DOMINANT:
-    	read_score(start_index, end_bound, 0,1,1, region_index);
+        read_score(start_index, end_bound, 0, 1, 1, region_index);
         break;
     case MODEL::RECESSIVE:
-    	read_score(start_index, end_bound, 0,0,1, region_index);
-    	break;
-    default:
-		read_score(start_index, end_bound, 0,1,2, region_index);
-		break;
-	}
+        read_score(start_index, end_bound, 0, 0, 1, region_index);
+        break;
+    default: read_score(start_index, end_bound, 0, 1, 2, region_index); break;
+    }
 }

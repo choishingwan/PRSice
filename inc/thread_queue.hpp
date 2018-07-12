@@ -56,13 +56,14 @@ public:
         mlock.unlock();
         m_cond_not_empty.notify_one();
     }
-    void emplace(T&& item, size_t max_process){
+    void emplace(T&& item, size_t max_process)
+    {
         std::unique_lock<std::mutex> mlock(m_mutex);
         while (max_process <= m_num_processing) {
             m_cond_not_full.wait(mlock);
         }
         m_storage_queue.emplace(std::forward<T>(item));
-        //m_storage_queue.push(item);
+        // m_storage_queue.push(item);
         m_num_processing++;
         mlock.unlock();
         m_cond_not_empty.notify_one();

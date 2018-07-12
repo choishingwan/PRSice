@@ -266,6 +266,7 @@ private:
                                                       // phenotype
     std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
+    std::vector<size_t> m_matrix_index;
     static std::mutex lock_guard;
 
     struct column_file_info
@@ -324,17 +325,17 @@ private:
                          const size_t num_snp, const bool store_null,
                          const bool binary);
     void produce_null_prs(Thread_Queue<std::vector<double>>& q,
-                          Genotype& target, std::vector<int>& sample_index,
-                          size_t num_consumer, size_t num_perm, size_t set_size,
+                          Genotype& target, size_t num_consumer,
+                          size_t num_perm, size_t set_size,
                           size_t num_selected_snps, double original_p,
                           bool require_standardize);
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, bool is_binary, bool store_p);
-    void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
-                            int& num_significant, size_t num_perm,
-                            size_t set_size, size_t num_selected_snps,
-                            double original_p, bool require_standardize,
-                            bool is_binary, bool store_p);
+    void null_set_no_thread(Genotype& target, int& num_significant,
+                            size_t num_perm, size_t set_size,
+                            size_t num_selected_snps, double original_p,
+                            bool require_standardize, bool is_binary,
+                            bool store_p);
     void gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                         size_t num_consumer);
 

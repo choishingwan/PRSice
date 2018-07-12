@@ -143,9 +143,9 @@ int main(int argc, char* argv[])
             region.clean();
             // TODO: This is no longer useful and can be deleted in next
             // release, once Yunfeng has completed her analysis
-            std::string region_out_name = commander.out() + ".region";
+            // std::string region_out_name = commander.out() + ".region";
             // output the number of SNPs observed in each sets
-            region.print_file(region_out_name);
+            // region.print_file(region_out_name);
             // initialize PRSice class
             PRSice prsice(base_name, commander, region.size() > 1,
                           target_file->num_sample(), reporter);

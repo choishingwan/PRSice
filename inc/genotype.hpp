@@ -54,9 +54,9 @@ public:
              const bool keep_nonfounder, const bool keep_ambig,
              const bool is_ref = false)
         : m_thread(thread)
-    	, m_ignore_fid(ignore_fid)
-    	, m_is_ref(is_ref)
-    	, m_keep_nonfounder(keep_nonfounder)
+        , m_ignore_fid(ignore_fid)
+        , m_is_ref(is_ref)
+        , m_keep_nonfounder(keep_nonfounder)
         , m_keep_ambig(keep_ambig){};
     virtual ~Genotype();
 
@@ -85,9 +85,9 @@ public:
         return m_existed_snps_index;
     };
     std::vector<double> get_thresholds() const { return m_thresholds; };
-    std::vector<Sample> sample_names() const { return m_sample_names; };
+    std::vector<Sample_ID> sample_names() const { return m_sample_id; };
     size_t max_category() const { return m_max_category; };
-    size_t num_sample() const { return m_sample_names.size(); }
+    size_t num_sample() const { return m_sample_id.size(); }
 
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
@@ -118,73 +118,56 @@ public:
     }
     void reset_sample_pheno()
     {
-        for (auto&& sample : m_sample_names) {
-            sample.num_snp = 0;
-            sample.prs = 0.0;
-            sample.in_regression = false;
+        std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
+        for (auto&& prs : m_prs_info) {
+            prs.reset();
         }
     };
 
     void reset_sample_prs()
     {
-        for (auto&& sample : m_sample_names) {
-            sample.prs = 0.0;
-            sample.num_snp = 0.0;
+        for (auto&& prs : m_prs_info) {
+            prs.reset();
         }
     };
     bool prepare_prsice(Reporter& reporter);
     std::string sample_id(size_t i) const
     {
-        if (i > m_sample_names.size())
+        if (i > m_sample_id.size())
             throw std::out_of_range("Sample name vector out of range");
         if (m_ignore_fid)
-            return m_sample_names[i].IID;
+            return m_sample_id[i].IID;
         else
-            return m_sample_names[i].FID + "_" + m_sample_names[i].IID;
+            return m_sample_id[i].FID + "_" + m_sample_id[i].IID;
     }
 
 
     bool sample_in_regression(size_t i) const
     {
-        return m_sample_names.at(i).in_regression;
+        return IS_SET(m_in_regression.data(), i);
     }
-    bool is_include(size_t i) const { return m_sample_names.at(i).include; }
-    void set_in_regression(size_t i, bool within)
-    {
-        m_sample_names.at(i).in_regression = within;
-    }
-    bool include_for_regression(size_t i) const
-    {
-        return m_sample_names.at(i).in_regression;
-    };
-    std::string pheno(size_t i) const { return m_sample_names.at(i).pheno; }
-    bool pheno_is_na(size_t i) const
-    {
-        return m_sample_names.at(i).pheno.compare("NA") == 0;
-    }
-    std::string fid(size_t i) const { return m_sample_names.at(i).FID; }
-    std::string iid(size_t i) const { return m_sample_names.at(i).IID; }
+    // this is dangerous but whatever
+    bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
+    void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
+    std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
+    bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }
+    std::string fid(size_t i) const { return m_sample_id[i].FID; }
+    std::string iid(size_t i) const { return m_sample_id[i].IID; }
 
     double calculate_score(SCORING score_type, size_t i) const
     {
-        if (i > m_sample_names.size())
+        if (i > m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
         double score = 0;
         switch (score_type)
         {
-        case SCORING::AVERAGE:
-            if (m_sample_names[i].num_snp == 0) return 0;
-            return m_sample_names[i].prs / (double) m_sample_names[i].num_snp;
-            break;
-        case SCORING::SUM: return m_sample_names[i].prs; break;
+        case SCORING::SUM: return m_prs_info[i].prs; break;
         case SCORING::STANDARDIZE:
-            if (m_sample_names[i].num_snp == 0)
-                return -m_mean_score / m_score_sd;
-            else
-                return ((m_sample_names[i].prs
-                         / (double) m_sample_names[i].num_snp)
-                        - m_mean_score)
-                       / m_score_sd;
+            return (m_prs_info[i].get_prs() - m_mean_score) / m_score_sd;
+            break;
+        default:
+            // default is avg
+            return m_prs_info[i].get_prs();
             break;
         }
         return score;
@@ -246,34 +229,38 @@ public:
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
-    // need to consider cacheline efficiency, so we need to organize the member variable in most efficient way
+    // need to consider cacheline efficiency, so we need to organize the member
+    // variable in most efficient way
 
 
     // vector storing all the genotype files
-    std::vector<Sample> m_sample_names;
+    // std::vector<Sample> m_sample_names;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_map<std::string, int> m_chr_order;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
+    std::vector<Sample_ID> m_sample_id;
+    std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_files;
     std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
-    //std::vector<uintptr_t> m_chrom_mask;
+    // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
     std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<size_t> m_background_snp_index;
-    //std::vector<uintptr_t> m_sex_male;
+    // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
-    //std::vector<int32_t> m_chrom_start;
+    // std::vector<int32_t> m_chrom_start;
     // sample file name. Fam for plink
     std::string m_sample_file;
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
-    double m_hard_threshold =0.0;
-    double m_clump_r2=0.0;
+    double m_hard_threshold = 0.0;
+    double m_clump_r2 = 0.0;
     double m_clump_proxy = 0.0;
     double m_clump_p = 0.0;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
@@ -286,11 +273,11 @@ protected:
     uint32_t m_region_size = 1;
     uint32_t m_num_threshold = 0;
     uint32_t m_max_window_size = 0;
-    uint32_t m_thread = 1;         // number of final samples
-    uint32_t m_autosome_ct=0;
-    uint32_t m_max_code=0;
+    uint32_t m_thread = 1; // number of final samples
+    uint32_t m_autosome_ct = 0;
+    uint32_t m_max_code = 0;
     uintptr_t m_marker_ct = 0;
-    unsigned int m_seed=0;
+    unsigned int m_seed = 0;
     uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;
     uint32_t m_num_maf_filter = 0;
@@ -319,9 +306,9 @@ protected:
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
     // responsible for reading in the sample
-    virtual std::vector<Sample> gen_sample_vector()
+    virtual std::vector<Sample_ID> gen_sample_vector()
     {
-        return std::vector<Sample>(0);
+        return std::vector<Sample_ID>(0);
     };
     virtual std::vector<SNP>
     gen_snp_vector(const double geno, const double maf, const double info,
@@ -347,8 +334,8 @@ protected:
                   std::vector<uintptr_t>& genotype_vector);
     /** Misc information **/
     // uint32_t m_hh_exists;
-
-    void update_snps(std::vector<int>& retained_index);
+    void pearson_clump(Genotype& reference, Reporter& reporter);
+    void update_snps();
     virtual inline void read_genotype(uintptr_t* genotype,
                                       const std::streampos byte_pos,
                                       const std::string& file_name){};

@@ -250,7 +250,10 @@ void Genotype::load_samples(const std::string& keep_file,
         m_sample_selection_list = load_ref(keep_file, m_ignore_fid);
     }
     if (!m_is_ref) {
-        m_sample_names = gen_sample_vector();
+        // m_sample_names = gen_sample_vector();
+        m_sample_id = gen_sample_vector();
+        m_prs_info.resize(m_sample_ct, PRS());
+        m_in_regression.resize(m_sample_include.size(), 0);
     }
     else
     {
@@ -324,39 +327,17 @@ void Genotype::load_snps(const std::string out_prefix,
     m_snp_selection_list.clear();
 }
 
-void Genotype::update_snps(std::vector<int>& retained_index)
+void Genotype::update_snps()
 {
 
-    if (retained_index.size() != m_existed_snps.size())
-    { // only do this if we need to remove some SNPs
-        // we assume exist_index doesn't have any duplicated index
-        std::sort(retained_index.begin(), retained_index.end());
-        int start = (retained_index.empty()) ? -1 : retained_index.front();
-        int end = start;
-        std::vector<SNP>::iterator last = m_existed_snps.begin();
-        for (auto&& ind : retained_index) {
-            if (ind == start || ind - end == 1)
-                end = ind; // try to perform the copy as a block
-            else
-            {
-                std::copy(m_existed_snps.begin() + start,
-                          m_existed_snps.begin() + end + 1, last);
-                last += end + 1 - start;
-                start = ind;
-                end = ind;
-            }
-        }
-        if (!retained_index.empty()) {
-            std::copy(m_existed_snps.begin() + start,
-                      m_existed_snps.begin() + end + 1, last);
-            last += end + 1 - start;
-        }
-        m_existed_snps.erase(last, m_existed_snps.end());
-    }
+    m_existed_snps.erase(std::remove_if(m_existed_snps.begin(),
+                                        m_existed_snps.end(),
+                                        [](SNP& s) { return !s.retained(); }),
+                         m_existed_snps.end());
     m_existed_snps_index.clear();
-    size_t vector_index = 0;
-    for (auto&& cur_snp : m_existed_snps) {
-        m_existed_snps_index[cur_snp.rs()] = vector_index++;
+    size_t num_snp = m_existed_snps.size();
+    for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
+        m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
     }
 }
 Genotype::~Genotype() {}
@@ -414,7 +395,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     // Some QC counts
     std::string rs_id;
     std::string ref_allele;
-	std::string alt_allele;
+    std::string alt_allele;
     double maf = 1;
     double info_score = 1;
     double pvalue = 2.0;
@@ -526,11 +507,11 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 }
             }
             ref_allele = (index[+BASE_INDEX::REF] >= 0)
-                                         ? token[index[+BASE_INDEX::REF]]
-                                         : "";
+                             ? token[index[+BASE_INDEX::REF]]
+                             : "";
             alt_allele = (index[+BASE_INDEX::ALT] >= 0)
-                                         ? token[index[+BASE_INDEX::ALT]]
-                                         : "";
+                             ? token[index[+BASE_INDEX::ALT]]
+                             : "";
             std::transform(ref_allele.begin(), ref_allele.end(),
                            ref_allele.begin(), ::toupper);
             std::transform(alt_allele.begin(), alt_allele.end(),
@@ -714,11 +695,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
 
 
-    if(num_retained != m_existed_snps.size()){
-    	// remove all SNPs that we don't want to retain
-    	m_existed_snps.erase(std::remove_if(m_existed_snps.begin(),
-    			m_existed_snps.end(),
-				[](SNP& s){return !s.retained();}),m_existed_snps.end());
+    if (num_retained != m_existed_snps.size()) {
+        // remove all SNPs that we don't want to retain
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [](SNP& s) { return !s.retained(); }),
+            m_existed_snps.end());
     }
 
     m_existed_snps_index.clear();
@@ -970,6 +952,7 @@ double Genotype::get_r2(bool core_missing, bool pair_missing,
     return r2;
 }
 
+void Genotype::pearson_clump(Genotype& reference, Reporter& reporter) {}
 void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                                   bool const use_pearson)
 {
@@ -1028,9 +1011,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
     std::vector<int> remain_core_snps;
     int32_t dp_result[5];
-    const double min_r2 = (m_use_proxy)
-                              ? std::min(m_clump_proxy, m_clump_r2)
-                              : m_clump_r2;
+    const double min_r2 =
+        (m_use_proxy) ? std::min(m_clump_proxy, m_clump_r2) : m_clump_r2;
     bool is_x = false;
     double freq11;
     double freq11_expected;
@@ -1370,7 +1352,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 }
             }
             cur_target_snp.set_clumped();
-            //remain_core_snps.push_back(cur_snp_index);
+            // remain_core_snps.push_back(cur_snp_index);
             num_core_snps++;
             double thres = cur_target_snp.get_threshold();
             if (used_thresholds.find(thres) == used_thresholds.end()) {
@@ -1547,7 +1529,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                 }
             }
             cur_target_snp.set_clumped();
-            //remain_core_snps.push_back(cur_snp_index);
+            // remain_core_snps.push_back(cur_snp_index);
             num_core_snps++;
             double thres = cur_target_snp.get_threshold();
             if (used_thresholds.find(thres) == used_thresholds.end()) {
@@ -1595,19 +1577,17 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         m_existed_snps.erase(last, m_existed_snps.end());
     }
     */
-    // ordering doesn't matter, so we can just swap every remove SNPs to the back and this
-    // should be at most o(n)?
-    if(num_core_snps != m_existed_snps.size()){
-    	for(size_t i=0; i<m_existed_snps.size();)
-    	{
-    	    if( m_existed_snps[i].remove() )
-    	    {
-    	        std::swap(m_existed_snps[i], m_existed_snps.back());
-    	        m_existed_snps.pop_back();
-    	    }
-    	    else
-    	      ++i;
-    	}
+    // ordering doesn't matter, so we can just swap every remove SNPs to the
+    // back and this should be at most o(n)?
+    if (num_core_snps != m_existed_snps.size()) {
+        for (size_t i = 0; i < m_existed_snps.size();) {
+            if (m_existed_snps[i].remove()) {
+                std::swap(m_existed_snps[i], m_existed_snps.back());
+                m_existed_snps.pop_back();
+            }
+            else
+                ++i;
+        }
     }
     m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
@@ -1660,14 +1640,15 @@ void Genotype::get_null_score(const size_t& set_size,
     read_score(selected_snp_index);
     if (require_statistic) {
         misc::RunningStat rs;
-        for (auto&& sample : m_sample_names) {
-            if (!sample.include) continue;
-            if (sample.num_snp == 0) {
+        size_t num_prs = m_prs_info.size();
+        for (size_t i = 0; i < num_prs; ++i) {
+            if (!IS_SET(m_sample_include, i)) continue;
+            if (m_prs_info[i].num_snp == 0) {
                 rs.push(0.0);
             }
             else
             {
-                rs.push(sample.prs / (double) sample.num_snp);
+                rs.push(m_prs_info[i].get_prs());
             }
         }
         m_mean_score = rs.mean();
@@ -1714,14 +1695,15 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
     cur_index = end_index;
     if (require_statistic) {
         misc::RunningStat rs;
-        for (auto&& sample : m_sample_names) {
-            if (!sample.include) continue;
-            if (sample.num_snp == 0) {
+        size_t num_prs = m_prs_info.size();
+        for (size_t i = 0; i < num_prs; ++i) {
+            if (!IS_SET(m_sample_include, i)) continue;
+            if (m_prs_info[i].num_snp == 0) {
                 rs.push(0.0);
             }
             else
             {
-                rs.push(sample.prs / (double) sample.num_snp);
+                rs.push(m_prs_info[i].get_prs());
             }
         }
         m_mean_score = rs.mean();

@@ -38,7 +38,7 @@ private:
     std::streampos m_prev_loc = 0;
     uintptr_t m_bed_offset = 3;
 
-    std::vector<Sample> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector();
     std::vector<SNP> gen_snp_vector(const double geno, const double maf,
                                     const double info,
                                     const double hard_threshold,
@@ -82,10 +82,11 @@ private:
     void read_score(std::vector<size_t>& index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index);
-    void read_score(std::vector<size_t> &index_bound, uint32_t homcom_weight,
-    		uint32_t het_weight, uint32_t homrar_weight);
-    void read_score(size_t start_index, size_t end_bound, uint32_t homcom_weight,
-    		uint32_t het_weight, uint32_t homrar_weight, const size_t region_index);
+    void read_score(std::vector<size_t>& index_bound, uint32_t homcom_weight,
+                    uint32_t het_weight, uint32_t homrar_weight);
+    void read_score(size_t start_index, size_t end_bound,
+                    uint32_t homcom_weight, uint32_t het_weight,
+                    uint32_t homrar_weight, const size_t region_index);
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
                                     const uintptr_t* __restrict sample_include,

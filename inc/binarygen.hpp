@@ -39,7 +39,7 @@ public:
 
 private:
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
-    std::vector<Sample> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector();
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
     bool check_is_sample_format();
@@ -297,11 +297,11 @@ private:
     struct PRS_Interpreter
     {
         ~PRS_Interpreter(){};
-        PRS_Interpreter(std::vector<Sample>* sample, MODEL model,
+        PRS_Interpreter(std::vector<PRS>* sample_prs, MODEL model,
                         MISSING_SCORE missing,
                         std::vector<uintptr_t>* sample_inclusion, double stat,
                         bool flipped)
-            : m_sample(sample)
+            : m_sample_prs(sample_prs)
             , m_sample_inclusion(sample_inclusion)
             , m_model(model)
             , m_missing(missing)
@@ -309,7 +309,7 @@ private:
             , m_flipped(flipped)
         {
             // m_sample contains only samples extracted
-            m_score.resize(m_sample->size(), 0);
+            m_score.resize(m_sample_prs->size(), 0);
         }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
@@ -401,9 +401,11 @@ private:
                 m_total_prob
                 / (((double) m_num_included_samples - (double) num_miss) * 2);
             size_t idx_sample_include = 0;
-            for (size_t i_sample = 0; i_sample < m_sample->size(); ++i_sample) {
+            for (size_t i_sample = 0; i_sample < m_sample_prs->size();
+                 ++i_sample)
+            {
                 if (IS_SET(m_sample_inclusion->data(), i_sample)) {
-                    auto&& sample = m_sample->at(idx_sample_include++);
+                    auto&& sample = m_sample_prs->at(idx_sample_include++);
                     if (i_missing < num_miss
                         && i_sample == m_missing_samples[i_missing])
                     {
@@ -449,7 +451,7 @@ private:
         bool first = true;
         bool exclude = false;
         bool valid = true;
-        std::vector<Sample>* m_sample;
+        std::vector<PRS>* m_sample_prs;
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<double> m_score;
         std::vector<size_t> m_missing_samples;

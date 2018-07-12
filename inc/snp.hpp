@@ -66,6 +66,7 @@ public:
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
+        m_retain = true;
     }
 
     inline void set_flipped() { m_flipped = true; };
@@ -77,12 +78,12 @@ public:
     inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
-    	// should be trimmed
-        if (chr != -1 && m_chr != -1 && chr != m_chr){
-        	return false;
+        // should be trimmed
+        if (chr != -1 && m_chr != -1 && chr != m_chr) {
+            return false;
         }
-        if (loc != -1 && m_loc != -1 && loc != m_loc){
-        	return false;
+        if (loc != -1 && m_loc != -1 && loc != m_loc) {
+            return false;
         }
         if (m_ref == ref) {
             if (!m_alt.empty() && !alt.empty()) {
@@ -169,9 +170,9 @@ public:
                 completed = (target.m_flags[i_flag] == 0);
             }
         }
-        if (completed){
-        	target.set_clumped();
-        	target.m_remove =true;
+        if (completed) {
+            target.set_clumped();
+            target.m_remove = true;
         }
         m_clumped = true;
         // protect from other SNPs tempering its flags
@@ -179,15 +180,16 @@ public:
 
     bool remove() const { return m_remove; };
     bool clumped() const { return m_clumped; };
-    bool retained() {
-    	if(m_retain){
-    		m_retain = false;
-    		return true;
-    	}
-    	return m_retain;
+    bool retained()
+    {
+        if (m_retain) {
+            m_retain = false;
+            return true;
+        }
+        return m_retain;
     };
-    void set_retain() { m_retain = true;};
-    void reset_retain() { m_retain = false;};
+    void set_retain() { m_retain = true; };
+    void reset_retain() { m_retain = false; };
     bool valid() const { return m_valid; };
     void invalidate() { m_valid = false; };
     void set_low_bound(uintptr_t low) { m_low_bound = low; };
