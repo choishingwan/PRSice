@@ -714,7 +714,7 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
                         - ONELU;
             }
             ujj = 0;
-            while (ulii) {
+            while (ujj < BITCT) {
                 ukk = (ulii >> ujj) & 3;
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
@@ -874,7 +874,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                         - ONELU;
             }
             ujj = 0;
-            while (ulii) {
+            while (ujj < BITCT) {
                 ukk = (ulii >> ujj) & 3;
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
