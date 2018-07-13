@@ -147,7 +147,7 @@ public:
         return IS_SET(m_in_regression.data(), i);
     }
     // this is dangerous but whatever
-    bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
+    //bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
     bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }

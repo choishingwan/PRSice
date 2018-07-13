@@ -174,8 +174,6 @@ void PRSice::update_sample_included(Genotype& target)
     // phenotypes
     m_matrix_index.clear();
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-        bool included = target.is_include(i_sample);
-        if (!included) continue;
         m_max_fid_length = (m_max_fid_length > target.fid(i_sample).length())
                                ? m_max_fid_length
                                : target.fid(i_sample).length();
@@ -208,9 +206,10 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     size_t num_not_found = 0;
     std::string line;
     size_t sample_index_ct = 0;
-    size_t num_included = 0;
+    size_t sample_ct = target.num_sample();
     std::unordered_set<double> input_sanity_check; // check if input is sensible
     std::string pheno_name = "Phenotype";
+    std::string id;
     if (pheno_info.use_pheno) // use phenotype file
     {
         int pheno_col_index =
@@ -226,11 +225,12 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
 
         // Read in phenotype from phenotype file
         std::unordered_map<std::string, std::string> phenotype_info;
+        std::vector<std::string> token;
         // do not remove header line as that won't match anyway
         while (std::getline(pheno_file, line)) {
             misc::trim(line);
             if (line.empty()) continue;
-            std::vector<std::string> token = misc::split(line);
+            token = misc::split(line);
             if (token.size()
                 <= (size_t)(pheno_index + 1
                             + !m_ignore_fid)) // need to check the range
@@ -242,16 +242,14 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                       "Have you use the --ignore-fid option?";
                 throw std::runtime_error(error_message);
             }
-            std::string id =
+            id =
                 (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
-        for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-            std::string id = target.sample_id(i_sample);
-            bool included = target.is_include(i_sample);
-            if (included) num_included++;
-            if (phenotype_info.find(id) != phenotype_info.end() && included
+        for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
+            id = target.sample_id(i_sample);
+            if (phenotype_info.find(id) != phenotype_info.end()
                 && phenotype_info[id].compare("NA") != 0)
             {
                 try
@@ -296,10 +294,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     {
         // No phenotype file is provided
         // Use information from the fam file directly
-        for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-            bool included = target.is_include(i_sample);
-            if (included) num_included++;
-            if (target.pheno_is_na(i_sample) || !included) {
+        for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
+            if (target.pheno_is_na(i_sample)) {
                 // it is ok to skip NA as default = sample.has_pheno = false
                 continue;
             }
@@ -354,7 +350,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         message.append(std::to_string(invalid_pheno)
                        + " sample(s) with invalid phenotype\n");
     }
-    if (num_not_found == num_included && regress) {
+    if (num_not_found == sample_ct && regress) {
         message.append(
             "None of the target samples were found in the phenotype file. ");
         if (m_ignore_fid) {
@@ -370,7 +366,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         reporter.report(message);
         throw std::runtime_error("Error: No sample left");
     }
-    if (invalid_pheno == num_included && regress) {
+    if (invalid_pheno == sample_ct && regress) {
         message.append("Error: All sample has invalid phenotypes!");
         reporter.report(message);
         throw std::runtime_error("Error: No sample left");

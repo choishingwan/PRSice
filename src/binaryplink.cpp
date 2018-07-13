@@ -141,7 +141,6 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
             // cur_sample.founder = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
-
         if (token[+FAM::SEX].compare("1") == 0) {
             m_num_male++;
         }
