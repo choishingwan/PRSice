@@ -21,15 +21,12 @@
 #include <string>
 // From http://stackoverflow.com/a/12927952/1441789
 
-struct PRS
+class PRS
 {
+public:
     double prs;
     int num_snp;
-    PRS()
-    {
-        prs = 0.0;
-        num_snp = 0;
-    };
+    PRS(): prs(0.0), num_snp(0){};
     void reset()
     {
         prs = 0.0;
