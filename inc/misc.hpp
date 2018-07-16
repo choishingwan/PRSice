@@ -134,6 +134,7 @@ inline int parseLine(char* line)
     return i;
 }
 
+
 inline int getValue()
 { // Note: this value is in KB!
     FILE* file = fopen("/proc/self/status", "r");

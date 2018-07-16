@@ -1360,10 +1360,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     const uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.founder_ct());
     const uintptr_t founder_ctv2 =
         QUATERCT_TO_ALIGNED_WORDCT(reference.founder_ct());
-
     std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
-    std::vector<int> remain_core_snps;
-    remain_core_snps.reserve(m_existed_snps.size());
+    std::vector<bool> remain_core(m_existed_snps.size(), false);
     const double min_r2 =
         (m_use_proxy) ? std::min(m_clump_proxy, m_clump_r2) : m_clump_r2;
     bool is_x = false;
@@ -1671,7 +1669,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             }
         }
         cur_target_snp.set_clumped();
-        remain_core_snps.push_back(cur_snp_index);
+        remain_core[cur_snp_index] = true;
         num_core_snps++;
         double thres = cur_target_snp.get_threshold();
         if (used_thresholds.find(thres) == used_thresholds.end()) {
@@ -1689,22 +1687,18 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 
     m_existed_snps_index.clear();
     m_num_threshold = m_thresholds.size();
-
     if (num_core_snps != m_existed_snps.size()) {
         // remain_core_snps' follow the post sorted order (p-value sorted)
         // instead of m_existed_snps' index so we need to sort it first
-        std::sort(remain_core_snps.begin(), remain_core_snps.end());
-        int helpIndx(0);
-        m_existed_snps.erase(std::stable_partition(
-            std::begin(m_existed_snps), std::end(m_existed_snps),
-            [&](decltype(*std::begin(m_existed_snps)) const & val) -> bool {
-                return std::find(std::begin(remain_core_snps),
-                                 std::end(remain_core_snps), helpIndx++)
-                       == std::end(remain_core_snps);
-            }));
+        m_existed_snps.erase(
+            std::remove_if(
+                m_existed_snps.begin(), m_existed_snps.end(),
+                [&remain_core, this](const SNP& s) {
+                    return !remain_core[&s - &*begin(m_existed_snps)];
+                }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
-
-    m_existed_snps.shrink_to_fit();
     m_existed_snps_index.clear();
 
     // no longer require the m_existed_snps_index
