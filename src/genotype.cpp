@@ -252,9 +252,15 @@ void Genotype::load_samples(const std::string& keep_file,
     if (!m_is_ref) {
         // m_sample_names = gen_sample_vector();
         m_sample_id = gen_sample_vector();
-        m_prs_info.resize(m_sample_ct, PRS());
-        m_in_regression.resize(m_sample_include.size(), 0);
-    }
+        m_prs_info.reserve(m_sample_ct);
+        for(size_t i = 0; i < m_sample_ct; ++i){
+        	m_prs_info.emplace_back(PRS());
+        }
+        m_in_regression.reserve(m_sample_include.size());
+        for(size_t i = 0; i < m_sample_include.size(): ++i)
+        {
+        	m_in_regression.push_back(0);
+        }
     else
     {
         // don't bother loading up the sample vector as it should
