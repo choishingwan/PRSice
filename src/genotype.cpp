@@ -257,10 +257,11 @@ void Genotype::load_samples(const std::string& keep_file,
         	m_prs_info.emplace_back(PRS());
         }
         m_in_regression.reserve(m_sample_include.size());
-        for(size_t i = 0; i < m_sample_include.size(): ++i)
+        for(size_t i = 0; i < m_sample_include.size(); ++i)
         {
         	m_in_regression.push_back(0);
         }
+    }
     else
     {
         // don't bother loading up the sample vector as it should
