@@ -36,8 +36,8 @@ public:
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
-        const uint32_t homcom_ct = 0, const uint32_t het_ct = 0,
-        const uint32_t homrar_ct = 0, const uint32_t missing = 0)
+        const uint32_t homcom_ct, const uint32_t het_ct,
+        const uint32_t homrar_ct, const uint32_t missing)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -50,7 +50,23 @@ public:
         , m_homcom(homcom_ct)
         , m_het(het_ct)
         , m_homrar(homrar_ct)
-        , m_missing(missing){};
+        , m_missing(missing){
+    	m_has_count = true;
+    };
+    SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const std::string& file_name, const std::streampos byte_pos)
+        : m_alt(alt_allele)
+        , m_ref(ref_allele)
+        , m_rs(rs_id)
+        , m_target_file(file_name)
+        , m_ref_file(file_name)
+        , m_target_byte_pos(byte_pos)
+        , m_ref_byte_pos(byte_pos)
+        , m_chr(chr)
+        , m_loc(loc){
+    	m_has_count = false;
+    };
     virtual ~SNP();
 
     void set_statistic(const double stat, const double p_value,
@@ -195,13 +211,14 @@ public:
     void set_low_bound(uintptr_t low) { m_low_bound = low; };
 
     void set_up_bound(uintptr_t up) { m_up_bound = up; };
-    void get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
+    bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
                     uint32_t& missing)
     {
         homcom = m_homcom;
         het = m_het;
         homrar = m_homrar;
         missing = m_missing;
+        return m_has_count;
     }
     void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
                     uint32_t& missing)
@@ -210,6 +227,7 @@ public:
         m_het = het;
         m_homrar = homrar;
         m_missing = missing;
+        m_has_count = true;
     }
     uintptr_t up_bound() const { return m_up_bound; };
     uintptr_t low_bound() const { return m_low_bound; };
@@ -239,6 +257,7 @@ private:
     uint32_t m_het = 0;
     uint32_t m_homrar = 0;
     uint32_t m_missing = 0;
+    bool m_has_count = false;
     bool m_clumped = false;
     bool m_valid = true;
     bool m_remove = false;

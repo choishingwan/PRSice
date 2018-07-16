@@ -649,7 +649,7 @@ inline double lower_gamma_series(double aa, double zz, double init_value)
         aa += 1.0;
         result *= zz / aa;
         total += rr;
-    } while (fabs(rr) > (kBigEpsilon * kBigEpsilon));
+    } while (std::abs(rr) > (kBigEpsilon * kBigEpsilon));
     return total;
 }
 

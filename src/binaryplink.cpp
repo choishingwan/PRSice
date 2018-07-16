@@ -208,7 +208,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     uint32_t num_ref_target_match = 0;
     intptr_t nanal;
     double cur_maf;
-    bool chr_error = false, chr_sex_error = false,
+    bool chr_error = false, chr_sex_error = false, has_count = false,
          dummy; // to limit error report
     int num_snp_read = 0, prev_snp_processed = 0;
     std::string bim_name, bed_name, chr;
@@ -385,6 +385,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     m_bed_offset
                     + ((num_snp_read - 1) * ((uint64_t) unfiltered_sample_ct4));
                 if (maf > 0 || geno < 1) {
+                	has_count = true;
                     if (num_snp_read - prev_snp_processed > 1) {
                         // skip unread lines
                         if (!bed.seekg(byte_pos, std::ios_base::beg)) {
@@ -436,10 +437,15 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     m_existed_snps_index[bim_info[+BIM::RS]] = snp_info.size();
                     // TODO: When working with SNP class, we need to add in the
                     // aA AA aa variable to avoid re-calculating the mean
+                    if(has_count)
                     snp_info.push_back(SNP(
                         bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos, homcom_ct, het_ct,
                         homrar_ct, missing_ct));
+                    else
+                    	snp_info.push_back(SNP(
+                    	                        bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
+                    	                        bim_info[+BIM::A2], prefix, byte_pos));
                 }
                 else
                 {
@@ -835,8 +841,9 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         genovec_3freq(genotype.data(), sample_include2.data(), pheno_nm_ctv2,
                       &missing_ct, &het_ct, &homcom_ct);
                       */
-        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-        if (homcom_ct + het_ct + homrar_ct + missing_ct == 0) {
+        bool has_count = cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+
+        if (!has_count) {
             genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
                           &missing_ct, &het_ct, &homcom_ct);
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
