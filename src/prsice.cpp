@@ -846,7 +846,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     }
 
     if (all_out.is_open()) all_out.close();
-    process_permutations();
+    if (c_commander.permutation() != 0) process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
         // we don't do competitive for the full set

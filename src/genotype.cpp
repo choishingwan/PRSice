@@ -442,6 +442,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         if (!c_commander.is_index()) std::getline(snp_file, line);
     }
     std::unordered_set<int> unique_thresholds;
+    std::vector<bool> retain_snp(m_existed_snps.size(), false);
     double prev_progress = 0.0;
 
     // very ugly, might want to use polymorphism (is this the right word) as an
@@ -665,7 +666,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 }
                 if (flipped) cur_snp.set_flipped();
                 // ignore the SE as it currently serves no purpose
-                cur_snp.set_retain();
+                // cur_snp.set_retain();
+                retain_snp[m_existed_snps_index[rs_id]] = true;
                 num_retained++;
                 cur_snp.set_statistic(stat, pvalue, category, pthres);
                 if (unique_thresholds.find(category) == unique_thresholds.end())
@@ -698,9 +700,13 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     if (num_retained != m_existed_snps.size()) {
         // remove all SNPs that we don't want to retain
         m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [](SNP& s) { return !s.retained(); }),
+            std::remove_if(
+                m_existed_snps.begin(), m_existed_snps.end(),
+                [&retain_snp, this](const SNP& s) {
+                    return !retain_snp[&s - &*begin(m_existed_snps)];
+                }),
             m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
 
     m_existed_snps_index.clear();
