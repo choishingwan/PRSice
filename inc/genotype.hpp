@@ -224,6 +224,8 @@ public:
     void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
                         const std::vector<size_t>& background_list,
                         const bool require_standardize);
+    void get_null_score(const size_t& set_size,const size_t& prev_size, const std::vector<size_t>& background_list,
+                        const bool first_run, const bool require_standardize);
     size_t num_background() const { return m_background_snp_index.size(); };
     std::vector<size_t> background_index() const
     {

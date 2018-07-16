@@ -167,33 +167,6 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     }
     m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
-    /**
-     * This part might have slow me down a bit
-     */
-    /*
-    for (size_t i_region = 0; i_region < m_region_list.size(); ++i_region) {
-        auto&& gene_set = m_region_list[i_region];
-        size_t prev_chr = -1;
-        for (size_t i_bound = 0; i_bound < gene_set.size(); ++i_bound) {
-            int cur_chr = gene_set[i_bound].chr;
-            if (prev_chr != cur_chr) {
-                if (m_chr_index.find(i_region) == m_chr_index.end()) {
-                    m_chr_index[i_region] = std::vector<int>(cur_chr + 1, -1);
-                    m_chr_index[i_region][cur_chr] = i_bound;
-                }
-                else
-                {
-                    if (m_chr_index[i_region].size() < cur_chr + 1) {
-                        while (m_chr_index[i_region].size() < cur_chr + 1)
-                            m_chr_index[i_region].push_back(-1);
-                    }
-                    m_chr_index[i_region][cur_chr] = i_bound;
-                }
-                prev_chr = cur_chr;
-            }
-        }
-    }
-    */
     m_duplicated_names.clear();
 }
 void Region::process_snp_sets(const std::string& single_snp_set,
@@ -983,13 +956,16 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
     size_t chr_index = 0;
     std::vector<int> chr_start;
     // optimize for human for now
-    chr_start.reserve(22);
+    chr_start.resize(22,-1);
     for (auto&& bound : current_region) {
+
+        if (prev_chr != bound.chr || prev_chr == -1) {
+            chr_start[bound.chr-1] = chr_index;
+        }
         if (prev_chr == -1) {
             prev_chr = bound.chr;
             prev_start = bound.start;
             prev_end = bound.end;
-            chr_start.push_back(chr_index);
         }
         else if (prev_chr != bound.chr || bound.start > prev_end)
         {
@@ -1002,9 +978,6 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
             prev_chr = bound.chr;
             prev_start = bound.start;
             prev_end = bound.end;
-            if (prev_chr != bound.chr) {
-                chr_start.push_back(chr_index);
-            }
         }
         else
         {
@@ -1098,25 +1071,29 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
     // sactual chromosome
     bool chr_switched = false;
     size_t region_size = m_region_name.size();
+    size_t region_start, region_end;
+    int bound_chr_start_index;
     for (size_t i_region = 1; i_region < region_size; ++i_region) {
-        int region_chr_index = m_chr_index[i_region][chr];
+        int snp_region_chr_start_index = m_chr_index[i_region][chr];
         size_t current_region_size = m_region_list[i_region].size();
+        // while we still have boundary left
         while (m_snp_check_index[i_region] < current_region_size) {
             auto&& current_bound =
                 m_region_list[i_region][m_snp_check_index[i_region]];
-            int region_chr = m_chr_index[i_region][current_bound.chr];
-            size_t region_start = current_bound.start;
-            size_t region_end = current_bound.end;
-            if (region_chr_index != region_chr && !chr_switched) {
-                // only increment if we have passed the chromosome
-                m_snp_check_index[i_region] = region_chr_index;
+            bound_chr_start_index = m_chr_index[i_region][current_bound.chr];
+            region_start = current_bound.start;
+            region_end = current_bound.end;
+            if (snp_region_chr_start_index != bound_chr_start_index && !chr_switched) {
+            	// not the same chromosome, so jump to the correct location
+                m_snp_check_index[i_region] = snp_region_chr_start_index;
                 chr_switched = true;
             }
-            else if (region_chr_index != region_chr)
+            else if (bound_chr_start_index != snp_region_chr_start_index)
             {
+            	// already jumped once
                 break;
             }
-            else if (region_chr_index == region_chr) // same chromosome
+            else// same chromosome
             {
                 if (region_start <= loc && region_end >= loc) {
                     // This is the region
@@ -1130,11 +1107,6 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                 {
                     m_snp_check_index[i_region]++;
                 }
-            }
-            else
-            {
-                // not the same chromosome
-                break;
             }
         }
     }

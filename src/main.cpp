@@ -196,6 +196,9 @@ int main(int argc, char* argv[])
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
                     }
+                    if(!commander.no_regress() && commander.perform_set_perm()){
+                    	prsice.run_competitive(*target_file, commander, i_pheno);
+                    }
                 }
                 prsice.print_progress(true);
                 fprintf(stderr, "\n");

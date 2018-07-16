@@ -192,6 +192,7 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
         }
     }
+    void run_competitive(Genotype& target, const Commander& commander, const size_t pheno_index);
 
 protected:
 private:
@@ -331,6 +332,10 @@ private:
                           bool require_standardize);
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, bool is_binary, bool store_p);
+
+	void null_set_no_thread(Genotype& target, std::map<uint32_t, std::vector<uint32_t>> &set_index,
+			std::vector<double> &ori_t_value, std::vector<uint32_t> &set_perm_res, const size_t num_perm,
+			const bool is_binary, const bool require_standardize);
     void null_set_no_thread(Genotype& target, int& num_significant,
                             size_t num_perm, size_t set_size,
                             size_t num_selected_snps, double original_p,

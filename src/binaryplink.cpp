@@ -767,7 +767,7 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
-    uint32_t homrar_ct;
+    uint32_t homrar_ct = 0;
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;

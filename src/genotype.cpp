@@ -1735,6 +1735,36 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
+void Genotype::get_null_score(const size_t& set_size,
+							  const size_t& prev_size,
+                              const std::vector<size_t>& background_list,
+							  const bool first_run,
+                              const bool require_statistic)
+{
+    // selection_list = permuted list of SNP index
+    if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
+    std::vector<size_t> selected_snp_index(
+        background_list.begin()+prev_size, background_list.begin() + set_size);
+    std::sort(selected_snp_index.begin(), selected_snp_index.end());
+    read_score(selected_snp_index, first_run);
+    if (require_statistic) {
+        misc::RunningStat rs;
+        size_t num_prs = m_prs_info.size();
+        for (size_t i = 0; i < num_prs; ++i) {
+            if (!IS_SET(m_sample_include, i)) continue;
+            if (m_prs_info[i].num_snp == 0) {
+                rs.push(0.0);
+            }
+            else
+            {
+                rs.push(m_prs_info[i].get_prs());
+            }
+        }
+        m_mean_score = rs.mean();
+        m_score_sd = rs.sd();
+    }
+}
+
 
 void Genotype::get_null_score(const size_t& set_size,
                               const size_t& num_selected_snps,
