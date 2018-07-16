@@ -384,49 +384,51 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 byte_pos =
                     m_bed_offset
                     + ((num_snp_read - 1) * ((uint64_t) unfiltered_sample_ct4));
-                if (maf > 0 || geno < 1){
-					if (num_snp_read - prev_snp_processed > 1) {
-						// skip unread lines
-						if (!bed.seekg(byte_pos, std::ios_base::beg)) {
-							std::string error_message =
-								"Error: Cannot read the bed file(seek): "
-								+ bed_name;
-							throw std::runtime_error(error_message);
-						}
-					}
-					prev_snp_processed = (num_snp_read - 1);
-					if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
-											   m_sample_include.data(), final_mask,
-											   false, bed, m_tmp_genotype.data(),
-											   genotype.data()))
-					{
-						std::string error_message =
-							"Error: Cannot read the bed file(read): " + bed_name;
-						throw std::runtime_error(error_message);
-					}
-					genovec_3freq(genotype.data(), m_sample_mask.data(),
-								  pheno_nm_ctv2, &missing_ct, &het_ct, &homcom_ct);
-					nanal = m_sample_ct - missing_ct;
-					homrar_ct = nanal - het_ct - homcom_ct;
-					if (nanal == 0) {
-						// still count as MAF filtering (for now)
-						m_num_maf_filter++;
-						continue;
-					}
+                if (maf > 0 || geno < 1) {
+                    if (num_snp_read - prev_snp_processed > 1) {
+                        // skip unread lines
+                        if (!bed.seekg(byte_pos, std::ios_base::beg)) {
+                            std::string error_message =
+                                "Error: Cannot read the bed file(seek): "
+                                + bed_name;
+                            throw std::runtime_error(error_message);
+                        }
+                    }
+                    prev_snp_processed = (num_snp_read - 1);
+                    if (load_and_collapse_incl(
+                            m_unfiltered_sample_ct, m_sample_ct,
+                            m_sample_include.data(), final_mask, false, bed,
+                            m_tmp_genotype.data(), genotype.data()))
+                    {
+                        std::string error_message =
+                            "Error: Cannot read the bed file(read): "
+                            + bed_name;
+                        throw std::runtime_error(error_message);
+                    }
+                    genovec_3freq(genotype.data(), m_sample_mask.data(),
+                                  pheno_nm_ctv2, &missing_ct, &het_ct,
+                                  &homcom_ct);
+                    nanal = m_sample_ct - missing_ct;
+                    homrar_ct = nanal - het_ct - homcom_ct;
+                    if (nanal == 0) {
+                        // still count as MAF filtering (for now)
+                        m_num_maf_filter++;
+                        continue;
+                    }
 
-					if ((double) missing_ct / (double) m_sample_ct > geno) {
-						m_num_geno_filter++;
-						continue;
-					}
+                    if ((double) missing_ct / (double) m_sample_ct > geno) {
+                        m_num_geno_filter++;
+                        continue;
+                    }
 
-					cur_maf = ((double) (het_ct + homrar_ct * 2)
-							   / ((double) nanal * 2.0));
-					if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
-					// remove SNP if maf lower than threshold
-					if (cur_maf < maf) {
-						m_num_maf_filter++;
-						continue;
-					}
+                    cur_maf = ((double) (het_ct + homrar_ct * 2)
+                               / ((double) nanal * 2.0));
+                    if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
+                    // remove SNP if maf lower than threshold
+                    if (cur_maf < maf) {
+                        m_num_maf_filter++;
+                        continue;
+                    }
                 }
                 m_num_ambig +=
                     ambiguous(bim_info[+BIM::A1], bim_info[+BIM::A2]);
@@ -671,10 +673,10 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
                       &missing_ct, &het_ct, &homcom_ct);
                       */
         cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-        if(homcom_ct+het_ct+homrar_ct+missing_ct==0){
-        	genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
-        	                      &missing_ct, &het_ct, &homcom_ct);
-        	cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        if (homcom_ct + het_ct + homrar_ct + missing_ct == 0) {
+            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                          &missing_ct, &het_ct, &homcom_ct);
+            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
         nanal = m_sample_ct - missing_ct;
         if (nanal == 0) {
@@ -720,20 +722,24 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
                 switch (ukk)
                 {
                 default:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                    sample_prs.prs = sample_prs.prs*not_first + homcom_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat * 0.5 - adj_score;
                     break;
                 case 1:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                    sample_prs.prs = sample_prs.prs*not_first + het_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat * 0.5 - adj_score;
                     break;
                 case 3:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                    sample_prs.prs = sample_prs.prs*not_first + homrar_weight * stat * 0.5 - adj_score;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat * 0.5 - adj_score;
                     break;
                 case 2:
-                    sample_prs.prs = sample_prs.prs*not_first + miss_score;
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + miss_count;
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
                     break;
                 }
                 ulii &= ~((3 * ONELU) << ujj);
@@ -748,7 +754,8 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
 
 void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                              uint32_t homcom_wt, uint32_t het_wt,
-                             uint32_t homrar_wt, const size_t region_index, bool set_zero)
+                             uint32_t homrar_wt, const size_t region_index,
+                             bool set_zero)
 {
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     // for array size
@@ -829,10 +836,10 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                       &missing_ct, &het_ct, &homcom_ct);
                       */
         cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-        if(homcom_ct+het_ct+homrar_ct+missing_ct==0){
-        	genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
-        	                      &missing_ct, &het_ct, &homcom_ct);
-        	cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        if (homcom_ct + het_ct + homrar_ct + missing_ct == 0) {
+            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                          &missing_ct, &het_ct, &homcom_ct);
+            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
         nanal = m_sample_ct - missing_ct;
         if (nanal == 0) {
@@ -880,21 +887,25 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                 switch (ukk)
                 {
                 default:
-                	sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                	sample_prs.prs = sample_prs.prs*not_first + homcom_weight * stat * 0.5 - adj_score;
-                	break;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat * 0.5 - adj_score;
+                    break;
                 case 1:
-                	sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                	sample_prs.prs = sample_prs.prs*not_first + het_weight * stat * 0.5 - adj_score;
-                	break;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat * 0.5 - adj_score;
+                    break;
                 case 3:
-                	sample_prs.num_snp = sample_prs.num_snp*not_first + 1;
-                	sample_prs.prs = sample_prs.prs*not_first + homrar_weight * stat * 0.5 - adj_score;
-                	break;
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat * 0.5 - adj_score;
+                    break;
                 case 2:
-                	sample_prs.prs = sample_prs.prs*not_first + miss_score;
-                	sample_prs.num_snp = sample_prs.num_snp*not_first + miss_count;
-                	break;
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
+                    break;
                 }
                 ulii &= ~((3 * ONELU) << ujj);
                 ujj += 2;
@@ -921,6 +932,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     case MODEL::RECESSIVE:
         read_score(start_index, end_bound, 0, 0, 1, region_index, set_zero);
         break;
-    default: read_score(start_index, end_bound, 0, 1, 2, region_index, set_zero); break;
+    default:
+        read_score(start_index, end_bound, 0, 1, 2, region_index, set_zero);
+        break;
     }
 }

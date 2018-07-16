@@ -91,7 +91,8 @@ public:
 
     bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
                    size_t& num_snp_included, const size_t region_index,
-                   const bool cumulate, const bool require_statistic, const bool first_run);
+                   const bool cumulate, const bool require_statistic,
+                   const bool first_run);
     // this is to prepare the genotypes for clumping
     bool sort_by_p()
     {
@@ -119,17 +120,20 @@ public:
     void reset_sample_pheno()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
+        /*
         for (auto&& prs : m_prs_info) {
             prs.reset();
         }
+        */
     };
-
+    /*
     void reset_sample_prs()
     {
         for (auto&& prs : m_prs_info) {
             prs.reset();
         }
     };
+    */
     bool prepare_prsice(Reporter& reporter);
     std::string sample_id(size_t i) const
     {
@@ -147,7 +151,7 @@ public:
         return IS_SET(m_in_regression.data(), i);
     }
     // this is dangerous but whatever
-    //bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
+    // bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
     bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }
@@ -225,6 +229,7 @@ public:
     {
         return m_background_snp_index;
     };
+    uint32_t max_chr() const { return m_max_code; };
 
 protected:
     friend class BinaryPlink;
@@ -269,6 +274,7 @@ protected:
     uintptr_t m_clump_distance = 0;
     uintptr_t m_sample_ct = 0;
     uintptr_t m_founder_ct = 0;
+    uintptr_t m_marker_ct = 0;
     intptr_t m_background_region_index = -1;
     uint32_t m_max_category = 0;
     uint32_t m_region_size = 1;
@@ -277,7 +283,6 @@ protected:
     uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
-    uintptr_t m_marker_ct = 0;
     unsigned int m_seed = 0;
     uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;

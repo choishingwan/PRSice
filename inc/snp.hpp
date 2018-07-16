@@ -204,7 +204,8 @@ public:
         missing = m_missing;
     }
     void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-            uint32_t& missing){
+                    uint32_t& missing)
+    {
         m_homcom = homcom;
         m_het = het;
         m_homrar = homrar;

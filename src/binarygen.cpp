@@ -983,7 +983,7 @@ void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
 {
     // because I don't want to touch the code in dosage_score, we will reset the
     // sample here
-    reset_sample_prs();
+    // reset_sample_prs();
     if (m_hard_coded)
         hard_code_score(index);
     else

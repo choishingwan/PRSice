@@ -103,26 +103,6 @@ int main(int argc, char* argv[])
         {
             target_file->set_info(commander);
             // load reference panel first so that we have updated the target
-            if (commander.use_ref()) {
-                reporter.report("Loading reference "
-                                "panel\n==============================\n");
-                reference_file = factory.createGenotype(
-                    commander.ref_name(), commander.ref_type(),
-                    commander.ref_list(), commander.thread(),
-                    commander.ignore_fid(), commander.nonfounders(),
-                    commander.keep_ambig(), reporter, commander, true);
-
-                reference_file->load_samples(commander.ld_keep_file(),
-                                             commander.ld_remove_file(),
-                                             verbose, reporter);
-                // only load SNPs that can be found in the target file index
-                reference_file->load_snps(
-                    commander.out(), commander.extract_file(),
-                    commander.exclude_file(), commander.geno(), commander.maf(),
-                    commander.info(), commander.hard_threshold(),
-                    commander.hard_coded(), exclusion, verbose, reporter,
-                    target_file);
-            }
 
             std::string message = "Start processing " + base_name + "\n";
             message.append("==============================\n");
@@ -146,10 +126,29 @@ int main(int argc, char* argv[])
 
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
-            	// get the sort by p index vector for target
-                // so that we can still find out the relative coordinates of each
-                // SNPs
-            	// This is only required for clumping
+                if (commander.use_ref()) {
+                    reporter.report("Loading reference "
+                                    "panel\n==============================\n");
+                    reference_file = factory.createGenotype(
+                        commander.ref_name(), commander.ref_type(),
+                        commander.ref_list(), commander.thread(),
+                        commander.ignore_fid(), commander.nonfounders(),
+                        commander.keep_ambig(), reporter, commander, true);
+
+                    reference_file->load_samples(commander.ld_keep_file(),
+                                                 commander.ld_remove_file(),
+                                                 verbose, reporter);
+                    // only load SNPs that can be found in the target file index
+                    reference_file->load_snps(
+                        commander.out(), commander.extract_file(),
+                        commander.exclude_file(), commander.geno(),
+                        commander.maf(), commander.info(),
+                        commander.hard_threshold(), commander.hard_coded(),
+                        exclusion, verbose, reporter, target_file);
+                }
+                // get the sort by p index vector for target
+                // so that we can still find out the relative coordinates of
+                // each SNPs This is only required for clumping
                 if (!target_file->sort_by_p()) {
                     std::string error_message =
                         "No SNPs left for PRSice processing";

@@ -187,6 +187,7 @@ void PRSice::update_sample_included(Genotype& target)
             != m_sample_with_phenotypes.end())
         {
             m_matrix_index.push_back(i_sample);
+            target.set_in_regression(i_sample);
         }
     }
 }
@@ -242,8 +243,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                       "Have you use the --ignore-fid option?";
                 throw std::runtime_error(error_message);
             }
-            id =
-                (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+            id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
@@ -757,7 +757,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                         const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-    //target.reset_sample_prs();
+    // target.reset_sample_prs();
     // prslice can easily be implemented using PRSet functionality
     // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
@@ -1044,7 +1044,7 @@ void PRSice::run_null_perm_no_thread(
     Eigen::VectorXd perm_pheno = m_phenotype;
     if (run_glm) {
         while (processed < m_num_perm) {
-            //perm_pheno = m_phenotype;
+            // perm_pheno = m_phenotype;
             std::shuffle(perm_pheno.data(),
                          perm_pheno.data() + num_regress_sample, rand_gen);
             m_analysis_done++;
@@ -1066,7 +1066,7 @@ void PRSice::run_null_perm_no_thread(
         Eigen::VectorXd beta;
         Eigen::VectorXd se;
         while (processed < m_num_perm) {
-            //perm_pheno = m_phenotype;
+            // perm_pheno = m_phenotype;
             std::shuffle(perm_pheno.data(),
                          perm_pheno.data() + num_regress_sample, rand_gen);
             m_analysis_done++;
@@ -1624,7 +1624,7 @@ void PRSice::null_set_no_thread(Genotype& target, int& num_significant,
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             // size_t r = background[begin];
             size_t advance_index = dist(g);
-            std::swap(background[begin],background[advance_index]);
+            std::swap(background[begin], background[advance_index]);
             // background[begin] = background[advance_index];
             // background[advance_index] = r;
             ++begin;
@@ -1633,7 +1633,7 @@ void PRSice::null_set_no_thread(Genotype& target, int& num_significant,
         /*
         target.get_null_score(set_size, num_selected_snps, background,
                               require_standardize);
-		*/
+        */
         for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
             m_independent_variables(sample_id, 1) =
                 target.calculate_score(m_score, m_matrix_index[sample_id]);

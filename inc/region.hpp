@@ -80,9 +80,9 @@ public:
         m_region_post_clump_count.resize(count.size());
         const size_t last_region_index = count.size() - 1;
         for (size_t i = 0; i < count.size(); ++i) {
-        	if(i != last_region_index && i != 0){
-        		max = std::max(count[i], max);
-        	}
+            if (i != last_region_index && i != 0) {
+                max = std::max(count[i], max);
+            }
             m_region_post_clump_count[i] = count[i];
             if (m_region_size_duplicated.find(count[i])
                 != m_region_size_duplicated.end())
@@ -111,8 +111,8 @@ private:
     struct region_bound
     {
         int chr;
-        size_t start;
-        size_t end;
+        uint32_t start;
+        uint32_t end;
     };
     std::string m_out_prefix; // for log file
     // for checking duplicated region
@@ -159,9 +159,11 @@ private:
     std::unordered_map<std::string, region_bound> process_gtf(
         const std::string& gtf,
         std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-        const std::string& out_prefix, Reporter& reporter);
+        const std::string& out_prefix, const uint32_t max_chr,
+        Reporter& reporter);
     std::vector<Region::region_bound>
-    solve_overlap(std::vector<Region::region_bound>& current_region);
+    solve_overlap(std::vector<Region::region_bound>& current_region,
+                  size_t i_region);
     void process_msigdb(
         const std::string& msigdb,
         const std::unordered_map<std::string, region_bound>& gtf_info,
