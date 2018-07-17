@@ -34,12 +34,14 @@ public:
     BinaryGen(const std::string& prefix, const std::string& sample_file,
               const std::string& multi_input, const size_t thread = 1,
               const bool ignore_fid = false, const bool keep_nonfounder = false,
-              const bool keep_ambig = false, const bool is_ref = false, const bool intermediate=false);
+              const bool keep_ambig = false, const bool is_ref = false,
+              const bool intermediate = false);
     ~BinaryGen();
-private:
 
-    std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
+private:
     typedef std::vector<std::vector<double>> Data;
+    std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
+    std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::string m_cur_file;
     bool m_intermediate = false;
 
@@ -90,46 +92,43 @@ private:
     {
         assert(unfiltered_sample_ct);
         if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-                    || !m_bgen_file.is_open())
+            || !m_bgen_file.is_open())
         {
-        	if (m_bgen_file.is_open()) m_bgen_file.close();
-        	std::string bgen_name = file_name + ".bgen";
-        	m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-        	if (!m_bgen_file.is_open()) {
-        		std::string error_message =
-        				"ERROR: Cannot open bgen file: " + file_name;
-        		throw std::runtime_error(error_message);
-        	}
-        	m_cur_file = file_name;
+            if (m_bgen_file.is_open()) m_bgen_file.close();
+            std::string bgen_name = file_name + ".bgen";
+            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+            if (!m_bgen_file.is_open()) {
+                std::string error_message =
+                    "ERROR: Cannot open bgen file: " + file_name;
+                throw std::runtime_error(error_message);
+            }
+            m_cur_file = file_name;
         }
         auto&& context = m_context_map[file_name];
-        // anyway to avoid reinitializing the memory for buffer 1 and 2?
-        std::vector<genfile::byte_t> buffer1, buffer2;
         m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-
         PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold);
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-        		m_bgen_file, context, setter, &buffer1, &buffer2, false);
-
-
-
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
         // output from load_raw should have already copied all samples
         // to the front without the need of subseting
         if (do_reverse) {
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
         }
-
         // mainbuf should contains the information
         return 0;
     }
 
     void read_score(std::vector<size_t>& index, bool reset_zero);
-    void hard_code_score(std::vector<size_t>& index);
+    void hard_code_score(std::vector<size_t>& index, int32_t homcom_weight,
+                         uint32_t het_weight, uint32_t homrar_weight,
+                         const size_t region_index, bool set_zero);
     void dosage_score(std::vector<size_t>& index);
     void read_score(size_t start_index, size_t end_bound,
                     const size_t region_index, bool reset_zero);
     void hard_code_score(size_t start_index, size_t end_bound,
-                         const size_t region_index);
+                         uint32_t homcom_weight, uint32_t het_weight,
+                         uint32_t homrar_weight, const size_t region_index,
+                         bool set_zero);
     void dosage_score(size_t start_index, size_t end_bound,
                       const size_t region_index);
 
@@ -286,9 +285,8 @@ private:
                 if (idx_sample_include >= m_num_included_samples) break;
             }
         }
-        void sample_completed(){
+        void sample_completed() {}
 
-        }
     private:
         size_t m_sample_i = 0;
         size_t m_entry_i = 0;
@@ -318,27 +316,29 @@ private:
                         double hard_threshold)
             : m_sample(sample)
             , m_genotype(genotype)
-        	, m_hard_threshold(hard_threshold)
-        {}
+            , m_hard_threshold(hard_threshold)
+        {
+        }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
         {
-        	m_index = 0;
-        	m_shift =0;
-        	rs.clear();
+            m_index = 0;
+            m_shift = 0;
+            rs.clear();
         }
         void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
                                 uint32_t min_entries, uint32_t max_entries)
-        {}
+        {
+        }
 
         bool set_sample(std::size_t i)
         {
-        	m_sample_i = i;
-        	m_geno = 1;
-        	m_entry_i = 0;
-        	m_hard_prob = 0.0;
-        	m_exp_value = 0.0;
-        	m_include_snp = IS_SET(m_sample->data(), m_sample_i);
+            m_sample_i = i;
+            m_geno = 1;
+            m_entry_i = 0;
+            m_hard_prob = 0.0;
+            m_exp_value = 0.0;
+            m_include_snp = IS_SET(m_sample->data(), m_sample_i);
             return m_include_snp;
         }
 
@@ -354,7 +354,7 @@ private:
         {
             if (value > m_hard_prob && value >= m_hard_threshold) {
                 // geno = 2 - m_entry_i;
-            	m_geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                m_geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
                 m_hard_prob = value;
             }
             m_entry_i++;
@@ -362,9 +362,9 @@ private:
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value) {}
 
-        void finalise()
-        {}
-        void sample_completed(){
+        void finalise() {}
+        void sample_completed()
+        {
             if (m_shift == 0)
                 m_genotype[m_index] = 0; // match behaviour of binaryplink
             m_genotype[m_index] |= m_geno << m_shift;
@@ -374,12 +374,13 @@ private:
                 m_shift = 0;
             }
         }
-        double info_score() const{
+        double info_score() const
+        {
             double p = rs.mean() / 2.0;
             double p_all = 2.0 * p * (1.0 - p);
-            return(rs.var() / p_all);
-
+            return (rs.var() / p_all);
         }
+
     private:
         std::vector<uintptr_t>* m_sample;
         uintptr_t* m_genotype;
