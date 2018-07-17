@@ -42,6 +42,7 @@ struct Sample_ID
     std::string pheno;
     Sample_ID(const std::string &F, const std::string &I, const std::string &P):
     	FID(F), IID(I), pheno(P){};
+    Sample_ID():FID(""),IID(""),pheno(""){};
 };
 
 // Passkey idiom, allow safer access to
