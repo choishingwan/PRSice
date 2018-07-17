@@ -21,24 +21,10 @@
 #include <string>
 // From http://stackoverflow.com/a/12927952/1441789
 
-class PRS
+struct PRS
 {
-public:
     double prs;
     int num_snp;
-    PRS(): prs(0.0), num_snp(0){};
-    void reset()
-    {
-        prs = 0.0;
-        num_snp = 0;
-    };
-    double get_prs() const
-    {
-        if (num_snp == 0)
-            return 0.0;
-        else
-            return prs / (double) num_snp;
-    };
 };
 
 struct Sample_ID

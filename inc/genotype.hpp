@@ -162,19 +162,26 @@ public:
     {
         if (i > m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
-        double score = 0;
+        double prs = m_prs_info[i].prs;
+        int num_snp = m_prs_info[i].num_snp;
+        double avg = prs;
+        if(num_snp==0){
+        	avg = 0.0;
+        }else{
+        	avg = prs/(double)num_snp;
+        }
+
         switch (score_type)
         {
         case SCORING::SUM: return m_prs_info[i].prs; break;
         case SCORING::STANDARDIZE:
-            return (m_prs_info[i].get_prs() - m_mean_score) / m_score_sd;
+            return (avg - m_mean_score) / m_score_sd;
             break;
         default:
             // default is avg
-            return m_prs_info[i].get_prs();
+            return avg;
             break;
         }
-        return score;
     }
 
     uintptr_t founder_ct() const { return m_founder_ct; }
