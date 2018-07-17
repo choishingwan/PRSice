@@ -698,11 +698,10 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     if (num_retained != m_existed_snps.size()) {
         // remove all SNPs that we don't want to retain
         m_existed_snps.erase(
-            std::remove_if(
-                m_existed_snps.begin(), m_existed_snps.end(),
-                [&retain_snp, this](const SNP& s) {
-                    return !retain_snp[&s - &*begin(m_existed_snps)];
-                }),
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain_snp, this](const SNP& s) {
+                               return !retain_snp[&s - &*begin(m_existed_snps)];
+                           }),
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
     }
@@ -1733,16 +1732,15 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
-void Genotype::get_null_score(const size_t& set_size,
-							  const size_t& prev_size,
+void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               const std::vector<size_t>& background_list,
-							  const bool first_run,
+                              const bool first_run,
                               const bool require_statistic)
 {
     // selection_list = permuted list of SNP index
     if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
-    std::vector<size_t> selected_snp_index(
-        background_list.begin()+prev_size, background_list.begin() + set_size);
+    std::vector<size_t> selected_snp_index(background_list.begin() + prev_size,
+                                           background_list.begin() + set_size);
     std::sort(selected_snp_index.begin(), selected_snp_index.end());
     read_score(selected_snp_index, first_run);
     if (require_statistic) {

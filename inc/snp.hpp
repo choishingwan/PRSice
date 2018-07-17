@@ -50,8 +50,9 @@ public:
         , m_homcom(homcom_ct)
         , m_het(het_ct)
         , m_homrar(homrar_ct)
-        , m_missing(missing){
-    	m_has_count = true;
+        , m_missing(missing)
+    {
+        m_has_count = true;
     };
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
@@ -64,8 +65,9 @@ public:
         , m_target_byte_pos(byte_pos)
         , m_ref_byte_pos(byte_pos)
         , m_chr(chr)
-        , m_loc(loc){
-    	m_has_count = false;
+        , m_loc(loc)
+    {
+        m_has_count = false;
     };
     virtual ~SNP();
 

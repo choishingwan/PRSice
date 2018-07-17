@@ -25,7 +25,7 @@ struct PRS
 {
     double prs;
     int num_snp;
-    PRS(): prs(0.0), num_snp(0){};
+    PRS() : prs(0.0), num_snp(0){};
     double get_prs() const
     {
         if (num_snp == 0)
@@ -40,9 +40,9 @@ struct Sample_ID
     std::string FID;
     std::string IID;
     std::string pheno;
-    Sample_ID(const std::string &F, const std::string &I, const std::string &P):
-    	FID(F), IID(I), pheno(P){};
-    Sample_ID():FID(""),IID(""),pheno(""){};
+    Sample_ID(const std::string& F, const std::string& I, const std::string& P)
+        : FID(F), IID(I), pheno(P){};
+    Sample_ID() : FID(""), IID(""), pheno(""){};
 };
 
 // Passkey idiom, allow safer access to

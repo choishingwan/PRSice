@@ -956,11 +956,11 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
     size_t chr_index = 0;
     std::vector<int> chr_start;
     // optimize for human for now
-    chr_start.resize(22,-1);
+    chr_start.resize(22, -1);
     for (auto&& bound : current_region) {
 
         if (prev_chr != bound.chr || prev_chr == -1) {
-            chr_start[bound.chr-1] = chr_index;
+            chr_start[bound.chr - 1] = chr_index;
         }
         if (prev_chr == -1) {
             prev_chr = bound.chr;
@@ -1083,17 +1083,19 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
             bound_chr_start_index = m_chr_index[i_region][current_bound.chr];
             region_start = current_bound.start;
             region_end = current_bound.end;
-            if (snp_region_chr_start_index != bound_chr_start_index && !chr_switched) {
-            	// not the same chromosome, so jump to the correct location
+            if (snp_region_chr_start_index != bound_chr_start_index
+                && !chr_switched)
+            {
+                // not the same chromosome, so jump to the correct location
                 m_snp_check_index[i_region] = snp_region_chr_start_index;
                 chr_switched = true;
             }
             else if (bound_chr_start_index != snp_region_chr_start_index)
             {
-            	// already jumped once
+                // already jumped once
                 break;
             }
-            else// same chromosome
+            else // same chromosome
             {
                 if (region_start <= loc && region_end >= loc) {
                     // This is the region

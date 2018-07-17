@@ -154,7 +154,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         // only store samples that we need, and use the m_sample_include and
         // m_founder_info to indicate if sample is needed
         if (inclusion && !m_is_ref) {
-            sample_name.emplace_back(Sample_ID(token[+FAM::FID], token[+FAM::IID], token[+FAM::PHENOTYPE]));
+            sample_name.emplace_back(Sample_ID(
+                token[+FAM::FID], token[+FAM::IID], token[+FAM::PHENOTYPE]));
         }
         duplicated_samples.insert(id);
     }
@@ -171,9 +172,9 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 
     famfile.close();
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
-    //m_prs_info.reserve(m_sample_ct);
-    for(size_t i = 0; i < m_sample_ct; ++i){
-    	m_prs_info.emplace_back(PRS());
+    // m_prs_info.reserve(m_sample_ct);
+    for (size_t i = 0; i < m_sample_ct; ++i) {
+        m_prs_info.emplace_back(PRS());
     }
     m_in_regression.resize(m_sample_include.size(), 0);
     return sample_name;
@@ -386,7 +387,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     m_bed_offset
                     + ((num_snp_read - 1) * ((uint64_t) unfiltered_sample_ct4));
                 if (maf > 0 || geno < 1) {
-                	has_count = true;
+                    has_count = true;
                     if (num_snp_read - prev_snp_processed > 1) {
                         // skip unread lines
                         if (!bed.seekg(byte_pos, std::ios_base::beg)) {
@@ -438,15 +439,17 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     m_existed_snps_index[bim_info[+BIM::RS]] = snp_info.size();
                     // TODO: When working with SNP class, we need to add in the
                     // aA AA aa variable to avoid re-calculating the mean
-                    if(has_count)
-                    snp_info.emplace_back(SNP(
-                        bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
-                        bim_info[+BIM::A2], prefix, byte_pos, homcom_ct, het_ct,
-                        homrar_ct, missing_ct));
+                    if (has_count)
+                        snp_info.emplace_back(SNP(bim_info[+BIM::RS], chr_code,
+                                                  loc, bim_info[+BIM::A1],
+                                                  bim_info[+BIM::A2], prefix,
+                                                  byte_pos, homcom_ct, het_ct,
+                                                  homrar_ct, missing_ct));
                     else
-                    	snp_info.emplace_back(SNP(
-                    	                        bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
-                    	                        bim_info[+BIM::A2], prefix, byte_pos));
+                        snp_info.emplace_back(SNP(bim_info[+BIM::RS], chr_code,
+                                                  loc, bim_info[+BIM::A1],
+                                                  bim_info[+BIM::A2], prefix,
+                                                  byte_pos));
                 }
                 else
                 {
@@ -842,7 +845,8 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         genovec_3freq(genotype.data(), sample_include2.data(), pheno_nm_ctv2,
                       &missing_ct, &het_ct, &homcom_ct);
                       */
-        bool has_count = cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        bool has_count =
+            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
 
         if (!has_count) {
             genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,

@@ -86,7 +86,8 @@ public:
             }
             if (sample_file.empty()) sample_file = commander.pheno_file();
             return new BinaryGen(binary_file, sample_file, multi_input, thread,
-                                 ignore_fid, keep_nonfounder, keep_ambig, is_ref, intermediate);
+                                 ignore_fid, keep_nonfounder, keep_ambig,
+                                 is_ref, intermediate);
         }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");

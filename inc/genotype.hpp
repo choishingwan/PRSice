@@ -165,10 +165,12 @@ public:
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
         double avg = prs;
-        if(num_snp==0){
-        	avg = 0.0;
-        }else{
-        	avg = prs/(double)num_snp;
+        if (num_snp == 0) {
+            avg = 0.0;
+        }
+        else
+        {
+            avg = prs / (double) num_snp;
         }
 
         switch (score_type)
@@ -231,7 +233,8 @@ public:
     void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
                         const std::vector<size_t>& background_list,
                         const bool require_standardize);
-    void get_null_score(const size_t& set_size,const size_t& prev_size, const std::vector<size_t>& background_list,
+    void get_null_score(const size_t& set_size, const size_t& prev_size,
+                        const std::vector<size_t>& background_list,
                         const bool first_run, const bool require_standardize);
     size_t num_background() const { return m_background_snp_index.size(); };
     std::vector<size_t> background_index() const
@@ -240,9 +243,8 @@ public:
     };
     uint32_t max_chr() const { return m_max_code; };
 
-    void expect_reference(){
-    	m_expect_reference = true;
-    }
+    void expect_reference() { m_expect_reference = true; }
+
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;

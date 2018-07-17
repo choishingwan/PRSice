@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
-            if(commander.use_ref()) target_file->expect_reference();
+            if (commander.use_ref()) target_file->expect_reference();
             target_file->load_snps(
                 commander.out(), commander.extract_file(),
                 commander.exclude_file(), commander.geno(), commander.maf(),
@@ -197,8 +197,10 @@ int main(int argc, char* argv[])
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
                     }
-                    if(!commander.no_regress() && commander.perform_set_perm()){
-                    	prsice.run_competitive(*target_file, commander, i_pheno);
+                    if (!commander.no_regress() && commander.perform_set_perm())
+                    {
+                        prsice.run_competitive(*target_file, commander,
+                                               i_pheno);
                     }
                 }
                 prsice.print_progress(true);
