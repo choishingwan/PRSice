@@ -240,6 +240,9 @@ public:
     };
     uint32_t max_chr() const { return m_max_code; };
 
+    void expect_reference(){
+    	m_expect_reference = true;
+    }
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -334,9 +337,6 @@ protected:
     {
         return std::vector<SNP>(0);
     };
-    void expect_reference(){
-    	m_expect_reference = true;
-    }
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
