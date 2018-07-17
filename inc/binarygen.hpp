@@ -34,11 +34,15 @@ public:
     BinaryGen(const std::string& prefix, const std::string& sample_file,
               const std::string& multi_input, const size_t thread = 1,
               const bool ignore_fid = false, const bool keep_nonfounder = false,
-              const bool keep_ambig = false, const bool is_ref = false);
+              const bool keep_ambig = false, const bool is_ref = false, const bool intermediate=false);
     ~BinaryGen();
-
 private:
+
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
+    typedef std::vector<std::vector<double>> Data;
+    std::string m_cur_file;
+    bool m_intermediate = false;
+
     std::vector<Sample_ID> gen_sample_vector();
     // check if the sample file is of the sample format specified by bgen
     // or just a simple text file
@@ -53,36 +57,6 @@ private:
     bool check_sample_consistent(const std::string& bgen_name,
                                  const genfile::bgen::Context& context);
 
-
-    typedef std::vector<std::vector<double>> Data;
-
-
-    std::string m_cur_file;
-    inline void load_raw(uintptr_t* genotype, const std::streampos byte_pos,
-                         const std::string& file_name)
-    {
-
-        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-            || !m_bgen_file.is_open())
-        {
-            if (m_bgen_file.is_open()) m_bgen_file.close();
-            std::string bgen_name = file_name + ".bgen";
-            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-            if (!m_bgen_file.is_open()) {
-                std::string error_message =
-                    "ERROR: Cannot open bgen file: " + file_name;
-                throw std::runtime_error(error_message);
-            }
-            m_cur_file = file_name;
-        }
-        auto&& context = m_context_map[file_name];
-        std::vector<genfile::byte_t> buffer1, buffer2;
-        m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-
-        PLINK_generator setter(&m_sample_include, genotype, m_hard_threshold);
-        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-            m_bgen_file, context, setter, &buffer1, &buffer2, false);
-    };
 
     inline void read_genotype(uintptr_t* genotype,
                               const std::streampos byte_pos,
@@ -115,22 +89,32 @@ private:
                                     uintptr_t* __restrict mainbuf)
     {
         assert(unfiltered_sample_ct);
-        // if (unfiltered_sample_ct == sample_ct) {
-        rawbuf = mainbuf;
-        //}
-        load_raw(rawbuf, byte_pos, file_name);
+        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+                    || !m_bgen_file.is_open())
+        {
+        	if (m_bgen_file.is_open()) m_bgen_file.close();
+        	std::string bgen_name = file_name + ".bgen";
+        	m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+        	if (!m_bgen_file.is_open()) {
+        		std::string error_message =
+        				"ERROR: Cannot open bgen file: " + file_name;
+        		throw std::runtime_error(error_message);
+        	}
+        	m_cur_file = file_name;
+        }
+        auto&& context = m_context_map[file_name];
+        // anyway to avoid reinitializing the memory for buffer 1 and 2?
+        std::vector<genfile::byte_t> buffer1, buffer2;
+        m_bgen_file.seekg(byte_pos, std::ios_base::beg);
+
+        PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold);
+        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
+        		m_bgen_file, context, setter, &buffer1, &buffer2, false);
+
+
+
         // output from load_raw should have already copied all samples
         // to the front without the need of subseting
-        /*
-        if (unfiltered_sample_ct != sample_ct) {
-            copy_quaterarr_nonempty_subset(rawbuf, sample_include,
-                                           unfiltered_sample_ct, sample_ct,
-                                           mainbuf);
-        }
-        else
-        {
-            mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
-        }*/
         if (do_reverse) {
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
         }
@@ -156,143 +140,6 @@ private:
      * Different structures use for reading in the bgen info
      */
 
-    struct QC_Checker
-    {
-        QC_Checker(std::vector<uintptr_t>* sample_info, double hard_thres,
-                   bool hard_code)
-            : hard_coded(hard_code)
-            , hard_threshold(hard_thres)
-            , sample_inclusion(sample_info)
-        {
-        }
-        void initialise(std::size_t number_of_samples,
-                        std::size_t number_of_alleles)
-        {
-        }
-        void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
-                                uint32_t min_entries, uint32_t max_entries)
-        {
-        }
-
-        bool set_sample(std::size_t i)
-        {
-            if (!first && !exclude) {
-                if (missing || sum <= 0.0 || (hard_coded && genotype == -1)) {
-                    nmiss++;
-                    nmiss_maf++;
-                }
-                else
-                {
-                    rs.push(exp);
-                    if (genotype == -1)
-                        nmiss_maf++;
-                    else
-                        maf_sum += genotype;
-                }
-            }
-            m_sample_i = i;
-            // exclude = !sample_inclusion->at(m_sample_i).included;
-            exclude = !IS_SET(sample_inclusion->data(), m_sample_i);
-            if (!exclude) num_included_sample++;
-            first = false;
-            missing = false;
-            genotype = -1;
-            m_entry_i = 0;
-            sum = 0.0;
-            hard_prob = 0.0;
-            exp = 0.0;
-            return !exclude;
-        }
-
-        void set_number_of_entries(std::size_t ploidy,
-                                   std::size_t number_of_entries,
-                                   genfile::OrderType order_type,
-                                   genfile::ValueType value_type)
-        {
-        }
-
-        // Called once for each genotype (or haplotype) probability per sample.
-        void set_value(uint32_t, double value)
-        {
-            exp += (2 - m_entry_i) * value;
-            sum += value;
-            if (value > hard_prob && value >= hard_threshold) {
-                genotype = 2 - m_entry_i;
-            }
-            m_entry_i++;
-        }
-        // call if sample is missing
-        void set_value(uint32_t, genfile::MissingValue value)
-        {
-            missing = true;
-        }
-
-        void finalise()
-        {
-            // summarize the last sample's info
-            if (!exclude) {
-                if (missing || sum <= 0.0 || (hard_coded && genotype == -1)) {
-                    nmiss++;
-                    nmiss_maf++;
-                }
-                else
-                {
-                    rs.push(exp);
-                    if (genotype == -1)
-                        nmiss_maf++;
-                    else
-                        maf_sum += genotype;
-                }
-            }
-            geno_miss_rate = (double) nmiss / (double) num_included_sample;
-            if (num_included_sample != nmiss_maf) {
-                maf = (double) maf_sum
-                      / (((double) num_included_sample - (double) nmiss_maf)
-                         * 2.0);
-            }
-
-            double p = rs.mean() / 2.0;
-            double p_all = 2.0 * p * (1.0 - p);
-            info_score = rs.var() / p_all;
-        }
-        // 0 is no filter,1 is geno filtered, 2 is maf filtered, 3 is info
-        // filtered not the best return type but good enough
-        int filter_snp(double maf_threshold, double geno_threshold,
-                       double info_threshold)
-        {
-            if (geno_miss_rate > geno_threshold) return 1;
-            if (maf_threshold > 0.0
-                && (hard_coded && num_included_sample == nmiss_maf))
-                return 2;
-            else if (maf < maf_threshold)
-                return 2;
-            if (info_score < info_threshold) return 3;
-            return 0;
-        }
-
-    private:
-        size_t m_sample_i = 0;
-        size_t m_entry_i = 0;
-        bool first = true;
-        bool missing = false;
-        bool hard_coded = false;
-        bool exclude = false;
-        misc::RunningStat rs;
-        int nmiss = 0;
-        int nmiss_maf = 0;
-        int genotype = -1;
-        int maf_sum = 0;
-        int num_included_sample = 0;
-        double sum = 0;
-        double hard_prob = 0;
-        double exp = 0.0;
-        double hard_threshold = 0.0;
-        std::vector<uintptr_t>* sample_inclusion;
-        // QC info
-        double geno_miss_rate = 0.0;
-        double maf = 0.0;
-        double info_score = 0.0;
-    };
 
     struct PRS_Interpreter
     {
@@ -439,7 +286,9 @@ private:
                 if (idx_sample_include >= m_num_included_samples) break;
             }
         }
+        void sample_completed(){
 
+        }
     private:
         size_t m_sample_i = 0;
         size_t m_entry_i = 0;
@@ -467,43 +316,30 @@ private:
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
                         double hard_threshold)
-            : m_hard_threshold(hard_threshold)
-            , m_sample(sample)
+            : m_sample(sample)
             , m_genotype(genotype)
-        {
-        }
+        	, m_hard_threshold(hard_threshold)
+        {}
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
         {
+        	m_index = 0;
+        	m_shift =0;
+        	rs.clear();
         }
         void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
                                 uint32_t min_entries, uint32_t max_entries)
-        {
-        }
+        {}
 
         bool set_sample(std::size_t i)
         {
-            if (!first && !exclude) {
-                // summarize the previous sample's info
-                if (shift == 0)
-                    m_genotype[index] = 0; // match behaviour of binaryplink
-                m_genotype[index] |= geno << shift;
-                shift += 2;
-                if (shift == BITCT) {
-                    index++;
-                    shift = 0;
-                }
-            }
-            first = false;
-            exclude = false;
-            geno = 1;
-            m_entry_i = 0;
-            hard_prob = 0.0;
-            m_sample_i = i;
-            // exclude = !m_sample->at(m_sample_i).included;
-            exclude = !IS_SET(m_sample->data(), m_sample_i);
-
-            return !exclude;
+        	m_sample_i = i;
+        	m_geno = 1;
+        	m_entry_i = 0;
+        	m_hard_prob = 0.0;
+        	m_exp_value = 0.0;
+        	m_include_snp = IS_SET(m_sample->data(), m_sample_i);
+            return m_include_snp;
         }
 
         void set_number_of_entries(std::size_t ploidy,
@@ -516,10 +352,10 @@ private:
         // Called once for each genotype (or haplotype) probability per sample.
         void set_value(uint32_t, double value)
         {
-            if (value > hard_prob && value >= m_hard_threshold) {
+            if (value > m_hard_prob && value >= m_hard_threshold) {
                 // geno = 2 - m_entry_i;
-                geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
-                hard_prob = value;
+            	m_geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                m_hard_prob = value;
             }
             m_entry_i++;
         }
@@ -527,32 +363,36 @@ private:
         void set_value(uint32_t, genfile::MissingValue value) {}
 
         void finalise()
-        {
-            // summarize the last sample's info
-            if (!exclude) {
-                if (shift == 0)
-                    m_genotype[index] = 0; // match behaviour of binaryplink
-                m_genotype[index] |= geno << shift;
-                shift += 2;
-                if (shift == BITCT) {
-                    index++;
-                    shift = 0;
-                }
+        {}
+        void sample_completed(){
+            if (m_shift == 0)
+                m_genotype[m_index] = 0; // match behaviour of binaryplink
+            m_genotype[m_index] |= m_geno << m_shift;
+            m_shift += 2;
+            if (m_shift == BITCT) {
+                m_index++;
+                m_shift = 0;
             }
         }
+        double info_score() const{
+            double p = rs.mean() / 2.0;
+            double p_all = 2.0 * p * (1.0 - p);
+            return(rs.var() / p_all);
 
+        }
     private:
-        size_t m_sample_i = 0;
-        size_t m_entry_i = 0;
-        bool first = true;
-        bool exclude = false;
-        uintptr_t geno = 1;
-        int shift = 0;
-        int index = 0;
-        double hard_prob = 0;
-        double m_hard_threshold = 0.0;
         std::vector<uintptr_t>* m_sample;
         uintptr_t* m_genotype;
+        misc::RunningStat rs;
+        double m_hard_threshold = 0.0;
+        double m_hard_prob = 0;
+        double m_exp_value = 0.0;
+        uintptr_t m_geno = 1;
+        uint32_t m_shift = 0;
+        uint32_t m_index = 0;
+        size_t m_sample_i = 0;
+        size_t m_entry_i = 0;
+        bool m_include_snp = false;
     };
 };
 

@@ -94,6 +94,7 @@ public:
         return (!reference_panel.file_name.empty()
                 || !reference_panel.multi_name.empty());
     };
+    bool intermediate() const { return reference_panel.allow_inter; };
     // misc
     std::string out() const { return misc.out; };
     std::string exclusion_range() const { return misc.exclusion_range; };

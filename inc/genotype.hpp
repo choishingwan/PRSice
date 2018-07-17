@@ -310,6 +310,7 @@ protected:
     bool m_remove_sample = true;
     bool m_exclude_snp = true;
     bool m_hard_coded = false;
+    bool m_expect_reference = false;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
@@ -333,6 +334,9 @@ protected:
     {
         return std::vector<SNP>(0);
     };
+    void expect_reference(){
+    	m_expect_reference = true;
+    }
     // for loading the sample inclusion / exclusion set
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);

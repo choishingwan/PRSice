@@ -19,10 +19,11 @@
 BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
                      const std::string& multi_input, const size_t thread,
                      const bool ignore_fid, const bool keep_nonfounder,
-                     const bool keep_ambig, const bool is_ref)
+                     const bool keep_ambig, const bool is_ref, const bool intermediate)
     : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig, is_ref)
 {
     /** setting the chromosome information **/
+	m_intermediate = intermediate;
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
@@ -78,13 +79,15 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
     std::vector<Sample_ID> sample_name;
     std::unordered_set<std::string> duplicated_samples;
     std::vector<std::string> duplicated_sample_id;
+    std::vector<std::string> token;
     std::vector<bool> temp_inclusion_vec;
     bool inclusion = false;
+    std::string FID, IID;
     while (std::getline(sample_file, line)) {
         misc::trim(line);
         line_id++;
         if (!line.empty()) {
-            std::vector<std::string> token = misc::split(line);
+            token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
             if (line_id == 1) {
@@ -111,20 +114,19 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                 throw std::runtime_error(error_message);
             }
             m_unfiltered_sample_ct++;
-            Sample_ID cur_sample;
+
             if (is_sample_format || !m_ignore_fid) {
-                cur_sample.FID = token[0];
-                cur_sample.IID = token[1];
+                FID = token[0];
+                IID = token[1];
             }
             else
             {
-                cur_sample.FID = "";
-                cur_sample.IID = token[0];
+                FID = "";
+                IID = token[0];
             }
             std::string id = (m_ignore_fid)
-                                 ? cur_sample.IID
-                                 : cur_sample.FID + "_" + cur_sample.IID;
-            cur_sample.pheno = "";
+                                 ? IID
+                                 : FID + "_" + IID;
             // true as we assume all bgen samples are founders
             if (!m_remove_sample) {
                 inclusion = (m_sample_selection_list.find(id)
@@ -158,7 +160,7 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             duplicated_samples.insert(id);
             temp_inclusion_vec.push_back(inclusion);
             if (!m_is_ref && inclusion) {
-                sample_name.push_back(cur_sample);
+                sample_name.emplace_back(Sample_ID(FID, IID, ""));
             }
         }
     }
@@ -190,6 +192,11 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         }
     }
     sample_file.close();
+    //m_prs_info.reserve(m_sample_ct);
+    for(size_t i = 0; i < m_sample_ct; ++i){
+    	m_prs_info.emplace_back(PRS());
+    }
+    m_in_regression.resize(m_sample_include.size(), 0);
     return sample_name;
 }
 
@@ -314,6 +321,9 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         assert(actual_number_of_samples == context.number_of_samples);
         // we don't need to check the sample name when we are doing the LD
         // as we don't store any
+        // though might be good practice to actually check the names matched
+        // between the sample name and the ld bgen file to avoid mismatch
+        // That can be done later on
         if (!m_is_ref) {
             for (size_t i = 0; i < actual_number_of_samples; ++i) {
                 genfile::bgen::read_length_followed_by_data(
@@ -323,10 +333,10 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                         "Error: Problem reading bgen file!");
                 bytes_read += sizeof(identifier_size) + identifier_size;
                 // Only need to use IID as BGEN doesn't have the FID information
-                if (m_sample_id[i].IID.compare(identifier) != 0) {
-                    throw std::runtime_error("Error: Sample mismatch "
-                                             "between bgen and phenotype "
-                                             "file!");
+                if (m_sample_id[i].IID != identifier) {
+                	std::string error_message = "Error: Sample mismatch "
+                            "between bgen and phenotype file! Name in BGEN file is :"+identifier+" and in phentoype file is: "+m_sample_id[i].IID;
+                    throw std::runtime_error(error_message);
                 }
             }
         }
@@ -370,19 +380,49 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     snp_res.reserve(total_unfiltered_snps);
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
+    std::string intermediate_name=out_prefix+".inter";
+
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(), hard_threshold);
+    m_sample_mask.resize(pheno_nm_ctv2);
+    fill_quatervec_55(m_sample_ct, m_sample_mask.data());
+    std::vector<std::string> alleles;
+    std::vector<genfile::byte_t> buffer1;
+    std::vector<genfile::byte_t> buffer2;
+    std::ifstream bgen_file;
+    std::string bgen_name;
+    std::string allele;
+    std::string SNPID;
+    std::string RSID;
+    std::string chromosome;
     std::string prev_chr = "";
+    std::streampos byte_pos;
+    uint32_t SNP_position;
+    uint32_t offset;
+    uint32_t num_snp;
+    uint32_t homrar_ct;
+    uint32_t missing_ct;
+    uint32_t het_ct;
+    uint32_t homcom_ct;
+    intptr_t nanal;
+    double cur_maf;
     int chr_code = 0;
+    bool exclude_snp = false;
+
     for (auto prefix : m_genotype_files) {
-        std::string bgen_name = prefix + ".bgen";
-        std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
+        bgen_name = prefix + ".bgen";
+        bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
         if (!bgen_file.is_open()) {
             std::string error_message =
                 "Error: Cannot open bgen file " + bgen_name;
             throw std::runtime_error(error_message);
         }
-        uint32_t offset = m_context_map[prefix].offset;
+        offset = m_context_map[prefix].offset;
         bgen_file.seekg(offset + 4);
-        uint32_t num_snp = m_context_map[prefix].number_of_variants;
+        num_snp = m_context_map[prefix].number_of_variants;
         auto&& context = m_context_map[prefix];
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
             if (i_snp % 1000 == 0) {
@@ -390,28 +430,20 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                         bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
-            std::string allele;
-            std::string SNPID;
-            std::string RSID;
-            std::string chromosome;
-            uint32_t SNP_position;
-            std::vector<std::string> alleles;
+
             // directly use the libraryread_snp_identifying_data(
 
             read_snp_identifying_data(
                 bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
                 [&alleles](std::size_t n) { alleles.resize(n); },
                 [&alleles](std::size_t i, std::string const& allele) {
-                    alleles.at(i) = allele;
+                	std::string a = allele;
+                	std::transform(a.begin(), a.end(), a.begin(), ::toupper);
+                    alleles.at(i) = a;
                 });
-
-            for (auto&& a : alleles) {
-
-                std::transform(a.begin(), a.end(), a.begin(), ::toupper);
-            }
-            bool exclude_snp = false;
+            exclude_snp = false;
             // but we will not process anything
-            if (chromosome.compare(prev_chr) != 0) {
+            if (chromosome != prev_chr) {
                 prev_chr = chromosome;
                 if (m_chr_order.find(chromosome) != m_chr_order.end()) {
 
@@ -446,7 +478,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                 }
             }
 
-            if (RSID.compare(".") == 0) // when the rs id isn't available,
+            if (RSID == ".") // when the rs id isn't available,
                                         // change it to chr:loc coding
             {
                 RSID = std::to_string(chr_code) + ":"
@@ -484,23 +516,56 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
             if (!user_exclude) {
                 duplicate_check_list.insert(RSID);
             }
-            std::vector<genfile::byte_t> buffer1;
-            std::vector<genfile::byte_t> buffer2;
-            std::streampos byte_pos = bgen_file.tellg();
+            byte_pos = bgen_file.tellg();
             read_genotype_data_block(bgen_file, context, &buffer1);
             // if we want to exclude this SNP, we will not perform decompression
             if (!exclude_snp) {
                 // now filter
-                //
-                if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
-                    QC_Checker setter(&m_sample_include, hard_threshold,
-                                      hard_coded);
+            	std::string file_name = (m_intermediate)? intermediate_name : prefix;
+                if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0) || m_intermediate) {
                     genfile::bgen::uncompress_probability_data(context, buffer1,
                                                                &buffer2);
-                    genfile::bgen::parse_probability_data<QC_Checker>(
+                    genfile::bgen::parse_probability_data<PLINK_generator>(
                         &(buffer2)[0], &(buffer2)[0] + buffer2.size(), context,
                         setter);
-                    if (setter.filter_snp(maf, geno, info_score)) continue;
+                    if(!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
+                    	// do QC
+                    	 genovec_3freq(m_tmp_genotype.data(), m_sample_mask.data(),
+                    			 pheno_nm_ctv2, &missing_ct, &het_ct,
+								 &homcom_ct);
+                    	 nanal = m_sample_ct - missing_ct;
+                    	 homrar_ct = nanal - het_ct - homcom_ct;
+                    	 if (nanal == 0) {
+                    		 // still count as MAF filtering (for now)
+                    		 m_num_maf_filter++;
+                    		 continue;
+                    	 }
+
+                    	 if ((double) missing_ct / (double) m_sample_ct > geno) {
+                    		 m_num_geno_filter++;
+                    		 continue;
+                    	 }
+
+                    	 cur_maf = ((double) (het_ct + homrar_ct * 2)
+                    			 / ((double) nanal * 2.0));
+                    	 if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
+                    	 // remove SNP if maf lower than threshold
+                    	 if (cur_maf < maf) {
+                    		 m_num_maf_filter++;
+                    		 continue;
+                    	 }
+                    	 if(setter.info_score() < info_score){
+                    		 m_num_info_filter++;
+                    		 continue;
+                    	 }
+                    }
+                    if (m_intermediate && (m_is_ref || !m_expect_reference || (!m_is_ref && hard_coded))){
+                    	// we will only generate the intermediate file if the following happen:
+                    	// 1. User want to generate the intermediate file
+                    	// 2. We are dealing with reference file format
+                    	// 3. We are dealing with target file and there is no reference file
+                    	// 4. We are dealing with target file and we are expected to use hard_coding
+                    }
                 }
                 if (!m_is_ref) {
                     m_existed_snps_index[RSID] = snp_res.size();
@@ -508,7 +573,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     // for now, we focus on PLINK optimization and ignore bgen
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.front(), alleles.back(),
-                                             prefix, byte_pos));
+                                             file_name, byte_pos));
                 }
                 else
                 {
