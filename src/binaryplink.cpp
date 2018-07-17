@@ -105,13 +105,9 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
                 + std::to_string(sample_index + 1);
             throw std::runtime_error(error_message);
         }
-        Sample_ID cur_sample;
-        cur_sample.FID = token[+FAM::FID];
-        cur_sample.IID = token[+FAM::IID];
         std::string id = (m_ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + "_" + token[+FAM::IID];
-        cur_sample.pheno = token[+FAM::PHENOTYPE];
         // cur_sample.in_regression = false;
         // false as we have not check if the pheno information is valid
         if (!m_remove_sample) {
@@ -158,7 +154,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         // only store samples that we need, and use the m_sample_include and
         // m_founder_info to indicate if sample is needed
         if (inclusion && !m_is_ref) {
-            sample_name.push_back(cur_sample);
+            sample_name.emplace_back(Sample_ID(token[+FAM::FID], token[+FAM::IID], token[+FAM::PHENOTYPE]));
         }
         duplicated_samples.insert(id);
     }
@@ -177,10 +173,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
     //m_prs_info.reserve(m_sample_ct);
     for(size_t i = 0; i < m_sample_ct; ++i){
-    	PRS cur_prs;
-    	cur_prs.prs = 0.0;
-    	cur_prs.num_snp = 0;
-    	m_prs_info.push_back(cur_prs);
+    	m_prs_info.emplace_back(PRS());
     }
     m_in_regression.resize(m_sample_include.size(), 0);
     return sample_name;
@@ -446,12 +439,12 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     // TODO: When working with SNP class, we need to add in the
                     // aA AA aa variable to avoid re-calculating the mean
                     if(has_count)
-                    snp_info.push_back(SNP(
+                    snp_info.emplace_back(SNP(
                         bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                         bim_info[+BIM::A2], prefix, byte_pos, homcom_ct, het_ct,
                         homrar_ct, missing_ct));
                     else
-                    	snp_info.push_back(SNP(
+                    	snp_info.emplace_back(SNP(
                     	                        bim_info[+BIM::RS], chr_code, loc, bim_info[+BIM::A1],
                     	                        bim_info[+BIM::A2], prefix, byte_pos));
                 }
