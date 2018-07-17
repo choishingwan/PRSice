@@ -1755,7 +1755,7 @@ void Genotype::get_null_score(const size_t& set_size,
             }
             else
             {
-                rs.push(m_prs_info[i].prs/(double)m_prs_info[i].num_snp);
+                rs.push(m_prs_info[i].get_prs());
             }
         }
         m_mean_score = rs.mean();
@@ -1786,7 +1786,7 @@ void Genotype::get_null_score(const size_t& set_size,
             }
             else
             {
-                rs.push(m_prs_info[i].prs/(double)m_prs_info[i].num_snp);
+                rs.push(m_prs_info[i].get_prs());
             }
         }
         m_mean_score = rs.mean();
@@ -1838,7 +1838,7 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
             }
             else
             {
-                rs.push(m_prs_info[i].prs/(double)m_prs_info[i].num_snp);
+                rs.push(m_prs_info[i].get_prs());
             }
         }
         m_mean_score = rs.mean();

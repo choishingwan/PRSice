@@ -175,7 +175,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 
     famfile.close();
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
-    m_prs_info.reserve(m_sample_ct);
+    //m_prs_info.reserve(m_sample_ct);
     for(size_t i = 0; i < m_sample_ct; ++i){
     	PRS cur_prs;
     	cur_prs.prs = 0.0;

@@ -25,6 +25,14 @@ struct PRS
 {
     double prs;
     int num_snp;
+    PRS(): prs(0.0), num_snp(0){};
+    double get_prs() const
+    {
+        if (num_snp == 0)
+            return 0.0;
+        else
+            return prs / (double) num_snp;
+    };
 };
 
 struct Sample_ID
