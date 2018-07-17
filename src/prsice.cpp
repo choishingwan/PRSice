@@ -1663,9 +1663,7 @@ void PRSice::null_set_no_thread(Genotype& target, std::map<uint32_t, std::vector
             }
             // set_size second contain the indexs to each set with this size
             for(auto&& set_index : set_size.second){
-            	if(t_value >= ori_t_value[set_index]){
-            		set_perm_res[set_index]++;
-            	}
+            	set_perm_res[set_index]+=(ori_t_value[set_index] < t_value);
             }
             first_run = false;
     	}
@@ -1828,6 +1826,47 @@ void PRSice::consume_prs(Thread_Queue<std::pair<std::vector<double>,uint32_t>>& 
 		std::vector<double> &ori_t_value,
 		std::vector<uint32_t> &set_perm_res,
 		const bool is_binary){
+
+    Eigen::MatrixXd independent = m_independent_variables;
+    const size_t num_regress_sample = m_matrix_index.size();
+    std::vector<uint32_t> temp_perm_res(set_perm_res.size(), 0);
+	double coefficient, se, r2, r2_adjust;
+	double obs_p = 2.0; // for safety reason, make sure it is out bound
+	std::pair<std::vector<double>, uint32_t> prs_info;
+
+    while (true) {
+    	q.pop(prs_info);
+    	if (std::get<0>(prs_info).empty()) {
+    		// all job finished
+    		break;
+    	}
+    	for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
+    		independent(i_sample, 1) = std::get<0>(prs_info)[i_sample];
+    	}
+    	if (is_binary) {
+    		Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
+    				se, 25, 1, true);
+    	}
+    	else
+    	{
+    		Regression::linear_regression(m_phenotype, independent, obs_p, r2,
+    				r2_adjust, coefficient, se, 1, true);
+    	}
+    	double t_value = std::abs(coefficient/se);
+    	auto &&index = set_index[std::get<1>(prs_info)];
+    	for(auto &&ref: index){
+    		temp_perm_res[ref]+=(ori_t_value[ref] < t_value);
+    	}
+    }
+
+    {
+    	// keep mutex lock within this scope
+    	std::unique_lock<std::mutex> locker(m_thread_mutex);
+    	size_t num_sets = temp_perm_res.size();
+    	for(size_t i = 0; i < num_sets; ++i){
+    		set_perm_res[i]+=temp_perm_res[i];
+    	}
+    }
 
 }
 /*
