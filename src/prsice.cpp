@@ -1046,7 +1046,7 @@ void PRSice::run_null_perm_no_thread(
     Eigen::VectorXd perm_pheno = m_phenotype;
     if (run_glm) {
         while (processed < m_num_perm) {
-            // perm_pheno = m_phenotype;
+            perm_pheno = m_phenotype;
             std::shuffle(perm_pheno.data(),
                          perm_pheno.data() + num_regress_sample, rand_gen);
             m_analysis_done++;
@@ -1106,8 +1106,10 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     const size_t num_regress_sample = m_phenotype.rows();
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
-    Eigen::VectorXd null_pheno = m_phenotype;
+
     while (processed < m_num_perm) {
+    	// make sure it doesn't cause some crazy error
+    	Eigen::VectorXd null_pheno = m_phenotype;
         std::shuffle(null_pheno.data(), null_pheno.data() + num_regress_sample,
                      rand_gen);
         // q.push(p, num_consumer);
@@ -1728,7 +1730,55 @@ void PRSice::null_set_no_thread(Genotype& target, int& num_significant,
     }
 }
 
+void PRSice::produce_null_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t> >& q,
+							  Genotype& target, size_t num_consumer,
+							std::map<uint32_t, std::vector<uint32_t>> &set_index,
+							const size_t num_perm, const bool require_standardize){
+	const uint32_t max_size = set_index.rbegin()->first;
+	const size_t num_sample = m_matrix_index.size();
+	const size_t num_regress_sample = m_independent_variables.rows();
+	const size_t num_background = target.num_background();
+	size_t processed = 0;
+	size_t prev_size = 0;
+	std::mt19937 g(m_seed);
+	std::vector<size_t> background = target.background_index();
+    bool first_run = true;
+	while (processed < num_perm) {
+		size_t begin = 0;
+		// size_t num_snp = set_size;
+		size_t num_snp = max_size;
+		while (num_snp--) {
+			std::uniform_int_distribution<int> dist(begin, num_background - 1);
+			size_t r = background[begin];
+			size_t advance_index = dist(g);
+			background[begin] = background[advance_index];
+			background[advance_index] = r;
+			++begin;
+		}
+		first_run = true;
+    	prev_size = 0;
+    	for(auto &&set_size : set_index){
+    		target.get_null_score(set_size.first, prev_size, background, first_run, require_standardize);
+    		prev_size = set_size.first;
+    		std::vector<double> prs(num_regress_sample, 0);
+    		for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
+    			prs[sample_id] =
+    	                target.calculate_score(m_score, m_matrix_index[sample_id]);
+    		}
+    		q.emplace(std::make_pair(prs,set_size.first), num_consumer);
+    		m_analysis_done++;
+    		print_progress();
+    		first_run = false;
+    	}
+    	processed++;
+	}
+	// send termination signal to the consumers
+	for (size_t i = 0; i < num_consumer; ++i) {
+		q.emplace(std::make_pair(std::vector<double>(),0), num_consumer);
+	}
+}
 // might want to remove num_selected_snps?
+/*
 void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
                               Genotype& target, size_t num_consumer,
                               size_t num_perm, size_t set_size,
@@ -1772,8 +1822,15 @@ void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
         q.emplace(std::vector<double>(), num_consumer);
     }
 }
+*/
+void PRSice::consume_prs(Thread_Queue<std::pair<std::vector<double>,uint32_t>>& q,
+		std::map<uint32_t, std::vector<uint32_t>> &set_index,
+		std::vector<double> &ori_t_value,
+		std::vector<uint32_t> &set_perm_res,
+		const bool is_binary){
 
-
+}
+/*
 void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
                          double original_p, int& num_significant,
                          bool is_binary, bool store_p)
@@ -1814,15 +1871,9 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
         std::unique_lock<std::mutex> locker(m_thread_mutex);
 
         num_significant += cur_num_significant;
-        /*
-        if (store_p) {
-            null_p_value.insert(null_p_value.end(),
-                               cur_null_p.begin(),
-                                cur_null_p.end());
-        }*/
     }
 }
-
+*/
 
 void PRSice::run_competitive(Genotype& target, const Commander& commander, const size_t pheno_index){
 	// here we know the R2 and p-value of all pathways
@@ -1880,6 +1931,22 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
     // they will be pushing around the PRS and the number of SNPs for this PRS
     if(num_thread > 1){
     	Thread_Queue<std::pair<std::vector<double>, uint32_t> > set_perm_queue;
+    	std::thread producer(
+    	            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
+    	            std::ref(target), num_thread - 1, std::ref(set_index),
+					num_perm, require_standardize);
+
+    	std::vector<std::thread> consumer_store;
+
+    	for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
+    		consumer_store.push_back(std::thread(
+    				&PRSice::consume_prs, this, std::ref(set_perm_queue),
+					std::ref(set_index), std::ref(ori_t_value),
+					std::ref(set_perm_res), is_binary));
+    	}
+
+    	producer.join();
+    	for (auto&& thread : consumer_store) thread.join();
     }else{
     	null_set_no_thread(target, set_index, ori_t_value, set_perm_res, num_perm, is_binary, require_standardize);
     }
@@ -1888,6 +1955,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander, const
 		res.competitive_p = (set_perm_res[i-1]+1.0)/(num_perm+1.0);
 	}
 }
+
+/*
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
 
                              const size_t set_size, const bool store_null,
@@ -1957,13 +2026,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
                            num_selected_snps, obs_p_value, require_standardize,
                            is_binary, store_null);
     }
-    /*
-    if (store_null) {
-        std::sort(null_p_value.begin(), null_p_value.end());
-        m_null_store[set_size] = null_p_value;
-    }
-    */
     double competitive_p =
         ((double) num_more_significant + 1.0) / ((double) num_perm + 1.0);
     m_prs_results[m_best_index].competitive_p = competitive_p;
 }
+*/

@@ -325,13 +325,25 @@ private:
     void run_competitive(Genotype& target, const Commander& commander,
                          const size_t num_snp, const bool store_null,
                          const bool binary);
-    void produce_null_prs(Thread_Queue<std::vector<double>>& q,
+  /*  void produce_null_prs(Thread_Queue<std::vector<double>>& q,
                           Genotype& target, size_t num_consumer,
                           size_t num_perm, size_t set_size,
                           size_t num_selected_snps, double original_p,
                           bool require_standardize);
+*/
+    void produce_null_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t> >& q,
+    						Genotype& target, size_t num_consumer,
+							std::map<uint32_t, std::vector<uint32_t>> &set_index,
+							const size_t num_perm, const bool require_standardize);
+    /*
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, bool is_binary, bool store_p);
+    */
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t> >& q,
+    					std::map<uint32_t, std::vector<uint32_t>> &set_index,
+						std::vector<double> &ori_t_value,
+						std::vector<uint32_t> &set_perm_res,
+						const bool is_binary);
 
 	void null_set_no_thread(Genotype& target, std::map<uint32_t, std::vector<uint32_t>> &set_index,
 			std::vector<double> &ori_t_value, std::vector<uint32_t> &set_perm_res, const size_t num_perm,
@@ -341,6 +353,8 @@ private:
                             size_t num_selected_snps, double original_p,
                             bool require_standardize, bool is_binary,
                             bool store_p);
+
+
     void gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                         size_t num_consumer);
 
