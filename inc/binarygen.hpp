@@ -44,6 +44,7 @@ private:
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
     std::string m_cur_file;
+    std::string m_intermediate_file;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;

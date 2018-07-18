@@ -387,18 +387,18 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     snp_res.reserve(total_unfiltered_snps);
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
-    std::string intermediate_name = out_prefix + ".inter";
+    std::string m_intermediate_file = out_prefix + ".inter";
     std::ofstream inter_out;
     if (m_intermediate) {
         if (m_target_plink && m_is_ref) {
             // target already generated some intermediate, now append for
             // reference
-            inter_out.open(intermediate_name.c_str(),
+            inter_out.open(m_intermediate_file.c_str(),
                            std::ios::binary | std::ios::app);
         }
         else
         {
-            inter_out.open(intermediate_name.c_str(), std::ios::binary);
+            inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
         }
     }
     const uintptr_t unfiltered_sample_ctl =
@@ -600,7 +600,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             m_ref_plink = true;
                             // we can write to the intermediate file directly
                             byte_pos = inter_out.tellp();
-                            file_name = intermediate_name;
+                            file_name = m_intermediate_file;
                             // now write to file
                             inter_out.write((char*) (&m_tmp_genotype[0]),
                                             m_tmp_genotype.size()
@@ -614,7 +614,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             m_ref_plink = true;
                             m_target_plink = true;
                             byte_pos = inter_out.tellp();
-                            file_name = intermediate_name;
+                            file_name = m_intermediate_file;
                             inter_out.write((char*) (&m_tmp_genotype[0]),
                                             m_tmp_genotype.size()
                                                 * sizeof(m_tmp_genotype[0]));
@@ -698,6 +698,10 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 BinaryGen::~BinaryGen()
 {
     if (m_bgen_file.is_open()) m_bgen_file.close();
+    if (m_target_plink || m_ref_plink) {
+        // delete file
+        std::remove(m_intermediate_file.c_str());
+    }
 }
 
 
