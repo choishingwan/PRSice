@@ -161,9 +161,16 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
         if (!has_snp_colname) {
             // did not find the colnames, then we will assume this is a bim file
             if (token.size() == 6) {
-                message = "SNP extraction/exclusion list contain 6 column, "
+                message = "SNP extraction/exclusion list contains 6 columns, "
                           "will assume second column contains the SNP ID";
                 reporter.report(message);
+                rs_index = 1;
+            }
+            else{
+                message = "SNP extraction/exclusion list contains "+std::to_string(token.size())+" columns, "
+                          "will assume first column contains the SNP ID";
+                reporter.report(message);
+            	rs_index = 0;
             }
         }
     }
@@ -1657,7 +1664,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
             }
-            std::cout << cur_target_snp.rs() << "\t" pair_target_snp.rs() << "\t" << r2 << std::endl;
+            std::cout << cur_target_snp.rs() << "\t" << pair_target_snp.rs() << "\t" << r2 << std::endl;
             exit(-1);
         }
         cur_target_snp.set_clumped();

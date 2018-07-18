@@ -90,7 +90,7 @@ private:
         	        }
 
             m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-            m_bgen_file.read((char*) genotype, unfiltered_sample_ct4)
+            m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
         }
         else if (load_and_collapse_incl(byte_pos, file_name, m_unfiltered_sample_ct,
                                    m_founder_ct, m_founder_info.data(),
