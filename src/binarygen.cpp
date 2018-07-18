@@ -355,6 +355,8 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 {
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
+    std::vector<bool> ref_retain;
+    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> duplicate_check_list;
     m_hard_threshold = hard_threshold;
@@ -384,7 +386,16 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
     std::string intermediate_name = out_prefix + ".inter";
-
+    std::ofstream inter_out;
+    if(m_intermediate){
+    	if(m_target_plink && m_is_ref){
+    		// target already generated some intermediate, now append for reference
+    		inter_out.open(intermediate_name.c_str(), std::ios::binary| std::ios::app);
+    	}
+    	else{
+    		inter_out.open(intermediate_name.c_str(), std::ios::binary );
+    	}
+    }
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
@@ -403,6 +414,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     std::string RSID;
     std::string chromosome;
     std::string prev_chr = "";
+    std::string file_name;
     std::streampos byte_pos;
     uint32_t SNP_position;
     uint32_t offset;
@@ -525,8 +537,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
             // if we want to exclude this SNP, we will not perform decompression
             if (!exclude_snp) {
                 // now filter
-                std::string file_name =
-                    (m_intermediate) ? intermediate_name : prefix;
+                file_name = prefix;
                 if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)
                     || m_intermediate)
                 {
@@ -579,6 +590,27 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                         // 4. We are dealing with target file and we are
                         // expected to use hard_coding
                         // TODO:
+                        if (m_is_ref || !m_expect_reference) {
+                            // when not expecting reference, we will
+                            // just update the info on the reference field
+                            m_ref_plink = true;
+                            // we can write to the intermediate file directly
+                            byte_pos = inter_out.tellp();
+                            file_name = intermediate_name;
+                            // now write to file
+                            inter_out.write((char*)(&m_tmp_genotype[0]), m_tmp_genotype.size() * sizeof(m_tmp_genotype[0])) ;
+                        }
+                        else
+                        {
+                            // Not reference, not expecting a reference
+                            // and using hard code, then update both reference
+                            // and target field
+                            m_ref_plink = true;
+                            m_target_plink = true;
+                            byte_pos = inter_out.tellp();
+                            file_name = intermediate_name;
+                            inter_out.write((char*)(&m_tmp_genotype[0]), m_tmp_genotype.size() * sizeof(m_tmp_genotype[0])) ;
+                        }
                     }
                 }
                 if (!m_is_ref) {
@@ -602,7 +634,8 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     else
                     {
                         target->m_existed_snps[target_index].add_reference(
-                            prefix, byte_pos);
+                        		file_name, byte_pos);
+                        ref_retain[target_index] = true;
                         ref_target_match++;
                     }
                 }
@@ -614,7 +647,13 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     snp_res.shrink_to_fit(); // so that it will be more suitable
 
     if (m_is_ref && ref_target_match != target->m_existed_snps.size()) {
-        target->update_snps();
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&ref_retain, this](const SNP& s) {
+                               return !ref_retain[&s - &*begin(m_existed_snps)];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snps.size() != 0) {
         std::ofstream log_file_stream;

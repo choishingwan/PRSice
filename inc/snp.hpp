@@ -84,9 +84,14 @@ public:
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
-        m_retain = true;
     }
 
+    void update_target(const std::string& ref_file,
+                       const std::streampos ref_byte_pos)
+    {
+        m_target_file = ref_file;
+        m_target_byte_pos = ref_byte_pos;
+    }
     inline void set_flipped() { m_flipped = true; };
     std::string get_rs() const { return m_rs; };
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
@@ -198,16 +203,6 @@ public:
 
     bool remove() const { return m_remove; };
     bool clumped() const { return m_clumped; };
-    bool retained()
-    {
-        if (m_retain) {
-            m_retain = false;
-            return true;
-        }
-        return m_retain;
-    };
-    void set_retain() { m_retain = true; };
-    void reset_retain() { m_retain = false; };
     bool valid() const { return m_valid; };
     void invalidate() { m_valid = false; };
     void set_low_bound(uintptr_t low) { m_low_bound = low; };
@@ -263,8 +258,6 @@ private:
     bool m_clumped = false;
     bool m_valid = true;
     bool m_remove = false;
-    // should maintain it as false between functions, only use within
-    bool m_retain = false;
     bool m_flipped = false;
     // This indicate where this SNP's bound is at
     // useful for PRSlice and also clumping

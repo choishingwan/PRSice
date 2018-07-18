@@ -325,19 +325,6 @@ void Genotype::load_snps(const std::string out_prefix,
     m_snp_selection_list.clear();
 }
 
-void Genotype::update_snps()
-{
-
-    m_existed_snps.erase(std::remove_if(m_existed_snps.begin(),
-                                        m_existed_snps.end(),
-                                        [](SNP& s) { return !s.retained(); }),
-                         m_existed_snps.end());
-    m_existed_snps_index.clear();
-    size_t num_snp = m_existed_snps.size();
-    for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
-        m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
-    }
-}
 Genotype::~Genotype() {}
 
 void Genotype::read_base(const Commander& c_commander, Region& region,

@@ -189,37 +189,34 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
 {
     std::unordered_set<std::string> duplicated_snp;
     std::vector<SNP> snp_info;
-
-
-    std::string line;
-    const uintptr_t final_mask = get_final_mask(m_sample_ct);
-    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    std::vector<std::string> bim_info;
+    std::vector<bool> ref_retain;
+    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
+    std::ifstream bim, bed;
+    std::string bim_name, bed_name, chr, line;
+    std::string prev_chr = "";
+    double cur_maf;
+    std::streampos byte_pos;
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     int chr_index = 0;
     int chr_code = 0;
-    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-
-
-    // initialize the mask for read score
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    int num_snp_read = 0, prev_snp_processed = 0;
     uint32_t homrar_ct;
     uint32_t missing_ct;
     uint32_t het_ct;
     uint32_t homcom_ct;
     uint32_t num_ref_target_match = 0;
     intptr_t nanal;
-    double cur_maf;
     bool chr_error = false, chr_sex_error = false, has_count = false,
-         dummy; // to limit error report
-    int num_snp_read = 0, prev_snp_processed = 0;
-    std::string bim_name, bed_name, chr;
-    std::ifstream bim, bed;
-    std::string prev_chr = "";
-    std::streampos byte_pos;
-    std::vector<std::string> bim_info;
+         dummy;
     m_sample_mask.resize(pheno_nm_ctv2);
     fill_quatervec_55(m_sample_ct, m_sample_mask.data());
+
     for (auto prefix : m_genotype_files) {
         bim_name = prefix + ".bim";
         bed_name = prefix + ".bed";
@@ -465,6 +462,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                     {
                         target->m_existed_snps[target_index].add_reference(
                             prefix, byte_pos);
+                        ref_retain[target_index] = true;
                         num_ref_target_match++;
                     }
                 }
@@ -477,7 +475,16 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     }
     snp_info.shrink_to_fit();
     if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
-        target->update_snps();
+
+        // remain_core_snps' follow the post sorted order (p-value sorted)
+        // instead of m_existed_snps' index so we need to sort it first
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&ref_retain, this](const SNP& s) {
+                               return !ref_retain[&s - &*begin(m_existed_snps)];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snp.size() != 0) {
         std::ofstream log_file_stream;

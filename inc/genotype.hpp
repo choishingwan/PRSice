@@ -356,7 +356,6 @@ protected:
     /** Misc information **/
     // uint32_t m_hh_exists;
     void pearson_clump(Genotype& reference, Reporter& reporter);
-    void update_snps();
     virtual inline void read_genotype(uintptr_t* genotype,
                                       const std::streampos byte_pos,
                                       const std::string& file_name){};
