@@ -190,6 +190,7 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             SET_BIT(i, m_founder_info.data());
         }
     }
+    m_sample_ct = m_founder_ct;
     sample_file.close();
     // m_prs_info.reserve(m_sample_ct);
     for (size_t i = 0; i < m_sample_ct; ++i) {
@@ -365,6 +366,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     bool chr_error = false;
     bool first_bgen_file = true;
     bool user_exclude = false;
+    bool has_duplicate = false;
     size_t chr_index = 0;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
@@ -387,14 +389,17 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     // the for loop
     std::string intermediate_name = out_prefix + ".inter";
     std::ofstream inter_out;
-    if(m_intermediate){
-    	if(m_target_plink && m_is_ref){
-    		// target already generated some intermediate, now append for reference
-    		inter_out.open(intermediate_name.c_str(), std::ios::binary| std::ios::app);
-    	}
-    	else{
-    		inter_out.open(intermediate_name.c_str(), std::ios::binary );
-    	}
+    if (m_intermediate) {
+        if (m_target_plink && m_is_ref) {
+            // target already generated some intermediate, now append for
+            // reference
+            inter_out.open(intermediate_name.c_str(),
+                           std::ios::binary | std::ios::app);
+        }
+        else
+        {
+            inter_out.open(intermediate_name.c_str(), std::ios::binary);
+        }
     }
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -405,8 +410,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     m_sample_mask.resize(pheno_nm_ctv2);
     fill_quatervec_55(m_sample_ct, m_sample_mask.data());
     std::vector<std::string> alleles;
-    std::vector<genfile::byte_t> buffer1;
-    std::vector<genfile::byte_t> buffer2;
     std::ifstream bgen_file;
     std::string bgen_name;
     std::string allele;
@@ -523,6 +526,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
             }
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
+                has_duplicate = true;
             }
             else if (!exclude_snp && ambiguous(alleles.front(), alleles.back()))
             {
@@ -533,19 +537,19 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                 duplicate_check_list.insert(RSID);
             }
             byte_pos = bgen_file.tellg();
-            read_genotype_data_block(bgen_file, context, &buffer1);
+            read_genotype_data_block(bgen_file, context, &m_buffer1);
             // if we want to exclude this SNP, we will not perform decompression
-            if (!exclude_snp) {
+            if (!exclude_snp && !has_duplicate) {
                 // now filter
                 file_name = prefix;
                 if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)
                     || m_intermediate)
                 {
-                    genfile::bgen::uncompress_probability_data(context, buffer1,
-                                                               &buffer2);
+                    genfile::bgen::uncompress_probability_data(
+                        context, m_buffer1, &m_buffer2);
                     genfile::bgen::parse_probability_data<PLINK_generator>(
-                        &(buffer2)[0], &(buffer2)[0] + buffer2.size(), context,
-                        setter);
+                        &(m_buffer2)[0], &(m_buffer2)[0] + m_buffer2.size(),
+                        context, setter);
                     if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
                         // do QC
                         genovec_3freq(m_tmp_genotype.data(),
@@ -553,6 +557,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                                       &missing_ct, &het_ct, &homcom_ct);
                         nanal = m_sample_ct - missing_ct;
                         homrar_ct = nanal - het_ct - homcom_ct;
+
                         if (nanal == 0) {
                             // still count as MAF filtering (for now)
                             m_num_maf_filter++;
@@ -566,7 +571,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 
                         cur_maf = ((double) (het_ct + homrar_ct * 2)
                                    / ((double) nanal * 2.0));
-                        std::cout << RSID << "\t"  << cur_maf << std::endl;
                         if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
                         // remove SNP if maf lower than threshold
                         if (cur_maf < maf) {
@@ -590,7 +594,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                         // reference file
                         // 4. We are dealing with target file and we are
                         // expected to use hard_coding
-                        // TODO:
                         if (m_is_ref || !m_expect_reference) {
                             // when not expecting reference, we will
                             // just update the info on the reference field
@@ -599,7 +602,9 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             byte_pos = inter_out.tellp();
                             file_name = intermediate_name;
                             // now write to file
-                            inter_out.write((char*)(&m_tmp_genotype[0]), m_tmp_genotype.size() * sizeof(m_tmp_genotype[0])) ;
+                            inter_out.write((char*) (&m_tmp_genotype[0]),
+                                            m_tmp_genotype.size()
+                                                * sizeof(m_tmp_genotype[0]));
                         }
                         else
                         {
@@ -610,7 +615,9 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             m_target_plink = true;
                             byte_pos = inter_out.tellp();
                             file_name = intermediate_name;
-                            inter_out.write((char*)(&m_tmp_genotype[0]), m_tmp_genotype.size() * sizeof(m_tmp_genotype[0])) ;
+                            inter_out.write((char*) (&m_tmp_genotype[0]),
+                                            m_tmp_genotype.size()
+                                                * sizeof(m_tmp_genotype[0]));
                         }
                     }
                 }
@@ -635,7 +642,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     else
                     {
                         target->m_existed_snps[target_index].add_reference(
-                        		file_name, byte_pos);
+                            file_name, byte_pos);
                         ref_retain[target_index] = true;
                         ref_target_match++;
                     }

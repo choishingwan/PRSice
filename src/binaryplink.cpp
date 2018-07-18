@@ -212,8 +212,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     uint32_t homcom_ct;
     uint32_t num_ref_target_match = 0;
     intptr_t nanal;
-    bool chr_error = false, chr_sex_error = false, has_count = false,
-         dummy;
+    bool chr_error = false, chr_sex_error = false, has_count = false, dummy;
     m_sample_mask.resize(pheno_nm_ctv2);
     fill_quatervec_55(m_sample_ct, m_sample_mask.data());
 

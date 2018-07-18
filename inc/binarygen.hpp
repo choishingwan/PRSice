@@ -70,32 +70,33 @@ private:
         // try to use PLINK one. The difficulty is ifstream vs FILE
         // this is for the LD calculation
         uintptr_t final_mask = get_final_mask(m_founder_ct);
-        const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+        const uintptr_t unfiltered_sample_ct4 =
+            (m_unfiltered_sample_ct + 3) / 4;
         // std::fill(m_tmp_genotype.begin(), m_tmp_genotype.end(), 0);
         // std::memset(m_tmp_genotype, 0x0, m_unfiltered_sample_ctl * 2 *
         // sizeof(uintptr_t));
-        if(m_ref_plink){
-        	// this is a plink file format, so we will directly read the file
-        	if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-        	            || !m_bgen_file.is_open())
-        	        {
-        	            if (m_bgen_file.is_open()) m_bgen_file.close();
-        	            m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
-        	            if (!m_bgen_file.is_open()) {
-        	                std::string error_message =
-        	                    "ERROR: Cannot open bgen file: " + file_name;
-        	                throw std::runtime_error(error_message);
-        	            }
-        	            m_cur_file = file_name;
-        	        }
+        if (m_ref_plink) {
+            // this is a plink file format, so we will directly read the file
+            if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+                || !m_bgen_file.is_open())
+            {
+                if (m_bgen_file.is_open()) m_bgen_file.close();
+                m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
+                if (!m_bgen_file.is_open()) {
+                    std::string error_message =
+                        "ERROR: Cannot open bgen file: " + file_name;
+                    throw std::runtime_error(error_message);
+                }
+                m_cur_file = file_name;
+            }
 
             m_bgen_file.seekg(byte_pos, std::ios_base::beg);
             m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
         }
-        else if (load_and_collapse_incl(byte_pos, file_name, m_unfiltered_sample_ct,
-                                   m_founder_ct, m_founder_info.data(),
-                                   final_mask, false, m_tmp_genotype.data(),
-                                   genotype))
+        else if (load_and_collapse_incl(byte_pos, file_name,
+                                        m_unfiltered_sample_ct, m_founder_ct,
+                                        m_founder_info.data(), final_mask,
+                                        false, m_tmp_genotype.data(), genotype))
         {
             throw std::runtime_error("ERROR: Cannot read the bgen file!");
         }
@@ -349,11 +350,11 @@ private:
         {
             m_sample_i = i;
             m_geno = 1;
-            m_entry_i = 0;
+            m_entry_i = 3;
             m_hard_prob = 0.0;
             m_exp_value = 0.0;
-            m_include_snp = IS_SET(m_sample->data(), m_sample_i);
-            return m_include_snp;
+            m_include_sample = IS_SET(m_sample->data(), m_sample_i);
+            return m_include_sample;
         }
 
         void set_number_of_entries(std::size_t ploidy,
@@ -367,12 +368,15 @@ private:
         void set_value(uint32_t, double value)
         {
             if (value > m_hard_prob && value >= m_hard_threshold) {
-                // geno = 2 - m_entry_i;
-                m_geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
+                // m_geno = 2 - m_entry_i;
+                // 0 2 3 as 1 is missing
+                // problem is the genotype should be
+                // 3 2 0
+                m_geno = (m_entry_i == 1) ? 0 : m_entry_i;
                 m_hard_prob = value;
             }
             m_exp_value += m_geno * value;
-            m_entry_i++;
+            --m_entry_i;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value) {}
@@ -408,8 +412,8 @@ private:
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
-        size_t m_entry_i = 0;
-        bool m_include_snp = false;
+        size_t m_entry_i = 3;
+        bool m_include_sample = false;
     };
 };
 
