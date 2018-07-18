@@ -655,16 +655,21 @@ BinaryGen::~BinaryGen()
 
 
 void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
-                             const size_t region_index)
+                             uint32_t homcom_weight, uint32_t het_weight,
+                             uint32_t homrar_weight, const size_t region_index,
+                             bool set_zero)
 {
     m_cur_file = "";
-    std::vector<genfile::byte_t> buffer1, buffer2;
+    std::string bgen_name;
+
+    bool not_first = !set_zero;
+    PRS_Interpreter setter(&m_prs_info, &m_sample_include, m_missing_score);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         auto&& snp = m_existed_snps[i_snp];
         if (!snp.in(region_index)) continue;
         if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
             if (m_bgen_file.is_open()) m_bgen_file.close();
-            std::string bgen_name = snp.file_name() + ".bgen";
+            bgen_name = snp.file_name() + ".bgen";
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
             if (!m_bgen_file.is_open()) {
                 std::string error_message =
@@ -676,26 +681,22 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
-
-        PRS_Interpreter setter(&m_prs_info, m_model, m_missing_score,
-                               &m_sample_include, snp.stat() * 2,
-                               snp.is_flipped());
-        /*
-        PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
-                               vector_pad, m_model, m_missing_score,
-                               snp.stat() * 2,
-                               snp.is_flipped()); // Multiple by ploidy
-                               */
-        // after this, m_sample contain the latest PRS score
+        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
+                        homrar_weight, not_first);
+        not_first = true;
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
-            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
     }
 }
 
-void BinaryGen::dosage_score(std::vector<size_t>& index)
+void BinaryGen::dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
+                             uint32_t het_weight, uint32_t homrar_weight,
+                             bool set_zero)
 {
     m_cur_file = "";
-    std::vector<genfile::byte_t> buffer1, buffer2;
+
+    PRS_Interpreter setter(&m_prs_info, &m_sample_include, m_missing_score);
+    bool not_first = !set_zero;
     for (auto&& i_snp : index) {
         auto&& snp = m_existed_snps[i_snp];
         if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
@@ -712,10 +713,14 @@ void BinaryGen::dosage_score(std::vector<size_t>& index)
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
-
+        /*
         PRS_Interpreter setter(&m_prs_info, m_model, m_missing_score,
                                &m_sample_include, snp.stat() * 2,
-                               snp.is_flipped());
+                               snp.is_flipped());*/
+
+        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
+                        homrar_weight, not_first);
+        not_first = true;
         /*
         PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
                                vector_pad, m_model, m_missing_score,
@@ -724,19 +729,20 @@ void BinaryGen::dosage_score(std::vector<size_t>& index)
                                */
         // after this, m_sample contain the latest PRS score
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
-            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
     }
 }
 
 
 void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
-                                uint32_t homcom_weight, uint32_t het_weight,
-                                uint32_t homrar_weight,
-                                const size_t region_index, bool set_zero)
+                                uint32_t homcom_wt, uint32_t het_wt,
+                                uint32_t homrar_wt, const size_t region_index,
+                                bool set_zero)
 {
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t* lbptr;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
@@ -853,14 +859,14 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
 }
 
 
-void BinaryGen::hard_code_score(std::vector<size_t>& index,
-                                int32_t homcom_weight, uint32_t het_weight,
-                                uint32_t homrar_weight,
-                                const size_t region_index, bool set_zero)
+void BinaryGen::hard_code_score(std::vector<size_t>& index, int32_t homcom_wt,
+                                uint32_t het_wt, uint32_t homrar_wt,
+                                bool set_zero)
 {
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t* lbptr;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
@@ -872,7 +878,6 @@ void BinaryGen::hard_code_score(std::vector<size_t>& index,
     uint32_t homcom_weight = homcom_wt;
     uint32_t het_weight = het_wt;
     uint32_t homrar_weight = homrar_wt;
-    uint32_t temp_weight = 0;
     // For set zero, miss_count will become 0
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
@@ -1000,7 +1005,28 @@ void BinaryGen::read_score(size_t start_index, size_t end_bound,
         return;
     }
     else
-        dosage_score(start_index, end_bound, region_index);
+    {
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            dosage_score(start_index, end_bound, 0, 1, 0, region_index,
+                         set_zero);
+            break;
+        case MODEL::DOMINANT:
+            dosage_score(start_index, end_bound, 0, 1, 1, region_index,
+                         set_zero);
+            break;
+        case MODEL::RECESSIVE:
+            dosage_score(start_index, end_bound, 0, 0, 1, region_index,
+                         set_zero);
+            break;
+        default:
+            dosage_score(start_index, end_bound, 0, 1, 2, region_index,
+                         set_zero);
+            break;
+        }
+        return;
+    }
 }
 
 void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
@@ -1024,5 +1050,16 @@ void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
         }
     }
     else
-        dosage_score(index);
+    {
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            dosage_score(index, 0, 1, 0, reset_zero);
+            break;
+        case MODEL::DOMINANT: dosage_score(index, 0, 1, 1, reset_zero); break;
+        case MODEL::RECESSIVE: dosage_score(index, 0, 0, 1, reset_zero); break;
+        default: dosage_score(index, 0, 1, 2, reset_zero); break;
+        }
+        return;
+    }
 }

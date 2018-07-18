@@ -121,16 +121,20 @@ private:
     void read_score(std::vector<size_t>& index, bool reset_zero);
     void hard_code_score(std::vector<size_t>& index, int32_t homcom_weight,
                          uint32_t het_weight, uint32_t homrar_weight,
-                         const size_t region_index, bool set_zero);
-    void dosage_score(std::vector<size_t>& index);
+                         bool set_zero);
+    void dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
+                      uint32_t het_weight, uint32_t homrar_weight,
+                      bool set_zero);
     void read_score(size_t start_index, size_t end_bound,
-                    const size_t region_index, bool reset_zero);
+                    const size_t region_index, bool set_zero);
     void hard_code_score(size_t start_index, size_t end_bound,
                          uint32_t homcom_weight, uint32_t het_weight,
                          uint32_t homrar_weight, const size_t region_index,
                          bool set_zero);
     void dosage_score(size_t start_index, size_t end_bound,
-                      const size_t region_index);
+                      uint32_t homcom_weight, uint32_t het_weight,
+                      uint32_t homrar_weight, const size_t region_index,
+                      bool set_zero);
 
 
     std::ifstream m_bgen_file;
@@ -143,24 +147,40 @@ private:
     struct PRS_Interpreter
     {
         ~PRS_Interpreter(){};
-        PRS_Interpreter(std::vector<PRS>* sample_prs, MODEL model,
-                        MISSING_SCORE missing,
-                        std::vector<uintptr_t>* sample_inclusion, double stat,
-                        bool flipped)
+        PRS_Interpreter(std::vector<PRS>* sample_prs,
+                        std::vector<uintptr_t>* sample_inclusion,
+                        MISSING_SCORE missing)
             : m_sample_prs(sample_prs)
             , m_sample_inclusion(sample_inclusion)
-            , m_model(model)
-            , m_missing(missing)
-            , m_stat(stat)
-            , m_flipped(flipped)
+            , m_missing_score(missing)
         {
             // m_sample contains only samples extracted
-            m_score.resize(m_sample_prs->size(), 0);
+            // m_score.resize(m_sample_prs->size(), 0);
+
+            m_miss_count = (missing != MISSING_SCORE::SET_ZERO);
+            m_sample_missing_index.reserve(m_sample_prs->size());
+        }
+        void set_stat(double stat, uint32_t homcom_weight, uint32_t het_weight,
+                      uint32_t homrar_weight, bool flipped, bool not_first)
+        {
+            m_stat = stat;
+            m_flipped = flipped;
+            m_homcom_weight = homcom_weight;
+            m_het_weight = het_weight;
+            m_homrar_weight = homrar_weight;
+            m_not_first = not_first;
+            if (m_flipped) {
+                std::swap(homcom_weight, homrar_weight);
+            }
         }
         void initialise(std::size_t number_of_samples,
                         std::size_t number_of_alleles)
         {
-            m_total_sample_size = number_of_samples;
+            m_prs_sample_i = 0;
+            m_bgen_sample_i = 0;
+            m_sample_missing_index.clear();
+            // std::fill(m_sample_missing.begin(), m_sample_missing.end(),
+            // false);  std::fill(m_score.begin(), m_score.end(), 0.0);
         }
         void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
                                 uint32_t min_entries, uint32_t max_entries)
@@ -169,26 +189,11 @@ private:
 
         bool set_sample(std::size_t i)
         {
-            if (!first && !exclude) {
-                if (missing || m_sum == 0) {
-                    m_missing_samples.push_back(m_sample_i);
-                }
-            }
-            first = false;
             m_entry_i = 0;
-            missing = false;
+            m_is_missing = false;
             m_sum = 0.0;
-            m_sample_i = i;
-            exclude = !IS_SET(m_sample_inclusion->data(), m_sample_i);
-            if (!exclude) {
-                // as this is size_t, we can't use -1. Therefore in subsequent
-                // use, we should always -1
-                m_score_i++;
-            }
-            // exclude = !m_sample->at(m_sample_i).included;
-            m_num_included_samples += !exclude;
-            // don't bother reading the score of anyone that is being excluded
-            return !exclude;
+            m_bgen_sample_i = i;
+            return !IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
         }
 
         void set_number_of_entries(std::size_t ploidy,
@@ -201,112 +206,104 @@ private:
         // Called once for each genotype (or haplotype) probability per sample.
         void set_value(uint32_t, double value)
         {
-
-            int geno = (!m_flipped) ? 2 - m_entry_i : m_entry_i;
-            if (m_model == MODEL::HETEROZYGOUS && geno == 2)
-                geno = 0;
-            else if (m_model == MODEL::DOMINANT && geno == 2)
-                geno = 1;
-            else if (m_model == MODEL::RECESSIVE)
-                geno = std::max(geno - 1, 0);
-            m_score[m_score_i - 1] += value * geno;
-            if (!exclude) m_total_prob += value * geno;
-            m_entry_i++;
+            int geno = 2 - m_entry_i;
+            auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
+            // for bgen 1.1, we will still get set_value even for missing data
+            // however, all values will be 0
+            // Therefore for missing sample, we would've add 1, which is ok if
+            // MISSING_SCORE !=SET_ZERO
+            switch (geno)
+            {
+            default:
+                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
+                sample_prs.prs = sample_prs.prs * m_not_first
+                                 + m_homcom_weight * value * m_stat * 0.5;
+                break;
+            case 1:
+                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
+                sample_prs.prs = sample_prs.prs * m_not_first
+                                 + m_het_weight * value * m_stat * 0.5;
+                break;
+            case 2:
+                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
+                sample_prs.prs = sample_prs.prs * m_not_first
+                                 + m_homrar_weight * value * m_stat * 0.5;
+            }
+            m_total_prob += value * geno;
+            ++m_entry_i;
             m_sum += value;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
         {
-            missing = true;
+            m_is_missing = true;
+        }
+
+        void sample_completed()
+        {
+            if (m_sum == 0.0 || m_is_missing) {
+                // this is a missing sample
+                m_sample_missing_index.push_back(m_prs_sample_i);
+                // remove the problematic count if needed
+                (*m_sample_prs)[m_prs_sample_i].num_snp -= m_miss_count;
+            }
+            // go to next sample
+            ++m_prs_sample_i;
         }
 
         void finalise()
         {
-            // TODO: Double check this function in case there are any problem
-            // summarize the last sample's info
-            if (!first && !exclude) {
-                if (missing || m_sum == 0) {
-                    // this is missing
-                    m_missing_samples.push_back(m_sample_i);
-                }
+            size_t num_miss = m_sample_missing_index.size();
+            size_t num_prs = m_sample_prs->size();
+            if (num_prs == num_miss) {
+                // all samples are missing
+                return;
             }
-            // now update the PRS score
-
-
-            if (m_num_included_samples == m_missing_samples.size()) {
-                valid = false;
-            }
-            size_t i_missing = 0;
-            // missing sample should be unique and sorted, right?
-            // std::sort(m_missing_samples.begin(), m_missing_samples.end());
-            // m_missing_samples.erase(
-            //    std::unique(m_missing_samples.begin(),
-            //    m_missing_samples.end()), m_missing_samples.end());
-            size_t num_miss = m_missing_samples.size();
-            double mean =
-                m_total_prob
-                / (((double) m_num_included_samples - (double) num_miss) * 2);
-            size_t idx_sample_include = 0;
-            for (size_t i_sample = 0; i_sample < m_sample_prs->size();
-                 ++i_sample)
+            double expected_value =
+                m_total_prob / (((double) num_prs - (double) num_miss) * 2);
+            // worth separating centre score out
+            size_t miss_index = m_sample_missing_index.front();
+            switch (m_missing_score)
             {
-                if (IS_SET(m_sample_inclusion->data(), i_sample)) {
-                    auto&& sample = m_sample_prs->at(idx_sample_include++);
-                    if (i_missing < num_miss
-                        && i_sample == m_missing_samples[i_missing])
-                    {
-                        if (m_missing == MISSING_SCORE::MEAN_IMPUTE)
-                            sample.prs += m_stat * mean;
-                        // m_prs_score->at(i_sample + m_vector_pad) +=
-                        //    m_stat * mean;
-                        if (m_missing != MISSING_SCORE::SET_ZERO)
-                            sample.num_snp++;
-                        // m_num_snps->at(i_sample + m_vector_pad)++;
-                        i_missing++;
-                    }
-                    else
-                    { // not missing sample
-                        if (m_missing == MISSING_SCORE::CENTER) {
-                            // if centering, we want to keep missing at 0
-                            sample.prs -= m_stat * mean;
-                            // m_prs_score->at(i_sample + m_vector_pad) -=
-                            //    m_stat * mean;
-                        }
-                        // again, so that it will generate the same result as
-                        // genotype file format when we are 100% certain of the
-                        // genotypes
-                        sample.prs += m_score[i_sample] * m_stat * 0.5;
-                        // m_prs_score->at(i_sample + m_vector_pad) +=
-                        //    m_score[i_sample] * m_stat * 0.5;
-                        sample.num_snp++;
-                        // m_num_snps->at(i_sample + m_vector_pad)++;
-                    }
+            default:
+                // centre score
+                for (auto&& index : m_sample_missing_index) {
+                    (*m_sample_prs)[index].prs += expected_value;
                 }
-                if (idx_sample_include >= m_num_included_samples) break;
+                break;
+            case MISSING_SCORE::CENTER:
+                for (size_t i = 0; i < num_prs; ++i) {
+                    if (miss_index == i) {
+                        ++miss_index;
+                        continue;
+                    }
+                    (*m_sample_prs)[m_prs_sample_i].prs -= expected_value;
+                }
+                break;
+            case MISSING_SCORE::SET_ZERO:
+                // do nothing
+                break;
             }
         }
-        void sample_completed() {}
 
     private:
-        size_t m_sample_i = 0;
-        size_t m_entry_i = 0;
-        size_t m_num_included_samples = 0;
-        size_t m_total_sample_size = 0;
-        size_t m_score_i = 0;
-        double m_sum = 0.0;
-        bool missing = false;
-        bool first = true;
-        bool exclude = false;
-        bool valid = true;
         std::vector<PRS>* m_sample_prs;
         std::vector<uintptr_t>* m_sample_inclusion;
-        std::vector<double> m_score;
-        std::vector<size_t> m_missing_samples;
-        MODEL m_model;
-        MISSING_SCORE m_missing;
-        double m_stat = 0.0;
+        std::vector<uint32_t> m_sample_missing_index;
+        double m_stat;
         double m_total_prob = 0.0;
+        double m_sum = 0.0;
+        uint32_t m_homcom_weight;
+        uint32_t m_het_weight;
+        uint32_t m_homrar_weight;
+        uint32_t m_bgen_sample_i = 0;
+        uint32_t m_prs_sample_i = 0;
+        uint32_t m_entry_i = 0;
+        uint32_t m_miss_count;
+        MISSING_SCORE m_missing_score;
         bool m_flipped;
+        bool m_not_first;
+        bool m_is_missing;
     };
 
 
@@ -357,6 +354,7 @@ private:
                 m_geno = (m_entry_i == 0) ? 0 : m_entry_i + 1;
                 m_hard_prob = value;
             }
+            m_exp_value += m_geno * value;
             m_entry_i++;
         }
         // call if sample is missing
@@ -373,6 +371,7 @@ private:
                 m_index++;
                 m_shift = 0;
             }
+            rs.push(m_exp_value);
         }
         double info_score() const
         {
