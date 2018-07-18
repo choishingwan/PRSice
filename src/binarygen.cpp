@@ -566,6 +566,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 
                         cur_maf = ((double) (het_ct + homrar_ct * 2)
                                    / ((double) nanal * 2.0));
+                        std::cout << RSID << "\t"  << cur_maf << std::endl;
                         if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
                         // remove SNP if maf lower than threshold
                         if (cur_maf < maf) {

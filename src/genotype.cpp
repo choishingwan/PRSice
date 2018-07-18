@@ -1657,6 +1657,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             if (r2 >= min_r2) {
                 cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
             }
+            std::cout << cur_target_snp.rs() << "\t" pair_target_snp.rs() << "\t" << r2 << std::endl;
+            exit(-1);
         }
         cur_target_snp.set_clumped();
         remain_core[cur_snp_index] = true;
