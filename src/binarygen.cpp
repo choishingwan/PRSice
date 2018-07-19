@@ -856,7 +856,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data(), , m_target_plink))
+                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
