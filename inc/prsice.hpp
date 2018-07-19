@@ -312,8 +312,8 @@ private:
                         Reporter& reporter);
     void generate_factor_list(
         const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
-        std::vector<uint32_t>& cov_start_index, std::vector<uint32_t>& cov_index,
-		std::vector<std::string>& cov_name,
+        std::vector<uint32_t>& cov_start_index,
+        std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
         Reporter& reporter);
     void check_factor_cov(
