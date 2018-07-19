@@ -599,8 +599,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             // just update the info on the reference field
                             m_ref_plink = true;
                             // we can write to the intermediate file directly
-                            byte_pos = inter_out.tellp();
-                            file_name = m_intermediate_file;
                             // now write to file
                             inter_out.write((char*) (&m_tmp_genotype[0]),
                                             m_tmp_genotype.size()
@@ -625,6 +623,10 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     m_existed_snps_index[RSID] = snp_res.size();
                     // TODO: Update SNP constructor
                     // for now, we focus on PLINK optimization and ignore bgen
+                    if(m_target_plink){
+                        byte_pos = inter_out.tellp();
+                        file_name = m_intermediate_file;
+                    }
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.front(), alleles.back(),
                                              file_name, byte_pos));
@@ -641,6 +643,10 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     }
                     else
                     {
+                    	if(m_ref_plink){
+                            byte_pos = inter_out.tellp();
+                            file_name = m_intermediate_file;
+                    	}
                         target->m_existed_snps[target_index].add_reference(
                             file_name, byte_pos);
                         ref_retain[target_index] = true;
