@@ -413,6 +413,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     bool maf_filtered = false;
     bool exclude = false;
     bool flipped = false;
+    bool has_chr = false;
+    bool has_bp   = false;
     int category = -1;
     double pthres = 0.0;
     int32_t chr_code;
@@ -460,7 +462,8 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         num_line_in_base++;
         exclude = false;
         token = misc::split(line);
-
+        has_chr = false;
+        has_bp = false;
         if (token.size() <= max_index) {
             std::string error_message = line;
             error_message.append("\nMore index than column in data");
@@ -504,6 +507,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     num_haploid++;
                 }
             }
+            has_chr = (chr_code != -1);
             ref_allele = (index[+BASE_INDEX::REF] >= 0)
                              ? token[index[+BASE_INDEX::REF]]
                              : "";
@@ -526,6 +530,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                             "Error: " + rs_id + " has negative loci!\n";
                         throw std::runtime_error(error_message);
                     }
+                    has_bp = true;
                 }
                 catch (const std::runtime_error& error)
                 {
@@ -602,9 +607,12 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
             		mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
             	}
             	auto && target_index = m_existed_snps_index[rs_id];
-            	mismatch_snp_record << "Base\t" << rs_id << "\t" << m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
-            	                    			<< m_existed_snps[target_index].loc() << "\t" << loc << "\t" << m_existed_snps[target_index].ref() << "\t"
-            									<< "\t" << ref_allele << m_existed_snps[target_index].alt() << "\t" << alt_allele << "\n";
+            	std::string chr_out = (has_chr)? std::to_string(chr_code) : "-";
+            	std::string loc_out = (has_bp)? std::to_string(loc) : "-";
+            	std::string alt_allele_out = (alt_allele.empty())? "-" : alt_allele;
+            	mismatch_snp_record << "Base\t" << rs_id << "\t" << m_existed_snps[target_index].chr() << "\t" << chr_out << "\t"
+            	                    			<< m_existed_snps[target_index].loc() << "\t" << loc_out << "\t" << m_existed_snps[target_index].ref() << "\t"
+            									<< "\t" << ref_allele << m_existed_snps[target_index].alt() << "\t" << alt_allele_out << "\n";
                 num_mismatched++;
                 exclude = true;
             }
