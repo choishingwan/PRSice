@@ -111,31 +111,52 @@ private:
                                     const uintptr_t* __restrict sample_include,
                                     uintptr_t final_mask, uint32_t do_reverse,
                                     uintptr_t* __restrict rawbuf,
-                                    uintptr_t* __restrict mainbuf)
+                                    uintptr_t* __restrict mainbuf,
+									bool intermediate=false)
     {
         assert(unfiltered_sample_ct);
-        if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-            || !m_bgen_file.is_open())
-        {
-            if (m_bgen_file.is_open()) m_bgen_file.close();
-            std::string bgen_name = file_name + ".bgen";
-            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-            if (!m_bgen_file.is_open()) {
-                std::string error_message =
-                    "ERROR: Cannot open bgen file: " + file_name;
-                throw std::runtime_error(error_message);
-            }
-            m_cur_file = file_name;
-        }
-        auto&& context = m_context_map[file_name];
-        m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold);
-        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
-        // output from load_raw should have already copied all samples
-        // to the front without the need of subseting
-        if (do_reverse) {
-            reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+        if(!intermediate){
+        	if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+        			|| !m_bgen_file.is_open())
+        	{
+        		if (m_bgen_file.is_open()) m_bgen_file.close();
+        		std::string bgen_name = file_name + ".bgen";
+        		m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+        		if (!m_bgen_file.is_open()) {
+        			std::string error_message =
+        					"ERROR: Cannot open bgen file: " + file_name;
+        			throw std::runtime_error(error_message);
+        		}
+        		m_cur_file = file_name;
+        	}
+        	auto&& context = m_context_map[file_name];
+        	m_bgen_file.seekg(byte_pos, std::ios_base::beg);
+        	PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold);
+        	genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
+        			m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
+        	// output from load_raw should have already copied all samples
+        	// to the front without the need of subseting
+        	if (do_reverse) {
+        		reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+        	}
+        }else{
+            const uintptr_t unfiltered_sample_ct4 =
+                (m_unfiltered_sample_ct + 3) / 4;
+        	 if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+        			 || !m_bgen_file.is_open())
+        	 {
+        		 if (m_bgen_file.is_open()) m_bgen_file.close();
+        		 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
+        		 if (!m_bgen_file.is_open()) {
+        			 std::string error_message =
+        					 "ERROR: Cannot open bgen file: " + file_name;
+        			 throw std::runtime_error(error_message);
+        		 }
+        		 m_cur_file = file_name;
+        	 }
+
+        	 m_bgen_file.seekg(byte_pos, std::ios_base::beg);
+        	 m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
         }
         // mainbuf should contains the information
         return 0;
@@ -309,20 +330,20 @@ private:
         std::vector<PRS>* m_sample_prs;
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<uint32_t> m_sample_missing_index;
-        double m_stat;
+        double m_stat = 0.0;
         double m_total_prob = 0.0;
         double m_sum = 0.0;
-        uint32_t m_homcom_weight;
-        uint32_t m_het_weight;
-        uint32_t m_homrar_weight;
+        uint32_t m_homcom_weight = 0;
+        uint32_t m_het_weight = 1;
+        uint32_t m_homrar_weight = 2;
         uint32_t m_bgen_sample_i = 0;
         uint32_t m_prs_sample_i = 0;
         uint32_t m_entry_i = 0;
-        uint32_t m_miss_count;
+        uint32_t m_miss_count = 0;
         MISSING_SCORE m_missing_score;
-        bool m_flipped;
-        bool m_not_first;
-        bool m_is_missing;
+        bool m_flipped = false;
+        bool m_not_first = false;
+        bool m_is_missing  = false;
     };
 
 

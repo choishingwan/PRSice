@@ -856,7 +856,7 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data()))
+                                   m_tmp_genotype.data(), genotype.data(), , m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
@@ -976,7 +976,7 @@ void BinaryGen::hard_code_score(std::vector<size_t>& index, int32_t homcom_wt,
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data()))
+                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
@@ -1116,6 +1116,7 @@ void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
     // sample here
     // reset_sample_prs();
     if (m_hard_coded) {
+    	// for hard coded, we need to check if intermediate file is used instead
         switch (m_model)
         {
         case MODEL::HETEROZYGOUS:
