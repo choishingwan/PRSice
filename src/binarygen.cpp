@@ -356,20 +356,57 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 {
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
-    std::vector<bool> ref_retain;
-    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> duplicate_check_list;
-    m_hard_threshold = hard_threshold;
-    m_hard_coded = hard_coded;
+    std::vector<std::string> alleles;
+    std::vector<bool> ref_retain;
+    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
+    std::ifstream bgen_file;
+    std::ofstream mismatch_snp_record;
+    std::ofstream inter_out;
+    std::string bgen_name;
+    std::string allele;
+    std::string SNPID;
+    std::string RSID;
+    std::string chromosome;
+    std::string prev_chr = "";
+    std::string file_name;
+    std::string mismatch_snp_record_name = out_prefix+".mismatch";
+    std::string m_intermediate_file = out_prefix + ".inter";
+    double cur_maf;
+    std::streampos byte_pos;
+    size_t chr_index = 0;
+    size_t total_unfiltered_snps = 0;
+    size_t ref_target_match = 0;
+    uint32_t SNP_position;
+    uint32_t offset;
+    uint32_t num_snp;
+    uint32_t homrar_ct;
+    uint32_t missing_ct;
+    uint32_t het_ct;
+    uint32_t homcom_ct;
+    intptr_t nanal;
+    int chr_code = 0;
+    bool exclude_snp = false;
     bool chr_sex_error = false;
     bool chr_error = false;
     bool first_bgen_file = true;
     bool user_exclude = false;
     bool has_duplicate = false;
-    size_t chr_index = 0;
-    size_t total_unfiltered_snps = 0;
-    size_t ref_target_match = 0;
+
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
+                           hard_threshold);
+    m_sample_mask.resize(pheno_nm_ctv2);
+    fill_quatervec_55(m_sample_ct, m_sample_mask.data());
+
+    m_hard_threshold = hard_threshold;
+    m_hard_coded = hard_coded;
+
+
 
     for (auto prefix : m_genotype_files) {
         get_context(prefix);
@@ -387,8 +424,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     snp_res.reserve(total_unfiltered_snps);
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
-    std::string m_intermediate_file = out_prefix + ".inter";
-    std::ofstream inter_out;
     if (m_intermediate) {
         if (m_target_plink && m_is_ref) {
             // target already generated some intermediate, now append for
@@ -401,36 +436,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
             inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
         }
     }
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
-    PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
-                           hard_threshold);
-    m_sample_mask.resize(pheno_nm_ctv2);
-    fill_quatervec_55(m_sample_ct, m_sample_mask.data());
-    std::vector<std::string> alleles;
-    std::ifstream bgen_file;
-    std::string bgen_name;
-    std::string allele;
-    std::string SNPID;
-    std::string RSID;
-    std::string chromosome;
-    std::string prev_chr = "";
-    std::string file_name;
-    std::streampos byte_pos;
-    uint32_t SNP_position;
-    uint32_t offset;
-    uint32_t num_snp;
-    uint32_t homrar_ct;
-    uint32_t missing_ct;
-    uint32_t het_ct;
-    uint32_t homcom_ct;
-    intptr_t nanal;
-    double cur_maf;
-    int chr_code = 0;
-    bool exclude_snp = false;
-
     for (auto prefix : m_genotype_files) {
         bgen_name = prefix + ".bgen";
         bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
@@ -639,6 +644,25 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             chr_code, SNP_position, alleles.front(),
                             alleles.back(), dummy))
                     {
+                    	if(!mismatch_snp_record.is_open()){
+                    		// open the file accordingly
+                    		if(m_mismatch_file_output){
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str(), std::ofstream::app);
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    		}else{
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str());
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    			mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
+                    		}
+                    	}
+                    	mismatch_snp_record << "Reference\t" << RSID << "\t" << target->m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
+                    			<< target->m_existed_snps[target_index].loc() << "\t" << SNP_position << "\t" << target->m_existed_snps[target_index].ref() << "\t"
+								<< "\t" << alleles.front() << target->m_existed_snps[target_index].alt() << "\t" << alleles.back() << "\n";
+
                         m_num_ref_target_mismatch++;
                     }
                     else

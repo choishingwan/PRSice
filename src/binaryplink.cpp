@@ -196,8 +196,10 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     std::vector<bool> ref_retain;
     if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
     std::ifstream bim, bed;
+    std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
     std::string prev_chr = "";
+    std::string mismatch_snp_record_name = out_prefix+".mismatch";
     double cur_maf;
     std::streampos byte_pos;
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
@@ -455,6 +457,26 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             chr_code, loc, bim_info[+BIM::A1],
                             bim_info[+BIM::A2], dummy))
                     {
+                    	// We read base before reading reference. So there can be
+                    	// a mismatch file already
+                    	if(!mismatch_snp_record.is_open()){
+                    		// open the file accordingly
+                    		if(m_mismatch_file_output){
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str(), std::ofstream::app);
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    		}else{
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str());
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    			mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
+                    		}
+                    	}
+                    	mismatch_snp_record << "Reference\t" << bim_info[+BIM::RS] << "\t" << target->m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
+                    			<< target->m_existed_snps[target_index].loc() << "\t" << loc << "\t" << target->m_existed_snps[target_index].ref() << "\t"
+								<< "\t" << bim_info[+BIM::A1] << target->m_existed_snps[target_index].alt() << "\t" << bim_info[+BIM::A2] << "\n";
                         m_num_ref_target_mismatch++;
                     }
                     else
@@ -508,7 +530,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             + dup_name;
         throw std::runtime_error(error_message);
     }
-
+    // mismatch_snp_record will close itself when it goes out of scope
     return snp_info;
 }
 

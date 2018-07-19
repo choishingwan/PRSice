@@ -316,6 +316,7 @@ protected:
     bool m_exclude_snp = true;
     bool m_hard_coded = false;
     bool m_expect_reference = false;
+    bool m_mismatch_file_output = false;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;

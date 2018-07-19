@@ -342,18 +342,20 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
 {
     // can assume region is of the same order as m_existed_snp
 
+    std::vector<int> index = c_commander.index();
     const std::string input = c_commander.base_name();
-    const bool beta = c_commander.beta();
-    const bool fastscore = c_commander.fastscore();
-    const bool no_full = c_commander.no_full();
+    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
+    std::ifstream snp_file;
+    std::ofstream mismatch_snp_record;
     const double info_threshold = c_commander.base_info_score();
     const double maf_control = c_commander.maf_base_control();
     const double maf_case = c_commander.maf_base_case();
-    std::vector<int> index = c_commander.index();
+    const bool beta = c_commander.beta();
+    const bool fastscore = c_commander.fastscore();
+    const bool no_full = c_commander.no_full();
     // now coordinates obtained from target file instead. Coordinate information
     // in base file only use for validation
     bool gz_input = false;
-    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     if (input.substr(input.find_last_of(".") + 1).compare("gz") == 0) {
         gz_snp_file.open(input.c_str());
         if (!gz_snp_file.good()) {
@@ -364,7 +366,6 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         gz_input = true;
     }
 
-    std::ifstream snp_file;
     if (!gz_input) {
         snp_file.open(input.c_str());
         if (!snp_file.is_open()) {
@@ -376,6 +377,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
     std::string message = "Base file: " + input + "\n";
+    std::string mismatch_snp_record_name = c_commander.out()+".mismatch";
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
@@ -592,6 +594,17 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                                   flipped))
             {
                 // Mismatched SNPs
+            	if(!mismatch_snp_record.is_open()){
+            		mismatch_snp_record.open(mismatch_snp_record_name.c_str());
+            		if(!mismatch_snp_record.is_open()){
+            			throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+            		}
+            		mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
+            	}
+            	auto && target_index = m_existed_snps_index[rs_id];
+            	mismatch_snp_record << "Base\t" << rs_id << "\t" << m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
+            	                    			<< m_existed_snps[target_index].loc() << "\t" << loc << "\t" << m_existed_snps[target_index].ref() << "\t"
+            									<< "\t" << ref_allele << m_existed_snps[target_index].alt() << "\t" << alt_allele << "\n";
                 num_mismatched++;
                 exclude = true;
             }
