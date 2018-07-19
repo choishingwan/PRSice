@@ -188,10 +188,11 @@ int main(int argc, char* argv[])
             	}
             }
             if(removed_regions.is_open()) removed_regions.close();
-            prsice.init_process_count(commander, region.size(),
-                                      target_file->num_threshold());
             const size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
+            	// this count is specific for PRSice
+                prsice.init_process_count(commander, region.size(),
+                                          target_file->num_threshold());
                 const size_t num_region_process =
                     region.size() - (region.size() > 1 ? 1 : 0);
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
