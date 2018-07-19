@@ -67,7 +67,7 @@ private:
         if ((m_prev_loc != snp_index)
             && !m_bed_file.seekg(snp_index, std::ios_base::beg))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
         // so that we don't jump if we don't need to
         m_prev_loc = snp_index + (std::streampos) unfiltered_sample_ct4;
@@ -75,7 +75,7 @@ private:
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
     };
 

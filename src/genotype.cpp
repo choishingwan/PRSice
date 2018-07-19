@@ -1399,7 +1399,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     // pre-allocate the memory without bothering the memory pool stuff
     std::vector<uint32_t> ld_missing_count(m_max_window_size);
     // kinda stupid for me to use it but let's forget about it now
-    uint32_t* ld_missing_ct_ptr = nullptr;
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(reference.founder_ct(), founder_include2.data());
     std::unordered_set<int> unique_threshold;
@@ -1500,8 +1499,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 
     // we need this for pearson ld calculation
     uintptr_t* window_data = nullptr;
-    uintptr_t* geno_mask = nullptr;
-    uintptr_t* geno_mask_ptr = nullptr;
     uintptr_t num_core_snps = 0;
     window_data = (uintptr_t*) bigstack_initial_base;
     uintptr_t* window_data_ptr = nullptr;
@@ -1556,8 +1553,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         size_t start = cur_target_snp.low_bound();
         size_t end = cur_target_snp.up_bound();
         window_data_ptr = window_data;
-        ld_missing_ct_ptr = ld_missing_count.data();
-        geno_mask_ptr = geno_mask;
         cur_window_size = 0;
         // transversing on TARGET
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++) {

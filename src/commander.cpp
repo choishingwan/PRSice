@@ -193,6 +193,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"clump-wind", required_argument, NULL, 0},
         {"clump-p", required_argument, NULL, 0},
         {"clump-r2", required_argument, NULL, 0},
+        {"cov-factor", required_argument, NULL, 0},
         {"exclude", required_argument, NULL, 0},
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
@@ -450,6 +451,10 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                    target.is_binary, error, command);
             else if (command.compare("memory") == 0)
                 set_memory(optarg, message_store, error_messages, error);
+            else if (command == "cov-factor"){
+                load_string_vector(optarg, message_store, covariate.factor_covariates,
+                                   "cov-factor", error_messages);
+            }
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -594,6 +599,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (p_thresholds.no_full) message_store["no-full"] = "";
     if (prs_calculation.no_regress) message_store["no-regress"] = "";
     if (target.include_nonfounders) message_store["nonfounders"] = "";
+    if (reference_panel.allow_inter) message_store["allow-intermediate"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -1626,159 +1632,172 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
 }
 
 
-void Commander::covariate_check(bool& error, std::string& error_message)
-{
-    if (covariate.file_name.empty() || covariate.covariates.size() == 0) return;
-    std::ifstream cov_file;
-    cov_file.open(covariate.file_name.c_str());
-    if (!cov_file.is_open()) {
-        error = true;
-        error_message.append(
-            "Error: Cannot open covariate file: " + covariate.file_name + "\n");
-        return;
-    }
-    std::string line;
-    std::getline(cov_file, line);
-    if (line.empty()) {
-        error = true;
-        error_message.append("Error: First line of covariate file is empty!\n");
-        return;
-    }
-    cov_file.close();
-    // obtain the header information
-    std::unordered_set<std::string> included;
-    for (auto cov : covariate.covariates) {
-        if (cov.empty()) continue;
-        if (included.find(cov)
-            == included.end()) // to avoid duplicated covariance headers
-        {
-            // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
-            // thingy to substitute them
-            if (cov.at(0) == '@') {
-                cov.erase(0, 1);
-                std::vector<std::string> open = misc::split(cov, "[");
-                std::vector<std::string> info;
-                std::vector<bool> list;
-                for (auto o : open) {
-                    if (o.find("]") != std::string::npos) {
-                        std::vector<std::string> close = misc::split(o, "]");
-                        // the first one will always be the list
-                        info.push_back(close[0]);
-                        list.push_back(true);
-                        for (size_t cl = 1; cl < close.size(); ++cl) {
-                            info.push_back(close[cl]);
-                            list.push_back(false);
-                        }
-                    }
-                    else
-                    {
-                        info.push_back(o);
-                        list.push_back(false);
-                    }
+std::vector<std::string> Commander::transform_covariate(std::string &cov){
+	std::vector<std::string> final_covariates;
+	std::vector<std::string> open;
+	std::vector<std::string> close;
+    std::vector<std::string> info;
+    std::vector<std::string> individual;
+    std::vector<std::string> range;
+    std::vector<int> numeric;
+    std::vector<bool> list;
+	if (cov.at(0) == '@') {
+		cov.erase(0, 1);
+		open = misc::split(cov, "[");
+        for (auto o : open) {
+            if (o.find("]") != std::string::npos) {
+                close = misc::split(o, "]");
+                // the first one will always be the list
+                info.push_back(close[0]);
+                list.push_back(true);
+                // Nested List is not supported
+                for (size_t cl = 1; cl < close.size(); ++cl) {
+                    info.push_back(close[cl]);
+                    list.push_back(false);
                 }
-                std::vector<std::string> final_covariates;
-                for (size_t c = 0; c < info.size(); ++c) {
-                    if (list[c]) {
-                        std::vector<std::string> individual =
-                            misc::split(info[c], ".");
-                        std::vector<int> numeric;
-                        for (auto&& ind : individual) {
-                            if (ind.find("-") != std::string::npos) {
-                                std::vector<std::string> range =
-                                    misc::split(ind, "-");
-                                if (range.size() != 2) {
-                                    throw std::runtime_error(
-                                        "Error: Invalid range format, range "
-                                        "must be in the form of start-end");
-                                }
-                                try
-                                {
-                                    size_t start =
-                                        misc::convert<size_t>(range[0]);
-                                    size_t end =
-                                        misc::convert<size_t>(range[1]);
-                                    if (start > end) {
-                                        int temp = end;
-                                        end = start;
-                                        start = temp;
-                                    }
-                                    for (size_t s = start; s <= end; ++s) {
-                                        numeric.push_back(s);
-                                    }
-                                }
-                                catch (const std::runtime_error& error)
-                                {
-                                    std::string error_message =
-                                        "Error: Invalid parameter: " + range[0]
-                                        + " or " + range[1]
-                                        + ", only allow integer!";
-                                    throw std::runtime_error(error_message);
-                                }
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    int temp = misc::convert<int>(ind);
-                                    numeric.push_back(temp);
-                                }
-                                catch (const std::runtime_error& error)
-                                {
-                                    std::string error_message =
-                                        "Error: Invalid parameter: " + ind
-                                        + ", only allow integer!";
-                                    throw std::runtime_error(error_message);
-                                }
-                            }
-                        }
+            }
+            else
+            {
+                info.push_back(o);
+                list.push_back(false);
+            }
+        }
 
-                        // Now we have all the numeric parameters
-                        if (final_covariates.empty()) {
-                            for (auto n : numeric) {
-                                final_covariates.push_back(std::to_string(n));
+        for (size_t c = 0; c < info.size(); ++c) {
+            if (list[c]) {
+            	individual = misc::split(info[c], ".");
+            	numeric.clear();
+                for (auto&& ind : individual) {
+                    if (ind.find("-") != std::string::npos) {
+                        range = misc::split(ind, "-");
+                        if (range.size() != 2) {
+                            throw std::runtime_error(
+                                "Error: Invalid range format, range "
+                                "must be in the form of start-end");
+                        }
+                        try
+                        {
+                            size_t start =
+                                misc::convert<size_t>(range[0]);
+                            size_t end =
+                                misc::convert<size_t>(range[1]);
+                            if (start > end) {
+                            	std::swap(start, end);
+                            }
+                            for (size_t s = start; s <= end; ++s) {
+                                numeric.push_back(s);
                             }
                         }
-                        else
+                        catch (const std::runtime_error& error)
                         {
-                            size_t cur_size = final_covariates.size();
-                            for (size_t final = 0; final < cur_size; ++final) {
-                                std::string cur = final_covariates[final];
-                                final_covariates[final].append(
-                                    std::to_string(numeric.front()));
-                                for (size_t s = 1; s < numeric.size(); ++s) {
-                                    final_covariates.push_back(
-                                        cur + std::to_string(numeric[s]));
-                                }
-                            }
+                            std::string error_message =
+                                "Error: Invalid parameter: " + range[0]
+                                + " or " + range[1]
+                                + ", only allow integer!";
+                            throw std::runtime_error(error_message);
                         }
                     }
                     else
                     {
-                        for (size_t final = 0; final < final_covariates.size();
-                             ++final)
+                        try
                         {
-                            final_covariates[final].append(info[c]);
+                            int temp = misc::convert<int>(ind);
+                            numeric.push_back(temp);
                         }
-                        if (final_covariates.empty())
-                            final_covariates.push_back(info[c]);
+                        catch (const std::runtime_error& error)
+                        {
+                            std::string error_message =
+                                "Error: Invalid parameter: " + ind
+                                + ", only allow integer!";
+                            throw std::runtime_error(error_message);
+                        }
                     }
                 }
-                for (auto res : final_covariates) {
-                    if (included.find(res) == included.end()) {
-                        included.insert(res);
+
+                // Now we have all the numeric parameters
+                if (final_covariates.empty()) {
+                    for (auto n : numeric) {
+                        final_covariates.push_back(std::to_string(n));
+                    }
+                }
+                else
+                {
+                    size_t cur_size = final_covariates.size();
+                    for (size_t final = 0; final < cur_size; ++final) {
+                        std::string cur = final_covariates[final];
+                        final_covariates[final].append(
+                            std::to_string(numeric.front()));
+                        for (size_t s = 1; s < numeric.size(); ++s) {
+                            final_covariates.push_back(
+                                cur + std::to_string(numeric[s]));
+                        }
                     }
                 }
             }
             else
-                included.insert(cov);
+            {
+                for (size_t final = 0; final < final_covariates.size();
+                     ++final)
+                {
+                    final_covariates[final].append(info[c]);
+                }
+                if (final_covariates.empty())
+                    final_covariates.push_back(info[c]);
+            }
+        }
+	}
+	else{
+		final_covariates.push_back(cov);
+	}
+	return final_covariates;
+}
+
+void Commander::covariate_check(bool& error, std::string& error_message)
+{
+    if (covariate.file_name.empty()) return;
+    // first, transform all the covariates
+    std::unordered_set<std::string> included;
+    std::vector<std::string> transformed_cov;
+    for (auto cov : covariate.covariates) {
+        if (cov.empty()) continue;
+        // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
+        // thingy to substitute them
+        transformed_cov = transform_covariate(cov);
+        for(auto && trans : transformed_cov){
+        	included.insert(trans);
         }
     }
-
-    std::vector<std::string> token = misc::split(line);
+    std::ifstream cov_file;
+    cov_file.open(covariate.file_name.c_str());
+    if (!cov_file.is_open()) {
+    	error = true;
+    	error_message.append(
+    			"Error: Cannot open covariate file: " + covariate.file_name + "\n");
+    	return;
+    }
+    std::string line;
+    std::getline(cov_file, line);
+    if (line.empty()) {
+    	error = true;
+    	error_message.append("Error: First line of covariate file is empty!\n");
+    	return;
+    }
+    cov_file.close();
+    std::vector<std::string> cov_header = misc::split(line);
     std::string missing = "";
     std::unordered_set<std::string> ref;
-    for (auto&& head : token) {
+    for (auto&& head : cov_header) {
         ref.insert(head);
+    }
+    if(covariate.covariates.size()==0){
+    	// add all headers to the covariate list
+    	size_t start_index = 2;
+    	if(misc.ignore_fid){
+    		start_index = 1;
+    	}
+    	for(size_t i = start_index; i < cov_header.size(); ++i){
+    		included.insert(cov_header[i]);
+    	}
     }
     size_t valid_cov = 0;
     std::vector<std::string> final_cov;
@@ -1800,7 +1819,24 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         error = true;
         error_message.append("Error: No valid Covariate!\n");
     }
+
+    std::vector<std::string> factor_cov;
+    for (auto cov : covariate.factor_covariates) {
+    	if (cov.empty()) continue;
+		transformed_cov = transform_covariate(cov);
+        for(auto && trans : transformed_cov){
+        	if(included.find(trans)!= included.end()){
+        		factor_cov.push_back(trans);
+        	}
+        	else{
+        		error = true;
+        		error_message.append("Error: All factor covariates must be found in covariate list. "+trans+" not found in covariate list");
+        	}
+        }
+    }
+
     covariate.covariates = final_cov;
+    covariate.factor_covariates = factor_cov;
 }
 
 

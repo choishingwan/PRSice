@@ -268,7 +268,7 @@ private:
     {
         std::string file_name;
         std::vector<std::string> covariates;
-        // Numeric factors should be defined with ""
+        std::vector<std::string> factor_covariates;
     } covariate;
 
     struct Misc
@@ -549,6 +549,7 @@ private:
         }
         message["model"] = input;
     }
+    std::vector<std::string> transform_covariate(std::string &cov);
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
