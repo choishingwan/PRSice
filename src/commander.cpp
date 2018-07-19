@@ -451,9 +451,11 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                    target.is_binary, error, command);
             else if (command.compare("memory") == 0)
                 set_memory(optarg, message_store, error_messages, error);
-            else if (command == "cov-factor"){
-                load_string_vector(optarg, message_store, covariate.factor_covariates,
-                                   "cov-factor", error_messages);
+            else if (command == "cov-factor")
+            {
+                load_string_vector(optarg, message_store,
+                                   covariate.factor_covariates, "cov-factor",
+                                   error_messages);
             }
             else
             {
@@ -1632,18 +1634,19 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
 }
 
 
-std::vector<std::string> Commander::transform_covariate(std::string &cov){
-	std::vector<std::string> final_covariates;
-	std::vector<std::string> open;
-	std::vector<std::string> close;
+std::vector<std::string> Commander::transform_covariate(std::string& cov)
+{
+    std::vector<std::string> final_covariates;
+    std::vector<std::string> open;
+    std::vector<std::string> close;
     std::vector<std::string> info;
     std::vector<std::string> individual;
     std::vector<std::string> range;
     std::vector<int> numeric;
     std::vector<bool> list;
-	if (cov.at(0) == '@') {
-		cov.erase(0, 1);
-		open = misc::split(cov, "[");
+    if (cov.at(0) == '@') {
+        cov.erase(0, 1);
+        open = misc::split(cov, "[");
         for (auto o : open) {
             if (o.find("]") != std::string::npos) {
                 close = misc::split(o, "]");
@@ -1665,8 +1668,8 @@ std::vector<std::string> Commander::transform_covariate(std::string &cov){
 
         for (size_t c = 0; c < info.size(); ++c) {
             if (list[c]) {
-            	individual = misc::split(info[c], ".");
-            	numeric.clear();
+                individual = misc::split(info[c], ".");
+                numeric.clear();
                 for (auto&& ind : individual) {
                     if (ind.find("-") != std::string::npos) {
                         range = misc::split(ind, "-");
@@ -1677,12 +1680,10 @@ std::vector<std::string> Commander::transform_covariate(std::string &cov){
                         }
                         try
                         {
-                            size_t start =
-                                misc::convert<size_t>(range[0]);
-                            size_t end =
-                                misc::convert<size_t>(range[1]);
+                            size_t start = misc::convert<size_t>(range[0]);
+                            size_t end = misc::convert<size_t>(range[1]);
                             if (start > end) {
-                            	std::swap(start, end);
+                                std::swap(start, end);
                             }
                             for (size_t s = start; s <= end; ++s) {
                                 numeric.push_back(s);
@@ -1691,9 +1692,8 @@ std::vector<std::string> Commander::transform_covariate(std::string &cov){
                         catch (const std::runtime_error& error)
                         {
                             std::string error_message =
-                                "Error: Invalid parameter: " + range[0]
-                                + " or " + range[1]
-                                + ", only allow integer!";
+                                "Error: Invalid parameter: " + range[0] + " or "
+                                + range[1] + ", only allow integer!";
                             throw std::runtime_error(error_message);
                         }
                     }
@@ -1736,8 +1736,7 @@ std::vector<std::string> Commander::transform_covariate(std::string &cov){
             }
             else
             {
-                for (size_t final = 0; final < final_covariates.size();
-                     ++final)
+                for (size_t final = 0; final < final_covariates.size(); ++final)
                 {
                     final_covariates[final].append(info[c]);
                 }
@@ -1745,11 +1744,12 @@ std::vector<std::string> Commander::transform_covariate(std::string &cov){
                     final_covariates.push_back(info[c]);
             }
         }
-	}
-	else{
-		final_covariates.push_back(cov);
-	}
-	return final_covariates;
+    }
+    else
+    {
+        final_covariates.push_back(cov);
+    }
+    return final_covariates;
 }
 
 void Commander::covariate_check(bool& error, std::string& error_message)
@@ -1763,47 +1763,43 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
         // thingy to substitute them
         transformed_cov = transform_covariate(cov);
-        for(auto && trans : transformed_cov){
-        	included.insert(trans);
+        for (auto&& trans : transformed_cov) {
+            included.insert(trans);
         }
     }
     std::ifstream cov_file;
     cov_file.open(covariate.file_name.c_str());
     if (!cov_file.is_open()) {
-    	error = true;
-    	error_message.append(
-    			"Error: Cannot open covariate file: " + covariate.file_name + "\n");
-    	return;
+        error = true;
+        error_message.append(
+            "Error: Cannot open covariate file: " + covariate.file_name + "\n");
+        return;
     }
     std::string line;
     std::getline(cov_file, line);
     if (line.empty()) {
-    	error = true;
-    	error_message.append("Error: First line of covariate file is empty!\n");
-    	return;
+        error = true;
+        error_message.append("Error: First line of covariate file is empty!\n");
+        return;
     }
     cov_file.close();
     std::vector<std::string> cov_header = misc::split(line);
     std::string missing = "";
-    std::unordered_set<std::string> ref;
-    for (auto&& head : cov_header) {
-        ref.insert(head);
+    std::unordered_map<std::string, uint32_t> ref_index;
+    for (size_t i = 0; i < cov_header.size(); ++i) {
+        ref_index[cov_header[i]] = i;
     }
-    if(covariate.covariates.size()==0){
-    	// add all headers to the covariate list
-    	size_t start_index = 2;
-    	if(misc.ignore_fid){
-    		start_index = 1;
-    	}
-    	for(size_t i = start_index; i < cov_header.size(); ++i){
-    		included.insert(cov_header[i]);
-    	}
+    if (covariate.covariates.size() == 0) {
+        // add all headers to the covariate list
+        for (size_t i = (1 + !misc.ignore_fid); i < cov_header.size(); ++i) {
+            included.insert(cov_header[i]);
+        }
     }
     size_t valid_cov = 0;
-    std::vector<std::string> final_cov;
     for (auto&& cov : included) {
-        if (ref.find(cov) != ref.end()) {
-            final_cov.push_back(cov);
+        if (ref_index.find(cov) != ref_index.end()) {
+            covariate.covariate_index.push_back(ref_index[cov]);
+            covariate.covariates.push_back(cov);
             valid_cov++;
         }
         else if (missing.empty())
@@ -1819,24 +1815,28 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         error = true;
         error_message.append("Error: No valid Covariate!\n");
     }
-
-    std::vector<std::string> factor_cov;
+    covariate.covariates.clear();
+    std::sort(covariate.covariate_index.begin(),
+              covariate.covariate_index.end());
+    for (auto&& c : covariate.covariate_index) {
+        covariate.covariates.push_back(cov_header[c]);
+    }
     for (auto cov : covariate.factor_covariates) {
-    	if (cov.empty()) continue;
-		transformed_cov = transform_covariate(cov);
-        for(auto && trans : transformed_cov){
-        	if(included.find(trans)!= included.end()){
-        		factor_cov.push_back(trans);
-        	}
-        	else{
-        		error = true;
-        		error_message.append("Error: All factor covariates must be found in covariate list. "+trans+" not found in covariate list");
-        	}
+        if (cov.empty()) continue;
+        transformed_cov = transform_covariate(cov);
+        for (auto&& trans : transformed_cov) {
+            if (included.find(trans) != included.end()) {
+                covariate.factor_index.push_back(ref_index[trans]);
+            }
+            else
+            {
+                error = true;
+                error_message.append("Error: All factor covariates must be "
+                                     "found in covariate list. "
+                                     + trans + " not found in covariate list");
+            }
         }
     }
-
-    covariate.covariates = final_cov;
-    covariate.factor_covariates = factor_cov;
 }
 
 

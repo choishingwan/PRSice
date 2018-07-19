@@ -371,7 +371,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     std::string chromosome;
     std::string prev_chr = "";
     std::string file_name;
-    std::string mismatch_snp_record_name = out_prefix+".mismatch";
+    std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::string m_intermediate_file = out_prefix + ".inter";
     double cur_maf;
     std::streampos byte_pos;
@@ -405,7 +405,6 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
 
     m_hard_threshold = hard_threshold;
     m_hard_coded = hard_coded;
-
 
 
     for (auto prefix : m_genotype_files) {
@@ -628,7 +627,7 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                     m_existed_snps_index[RSID] = snp_res.size();
                     // TODO: Update SNP constructor
                     // for now, we focus on PLINK optimization and ignore bgen
-                    if(m_target_plink){
+                    if (m_target_plink) {
                         byte_pos = inter_out.tellp();
                         file_name = m_intermediate_file;
                     }
@@ -644,33 +643,53 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
                             chr_code, SNP_position, alleles.front(),
                             alleles.back(), dummy))
                     {
-                    	if(!mismatch_snp_record.is_open()){
-                    		// open the file accordingly
-                    		if(m_mismatch_file_output){
-                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str(), std::ofstream::app);
-                    			if(!mismatch_snp_record.is_open()){
-                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
-                    			}
-                    		}else{
-                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str());
-                    			if(!mismatch_snp_record.is_open()){
-                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
-                    			}
-                    			mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
-                    		}
-                    	}
-                    	mismatch_snp_record << "Reference\t" << RSID << "\t" << target->m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
-                    			<< target->m_existed_snps[target_index].loc() << "\t" << SNP_position << "\t" << target->m_existed_snps[target_index].ref() << "\t"
-								<< "\t" << alleles.front() << target->m_existed_snps[target_index].alt() << "\t" << alleles.back() << "\n";
+                        if (!mismatch_snp_record.is_open()) {
+                            // open the file accordingly
+                            if (m_mismatch_file_output) {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str(),
+                                    std::ofstream::app);
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to write: "
+                                        + mismatch_snp_record_name));
+                                }
+                            }
+                            else
+                            {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str());
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to write: "
+                                        + mismatch_snp_record_name));
+                                }
+                                mismatch_snp_record
+                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                       "File\tBP_Target\tBP_File\tA1_"
+                                       "Target\tA1_File\tA2_Target\tA2_File\n";
+                            }
+                        }
+                        mismatch_snp_record
+                            << "Reference\t" << RSID << "\t"
+                            << target->m_existed_snps[target_index].chr()
+                            << "\t" << chr_code << "\t"
+                            << target->m_existed_snps[target_index].loc()
+                            << "\t" << SNP_position << "\t"
+                            << target->m_existed_snps[target_index].ref()
+                            << "\t"
+                            << "\t" << alleles.front()
+                            << target->m_existed_snps[target_index].alt()
+                            << "\t" << alleles.back() << "\n";
 
                         m_num_ref_target_mismatch++;
                     }
                     else
                     {
-                    	if(m_ref_plink){
+                        if (m_ref_plink) {
                             byte_pos = inter_out.tellp();
                             file_name = m_intermediate_file;
-                    	}
+                        }
                         target->m_existed_snps[target_index].add_reference(
                             file_name, byte_pos);
                         ref_retain[target_index] = true;
@@ -762,8 +781,8 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
-        setter.set_stat(snp.stat(), homcom_weight, het_weight,
-                        homrar_weight, snp.is_flipped(),  not_first);
+        setter.set_stat(snp.stat(), homcom_weight, het_weight, homrar_weight,
+                        snp.is_flipped(), not_first);
         not_first = true;
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
@@ -799,8 +818,8 @@ void BinaryGen::dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
                                &m_sample_include, snp.stat() * 2,
                                snp.is_flipped());*/
 
-        setter.set_stat(snp.stat(), homcom_weight, het_weight,
-                        homrar_weight, snp.is_flipped(), not_first);
+        setter.set_stat(snp.stat(), homcom_weight, het_weight, homrar_weight,
+                        snp.is_flipped(), not_first);
         not_first = true;
         /*
         PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
@@ -853,10 +872,10 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.in(region_index)) continue;
 
-        if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
-                                   m_unfiltered_sample_ct, m_sample_ct,
-                                   m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
+        if (load_and_collapse_incl(
+                cur_snp.byte_pos(), cur_snp.file_name(), m_unfiltered_sample_ct,
+                m_sample_ct, m_sample_include.data(), final_mask, false,
+                m_tmp_genotype.data(), genotype.data(), m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
@@ -973,10 +992,10 @@ void BinaryGen::hard_code_score(std::vector<size_t>& index, int32_t homcom_wt,
 
     for (auto&& i_snp : index) { // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
-        if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
-                                   m_unfiltered_sample_ct, m_sample_ct,
-                                   m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
+        if (load_and_collapse_incl(
+                cur_snp.byte_pos(), cur_snp.file_name(), m_unfiltered_sample_ct,
+                m_sample_ct, m_sample_include.data(), final_mask, false,
+                m_tmp_genotype.data(), genotype.data(), m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
@@ -1116,7 +1135,7 @@ void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
     // sample here
     // reset_sample_prs();
     if (m_hard_coded) {
-    	// for hard coded, we need to check if intermediate file is used instead
+        // for hard coded, we need to check if intermediate file is used instead
         switch (m_model)
         {
         case MODEL::HETEROZYGOUS:

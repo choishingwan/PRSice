@@ -33,6 +33,7 @@
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <zlib.h>
@@ -67,10 +68,18 @@ public:
 
     // covariate
     std::string get_cov_file() const { return covariate.file_name; };
-    std::vector<std::string> get_cov_header() const
+    std::vector<uint32_t> get_cov_index() const
+    {
+        return covariate.covariate_index;
+    };
+    std::vector<std::string> get_cov_name() const
     {
         return covariate.covariates;
     };
+    std::vector<uint32_t> get_factor_cov_index() const
+    {
+        return covariate.factor_index;
+    }
     // reference panel
     std::string ref_name() const
     {
@@ -269,6 +278,8 @@ private:
         std::string file_name;
         std::vector<std::string> covariates;
         std::vector<std::string> factor_covariates;
+        std::vector<uint32_t> covariate_index;
+        std::vector<uint32_t> factor_index;
     } covariate;
 
     struct Misc
@@ -549,7 +560,7 @@ private:
         }
         message["model"] = input;
     }
-    std::vector<std::string> transform_covariate(std::string &cov);
+    std::vector<std::string> transform_covariate(std::string& cov);
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,

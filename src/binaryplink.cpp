@@ -199,7 +199,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
     std::string prev_chr = "";
-    std::string mismatch_snp_record_name = out_prefix+".mismatch";
+    std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     double cur_maf;
     std::streampos byte_pos;
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
@@ -208,12 +208,12 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     int chr_index = 0;
     int chr_code = 0;
     int num_snp_read = 0, prev_snp_processed = 0;
-    uint32_t homrar_ct =0;
-    uint32_t missing_ct=0;
-    uint32_t het_ct=0;
-    uint32_t homcom_ct=0;
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
     uint32_t num_ref_target_match = 0;
-    intptr_t nanal=0;
+    intptr_t nanal = 0;
     bool chr_error = false, chr_sex_error = false, has_count = false, dummy;
     m_sample_mask.resize(pheno_nm_ctv2);
     fill_quatervec_55(m_sample_ct, m_sample_mask.data());
@@ -457,26 +457,46 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                             chr_code, loc, bim_info[+BIM::A1],
                             bim_info[+BIM::A2], dummy))
                     {
-                    	// We read base before reading reference. So there can be
-                    	// a mismatch file already
-                    	if(!mismatch_snp_record.is_open()){
-                    		// open the file accordingly
-                    		if(m_mismatch_file_output){
-                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str(), std::ofstream::app);
-                    			if(!mismatch_snp_record.is_open()){
-                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
-                    			}
-                    		}else{
-                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str());
-                    			if(!mismatch_snp_record.is_open()){
-                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
-                    			}
-                    			mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
-                    		}
-                    	}
-                    	mismatch_snp_record << "Reference\t" << bim_info[+BIM::RS] << "\t" << target->m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
-                    			<< target->m_existed_snps[target_index].loc() << "\t" << loc << "\t" << target->m_existed_snps[target_index].ref() << "\t"
-								<< "\t" << bim_info[+BIM::A1] << target->m_existed_snps[target_index].alt() << "\t" << bim_info[+BIM::A2] << "\n";
+                        // We read base before reading reference. So there can
+                        // be a mismatch file already
+                        if (!mismatch_snp_record.is_open()) {
+                            // open the file accordingly
+                            if (m_mismatch_file_output) {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str(),
+                                    std::ofstream::app);
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to write: "
+                                        + mismatch_snp_record_name));
+                                }
+                            }
+                            else
+                            {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str());
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to write: "
+                                        + mismatch_snp_record_name));
+                                }
+                                mismatch_snp_record
+                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                       "File\tBP_Target\tBP_File\tA1_"
+                                       "Target\tA1_File\tA2_Target\tA2_File\n";
+                            }
+                        }
+                        mismatch_snp_record
+                            << "Reference\t" << bim_info[+BIM::RS] << "\t"
+                            << target->m_existed_snps[target_index].chr()
+                            << "\t" << chr_code << "\t"
+                            << target->m_existed_snps[target_index].loc()
+                            << "\t" << loc << "\t"
+                            << target->m_existed_snps[target_index].ref()
+                            << "\t"
+                            << "\t" << bim_info[+BIM::A1]
+                            << target->m_existed_snps[target_index].alt()
+                            << "\t" << bim_info[+BIM::A2] << "\n";
                         m_num_ref_target_mismatch++;
                     }
                     else

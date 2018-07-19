@@ -377,7 +377,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     size_t max_index = index[+BASE_INDEX::MAX];
     std::string line;
     std::string message = "Base file: " + input + "\n";
-    std::string mismatch_snp_record_name = c_commander.out()+".mismatch";
+    std::string mismatch_snp_record_name = c_commander.out() + ".mismatch";
     // category related stuff
     double threshold = (c_commander.fastscore()) ? c_commander.bar_upper()
                                                  : c_commander.upper();
@@ -414,7 +414,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
     bool exclude = false;
     bool flipped = false;
     bool has_chr = false;
-    bool has_bp   = false;
+    bool has_bp = false;
     int category = -1;
     double pthres = 0.0;
     int32_t chr_code;
@@ -599,20 +599,32 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                                   flipped))
             {
                 // Mismatched SNPs
-            	if(!mismatch_snp_record.is_open()){
-            		mismatch_snp_record.open(mismatch_snp_record_name.c_str());
-            		if(!mismatch_snp_record.is_open()){
-            			throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
-            		}
-            		mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
-            	}
-            	auto && target_index = m_existed_snps_index[rs_id];
-            	std::string chr_out = (has_chr)? std::to_string(chr_code) : "-";
-            	std::string loc_out = (has_bp)? std::to_string(loc) : "-";
-            	std::string alt_allele_out = (alt_allele.empty())? "-" : alt_allele;
-            	mismatch_snp_record << "Base\t" << rs_id << "\t" << m_existed_snps[target_index].chr() << "\t" << chr_out << "\t"
-            	                    			<< m_existed_snps[target_index].loc() << "\t" << loc_out << "\t" << m_existed_snps[target_index].ref() << "\t"
-            									<< "\t" << ref_allele << m_existed_snps[target_index].alt() << "\t" << alt_allele_out << "\n";
+                if (!mismatch_snp_record.is_open()) {
+                    mismatch_snp_record.open(mismatch_snp_record_name.c_str());
+                    if (!mismatch_snp_record.is_open()) {
+                        throw std::runtime_error(
+                            std::string("Cannot open mismatch file to write: "
+                                        + mismatch_snp_record_name));
+                    }
+                    mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                           "File\tBP_Target\tBP_File\tA1_"
+                                           "Target\tA1_File\tA2_Target\tA2_"
+                                           "File\n";
+                }
+                auto&& target_index = m_existed_snps_index[rs_id];
+                std::string chr_out =
+                    (has_chr) ? std::to_string(chr_code) : "-";
+                std::string loc_out = (has_bp) ? std::to_string(loc) : "-";
+                std::string alt_allele_out =
+                    (alt_allele.empty()) ? "-" : alt_allele;
+                mismatch_snp_record
+                    << "Base\t" << rs_id << "\t"
+                    << m_existed_snps[target_index].chr() << "\t" << chr_out
+                    << "\t" << m_existed_snps[target_index].loc() << "\t"
+                    << loc_out << "\t" << m_existed_snps[target_index].ref()
+                    << "\t"
+                    << "\t" << ref_allele << m_existed_snps[target_index].alt()
+                    << "\t" << alt_allele_out << "\n";
                 num_mismatched++;
                 exclude = true;
             }
