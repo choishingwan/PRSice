@@ -85,7 +85,7 @@ private:
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
                 if (!m_bgen_file.is_open()) {
                     std::string error_message =
-                        "ERROR: Cannot open bgen file: " + file_name;
+                        "Error: Cannot open bgen file: " + file_name;
                     throw std::runtime_error(error_message);
                 }
                 m_cur_file = file_name;
@@ -99,7 +99,7 @@ private:
                                         m_founder_info.data(), final_mask,
                                         false, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bgen file!");
+            throw std::runtime_error("Error: Cannot read the bgen file!");
         }
     };
 
@@ -124,7 +124,7 @@ private:
         		m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
         		if (!m_bgen_file.is_open()) {
         			std::string error_message =
-        					"ERROR: Cannot open bgen file: " + file_name;
+        					"Error: Cannot open bgen file: " + file_name;
         			throw std::runtime_error(error_message);
         		}
         		m_cur_file = file_name;
@@ -149,7 +149,7 @@ private:
         		 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
         		 if (!m_bgen_file.is_open()) {
         			 std::string error_message =
-        					 "ERROR: Cannot open bgen file: " + file_name;
+        					 "Error: Cannot open bgen file: " + file_name;
         			 throw std::runtime_error(error_message);
         		 }
         		 m_cur_file = file_name;
@@ -210,7 +210,7 @@ private:
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
             if (m_flipped) {
-                std::swap(homcom_weight, homrar_weight);
+                std::swap(m_homcom_weight, m_homrar_weight);
             }
         }
         void initialise(std::size_t number_of_samples,
@@ -231,9 +231,10 @@ private:
         {
             m_entry_i = 0;
             m_is_missing = false;
+            m_start_geno = false;
             m_sum = 0.0;
             m_bgen_sample_i = i;
-            return !IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
+            return IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
         }
 
         void set_number_of_entries(std::size_t ploidy,
@@ -255,23 +256,24 @@ private:
             switch (geno)
             {
             default:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp = sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_homcom_weight * value * m_stat * 0.5;
                 break;
             case 1:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp = sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_het_weight * value * m_stat * 0.5;
                 break;
             case 2:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp = sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_homrar_weight * value * m_stat * 0.5;
             }
             m_total_prob += value * geno;
             ++m_entry_i;
             m_sum += value;
+            m_start_geno = true;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
@@ -344,6 +346,7 @@ private:
         bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing  = false;
+        bool m_start_geno = false;
     };
 
 

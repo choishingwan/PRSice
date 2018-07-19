@@ -762,8 +762,8 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
-        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
-                        homrar_weight, not_first);
+        setter.set_stat(snp.stat(), homcom_weight, het_weight,
+                        homrar_weight, snp.is_flipped(),  not_first);
         not_first = true;
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
@@ -799,8 +799,8 @@ void BinaryGen::dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
                                &m_sample_include, snp.stat() * 2,
                                snp.is_flipped());*/
 
-        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
-                        homrar_weight, not_first);
+        setter.set_stat(snp.stat(), homcom_weight, het_weight,
+                        homrar_weight, snp.is_flipped(), not_first);
         not_first = true;
         /*
         PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
