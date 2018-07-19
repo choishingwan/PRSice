@@ -4,7 +4,9 @@ Below are some other parameters available for PRSice
 
 # Command
 - `--all-score`
+
     Output PRS for ALL threshold.
+
     !!! warning
         This will generate a huge file
 
@@ -24,11 +26,16 @@ Below are some other parameters available for PRSice
     first column of all file will be assume to
     be IID instead of FID
 
+- `--keep-ambig`
+
+    Keep ambiguous SNPs. Only use this option
+    whe base and target has the same A1 and A2 alleles
+
 - `--logit-perm`
 
-    When performing permutation, still use logistic
-    regression instead of linear regression. This
-    will substantially slow down PRSice.
+    When performing permutation on binary phenotypes, 
+    use logistic regression instead of linear regression. 
+    This will substantially slow down PRSice.
 
     !!! note
 
@@ -41,11 +48,13 @@ Below are some other parameters available for PRSice
         the `--logit-perm` option. In most case, the p-value of the
         linear model should be similar to the logistic model
 
-- `--keep-ambig`
+- `--no-default`
 
-    Keep ambiguous SNPs. Only use this option
-    if you are certain that the base and target
-    has the same A1 and A2 alleles
+    Disable the default options of PRSice. 
+
+- `--no-full`
+
+    Do not include the p-value threshold of 1 unless specified in `--bar-levels` or `--upper`
 
 - `--out` | `-o`
 
@@ -63,23 +72,42 @@ Below are some other parameters available for PRSice
 
     Number of permutation to perform. This will
     generate the empirical p-value. Recommend to
-    use value larger than 10,000
+    use value larger than or equal to 10,000
 
     !!! note
 
-        Essentially, when permutation is required, PRSice will perform the following
-        operation (with slight difference in implementation for optimum performance)
+        When permutation is required, PRSice will perform the following
+        operation
 
         1. Perform normal PRSice across all thresholds and obtain p-value of the
         most significant threshold
         2. Repeat PRSice analysis *N* times with permuted phenotype. Count the
         number of time where the p-value of the most significant threshold for
-        the permuted 
+        the permuted
 
-"    --seed          | -s    Seed used for permutation. If not provided,\n"
-"                            system time will be used as seed. When same\n"
-"                            seed and same input is provided, same result\n"
-"                            can be generated\n"
-"    --print-snp             Print all SNPs used to construct the best PRS\n"
-"    --thread        | -n    Number of thread use\n"
-"    --help          | -h    Display this help message\n";
+- `--print-snp`
+
+    Print all SNPs used to construct the best PRS
+
+- `--seed` | `-s`
+
+    Seed used for permutation. If not provided,
+    system time will be used as seed. This will
+    allow the same results to be generated when
+    the same seed and input is used
+
+- `--thread` | `-n`
+
+    Number of thread use
+
+    !!! tip
+
+        Maximum number of thread can be specified by using `--thread max`
+
+    !!! note
+
+        PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.
+
+- `--help` | `-h`
+
+    Display the help messages

@@ -46,24 +46,25 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
+        Region exclusion(commander.exclusion_range(), reporter);
         GenomeFactory factory;
         Genotype *target_file, *reference_file;
         try
         {
             target_file = factory.createGenotype(
                 commander.target_name(), commander.target_type(),
-                commander.thread(), commander.ignore_fid(),
-                commander.nonfounders(), commander.keep_ambig(), reporter,
-                commander);
-            target_file->is_reference(false);
+                commander.target_list(), commander.thread(),
+                commander.ignore_fid(), commander.nonfounders(),
+                commander.keep_ambig(), reporter, commander);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
-            target_file->load_snps(commander.out(), commander.extract_file(),
-                                   commander.exclude_file(), commander.geno(),
-                                   commander.maf(), commander.info(),
-                                   commander.hard_threshold(),
-                                   commander.hard_coded(), verbose, reporter);
+            if (commander.use_ref()) target_file->expect_reference();
+            target_file->load_snps(
+                commander.out(), commander.extract_file(),
+                commander.exclude_file(), commander.geno(), commander.maf(),
+                commander.info(), commander.hard_threshold(),
+                commander.hard_coded(), exclusion, verbose, reporter);
         }
         catch (const std::invalid_argument& ia)
         {
@@ -76,12 +77,14 @@ int main(int argc, char* argv[])
             return -1;
         }
         // TODO: Revamp Region to make it suitable for prslice too
-        Region region =
-            Region(commander.feature(), target_file->get_chr_order());
+        Region region(commander.feature(), commander.window_5(),
+                      commander.window_3());
         try
         {
             region.run(commander.gtf(), commander.msigdb(), commander.bed(),
-                       commander.out());
+                       commander.single_snp_set(), commander.multi_snp_sets(),
+                       *target_file, commander.out(), commander.background(),
+                       reporter);
         }
         catch (const std::runtime_error& error)
         {
@@ -101,54 +104,63 @@ int main(int argc, char* argv[])
         {
             target_file->set_info(commander);
             // load reference panel first so that we have updated the target
-            if (!commander.ref_name().empty()) {
-                reporter.report("Loading reference "
-                                "panel\n==============================\n");
-                reference_file = factory.createGenotype(
-                    commander.ref_name(), commander.ref_type(),
-                    commander.thread(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), reporter,
-                    commander);
-                reference_file->is_reference(true);
-                reference_file->load_samples(commander.ld_keep_file(),
-                                             commander.ld_remove_file(),
-                                             verbose, reporter);
-                // only load SNPs that can be found in the target file index
-                reference_file->load_snps(
-                    commander.out(), commander.extract_file(),
-                    commander.exclude_file(), commander.geno(), commander.maf(),
-                    commander.info(), commander.hard_threshold(),
-                    commander.hard_coded(), verbose, reporter, target_file);
-            }
 
             std::string message = "Start processing " + base_name + "\n";
             message.append("==============================\n");
             reporter.report(message);
             target_file->read_base(commander, region, reporter);
 
-            // get the sort by p inex vector for target
-            // so that we can still find out the relative coordinates of each
-            // SNPs
-            if (!target_file->sort_by_p()) {
-                std::string error_message =
-                    "No SNPs left for PRSice processing";
-                reporter.report(error_message);
-                return -1;
-            }
+
             // we no longer need the region boundaries
             // as we don't allow multiple base file input
             region.clean();
-            std::string region_out_name = commander.out() + ".region";
+            // TODO: This is no longer useful and can be deleted in next
+            // release, once Yunfeng has completed her analysis
+            // std::string region_out_name = commander.out() + ".region";
             // output the number of SNPs observed in each sets
-            region.print_file(region_out_name);
+            // region.print_file(region_out_name);
+            // initialize PRSice class
+            PRSice prsice(base_name, commander, region.size() > 1,
+                          target_file->num_sample(), reporter);
+            // check the phenotype input columns
+            prsice.pheno_check(commander, reporter);
+
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
-                target_file->efficient_clumping((commander.ref_name().empty())
-                                                    ? *target_file
-                                                    : *reference_file,
-                                                reporter, commander.pearson());
+                if (commander.use_ref()) {
+                    reporter.report("Loading reference "
+                                    "panel\n==============================\n");
+                    reference_file = factory.createGenotype(
+                        commander.ref_name(), commander.ref_type(),
+                        commander.ref_list(), commander.thread(),
+                        commander.ignore_fid(), commander.nonfounders(),
+                        commander.keep_ambig(), reporter, commander, true);
+
+                    reference_file->load_samples(commander.ld_keep_file(),
+                                                 commander.ld_remove_file(),
+                                                 verbose, reporter);
+                    // only load SNPs that can be found in the target file index
+                    reference_file->load_snps(
+                        commander.out(), commander.extract_file(),
+                        commander.exclude_file(), commander.geno(),
+                        commander.maf(), commander.info(),
+                        commander.hard_threshold(), commander.hard_coded(),
+                        exclusion, verbose, reporter, target_file);
+                }
+                // get the sort by p index vector for target
+                // so that we can still find out the relative coordinates of
+                // each SNPs This is only required for clumping
+                if (!target_file->sort_by_p()) {
+                    std::string error_message =
+                        "No SNPs left for PRSice processing";
+                    reporter.report(error_message);
+                    return -1;
+                }
+                target_file->efficient_clumping(
+                    commander.use_ref() ? *reference_file : *target_file,
+                    reporter, commander.pearson());
                 // immediately free the memory if needed
-                if (!commander.ref_name().empty()) delete reference_file;
+                if (commander.use_ref()) delete reference_file;
             }
             if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =
@@ -156,50 +168,61 @@ int main(int argc, char* argv[])
                 reporter.report(error_message);
                 return -1;
             }
-            // initialize PRSice class
-            PRSice prsice = PRSice(base_name, commander, region.size() > 1,
-                                   target_file->num_sample(), reporter);
-            // check the phenotype input columns
-            prsice.pheno_check(commander, reporter);
-            size_t num_pheno = prsice.num_phenotype();
+            target_file->count_snp_in_region(region, commander.out(),
+                                             commander.print_snp());
+
+            // check which region are removed
+            std::ofstream removed_regions;
+            size_t region_size = region.size();
+            for(size_t i = 0; i < region_size; ++i){
+            	if(region.num_post_clump_snp(i)==0){
+            		// this is not included in the analysis
+            		if(!removed_regions.is_open()){
+            			removed_regions.open(std::string(commander.out()+".excluded_regions").c_str());
+            			if(!removed_regions.is_open()){
+            				fprintf(stderr, "Error: Cannot open file to write: %s\n", std::string(commander.out()+".excluded_regions").c_str() );
+            				return -1;
+            			}
+            		}
+            		removed_regions << region.get_name(i) << std::endl;
+            	}
+            }
+            if(removed_regions.is_open()) removed_regions.close();
+            const size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
+            	// this count is specific for PRSice
+                prsice.init_process_count(commander, region.size(),
+                                          target_file->num_threshold());
+                const size_t num_region_process =
+                    region.size() - (region.size() > 1 ? 1 : 0);
                 for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
+                    fprintf(stderr, "\nProcessing the %zu th phenotype\n",
+                            i_pheno + 1);
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
+                    prsice.prep_output(commander, *target_file, region.names(),
+                                       i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
-                    if (region.size() > 1) {
-                        fprintf(stderr, "\rProcessing %03.2f%% of sets", 0.0);
-                    }
-                    for (size_t i_region = 0; i_region < region.size();
+                    for (size_t i_region = 0; i_region < num_region_process;
                          ++i_region)
                     {
-                        prsice.run_prsice(commander, region.get_name(i_region),
-                                          i_pheno, i_region, *target_file);
-                        if (region.size() > 1) {
-                            fprintf(stderr, "\rProcessing %03.2f%% of sets",
-                                    (double) i_region / (double) region.size()
-                                        * 100.0);
-                        }
+                    	if(region.num_post_clump_snp(i_region)==0) continue;
+                        prsice.run_prsice(commander, region, i_pheno, i_region,
+                                          *target_file);
                         if (!commander.no_regress())
                             prsice.output(commander, region, i_pheno, i_region,
                                           *target_file);
-                        else if (commander.print_snp())
-                        {
-                            std::string output_name = commander.out();
-                            if (region.size() > 1)
-                                output_name.append("."
-                                                   + region.get_name(i_region));
-                            std::string out_snp = output_name + ".snps";
-                            target_file->print_snp(out_snp, -1, i_region);
-                        }
                     }
-                    if (region.size() > 1) {
-                        fprintf(stderr, "\rProcessing %03.2f%% of sets\n",
-                                100.0);
+                    if (!commander.no_regress() && commander.perform_set_perm())
+                    {
+                        prsice.run_competitive(*target_file, commander,
+                                               i_pheno);
                     }
                 }
+                prsice.print_progress(true);
+                fprintf(stderr, "\n");
                 if (!commander.no_regress())
                     prsice.summarize(commander, reporter);
             }
@@ -225,7 +248,7 @@ int main(int argc, char* argv[])
         }
         delete target_file;
     }
-    catch (const std::bad_alloc)
+    catch (const std::bad_alloc& er)
     {
         std::string error_message = "Error: Bad Allocation exception detected. "
                                     "This is likely due to insufficient memory "

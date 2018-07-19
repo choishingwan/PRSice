@@ -17,23 +17,29 @@
 #include "binarygen.hpp"
 
 BinaryGen::BinaryGen(const std::string& prefix, const std::string& sample_file,
-                     const size_t thread, const bool ignore_fid,
-                     const bool keep_nonfounder, const bool keep_ambig)
-    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig)
+                     const std::string& multi_input, const size_t thread,
+                     const bool ignore_fid, const bool keep_nonfounder,
+                     const bool keep_ambig, const bool is_ref,
+                     const bool intermediate)
+    : Genotype(thread, ignore_fid, keep_nonfounder, keep_ambig, is_ref)
 {
     /** setting the chromosome information **/
+    m_intermediate = intermediate;
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     // we are not using the following script for now as we only support human
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
-    m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
+    // m_chrom_mask.resize(CHROM_MASK_WORDS, 0);
     // place holder. Currently set default to human.
     init_chr();
     // get the bed file names
-    m_genotype_files = set_genotype_files(prefix);
+    if (multi_input.empty())
+        m_genotype_files = set_genotype_files(prefix);
+    else
+        m_genotype_files = load_genotype_prefix(multi_input);
     m_sample_file = sample_file;
 }
 
-std::vector<Sample> BinaryGen::gen_sample_vector()
+std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
     bool is_sample_format = check_is_sample_format();
     std::ifstream sample_file(m_sample_file.c_str());
@@ -71,16 +77,18 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     }
 
     int line_id = 0;
-    std::vector<Sample> sample_name;
+    std::vector<Sample_ID> sample_name;
     std::unordered_set<std::string> duplicated_samples;
     std::vector<std::string> duplicated_sample_id;
+    std::vector<std::string> token;
     std::vector<bool> temp_inclusion_vec;
     bool inclusion = false;
+    std::string FID, IID;
     while (std::getline(sample_file, line)) {
         misc::trim(line);
         line_id++;
         if (!line.empty()) {
-            std::vector<std::string> token = misc::split(line);
+            token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
             if (line_id == 1) {
@@ -107,25 +115,18 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
                 throw std::runtime_error(error_message);
             }
             m_unfiltered_sample_ct++;
-            Sample cur_sample;
+
             if (is_sample_format || !m_ignore_fid) {
-                cur_sample.FID = token[0];
-                cur_sample.IID = token[1];
+                FID = token[0];
+                IID = token[1];
             }
             else
             {
-                cur_sample.FID = "";
-                cur_sample.IID = token[0];
+                FID = "";
+                IID = token[0];
             }
-            std::string id = (m_ignore_fid)
-                                 ? cur_sample.IID
-                                 : cur_sample.FID + "_" + cur_sample.IID;
-            cur_sample.pheno = "";
+            std::string id = (m_ignore_fid) ? IID : FID + "_" + IID;
             // true as we assume all bgen samples are founders
-            cur_sample.include = true;
-            cur_sample.prs = 0.0;
-            cur_sample.num_snp = 0.0;
-            cur_sample.in_regression = false;
             if (!m_remove_sample) {
                 inclusion = (m_sample_selection_list.find(id)
                              != m_sample_selection_list.end());
@@ -158,7 +159,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
             duplicated_samples.insert(id);
             temp_inclusion_vec.push_back(inclusion);
             if (!m_is_ref && inclusion) {
-                sample_name.push_back(cur_sample);
+                sample_name.emplace_back(Sample_ID(FID, IID, ""));
             }
         }
     }
@@ -171,7 +172,7 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
         throw std::runtime_error(error_message);
     }
 
-    m_founder_ct = m_unfiltered_sample_ct;
+    // m_founder_ct = m_unfiltered_sample_ct;
     // now set all those vectors
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     // don't bother with founder info here as we don't have this information
@@ -179,14 +180,23 @@ std::vector<Sample> BinaryGen::gen_sample_vector()
     m_founder_info.resize(unfiltered_sample_ctl, 0);
     m_num_male = 0, m_num_female = 0, m_num_ambig_sex = 0,
     m_num_non_founder = 0;
+    m_founder_ct = 0;
     for (size_t i = 0; i < temp_inclusion_vec.size(); ++i) {
         if (temp_inclusion_vec[i]) {
+
+            m_founder_ct++;
             SET_BIT(i, m_sample_include.data());
             // we assume all bgen samples to be founder
             SET_BIT(i, m_founder_info.data());
         }
     }
+    m_sample_ct = m_founder_ct;
     sample_file.close();
+    // m_prs_info.reserve(m_sample_ct);
+    for (size_t i = 0; i < m_sample_ct; ++i) {
+        m_prs_info.emplace_back(PRS());
+    }
+    m_in_regression.resize(m_sample_include.size(), 0);
     return sample_name;
 }
 
@@ -247,7 +257,9 @@ void BinaryGen::get_context(std::string& prefix)
     genfile::bgen::read_little_endian_integer(bgen_file, &number_of_samples);
     bgen_file.read(&magic[0], 4);
     free_data.resize(header_size - fixed_data_size);
-    bgen_file.read(&free_data[0], free_data.size());
+    if (free_data.size() > 0) {
+        bgen_file.read(&free_data[0], free_data.size());
+    }
     genfile::bgen::read_little_endian_integer(bgen_file, &flags);
     if ((magic[0] != 'b' || magic[1] != 'g' || magic[2] != 'e'
          || magic[3] != 'n')
@@ -284,6 +296,7 @@ void BinaryGen::get_context(std::string& prefix)
 bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                         const genfile::bgen::Context& context)
 {
+    // only do this if our gen file contains the sample information
     if (context.flags & genfile::bgen::e_SampleIdentifiers) {
         std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
         uint32_t tmp_offset;
@@ -301,49 +314,99 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                                   &sample_block_size);
         genfile::bgen::read_little_endian_integer(bgen_file,
                                                   &actual_number_of_samples);
+        // +8 here to account for the sample_block_size and
+        // actual_number_of_samples read above. Direct Copy and paste from BGEN
+        // lib function read_sample_identifier_block
         bytes_read += 8;
         assert(actual_number_of_samples == context.number_of_samples);
         // we don't need to check the sample name when we are doing the LD
         // as we don't store any
-        if(!m_is_ref){
-        	for (size_t i = 0; i < actual_number_of_samples; ++i) {
-				genfile::bgen::read_length_followed_by_data(
-					bgen_file, &identifier_size, &identifier);
-				if (!bgen_file)
-					throw std::runtime_error("Error: Problem reading bgen file!");
-				bytes_read += sizeof(identifier_size) + identifier_size;
-				// Only need to use IID as BGEN doesn't have the FID information
-				if (m_sample_names[i].IID.compare(identifier) != 0) {
-					throw std::runtime_error("Error: Sample mismatch "
-											 "between bgen and phenotype "
-											 "file!");
-				}
-			}
+        // though might be good practice to actually check the names matched
+        // between the sample name and the ld bgen file to avoid mismatch
+        // That can be done later on
+        if (!m_is_ref) {
+            for (size_t i = 0; i < actual_number_of_samples; ++i) {
+                genfile::bgen::read_length_followed_by_data(
+                    bgen_file, &identifier_size, &identifier);
+                if (!bgen_file)
+                    throw std::runtime_error(
+                        "Error: Problem reading bgen file!");
+                bytes_read += sizeof(identifier_size) + identifier_size;
+                // Only need to use IID as BGEN doesn't have the FID information
+                if (m_sample_id[i].IID != identifier) {
+                    std::string error_message =
+                        "Error: Sample mismatch "
+                        "between bgen and phenotype file! Name in BGEN file is "
+                        ":"
+                        + identifier
+                        + " and in phentoype file is: " + m_sample_id[i].IID;
+                    throw std::runtime_error(error_message);
+                }
+            }
         }
         assert(bytes_read == sample_block_size);
     }
     return true;
 }
-std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
-                                           const double info_score,
-                                           const double hard_threshold,
-                                           const bool hard_coded,
-                                           const std::string& out_prefix,
-                                           Genotype* target)
+std::vector<SNP>
+BinaryGen::gen_snp_vector(const double geno, const double maf,
+                          const double info_score, const double hard_threshold,
+                          const bool hard_coded, Region& exclusion,
+                          const std::string& out_prefix, Genotype* target)
 {
     std::vector<SNP> snp_res;
     std::unordered_set<std::string> duplicated_snps;
-    std::vector<int> ref_target_overlap_index;
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> duplicate_check_list;
-    m_hard_threshold = hard_threshold;
-    m_hard_coded = hard_coded;
+    std::vector<std::string> alleles;
+    std::vector<bool> ref_retain;
+    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
+    std::ifstream bgen_file;
+    std::ofstream mismatch_snp_record;
+    std::ofstream inter_out;
+    std::string bgen_name;
+    std::string allele;
+    std::string SNPID;
+    std::string RSID;
+    std::string chromosome;
+    std::string prev_chr = "";
+    std::string file_name;
+    std::string mismatch_snp_record_name = out_prefix+".mismatch";
+    std::string m_intermediate_file = out_prefix + ".inter";
+    double cur_maf;
+    std::streampos byte_pos;
+    size_t chr_index = 0;
+    size_t total_unfiltered_snps = 0;
+    size_t ref_target_match = 0;
+    uint32_t SNP_position;
+    uint32_t offset;
+    uint32_t num_snp;
+    uint32_t homrar_ct;
+    uint32_t missing_ct;
+    uint32_t het_ct;
+    uint32_t homcom_ct;
+    intptr_t nanal;
+    int chr_code = 0;
+    bool exclude_snp = false;
     bool chr_sex_error = false;
     bool chr_error = false;
     bool first_bgen_file = true;
     bool user_exclude = false;
-    size_t chr_index = 0;
-    size_t total_unfiltered_snps = 0;
+    bool has_duplicate = false;
+
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
+                           hard_threshold);
+    m_sample_mask.resize(pheno_nm_ctv2);
+    fill_quatervec_55(m_sample_ct, m_sample_mask.data());
+
+    m_hard_threshold = hard_threshold;
+    m_hard_coded = hard_coded;
+
+
 
     for (auto prefix : m_genotype_files) {
         get_context(prefix);
@@ -356,22 +419,34 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     }
     // first pass to get the total SNP number such that we can speed up the push
     // back
+    // might need time to reserve large amount of memory for the large number
+    // of SNPs included in bgen
     snp_res.reserve(total_unfiltered_snps);
     // to allow multiple file for one chromosome, we put these variable outside
     // the for loop
-    std::string prev_chr = "";
-    int chr_code = 0;
+    if (m_intermediate) {
+        if (m_target_plink && m_is_ref) {
+            // target already generated some intermediate, now append for
+            // reference
+            inter_out.open(m_intermediate_file.c_str(),
+                           std::ios::binary | std::ios::app);
+        }
+        else
+        {
+            inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
+        }
+    }
     for (auto prefix : m_genotype_files) {
-        std::string bgen_name = prefix + ".bgen";
-        std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
+        bgen_name = prefix + ".bgen";
+        bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
         if (!bgen_file.is_open()) {
             std::string error_message =
                 "Error: Cannot open bgen file " + bgen_name;
             throw std::runtime_error(error_message);
         }
-        uint32_t offset = m_context_map[prefix].offset;
+        offset = m_context_map[prefix].offset;
         bgen_file.seekg(offset + 4);
-        uint32_t num_snp = m_context_map[prefix].number_of_variants;
+        num_snp = m_context_map[prefix].number_of_variants;
         auto&& context = m_context_map[prefix];
         for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
             if (i_snp % 1000 == 0) {
@@ -379,29 +454,20 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                         bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
-            std::string allele;
-            std::string SNPID;
-            std::string RSID;
-            std::string chromosome;
-            uint32_t SNP_position;
-            std::vector<std::string> alleles;
+
             // directly use the libraryread_snp_identifying_data(
 
             read_snp_identifying_data(
                 bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
                 [&alleles](std::size_t n) { alleles.resize(n); },
                 [&alleles](std::size_t i, std::string const& allele) {
-                    alleles.at(i) = allele;
+                    std::string a = allele;
+                    std::transform(a.begin(), a.end(), a.begin(), ::toupper);
+                    alleles.at(i) = a;
                 });
-
-            for (auto&& a : alleles) {
-
-                std::transform(a.begin(), a.end(), a.begin(), ::toupper);
-            }
-            std::streampos byte_pos = bgen_file.tellg();
-            bool exclude_snp = false;
+            exclude_snp = false;
             // but we will not process anything
-            if (chromosome.compare(prev_chr) != 0) {
+            if (chromosome != prev_chr) {
                 prev_chr = chromosome;
                 if (m_chr_order.find(chromosome) != m_chr_order.end()) {
 
@@ -415,7 +481,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 { // bigger than the maximum code, ignore it
                     if (!chr_error) {
                         fprintf(stderr,
-                                "Warning: SNPs with chromosome number larger "
+                                "\nWarning: SNPs with chromosome number larger "
                                 "than %du\n",
                                 m_max_code);
                         fprintf(stderr, "         They will be ignored!\n");
@@ -427,7 +493,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                                  || chr_code == m_xymt_codes[X_OFFSET]
                                  || chr_code == m_xymt_codes[Y_OFFSET]))
                     {
-                        fprintf(stderr, "Warning: Currently not support "
+                        fprintf(stderr, "\nWarning: Currently not support "
                                         "haploid chromosome and sex "
                                         "chromosomes\n");
                         chr_sex_error = true;
@@ -436,8 +502,8 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 }
             }
 
-            if (RSID.compare(".") == 0) // when the rs id isn't available,
-                                        // change it to chr:loc coding
+            if (RSID == ".") // when the rs id isn't available,
+                             // change it to chr:loc coding
             {
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
@@ -460,10 +526,14 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             {
                 exclude_snp = true;
             }
+            if (exclusion.check_exclusion(chromosome, SNP_position)) {
+                exclude_snp = true;
+            }
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
+                has_duplicate = true;
             }
-            else if (ambiguous(alleles.front(), alleles.back()))
+            else if (!exclude_snp && ambiguous(alleles.front(), alleles.back()))
             {
                 m_num_ambig++;
                 if (!m_keep_ambig) exclude_snp = true;
@@ -471,29 +541,100 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
             if (!user_exclude) {
                 duplicate_check_list.insert(RSID);
             }
-            std::vector<genfile::byte_t> buffer1;
-            std::vector<genfile::byte_t>* buffer2 = nullptr;
-            read_genotype_data_block(bgen_file, context, &buffer1);
+            byte_pos = bgen_file.tellg();
+            read_genotype_data_block(bgen_file, context, &m_buffer1);
             // if we want to exclude this SNP, we will not perform decompression
-            if (!exclude_snp) {
+            if (!exclude_snp && !has_duplicate) {
                 // now filter
-                //
-                if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
-                    QC_Checker setter(&m_sample_include, hard_threshold,
-                                      hard_coded);
-                    genfile::bgen::uncompress_probability_data(context, buffer1,
-                                                               buffer2);
-                    genfile::bgen::parse_probability_data<QC_Checker>(
-                        &(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                file_name = prefix;
+                if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)
+                    || m_intermediate)
+                {
+                    genfile::bgen::uncompress_probability_data(
+                        context, m_buffer1, &m_buffer2);
+                    genfile::bgen::parse_probability_data<PLINK_generator>(
+                        &(m_buffer2)[0], &(m_buffer2)[0] + m_buffer2.size(),
                         context, setter);
-                    if (setter.filter_snp(maf, geno, info_score)) continue;
+                    if (!(maf <= 0.0 && geno >= 1.0 && info_score <= 0.0)) {
+                        // do QC
+                        genovec_3freq(m_tmp_genotype.data(),
+                                      m_sample_mask.data(), pheno_nm_ctv2,
+                                      &missing_ct, &het_ct, &homcom_ct);
+                        nanal = m_sample_ct - missing_ct;
+                        homrar_ct = nanal - het_ct - homcom_ct;
+
+                        if (nanal == 0) {
+                            // still count as MAF filtering (for now)
+                            m_num_maf_filter++;
+                            continue;
+                        }
+
+                        if ((double) missing_ct / (double) m_sample_ct > geno) {
+                            m_num_geno_filter++;
+                            continue;
+                        }
+
+                        cur_maf = ((double) (het_ct + homrar_ct * 2)
+                                   / ((double) nanal * 2.0));
+                        if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
+                        // remove SNP if maf lower than threshold
+                        if (cur_maf < maf) {
+                            m_num_maf_filter++;
+                            continue;
+                        }
+                        if (setter.info_score() < info_score) {
+                            m_num_info_filter++;
+                            continue;
+                        }
+                    }
+                    if (m_intermediate
+                        && (m_is_ref || !m_expect_reference
+                            || (!m_is_ref && hard_coded)))
+                    {
+                        // we will only generate the intermediate file if the
+                        // following happen:
+                        // 1. User want to generate the intermediate file
+                        // 2. We are dealing with reference file format
+                        // 3. We are dealing with target file and there is no
+                        // reference file
+                        // 4. We are dealing with target file and we are
+                        // expected to use hard_coding
+                        if (m_is_ref || !m_expect_reference) {
+                            // when not expecting reference, we will
+                            // just update the info on the reference field
+                            m_ref_plink = true;
+                            // we can write to the intermediate file directly
+                            // now write to file
+                            inter_out.write((char*) (&m_tmp_genotype[0]),
+                                            m_tmp_genotype.size()
+                                                * sizeof(m_tmp_genotype[0]));
+                        }
+                        else
+                        {
+                            // Not reference, not expecting a reference
+                            // and using hard code, then update both reference
+                            // and target field
+                            m_ref_plink = true;
+                            m_target_plink = true;
+                            byte_pos = inter_out.tellp();
+                            file_name = m_intermediate_file;
+                            inter_out.write((char*) (&m_tmp_genotype[0]),
+                                            m_tmp_genotype.size()
+                                                * sizeof(m_tmp_genotype[0]));
+                        }
+                    }
                 }
                 if (!m_is_ref) {
                     m_existed_snps_index[RSID] = snp_res.size();
                     // TODO: Update SNP constructor
+                    // for now, we focus on PLINK optimization and ignore bgen
+                    if(m_target_plink){
+                        byte_pos = inter_out.tellp();
+                        file_name = m_intermediate_file;
+                    }
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.front(), alleles.back(),
-                                             prefix, byte_pos));
+                                             file_name, byte_pos));
                 }
                 else
                 {
@@ -503,11 +644,38 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                             chr_code, SNP_position, alleles.front(),
                             alleles.back(), dummy))
                     {
+                    	if(!mismatch_snp_record.is_open()){
+                    		// open the file accordingly
+                    		if(m_mismatch_file_output){
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str(), std::ofstream::app);
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    		}else{
+                    			mismatch_snp_record.open(mismatch_snp_record_name.c_str());
+                    			if(!mismatch_snp_record.is_open()){
+                    				throw std::runtime_error(std::string("Cannot open mismatch file to write: "+mismatch_snp_record_name));
+                    			}
+                    			mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_File\tBP_Target\tBP_File\tA1_Target\tA1_File\tA2_Target\tA2_File\n";
+                    		}
+                    	}
+                    	mismatch_snp_record << "Reference\t" << RSID << "\t" << target->m_existed_snps[target_index].chr() << "\t" << chr_code << "\t"
+                    			<< target->m_existed_snps[target_index].loc() << "\t" << SNP_position << "\t" << target->m_existed_snps[target_index].ref() << "\t"
+								<< "\t" << alleles.front() << target->m_existed_snps[target_index].alt() << "\t" << alleles.back() << "\n";
+
                         m_num_ref_target_mismatch++;
                     }
-                    target->m_existed_snps[target_index].add_reference(
-                        prefix, byte_pos);
-                    ref_target_overlap_index.push_back(target_index);
+                    else
+                    {
+                    	if(m_ref_plink){
+                            byte_pos = inter_out.tellp();
+                            file_name = m_intermediate_file;
+                    	}
+                        target->m_existed_snps[target_index].add_reference(
+                            file_name, byte_pos);
+                        ref_retain[target_index] = true;
+                        ref_target_match++;
+                    }
                 }
             }
         }
@@ -516,8 +684,14 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
     }
     snp_res.shrink_to_fit(); // so that it will be more suitable
 
-    if (m_is_ref) {
-        target->update_snps(ref_target_overlap_index);
+    if (m_is_ref && ref_target_match != target->m_existed_snps.size()) {
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&ref_retain, this](const SNP& s) {
+                               return !ref_retain[&s - &*begin(m_existed_snps)];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snps.size() != 0) {
         std::ofstream log_file_stream;
@@ -532,33 +706,80 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const double geno, const double maf,
                 continue;
             log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                             << snp.loc() << "\t" << snp.ref() << "\t"
-                            << snp.alt() << std::endl;
+                            << snp.alt() << "\n";
         }
         log_file_stream.close();
         std::string error_message =
-            "Error: Duplicated SNP ID detected!. Valid SNP ID stored at "
-            + dup_name + ". You can avoid this error by using --extract "
-            + dup_name;
+            "Error: A total of " + std::to_string(duplicated_snps.size())
+            + " duplicated SNP ID detected out of "
+            + std::to_string(snp_res.size())
+            + " input SNPs!. Valid SNP ID stored at " + dup_name
+            + ". You can avoid this error by using --extract " + dup_name;
         throw std::runtime_error(error_message);
     }
-
+    if (hard_coded) {
+        uintptr_t unfiltered_sample_ctl =
+            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    }
     return snp_res;
 }
 
 BinaryGen::~BinaryGen()
 {
     if (m_bgen_file.is_open()) m_bgen_file.close();
+    if (m_target_plink || m_ref_plink) {
+        // delete file
+        std::remove(m_intermediate_file.c_str());
+    }
 }
 
 
 void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
-                             const size_t region_index)
+                             uint32_t homcom_weight, uint32_t het_weight,
+                             uint32_t homrar_weight, const size_t region_index,
+                             bool set_zero)
 {
     m_cur_file = "";
-    std::vector<genfile::byte_t> buffer1, buffer2;
+    std::string bgen_name;
+
+    bool not_first = !set_zero;
+    PRS_Interpreter setter(&m_prs_info, &m_sample_include, m_missing_score);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         auto&& snp = m_existed_snps[i_snp];
         if (!snp.in(region_index)) continue;
+        if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
+            if (m_bgen_file.is_open()) m_bgen_file.close();
+            bgen_name = snp.file_name() + ".bgen";
+            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+            if (!m_bgen_file.is_open()) {
+                std::string error_message =
+                    "Error: Cannot open bgen file: " + snp.file_name();
+                throw std::runtime_error(error_message);
+            }
+            m_cur_file = snp.file_name();
+        }
+        m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
+
+        auto&& context = m_context_map[m_cur_file];
+        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
+                        homrar_weight, not_first);
+        not_first = true;
+        genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
+    }
+}
+
+void BinaryGen::dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
+                             uint32_t het_weight, uint32_t homrar_weight,
+                             bool set_zero)
+{
+    m_cur_file = "";
+
+    PRS_Interpreter setter(&m_prs_info, &m_sample_include, m_missing_score);
+    bool not_first = !set_zero;
+    for (auto&& i_snp : index) {
+        auto&& snp = m_existed_snps[i_snp];
         if (m_cur_file.empty() || snp.file_name().compare(m_cur_file) != 0) {
             if (m_bgen_file.is_open()) m_bgen_file.close();
             std::string bgen_name = snp.file_name() + ".bgen";
@@ -573,10 +794,14 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
         m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg);
 
         auto&& context = m_context_map[m_cur_file];
-
-        PRS_Interpreter setter(&m_sample_names, m_model, m_missing_score,
+        /*
+        PRS_Interpreter setter(&m_prs_info, m_model, m_missing_score,
                                &m_sample_include, snp.stat() * 2,
-                               snp.is_flipped());
+                               snp.is_flipped());*/
+
+        setter.set_stat(snp.stat(), snp.is_flipped(), homcom_weight, het_weight,
+                        homrar_weight, not_first);
+        not_first = true;
         /*
         PRS_Interpreter setter(&m_sample_names, &g_prs_storage, &g_num_snps,
                                vector_pad, m_model, m_missing_score,
@@ -585,47 +810,91 @@ void BinaryGen::dosage_score(size_t start_index, size_t end_bound,
                                */
         // after this, m_sample contain the latest PRS score
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
-            m_bgen_file, context, setter, &buffer1, &buffer2, false);
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
     }
 }
 
-void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
-                                const size_t region_index)
-{
 
-    m_cur_file = "";
+void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
+                                uint32_t homcom_wt, uint32_t het_wt,
+                                uint32_t homrar_wt, const size_t region_index,
+                                bool set_zero)
+{
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t* lbptr;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
     uintptr_t ulii = 0;
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    uintptr_t final_mask = get_final_mask(m_sample_ct);
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
+    uint32_t homcom_weight = homcom_wt;
+    uint32_t het_weight = het_wt;
+    uint32_t homrar_weight = homrar_wt;
+    uint32_t temp_weight = 0;
+    // For set zero, miss_count will become 0
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
+    const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
+    bool not_first = !set_zero;
+    intptr_t nanal;
+    double stat, maf, adj_score, miss_score;
 
-    size_t num_sample_read = m_sample_names.size();
-    // index is w.r.t. partition, which contain all the information
+    m_cur_file = "";
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-    //    uintptr_t* genotype = new uintptr_t[unfiltered_sample_ctl * 2];
+
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp)
     { // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
         if (!cur_snp.in(region_index)) continue;
+
         if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
                                    m_unfiltered_sample_ct, m_sample_ct,
                                    m_sample_include.data(), final_mask, false,
-                                   m_tmp_genotype.data(), genotype.data()))
+                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
-        uintptr_t* lbptr = genotype.data();
-        uii = 0;
-        std::vector<size_t> missing_samples;
-        double stat = cur_snp.stat() * 2; // Multiply by ploidy
-        bool flipped = cur_snp.is_flipped();
-        std::vector<double> genotypes(num_sample_read);
+        bool has_count =
+            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
 
-        uint32_t sample_idx = 0;
-        int nmiss = 0;
-        int aa = 0, aA = 0, AA = 0;
+        if (!has_count) {
+            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                          &missing_ct, &het_ct, &homcom_ct);
+            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        }
+        nanal = m_sample_ct - missing_ct;
+        if (nanal == 0) {
+            cur_snp.invalidate();
+            continue;
+        }
+        homcom_weight = homcom_wt;
+        het_weight = het_wt;
+        homrar_weight = homrar_wt;
+        maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
+              / (double) (nanal * 2.0);
+        if (cur_snp.is_flipped()) {
+            // change the mean to reflect flipping
+            maf = 1.0 - maf;
+            // swap the weighting
+            temp_weight = homcom_weight;
+            homcom_weight = homrar_weight;
+            homrar_weight = temp_weight;
+        }
+        stat = cur_snp.stat() * 2; // Multiply by ploidy
+
+
+        adj_score = stat * maf * is_centre;
+        miss_score = stat * maf * mean_impute;
+
+        lbptr = genotype.data();
+        uii = 0;
+        ulii = 0;
         do
         {
             ulii = ~(*lbptr++);
@@ -633,128 +902,246 @@ void BinaryGen::hard_code_score(size_t start_index, size_t end_bound,
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
                         - ONELU;
             }
-            while (ulii) {
-                ujj = CTZLU(ulii) & (BITCT - 2);
+            ujj = 0;
+            while (ujj < BITCT) {
                 ukk = (ulii >> ujj) & 3;
-                sample_idx = uii + (ujj / 2);
-                if (ukk == 1 || ukk == 3) // Because 01 is coded as missing
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                // now we will get all genotypes (0, 1, 2, 3)
+                switch (ukk)
                 {
-                    // 3 is homo alternative
-                    // int flipped_geno = snp_list[snp_index].geno(ukk);
-                    if (sample_idx < num_sample_read) {
-                        int g = (ukk == 3) ? 2 : ukk;
-                        switch (g)
-                        {
-                        case 0: aa++; break;
-                        case 1: aA++; break;
-                        case 2: AA++; break;
-                        }
-                        genotypes[sample_idx] = g;
-                    }
-                }
-                else // this should be 2
-                {
-                    missing_samples.push_back(sample_idx);
-                    nmiss++;
+                default:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat * 0.5 - adj_score;
+                    break;
+                case 1:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat * 0.5 - adj_score;
+                    break;
+                case 3:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat * 0.5 - adj_score;
+                    break;
+                case 2:
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
+                    break;
                 }
                 ulii &= ~((3 * ONELU) << ujj);
+                ujj += 2;
             }
             uii += BITCT2;
-        } while (uii < num_sample_read);
-
-
-        size_t i_missing = 0;
-
-        if (num_sample_read - nmiss == 0) {
-            cur_snp.invalidate();
-            continue;
-        }
-        // due to the way the binary code works, the aa will always be 0
-        // added there just for fun tbh
-        aa = num_sample_read - nmiss - aA - AA;
-        assert(aa >= 0);
-        if (flipped) {
-            int temp = aa;
-            aa = AA;
-            AA = temp;
-        }
-        if (m_model == MODEL::HETEROZYGOUS) {
-            // 010
-            aa += AA;
-            AA = 0;
-        }
-        else if (m_model == MODEL::DOMINANT)
-        {
-            // 011;
-            aA += AA;
-            AA = 0;
-        }
-        else if (m_model == MODEL::RECESSIVE)
-        {
-            // 001
-            aa += aA;
-            aA = AA;
-            AA = 0;
-        }
-
-        double maf = ((double) (aA + AA * 2)
-                      / ((double) (num_sample_read - nmiss)
-                         * 2.0)); // MAF does not count missing
-        double center_score = stat * maf;
-        size_t num_miss = missing_samples.size();
-        size_t actual_index = 0;
-        for (size_t i_sample = 0; i_sample < num_sample_read; ++i_sample) {
-            auto&& sample = m_sample_names[i_sample];
-            if (i_missing < num_miss
-                && actual_index == missing_samples[i_missing])
-            {
-                if (m_missing_score == MISSING_SCORE::MEAN_IMPUTE)
-                    sample.prs += center_score;
-                // g_prs_storage[i_sample + vector_pad] += center_score;
-                if (m_missing_score != MISSING_SCORE::SET_ZERO)
-                    sample.num_snp++;
-                // g_num_snps[i_sample + vector_pad]++;
-                i_missing++;
-            }
-            else
-            { // not missing sample
-                if (m_missing_score == MISSING_SCORE::CENTER) {
-                    // if centering, we want to keep missing at 0
-                    sample.prs -= center_score;
-                    // g_prs_storage[i_sample + vector_pad] -= center_score;
-                }
-
-                int g = (flipped) ? fabs(genotypes[actual_index] - 2)
-                                  : genotypes[actual_index];
-                if (m_model == MODEL::HETEROZYGOUS) {
-                    g = (g == 2) ? 0 : g;
-                }
-                else if (m_model == MODEL::RECESSIVE)
-                {
-                    g = std::max(0, g - 1);
-                }
-                else if (m_model == MODEL::DOMINANT)
-                {
-                    g = (g == 2) ? 1 : g;
-                }
-
-                sample.prs += g * stat * 0.5;
-                sample.num_snp++;
-                // g_prs_storage[i_sample + vector_pad] += g * stat * 0.5;
-                // g_num_snps[i_sample + vector_pad]++;
-            }
-            actual_index++;
-        }
+        } while (uii < m_sample_ct);
+        not_first = true;
     }
 }
 
+
+void BinaryGen::hard_code_score(std::vector<size_t>& index, int32_t homcom_wt,
+                                uint32_t het_wt, uint32_t homrar_wt,
+                                bool set_zero)
+{
+    const uintptr_t final_mask = get_final_mask(m_sample_ct);
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    uintptr_t* lbptr;
+    uint32_t uii;
+    uint32_t ujj;
+    uint32_t ukk;
+    uintptr_t ulii = 0;
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
+    uint32_t homcom_weight = homcom_wt;
+    uint32_t het_weight = het_wt;
+    uint32_t homrar_weight = homrar_wt;
+    // For set zero, miss_count will become 0
+    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
+    const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
+    bool not_first = !set_zero;
+    intptr_t nanal;
+    double stat, maf, adj_score, miss_score;
+
+    m_cur_file = "";
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+
+    for (auto&& i_snp : index) { // for each SNP
+        auto&& cur_snp = m_existed_snps[i_snp];
+        if (load_and_collapse_incl(cur_snp.byte_pos(), cur_snp.file_name(),
+                                   m_unfiltered_sample_ct, m_sample_ct,
+                                   m_sample_include.data(), final_mask, false,
+                                   m_tmp_genotype.data(), genotype.data(), m_target_plink))
+        {
+            throw std::runtime_error("Error: Cannot read the bed file!");
+        }
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        if (homcom_ct + het_ct + homrar_ct + missing_ct == 0) {
+            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                          &missing_ct, &het_ct, &homcom_ct);
+            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        }
+        nanal = m_sample_ct - missing_ct;
+        if (nanal == 0) {
+            cur_snp.invalidate();
+            continue;
+        }
+        homcom_weight = homcom_wt;
+        het_weight = het_wt;
+        homrar_weight = homrar_wt;
+        maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
+              / (double) (nanal * 2.0);
+        if (cur_snp.is_flipped()) {
+            // change the mean to reflect flipping
+            maf = 1.0 - maf;
+            // swap the weighting
+            std::swap(homcom_weight, homrar_weight);
+        }
+        stat = cur_snp.stat() * 2; // Multiply by ploidy
+        // we don't allow the use of center and mean impute together
+        // if centre, missing = 0 anyway (kinda like mean imputed)
+        // centre is 0 if false
+        adj_score = stat * maf * is_centre;
+        miss_score = stat * maf * mean_impute;
+
+
+        // now we go through the SNP vector
+
+        lbptr = genotype.data();
+        uii = 0;
+        ulii = 0;
+        do
+        {
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            ujj = 0;
+            while (ujj < BITCT) {
+                ukk = (ulii >> ujj) & 3;
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                // now we will get all genotypes (0, 1, 2, 3)
+                switch (ukk)
+                {
+                default:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat * 0.5 - adj_score;
+                    break;
+                case 1:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat * 0.5 - adj_score;
+                    break;
+                case 3:
+                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat * 0.5 - adj_score;
+                    break;
+                case 2:
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
+                    break;
+                }
+                ulii &= ~((3 * ONELU) << ujj);
+                ujj += 2;
+            }
+            uii += BITCT2;
+        } while (uii < m_sample_ct);
+        not_first = true;
+    }
+}
+
+
 void BinaryGen::read_score(size_t start_index, size_t end_bound,
-                           const size_t region_index)
+                           const size_t region_index, bool set_zero)
 {
     if (m_hard_coded) {
-        hard_code_score(start_index, end_bound, region_index);
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            hard_code_score(start_index, end_bound, 0, 1, 0, region_index,
+                            set_zero);
+            break;
+        case MODEL::DOMINANT:
+            hard_code_score(start_index, end_bound, 0, 1, 1, region_index,
+                            set_zero);
+            break;
+        case MODEL::RECESSIVE:
+            hard_code_score(start_index, end_bound, 0, 0, 1, region_index,
+                            set_zero);
+            break;
+        default:
+            hard_code_score(start_index, end_bound, 0, 1, 2, region_index,
+                            set_zero);
+            break;
+        }
         return;
     }
     else
-        dosage_score(start_index, end_bound, region_index);
+    {
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            dosage_score(start_index, end_bound, 0, 1, 0, region_index,
+                         set_zero);
+            break;
+        case MODEL::DOMINANT:
+            dosage_score(start_index, end_bound, 0, 1, 1, region_index,
+                         set_zero);
+            break;
+        case MODEL::RECESSIVE:
+            dosage_score(start_index, end_bound, 0, 0, 1, region_index,
+                         set_zero);
+            break;
+        default:
+            dosage_score(start_index, end_bound, 0, 1, 2, region_index,
+                         set_zero);
+            break;
+        }
+        return;
+    }
+}
+
+void BinaryGen::read_score(std::vector<size_t>& index, bool reset_zero)
+{
+    // because I don't want to touch the code in dosage_score, we will reset the
+    // sample here
+    // reset_sample_prs();
+    if (m_hard_coded) {
+    	// for hard coded, we need to check if intermediate file is used instead
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            hard_code_score(index, 0, 1, 0, reset_zero);
+            break;
+        case MODEL::DOMINANT:
+            hard_code_score(index, 0, 1, 1, reset_zero);
+            break;
+        case MODEL::RECESSIVE:
+            hard_code_score(index, 0, 0, 1, reset_zero);
+            break;
+        default: hard_code_score(index, 0, 1, 2, reset_zero); break;
+        }
+    }
+    else
+    {
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            dosage_score(index, 0, 1, 0, reset_zero);
+            break;
+        case MODEL::DOMINANT: dosage_score(index, 0, 1, 1, reset_zero); break;
+        case MODEL::RECESSIVE: dosage_score(index, 0, 0, 1, reset_zero); break;
+        default: dosage_score(index, 0, 1, 2, reset_zero); break;
+        }
+        return;
+    }
 }

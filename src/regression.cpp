@@ -31,21 +31,19 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     // this to speed things up
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
     Eigen::VectorXd beta = z.solve(y);
-    Eigen::MatrixXd fitted = A * beta;
-    Eigen::VectorXd residual = y - fitted;
-    double mss = 0.0;
-    double rss = 0.0;
-    double fitted_mean = fitted.mean();
-    for (size_t i = 0; i < A.rows(); ++i) {
-        mss += pow(fitted(i) - fitted_mean, 2);
-        rss += residual(i) * residual(i);
-    }
-    int rank = z.rank();
-    int n = A.rows();
-    int rdf = n - rank;
-    double resvar = rss / (double) rdf;
-    int df_int = intercept; // 0 false 1 true
+    Eigen::VectorXd fitted = A * beta;
+    double rss = (A * beta - y).squaredNorm();
+    double mss = (fitted.array() - fitted.mean()).pow(2).sum();
+    r2 = mss / (mss + rss);
 
+    int n = A.rows();
+    int rank = z.rank();
+    int rdf = n - rank;
+    int df_int = intercept; // 0 false 1 true
+    r2_adjust = 1.0 - (1.0 - r2) * ((double) (n - df_int) / (double) rdf);
+
+
+    double resvar = rss / (double) rdf;
     size_t se_index = intercept;
     for (size_t ind = 0; ind < beta.rows(); ++ind) {
         if (z.colsPermutation().indices()(ind) == intercept) {
@@ -53,15 +51,12 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
             break;
         }
     }
-    r2 = mss / (mss + rss);
-    r2_adjust = 1.0 - (1.0 - r2) * ((double) (n - df_int) / (double) rdf);
+
     Eigen::MatrixXd R =
         z.matrixR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
     Eigen::VectorXd se =
         ((R.transpose() * R).inverse().diagonal() * resvar).array().sqrt();
     // Remember, only the coefficient's order is wrong e.g. intercept at the end
-    // Eigen::VectorXd est =
-    // beta.transpose()*Eigen::MatrixXd(z.colsPermutation());
     double tval = beta(intercept)
                   / se(se_index); // only interested in the one coefficient
     coeff = beta(intercept);
@@ -214,33 +209,19 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          size_t thread, bool intercept)
 {
     Eigen::setNbThreads(thread);
-    /*
-    Eigen::MatrixXd A;
-    if(intercept){
-        A=Eigen::MatrixXd::Zero(x.rows(), x.cols()+1);
-        A.col(0) = Eigen::VectorXd::Constant(x.rows(),1.0);
-        A.block(0,1,x.rows(), x.cols()) = x;
-    }
-    else A = x;
-    */
-    // unfortunately, because of the algorithm where we will need to modify A,
-    // we will need at least one copying
     Eigen::MatrixXd A = x;
     int nobs = y.rows();
     int nvars = A.cols();
     Eigen::VectorXd weights = Eigen::VectorXd::Ones(nobs);
     Eigen::VectorXd mustart =
         (weights.array() * y.array() + 0.5) / (weights.array() + 1);
-    //		Eigen::VectorXd n = Eigen::VectorXd::Ones(nobs);
-    //		Eigen::VectorXd m = weights.array()*y.array();
     Eigen::VectorXd eta =
         (mustart.array() / (1 - mustart.array())).array().log();
     Eigen::VectorXd mu = logit_linkinv(eta);
-    Eigen::MatrixXd A_tmp;
     double devold = binomial_dev_resids_sum(y, mu, weights), dev = 0.0;
     // Iterative reweighting
-    Eigen::VectorXd varmu;
-    Eigen::VectorXd mu_eta_val, z, w, good, fit, start;
+    Eigen::MatrixXd A_tmp;
+    Eigen::VectorXd varmu, mu_eta_val, z, w, good, fit, start;
     bool converge = false;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
     qr.setThreshold(
@@ -284,7 +265,6 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
                 + std::to_string(nobs) + " observations";
             throw std::runtime_error(error_message);
         }
-        // start = fit.transpose()*Eigen::MatrixXd(qr.colsPermutation());
         eta = A * start;
         mu = logit_linkinv(eta);
         dev = binomial_dev_resids_sum(y, mu, weights);
@@ -335,7 +315,6 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
     p_value = misc::chiprob_p(tvalue * tvalue, 1);
-    // p_value = chiprob_p(coeff*coeff,1);
     standard_error = se(se_index);
 }
 }

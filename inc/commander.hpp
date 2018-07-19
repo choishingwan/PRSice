@@ -39,8 +39,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.1.beta";
-const std::string date = "10 April 2018";
+const std::string version = "2.1.3.beta";
+const std::string date = "31 May 2018";
 class Commander
 {
 public:
@@ -72,7 +72,12 @@ public:
         return covariate.covariates;
     };
     // reference panel
-    std::string ref_name() const { return reference_panel.file_name; };
+    std::string ref_name() const
+    {
+        return (reference_panel.file_name.empty()) ? "-"
+                                                   : reference_panel.file_name;
+    };
+    std::string ref_list() const { return reference_panel.multi_name; };
     std::string ref_type() const { return reference_panel.type; };
     std::string ld_keep_file() const { return reference_panel.keep_file; };
     std::string ld_remove_file() const { return reference_panel.remove_file; };
@@ -84,10 +89,17 @@ public:
     };
     double ld_maf() const { return reference_snp_filtering.maf; };
     double ld_info() const { return reference_snp_filtering.info_score; };
-
+    bool use_ref() const
+    {
+        return (!reference_panel.file_name.empty()
+                || !reference_panel.multi_name.empty());
+    };
+    bool intermediate() const { return reference_panel.allow_inter; };
     // misc
     std::string out() const { return misc.out; };
+    std::string exclusion_range() const { return misc.exclusion_range; };
     bool all_scores() const { return misc.print_all_scores; };
+    bool cumulate() const { return !misc.non_cumulate; };
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
     bool print_snp() const { return misc.print_snp; };
@@ -95,7 +107,13 @@ public:
     int permutation() const { return misc.permutation; };
     int seed() const { return misc.seed; };
     int thread() const { return misc.thread; };
-
+    size_t max_memory(const size_t detected) const
+    {
+        if (!misc.provided_memory)
+            return detected;
+        else
+            return (misc.memory > detected) ? detected : misc.memory;
+    }
     // p_thresholds
     double bar_upper() const { return p_thresholds.barlevel.back(); };
     double get_threshold(int i) const
@@ -167,13 +185,22 @@ public:
     std::vector<std::string> feature() const { return prset.feature; };
     std::string gtf() const { return prset.gtf; };
     std::string msigdb() const { return prset.msigdb; };
-
+    std::string single_snp_set() const { return prset.single_snp_set; };
+    std::string multi_snp_sets() const { return prset.multi_snp_sets; };
+    std::string background() const { return prset.background; };
+    int set_perm() const { return prset.set_perm; };
     // prslice
     bool perform_prslice() const { return prslice.provided; };
+    bool perform_set_perm() const { return prset.perform_set_perm; }
     int prslice_size() const { return prslice.size; };
-
+    int window_5() const { return prset.window_5; };
+    int window_3() const { return prset.window_3; };
     // target
-    std::string target_name() const { return target.name; };
+    std::string target_name() const
+    {
+        return (target.name.empty()) ? "-" : target.name;
+    };
+    std::string target_list() const { return target.multi_name; };
     std::string target_type() const { return target.type; };
     std::string pheno_file() const { return target.pheno_file; };
     std::string pheno_col(size_t index) const
@@ -247,6 +274,8 @@ private:
     struct Misc
     {
         std::string out;
+        std::string exclusion_range;
+        int non_cumulate;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;
@@ -254,16 +283,20 @@ private:
         int permutation;
         int print_snp;
         int thread;
+        size_t memory;
         size_t seed;
         bool provided_seed;
+        bool provided_memory;
     } misc;
 
     struct Reference
     {
         std::string file_name;
+        std::string multi_name;
         std::string type;
         std::string keep_file;
         std::string remove_file;
+        int allow_inter;
     } reference_panel;
 
     struct Ref_filtering
@@ -316,7 +349,14 @@ private:
         std::vector<std::string> feature;
         std::string gtf;
         std::string msigdb;
+        std::string background;
+        std::string single_snp_set;
+        std::string multi_snp_sets;
+        int set_perm;
+        int window_5;
+        int window_3;
         bool perform_prset;
+        bool perform_set_perm;
     } prset;
 
     struct PRSlice
@@ -329,8 +369,9 @@ private:
     {
         std::string name;
         std::string keep_file;
-        std::string remove_file;
+        std::string multi_name;
         std::string pheno_file;
+        std::string remove_file;
         std::string type;
         std::vector<std::string> pheno_col;
         // should equal to number of binary target
@@ -420,13 +461,19 @@ private:
                                     const std::string& c)
     {
         if (input.empty()) return;
-        message[c] = message[c] + input;
+        if (message.find(c) == message.end()) {
+            message[c] = input;
+        }
+        else
+        {
+            message[c] = "," + input;
+        }
         if (!input.empty() && input.back() == ',') {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
         }
-        std::vector<std::string> token = misc::split(optarg, ",");
+        std::vector<std::string> token = misc::split(input, ",");
         try
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
@@ -516,6 +563,77 @@ private:
         target_boolean = true;
     }
 
+    inline void set_memory(const std::string& input,
+                           std::map<std::string, std::string>& message,
+                           std::string& error_messages, bool& error)
+    {
+        misc.provided_memory = true;
+        if (message.find("memory") != message.end()) {
+            error_messages.append("Warning: Duplicated argument --memory\n");
+        }
+        try
+        {
+            int memory = misc::convert<int>(input);
+            misc.memory = memory;
+        }
+        catch (const std::runtime_error& er)
+        {
+            // contain MB KB or B here
+            if (input.length() >= 2) {
+                try
+                {
+                    std::string unit = input.substr(input.length() - 2);
+                    std::string value = input.substr(0, input.length() - 2);
+                    std::transform(unit.begin(), unit.end(), unit.begin(),
+                                   ::toupper);
+                    if (unit.compare("KB") == 0) {
+                        misc.memory = misc::convert<size_t>(value) * 1024;
+                    }
+                    else if (unit.compare("MB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024;
+                    }
+                    else if (unit.compare("GB") == 0)
+                    {
+                        misc.memory =
+                            misc::convert<size_t>(value) * 1024 * 1024 * 1024;
+                    }
+                    else if (unit.compare("TB") == 0)
+                    {
+                        misc.memory = misc::convert<size_t>(value) * 1024 * 1024
+                                      * 1024 * 1024;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(input.length() - 1);
+                        value = input.substr(0, input.length() - 1);
+                        std::transform(unit.begin(), unit.end(), unit.begin(),
+                                       ::toupper);
+                        if (unit.compare("B") == 0) {
+                            misc.memory = misc::convert<size_t>(value);
+                        }
+                    }
+                }
+                catch (const std::runtime_error& er_info)
+                {
+                    error = true;
+                    error_messages.append("Error: Undefined memory input: "
+                                          + input);
+                }
+            }
+            else
+            {
+                error = true;
+                error_messages.append("Error: Undefined memory input: "
+                                      + input);
+            }
+        }
+
+        message["memory"] = input;
+    }
+
     inline int index_check(const std::string& target,
                            const std::vector<std::string>& ref) const
     {
@@ -533,7 +651,7 @@ private:
     {
         try
         {
-            int index = misc::convert<int>(optarg);
+            int index = misc::convert<int>(target);
             if (index >= max) {
                 error = true;
                 error_message.append("Error: " + name

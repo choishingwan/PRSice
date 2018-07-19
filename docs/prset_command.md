@@ -10,6 +10,7 @@
 
 # Command
 - `--bed` | `-B`
+
     Bed file containing the selected regions.
     Name of bed file will be used as the region
     identifier. WARNING: Bed file is 0-based
@@ -40,4 +41,4 @@
 
     !!! tip
 
-        You can download some curated MSigDB files from [here](http://software.broadinstitute.org/gsea/msigdb/) after registration in [here](http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb)
+        Curated MSigDB files can be downloaded from [here](http://software.broadinstitute.org/gsea/msigdb/) after registration in [here](http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb)

@@ -913,6 +913,7 @@ namespace bgen
                                      impl::convert_from_integer_representation(
                                          prob, probability_conversion_factor));
                 }
+                setter.sample_completed();
             }
             call_finalise(setter);
         }
@@ -1138,6 +1139,7 @@ namespace bgen
                                 }
                             }
                         }
+                        setter.sample_completed();
                     }
                     else
                     {

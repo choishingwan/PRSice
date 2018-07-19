@@ -1,40 +1,12 @@
-# Introduction
-Due to Linkage Disequilibrium (LD) between SNPs,
-signals in high-LD regions will be over-represented,
-leading to bias in the PRS.
-To maximize the signals for PRS analysis, an association
-information driven pruning algorithm, i.e. Clumping can be
-performed.
-That is, when a SNP pair is in LD, only the SNP with the
-lowest p-value will be retained, this prevents the more associated
-SNP being removed from subsequent analysis, thus preserved the signal.
-
-In PRSice, the PLINK clumping algorithm is implemented where
-the r<sup>2</sup> values computed are based on maximum likelihood haplotype
-frequency estimates.
-In addition, the LD is calculated in all founder samples (ignoring case control
-status).
-
-!!! tip
-
-    If you would like to perform the LD estimates on only the controls, you
-    can use `--ld` and `--keep`/`--remove`.
-
-!!! important
-
-    When no reference panel is provided, the target samples will be
-    used for LD calculation. However, none of the `--ld-*` parameters
-    will take effect. The `--ld-*` parameters will only have an effect
-    on the `--ld` file. You will need to resupply the target file to the
-    `--ld` parameter for the `--ld-*` parameters to take effect
-
-# Commands
 - `--clump-kb`
-    The distance for clumping in kb. Default: 250
+    The distance for clumping in kb.
+    For example, if `--clump-kb 250` is provided, PRSice will clump any SNPs that is 
+    within 250kb to **both** end of the index SNP (therefore a 500kb window with the index SNP at the center).
+    Default: 250
 
 - `--clump-r2`
 
-    The r<sup>2</sup> threshold for clumping. Default: 0.1
+    The r^2^ threshold for clumping. Default: 0.1
 
 - `--clump-p`
 
@@ -46,9 +18,9 @@ status).
     If not provided, will use the post-filtered target genotype
     for LD calculation. Support multiple chromosome input.
     Please see [`--target`](target_file.md#target-file-related-parameters) for more information.
-    When you target sample is small (e.g. < 500) and
+    When the target sample is small (e.g. < 500) and
     external panel of the same population is available (e.g. 1000 genome),
-    you might want to use the external reference panel
+    an external reference panel might be used
     to improve the LD estimation for clumping.
 
 - `--ld-geno`
@@ -59,8 +31,8 @@ status).
 - `--ld-info`
 
     Filter SNPs based on info score. Only used for imputed LD reference.
-    The INFO score is calculated as the MaCH imputation r-squared value.
-    The pseudo code is represented as follow:
+    The INFO score is calculated as the MaCH imputation r-squared value, 
+    represented by the following pseudo code
 
 ```
     m=Mean of expected genotype
@@ -89,8 +61,8 @@ status).
 
     !!! Note
 
-        When perform MAF filtering on dosage data, we will
-        calculate the MAF using the hard-coded genotype
+        When perform MAF filtering on dosage data, MAF 
+        is calculated using the hard-coded genotype
 
 - `--ld-remove`
 
@@ -107,9 +79,12 @@ status).
 
 - `--no-clump`
 
-    When set, PRSice will not perform clumping. This is useful when you have
-    a pre-clumped list of SNPs and want PRSice to only perform the regression
-    analysis.
+    When set, PRSice will not perform clumping. This is useful
+    a pre-clumped list of SNPs is available.
+
+- `--pearson`
+
+    Use Pearson Correlation instead of maximum likelihood haplotype frequency estimates for LD calculation
 
 - `--proxy`
 
@@ -117,5 +92,5 @@ status).
     as part of the region represented by the clumped
     SNP(s). e.g. `--proxy 0.8` means the index SNP will
     represent region of any clumped SNP(s) that has
-    r<sup>2</sup>=0.8 even if the index SNP does not physically
+    r^2^=0.8 even if the index SNP does not physically
     locate within the region
