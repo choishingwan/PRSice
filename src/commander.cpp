@@ -164,7 +164,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"upper", required_argument, NULL, 'u'},
         {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
-        {"allow-intermediate", no_argument, &reference_panel.allow_inter, 1},
+        {"allow-inter", no_argument, &reference_panel.allow_inter, 1},
         {"all-score", no_argument, &misc.print_all_scores, 1},
         {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &prs_snp_filtering.is_hard_coded, 1},
@@ -173,7 +173,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"keep-ambig", no_argument, &prs_snp_filtering.keep_ambig, 1},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
-        {"non-cumulative", no_argument, &misc.non_cumulate, 1},
+        {"non-cumulate", no_argument, &misc.non_cumulate, 1},
         {"no-default", no_argument, &base.no_default, 1},
         {"no-full", no_argument, &p_thresholds.no_full, 1},
         {"no-regress", no_argument, &prs_calculation.no_regress, 1},
@@ -190,7 +190,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"bp", required_argument, NULL, 0},
         {"chr", required_argument, NULL, 0},
         {"clump-kb", required_argument, NULL, 0},
-        {"clump-wind", required_argument, NULL, 0},
         {"clump-p", required_argument, NULL, 0},
         {"clump-r2", required_argument, NULL, 0},
         {"cov-factor", required_argument, NULL, 0},
@@ -651,7 +650,7 @@ Commander::~Commander()
 // avoid having large chunk of un-foldable code
 void Commander::set_help_message()
 {
-    help_message = help_message = help_message =
+    help_message =
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"
         // Base file
         "\nBase File:\n"
@@ -804,6 +803,12 @@ void Commander::set_help_message()
         "bed\n"
         // dosage
         "\nDosage:\n"
+        "    --allow-inter           Allow the generate of intermediate file. "
+        "This will\n"
+        "                            speed up PRSice when using dosage data as "
+        "clumping\n"
+        "                            reference and for hard coding PRS "
+        "calculation\n"
         "    --hard-thres            Hard threshold for dosage data. Any call "
         "less than\n"
         "                            this will be treated as missing. Note "
@@ -909,6 +914,14 @@ void Commander::set_help_message()
           "                            the second column should be IID. If "
           "--ignore-fid\n"
           "                            is set, first column should be IID\n"
+          "    --cov-factor            Header of categorical covariate(s). "
+          "Dummy variable\n"
+          "                            will automatically generated. Any items "
+          "in\n"
+          "                            --cov-factor must also be found in "
+          "--cov-col\n"
+          "                            Also accept continuous input (start "
+          "with @).\n"
           // PRSice
           "\nP-value Thresholding:\n"
           "    --bar-levels            Level of barchart to be plotted. When "
@@ -1024,7 +1037,7 @@ void Commander::set_help_message()
           "    --all-score             Output PRS for ALL threshold. WARNING: "
           "This\n"
           "                            will generate a huge file\n"
-          "    --non-cumulative        Calculate non-cumulative PRS. PRS will "
+          "    --non-cumulate          Calculate non-cumulative PRS. PRS will "
           "be reset\n"
           "                            to 0 for each new P-value threshold "
           "instead of\n"
@@ -1065,6 +1078,8 @@ void Commander::set_help_message()
           "                            generate the empirical p-value. "
           "Recommend to\n"
           "                            use value larger than 10,000\n"
+          "    --print-snp             Print all SNPs used to construct the "
+          "best PRS\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
           "                            system time will be used as seed. When "
@@ -1072,9 +1087,15 @@ void Commander::set_help_message()
           "                            seed and same input is provided, same "
           "result\n"
           "                            can be generated\n"
-          "    --print-snp             Print all SNPs used to construct the "
-          "best PRS\n"
           "    --thread        | -n    Number of thread use\n"
+          "    --x-range               Range of SNPs to be excluded from the "
+          "whole\n"
+          "                            analysis. It can either be a single bed "
+          "file\n"
+          "                            or a comma seperated list of range. "
+          "Range must\n"
+          "                            be in the format of chr:start-end or "
+          "chr:coordinate\n"
           "    --help          | -h    Display this help message\n";
 }
 
