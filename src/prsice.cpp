@@ -598,7 +598,6 @@ uint32_t PRSice::generate_factor_list(
                     auto&& cur_level = factor_levels[factor_level_index];
                     if (cur_level.find(token[factor]) == cur_level.end()) {
                         // add factor
-                    	std::cout << "Levels: " << factor << "\t" << token[factor] << "\t"<< current_factor_level[factor_level_index] << std::endl;
                         cur_level[token[factor]] =
                             current_factor_level[factor_level_index]++;
                     }
