@@ -517,7 +517,7 @@ void PRSice::check_factor_cov(
 }
 
 
-void PRSice::generate_factor_list(
+uint32_t PRSice::generate_factor_list(
     const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
     std::vector<uint32_t>& cov_start_index, std::vector<uint32_t>& cov_index,
     std::vector<std::string>& cov_name,
@@ -536,7 +536,7 @@ void PRSice::generate_factor_list(
     int factor_level_index = 0;
     int num_valid = 0, index = 0;
     bool valid = true;
-
+    factor_levels.resize(factor_cov_index.size());
     cov.open(cov_file.c_str());
     if (!cov.is_open()) {
         throw std::runtime_error("Error: Cannot open covariate file: "
@@ -593,7 +593,100 @@ void PRSice::generate_factor_list(
     cov.close();
     // Here, we should know the identity of the valid sample and also
     // the factor levels
+    // now calculate the number of column required
+    // 1 for intercept, 1 for PRS
+    // also output factor info
+
+    std::vector<std::string> all_missing_cov;
+    std::string message = "Include Covariates:\nName\tMissing\tNumber of levels\n";
+    uint32_t total_column = 2;
+    uint32_t num_sample = m_sample_with_phenotypes.size();
+    factor_level_index = 0;
+    uint32_t cur_cov_index = 0;
+    uint32_t num_level = 0;
+    for(auto&& cov : cov_index){
+    	cov_start_index.push_back(total_column);
+    	if(factor_level_index == factor_cov_index.size() || cov!= factor_cov_index[factor_level_index]){
+    		++total_column;
+    		message.append(cov_name[cur_cov_index]+"\t"+std::to_string(missing_count[cov])+"\t-\n");
+    	}else{
+    		num_level = factor_levels[factor_level_index++].size();
+    		total_column+=num_level-1;
+    		message.append(cov_name[cur_cov_index]+"\t"+std::to_string(missing_count[cov])+"\t"+std::to_string(num_level)+"\n");
+    	}
+    	++cur_cov_index;
+    	// error messages here
+    }
+    reporter.report(message);
+    // now update the m_phenotype vector
+    if (valid_sample_index.size() != num_sample && num_sample != 0) {
+    	// helpful to give the overview
+    	int removed = num_sample - valid_sample_index.size();
+    	message =
+    			std::to_string(removed) + " sample(s) with invalid covariate:\n\n";
+    	double portion = (double) removed / (double) num_sample;
+    	if (valid_sample_index.size() == 0) {
+    		// if all samples are removed
+    		cur_cov_index = 0;
+    		for(auto&& cov : cov_index){
+    			if (missing_count[cov] == num_sample) {
+    				// we sorted the column index so we can't tell what the
+    				// column name is useless we also store the head of the file
+    				// (too troublesome)
+    				message.append("Error: "+cov_name[cur_cov_index]
+    				+ " is invalid, please check it is of the "
+					"correct format\n");
+    			}
+    			++cur_cov_index;
+    		}
+    		reporter.report(message);
+    		throw std::runtime_error("Error: All samples removed due to "
+    				"missingness in covariate file!");
+    	}
+    	if (portion > 0.05) {
+    		message.append(
+    				"Warning: More than " + std::to_string(portion * 100)
+                    + "% of your samples were removed! "
+					"You should check if your covariate file is correct\n");
+    	}
+    	reporter.report(message);
+    	// sort the sample index
+    	// Sorting is required because our ordering follows the covariate
+    	// file, which does not need to have the same ordering as the
+    	// target file.
+    	// Also, this does means that the base factor will be the
+    	// first factor observed within the covariate file, not
+    	// the one observed in the first sample
+    	std::sort(begin(valid_sample_index), end(valid_sample_index),
+    			[](std::pair<std::string, size_t> const& t1,
+    					std::pair<std::string, size_t> const& t2) {
+    		if (std::get<1>(t1) == std::get<1>(t2))
+    			return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
+    		else
+    			return std::get<1>(t1) < std::get<1>(t2);
+    	});
+
+
+    	// update the m_phenotype and m_independent
+    	m_sample_with_phenotypes.clear();
+    	// vector contains the name of samples that we keep
+    	// and also their original index on m_phenotype
+    	for (size_t cur_index = 0; cur_index < valid_sample_index.size();
+    			++cur_index)
+    	{
+    		std::string name = std::get<0>(valid_sample_index[cur_index]);
+    		m_sample_with_phenotypes[name] = cur_index;
+    		size_t original_index = std::get<1>(valid_sample_index[cur_index]);
+    		if (original_index != cur_index) {
+    			m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
+    		}
+    	}
+            m_phenotype.conservativeResize(valid_sample_index.size(), 1);
+    }
+    return total_column;
+
 }
+
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             std::vector<std::string> cov_header_name,
                             std::vector<uint32_t> cov_header_index,
@@ -613,13 +706,18 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // occur in different covariates
     // As the index are sorted, we can use vector
     std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
-    uint32_t covariate_dimention = cov_header_index.size();
+    std::vector<uint32_t> cov_start_index;
+    uint32_t num_column=2+cov_header_index.size();
     if (factor_cov_index.size() != 0) {
         /*
          * What we want:
          * For each factor of a factor covariate, know which column should we
          * put the 1 to
          */
+    	num_column=generate_factor_list(c_cov_file, factor_cov_index, cov_start_index, cov_header_index, cov_header_name, factor_list, reporter);
+
+    	// show index start
+    	exit(-1);
     }
     /*
     std::vector<size_t> cov_index =
