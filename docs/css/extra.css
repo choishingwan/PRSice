@@ -107,3 +107,62 @@ border: 1px solid #CCC !important;
 .codehilite .vg { color: #008080 } /* Name.Variable.Global */
 .codehilite .vi { color: #008080 } /* Name.Variable.Instance */
 .codehilite .il { color: #009999 } /* Literal.Number.Integer.Long */
+
+img[src*='#left'] {
+    float: left;
+}
+img[src*='#right'] {
+    float: right;
+}
+img[src*='#center'] {
+    display: block;
+    margin: auto;
+}
+
+
+.admonition.announcement{
+    padding: 12px;
+    margin: -12px -12px 0px -12px;
+    background-color: rgba(98, 0, 234, .1);
+}
+.admonition.announcement .admonition-title{
+    border-bottom: .1rem solid rgba(98, 0, 234, .1);
+    background-color: #6200ea;
+}
+
+.admonition.announcement .admonition-title:before{
+    content: "\f0a1";
+    font-family: 'FontAwesome';
+}
+
+p {
+    font-size: 18px;
+    font-family: sans-serif;
+}
+
+li {
+    font-size: 18px;
+    font-family: sans-serif;
+}
+
+h1, h2, h3 {
+    font-family: serif;
+}
+
+code {
+    font-family: Monaco;
+}
+
+tbody { 
+   font-family: serif;
+  font-size: 20px;
+  }
+
+th {
+    font-family: serif;
+    font-size: 26px;
+}
+td {
+    font-family: sans-serif;
+    font-size: 16px;
+}

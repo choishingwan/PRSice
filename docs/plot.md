@@ -1,9 +1,9 @@
 # Introduction
 PRSice will automatically generate the bar-plot and high-resolution plot
-(if `--fastscore`) is not set. Quantile plots will also be generated if you
-used the `--quantile` parameter.
+(if `--fastscore`) is not set. Quantile plots will also be generated if 
+the `--quantile` parameter is provided
 
-To see some example of PRSice output, you can refer to [here](step_by_step.md#output-of-results)
+To see some example of PRSice output, please refer to [here](step_by_step.md#output-of-results)
 
 !!! note
     These parameters, is not recognized by the PRSice binary
@@ -34,8 +34,8 @@ To see some example of PRSice output, you can refer to [here](step_by_step.md#ou
 
 - `--plot`
 
-  When set, will only perform plotting using existing PRSice result files.
-  Users will still need to provide all other parameters such that PRSice
+  When set, will only perform plotting using existing PRSice result files. 
+  All other parameters are still required such that PRSice
   can correctly locate the required input files for plotting.
 
 - `--plot-set`
@@ -51,6 +51,16 @@ To see some example of PRSice output, you can refer to [here](step_by_step.md#ou
     Number of quantiles to plot.
     No quantile plot will be generated when this is not provided.
 
+-  `--quant-break`
+
+    Parameter to indicate an uneven distribution of quantile. Values represent
+    the upperbound of each quantile group. 
+
+    e.g. With `--quantile 10 --quant-break 1,5,10`, the quantiles will be grouped into
+
+    > $0\lt Q \le 1$, $1\lt Q \le 5$, $5\lt Q \le 10$
+
+
 - `--quant-extract` | `-e`
 
   File containing sample ID to be plot on a separated
@@ -58,14 +68,18 @@ To see some example of PRSice output, you can refer to [here](step_by_step.md#ou
   schizophrenia samples. Must contain IID. Should
   contain FID if `--ignore-fid` isn't set.
 
-  !!! note
+!!! note
 
     This will only work if the base and target has a different
     phenotype or if the target phenotype is quantitative
 
+
 - `--quant-ref`
 
   Reference quantile for quantile plot. Default is number of quantiles divided by 2
+
+  Or in the event where `--quant-break` is used, represent the upper bound of the 
+  reference quantile
 
 - `--scatter-r2`
 

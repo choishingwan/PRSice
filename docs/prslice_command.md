@@ -2,8 +2,7 @@
 
 !!! Note
 
-    Currently not implemented as we do not have the manpower to empirically
-    analysis the performance/viability of this method
+    Currently not implemented due to the lack of manpower
 
 # Command
 - `--prslice`

@@ -34,14 +34,14 @@
 #define NDEBUG
 #endif
 #include <assert.h>
-
 // Uncomment this to build this without CBLAS/CLAPACK.
 // #define NOLAPACK
 
 // Uncomment this to prevent all unstable features from being accessible from
 // the command line.
 // #define STABLE_BUILD
-
+#define PROG_NAME_STR "PRSice"
+#define PROG_NAME_CAPS "PRSICE"
 #define SPECIES_HUMAN 0
 #define SPECIES_COW 1
 #define SPECIES_DOG 2
@@ -52,8 +52,6 @@
 #define SPECIES_UNKNOWN 7
 #define SPECIES_DEFAULT SPECIES_HUMAN
 
-#define PROG_NAME_STR "plink"
-#define PROG_NAME_CAPS "PLINK"
 
 #ifdef _WIN32
 // needed for MEMORYSTATUSEX

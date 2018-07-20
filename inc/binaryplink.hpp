@@ -26,22 +26,27 @@ class BinaryPlink : public Genotype
 {
 public:
     BinaryPlink(const std::string& prefix, const std::string& sample_file,
-                const size_t thread = 1, const bool ignore_fid = false,
+                const std::string& multi_input, const size_t thread = 1,
+                const bool ignore_fid = false,
                 const bool keep_nonfounder = false,
-                const bool keep_ambig = false);
+                const bool keep_ambig = false, const bool is_ref = false);
     ~BinaryPlink();
 
 private:
+    std::string m_cur_file;
+    std::ifstream m_bed_file;
+    std::streampos m_prev_loc = 0;
     uintptr_t m_bed_offset = 3;
-    std::vector<Sample> gen_sample_vector();
 
-    std::vector<SNP>
-    gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   const std::string& out_prefix, Genotype* target = nullptr);
+    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
+                                    const double info,
+                                    const double hard_threshold,
+                                    const bool hard_coded, Region& exclusion,
+                                    const std::string& out_prefix,
+                                    Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);
-
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype,
                               const std::streampos byte_pos,
@@ -62,7 +67,7 @@ private:
         if ((m_prev_loc != snp_index)
             && !m_bed_file.seekg(snp_index, std::ios_base::beg))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
         // so that we don't jump if we don't need to
         m_prev_loc = snp_index + (std::streampos) unfiltered_sample_ct4;
@@ -70,17 +75,20 @@ private:
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
     };
 
+    void read_score(std::vector<size_t>& index, bool reset_zero);
+    void read_score(std::vector<size_t>& index_bound, uint32_t homcom_weight,
+                    uint32_t het_weight, uint32_t homrar_weight,
+                    bool reset_zero);
     void read_score(size_t start_index, size_t end_bound,
-                    const size_t region_index);
-
-    std::ifstream m_bed_file;
-    std::string m_cur_file;
-    std::streampos m_prev_loc = 0;
-
+                    const size_t region_index, bool reset_zero);
+    void read_score(size_t start_index, size_t end_bound,
+                    uint32_t homcom_weight, uint32_t het_weight,
+                    uint32_t homrar_weight, const size_t region_index,
+                    bool reset_zero);
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
                                     const uintptr_t* __restrict sample_include,

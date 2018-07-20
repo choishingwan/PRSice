@@ -60,18 +60,23 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
+    misc.non_cumulate = 0;
+    misc.exclusion_range = "";
     misc.print_all_scores = false;
     misc.ignore_fid = false;
     misc.logit_perm = false;
+    misc.memory = 0;
     misc.pearson = false;
     misc.permutation = 0;
     misc.print_snp = false;
     misc.provided_seed = false;
+    misc.provided_memory = false;
     misc.thread = 1;
     misc.seed = 0;
 
-
+    reference_panel.allow_inter = 0;
     reference_panel.file_name = "";
+    reference_panel.multi_name = "";
     reference_panel.type = "bed";
     reference_panel.keep_file = "";
     reference_panel.remove_file = "";
@@ -107,13 +112,21 @@ Commander::Commander()
 
     prset.gtf = "";
     prset.msigdb = "";
+    prset.background = "";
+    prset.single_snp_set = "";
+    prset.multi_snp_sets = "";
     prset.perform_prset = false;
+    prset.perform_set_perm = false;
+    prset.set_perm = 10000;
+    prset.window_5 = 0;
+    prset.window_3 = 0;
 
     prslice.size = -1;
     prslice.provided = false;
 
     target.include_nonfounders = false;
     target.name = "";
+    target.multi_name = "";
     target.pheno_file = "";
     target.type = "bed";
     set_help_message();
@@ -151,6 +164,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"upper", required_argument, NULL, 'u'},
         {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
+        {"allow-inter", no_argument, &reference_panel.allow_inter, 1},
         {"all-score", no_argument, &misc.print_all_scores, 1},
         {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &prs_snp_filtering.is_hard_coded, 1},
@@ -159,6 +173,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"keep-ambig", no_argument, &prs_snp_filtering.keep_ambig, 1},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
+        {"non-cumulate", no_argument, &misc.non_cumulate, 1},
         {"no-default", no_argument, &base.no_default, 1},
         {"no-full", no_argument, &p_thresholds.no_full, 1},
         {"no-regress", no_argument, &prs_calculation.no_regress, 1},
@@ -169,14 +184,15 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         // long flags, need to work on them
         {"A1", required_argument, NULL, 0},
         {"A2", required_argument, NULL, 0},
+        {"background", required_argument, NULL, 0},
         {"bar-levels", required_argument, NULL, 0},
         {"binary-target", required_argument, NULL, 0},
         {"bp", required_argument, NULL, 0},
         {"chr", required_argument, NULL, 0},
         {"clump-kb", required_argument, NULL, 0},
-        {"clump-wind", required_argument, NULL, 0},
         {"clump-p", required_argument, NULL, 0},
         {"clump-r2", required_argument, NULL, 0},
+        {"cov-factor", required_argument, NULL, 0},
         {"exclude", required_argument, NULL, 0},
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
@@ -186,6 +202,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"info", required_argument, NULL, 0},
         {"keep", required_argument, NULL, 0},
         {"ld-keep", required_argument, NULL, 0},
+        {"ld-list", required_argument, NULL, 0},
         {"ld-type", required_argument, NULL, 0},
         {"ld-remove", required_argument, NULL, 0},
         {"ld-maf", required_argument, NULL, 0},
@@ -194,6 +211,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-info", required_argument, NULL, 0},
         {"maf-base", required_argument, NULL, 0},
         {"maf", required_argument, NULL, 0},
+        {"memory", required_argument, NULL, 0},
         {"missing", required_argument, NULL, 0},
         {"model", required_argument, NULL, 0},
         {"perm", required_argument, NULL, 0},
@@ -202,9 +220,16 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"remove", required_argument, NULL, 0},
         {"score", required_argument, NULL, 0},
         {"se", required_argument, NULL, 0},
+        {"set-perm", required_argument, NULL, 0},
         {"snp", required_argument, NULL, 0},
+        {"snp-set", required_argument, NULL, 0},
+        {"snp-sets", required_argument, NULL, 0},
         {"stat", required_argument, NULL, 0},
+        {"target-list", required_argument, NULL, 0},
         {"type", required_argument, NULL, 0},
+        {"wind-5", required_argument, NULL, 0},
+        {"wind-3", required_argument, NULL, 0},
+        {"x-range", required_argument, NULL, 0},
         {NULL, 0, 0, 0}};
     return process(argc, argv, optString, longOpts, reporter);
 }
@@ -300,9 +325,18 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                     misc.permutation = intpart;
                 }
             }
+            else if (command.compare("x-range") == 0)
+            {
+                // Require additional processing
+                set_string(optarg, message_store, misc.exclusion_range, dummy,
+                           command, error_messages);
+            }
             // Long opts for reference_panel
             else if (command.compare("ld-keep") == 0)
                 set_string(optarg, message_store, reference_panel.keep_file,
+                           dummy, command, error_messages);
+            else if (command.compare("ld-list") == 0)
+                set_string(optarg, message_store, reference_panel.multi_name,
                            dummy, command, error_messages);
             else if (command.compare("ld-remove") == 0)
                 set_string(optarg, message_store, reference_panel.remove_file,
@@ -329,9 +363,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                     dummy, error, command);
             // Long opts for p_thresholds
             else if (command.compare("bar-levels") == 0)
+            {
                 load_numeric_vector<double>(
                     optarg, message_store, error_messages,
                     p_thresholds.barlevel, error, command);
+                p_thresholds.set_use_thresholds = true;
+            }
             // Long opts for prs_calculation
             else if (command.compare("model") == 0)
                 set_model(optarg, message_store, error_messages, error);
@@ -371,6 +408,25 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("feature") == 0)
                 load_string_vector(optarg, message_store, prset.feature,
                                    command, error_messages);
+            else if (command.compare("snp-set") == 0)
+                set_string(optarg, message_store, prset.single_snp_set, dummy,
+                           command, error_messages);
+            else if (command.compare("snp-sets") == 0)
+                set_string(optarg, message_store, prset.multi_snp_sets, dummy,
+                           command, error_messages);
+            else if (command.compare("set-perm") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.set_perm, prset.perform_set_perm, error,
+                                 command);
+            else if (command.compare("background") == 0)
+                set_string(optarg, message_store, prset.background, dummy,
+                           command, error_messages);
+            else if (command.compare("wind-5") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_5, dummy, error, command);
+            else if (command.compare("wind-3") == 0)
+                set_numeric<int>(optarg, message_store, error_messages,
+                                 prset.window_3, dummy, error, command);
             // Long opts for PRSlice
             else if (command.compare("prslice") == 0)
                 set_numeric<int>(optarg, message_store, error_messages,
@@ -386,9 +442,20 @@ bool Commander::process(int argc, char* argv[], const char* optString,
             else if (command.compare("type") == 0)
                 set_string(optarg, message_store, target.type, dummy, command,
                            error_messages);
+            else if (command.compare("target-list") == 0)
+                set_string(optarg, message_store, target.multi_name, dummy,
+                           command, error_messages);
             else if (command.compare("binary-target") == 0)
                 load_binary_vector(optarg, message_store, error_messages,
                                    target.is_binary, error, command);
+            else if (command.compare("memory") == 0)
+                set_memory(optarg, message_store, error_messages, error);
+            else if (command == "cov-factor")
+            {
+                load_string_vector(optarg, message_store,
+                                   covariate.factor_covariates, "cov-factor",
+                                   error_messages);
+            }
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -533,6 +600,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (p_thresholds.no_full) message_store["no-full"] = "";
     if (prs_calculation.no_regress) message_store["no-regress"] = "";
     if (target.include_nonfounders) message_store["nonfounders"] = "";
+    if (reference_panel.allow_inter) message_store["allow-intermediate"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -556,6 +624,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     std::string time_str(buffer);
     std::string prog_name = argv[0];
     message.append(time_str + "\n" + prog_name);
+
     for (auto&& com : message_store) {
         message.append(" \\\n    --" + com.first + " " + com.second);
     }
@@ -580,404 +649,275 @@ Commander::~Commander()
 // Function to set the help message
 // avoid having large chunk of un-foldable code
 void Commander::set_help_message()
-{
-    help_message =
-        "usage: PRSice [options] <-b base_file> <-t target_file>\n"
-        // Base file
-        "\nBase File:\n"
-        "    --A1                    Column header containing allele 1 "
-        "(effective allele)\n"
-        "                            Default: A1\n"
-        "    --A2                    Column header containing allele 2 "
-        "(non-effective allele)\n"
-        "                            Default: A2\n"
-        "    --base          | -b    Base association file\n"
-        "    --beta                  Whether the test statistic is in the form "
-        "of \n"
-        "                            BETA or OR. If set, test statistic is "
-        "assume\n"
-        "                            to be in the form of BETA.\n"
-        "    --bp                    Column header containing the SNP "
-        "coordinate\n"
-        "                            Default: BP\n"
-        "    --chr                   Column header containing the chromosome\n"
-        "                            Default: CHR\n"
-        "    --index                 If set, assume the INDEX instead of NAME  "
-        "for\n"
-        "                            the corresponding columns are provided. "
-        "Index\n"
-        "                            should be 0-based (start counting from "
-        "0)\n"
-        "    --info-base             Base INFO score filtering. Format should "
-        "be\n"
-        "                            <Column name>,<Threshold>. SNPs with info "
-        "\n"
-        "                            score less than <Threshold> will be "
-        "ignored\n"
-        "                            Column name default: INFO\n"
-        "                            Threshold default: 0.9\n"
-        "    --maf-base              Base MAF filtering. Format should be\n"
-        "                            <Column name>,<Threshold>. SNPs with maf\n"
-        "                            less than <Threshold> will be ignored. "
-        "An\n"
-        "                            additional column can also be added "
-        "(e.g.\n"
-        "                            also filter MAF for cases), using the\n"
-        "                            following format:\n"
-        "                            <Column name>,<Threshold>:<Column "
-        "name>,<Threshold>\n"
-        "    --no-default            Remove all default options. If set, "
-        "PRSice\n"
-        "                            will not set any default column name and "
-        "you\n"
-        "                            will have to ensure all required columns "
-        "are\n"
-        "                            provided. (--snp, --stat, --A1, "
-        "--pvalue)\n"
-        "    --pvalue        | -p    Column header containing the p-value\n"
-        "                            Default: P\n"
-        "    --se                    Column header containing the standard "
-        "error\n"
-        "                            Default: SE\n"
-        "    --snp                   Column header containing the SNP ID\n"
-        "                            Default: SNP\n"
-        "    --stat                  Column header containing the summary "
-        "statistic\n"
-        "                            If --beta is set, default as BETA. "
-        "Otherwise,\n"
-        "                            will search for OR or BETA from the "
-        "header\n"
-        "                            of the base file\n"
-        // TARGET FILE
-        "\nTarget File:\n"
-        "    --binary-target         Indicate whether the target phenotype\n"
-        "                            is binary or not. Either T or F should "
-        "be\n"
-        "                            provided where T represent a binary "
-        "phenotype.\n"
-        "                            For multiple phenotypes, the input should "
-        "be\n"
-        "                            separated by comma without space. \n"
-        "                            Default: T if --beta and F if --beta is "
-        "not\n"
-        "    --geno                  Filter SNPs based on gentype missingness\n"
-        "    --info                  Filter SNPs based on info score. Only "
-        "used\n"
-        "                            for imputed target\n"
-        "    --keep                  File containing the sample(s) to be "
-        "extracted from\n"
-        "                            the target file. First column should be "
-        "FID and\n"
-        "                            the second column should be IID. If "
-        "--ignore-fid is\n"
-        "                            set, first column should be IID\n"
-        "                            Mutually exclusive from --remove\n"
-        "    --maf                   Filter SNPs based on minor allele "
-        "frequency (MAF)\n"
-        "    --nonfounders           Keep the nonfounders in the analysis\n"
-        "                            Note: They will still be excluded from LD "
-        "calculation\n"
-        "    --pheno-col     | -F    Headers of phenotypes to be included from "
-        "the\n"
-        "                            phenotype file\n"
-        "    --pheno-file    | -f    Phenotype file containing the "
-        "phenotype(s).\n"
-        "                            First column must be FID of the samples "
-        "and\n"
-        "                            the second column must be IID of the "
-        "samples.\n"
-        "                            When --ignore-fid is set, first column "
-        "must\n"
-        "                            be the IID of the samples.\n"
-        "                            Must contain a header if --pheno-col is\n"
-        "                            specified\n"
-        "    --prevalence    | -k    Prevalence of all binary trait. If "
-        "provided\n"
-        "                            will adjust the ascertainment bias of the "
-        "R2.\n"
-        "                            Note that when multiple binary trait is "
-        "found,\n"
-        "                            prevalence information must be provided "
-        "for\n"
-        "                            all of them (Either adjust all binary "
-        "traits,\n"
-        "                            or don't adjust at all)\n"
-        "    --remove                File containing the sample(s) to be "
-        "removed from\n"
-        "                            the target file. First column should be "
-        "FID and\n"
-        "                            the second column should be IID. If "
-        "--ignore-fid is\n"
-        "                            set, first column should be IID\n"
-        "                            Mutually exclusive from --keep\n"
-        "    --target        | -t    Target genotype file. Currently support\n"
-        "                            both BGEN and binary PLINK format. For \n"
-        "                            multiple chromosome input, simply "
-        "substitute\n"
-        "                            the chromosome number with #. PRSice "
-        "will\n"
-        "                            automatically replace # with 1-22\n"
-        "                            For binary plink format, you can also "
-        "specify\n"
-        "                            a seperate fam file by <prefix>,<fam "
-        "file>\n"
-        "    --type                  File type of the target file. Support bed "
-        "\n"
-        "                            (binary plink) and bgen format. Default: "
-        "bed\n"
-        // dosage
-        "\nDosage:\n"
-        "    --hard-thres            Hard threshold for dosage data. Any call "
-        "less than\n"
-        "                            this will be treated as missing. Note "
-        "that if dosage\n"
-        "                            data is used as a LD reference, it will "
-        "always be\n"
-        "                            hard coded to calculate the LD\n"
-        "    --hard                  Use hard coding instead of dosage for PRS "
-        "construction.\n"
-        "                            Default is to use dosage instead of hard "
-        "coding\n"
-        // clumping
-        "\nClumping:\n"
-        "    --clump-kb              The distance for clumping in kb\n"
-        "                            Default: "
-        + std::to_string(clumping.distance)
-        + "\n"
-          "    --clump-r2              The R2 threshold for clumping\n"
-          "                            Default: "
-        + std::to_string(clumping.r2)
-        + "\n"
-          "    --clump-p               The p-value threshold use for "
-          "clumping.\n"
-          "                            Default: "
-        + std::to_string(clumping.p_value)
-        + "\n"
-          "    --ld            | -L    LD reference file. Use for LD "
-          "calculation. If not\n"
-          "                            provided, will use the post-filtered "
-          "target genotype\n"
-          "                            for LD calculation. Support multiple "
-          "chromosome input\n"
-          "                            Please see --target for more "
-          "information\n"
-          "    --ld-geno               Filter SNPs based on genotype "
-          "missingness\n"
-          "    --ld-info               Filter SNPs based on info score. Only "
-          "used\n"
-          "                            for imputed LD reference\n"
-          "    --ld-hard-thres         Hard threshold for dosage data. Any "
-          "call less than\n"
-          "                            this will be treated as missing.\n"
-          "                            Default: "
-        + std::to_string(reference_snp_filtering.hard_threshold)
-        + "\n"
-          "    --ld-keep               File containing the sample(s) to be "
-          "extracted from\n"
-          "                            the LD reference file. First column "
-          "should be FID and\n"
-          "                            the second column should be IID. If "
-          "--ignore-fid is\n"
-          "                            set, first column should be IID\n"
-          "                            Mutually exclusive from --ld-remove\n"
-          "                            No effect if --ld was not provided\n"
-          "    --ld-maf                Filter SNPs based on minor allele "
-          "frequency\n"
-          "    --ld-remove             File containing the sample(s) to be "
-          "removed from\n"
-          "                            the LD reference file. First column "
-          "should be FID and\n"
-          "                            the second column should be IID. If "
-          "--ignore-fid is\n"
-          "                            set, first column should be IID\n"
-          "                            Mutually exclusive from --ld-keep\n"
-          "    --ld-type               File type of the LD file. Support bed "
-          "(binary plink)\n"
-          "                            and bgen format. Default: bed\n"
-          "    --no-clump              Stop PRSice from performing clumping\n"
-          "    --proxy                 Proxy threshold for index SNP to be "
-          "considered\n"
-          "                            as part of the region represented by "
-          "the clumped\n"
-          "                            SNP(s). e.g. --proxy 0.8 means the "
-          "index SNP will\n"
-          "                            represent region of any clumped SNP(s) "
-          "that has a\n"
-          "                            R2>=0.8 even if the index SNP does not "
-          "physically\n"
-          "                            locate within the region\n"
-          // Covariates
-          "\nCovariate:\n"
-          "    --cov-col       | -c    Header of covariates. If not provided, "
-          "will use\n"
-          "                            all variables in the covariate file. By "
-          "adding\n"
-          "                            @ in front of the string, any numbers "
-          "within [\n"
-          "                            and ] will be parsed. E.g. @PC[1-3] "
-          "will be\n"
-          "                            read as PC1,PC2,PC3. Discontinuous "
-          "input are also\n"
-          "                            supported: @cov[1.3-5] will be parsed "
-          "as \n"
-          "                            cov1,cov3,cov4,cov5\n"
-          "    --cov-file      | -C    Covariate file. First column should be "
-          "FID and \n"
-          "                            the second column should be IID. If "
-          "--ignore-fid\n"
-          "                            is set, first column should be IID\n"
-          // PRSice
-          "\nP-value Thresholding:\n"
-          "    --bar-levels            Level of barchart to be plotted. When "
-          "--fastscore\n"
-          "                            is set, PRSice will only calculate the "
-          "PRS for \n"
-          "                            threshold within the bar level. Levels "
-          "should be\n"
-          "                            comma separated without space\n"
-          "    --fastscore             Only calculate threshold stated in "
-          "--bar-levels\n"
-          "    --no-full               By default, PRSice will include the "
-          "full model, \n"
-          "                            i.e. p-value threshold = 1. Setting "
-          "this flag will\n"
-          "                            disable that behaviour\n"
-          "    --interval      | -i    The step size of the threshold. "
-          "Default: "
-        + std::to_string(p_thresholds.inter)
-        + "\n"
-          "    --lower         | -l    The starting p-value threshold. "
-          "Default: "
-        + std::to_string(p_thresholds.lower)
-        + "\n"
-          "    --model                 Genetic model use for regression. The "
-          "genetic\n"
-          "                            encoding is based on the base data "
-          "where the\n"
-          "                            encoding represent number of the coding "
-          "allele\n"
-          "                            Available models include:\n"
-          "                            add - Additive model, code as 0/1/2 "
-          "(default)\n"
-          "                            dom - Dominant model, code as 0/1/1\n"
-          "                            rec - Recessive model, code as 0/0/1\n"
-          "                            het - Heterozygous only model, code as "
-          "0/1/0\n"
-          "    --missing               Method to handle missing genotypes. By "
-          "default, \n"
-          "                            final scores are averages of valid "
-          "per-allele \n"
-          "                            scores with missing genotypes "
-          "contribute an amount\n"
-          "                            proportional to imputed allele "
-          "frequency. To throw\n"
-          "                            out missing observations instead "
-          "(decreasing the\n"
-          "                            denominator in the final average when "
-          "this happens),\n"
-          "                            use the 'no_mean_imputation' modifier. "
-          "Alternatively,\n"
-          "                            you can use the 'center' modifier to "
-          "shift all scores\n"
-          "                            to mean zero. \n"
-          "    --no-regress            Do not perform the regression analysis "
-          "and simply\n"
-          "                            output all PRS.\n"
-
-          "    --score                 Method to calculate the polygenic "
-          "score.\n"
-          "                            Available methods include:\n"
-          "                            avg - Take the average effect size "
-          "(default)\n"
-          "                            std - Standardize the effect size \n"
-          "                            sum - Direct summation of the effect "
-          "size \n"
-          "    --upper         | -u    The final p-value threshold. Default: "
-        + std::to_string(p_thresholds.upper)
-        + "\n"
-          "\nPRSet:\n"
-          "    --bed           | -B    Bed file containing the selected "
-          "regions.\n"
-          "                            Name of bed file will be used as the "
-          "region\n"
-          "                            identifier. WARNING: Bed file is "
-          "0-based\n"
-          "    --feature               Feature(s) to be included from the gtf "
-          "file.\n"
-          "                            Default: exon,CDS,gene,protein_coding.\n"
-          "    --gtf           | -g    GTF file containing gene boundaries. "
-          "Required\n"
-          "                            when --msigdb is used\n"
-          "    --msigdb        | -m    MSIGDB file containing the pathway "
-          "information.\n"
-          "                            Require the gtf file\n"
-          // PRSlice
-          "\nPRSlice:\n"
-          "    --prslice               Perform PRSlice where the whole genome "
-          "is first cut\n"
-          "                            into bin size specified by this option. "
-          "PRSice will\n"
-          "                            then be performed on each bin. Bins are "
-          "then sorted\n"
-          "                            according to the their R2. PRSice is "
-          "then performed\n"
-          "                            again to find the best bin "
-          "combination.\n"
-          "                            This cannot be performed together with "
-          "PRSet\n"
-          "                            (Currently not implemented)\n"
-          // Misc
-          "\nMisc:\n"
-          "    --all-score             Output PRS for ALL threshold. WARNING: "
-          "This\n"
-          "                            will generate a huge file\n"
-          "    --exclude               File contains SNPs to be excluded from "
-          "the\n"
-          "                            analysis\n"
-          "    --extract               File contains SNPs to be included in "
-          "the \n"
-          "                            analysis\n"
-          "    --ignore-fid            Ignore FID for all input. When this is "
-          "set,\n"
-          "                            first column of all file will be assume "
-          "to\n"
-          "                            be IID instead of FID\n"
-          "    --logit-perm            When performing permutation, still use "
-          "logistic\n"
-          "                            regression instead of linear "
-          "regression. This\n"
-          "                            will substantially slow down PRSice\n"
-          "    --keep-ambig            Keep ambiguous SNPs. Only use this "
-          "option\n"
-          "                            if you are certain that the base and "
-          "target\n"
-          "                            has the same A1 and A2 alleles\n"
-          "    --out           | -o    Prefix for all file output\n"
-          "    --pearson               Use Pearson Correlation for LD "
-          "calculation\n"
-          "                            instead of the maximum likelihood "
-          "haplotype\n"
-          "                            frequency estimates. This will slightly "
-          "\n"
-          "                            decrease the accuracy of LD estimates, "
-          "but\n"
-          "                            should increase the speed of clumping\n"
-          "    --perm                  Number of permutation to perform. This "
-          "swill\n"
-          "                            generate the empirical p-value. "
-          "Recommend to\n"
-          "                            use value larger than 10,000\n"
-          "    --seed          | -s    Seed used for permutation. If not "
-          "provided,\n"
-          "                            system time will be used as seed. When "
-          "same\n"
-          "                            seed and same input is provided, same "
-          "result\n"
-          "                            can be generated\n"
-          "    --print-snp             Print all SNPs used to construct the "
-          "best PRS\n"
-          "    --thread        | -n    Number of thread use\n"
-          "    --help          | -h    Display this help message\n";
+{help_message =
+	       "usage: PRSice [options] <-b base_file> <-t target_file>\n"
+	           // Base file
+	       "\nBase File:\n"
+	       "    --A1                    Column header containing allele 1 (effective allele)\n"
+	       "                            Default: A1\n"
+	       "    --A2                    Column header containing allele 2 (non-effective allele)\n"
+	       "                            Default: A2\n"
+	       "    --base          | -b    Base association file\n"
+	       "    --beta                  Whether the test statistic is in the form of \n"
+	       "                            BETA or OR. If set, test statistic is assume\n"
+	       "                            to be in the form of BETA.\n"
+	       "    --bp                    Column header containing the SNP coordinate\n"
+	       "                            Default: BP\n"
+	       "    --chr                   Column header containing the chromosome\n"
+	       "                            Default: CHR\n"
+	       "    --index                 If set, assume the INDEX instead of NAME  for\n"
+	       "                            the corresponding columns are provided. Index\n"
+	       "                            should be 0-based (start counting from 0)\n"
+	       "    --info-base             Base INFO score filtering. Format should be\n"
+	       "                            <Column name>,<Threshold>. SNPs with info \n"
+	       "                            score less than <Threshold> will be ignored\n"
+	       "                            Column name default: INFO\n"
+	       "                            Threshold default: 0.9\n"
+	       "    --maf-base              Base MAF filtering. Format should be\n"
+	       "                            <Column name>,<Threshold>. SNPs with maf\n"
+	       "                            less than <Threshold> will be ignored. An\n"
+	       "                            additional column can also be added (e.g.\n"
+	       "                            also filter MAF for cases), using the\n"
+	       "                            following format:\n"
+	       "                            <Column name>,<Threshold>:<Column name>,<Threshold>\n"
+	       "    --no-default            Remove all default options. If set, PRSice\n"
+	       "                            will not set any default column name and you\n"
+	       "                            will have to ensure all required columns are\n"
+	       "                            provided. (--snp, --stat, --A1, --pvalue)\n"
+	       "    --pvalue        | -p    Column header containing the p-value\n"
+	       "                            Default: P\n"
+	       "    --se                    Column header containing the standard error\n"
+	       "                            Default: SE\n"
+	       "    --snp                   Column header containing the SNP ID\n"
+	       "                            Default: SNP\n"
+	       "    --stat                  Column header containing the summary statistic\n"
+	       "                            If --beta is set, default as BETA. Otherwise,\n"
+	       "                            will search for OR or BETA from the header\n"
+	       "                            of the base file\n"
+	           // TARGET FILE
+	       "\nTarget File:\n"
+	       "    --binary-target         Indicate whether the target phenotype\n"
+	       "                            is binary or not. Either T or F should be\n"
+	       "                            provided where T represent a binary phenotype.\n"
+	       "                            For multiple phenotypes, the input should be\n"
+	       "                            separated by comma without space. \n"
+	       "                            Default: T if --beta and F if --beta is not\n"
+	       "    --geno                  Filter SNPs based on gentype missingness\n"
+	       "    --info                  Filter SNPs based on info score. Only used\n"
+	       "                            for imputed target\n"
+	       "    --keep                  File containing the sample(s) to be extracted from\n"
+	       "                            the target file. First column should be FID and\n"
+	       "                            the second column should be IID. If --ignore-fid is\n"
+	       "                            set, first column should be IID\n"
+	       "                            Mutually exclusive from --remove\n"
+	       "    --maf                   Filter SNPs based on minor allele frequency (MAF)\n"
+	       "    --nonfounders           Keep the nonfounders in the analysis\n"
+	       "                            Note: They will still be excluded from LD calculation\n"
+	       "    --pheno-col     | -F    Headers of phenotypes to be included from the\n"
+	       "                            phenotype file\n"
+	       "    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n"
+	       "                            First column must be FID of the samples and\n"
+	       "                            the second column must be IID of the samples.\n"
+	       "                            When --ignore-fid is set, first column must\n"
+	       "                            be the IID of the samples.\n"
+	       "                            Must contain a header if --pheno-col is\n"
+	       "                            specified\n"
+	       "    --prevalence    | -k    Prevalence of all binary trait. If provided\n"
+	       "                            will adjust the ascertainment bias of the R2.\n"
+	       "                            Note that when multiple binary trait is found,\n"
+	       "                            prevalence information must be provided for\n"
+	       "                            all of them (Either adjust all binary traits,\n"
+	       "                            or don't adjust at all)\n"
+	       "    --remove                File containing the sample(s) to be removed from\n"
+	       "                            the target file. First column should be FID and\n"
+	       "                            the second column should be IID. If --ignore-fid is\n"
+	       "                            set, first column should be IID\n"
+	       "                            Mutually exclusive from --keep\n"
+	       "    --target        | -t    Target genotype file. Currently support\n"
+	       "                            both BGEN and binary PLINK format. For \n"
+	       "                            multiple chromosome input, simply substitute\n"
+	       "                            the chromosome number with #. PRSice will\n"
+	       "                            automatically replace # with 1-22\n"
+	       "                            For binary plink format, you can also specify\n"
+	       "                            a seperate fam file by <prefix>,<fam file>\n"
+	       "    --target-list           File containing prefix of target genotype\n"
+	       "                            files. Similar to --target but allow more \n"
+	       "                            flexibility. Do not support external fam file\n"
+	       "                            at the moment\n"
+	       "    --type                  File type of the target file. Support bed \n"
+	       "                            (binary plink) and bgen format. Default: bed\n"
+	       //dosage
+	       "\nDosage:\n"
+	       "    --allow-inter           Allow the generate of intermediate file. This will\n"
+	       "                            speed up PRSice when using dosage data as clumping\n"
+	       "                            reference and for hard coding PRS calculation\n"
+	       "    --hard-thres            Hard threshold for dosage data. Any call less than\n"
+	       "                            this will be treated as missing. Note that if dosage\n"
+	       "                            data is used as a LD reference, it will always be\n"
+	       "                            hard coded to calculate the LD\n"
+	       "    --hard                  Use hard coding instead of dosage for PRS construction.\n"
+	       "                            Default is to use dosage instead of hard coding\n"
+	       // clumping
+	       "\nClumping:\n"
+	       "    --clump-kb              The distance for clumping in kb\n"
+	       "                            Default: "+ std::to_string(clumping.distance)+ "\n"
+	       "    --clump-r2              The R2 threshold for clumping\n"
+	       "                            Default: "+ std::to_string(clumping.r2)+ "\n"
+	       "    --clump-p               The p-value threshold use for clumping.\n"
+	       "                            Default: "+ std::to_string(clumping.p_value)+ "\n"
+	       "    --ld            | -L    LD reference file. Use for LD calculation. If not\n"
+	       "                            provided, will use the post-filtered target genotype\n"
+	       "                            for LD calculation. Support multiple chromosome input\n"
+	       "                            Please see --target for more information\n"
+	       "    --ld-list               File containing prefix of LD reference files.\n"
+	       "                            Similar to --ld but allow more \n"
+	       "                            flexibility. Do not support external fam file\n"
+	       "                            at the moment\n"
+	       "    --ld-geno               Filter SNPs based on genotype missingness\n"
+	       "    --ld-info               Filter SNPs based on info score. Only used\n"
+	       "                            for imputed LD reference\n"
+	       "    --ld-hard-thres         Hard threshold for dosage data. Any call less than\n"
+	       "                            this will be treated as missing.\n"
+	       "                            Default: "+std::to_string(reference_snp_filtering.hard_threshold)+"\n"
+	       "    --ld-keep               File containing the sample(s) to be extracted from\n"
+	       "                            the LD reference file. First column should be FID and\n"
+	       "                            the second column should be IID. If --ignore-fid is\n"
+	       "                            set, first column should be IID\n"
+	       "                            Mutually exclusive from --ld-remove\n"
+	       "                            No effect if --ld was not provided\n"
+	       "    --ld-maf                Filter SNPs based on minor allele frequency\n"
+	       "    --ld-remove             File containing the sample(s) to be removed from\n"
+	       "                            the LD reference file. First column should be FID and\n"
+	       "                            the second column should be IID. If --ignore-fid is\n"
+	       "                            set, first column should be IID\n"
+	       "                            Mutually exclusive from --ld-keep\n"
+	       "    --ld-type               File type of the LD file. Support bed (binary plink)\n"
+	       "                            and bgen format. Default: bed\n"
+	       "    --no-clump              Stop PRSice from performing clumping\n"
+	       "    --proxy                 Proxy threshold for index SNP to be considered\n"
+	       "                            as part of the region represented by the clumped\n"
+	       "                            SNP(s). e.g. --proxy 0.8 means the index SNP will\n"
+	       "                            represent region of any clumped SNP(s) that has a\n"
+	       "                            R2>=0.8 even if the index SNP does not physically\n"
+	       "                            locate within the region\n"
+	       // Covariates
+	       "\nCovariate:\n"
+	       "    --cov-col       | -c    Header of covariates. If not provided, will use\n"
+	       "                            all variables in the covariate file. By adding\n"
+	       "                            @ in front of the string, any numbers within [\n"
+	       "                            and ] will be parsed. E.g. @PC[1-3] will be\n"
+	       "                            read as PC1,PC2,PC3. Discontinuous input are also\n"
+	       "                            supported: @cov[1.3-5] will be parsed as \n"
+	       "                            cov1,cov3,cov4,cov5\n"
+	       "    --cov-factor            Header of categorical covariate(s). Dummy variable\n"
+	       "                            will be automatically generated. Any items in\n"
+	       "                            --cov-factor must also be found in --cov-col\n"
+	       "                            Also accept continuous input (start with @).\n"
+	       "    --cov-file      | -C    Covariate file. First column should be FID and \n"
+	       "                            the second column should be IID. If --ignore-fid\n"
+	       "                            is set, first column should be IID\n"
+	       //PRSice
+	       "\nP-value Thresholding:\n"
+	       "    --bar-levels            Level of barchart to be plotted. When --fastscore\n"
+	       "                            is set, PRSice will only calculate the PRS for \n"
+	       "                            threshold within the bar level. Levels should be\n"
+	       "                            comma separated without space\n"
+	       "    --fastscore             Only calculate threshold stated in --bar-levels\n"
+	       "    --no-full               By default, PRSice will include the full model, \n"
+	       "                            i.e. p-value threshold = 1. Setting this flag will\n"
+	       "                            disable that behaviour\n"
+	       "    --interval      | -i    The step size of the threshold. Default: "+ std::to_string(p_thresholds.inter)+ "\n"
+	       "    --lower         | -l    The starting p-value threshold. Default: " + std::to_string(p_thresholds.lower)+ "\n"
+	       "    --model                 Genetic model use for regression. The genetic\n"
+	       "                            encoding is based on the base data where the\n"
+	       "                            encoding represent number of the coding allele\n"
+	       "                            Available models include:\n"
+	       "                            add - Additive model, code as 0/1/2 (default)\n"
+	       "                            dom - Dominant model, code as 0/1/1\n"
+	       "                            rec - Recessive model, code as 0/0/1\n"
+	       "                            het - Heterozygous only model, code as 0/1/0\n"
+	       "    --missing               Method to handle missing genotypes. By default, \n"
+	       "                            final scores are averages of valid per-allele \n"
+	       "                            scores with missing genotypes contribute an amount\n"
+	       "                            proportional to imputed allele frequency. To throw\n"
+	       "                            out missing observations instead (decreasing the\n"
+	       "                            denominator in the final average when this happens),\n"
+	       "                            use the 'no_mean_imputation' modifier. Alternatively,\n"
+	       "                            you can use the 'center' modifier to shift all scores\n"
+	       "                            to mean zero. \n"
+	       "    --no-regress            Do not perform the regression analysis and simply\n"
+	       "                            output all PRS.\n"
+	       "    --score                 Method to calculate the polygenic score.\n"
+	       "                            Available methods include:\n"
+	       "                            avg - Take the average effect size (default)\n"
+	       "                            std - Standardize the effect size \n"
+	       "                            sum - Direct summation of the effect size \n"
+	       "    --upper         | -u    The final p-value threshold. Default: "+ std::to_string(p_thresholds.upper)+ "\n"
+	       "\nPRSet:\n"
+	       "    --bed           | -B    Bed file containing the selected regions.\n"
+	       "                            Name of bed file will be used as the region\n"
+	       "                            identifier. WARNING: Bed file is 0-based\n"
+	       "    --feature               Feature(s) to be included from the gtf file.\n"
+	       "                            Default: exon,CDS,gene,protein_coding.\n"
+	       "    --gtf           | -g    GTF file containing gene boundaries. Required\n"
+	       "                            when --msigdb is used\n"
+	       "    --msigdb        | -m    MSIGDB file containing the pathway information.\n"
+	       "                            Require the gtf file\n"
+	       "    --snp-set               Provide a SNP set file containing a single snp set.\n"
+	       "                            Name of SNP set file will be used as the region\n"
+	       "                            identifier. This file should contain only one column.\n"
+	       "    --snp-sets              Provide a SNP set file containing multiple snp sets.\n"
+	       "                            Each row represent a single SNP set with the first\n"
+	       "                            column containing name of the SNP set.\n"
+	       //PRSlice
+	       "\nPRSlice:\n"
+	       "    --prslice               Perform PRSlice where the whole genome is first cut\n"
+	       "                            into bin size specified by this option. PRSice will\n"
+	       "                            then be performed on each bin. Bins are then sorted\n"
+	       "                            according to the their R2. PRSice is then performed\n"
+	       "                            again to find the best bin combination.\n"
+	       "                            This cannot be performed together with PRSet\n"
+	       "                            (Currently not implemented)\n"
+	       //Misc
+	       "\nMisc:\n"
+	       "    --all-score             Output PRS for ALL threshold. WARNING: This\n"
+	       "                            will generate a huge file\n"
+	       "    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n"
+	       "                            to 0 for each new P-value threshold instead of\n"
+	       "                            adding up\n"
+	       "    --exclude               File contains SNPs to be excluded from the\n"
+	       "                            analysis\n"
+	       "    --extract               File contains SNPs to be included in the \n"
+	       "                            analysis\n"
+	       "    --ignore-fid            Ignore FID for all input. When this is set,\n"
+	       "                            first column of all file will be assume to\n"
+	       "                            be IID instead of FID\n"
+	       "    --logit-perm            When performing permutation, still use logistic\n"
+	       "                            regression instead of linear regression. This\n"
+	       "                            will substantially slow down PRSice\n"
+	       "    --keep-ambig            Keep ambiguous SNPs. Only use this option\n"
+	       "                            if you are certain that the base and target\n"
+	       "                            has the same A1 and A2 alleles\n"
+	       "    --out           | -o    Prefix for all file output\n"
+	       "    --pearson               Use Pearson Correlation for LD calculation\n"
+	       "                            instead of the maximum likelihood haplotype\n"
+	       "                            frequency estimates. This will slightly \n"
+	       "                            decrease the accuracy of LD estimates, but\n"
+	       "                            should increase the speed of clumping\n"
+	       "    --perm                  Number of permutation to perform. This swill\n"
+	       "                            generate the empirical p-value. Recommend to\n"
+	       "                            use value larger than 10,000\n"
+	       "    --print-snp             Print all SNPs used to construct the best PRS\n"
+	       "    --seed          | -s    Seed used for permutation. If not provided,\n"
+	       "                            system time will be used as seed. When same\n"
+	       "                            seed and same input is provided, same result\n"
+	       "                            can be generated\n"
+	       "    --thread        | -n    Number of thread use\n"
+	       "    --x-range               Range of SNPs to be excluded from the whole\n"
+	       "                            analysis. It can either be a single bed file\n"
+	       "                            or a comma seperated list of range. Range must\n"
+	       "                            be in the format of chr:start-end or chr:coordinate\n"
+	       "    --help          | -h    Display this help message\n";
 }
 
 // Print the help message
@@ -1490,6 +1430,7 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
         }
         if (reference_panel.type.compare("bgen") == 0
             || (reference_panel.file_name.empty()
+                && reference_panel.multi_name.empty()
                 && target.type.compare("bgen") == 0))
         {
             if (reference_snp_filtering.hard_threshold > 1
@@ -1499,7 +1440,8 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
                 error_message.append("Error: LD hard threshold must be larger "
                                      "than 0 and smaller than 1!\n");
             }
-            else if (!reference_panel.file_name.empty())
+            else if (!reference_panel.file_name.empty()
+                     || !reference_panel.multi_name.empty())
             {
                 // this is to be consistent where ld parameter won't
                 // apply to target file
@@ -1534,9 +1476,139 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
 }
 
 
+std::vector<std::string> Commander::transform_covariate(std::string& cov)
+{
+    std::vector<std::string> final_covariates;
+    std::vector<std::string> open;
+    std::vector<std::string> close;
+    std::vector<std::string> info;
+    std::vector<std::string> individual;
+    std::vector<std::string> range;
+    std::vector<int> numeric;
+    std::vector<bool> list;
+    if (cov.at(0) == '@') {
+        cov.erase(0, 1);
+        open = misc::split(cov, "[");
+        for (auto o : open) {
+            if (o.find("]") != std::string::npos) {
+                close = misc::split(o, "]");
+                // the first one will always be the list
+                info.push_back(close[0]);
+                list.push_back(true);
+                // Nested List is not supported
+                for (size_t cl = 1; cl < close.size(); ++cl) {
+                    info.push_back(close[cl]);
+                    list.push_back(false);
+                }
+            }
+            else
+            {
+                info.push_back(o);
+                list.push_back(false);
+            }
+        }
+
+        for (size_t c = 0; c < info.size(); ++c) {
+            if (list[c]) {
+                individual = misc::split(info[c], ".");
+                numeric.clear();
+                for (auto&& ind : individual) {
+                    if (ind.find("-") != std::string::npos) {
+                        range = misc::split(ind, "-");
+                        if (range.size() != 2) {
+                            throw std::runtime_error(
+                                "Error: Invalid range format, range "
+                                "must be in the form of start-end");
+                        }
+                        try
+                        {
+                            size_t start = misc::convert<size_t>(range[0]);
+                            size_t end = misc::convert<size_t>(range[1]);
+                            if (start > end) {
+                                std::swap(start, end);
+                            }
+                            for (size_t s = start; s <= end; ++s) {
+                                numeric.push_back(s);
+                            }
+                        }
+                        catch (const std::runtime_error& error)
+                        {
+                            std::string error_message =
+                                "Error: Invalid parameter: " + range[0] + " or "
+                                + range[1] + ", only allow integer!";
+                            throw std::runtime_error(error_message);
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            int temp = misc::convert<int>(ind);
+                            numeric.push_back(temp);
+                        }
+                        catch (const std::runtime_error& error)
+                        {
+                            std::string error_message =
+                                "Error: Invalid parameter: " + ind
+                                + ", only allow integer!";
+                            throw std::runtime_error(error_message);
+                        }
+                    }
+                }
+
+                // Now we have all the numeric parameters
+                if (final_covariates.empty()) {
+                    for (auto n : numeric) {
+                        final_covariates.push_back(std::to_string(n));
+                    }
+                }
+                else
+                {
+                    size_t cur_size = final_covariates.size();
+                    for (size_t final = 0; final < cur_size; ++final) {
+                        std::string cur = final_covariates[final];
+                        final_covariates[final].append(
+                            std::to_string(numeric.front()));
+                        for (size_t s = 1; s < numeric.size(); ++s) {
+                            final_covariates.push_back(
+                                cur + std::to_string(numeric[s]));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (size_t final = 0; final < final_covariates.size(); ++final)
+                {
+                    final_covariates[final].append(info[c]);
+                }
+                if (final_covariates.empty())
+                    final_covariates.push_back(info[c]);
+            }
+        }
+    }
+    else
+    {
+        final_covariates.push_back(cov);
+    }
+    return final_covariates;
+}
+
 void Commander::covariate_check(bool& error, std::string& error_message)
 {
-    if (covariate.file_name.empty() || covariate.covariates.size() == 0) return;
+    if (covariate.file_name.empty()) return;
+    // first, transform all the covariates
+    std::unordered_set<std::string> included;
+    std::vector<std::string> transformed_cov;
+    for (auto cov : covariate.covariates) {
+        if (cov.empty()) continue;
+        // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
+        // thingy to substitute them
+        transformed_cov = transform_covariate(cov);
+        for (auto&& trans : transformed_cov) {
+            included.insert(trans);
+        }
+    }
     std::ifstream cov_file;
     cov_file.open(covariate.file_name.c_str());
     if (!cov_file.is_open()) {
@@ -1553,146 +1625,23 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         return;
     }
     cov_file.close();
-    // obtain the header information
-    std::unordered_set<std::string> included;
-    for (auto cov : covariate.covariates) {
-        if (cov.empty()) continue;
-        if (included.find(cov)
-            == included.end()) // to avoid duplicated covariance headers
-        {
-            // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
-            // thingy to substitute them
-            if (cov.at(0) == '@') {
-                cov.erase(0, 1);
-                std::vector<std::string> open = misc::split(cov, "[");
-                std::vector<std::string> info;
-                std::vector<bool> list;
-                for (auto o : open) {
-                    if (o.find("]") != std::string::npos) {
-                        std::vector<std::string> close = misc::split(o, "]");
-                        // the first one will always be the list
-                        info.push_back(close[0]);
-                        list.push_back(true);
-                        for (size_t cl = 1; cl < close.size(); ++cl) {
-                            info.push_back(close[cl]);
-                            list.push_back(false);
-                        }
-                    }
-                    else
-                    {
-                        info.push_back(o);
-                        list.push_back(false);
-                    }
-                }
-                std::vector<std::string> final_covariates;
-                for (size_t c = 0; c < info.size(); ++c) {
-                    if (list[c]) {
-                        std::vector<std::string> individual =
-                            misc::split(info[c], ".");
-                        std::vector<int> numeric;
-                        for (auto&& ind : individual) {
-                            if (ind.find("-") != std::string::npos) {
-                                std::vector<std::string> range =
-                                    misc::split(ind, "-");
-                                if (range.size() != 2) {
-                                    throw std::runtime_error(
-                                        "Error: Invalid range format, range "
-                                        "must be in the form of start-end");
-                                }
-                                try
-                                {
-                                    size_t start =
-                                        misc::convert<size_t>(range[0]);
-                                    size_t end =
-                                        misc::convert<size_t>(range[1]);
-                                    if (start > end) {
-                                        int temp = end;
-                                        end = start;
-                                        start = temp;
-                                    }
-                                    for (size_t s = start; s <= end; ++s) {
-                                        numeric.push_back(s);
-                                    }
-                                }
-                                catch (const std::runtime_error& error)
-                                {
-                                    std::string error_message =
-                                        "Error: Invalid parameter: " + range[0]
-                                        + " or " + range[1]
-                                        + ", only allow integer!";
-                                    throw std::runtime_error(error_message);
-                                }
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    int temp = misc::convert<int>(ind);
-                                    numeric.push_back(temp);
-                                }
-                                catch (const std::runtime_error& error)
-                                {
-                                    std::string error_message =
-                                        "Error: Invalid parameter: " + ind
-                                        + ", only allow integer!";
-                                    throw std::runtime_error(error_message);
-                                }
-                            }
-                        }
-
-                        // Now we have all the numeric parameters
-                        if (final_covariates.empty()) {
-                            for (auto n : numeric) {
-                                final_covariates.push_back(std::to_string(n));
-                            }
-                        }
-                        else
-                        {
-                            size_t cur_size = final_covariates.size();
-                            for (size_t final = 0; final < cur_size; ++final) {
-                                std::string cur = final_covariates[final];
-                                final_covariates[final].append(
-                                    std::to_string(numeric.front()));
-                                for (size_t s = 1; s < numeric.size(); ++s) {
-                                    final_covariates.push_back(
-                                        cur + std::to_string(numeric[s]));
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (size_t final = 0; final < final_covariates.size();
-                             ++final)
-                        {
-                            final_covariates[final].append(info[c]);
-                        }
-                        if (final_covariates.empty())
-                            final_covariates.push_back(info[c]);
-                    }
-                }
-                for (auto res : final_covariates) {
-                    if (included.find(res) == included.end()) {
-                        included.insert(res);
-                    }
-                }
-            }
-            else
-                included.insert(cov);
+    std::vector<std::string> cov_header = misc::split(line);
+    std::string missing = "";
+    std::unordered_map<std::string, uint32_t> ref_index;
+    for (size_t i = 0; i < cov_header.size(); ++i) {
+        ref_index[cov_header[i]] = i;
+    }
+    if (covariate.covariates.size() == 0) {
+        // add all headers to the covariate list
+        for (size_t i = (1 + !misc.ignore_fid); i < cov_header.size(); ++i) {
+            included.insert(cov_header[i]);
         }
     }
-
-    std::vector<std::string> token = misc::split(line);
-    std::string missing = "";
-    std::unordered_set<std::string> ref;
-    for (auto&& head : token) {
-        ref.insert(head);
-    }
     size_t valid_cov = 0;
-    std::vector<std::string> final_cov;
     for (auto&& cov : included) {
-        if (ref.find(cov) != ref.end()) {
-            final_cov.push_back(cov);
+        if (ref_index.find(cov) != ref_index.end()) {
+            covariate.covariate_index.push_back(ref_index[cov]);
+            covariate.covariates.push_back(cov);
             valid_cov++;
         }
         else if (missing.empty())
@@ -1708,7 +1657,29 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         error = true;
         error_message.append("Error: No valid Covariate!\n");
     }
-    covariate.covariates = final_cov;
+    covariate.covariates.clear();
+    std::sort(covariate.covariate_index.begin(),
+              covariate.covariate_index.end());
+    for (auto&& c : covariate.covariate_index) {
+        covariate.covariates.push_back(cov_header[c]);
+    }
+    for (auto cov : covariate.factor_covariates) {
+        if (cov.empty()) continue;
+        transformed_cov = transform_covariate(cov);
+        for (auto&& trans : transformed_cov) {
+            if (included.find(trans) != included.end()) {
+                covariate.factor_index.push_back(ref_index[trans]);
+            }
+            else
+            {
+                error = true;
+                error_message.append("Error: All factor covariates must be "
+                                     "found in covariate list. "
+                                     + trans + " not found in covariate list");
+            }
+        }
+    }
+    std::sort(covariate.factor_index.begin(), covariate.factor_index.end());
 }
 
 
@@ -1778,7 +1749,7 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
                             bool& error, std::string& error_message)
 {
     if (!prset.perform_prset) return;
-    if (!prset.gtf.empty() && prset.msigdb.empty()) {
+    if (prset.gtf.empty() && !prset.msigdb.empty()) {
         error = true;
         error_message.append(
             "Error: Must provide a gtf file if msigdb is specified\n");
@@ -1789,6 +1760,18 @@ void Commander::prset_check(std::map<std::string, std::string>& message,
         prset.feature.push_back("protein_coding");
         prset.feature.push_back("CDS");
         message["feature"] = "exon,gene,protein_coding,CDS";
+    }
+    // don't check file exist here?
+    if (prset.set_perm <= 0) {
+        error = true;
+        error_message.append(
+            "Error: Negative number of set permutation provided!");
+    }
+    if (prset.set_perm != 0 && misc.permutation > 0) {
+        error = true;
+        error_message.append("Error: Currently only support either set-base "
+                             "permutation (for competitive p-value) or PRSice "
+                             "base permutation (--perm)");
     }
 }
 
@@ -1810,7 +1793,6 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
         if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     }
-    if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     if (prset.perform_prset) {
         if (!p_thresholds.set_use_thresholds && !p_thresholds.fastscore) {
             // if user use fastscore or provided any threshold, then we will
@@ -1818,6 +1800,12 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
             message["bar-levels"] = 1;
             p_thresholds.fastscore = true;
             p_thresholds.barlevel = {1};
+        }
+        else if (p_thresholds.barlevel.size() == 0)
+        {
+            // return to default of PRSice otherwise
+            p_thresholds.barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+            if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
         }
     }
     else if (!p_thresholds.fastscore)
@@ -1842,6 +1830,7 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
         message["lower"] = std::to_string(p_thresholds.lower);
         message["upper"] = std::to_string(p_thresholds.upper);
     }
+    if (!p_thresholds.no_full) p_thresholds.barlevel.push_back(1);
     std::sort(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end());
     p_thresholds.barlevel.erase(
         std::unique(p_thresholds.barlevel.begin(), p_thresholds.barlevel.end()),
@@ -1849,9 +1838,9 @@ void Commander::prsice_check(std::map<std::string, std::string>& message,
     std::string bar_message = "";
     for (auto&& b : p_thresholds.barlevel) {
         if (bar_message.empty())
-            bar_message.append(std::to_string(b));
+            bar_message.append(misc::to_string(b));
         else
-            bar_message.append("," + std::to_string(b));
+            bar_message.append("," + misc::to_string(b));
     }
     message["bar-levels"] = bar_message;
 }
@@ -1875,9 +1864,10 @@ void Commander::prslice_check(bool& error, std::string& error_message)
 void Commander::target_check(std::map<std::string, std::string>& message,
                              bool& error, std::string& error_message)
 {
-    if (target.name.empty()) {
+    if (target.name.empty() && target.multi_name.empty()) {
         error = true;
-        error_message.append("Error: You must provide a target file!\n");
+        error_message.append("Error: You must provide a target file or a file "
+                             "containing all target prefixs!\n");
     }
     if (!target.keep_file.empty() && !target.remove_file.empty()) {
         error = true;
