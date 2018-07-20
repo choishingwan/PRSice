@@ -517,12 +517,12 @@ void PRSice::check_factor_cov(
 }
 
 
-uint32_t PRSice::generate_factor_list(
+void PRSice::process_cov_file(
     const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
     std::vector<uint32_t>& cov_start_index, std::vector<uint32_t>& cov_index,
     std::vector<std::string>& cov_name,
     std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
-    Reporter& reporter)
+    uint32_t& num_column, Reporter& reporter)
 {
     // first, go through the covariate and generate the factor level vector for
 
@@ -562,7 +562,7 @@ uint32_t PRSice::generate_factor_list(
             // next, check if any of the phenotype is NA
 
             valid = true;
-            factor_level_index=0;
+            factor_level_index = 0;
             for (auto&& header : cov_index) {
                 if (token[header] == "NA" || token[header] == "Na"
                     || token[header] == "nA" || token[header] == "na")
@@ -571,20 +571,22 @@ uint32_t PRSice::generate_factor_list(
                     valid = false;
                     ++missing_count[header];
                 }
-                else if(factor_level_index >= num_factors || header != factor_cov_index[factor_level_index]){
-                	// check if this is covertable
-                	try
-                	{
-                		misc::convert<double>(  token[header]);
-                	}
-                	catch (const std::runtime_error& error)
-                	{
-                		valid = false;
-                		++missing_count[header];
-                	}
+                else if (factor_level_index >= num_factors
+                         || header != factor_cov_index[factor_level_index])
+                {
+                    // check if this is covertable
+                    try
+                    {
+                        misc::convert<double>(token[header]);
+                    }
+                    catch (const std::runtime_error& error)
+                    {
+                        valid = false;
+                        ++missing_count[header];
+                    }
                 }
-                factor_level_index += (header==factor_cov_index[factor_level_index]);
-
+                factor_level_index +=
+                    (header == factor_cov_index[factor_level_index]);
             }
             // only do the factor level thing if this
             // sample is valid
@@ -614,93 +616,100 @@ uint32_t PRSice::generate_factor_list(
     // also output factor info
 
     std::vector<std::string> all_missing_cov;
-    std::string message = "Include Covariates:\nName\tMissing\tNumber of levels\n";
+    std::string message =
+        "Include Covariates:\nName\tMissing\tNumber of levels\n";
     uint32_t total_column = 2;
     uint32_t num_sample = m_sample_with_phenotypes.size();
     factor_level_index = 0;
     uint32_t cur_cov_index = 0;
     uint32_t num_level = 0;
-    for(auto&& cov : cov_index){
-    	cov_start_index.push_back(total_column);
-    	if(factor_level_index == factor_cov_index.size() || cov!= factor_cov_index[factor_level_index]){
-    		++total_column;
-    		message.append(cov_name[cur_cov_index]+"\t"+std::to_string(missing_count[cov])+"\t-\n");
-    	}else{
-    		num_level = factor_levels[factor_level_index++].size();
-    		total_column+=num_level-1;
-    		message.append(cov_name[cur_cov_index]+"\t"+std::to_string(missing_count[cov])+"\t"+std::to_string(num_level)+"\n");
-    	}
-    	++cur_cov_index;
-    	// error messages here
+    for (auto&& cov : cov_index) {
+        cov_start_index.push_back(total_column);
+        if (factor_level_index == factor_cov_index.size()
+            || cov != factor_cov_index[factor_level_index])
+        {
+            ++total_column;
+            message.append(cov_name[cur_cov_index] + "\t"
+                           + std::to_string(missing_count[cov]) + "\t-\n");
+        }
+        else
+        {
+            num_level = factor_levels[factor_level_index++].size();
+            total_column += num_level - 1;
+            message.append(cov_name[cur_cov_index] + "\t"
+                           + std::to_string(missing_count[cov]) + "\t"
+                           + std::to_string(num_level) + "\n");
+        }
+        ++cur_cov_index;
+        // error messages here
     }
     reporter.report(message);
     // now update the m_phenotype vector
     if (valid_sample_index.size() != num_sample && num_sample != 0) {
-    	// helpful to give the overview
-    	int removed = num_sample - valid_sample_index.size();
-    	message =
-    			std::to_string(removed) + " sample(s) with invalid covariate:\n\n";
-    	double portion = (double) removed / (double) num_sample;
-    	if (valid_sample_index.size() == 0) {
-    		// if all samples are removed
-    		cur_cov_index = 0;
-    		for(auto&& cov : cov_index){
-    			if (missing_count[cov] == num_sample) {
-    				// we sorted the column index so we can't tell what the
-    				// column name is useless we also store the head of the file
-    				// (too troublesome)
-    				message.append("Error: "+cov_name[cur_cov_index]
-    				+ " is invalid, please check it is of the "
-					"correct format\n");
-    			}
-    			++cur_cov_index;
-    		}
-    		reporter.report(message);
-    		throw std::runtime_error("Error: All samples removed due to "
-    				"missingness in covariate file!");
-    	}
-    	if (portion > 0.05) {
-    		message.append(
-    				"Warning: More than " + std::to_string(portion * 100)
-                    + "% of your samples were removed! "
-					"You should check if your covariate file is correct\n");
-    	}
-    	reporter.report(message);
-    	// sort the sample index
-    	// Sorting is required because our ordering follows the covariate
-    	// file, which does not need to have the same ordering as the
-    	// target file.
-    	// Also, this does means that the base factor will be the
-    	// first factor observed within the covariate file, not
-    	// the one observed in the first sample
-    	std::sort(begin(valid_sample_index), end(valid_sample_index),
-    			[](std::pair<std::string, size_t> const& t1,
-    					std::pair<std::string, size_t> const& t2) {
-    		if (std::get<1>(t1) == std::get<1>(t2))
-    			return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
-    		else
-    			return std::get<1>(t1) < std::get<1>(t2);
-    	});
+        // helpful to give the overview
+        int removed = num_sample - valid_sample_index.size();
+        message =
+            std::to_string(removed) + " sample(s) with invalid covariate:\n\n";
+        double portion = (double) removed / (double) num_sample;
+        if (valid_sample_index.size() == 0) {
+            // if all samples are removed
+            cur_cov_index = 0;
+            for (auto&& cov : cov_index) {
+                if (missing_count[cov] == num_sample) {
+                    // we sorted the column index so we can't tell what the
+                    // column name is useless we also store the head of the file
+                    // (too troublesome)
+                    message.append("Error: " + cov_name[cur_cov_index]
+                                   + " is invalid, please check it is of the "
+                                     "correct format\n");
+                }
+                ++cur_cov_index;
+            }
+            reporter.report(message);
+            throw std::runtime_error("Error: All samples removed due to "
+                                     "missingness in covariate file!");
+        }
+        if (portion > 0.05) {
+            message.append(
+                "Warning: More than " + std::to_string(portion * 100)
+                + "% of your samples were removed! "
+                  "You should check if your covariate file is correct\n");
+        }
+        reporter.report(message);
+        // sort the sample index
+        // Sorting is required because our ordering follows the covariate
+        // file, which does not need to have the same ordering as the
+        // target file.
+        // Also, this does means that the base factor will be the
+        // first factor observed within the covariate file, not
+        // the one observed in the first sample
+        std::sort(begin(valid_sample_index), end(valid_sample_index),
+                  [](std::pair<std::string, size_t> const& t1,
+                     std::pair<std::string, size_t> const& t2) {
+                      if (std::get<1>(t1) == std::get<1>(t2))
+                          return std::get<0>(t1).compare(std::get<0>(t2)) < 0;
+                      else
+                          return std::get<1>(t1) < std::get<1>(t2);
+                  });
 
 
-    	// update the m_phenotype and m_independent
-    	m_sample_with_phenotypes.clear();
-    	// vector contains the name of samples that we keep
-    	// and also their original index on m_phenotype
-    	for (size_t cur_index = 0; cur_index < valid_sample_index.size();
-    			++cur_index)
-    	{
-    		std::string name = std::get<0>(valid_sample_index[cur_index]);
-    		m_sample_with_phenotypes[name] = cur_index;
-    		size_t original_index = std::get<1>(valid_sample_index[cur_index]);
-    		if (original_index != cur_index) {
-    			m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
-    		}
-    	}
-            m_phenotype.conservativeResize(valid_sample_index.size(), 1);
+        // update the m_phenotype and m_independent
+        m_sample_with_phenotypes.clear();
+        // vector contains the name of samples that we keep
+        // and also their original index on m_phenotype
+        for (size_t cur_index = 0; cur_index < valid_sample_index.size();
+             ++cur_index)
+        {
+            std::string name = std::get<0>(valid_sample_index[cur_index]);
+            m_sample_with_phenotypes[name] = cur_index;
+            size_t original_index = std::get<1>(valid_sample_index[cur_index]);
+            if (original_index != cur_index) {
+                m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
+            }
+        }
+        m_phenotype.conservativeResize(valid_sample_index.size(), 1);
     }
-    return total_column;
-
+    num_column = total_column;
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
@@ -723,28 +732,31 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // As the index are sorted, we can use vector
     std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
     std::vector<uint32_t> cov_start_index;
-    uint32_t num_column=2+cov_header_index.size();
+    uint32_t num_column = 2 + cov_header_index.size();
     if (factor_cov_index.size() != 0) {
         /*
          * What we want:
          * For each factor of a factor covariate, know which column should we
          * put the 1 to
          */
-    	num_column=generate_factor_list(c_cov_file, factor_cov_index, cov_start_index, cov_header_index, cov_header_name, factor_list, reporter);
-
-    }else{
-    	for(size_t i =0 ; i < cov_header_index.size(); ++i){
-    		cov_start_index.push_back(i+2);
-    	}
+        process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
+                         cov_header_index, cov_header_name, factor_list,
+                         num_column, reporter);
+    }
+    else
+    {
+        for (size_t i = 0; i < cov_header_index.size(); ++i) {
+            cov_start_index.push_back(i + 2);
+        }
     }
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
-    m_independent_variables =
-        Eigen::MatrixXd::Zero(num_sample, num_column);
+    m_independent_variables = Eigen::MatrixXd::Zero(num_sample, num_column);
     m_independent_variables.col(0).setOnes();
     m_independent_variables.col(1).setOnes();
-    // now we only need to fill in the independent matrix without worry about other stuff
+    // now we only need to fill in the independent matrix without worry about
+    // other stuff
     std::ifstream cov;
     cov.open(c_cov_file.c_str());
     if (!cov.is_open()) {
@@ -755,12 +767,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::vector<std::string> token;
     std::string line, id;
     size_t max_index = cov_header_index.back() + 1, index, cur_index, f_level;
-    uint32_t cur_cov_index=0, cur_factor_index=0, num_factor = factor_cov_index.size(), num_cov = cov_header_index.size();
+    uint32_t cur_cov_index = 0, cur_factor_index = 0,
+             num_factor = factor_cov_index.size(),
+             num_cov = cov_header_index.size();
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::split(line);
-        if (token.size() < max_index){
+        if (token.size() < max_index) {
             std::string error_message =
                 "Error: Malformed covariate file, should contain at least "
                 + std::to_string(max_index) + " column!";
@@ -769,23 +783,30 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
-        	// now we can propergate the matrix
-        	cur_cov_index = 0;
-        	cur_factor_index = 0;
-        	index = m_sample_with_phenotypes[id];
-        	for(size_t i_cov= 0; i_cov < num_cov; ++i_cov){
-        		if(cur_factor_index >= num_factor || cov_header_index[i_cov] != factor_cov_index[cur_factor_index]){
-        			// noraml covariate
-        			m_independent_variables(index, cov_start_index[i_cov]) = misc::convert<double>( token[cov_header_index[i_cov]]);
-        		}else{
-        			f_level = factor_list[cur_factor_index][token[cov_header_index[i_cov]]];
-        			if(f_level != 0){
-        				cur_index = cov_start_index[i_cov]+f_level-1;
-        				m_independent_variables(index, cur_index) = 1;
-        			}
-        			++cur_factor_index;
-        		}
-        	}
+            // now we can propergate the matrix
+            cur_cov_index = 0;
+            cur_factor_index = 0;
+            index = m_sample_with_phenotypes[id];
+            for (size_t i_cov = 0; i_cov < num_cov; ++i_cov) {
+                if (cur_factor_index >= num_factor
+                    || cov_header_index[i_cov]
+                           != factor_cov_index[cur_factor_index])
+                {
+                    // noraml covariate
+                    m_independent_variables(index, cov_start_index[i_cov]) =
+                        misc::convert<double>(token[cov_header_index[i_cov]]);
+                }
+                else
+                {
+                    f_level = factor_list[cur_factor_index]
+                                         [token[cov_header_index[i_cov]]];
+                    if (f_level != 0) {
+                        cur_index = cov_start_index[i_cov] + f_level - 1;
+                        m_independent_variables(index, cur_index) = 1;
+                    }
+                    ++cur_factor_index;
+                }
+            }
         }
     }
 

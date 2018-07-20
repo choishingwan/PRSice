@@ -310,12 +310,12 @@ private:
                         std::vector<uint32_t> cov_header_index,
                         std::vector<uint32_t> factor_cov_index,
                         Reporter& reporter);
-    uint32_t generate_factor_list(
+    void process_cov_file(
         const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
         std::vector<uint32_t>& cov_start_index,
         std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
-        Reporter& reporter);
+        uint32_t& num_column, Reporter& reporter);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,
