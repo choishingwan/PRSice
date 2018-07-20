@@ -1837,6 +1837,7 @@ void Commander::covariate_check(bool& error, std::string& error_message)
             }
         }
     }
+    std::sort(covariate.factor_index.begin(), covariate.factor_index.end());
 }
 
 

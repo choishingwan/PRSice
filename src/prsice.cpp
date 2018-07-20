@@ -583,6 +583,7 @@ uint32_t PRSice::generate_factor_list(
                 		++missing_count[header];
                 	}
                 }
+                factor_level_index += (header==factor_cov_index[factor_level_index]);
 
             }
             // only do the factor level thing if this
@@ -597,6 +598,7 @@ uint32_t PRSice::generate_factor_list(
                     auto&& cur_level = factor_levels[factor_level_index];
                     if (cur_level.find(token[factor]) == cur_level.end()) {
                         // add factor
+                    	std::cout << "Levels: " << factor << "\t" << token[factor] << "\t"<< current_factor_level[factor_level_index] << std::endl;
                         cur_level[token[factor]] =
                             current_factor_level[factor_level_index]++;
                     }
@@ -740,7 +742,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     message.append("==============================\n");
     reporter.report(message);
     m_independent_variables =
-        Eigen::MatrixXd::Ones(num_sample, num_column);
+        Eigen::MatrixXd::Zero(num_sample, num_column);
+    m_independent_variables.col(0).setOnes();
+    m_independent_variables.col(1).setOnes();
     // now we only need to fill in the independent matrix without worry about other stuff
     std::ifstream cov;
     cov.open(c_cov_file.c_str());
@@ -750,9 +754,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         throw std::runtime_error(error_message);
     }
     std::vector<std::string> token;
-    std::string line;
-    size_t max_index = cov_header_index.back() + 1;
-    uint32_t cur_cov_index=0, cur_factor_index=0, num_factor = factor_cov_index.size();
+    std::string line, id;
+    size_t max_index = cov_header_index.back() + 1, index, cur_index, f_level;
+    uint32_t cur_cov_index=0, cur_factor_index=0, num_factor = factor_cov_index.size(), num_cov = cov_header_index.size();
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -763,10 +767,26 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                 + std::to_string(max_index) + " column!";
             throw std::runtime_error(error_message);
         }
-        std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+        id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
-
+        	// now we can propergate the matrix
+        	cur_cov_index = 0;
+        	cur_factor_index = 0;
+        	index = m_sample_with_phenotypes[id];
+        	for(size_t i_cov= 0; i_cov < num_cov; ++i_cov){
+        		if(cur_factor_index >= num_factor || cov_header_index[i_cov] != factor_cov_index[cur_factor_index]){
+        			// noraml covariate
+        			m_independent_variables(index, cov_start_index[i_cov]) = misc::convert<double>( token[cov_header_index[i_cov]]);
+        		}else{
+        			f_level = factor_list[cur_factor_index][token[cov_header_index[i_cov]]];
+        			if(f_level != 0){
+        				cur_index = cov_start_index[i_cov]+f_level-1;
+        				m_independent_variables(index, cur_index) = 1;
+        			}
+        			++cur_factor_index;
+        		}
+        	}
         }
     }
 
