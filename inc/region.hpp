@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+class Genotype;
 class Region
 {
 public:
@@ -45,15 +46,18 @@ public:
            const int window_3);
     virtual ~Region();
     void run(const std::string& gtf, const std::string& msigdb,
-             const std::vector<std::string>& bed, const std::string& out,
-             const std::string& background, Reporter& reporter);
+             const std::vector<std::string>& bed, const std::string& snp_set,
+             const std::string& multi_snp_sets, const Genotype& target,
+             const std::string& out, const std::string& background,
+             Reporter& reporter);
     void reset()
     {
         m_snp_check_index = std::vector<size_t>(m_region_name.size());
         m_region_snp_count = std::vector<int>(m_region_name.size());
     };
 
-    void update_flag(std::string chr, size_t loc, std::vector<uintptr_t>& flag);
+    void update_flag(const int chr, const std::string& rs, size_t loc,
+                     std::vector<uintptr_t>& flag);
     size_t size() const { return m_region_name.size(); };
     std::string get_name(size_t i) const { return m_region_name.at(i); };
     std::vector<std::string> names() const { return m_region_name; };
@@ -74,9 +78,11 @@ public:
     {
         int max = 0;
         m_region_post_clump_count.resize(count.size());
+        const size_t last_region_index = count.size() - 1;
         for (size_t i = 0; i < count.size(); ++i) {
-            max = (count[i] > max && i != count.size() - 1 && i != 0) ? count[i]
-                                                                      : max;
+            if (i != last_region_index && i != 0) {
+                max = std::max(count[i], max);
+            }
             m_region_post_clump_count[i] = count[i];
             if (m_region_size_duplicated.find(count[i])
                 != m_region_size_duplicated.end())
@@ -105,14 +111,15 @@ private:
     struct region_bound
     {
         int chr;
-        size_t start;
-        size_t end;
+        uint32_t start;
+        uint32_t end;
     };
     std::string m_out_prefix; // for log file
     // for checking duplicated region
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
     std::unordered_set<std::string> m_duplicated_names;
+    std::vector<std::unordered_set<std::string>> m_snp_sets;
     // the name of the regions
     std::vector<std::string> m_region_name;
     // features that we'd like to capture
@@ -144,15 +151,19 @@ private:
         return false;
     }
 
-
+    void process_snp_sets(const std::string& single_snp_set,
+                          const std::string& multi_snp_set,
+                          const Genotype& target, Reporter& reporter);
     void process_bed(const std::vector<std::string>& bed, Reporter& reporter);
 
     std::unordered_map<std::string, region_bound> process_gtf(
         const std::string& gtf,
         std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-        const std::string& out_prefix, Reporter& reporter);
+        const std::string& out_prefix, const uint32_t max_chr,
+        Reporter& reporter);
     std::vector<Region::region_bound>
-    solve_overlap(std::vector<Region::region_bound>& current_region);
+    solve_overlap(std::vector<Region::region_bound>& current_region,
+                  size_t i_region);
     void process_msigdb(
         const std::string& msigdb,
         const std::unordered_map<std::string, region_bound>& gtf_info,

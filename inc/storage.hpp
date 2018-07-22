@@ -20,18 +20,30 @@
 #include <memory>
 #include <string>
 // From http://stackoverflow.com/a/12927952/1441789
-struct Sample
+
+struct PRS
+{
+    double prs;
+    int num_snp;
+    PRS() : prs(0.0), num_snp(0){};
+    double get_prs() const
+    {
+        if (num_snp == 0)
+            return 0.0;
+        else
+            return prs / (double) num_snp;
+    };
+};
+
+struct Sample_ID
 {
     std::string FID;
     std::string IID;
     std::string pheno;
-    int num_snp;
-    // include is related to founder status
-    bool include;
-    bool in_regression;
-    double prs;
+    Sample_ID(const std::string& F, const std::string& I, const std::string& P)
+        : FID(F), IID(I), pheno(P){};
+    Sample_ID() : FID(""), IID(""), pheno(""){};
 };
-
 
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP

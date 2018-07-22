@@ -145,6 +145,9 @@ help_message <-
     --type                  File type of the target file. Support bed \n
                             (binary plink) and bgen format. Default: bed\n
 \nDosage:\n
+    --allow-inter           Allow the generate of intermediate file. This will\n
+                            speed up PRSice when using dosage data as clumping\n
+                            reference and for hard coding PRS calculation\n
     --hard-thres            Hard threshold for dosage data. Any call less than\n
                             this will be treated as missing. Note that if dosage\n
                             data is used as a LD reference, it will always be\n
@@ -201,6 +204,10 @@ help_message <-
                             read as PC1,PC2,PC3. Discontinuous input are also\n
                             supported: @cov[1.3-5] will be parsed as \n
                             cov1,cov3,cov4,cov5\n
+    --cov-factor            Header of categorical covariate(s). Dummy variable\n
+                            will be automatically generated. Any items in\n
+                            --cov-factor must also be found in --cov-col\n
+                            Also accept continuous input (start with @).\n
     --cov-file      | -C    Covariate file. First column should be FID and \n
                             the second column should be IID. If --ignore-fid\n
                             is set, first column should be IID\n
@@ -250,6 +257,12 @@ help_message <-
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
                             Require the gtf file\n
+    --snp-set               Provide a SNP set file containing a single snp set.\n
+                            Name of SNP set file will be used as the region\n
+                            identifier. This file should contain only one column.\n
+    --snp-sets              Provide a SNP set file containing multiple snp sets.\n
+                            Each row represent a single SNP set with the first\n
+                            column containing name of the SNP set.\n    
 \nPRSlice:\n
     --prslice               Perform PRSlice where the whole genome is first cut\n
                             into bin size specified by this option. PRSice will\n
@@ -283,6 +296,9 @@ help_message <-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
+    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
+                            to 0 for each new P-value threshold instead of\n
+                            adding up\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
@@ -302,12 +318,16 @@ help_message <-
     --perm                  Number of permutation to perform. This swill\n
                             generate the empirical p-value. Recommend to\n
                             use value larger than 10,000\n
+    --print-snp             Print all SNPs used to construct the best PRS\n
     --seed          | -s    Seed used for permutation. If not provided,\n
                             system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
                             can be generated\n
-    --print-snp             Print all SNPs used to construct the best PRS\n
     --thread        | -n    Number of thread use\n
+    --x-range               Range of SNPs to be excluded from the whole\n
+                            analysis. It can either be a single bed file\n
+                            or a comma seperated list of range. Range must\n
+                            be in the format of chr:start-end or chr:coordinate\n
     --help          | -h    Display this help message\n"
 
 
@@ -457,7 +477,8 @@ option_list <- list(
   make_option(c("--target-list"), type = "character", dest="target_list"),
   make_option(c("--type"), type = "character"),
   # Dosage
-  make_option(c("--hard-thres"), type = "numeric"),
+  make_option(c("--allow-inter"), action = "store_true", dest="allow_inter"),
+  make_option(c("--hard-thres"), type = "numeric", dest="hard_thres"),
   make_option(c("--hard"), action = "store_true"),
   # Clumping
   make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
@@ -477,6 +498,7 @@ option_list <- list(
   # Covariates
   make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
   make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
+  make_option(c("--cov-factor"), type = "character", dest = "cov_factor"),
   # P-thresholding
   make_option(
     c("--bar-levels"),
@@ -500,6 +522,8 @@ option_list <- list(
   make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
   make_option(c("--wind-5"), type = "character", dest="wind_5"),
   make_option(c("--wind-3"), type = "character", dest="wind_3"),
+  make_option(c("--snp-set"), type = "character", dest="snp_set"),
+  make_option(c("--snp-sets"), type = "character", dest="snp_sets"),
   # PRSlice 
   make_option(c("--prslice"), type = "numeric"),
   # Misc
@@ -513,8 +537,10 @@ option_list <- list(
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
   make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
+  make_option(c("--non-cumulate"), action = "store_true", dest = "non_cumulate"),
   make_option(c("--pearson"), action = "store_true"),
   make_option(c("-n", "--thread"), type = "numeric"),
+  make_option(c("--x-range"), type = "character", dest="x_range"),
   #R Specified options
   make_option(c("--plot"), action = "store_true"),
   make_option(c("--quantile", "-q"), type = "numeric"),
@@ -613,7 +639,8 @@ get_os <- function(){
 
 # CALL_PRSICE: Call the cpp PRSice if required
 # To ensure the excutable is set correctly
-# This is also one of the reason why window doesn't work. I don't know if we can handle the WINDOW PEOPLE
+# For window, we might not be able to start an executable by simply adding ./
+# therefore Window people will need to be careful with their parameter input
 os <- get_os()
 if (provided("prsice", argv)) {
     if (!startsWith(argv$prsice, "/") &&
@@ -643,20 +670,22 @@ names(argv_c) <- gsub("_", "-", names(argv))
 flags <-
     c(
         "all-score",
+        "allow-inter",
         "beta",
-        "no-full",
-        "no-default",
+        "fastscore",
         "ignore-fid",
         "index",
         "keep-ambig",
         "logit-perm",
         "no-clump",
+        "no-default",
+        "no-full",
+        "no-mt",
         "no-regress",
         "no-x",
-        "no-y",
         "no-xy",
-        "no-mt",
-        "fastscore",
+        "no-y",
+        "non-cumulate",
         "print-snp"
     )
 
@@ -1589,188 +1618,6 @@ plot.bar <- function(argv, output, prefix){
 }
 
 
-# Sanity Check ------------------------------------------------------------
-
-
-if (provided("no_regress", argv)) {
-    quit("yes")
-}
-ignore_fid <- provided("ignore_fid", argv)
-
-extract_matrix <- function(x, y) {
-    z = which(x == y)
-    
-    if (length(z) == 0) {
-        return(NA)
-    } else{
-        return(z)
-    }
-}
-# CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
-# we need to deduce the file names
-# Now we actually require one single string for the input, separated by ,
-# Get all the region information
-# With this update, we only allow a single base file therefore we don't even need the
-# information of base here
-
-if (!provided("target", argv)) {
-    stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
-}
-
-
-phenos <- NULL
-
-binary_target <- strsplit(argv$binary_target, split = ",")[[1]]
-pheno.index <- 6
-if (provided("pheno_col", argv)) {
-    phenos <- strsplit(argv$pheno_col, split = ",")[[1]]
-    if (!provided("pheno_file", argv)) {
-        writeLines(
-            strwrap(
-                "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.",
-                width = 80
-            )
-        )
-    }else if (length(binary_target) != length(phenos)) {
-        message <-
-            "Number of binray target should match number of phenotype provided!"
-        message <- paste(
-            message,
-            "There are ",
-            length(binary_target),
-            " binary target information and ",
-            length(phenos),
-            "phenotypes",
-            sep = ""
-        )
-        stop(message)
-    } else{
-        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
-        # This will automatically filter out un-used phenos
-        valid.pheno <- phenos %in% colnames(header)
-        valid.file.index <- colnames(header) %in% phenos
-        if (sum(valid.pheno) == 0) {
-            stop("Error: None of the phenotype is identified in phenotype header!")
-        }
-        binary_target <- binary_target[valid.pheno]
-        phenos <- phenos[valid.pheno]
-        pheno.index <- c(1:ncol(header))[valid.file.index]
-    }
-} else if (provided("pheno_file", argv)) {
-    pheno.index <- 3
-    if (ignore_fid)
-        pheno.index <- 2
-} else{
-    if (length(binary_target) != 1) {
-        stop("Too many binary target information. We only have one phenotype")
-    }
-}
-
-
-# Read in covariates ------------------------------------------------------
-update_cov_header <- function(c) {
-    res <- NULL
-    for (i in c) {
-        if (substr(i, 0, 1) == "@") {
-            i <- substr(i, 2, nchar(i))
-            temp <- strsplit(i, "\\[")[[1]]
-            
-            info <- NULL
-            is_list <- NULL
-            for (j in temp) {
-                if (grepl("\\]", j)) {
-                    tem <- strsplit(j, "\\]")[[1]]
-                    
-                    for (k in 1:length(tem)) {
-                        info <- rbind(info, tem[k])
-                        
-                        is_list <- rbind(is_list, k == 1)
-                        
-                    }
-                } else{
-                    info <- rbind(info, j)
-                    
-                    is_list <- rbind(is_list, FALSE)
-                    
-                }
-            }
-            final <- NULL
-            
-            for (j in 1:nrow(info)) {
-                if (is_list[j]) {
-                    num <- NULL
-                    ind <- strsplit(info[j], split = "\\.")[[1]]
-                    
-                    for (k in ind) {
-                        if (grepl("-", k)) {
-                            range <- strsplit(k , split = "-")[[1]]
-                            
-                            r <- range[1]:range[2]
-                            
-                            num <- c(num, r)
-                            
-                        } else{
-                            num <- c(num, k)
-                            
-                        }
-                    }
-                    cur <- final
-                    final <- NULL
-                    for (n in num) {
-                        final <- c(final, paste(cur, n, sep = ""))
-                        
-                    }
-                } else{
-                    final <- paste(final, info[j], sep = "")
-                    
-                }
-            }
-            res <- c(res, final)
-        } else{
-            res <- c(res, i)
-            
-        }
-    }
-    return(res)
-}
-
-covariance <- NULL
-if (provided("cov_file", argv)) {
-    if (use.data.table) {
-        covariance <- fread(argv$cov_file,
-                            data.table = F,
-                            header = T)
-    } else {
-        covariance <- read.table(argv$cov_file, header = T)
-    }
-    
-    if (provided("cov_col", argv)) {
-        c = strsplit(argv$cov_col, split = ",")[[1]]
-        c <- update_cov_header(c)
-        selected <- colnames(covariance) %in% c
-        if (!ignore_fid) {
-            selected[2] <-
-                TRUE #When ignore_fid isn't provided, then we need to also include the FID information
-        }
-        selected[1] <-
-            TRUE # we always want the IID information, which should be the first column
-        covariance <- covariance[, selected]
-    }
-    if (ignore_fid) {
-        colnames(covariance) <-
-            c("IID", paste("Cov", 1:(ncol(covariance) - 1)))
-    } else{
-        colnames(covariance) <-
-            c("FID", "IID", paste("Cov", 1:(ncol(covariance) - 2)))
-    }
-}
-
-# we no longer have those complication
-prefix <- argv$out
-
-#regions <- read.table(paste(prefix, "region", sep = "."), header =T)
-#num_region = nrow(regions)
-
 # Plot multi-phenotype plot -----------------------------------------------
 
 multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
@@ -1969,6 +1816,178 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
         g <- dev.off()
     }
 }
+
+# Sanity Check ------------------------------------------------------------
+
+
+if (provided("no_regress", argv)) {
+    quit("yes")
+}
+ignore_fid <- provided("ignore_fid", argv)
+
+extract_matrix <- function(x, y) {
+    z = which(x == y)
+    
+    if (length(z) == 0) {
+        return(NA)
+    } else{
+        return(z)
+    }
+}
+# CALL PLOTTING FUNCTION: Process the input names and call the actual plotting function
+# we need to deduce the file names
+# Now we actually require one single string for the input, separated by ,
+# Get all the region information
+# With this update, we only allow a single base file therefore we don't even need the
+# information of base here
+
+if (!provided("target", argv)) {
+    stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
+}
+
+
+phenos <- NULL
+
+binary_target <- strsplit(argv$binary_target, split = ",")[[1]]
+pheno.index <- 6
+if (provided("pheno_col", argv)) {
+    phenos <- strsplit(argv$pheno_col, split = ",")[[1]]
+    if (!provided("pheno_file", argv)) {
+        writeLines(
+            strwrap(
+                "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.",
+                width = 80
+            )
+        )
+    }else if (length(binary_target) != length(phenos)) {
+        message <-
+            "Number of binray target should match number of phenotype provided!"
+        message <- paste(
+            message,
+            "There are ",
+            length(binary_target),
+            " binary target information and ",
+            length(phenos),
+            "phenotypes",
+            sep = ""
+        )
+        stop(message)
+    } else{
+        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
+        # This will automatically filter out un-used phenos
+        valid.pheno <- phenos %in% colnames(header)
+        valid.file.index <- colnames(header) %in% phenos
+        if (sum(valid.pheno) == 0) {
+            stop("Error: None of the phenotype is identified in phenotype header!")
+        }
+        binary_target <- binary_target[valid.pheno]
+        phenos <- phenos[valid.pheno]
+        pheno.index <- c(1:ncol(header))[valid.file.index]
+    }
+} else if (provided("pheno_file", argv)) {
+    pheno.index <- 3
+    if (ignore_fid)
+        pheno.index <- 2
+} else{
+    if (length(binary_target) != 1) {
+        stop("Too many binary target information. We only have one phenotype")
+    }
+}
+
+
+# Read in covariates ------------------------------------------------------
+update_cov_header <- function(c) {
+    res <- NULL
+    for (i in c) {
+        if (substr(i, 0, 1) == "@") {
+            i <- substr(i, 2, nchar(i))
+            temp <- strsplit(i, "\\[")[[1]]
+            
+            info <- NULL
+            is_list <- NULL
+            for (j in temp) {
+                if (grepl("\\]", j)) {
+                    tem <- strsplit(j, "\\]")[[1]]
+                    
+                    for (k in 1:length(tem)) {
+                        info <- rbind(info, tem[k])
+                        
+                        is_list <- rbind(is_list, k == 1)
+                        
+                    }
+                } else{
+                    info <- rbind(info, j)
+                    
+                    is_list <- rbind(is_list, FALSE)
+                    
+                }
+            }
+            final <- NULL
+            
+            for (j in 1:nrow(info)) {
+                if (is_list[j]) {
+                    num <- NULL
+                    ind <- strsplit(info[j], split = "\\.")[[1]]
+                    
+                    for (k in ind) {
+                        if (grepl("-", k)) {
+                            range <- strsplit(k , split = "-")[[1]]
+                            
+                            r <- range[1]:range[2]
+                            
+                            num <- c(num, r)
+                            
+                        } else{
+                            num <- c(num, k)
+                            
+                        }
+                    }
+                    cur <- final
+                    final <- NULL
+                    for (n in num) {
+                        final <- c(final, paste(cur, n, sep = ""))
+                        
+                    }
+                } else{
+                    final <- paste(final, info[j], sep = "")
+                    
+                }
+            }
+            res <- c(res, final)
+        } else{
+            res <- c(res, i)
+            
+        }
+    }
+    return(res)
+}
+
+covariance <- NULL
+covariance.base <- NULL
+if (provided("cov_file", argv)) {
+    if (use.data.table) {
+        covariance <- fread(argv$cov_file,
+                            data.table = F,
+                            header = T)
+    } else {
+        covariance <- read.table(argv$cov_file, header = T)
+    }
+    cov.header <- colnames(covariance)
+    selected.cov <- cov.header[!cov.header%in%c("FID", "IID")]
+    if(provided("cov_col", argv)){
+        c <- strsplit(argv$cov_col, split = ",")[[1]]
+        c <- update_cov_header(c)
+        selected.cov <- cov.header[cov.header %in% c]
+    }
+    covariance.base <- covariance[, cov.header%in%c("FID", "IID",selected.cov)]
+}
+
+# we no longer have those complication
+prefix <- argv$out
+
+#regions <- read.table(paste(prefix, "region", sep = "."), header =T)
+#num_region = nrow(regions)
+
 # Process plot functions --------------------------------------------------
 
 process_plot <-
@@ -2152,11 +2171,74 @@ if (provided("pheno_file", argv)) {
         }
     }
 }
+
+update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
+    
+    phenotype <- NULL
+    if (use.data.table) {
+        phenotype <-
+            fread(pheno.file, data.table = F, header = F)
+    } else{
+        # Allow header = false for fam or for phenotype files that does not contain phenotype name
+        phenotype <- read.table(pheno.file, header = F)
+    }
+    ignore_fid <- provided("ignore_fid", parameters)
+    if (!ignore_fid) {
+        phenotype <- phenotype[, c(1:2, pheno.index)]
+        colnames(phenotype) <- c("FID", "IID", "Pheno")
+        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype <-
+            phenotype[!is.na(phenotype$Pheno), ]
+    } else{
+        phenotype <- phenotype[, c(1, pheno.index)]
+        colnames(phenotype) <- c("IID", "Pheno")
+        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype <-
+            phenotype[!is.na(phenotype$Pheno), ]
+    }
+    # Now remove any missing sample from cov.base
+    covariance <- NULL
+    if(!ignore_fid){
+        covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
+                                   cov.base$IID %in% phenotype$IID, ]
+    }else{
+        covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
+    }
+    # Note: cov.base only contains the valid headers
+    if(provided("cov_factor", parameters)){
+        factor_cov <- parameters$cov_factor
+        for(i in colnames(covariance)){
+            if(i != "FID" & i != "IID"){
+                if(i %in%factor_cov){
+                    covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
+                }else{
+                    covariance[,i] <- as.numeric(covariance[,i])
+                }
+            }
+        }
+    }else{
+        for(i in colnames(covariance)){
+            if(i!="FID" & i!="IID"){
+                covariance[,i] <- as.numeric(covariance[,i])
+            }
+        }
+    }
+    if (ignore_fid) { 
+        colnames(covariance) <- 
+            c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
+    } else{ 
+        colnames(covariance) <- 
+            c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
+    } 
+    return(covariance)
+}
 # To account for the chromosome number
 pheno.file <- gsub("#", "1", pheno.file)
 if (!is.null(phenos) &
     length(phenos) > 1) {
     for (i in 1:length(phenos)) {
+        # Update the covariance matrix accordingly
+        covariance <- update_cov_factor(argv, pheno.file, pheno.index[i], covariance.base)
         process_plot(
             argv$out,
             covariance,
@@ -2173,6 +2255,7 @@ if (!is.null(phenos) &
         multi_pheno_plot(argv, use.ggplot, use.data.table)
     }
 } else if (!is.null(phenos)) {
+    covariance <- update_cov_factor(argv, pheno.file, pheno.index[1], covariance.base)
     process_plot(
         argv$out,
         covariance,
@@ -2185,6 +2268,7 @@ if (!is.null(phenos) &
         "-"
     )
 } else{
+    covariance <- update_cov_factor(argv, pheno.file, pheno.index[1], covariance.base)
     process_plot(
         argv$out,
         covariance,

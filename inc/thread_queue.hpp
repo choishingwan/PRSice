@@ -23,7 +23,7 @@ public:
         while (m_storage_queue.empty()) {
             m_cond_not_empty.wait(mlock);
         }
-        item = m_storage_queue.front();
+        item = std::move(m_storage_queue.front());
         m_num_processing--;
         m_storage_queue.pop();
         mlock.unlock();
@@ -39,6 +39,31 @@ public:
             m_cond_not_full.wait(mlock);
         }
         m_storage_queue.push(item);
+        m_num_processing++;
+        mlock.unlock();
+        m_cond_not_empty.notify_one();
+    }
+    void push(T&& item, size_t max_process)
+    {
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        // stop producer from producing extra data when
+        // we have not finish enough jobs
+        while (max_process <= m_num_processing) {
+            m_cond_not_full.wait(mlock);
+        }
+        m_storage_queue.push(item);
+        m_num_processing++;
+        mlock.unlock();
+        m_cond_not_empty.notify_one();
+    }
+    void emplace(T&& item, size_t max_process)
+    {
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        while (max_process <= m_num_processing) {
+            m_cond_not_full.wait(mlock);
+        }
+        m_storage_queue.emplace(std::forward<T>(item));
+        // m_storage_queue.push(item);
         m_num_processing++;
         mlock.unlock();
         m_cond_not_empty.notify_one();

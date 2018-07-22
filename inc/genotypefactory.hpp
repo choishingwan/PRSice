@@ -44,6 +44,7 @@ public:
         std::vector<std::string> external_sample = misc::split(prefix, ",");
         std::string sample_file = "";
         std::string binary_file = prefix;
+        const bool intermediate = commander.intermediate();
         if (external_sample.size() > 1) {
             sample_file = external_sample[1];
             binary_file = external_sample[0];
@@ -85,7 +86,8 @@ public:
             }
             if (sample_file.empty()) sample_file = commander.pheno_file();
             return new BinaryGen(binary_file, sample_file, multi_input, thread,
-                                 ignore_fid, keep_nonfounder, keep_ambig);
+                                 ignore_fid, keep_nonfounder, keep_ambig,
+                                 is_ref, intermediate);
         }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");
