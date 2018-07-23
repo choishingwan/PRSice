@@ -841,7 +841,11 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     // fields (e.g. r2) because we will overwrite it anyway
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
-    for (auto&& p : m_prs_results) p.threshold = -1;
+    for (auto&& p : m_prs_results){
+    	p.threshold = -1;
+    	p.r2 = 0.0;
+    	p.num_snp = 0;
+    }
     // initialize score vector
     m_best_sample_score.resize(target.num_sample());
 
