@@ -194,7 +194,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<std::string> bim_info;
     std::vector<bool> ref_retain;
-    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
+    if (m_is_ref) ref_retain.resize(target->m_existed_snps.size(), false);
     std::ifstream bim, bed;
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
@@ -269,10 +269,13 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             // the previous pass change them to upper case to avoid match
             // problems
             if (m_is_ref) {
+
                 // SNP not found in the target file
+
                 if (target->m_existed_snps_index.find(bim_info[+BIM::RS])
                     == target->m_existed_snps_index.end())
                 {
+
                     continue;
                 }
             }
