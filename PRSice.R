@@ -892,7 +892,8 @@ call_quantile <-
              use.residual,
              use.ggplot,
              binary,
-             extract) {
+             extract,
+             uneven) {
         
     if (!pheno.as.quant) {
         family <- gaussian
@@ -965,14 +966,16 @@ call_quantile <-
                        binary,
                        extract,
                        prefix,
-                       use.residual)
+                       use.residual,
+                       uneven)
         } else{
             plot.quant.no.g(quantiles.df,
                             num_quant,
                             binary,
                             extract,
                             prefix,
-                            use.residual)
+                            use.residual,
+                            uneven)
         }
     } else{
         # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
@@ -1011,13 +1014,15 @@ call_quantile <-
                              use.residual,
                              num_quant,
                              extract,
-                             prefix)
+                             prefix,
+                             uneven)
         } else{
             plot.pheno.quant.no.g(pheno.sum,
                                   use.residual,
                                   num_quant,
                                   extract,
-                                  prefix)
+                                  prefix,
+                                  uneven)
         }
     }
     
@@ -1107,7 +1112,7 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
                   use.residual,
                   use.ggplot,
                   binary,
-                  extract)
+                  extract, TRUE)
 }
 
 
@@ -1209,19 +1214,23 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
                  use.residual,
                  use.ggplot,
                  binary,
-                 extract)
+                 extract, FALSE)
 }
 
-plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix){
+plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
   png(paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   pheno.sum$color <- "#D55E00"
   xlab <- NULL
+  name <- "Quantiles"
+  if(uneven){
+      name <- "Strata"
+  }
   if(use_residual){
-    xlab <-"Quantiles for Residualized Phenotype"
+    xlab <-paste0(name, " for Residualized Phenotype")
   }else{
-    xlab <-"Quantiles for Phenotype"
+    xlab <-paste0(name, " for Phenotype")
   }
   
   
@@ -1230,6 +1239,9 @@ plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, p
     pheno.sum$color[quantiles.df$Group==1] <- "#0072B2"
   }
   ylab <- "Mean PRS given phenotype in quantiles"
+  if(uneven){
+      ylab <- "Mean PRS given phenotype in strata"
+  }
   with(pheno.sum, 
        plot(x=quantile, y=mean, 
             col=color, pch=19, 
@@ -1256,14 +1268,30 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
       ymin = LCI,
       ymax = UCI
     ))+ 
-    theme_sam+
-    ylab("Mean PRS given phenotype in quantiles")
+    theme_sam
+  if(uneven) {
+      quantiles.plot <-
+          quantiles.plot + ylab("Mean PRS given phenotype in strata")
+  } else{
+      quantiles.plot <-
+          quantiles.plot + ylab("Mean PRS given phenotype in quantiles")
+  }
   if(use_residual){
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for Residualized Phenotype")
+      if (uneven) {
+          quantiles.plot <- quantiles.plot +
+              xlab("Strata for Residualized Phenotype")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              xlab("Quantiles for Residualized Phenotype")
+      }
   }else{
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for Phenotype")
+      if (uneven) {
+          quantiles.plot <- quantiles.plot +
+              xlab("Quantiles for Phenotype")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              xlab("Strat for Phenotype")
+      }
   }
   
   if (is.null(extract)) {
@@ -1291,20 +1319,40 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
             ymin = CI.L,
             ymax = CI.U
         )) + 
-        theme_sam+
-        xlab("Quantiles for Polygenic Score")
+        theme_sam
+    if(uneven){
+        quantiles.plot <- quantiles.plot+xlab("Strata for Polygenic Score")
+    } else{
+        quantiles.plot <-
+            quantiles.plot + xlab("Quantiles for Polygenic Score")
+    }
     if (binary){
         if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
         }else if(use_residual){
-            quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+            if(uneven){
+                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+            }else{
+                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+            }
         }
     } else if(use_residual){
-        quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+        if (uneven) {
+            quantiles.plot <-
+                quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+        } else{
+            quantiles.plot <-
+                quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+        }
     }else{
-        quantiles.plot <- quantiles.plot +
-            ylab("Change in Phenotype \ngiven score in quantiles")
+        if (uneven) {
+            quantiles.plot <- quantiles.plot +
+                ylab("Change in Phenotype \ngiven score in strata")
+        } else{
+            quantiles.plot <- quantiles.plot +
+                ylab("Change in Phenotype \ngiven score in quantiles")
+        }
     }
     if (is.null(extract)) {
         quantiles.plot <-
@@ -1338,15 +1386,35 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, us
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
       }else if(use_residual){
-          quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+          if(uneven) {
+              quantiles.plot <-
+                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+          } else{
+              quantiles.plot <-
+                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+          }
       }
   } else if(use_residual){
-      quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-  }else{
-      quantiles.plot <- quantiles.plot +
-          ylab("Change in Phenotype \ngiven score in quantiles")
+      if (uneven) {
+          quantiles.plot <-
+              quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+      } else{
+          quantiles.plot <-
+              quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+      }
+  } else{
+      if(uneven) {
+          quantiles.plot <- quantiles.plot +
+              ylab("Change in Phenotype \ngiven score in strata")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              ylab("Change in Phenotype \ngiven score in quantiles")
+      }
   }
   xlab <- "Quantiles for Polygenic Score"
+  if(uneven){
+      xlab <- "Strata for Polygenic Score"
+  }
   with(quantiles.df, 
        plot(x=DEC, y=Coef, 
             col=color, pch=19, 
