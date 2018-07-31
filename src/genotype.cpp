@@ -622,9 +622,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     << m_existed_snps[target_index].chr() << "\t" << chr_out
                     << "\t" << m_existed_snps[target_index].loc() << "\t"
                     << loc_out << "\t" << m_existed_snps[target_index].ref()
-                    << "\t"
-                    << "\t" << ref_allele << m_existed_snps[target_index].alt()
-                    << "\t" << alt_allele_out << "\n";
+                    << "\t" << ref_allele << "\t"
+                    << m_existed_snps[target_index].alt() << "\t"
+                    << alt_allele_out << "\n";
                 num_mismatched++;
                 exclude = true;
             }
