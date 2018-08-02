@@ -174,23 +174,29 @@ int main(int argc, char* argv[])
             // check which region are removed
             std::ofstream removed_regions;
             size_t region_size = region.size();
-            for(size_t i = 0; i < region_size; ++i){
-            	if(region.num_post_clump_snp(i)==0){
-            		// this is not included in the analysis
-            		if(!removed_regions.is_open()){
-            			removed_regions.open(std::string(commander.out()+".excluded_regions").c_str());
-            			if(!removed_regions.is_open()){
-            				fprintf(stderr, "Error: Cannot open file to write: %s\n", std::string(commander.out()+".excluded_regions").c_str() );
-            				return -1;
-            			}
-            		}
-            		removed_regions << region.get_name(i) << std::endl;
-            	}
+            for (size_t i = 0; i < region_size; ++i) {
+                if (region.num_post_clump_snp(i) == 0) {
+                    // this is not included in the analysis
+                    if (!removed_regions.is_open()) {
+                        removed_regions.open(
+                            std::string(commander.out() + ".excluded_regions")
+                                .c_str());
+                        if (!removed_regions.is_open()) {
+                            fprintf(stderr,
+                                    "Error: Cannot open file to write: %s\n",
+                                    std::string(commander.out()
+                                                + ".excluded_regions")
+                                        .c_str());
+                            return -1;
+                        }
+                    }
+                    removed_regions << region.get_name(i) << std::endl;
+                }
             }
-            if(removed_regions.is_open()) removed_regions.close();
+            if (removed_regions.is_open()) removed_regions.close();
             const size_t num_pheno = prsice.num_phenotype();
             if (!perform_prslice) {
-            	// this count is specific for PRSice
+                // this count is specific for PRSice
                 prsice.init_process_count(commander, region.size(),
                                           target_file->num_threshold());
                 const size_t num_region_process =
@@ -208,7 +214,7 @@ int main(int argc, char* argv[])
                     for (size_t i_region = 0; i_region < num_region_process;
                          ++i_region)
                     {
-                    	if(region.num_post_clump_snp(i_region)==0) continue;
+                        if (region.num_post_clump_snp(i_region) == 0) continue;
                         prsice.run_prsice(commander, region, i_pheno, i_region,
                                           *target_file);
                         if (!commander.no_regress())

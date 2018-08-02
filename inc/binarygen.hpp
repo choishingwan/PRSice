@@ -85,7 +85,7 @@ private:
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
                 if (!m_bgen_file.is_open()) {
                     std::string error_message =
-                        "ERROR: Cannot open bgen file: " + file_name;
+                        "Error: Cannot open bgen file: " + file_name;
                     throw std::runtime_error(error_message);
                 }
                 m_cur_file = file_name;
@@ -99,64 +99,64 @@ private:
                                         m_founder_info.data(), final_mask,
                                         false, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bgen file!");
+            throw std::runtime_error("Error: Cannot read the bgen file!");
         }
     };
 
     // borrowed from plink
-    uint32_t load_and_collapse_incl(const std::streampos byte_pos,
-                                    const std::string& file_name,
-                                    uint32_t unfiltered_sample_ct,
-                                    uint32_t sample_ct,
-                                    const uintptr_t* __restrict sample_include,
-                                    uintptr_t final_mask, uint32_t do_reverse,
-                                    uintptr_t* __restrict rawbuf,
-                                    uintptr_t* __restrict mainbuf,
-									bool intermediate=false)
+    uint32_t load_and_collapse_incl(
+        const std::streampos byte_pos, const std::string& file_name,
+        uint32_t unfiltered_sample_ct, uint32_t sample_ct,
+        const uintptr_t* __restrict sample_include, uintptr_t final_mask,
+        uint32_t do_reverse, uintptr_t* __restrict rawbuf,
+        uintptr_t* __restrict mainbuf, bool intermediate = false)
     {
         assert(unfiltered_sample_ct);
-        if(!intermediate){
-        	if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-        			|| !m_bgen_file.is_open())
-        	{
-        		if (m_bgen_file.is_open()) m_bgen_file.close();
-        		std::string bgen_name = file_name + ".bgen";
-        		m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-        		if (!m_bgen_file.is_open()) {
-        			std::string error_message =
-        					"ERROR: Cannot open bgen file: " + file_name;
-        			throw std::runtime_error(error_message);
-        		}
-        		m_cur_file = file_name;
-        	}
-        	auto&& context = m_context_map[file_name];
-        	m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        	PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold);
-        	genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-        			m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
-        	// output from load_raw should have already copied all samples
-        	// to the front without the need of subseting
-        	if (do_reverse) {
-        		reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
-        	}
-        }else{
+        if (!intermediate) {
+            if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+                || !m_bgen_file.is_open())
+            {
+                if (m_bgen_file.is_open()) m_bgen_file.close();
+                std::string bgen_name = file_name + ".bgen";
+                m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+                if (!m_bgen_file.is_open()) {
+                    std::string error_message =
+                        "Error: Cannot open bgen file: " + file_name;
+                    throw std::runtime_error(error_message);
+                }
+                m_cur_file = file_name;
+            }
+            auto&& context = m_context_map[file_name];
+            m_bgen_file.seekg(byte_pos, std::ios_base::beg);
+            PLINK_generator setter(&m_sample_include, mainbuf,
+                                   m_hard_threshold);
+            genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
+                m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
+            // output from load_raw should have already copied all samples
+            // to the front without the need of subseting
+            if (do_reverse) {
+                reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+            }
+        }
+        else
+        {
             const uintptr_t unfiltered_sample_ct4 =
                 (m_unfiltered_sample_ct + 3) / 4;
-        	 if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
-        			 || !m_bgen_file.is_open())
-        	 {
-        		 if (m_bgen_file.is_open()) m_bgen_file.close();
-        		 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
-        		 if (!m_bgen_file.is_open()) {
-        			 std::string error_message =
-        					 "ERROR: Cannot open bgen file: " + file_name;
-        			 throw std::runtime_error(error_message);
-        		 }
-        		 m_cur_file = file_name;
-        	 }
+            if (m_cur_file.empty() || file_name.compare(m_cur_file) != 0
+                || !m_bgen_file.is_open())
+            {
+                if (m_bgen_file.is_open()) m_bgen_file.close();
+                m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
+                if (!m_bgen_file.is_open()) {
+                    std::string error_message =
+                        "Error: Cannot open bgen file: " + file_name;
+                    throw std::runtime_error(error_message);
+                }
+                m_cur_file = file_name;
+            }
 
-        	 m_bgen_file.seekg(byte_pos, std::ios_base::beg);
-        	 m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
+            m_bgen_file.seekg(byte_pos, std::ios_base::beg);
+            m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
         }
         // mainbuf should contains the information
         return 0;
@@ -210,7 +210,7 @@ private:
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
             if (m_flipped) {
-                std::swap(homcom_weight, homrar_weight);
+                std::swap(m_homcom_weight, m_homrar_weight);
             }
         }
         void initialise(std::size_t number_of_samples,
@@ -231,9 +231,10 @@ private:
         {
             m_entry_i = 0;
             m_is_missing = false;
+            m_start_geno = false;
             m_sum = 0.0;
             m_bgen_sample_i = i;
-            return !IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
+            return IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
         }
 
         void set_number_of_entries(std::size_t ploidy,
@@ -255,23 +256,27 @@ private:
             switch (geno)
             {
             default:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp =
+                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_homcom_weight * value * m_stat * 0.5;
                 break;
             case 1:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp =
+                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_het_weight * value * m_stat * 0.5;
                 break;
             case 2:
-                sample_prs.num_snp = sample_prs.num_snp * m_not_first + 1;
-                sample_prs.prs = sample_prs.prs * m_not_first
+                sample_prs.num_snp =
+                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
+                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
                                  + m_homrar_weight * value * m_stat * 0.5;
             }
             m_total_prob += value * geno;
             ++m_entry_i;
             m_sum += value;
+            m_start_geno = true;
         }
         // call if sample is missing
         void set_value(uint32_t, genfile::MissingValue value)
@@ -343,7 +348,8 @@ private:
         MISSING_SCORE m_missing_score;
         bool m_flipped = false;
         bool m_not_first = false;
-        bool m_is_missing  = false;
+        bool m_is_missing = false;
+        bool m_start_geno = false;
     };
 
 
