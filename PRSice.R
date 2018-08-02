@@ -792,10 +792,11 @@ set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.ind
 }
 # Determine Default -------------------------------------------------------
 # First, determine the bar levels
-if(!provided("bar-levels", argv)){
+if(!provided("bar_levels", argv)){
+    print("not provided")
     if(!provided("msigdb", argv) & !provided("gtf", argv) & !provided("bed", argv)) {
         argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
-        if (!provided("no-full", argv)) {
+        if (!provided("no_full", argv)) {
             argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
         }
     } else if (!provided("fastscore", argv) &
@@ -2096,7 +2097,7 @@ process_plot <-
         # We know the format of the best file, and it will always contain FID and IID
         
         base.prs <- best[,c(1,2,4)]
-        if(provided("plot_set", parameters) & (provided("msigdb", parameters)| provided("bed", parameters) | provided("gtf", parameters))){
+        if(provided("plot_set", parameters) & (provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)| provided("snp_set", parameters)| provided("snp_sets", parameters))){
             base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
             colnames(base.prs)[3] <- "PRS"
         }
@@ -2150,7 +2151,8 @@ process_plot <-
                 uneven_quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
             }
         }
-        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
+        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)
+           | provided("snp_test", parameters) | provided("snp_tests", parameters)){
             if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
                 bar_plot(prsice.result, prefix, parameters, use.ggplot) 
                 if(!provided("fastscore", parameters)){
@@ -2211,7 +2213,7 @@ pheno.file <- NULL
 
 if (provided("pheno_file", argv)) {
     pheno.file <- argv$pheno_file
-} else{
+} else if(provided("target", argv)){
     # Check if external fam / sample file is provided
     target.info <- strsplit(argv$target, split = ",")[[1]]
     if (length(target.info) == 2) {
@@ -2236,6 +2238,16 @@ if (provided("pheno_file", argv)) {
             # Because default is always plink
             pheno.file <- paste0(argv$target, ".fam")
         }
+    }
+}else if(provided("target_list", argv)){
+    # Assume no header
+    target.list <- read.table(argv$target_list)
+    target.prefix <- target.list[1]
+    pheno.file <- paste0(target.prefix, ".fam")    
+    if(provided("type", argv)){
+        if(argv$type=="bgen"){
+            stop("Error: You must provide a phenotype file for bgen list input")
+        }   
     }
 }
 

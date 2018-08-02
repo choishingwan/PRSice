@@ -1380,28 +1380,33 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         std::vector<double> avail_thresholds = target.get_thresholds();
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         size_t num_thresholds = avail_thresholds.size();
-        header_line = "FID IID";
+        std::streampos begin_byte=all_out.tellp();
+        all_out <<"FID IID";
+        //size_t header_length = 3+1+3;
         if (!m_prset) {
             for (auto& thres : avail_thresholds) {
-                header_line.append(" " + std::to_string(thres));
+            	all_out << " " << thres;
+            	//header_length+=1+m_numeric_width;
             }
         }
         else
         {
             for (size_t i = 0; i < region_name.size() - 1; ++i) {
                 for (auto& thres : avail_thresholds) {
-                    header_line.append(" " + region_name[i] + "_"
-                                       + std::to_string(thres));
+                    //header_length+= 1+region_name[i].length()+1+m_numeric_width;
+                    all_out << " " << region_name[i] << "_" << thres;
                 }
             }
         }
-        m_all_file.header_length = header_line.length() + 1;
+        all_out << "\n";
+        std::streampos end_byte=all_out.tellp();
+        m_all_file.header_length = end_byte-begin_byte;
         m_all_file.processed_threshold = 0;
         m_all_file.line_width =
             m_max_fid_length + 1 + m_max_iid_length + 1
             + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-        all_out << header_line << "\n";
+        //all_out << header_line << "\n";
     }
 
     // output sample IDs
