@@ -20,8 +20,8 @@ PRSice is seperated into two main parts:
 ## General Usage
 ```
 usage: Rscript PRSice.R [options] \
-    -b <base_file> \
-    -t < target_file> \
+    --base <base_file> \
+    --target < target_file> \
     --prsice <prsice_location>
 ```
 

@@ -102,6 +102,12 @@
     File type of the target file. Support bed (binary plink) and bgen format. Default: bed
 
 # Dosage Related Commands
+- `--allow-inter`
+
+    Allow the generate of intermediate file. This will
+    speed up PRSice when using dosage data as clumping
+    reference and for hard coding PRS calculation
+
 - `--hard-thres`
 
     Hard threshold for the dosage data. SNPs with be coded as
