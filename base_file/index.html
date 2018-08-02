@@ -166,6 +166,10 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../faq/">Frequently Asked Questions</a>
+                </li>
     </ul>
 	    </li>
           
@@ -224,7 +228,7 @@ the effect will be flipped. </p>
 <p><code>--base</code> | <code>-b</code></p>
 <p>Base (i.e. GWAS) association file. This is a whitespace delimited file
 containing association results for SNPs on the base phenotype.
-This file can be <em>gzipped</em>.
+This file can be <em>gzipped</em> (must have the .gz suffix).
 For PRSice to run, the base file must contain the effective allele
 (<code>--A1</code>), effect size estimates (<code>--stat</code>), p-value for association
 (<code>--pvalue</code>), and the SNP ID (<code>--snp</code>).</p>
@@ -233,7 +237,7 @@ For PRSice to run, the base file must contain the effective allele
 <p><code>--beta</code></p>
 <p>This flag is used to indicate if the test statistic is in the form
 of BETA. When not set, PRSice assume the statistic is in the form
-of Odd Ratios, performnatural log transformation on the test statistic.</p>
+of Odd Ratios, perform natural log transformation on the test statistic.</p>
 </li>
 <li>
 <p><code>--bp</code></p>
@@ -277,8 +281,7 @@ threshold of <strong>0.9</strong>. You can disable this behaviour by using <code
 <li>
 <p><code>--pvalue</code> | <code>-p</code></p>
 <p>Column header containing the p-value.
-The p-value information is required for clumping and
-this information must be provided even <code>--no-clump</code> is specified</p>
+The p-value information must be provided </p>
 </li>
 <li>
 <p><code>--se</code></p>
