@@ -286,6 +286,7 @@ help_message <-
     --plot-set              Define the gene set to be plot. Default: Base\n
     --quantile      | -q    Number of quantiles to plot. No quantile plot\n
                             will be generated when this is not provided.\n
+    --quant-break           Quantile groupings for plotting the strata plot\n
     --quant-extract | -e    File containing sample ID to be plot on a separated\n
                             quantile e.g. extra quantile containing only \n
                             schizophrenia samples. Must contain IID. Should\n
@@ -581,11 +582,9 @@ option_list <- list(
 capture <- commandArgs(trailingOnly = TRUE)
 help <- (sum(c("--help", "-h") %in% capture) >= 1)
 has_c <- (sum(c("--prsice") %in% capture) >= 1)
-if (help && !has_c) {
+if (help) {
     cat(help_message)
-    
     quit()
-    
 }
 argv <- parse_args(OptionParser(option_list = option_list))
 
@@ -1260,7 +1259,7 @@ plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, p
   g<-dev.off()
 }
 
-plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix){
+plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
   quantiles.plot <-
     ggplot(pheno.sum, aes(
       x = quantile,
@@ -1311,7 +1310,7 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
     quantiles.plot <-
         ggplot(quantiles.df, aes(
             x = DEC,
@@ -1371,7 +1370,7 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
     )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -2266,38 +2265,40 @@ update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
     }
     # Now remove any missing sample from cov.base
     covariance <- NULL
-    if(!ignore_fid){
-        covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
-                                   cov.base$IID %in% phenotype$IID, ]
-    }else{
-        covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
-    }
-    # Note: cov.base only contains the valid headers
-    if(provided("cov_factor", parameters)){
-        factor_cov <- parameters$cov_factor
-        for(i in colnames(covariance)){
-            if(i != "FID" & i != "IID"){
-                if(i %in%factor_cov){
-                    covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
-                }else{
+    if(!is.null(cov.base)){
+        if(!ignore_fid){
+            covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
+                                       cov.base$IID %in% phenotype$IID, ]
+        }else{
+            covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
+        }
+        # Note: cov.base only contains the valid headers
+        if(provided("cov_factor", parameters)){
+            factor_cov <- parameters$cov_factor
+            for(i in colnames(covariance)){
+                if(i != "FID" & i != "IID"){
+                    if(i %in%factor_cov){
+                        covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
+                    }else{
+                        covariance[,i] <- as.numeric(covariance[,i])
+                    }
+                }
+            }
+        }else{
+            for(i in colnames(covariance)){
+                if(i!="FID" & i!="IID"){
                     covariance[,i] <- as.numeric(covariance[,i])
                 }
             }
         }
-    }else{
-        for(i in colnames(covariance)){
-            if(i!="FID" & i!="IID"){
-                covariance[,i] <- as.numeric(covariance[,i])
-            }
-        }
+        if (ignore_fid) { 
+            colnames(covariance) <- 
+                c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
+        } else{ 
+            colnames(covariance) <- 
+                c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
+        } 
     }
-    if (ignore_fid) { 
-        colnames(covariance) <- 
-            c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
-    } else{ 
-        colnames(covariance) <- 
-            c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
-    } 
     return(covariance)
 }
 # To account for the chromosome number
