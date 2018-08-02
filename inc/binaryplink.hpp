@@ -33,9 +33,12 @@ public:
     ~BinaryPlink();
 
 private:
+    std::string m_cur_file;
+    std::ifstream m_bed_file;
+    std::streampos m_prev_loc = 0;
     uintptr_t m_bed_offset = 3;
-    std::vector<Sample> gen_sample_vector();
 
+    std::vector<Sample_ID> gen_sample_vector();
     std::vector<SNP> gen_snp_vector(const double geno, const double maf,
                                     const double info,
                                     const double hard_threshold,
@@ -44,7 +47,6 @@ private:
                                     Genotype* target = nullptr);
 
     void check_bed(const std::string& bed_name, size_t num_marker);
-
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype,
                               const std::streampos byte_pos,
@@ -52,7 +54,6 @@ private:
     {
         uintptr_t final_mask = get_final_mask(m_founder_ct);
         uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-        std::streampos snp_index = byte_pos;
         if (m_cur_file.empty() || m_cur_file.compare(file_name) != 0) {
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
@@ -62,29 +63,31 @@ private:
             m_prev_loc = 0;
             m_cur_file = file_name;
         }
-        if ((m_prev_loc != snp_index)
-            && !m_bed_file.seekg(snp_index, std::ios_base::beg))
+        if ((m_prev_loc != byte_pos)
+            && !m_bed_file.seekg(byte_pos, std::ios_base::beg))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
         // so that we don't jump if we don't need to
-        m_prev_loc = snp_index + (std::streampos) unfiltered_sample_ct4;
+        m_prev_loc = byte_pos + (std::streampos) unfiltered_sample_ct4;
         if (load_and_collapse_incl(m_unfiltered_sample_ct, m_founder_ct,
                                    m_founder_info.data(), final_mask, false,
                                    m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("ERROR: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot read the bed file!");
         }
     };
 
-    void read_score(std::vector<size_t>& index);
+    void read_score(std::vector<size_t>& index, bool reset_zero);
+    void read_score(std::vector<size_t>& index_bound, uint32_t homcom_weight,
+                    uint32_t het_weight, uint32_t homrar_weight,
+                    bool reset_zero);
     void read_score(size_t start_index, size_t end_bound,
-                    const size_t region_index);
-
-    std::ifstream m_bed_file;
-    std::string m_cur_file;
-    std::streampos m_prev_loc = 0;
-
+                    const size_t region_index, bool reset_zero);
+    void read_score(size_t start_index, size_t end_bound,
+                    uint32_t homcom_weight, uint32_t het_weight,
+                    uint32_t homrar_weight, const size_t region_index,
+                    bool reset_zero);
     uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
                                     uint32_t sample_ct,
                                     const uintptr_t* __restrict sample_include,

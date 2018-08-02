@@ -33,14 +33,15 @@
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <zlib.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.2.beta";
-const std::string date = "31 May 2018";
+const std::string version = "2.1.3.beta";
+const std::string date = "20 July 2018";
 class Commander
 {
 public:
@@ -67,10 +68,18 @@ public:
 
     // covariate
     std::string get_cov_file() const { return covariate.file_name; };
-    std::vector<std::string> get_cov_header() const
+    std::vector<uint32_t> get_cov_index() const
+    {
+        return covariate.covariate_index;
+    };
+    std::vector<std::string> get_cov_name() const
     {
         return covariate.covariates;
     };
+    std::vector<uint32_t> get_factor_cov_index() const
+    {
+        return covariate.factor_index;
+    }
     // reference panel
     std::string ref_name() const
     {
@@ -94,10 +103,12 @@ public:
         return (!reference_panel.file_name.empty()
                 || !reference_panel.multi_name.empty());
     };
+    bool intermediate() const { return reference_panel.allow_inter; };
     // misc
     std::string out() const { return misc.out; };
     std::string exclusion_range() const { return misc.exclusion_range; };
     bool all_scores() const { return misc.print_all_scores; };
+    bool cumulate() const { return !misc.non_cumulate; };
     bool ignore_fid() const { return misc.ignore_fid; };
     bool logit_perm() const { return misc.logit_perm; };
     bool print_snp() const { return misc.print_snp; };
@@ -266,13 +277,16 @@ private:
     {
         std::string file_name;
         std::vector<std::string> covariates;
-        // Numeric factors should be defined with ""
+        std::vector<std::string> factor_covariates;
+        std::vector<uint32_t> covariate_index;
+        std::vector<uint32_t> factor_index;
     } covariate;
 
     struct Misc
     {
         std::string out;
         std::string exclusion_range;
+        int non_cumulate;
         int print_all_scores;
         int ignore_fid;
         int logit_perm;
@@ -458,13 +472,19 @@ private:
                                     const std::string& c)
     {
         if (input.empty()) return;
-        message[c] = message[c] + input;
+        if (message.find(c) == message.end()) {
+            message[c] = input;
+        }
+        else
+        {
+            message[c] = "," + input;
+        }
         if (!input.empty() && input.back() == ',') {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
         }
-        std::vector<std::string> token = misc::split(optarg, ",");
+        std::vector<std::string> token = misc::split(input, ",");
         try
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
@@ -540,6 +560,7 @@ private:
         }
         message["model"] = input;
     }
+    std::vector<std::string> transform_covariate(std::string& cov);
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
@@ -642,7 +663,7 @@ private:
     {
         try
         {
-            int index = misc::convert<int>(optarg);
+            int index = misc::convert<int>(target);
             if (index >= max) {
                 error = true;
                 error_message.append("Error: " + name

@@ -108,7 +108,7 @@ public:
                 if (!m_logit_perm) {
                     std::string message =
                         "Warning: To speed up the permutation, "
-                        "we perform  linear regression instead of logistic "
+                        "we perform linear regression instead of logistic "
                         "regression within the permutation and uses the "
                         "p-value to rank the thresholds. Our assumptions "
                         "are as follow:\n";
@@ -192,6 +192,8 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
         }
     }
+    void run_competitive(Genotype& target, const Commander& commander,
+                         const size_t pheno_index);
 
 protected:
 private:
@@ -266,6 +268,7 @@ private:
                                                       // phenotype
     std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
+    std::vector<size_t> m_matrix_index;
     static std::mutex lock_guard;
 
     struct column_file_info
@@ -302,12 +305,17 @@ private:
     void update_sample_included(Genotype& target);
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        const int pheno_index, bool regress, Reporter& reporter);
-    std::vector<size_t> get_cov_index(const std::string& c_cov_file,
-                                      std::vector<std::string>& cov_header,
-                                      Reporter& reporter);
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string>& cov_header,
+                        std::vector<std::string> cov_header_name,
+                        std::vector<uint32_t> cov_header_index,
+                        std::vector<uint32_t> factor_cov_index,
                         Reporter& reporter);
+    void process_cov_file(
+        const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
+        std::vector<uint32_t>& cov_start_index,
+        std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
+        std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
+        uint32_t& num_column, Reporter& reporter);
     void check_factor_cov(
         const std::string& c_cov_file,
         const std::vector<std::string>& c_cov_header,
@@ -323,23 +331,43 @@ private:
     void run_competitive(Genotype& target, const Commander& commander,
                          const size_t num_snp, const bool store_null,
                          const bool binary);
-    void produce_null_prs(Thread_Queue<std::vector<double>>& q,
-                          Genotype& target, std::vector<int>& sample_index,
-                          size_t num_consumer, size_t num_perm, size_t set_size,
-                          size_t num_selected_snps, double original_p,
-                          bool require_standardize);
+    /*  void produce_null_prs(Thread_Queue<std::vector<double>>& q,
+                            Genotype& target, size_t num_consumer,
+                            size_t num_perm, size_t set_size,
+                            size_t num_selected_snps, double original_p,
+                            bool require_standardize);
+  */
+    void
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
+                     Genotype& target, size_t num_consumer,
+                     std::map<uint32_t, std::vector<uint32_t>>& set_index,
+                     const size_t num_perm, const bool require_standardize);
+    /*
     void consume_prs(Thread_Queue<std::vector<double>>& q, double original_p,
                      int& num_significant, bool is_binary, bool store_p);
-    void null_set_no_thread(Genotype& target, std::vector<int>& sample_index,
-                            int& num_significant, size_t num_perm,
-                            size_t set_size, size_t num_selected_snps,
-                            double original_p, bool require_standardize,
-                            bool is_binary, bool store_p);
-    void gen_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    */
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
+                     std::map<uint32_t, std::vector<uint32_t>>& set_index,
+                     std::vector<double>& ori_t_value,
+                     std::vector<uint32_t>& set_perm_res, const bool is_binary);
+
+    void null_set_no_thread(
+        Genotype& target, std::map<uint32_t, std::vector<uint32_t>>& set_index,
+        std::vector<double>& ori_t_value, std::vector<uint32_t>& set_perm_res,
+        const size_t num_perm, const bool is_binary,
+        const bool require_standardize);
+    void null_set_no_thread(Genotype& target, int& num_significant,
+                            size_t num_perm, size_t set_size,
+                            size_t num_selected_snps, double original_p,
+                            bool require_standardize, bool is_binary,
+                            bool store_p);
+
+
+    void gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                         size_t num_consumer);
 
     void
-    consume_null_pheno(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                        Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
                        int rank, const Eigen::VectorXd& pre_se, bool run_glm);
     void run_null_perm_no_thread(

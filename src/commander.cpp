@@ -60,6 +60,7 @@ Commander::Commander()
     covariate.file_name = "";
 
     misc.out = "PRSice";
+    misc.non_cumulate = 0;
     misc.exclusion_range = "";
     misc.print_all_scores = false;
     misc.ignore_fid = false;
@@ -163,7 +164,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"upper", required_argument, NULL, 'u'},
         {"version", no_argument, NULL, 'v'},
         // flags, only need to set them to true
-        {"allow-intermediate", no_argument, &reference_panel.allow_inter, 1},
+        {"allow-inter", no_argument, &reference_panel.allow_inter, 1},
         {"all-score", no_argument, &misc.print_all_scores, 1},
         {"beta", no_argument, &base.is_beta, 1},
         {"hard", no_argument, &prs_snp_filtering.is_hard_coded, 1},
@@ -172,6 +173,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"keep-ambig", no_argument, &prs_snp_filtering.keep_ambig, 1},
         {"logit-perm", no_argument, &misc.logit_perm, 1},
         {"no-clump", no_argument, &clumping.no_clump, 1},
+        {"non-cumulate", no_argument, &misc.non_cumulate, 1},
         {"no-default", no_argument, &base.no_default, 1},
         {"no-full", no_argument, &p_thresholds.no_full, 1},
         {"no-regress", no_argument, &prs_calculation.no_regress, 1},
@@ -188,9 +190,9 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"bp", required_argument, NULL, 0},
         {"chr", required_argument, NULL, 0},
         {"clump-kb", required_argument, NULL, 0},
-        {"clump-wind", required_argument, NULL, 0},
         {"clump-p", required_argument, NULL, 0},
         {"clump-r2", required_argument, NULL, 0},
+        {"cov-factor", required_argument, NULL, 0},
         {"exclude", required_argument, NULL, 0},
         {"extract", required_argument, NULL, 0},
         {"feature", required_argument, NULL, 0},
@@ -448,6 +450,12 @@ bool Commander::process(int argc, char* argv[], const char* optString,
                                    target.is_binary, error, command);
             else if (command.compare("memory") == 0)
                 set_memory(optarg, message_store, error_messages, error);
+            else if (command == "cov-factor")
+            {
+                load_string_vector(optarg, message_store,
+                                   covariate.factor_covariates, "cov-factor",
+                                   error_messages);
+            }
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -592,6 +600,7 @@ bool Commander::process(int argc, char* argv[], const char* optString,
     if (p_thresholds.no_full) message_store["no-full"] = "";
     if (prs_calculation.no_regress) message_store["no-regress"] = "";
     if (target.include_nonfounders) message_store["nonfounders"] = "";
+    if (reference_panel.allow_inter) message_store["allow-intermediate"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -641,7 +650,7 @@ Commander::~Commander()
 // avoid having large chunk of un-foldable code
 void Commander::set_help_message()
 {
-    help_message = help_message =
+    help_message =
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"
         // Base file
         "\nBase File:\n"
@@ -794,6 +803,12 @@ void Commander::set_help_message()
         "bed\n"
         // dosage
         "\nDosage:\n"
+        "    --allow-inter           Allow the generate of intermediate file. "
+        "This will\n"
+        "                            speed up PRSice when using dosage data as "
+        "clumping\n"
+        "                            reference and for hard coding PRS "
+        "calculation\n"
         "    --hard-thres            Hard threshold for dosage data. Any call "
         "less than\n"
         "                            this will be treated as missing. Note "
@@ -894,6 +909,14 @@ void Commander::set_help_message()
           "                            supported: @cov[1.3-5] will be parsed "
           "as \n"
           "                            cov1,cov3,cov4,cov5\n"
+          "    --cov-factor            Header of categorical covariate(s). "
+          "Dummy variable\n"
+          "                            will be automatically generated. Any "
+          "items in\n"
+          "                            --cov-factor must also be found in "
+          "--cov-col\n"
+          "                            Also accept continuous input (start "
+          "with @).\n"
           "    --cov-file      | -C    Covariate file. First column should be "
           "FID and \n"
           "                            the second column should be IID. If "
@@ -983,6 +1006,17 @@ void Commander::set_help_message()
           "    --msigdb        | -m    MSIGDB file containing the pathway "
           "information.\n"
           "                            Require the gtf file\n"
+          "    --snp-set               Provide a SNP set file containing a "
+          "single snp set.\n"
+          "                            Name of SNP set file will be used as "
+          "the region\n"
+          "                            identifier. This file should contain "
+          "only one column.\n"
+          "    --snp-sets              Provide a SNP set file containing "
+          "multiple snp sets.\n"
+          "                            Each row represent a single SNP set "
+          "with the first\n"
+          "                            column containing name of the SNP set.\n"
           // PRSlice
           "\nPRSlice:\n"
           "    --prslice               Perform PRSlice where the whole genome "
@@ -1003,6 +1037,11 @@ void Commander::set_help_message()
           "    --all-score             Output PRS for ALL threshold. WARNING: "
           "This\n"
           "                            will generate a huge file\n"
+          "    --non-cumulate          Calculate non-cumulative PRS. PRS will "
+          "be reset\n"
+          "                            to 0 for each new P-value threshold "
+          "instead of\n"
+          "                            adding up\n"
           "    --exclude               File contains SNPs to be excluded from "
           "the\n"
           "                            analysis\n"
@@ -1039,6 +1078,8 @@ void Commander::set_help_message()
           "                            generate the empirical p-value. "
           "Recommend to\n"
           "                            use value larger than 10,000\n"
+          "    --print-snp             Print all SNPs used to construct the "
+          "best PRS\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
           "                            system time will be used as seed. When "
@@ -1046,9 +1087,15 @@ void Commander::set_help_message()
           "                            seed and same input is provided, same "
           "result\n"
           "                            can be generated\n"
-          "    --print-snp             Print all SNPs used to construct the "
-          "best PRS\n"
           "    --thread        | -n    Number of thread use\n"
+          "    --x-range               Range of SNPs to be excluded from the "
+          "whole\n"
+          "                            analysis. It can either be a single bed "
+          "file\n"
+          "                            or a comma seperated list of range. "
+          "Range must\n"
+          "                            be in the format of chr:start-end or "
+          "chr:coordinate\n"
           "    --help          | -h    Display this help message\n";
 }
 
@@ -1179,23 +1226,60 @@ void Commander::base_check(std::map<std::string, std::string>& message,
             base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
             if (base.col_index[+BASE_INDEX::CHR] != -1)
                 message["chr"] = base.chr;
+            else if (base.provided_chr)
+            {
+                error_message.append("Warning: " + base.chr
+                                     + " not found in base file\n");
+                message.erase("chr");
+            }
             base.col_index[+BASE_INDEX::REF] =
                 index_check(base.effect_allele, token);
             if (base.col_index[+BASE_INDEX::REF] != -1)
                 message["A1"] = base.effect_allele;
+            else if (base.provided_effect_allele)
+            {
+                error_message.append("Warning: " + base.effect_allele
+                                     + " not found in base file\n");
+                message.erase("A1");
+            }
             base.col_index[+BASE_INDEX::ALT] =
                 index_check(base.non_effect_allele, token);
             if (base.col_index[+BASE_INDEX::ALT] != -1)
                 message["A2"] = base.non_effect_allele;
+            else if (base.provided_non_effect_allele)
+            {
+                error_message.append("Warning: " + base.non_effect_allele
+                                     + " not found in base file\n");
+                message.erase("A2");
+            }
             base.col_index[+BASE_INDEX::STAT] =
                 index_check(base.statistic, token);
             if (base.col_index[+BASE_INDEX::STAT] != -1)
                 message["stat"] = base.statistic;
+            else if (base.provided_statistic)
+            {
+                error_message.append("Error: " + base.statistic
+                                     + " not found in base file\n");
+                message.erase("stat");
+            }
             base.col_index[+BASE_INDEX::RS] = index_check(base.snp, token);
             if (base.col_index[+BASE_INDEX::RS] != -1)
                 message["snp"] = base.snp;
+            else if (base.provided_snp)
+            {
+                error_message.append("Error: " + base.snp
+                                     + " not found in base file\n");
+                message.erase("snp");
+            }
             base.col_index[+BASE_INDEX::BP] = index_check(base.bp, token);
-            if (base.col_index[+BASE_INDEX::BP] != -1) message["bp"] = base.bp;
+            if (base.col_index[+BASE_INDEX::BP] != -1)
+                message["bp"] = base.bp;
+            else if (base.provided_bp)
+            {
+                error_message.append("Warning: " + base.bp
+                                     + " not found in base file\n");
+                message.erase("bp");
+            }
             base.col_index[+BASE_INDEX::SE] =
                 index_check(base.standard_error, token);
             if (base.col_index[+BASE_INDEX::SE] != -1)
@@ -1203,6 +1287,12 @@ void Commander::base_check(std::map<std::string, std::string>& message,
             base.col_index[+BASE_INDEX::P] = index_check(base.p_value, token);
             if (base.col_index[+BASE_INDEX::P] != -1)
                 message["pvalue"] = base.p_value;
+            else if (base.provided_p_value)
+            {
+                error_message.append("Error: " + base.p_value
+                                     + " not found in base file\n");
+                message.erase("pvalue");
+            }
 
             if (!base.info_col.empty()) {
                 std::vector<std::string> info = misc::split(base.info_col, ",");
@@ -1608,9 +1698,139 @@ void Commander::clump_check(std::map<std::string, std::string>& message,
 }
 
 
+std::vector<std::string> Commander::transform_covariate(std::string& cov)
+{
+    std::vector<std::string> final_covariates;
+    std::vector<std::string> open;
+    std::vector<std::string> close;
+    std::vector<std::string> info;
+    std::vector<std::string> individual;
+    std::vector<std::string> range;
+    std::vector<int> numeric;
+    std::vector<bool> list;
+    if (cov.at(0) == '@') {
+        cov.erase(0, 1);
+        open = misc::split(cov, "[");
+        for (auto o : open) {
+            if (o.find("]") != std::string::npos) {
+                close = misc::split(o, "]");
+                // the first one will always be the list
+                info.push_back(close[0]);
+                list.push_back(true);
+                // Nested List is not supported
+                for (size_t cl = 1; cl < close.size(); ++cl) {
+                    info.push_back(close[cl]);
+                    list.push_back(false);
+                }
+            }
+            else
+            {
+                info.push_back(o);
+                list.push_back(false);
+            }
+        }
+
+        for (size_t c = 0; c < info.size(); ++c) {
+            if (list[c]) {
+                individual = misc::split(info[c], ".");
+                numeric.clear();
+                for (auto&& ind : individual) {
+                    if (ind.find("-") != std::string::npos) {
+                        range = misc::split(ind, "-");
+                        if (range.size() != 2) {
+                            throw std::runtime_error(
+                                "Error: Invalid range format, range "
+                                "must be in the form of start-end");
+                        }
+                        try
+                        {
+                            size_t start = misc::convert<size_t>(range[0]);
+                            size_t end = misc::convert<size_t>(range[1]);
+                            if (start > end) {
+                                std::swap(start, end);
+                            }
+                            for (size_t s = start; s <= end; ++s) {
+                                numeric.push_back(s);
+                            }
+                        }
+                        catch (const std::runtime_error& error)
+                        {
+                            std::string error_message =
+                                "Error: Invalid parameter: " + range[0] + " or "
+                                + range[1] + ", only allow integer!";
+                            throw std::runtime_error(error_message);
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            int temp = misc::convert<int>(ind);
+                            numeric.push_back(temp);
+                        }
+                        catch (const std::runtime_error& error)
+                        {
+                            std::string error_message =
+                                "Error: Invalid parameter: " + ind
+                                + ", only allow integer!";
+                            throw std::runtime_error(error_message);
+                        }
+                    }
+                }
+
+                // Now we have all the numeric parameters
+                if (final_covariates.empty()) {
+                    for (auto n : numeric) {
+                        final_covariates.push_back(std::to_string(n));
+                    }
+                }
+                else
+                {
+                    size_t cur_size = final_covariates.size();
+                    for (size_t final = 0; final < cur_size; ++final) {
+                        std::string cur = final_covariates[final];
+                        final_covariates[final].append(
+                            std::to_string(numeric.front()));
+                        for (size_t s = 1; s < numeric.size(); ++s) {
+                            final_covariates.push_back(
+                                cur + std::to_string(numeric[s]));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (size_t final = 0; final < final_covariates.size(); ++final)
+                {
+                    final_covariates[final].append(info[c]);
+                }
+                if (final_covariates.empty())
+                    final_covariates.push_back(info[c]);
+            }
+        }
+    }
+    else
+    {
+        final_covariates.push_back(cov);
+    }
+    return final_covariates;
+}
+
 void Commander::covariate_check(bool& error, std::string& error_message)
 {
     if (covariate.file_name.empty()) return;
+    // first, transform all the covariates
+    std::unordered_set<std::string> included;
+    std::vector<std::string> transformed_cov;
+    for (auto cov : covariate.covariates) {
+        if (cov.empty()) continue;
+        // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
+        // thingy to substitute them
+        transformed_cov = transform_covariate(cov);
+        for (auto&& trans : transformed_cov) {
+            included.insert(trans);
+        }
+    }
     std::ifstream cov_file;
     cov_file.open(covariate.file_name.c_str());
     if (!cov_file.is_open()) {
@@ -1627,181 +1847,61 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         return;
     }
     cov_file.close();
-    // obtain the header information
-    if (covariate.covariates.size() != 0) {
-        std::unordered_set<std::string> included;
-        for (auto cov : covariate.covariates) {
-            if (cov.empty()) continue;
-            if (included.find(cov)
-                == included.end()) // to avoid duplicated covariance headers
-            {
-                // got annoyed with the input of PC.1 PC.2 PC.3, do this
-                // automatic thingy to substitute them
-                if (cov.at(0) == '@') {
-                    cov.erase(0, 1);
-                    std::vector<std::string> open = misc::split(cov, "[");
-                    std::vector<std::string> info;
-                    std::vector<bool> list;
-                    for (auto o : open) {
-                        if (o.find("]") != std::string::npos) {
-                            std::vector<std::string> close =
-                                misc::split(o, "]");
-                            // the first one will always be the list
-                            info.push_back(close[0]);
-                            list.push_back(true);
-                            for (size_t cl = 1; cl < close.size(); ++cl) {
-                                info.push_back(close[cl]);
-                                list.push_back(false);
-                            }
-                        }
-                        else
-                        {
-                            info.push_back(o);
-                            list.push_back(false);
-                        }
-                    }
-                    std::vector<std::string> final_covariates;
-                    for (size_t c = 0; c < info.size(); ++c) {
-                        if (list[c]) {
-                            std::vector<std::string> individual =
-                                misc::split(info[c], ".");
-                            std::vector<int> numeric;
-                            for (auto&& ind : individual) {
-                                if (ind.find("-") != std::string::npos) {
-                                    std::vector<std::string> range =
-                                        misc::split(ind, "-");
-                                    if (range.size() != 2) {
-                                        throw std::runtime_error(
-                                            "Error: Invalid range format, "
-                                            "range "
-                                            "must be in the form of start-end");
-                                    }
-                                    try
-                                    {
-                                        size_t start =
-                                            misc::convert<size_t>(range[0]);
-                                        size_t end =
-                                            misc::convert<size_t>(range[1]);
-                                        if (start > end) {
-                                            int temp = end;
-                                            end = start;
-                                            start = temp;
-                                        }
-                                        for (size_t s = start; s <= end; ++s) {
-                                            numeric.push_back(s);
-                                        }
-                                    }
-                                    catch (const std::runtime_error& error)
-                                    {
-                                        std::string error_message =
-                                            "Error: Invalid parameter: "
-                                            + range[0] + " or " + range[1]
-                                            + ", only allow integer!";
-                                        throw std::runtime_error(error_message);
-                                    }
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        int temp = misc::convert<int>(ind);
-                                        numeric.push_back(temp);
-                                    }
-                                    catch (const std::runtime_error& error)
-                                    {
-                                        std::string error_message =
-                                            "Error: Invalid parameter: " + ind
-                                            + ", only allow integer!";
-                                        throw std::runtime_error(error_message);
-                                    }
-                                }
-                            }
-
-                            // Now we have all the numeric parameters
-                            if (final_covariates.empty()) {
-                                for (auto n : numeric) {
-                                    final_covariates.push_back(
-                                        std::to_string(n));
-                                }
-                            }
-                            else
-                            {
-                                size_t cur_size = final_covariates.size();
-                                for (size_t final = 0; final < cur_size;
-                                     ++final)
-                                {
-                                    std::string cur = final_covariates[final];
-                                    final_covariates[final].append(
-                                        std::to_string(numeric.front()));
-                                    for (size_t s = 1; s < numeric.size(); ++s)
-                                    {
-                                        final_covariates.push_back(
-                                            cur + std::to_string(numeric[s]));
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            for (size_t final = 0;
-                                 final < final_covariates.size(); ++final)
-                            {
-                                final_covariates[final].append(info[c]);
-                            }
-                            if (final_covariates.empty())
-                                final_covariates.push_back(info[c]);
-                        }
-                    }
-                    for (auto res : final_covariates) {
-                        if (included.find(res) == included.end()) {
-                            included.insert(res);
-                        }
-                    }
-                }
-                else
-                    included.insert(cov);
-            }
+    std::vector<std::string> cov_header = misc::split(line);
+    std::string missing = "";
+    std::unordered_map<std::string, uint32_t> ref_index;
+    for (size_t i = 0; i < cov_header.size(); ++i) {
+        ref_index[cov_header[i]] = i;
+    }
+    if (covariate.covariates.size() == 0) {
+        // add all headers to the covariate list
+        for (size_t i = (1 + !misc.ignore_fid); i < cov_header.size(); ++i) {
+            included.insert(cov_header[i]);
         }
-
-        std::vector<std::string> token = misc::split(line);
-        std::string missing = "";
-        std::unordered_set<std::string> ref;
-        for (auto&& head : token) {
-            ref.insert(head);
+    }
+    size_t valid_cov = 0;
+    for (auto&& cov : included) {
+        if (ref_index.find(cov) != ref_index.end()) {
+            covariate.covariate_index.push_back(ref_index[cov]);
+            covariate.covariates.push_back(cov);
+            valid_cov++;
         }
-        size_t valid_cov = 0;
-        std::vector<std::string> final_cov;
-        for (auto&& cov : included) {
-            if (ref.find(cov) != ref.end()) {
-                final_cov.push_back(cov);
-                valid_cov++;
+        else if (missing.empty())
+            missing = cov;
+        else
+            missing.append("," + cov);
+    }
+    if (!missing.empty()) {
+        error_message.append("Warning: Covariate(s) missing from file: "
+                             + missing + ". Header of file is: " + line + "\n");
+    }
+    if (valid_cov == 0) {
+        error = true;
+        error_message.append("Error: No valid Covariate!\n");
+    }
+    covariate.covariates.clear();
+    std::sort(covariate.covariate_index.begin(),
+              covariate.covariate_index.end());
+    for (auto&& c : covariate.covariate_index) {
+        covariate.covariates.push_back(cov_header[c]);
+    }
+    for (auto cov : covariate.factor_covariates) {
+        if (cov.empty()) continue;
+        transformed_cov = transform_covariate(cov);
+        for (auto&& trans : transformed_cov) {
+            if (included.find(trans) != included.end()) {
+                covariate.factor_index.push_back(ref_index[trans]);
             }
-            else if (missing.empty())
-                missing = cov;
             else
-                missing.append("," + cov);
-        }
-        if (!missing.empty()) {
-            error_message.append("Warning: Covariate(s) missing from file: "
-                                 + missing + ". Header of file is: " + line
-                                 + "\n");
-        }
-        if (valid_cov == 0) {
-            error = true;
-            error_message.append("Error: No valid Covariate!\n");
-        }
-        covariate.covariates = final_cov;
-    }
-    else
-    {
-        // we will use all covariates
-        std::vector<std::string> cov_header = misc::split(line);
-        for (size_t i_cov = 1 + misc.ignore_fid; i_cov < cov_header.size();
-             ++i_cov)
-        {
-            covariate.covariates.push_back(cov_header[i_cov]);
+            {
+                error = true;
+                error_message.append("Error: All factor covariates must be "
+                                     "found in covariate list. "
+                                     + trans + " not found in covariate list");
+            }
         }
     }
+    std::sort(covariate.factor_index.begin(), covariate.factor_index.end());
 }
 
 
