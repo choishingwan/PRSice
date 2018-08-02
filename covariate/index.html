@@ -172,6 +172,10 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../faq/">Frequently Asked Questions</a>
+                </li>
     </ul>
 	    </li>
           
@@ -228,22 +232,22 @@ still calculate the PRS for that sample. The <strong>In_Regression</strong> colu
 in the best score output is used to indicate whether the sample is
 included in the regression model (<em>Yes</em> for included; <em>No</em> for excluded)</p>
 </div>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>PRSice currently only support numeric covariates. To include non-numeric
-covariates, dummy variable must be generated beforehand.</p>
-</div>
 <h1 id="comamnds">Comamnds<a class="headerlink" href="#comamnds" title="Permanent link">&para;</a></h1>
 <ul>
-<li>
-<p><code>--cov-col</code> | <code>-c</code>
+<li><code>--cov-col</code> | <code>-c</code>
     Header of covariates. If not provided, will use
     all variables in the covariate file. By adding
     <code>@</code> in front of the string, any numbers within <code>[</code>
     and <code>]</code> will be parsed. E.g. <code>@PC[1-3]</code> will be
     read as <strong>PC1,PC2,PC3</strong>. Discontinuous input are also
     supported: <code>@cov[1.3-5]</code> will be parsed as
-    <strong>cov1,cov3,cov4,cov5</strong></p>
+    <strong>cov1,cov3,cov4,cov5</strong></li>
+<li>
+<p><code>--cov-factor</code></p>
+<p>Header of categorical covariate(s). Dummy variable 
+will be automatically generated. Any items in
+<code>--cov-factor</code> must also be found in <code>--cov-col</code>
+Also accept continuous input (start with <code>@</code>).</p>
 </li>
 <li>
 <p><code>--cov-file</code> | <code>-C</code>

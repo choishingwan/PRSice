@@ -172,6 +172,10 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../faq/">Frequently Asked Questions</a>
+                </li>
     </ul>
 	    </li>
           
@@ -246,8 +250,8 @@ identifier. WARNING: Bed file is 0-based</p>
 </li>
 <li>
 <p><code>--msigdb</code> | <code>-m</code></p>
-<p>MSIGDB file containing the pathway information. Require the gtf file.
-The MSigDB file format is a simple tab/space delimited text file
+<p>MSigDB file containing the pathway information. Require the gtf file.
+The GMT file format used by MSigDB is a simple tab/space delimited text file
 where each line correspond to a single gene set following by Gene IDs:
 <code>[Set A] [Gene 1] [Gene 2] ...
     [Set B] [Gene 1] [Gene 2] ...</code></p>
@@ -255,6 +259,18 @@ where each line correspond to a single gene set following by Gene IDs:
 <p class="admonition-title">Tip</p>
 <p>Curated MSigDB files can be downloaded from <a href="http://software.broadinstitute.org/gsea/msigdb/">here</a> after registration in <a href="http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb">here</a></p>
 </div>
+</li>
+<li>
+<p><code>--snp-set</code>               </p>
+<p>Provide a SNP set file containing a single snp set.
+Name of SNP set file will be used as the region
+identifier. This file should contain only one column.</p>
+</li>
+<li>
+<p><code>--snp-sets</code></p>
+<p>Provide a SNP set file containing multiple snp sets.
+Each row represent a single SNP set with the first
+column containing name of the SNP set.    </p>
 </li>
 </ul>
               

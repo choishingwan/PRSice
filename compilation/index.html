@@ -175,6 +175,10 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../faq/">Frequently Asked Questions</a>
+                </li>
     </ul>
 	    </li>
           
@@ -236,9 +240,9 @@ make
 
 <p>Then the PRSice executable will be located within PRSice/bin</p>
 <p>If you don't have git installed, you can still do</p>
-<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.0.beta &gt; PRSice.tar.gz
+<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.3.beta &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.1.0.beta
+cd PRSice-2.1.3.beta
 mkdir build
 cd build
 cmake ../
@@ -254,16 +258,16 @@ make
 <p>Without CMake, you can simply do the following</p>
 <div class="codehilite"><pre><span></span>git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div>
 
 
 <p>Then PRSice will be located in the current directory</p>
 <p>Alternatively, if you don't have git installed, you can still do</p>
-<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.0.beta &gt; PRSice.tar.gz
+<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.3.beta &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.1.0.beta
-g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+cd PRSice-2.1.3.beta
+g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div>
               
             </div>
