@@ -100,6 +100,12 @@ public:
         m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
         return true;
     }
+    bool sort_by_coordinates()
+    {
+    	if(m_existed_snps.size() == 0 ) return false;
+    	std::sort(m_existed_snps.begin(), m_existed_snps.end(), SNP::compare_snp);
+    	return true;
+    }
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
     size_t num_threshold() const { return m_num_threshold; };
@@ -120,20 +126,7 @@ public:
     void reset_sample_pheno()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
-        /*
-        for (auto&& prs : m_prs_info) {
-            prs.reset();
-        }
-        */
     };
-    /*
-    void reset_sample_prs()
-    {
-        for (auto&& prs : m_prs_info) {
-            prs.reset();
-        }
-    };
-    */
     bool prepare_prsice(Reporter& reporter);
     std::string sample_id(size_t i) const
     {
@@ -244,7 +237,7 @@ public:
     uint32_t max_chr() const { return m_max_code; };
 
     void expect_reference() { m_expect_reference = true; }
-
+    size_t prepare_prslice(const size_t &window_size);
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
@@ -272,6 +265,7 @@ protected:
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<size_t> m_background_snp_index;
+    std::vector<size_t> m_prslice_range;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     // std::vector<int32_t> m_chrom_start;
