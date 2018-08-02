@@ -22,6 +22,7 @@ PRSice allow the incorporation of covariates into the analysis.
     read as **PC1,PC2,PC3**. Discontinuous input are also
     supported: `@cov[1.3-5]` will be parsed as
     **cov1,cov3,cov4,cov5**
+    
 - `--cov-factor`
 
     Header of categorical covariate(s). Dummy variable 
