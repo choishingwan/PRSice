@@ -210,10 +210,6 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
-                <li class="">
-                    
-    <a class="" href="../faq/">Frequently Asked Questions</a>
-                </li>
     </ul>
 	    </li>
           
@@ -260,7 +256,7 @@
 <h2 id="msigdb">MSigDB<a class="headerlink" href="#msigdb" title="Permanent link">&para;</a></h2>
 <p>One simple way to obtain gene sets or pathway is through the <a href="http://software.broadinstitute.org/gsea/msigdb/">MSigDB</a>.
 After registration in <a href="http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb">here</a>, you can download different gene sets curated by the Broad Institute.
-Alternatively, you can also generate your own gene sets in the GMT format:</p>
+Alternatively, you can also generate your own gene sets in the MSigDB format:</p>
 <pre>
 [Set A] [Gene 1] [Gene 2] ...
 [Set B] [Gene 1] [Gene 2] ...
@@ -277,7 +273,7 @@ Alternatively, you can also generate your own gene sets in the GMT format:</p>
 one must also provide a GTF file. A GTF file contains the genome boundary of the genetic
 elements within the human genome and PRSet can use the information from GTF to determine if
 a SNP falls within a specific gene.
-One can download the GTF file file Human (Genome build GTCh38.p7) <a href="ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens">here</a>.</p>
+One can download the GTF file file Human (Genome build GTCh38.p7)<a href="ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens">here</a>.</p>
 <p>PRSet will look for any regions with feature  of <strong>exon</strong>, <strong>gene</strong>, <strong>protein_coding</strong> or <strong>CDS</strong> (<em>case sensitive</em>).
 Any genomic regions without these features will be ignored.
 Alternatively, you can specify the features using the <code>--feature</code> command.</p>
@@ -311,28 +307,26 @@ Therefore we provide the <code>--proxy</code> option. Essentially, this provide 
 For example, when user define <code>--proxy 0.8</code>, if LD between SNP A and SNP B is more than 0.8, then SNP A will be considered to be within the same regions as SNP B and vice versa.</p>
 <h1 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h1>
 <h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
-<p>A file containing the PRS model fit across thresholds is named <strong>[Name].prsice</strong>, where <strong>[Name]</strong> is the
-output prefix name as specified by <code>--out</code> this is stored as</p>
-<p>Name of Set, Threshold, R2, P-value, Coefficient, Standard Error, and Number of SNPs at this threshold</p>
+<p>A file containing the PRS model fit across thresholds is named <strong>[Name].[Set].prsice</strong>, where <strong>[Name]</strong> is the
+output prefix name as specified by <code>--out</code> and <strong>[Set]</strong> is the name of the gene set; this is stored as</p>
+<p>Threshold, R2, P-value, Coefficient, and Number of SNPs at this threshold</p>
 <h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
 <p>A file containing PRS for each individual at the best-fit PRS named</p>
-<p><strong>[Name].best</strong> is provide.
+<p><strong>[Name].[Set].best</strong> is provide.
 This file has the format of:</p>
-<p>FID,IID, In Regression, PRS at best threshold for Set 1, PRS at best threshold for Set 2, ...</p>
+<p>FID,IID,PRS at best threshold, Has Phenotype</p>
 <p>Where the has phenotype column indicate whether the sample contain all
 the required phenotype for PRSice analysis (e.g. Samples with missing
 phenotype/covariate will not be included in the regression.
-These samples will be indicated as "No" under the in regression column)</p>
+These samples will be indicated as "No" under the has phenotype column)</p>
 <p>If <code>--all</code> option is used, a file named</p>
-<p><strong>[Name].all.score</strong> is also generated</p>
+<p><strong>[Name].[Set].all.score</strong> is also generated</p>
 <p>Please note, if <code>--all</code> options is used, the PRS for each individual at all threshold will be given.
 In the event where the target sample size is large and a lot of threshold are tested, this file can be large.
 This is especially true when large number of gene sets were provided.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>PRSice also supports multiple phenotypes for target data.
-All output prefix will change to [Name].[Pheno] where [Pheno]
-is the name of the phenotype. 
 For more details on the options used to implement this, see
 <a href="../step_by_step/#phenotype-files">here</a>.</p>
 </div>
@@ -351,7 +345,6 @@ The summary file contain the following fields:</p>
 <li><strong>P</strong> - P value of the model fit</li>
 <li><strong>Num_SNP</strong> - Number of SNPs included in the model</li>
 <li><strong>Empirical-P</strong> - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting</li>
-<li><strong>Competitive-P</strong> - Only provided if set permutation is performed. This is the competitive p-value and should measure the enrichment of signal of the gene set</li>
 </ol>
 <h2 id="multi-set-plot">Multi-Set Plot<a class="headerlink" href="#multi-set-plot" title="Permanent link">&para;</a></h2>
 <p>When the <code>--multi-plot &lt;N&gt;</code> option is set, the results of the top <em>N</em> gene sets will be plotted.

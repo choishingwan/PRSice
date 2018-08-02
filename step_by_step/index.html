@@ -209,10 +209,6 @@
                     
     <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
-                <li class="">
-                    
-    <a class="" href="../faq/">Frequently Asked Questions</a>
-                </li>
     </ul>
 	    </li>
           
@@ -331,7 +327,6 @@ SNPs based on their INFO score and MAF respectively.</p>
 <blockquote>
 <p>CHR, BP, A1, A2, SNP, P, INFO, SE (case sensitive) and OR / BETA (case insensitive)</p>
 </blockquote>
-<p><code>--no-default</code> can be used to disable all the defaults of PRSice.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>PRSice will ignore any columns that were not found in the base file (e.g. If<code>--A2 B</code> is specified but none of the column header is <em>B</em>,  then PRSice will treat it as if no <em>A2</em> information is presented)</p>
@@ -352,11 +347,11 @@ SNPs based on their INFO score and MAF respectively.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>-9 will <strong>NOT</strong> be considered as missing for quantitative traits</p>
+<p>-9 will NOT be considered as missing for quantitative traits</p>
 </div>
 <p>If the binary file is separated into individual chromosomes, then an # can be used to specify the location of the chromosome number in the file name.
 PRSice will automatically substitute # with 1-22</p>
-<p>i.e. If the files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
+<p>i.e. If tje files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use</p>
 <div class="codehilite"><pre><span></span>--target chr#
 </pre></div>
 
@@ -365,8 +360,6 @@ PRSice will automatically substitute # with 1-22</p>
 <p class="admonition-title">Note</p>
 <p>Chromosome number substitution will not be performed on the external fam file as the fam file should be the same for all chromosomes. </p>
 </div>
-<p>Alternatively, if your PLINK files do not have a unified prefix, you can use <code>--target-list</code> to provide a file containing all
-prefix to PRSice. </p>
 <h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
 <p>PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the <code>--type bgen</code> or <code>--ld-type bgen</code> to the PRSice command</p>
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
@@ -392,9 +385,6 @@ coded as missing</p>
 threshold will be treated as missing</p>
 </li>
 </ul>
-<p>To perform clumping on BGEN file, we need to repeatly decompress the genotype dosage and convert them into PLINK binary format. 
-Therefore, to speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
-coded genotypes in PLINK binary format by using the <code>--allow-inter</code> option. </p>
 <h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
 <p>An external phenotype file can be provided to PRSice using the <code>--pheno-file</code>
 parameter.
@@ -483,15 +473,15 @@ G = G
 <p>Then depending on the <code>--score</code> option, the PRS is calculated as (assuming <span class="arithmatex">\(M\)</span> is the number of SNPs)</p>
 <p><code>--score avg</code> (default):
 $$
-    PRS = \sum_i{\frac{S_i\times G_i}{M}}
+    PRS = \sum{\frac{S\times G}{2}}\div M
 $$</p>
 <p><code>--score sum</code>:
 $$
-    PRS = \sum_i{S_i\times G_i}
+    PRS = \sum{\frac{S\times G}{2}}
 $$</p>
 <p><code>--score std</code>:
 $$
-    PRS = \frac{\sum_i({S_i\times G_i}) - \text{Mean}(PRS)}{\text{SD}(PRS)}
+    PRS = (\sum{\frac{S\times G}{2}} - \text{Mean}(PRS))\div \text{SD}(PRS)
 $$</p>
 <p>Sometimes, sample can have missing genotype. 
 The <code>--missing</code> option is used to determine how
@@ -539,78 +529,72 @@ An example quantile plot:</p>
 </ol>
 <p>The point of each quantile is their OR (if binary) or coefficient (otherwise) from the regression analysis</p>
 <p>A text file [Name]_QUANTILE\_[date].txt is also produced, which provides all the data used for the plotting. </p>
-<p>Moreover, uneven distribution of quantiles can be specified using the <code>--quant-break</code> function, which will generate
-the strata plot. 
-For example, to replicate the quantile break from Natarajan et al (2015):</p>
+<p>Moreover, uneven distribution of quantiles can be specified using the <code>--quant-break</code> function. 
+For example, to replicate the quantile break from Wen et al (2016):</p>
 <table>
 <thead>
 <tr>
-<th align="center">Percentile of PRS, %</th>
-<th align="center">All studies in iCOGS excluding pKARMA <br> OR (95% CI)</th>
-<th align="center">pKARMA only <br> OR (95% CI)</th>
+<th align="center">PRS (%)</th>
+<th align="center">Predicted OR</th>
+<th align="center">Observed OR (95% CI)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">&lt;1</td>
-<td align="center">0.29 (0.23 to 0.37)</td>
-<td align="center">0.48 (0.28 to 0.83)</td>
+<td align="center">0–1</td>
+<td align="center">0.37</td>
+<td align="center">0.39 (0.27–0.57)</td>
 </tr>
 <tr>
-<td align="center">&gt;1–5</td>
-<td align="center">0.42 (0.37 to 0.47)</td>
-<td align="center">0.48 (0.36 to 0.63)</td>
-</tr>
-<tr>
-<td align="center">5–10</td>
-<td align="center">0.55 (0.50 to 0.61)</td>
-<td align="center">0.58 (0.45 to 0.74)</td>
+<td align="center">0–10</td>
+<td align="center">0.52</td>
+<td align="center">0.55 (0.49–0.61)</td>
 </tr>
 <tr>
 <td align="center">10–20</td>
-<td align="center">0.65 (0.60 to 0.70)</td>
-<td align="center">0.68 (0.57 to 0.81)</td>
+<td align="center">0.67</td>
+<td align="center">0.71 (0.64–0.79)</td>
 </tr>
 <tr>
-<td align="center">20–40</td>
-<td align="center">0.80 (0.76 to 0.85)</td>
-<td align="center">0.81 (0.71 to 0.94)</td>
+<td align="center">20–30</td>
+<td align="center">0.77</td>
+<td align="center">0.74 (0.66–0.82)</td>
+</tr>
+<tr>
+<td align="center">30–40</td>
+<td align="center">0.86</td>
+<td align="center">0.88 (0.80–0.98)</td>
 </tr>
 <tr>
 <td align="center">40–60</td>
-<td align="center">1 (referent)</td>
-<td align="center">1 (referent)</td>
+<td align="center">1.00, reference</td>
+<td align="center">1.00, reference</td>
 </tr>
 <tr>
-<td align="center">60–80</td>
-<td align="center">1.18 (1.12 to 1.24)</td>
-<td align="center">1.35 (1.19 to 1.54)</td>
+<td align="center">60–70</td>
+<td align="center">1.16</td>
+<td align="center">1.10 (0.99–1.21)</td>
+</tr>
+<tr>
+<td align="center">70–80</td>
+<td align="center">1.29</td>
+<td align="center">1.24 (1.13–1.37)</td>
 </tr>
 <tr>
 <td align="center">80–90</td>
-<td align="center">1.48 (1.39 to 1.57)</td>
-<td align="center">1.56 (1.34 to 1.82)</td>
+<td align="center">1.49</td>
+<td align="center">1.52 (1.38–1.67)</td>
 </tr>
 <tr>
-<td align="center">90–95</td>
-<td align="center">1.69 (1.56 to 1.82)</td>
-<td align="center">2.05 (1.70 to 2.47)</td>
-</tr>
-<tr>
-<td align="center">95–99</td>
-<td align="center">2.20 (2.03 to 2.38)</td>
-<td align="center">2.12 (1.73 to 2.59)</td>
-</tr>
-<tr>
-<td align="center">&gt;99</td>
-<td align="center">2.81 (2.43 to 3.24)</td>
-<td align="center">3.06 (2.16 to 4.34)</td>
+<td align="center">90–100</td>
+<td align="center">1.97</td>
+<td align="center">1.93 (1.76–2.12)</td>
 </tr>
 </tbody>
 </table>
 <p>The following command can be added to PRSice command:</p>
 <div class="codehilite"><pre><span></span>--quantile 100 \
---quant-break 1,5,10,20,40,60,80,90,95,99,100 \
+--quant-break 1,10,20,30,40,60,70,80,90,100 \
 --quant-ref 60
 </pre></div>
 
