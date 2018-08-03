@@ -793,7 +793,6 @@ set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.ind
 # Determine Default -------------------------------------------------------
 # First, determine the bar levels
 if(!provided("bar_levels", argv)){
-    print("not provided")
     if(!provided("msigdb", argv) & !provided("gtf", argv) & !provided("bed", argv)) {
         argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
         if (!provided("no_full", argv)) {
@@ -2265,13 +2264,13 @@ update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
     if (!ignore_fid) {
         phenotype <- phenotype[, c(1:2, pheno.index)]
         colnames(phenotype) <- c("FID", "IID", "Pheno")
-        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
         phenotype <-
             phenotype[!is.na(phenotype$Pheno), ]
     } else{
         phenotype <- phenotype[, c(1, pheno.index)]
         colnames(phenotype) <- c("IID", "Pheno")
-        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
         phenotype <-
             phenotype[!is.na(phenotype$Pheno), ]
     }

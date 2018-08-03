@@ -234,22 +234,23 @@ int main(int argc, char* argv[])
             }
             else
             {
-            	// First, perform PRSice in each regional segment
-            	// Then record the best threshold for each.
-            	// And perform PRSice on each block of SNPs
-            	// then iterate and prepare
-            	size_t num_prslice_region = target_file->prepare_prslice(commander.prslice_size());
-            	for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-            		// initialize the phenotype & independent variable matrix
-            		fprintf(stderr, "\nProcessing the %zu th phenotype\n",
-            				i_pheno + 1);
-            		prsice.init_prslice_process_count(num_prslice_region, target_file->num_threshold());
-            		prsice.init_matrix(commander, i_pheno, *target_file,
-            				reporter);
-            		// get_prslice_best_thresholds
-            		// get_prslice_combination
-
-            	}
+                // First, perform PRSice in each regional segment
+                // Then record the best threshold for each.
+                // And perform PRSice on each block of SNPs
+                // then iterate and prepare
+                size_t num_prslice_region =
+                    target_file->prepare_prslice(commander.prslice_size());
+                for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
+                    // initialize the phenotype & independent variable matrix
+                    fprintf(stderr, "\nProcessing the %zu th phenotype\n",
+                            i_pheno + 1);
+                    prsice.init_prslice_process_count(
+                        num_prslice_region, target_file->num_threshold());
+                    prsice.init_matrix(commander, i_pheno, *target_file,
+                                       reporter);
+                    // get_prslice_best_thresholds
+                    // get_prslice_combination
+                }
                 std::string error_message =
                     "Error: We currently have not implemented PRSlice. We will "
                     "implement PRSlice once the implementation of PRSice is "

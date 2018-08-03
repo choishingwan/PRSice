@@ -543,6 +543,7 @@ void PRSice::process_cov_file(
                                  + cov_file);
     }
     size_t num_factors = factor_cov_index.size();
+
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -586,7 +587,8 @@ void PRSice::process_cov_file(
                     }
                 }
                 factor_level_index +=
-                    (header == factor_cov_index[factor_level_index]);
+                    (factor_level_index >= num_factors
+                     || header == factor_cov_index[factor_level_index]);
             }
             // only do the factor level thing if this
             // sample is valid
@@ -733,22 +735,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
     std::vector<uint32_t> cov_start_index;
     uint32_t num_column = 2 + cov_header_index.size();
-    if (factor_cov_index.size() != 0) {
-        /*
-         * What we want:
-         * For each factor of a factor covariate, know which column should we
-         * put the 1 to
-         */
-        process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
-                         cov_header_index, cov_header_name, factor_list,
-                         num_column, reporter);
-    }
-    else
-    {
-        for (size_t i = 0; i < cov_header_index.size(); ++i) {
-            cov_start_index.push_back(i + 2);
-        }
-    }
+    /*
+     * What we want:
+     * For each factor of a factor covariate, know which column should we
+     * put the 1 to
+     */
+    process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
+                     cov_header_index, cov_header_name, factor_list, num_column,
+                     reporter);
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
@@ -1380,33 +1374,34 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         std::vector<double> avail_thresholds = target.get_thresholds();
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         size_t num_thresholds = avail_thresholds.size();
-        std::streampos begin_byte=all_out.tellp();
-        all_out <<"FID IID";
-        //size_t header_length = 3+1+3;
+        std::streampos begin_byte = all_out.tellp();
+        all_out << "FID IID";
+        // size_t header_length = 3+1+3;
         if (!m_prset) {
             for (auto& thres : avail_thresholds) {
-            	all_out << " " << thres;
-            	//header_length+=1+m_numeric_width;
+                all_out << " " << thres;
+                // header_length+=1+m_numeric_width;
             }
         }
         else
         {
             for (size_t i = 0; i < region_name.size() - 1; ++i) {
                 for (auto& thres : avail_thresholds) {
-                    //header_length+= 1+region_name[i].length()+1+m_numeric_width;
+                    // header_length+=
+                    // 1+region_name[i].length()+1+m_numeric_width;
                     all_out << " " << region_name[i] << "_" << thres;
                 }
             }
         }
         all_out << "\n";
-        std::streampos end_byte=all_out.tellp();
-        m_all_file.header_length = end_byte-begin_byte;
+        std::streampos end_byte = all_out.tellp();
+        m_all_file.header_length = end_byte - begin_byte;
         m_all_file.processed_threshold = 0;
         m_all_file.line_width =
             m_max_fid_length + 1 + m_max_iid_length + 1
             + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-        //all_out << header_line << "\n";
+        // all_out << header_line << "\n";
     }
 
     // output sample IDs

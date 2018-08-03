@@ -97,18 +97,18 @@ public:
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     static void sort_snp_for_perm(std::vector<size_t>& index,
                                   const std::vector<SNP>& input);
-    static bool compare_snp(const SNP& a, const SNP & b)
+    static bool compare_snp(const SNP& a, const SNP& b)
     {
-    	if(a.m_chr==b.m_chr){
-    		if(a.m_loc==b.m_loc){
-    			if(a.m_target_file==b.m_target_file){
-    				return a.m_target_byte_pos < b.m_target_byte_pos;
-    			}
-    			return a.m_target_file < b.m_target_file;
-    		}
-    		return a.m_loc < b.m_loc;
-    	}
-    	return a.m_chr < b.m_chr;
+        if (a.m_chr == b.m_chr) {
+            if (a.m_loc == b.m_loc) {
+                if (a.m_target_file == b.m_target_file) {
+                    return a.m_target_byte_pos < b.m_target_byte_pos;
+                }
+                return a.m_target_file < b.m_target_file;
+            }
+            return a.m_loc < b.m_loc;
+        }
+        return a.m_chr < b.m_chr;
     }
 
     inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,

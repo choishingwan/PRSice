@@ -16,12 +16,14 @@
 
 #include "prsice.hpp"
 
-void PRSice::get_prslice_best_threshold(const Commander& commander, Genotype& target, const size_t num_prslice_regions, const size_t pheno_index){
-	// we can't do no regress here
-	const int num_thread = commander.thread();
-	const bool multi = pheno_info.name.size() > 1;
-	const size_t num_samples_included = target.num_sample();
-	const bool cumulate = commander.cumulate();
-
-
+void PRSice::get_prslice_best_threshold(const Commander& commander,
+                                        Genotype& target,
+                                        const size_t num_prslice_regions,
+                                        const size_t pheno_index)
+{
+    // we can't do no regress here
+    const int num_thread = commander.thread();
+    const bool multi = pheno_info.name.size() > 1;
+    const size_t num_samples_included = target.num_sample();
+    const bool cumulate = commander.cumulate();
 }

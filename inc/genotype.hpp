@@ -102,9 +102,10 @@ public:
     }
     bool sort_by_coordinates()
     {
-    	if(m_existed_snps.size() == 0 ) return false;
-    	std::sort(m_existed_snps.begin(), m_existed_snps.end(), SNP::compare_snp);
-    	return true;
+        if (m_existed_snps.size() == 0) return false;
+        std::sort(m_existed_snps.begin(), m_existed_snps.end(),
+                  SNP::compare_snp);
+        return true;
     }
     void print_snp(std::string& output, double threshold,
                    const size_t region_index);
@@ -237,7 +238,8 @@ public:
     uint32_t max_chr() const { return m_max_code; };
 
     void expect_reference() { m_expect_reference = true; }
-    size_t prepare_prslice(const size_t &window_size);
+    size_t prepare_prslice(const size_t& window_size);
+
 protected:
     friend class BinaryPlink;
     friend class BinaryGen;
