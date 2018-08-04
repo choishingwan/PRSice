@@ -880,15 +880,16 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         print_progress();
 
         if (print_all_scores) {
-            for (size_t sample = 0; sample < num_samples_included; ++sample) {
-                double score = target.calculate_score(m_score, sample);
+
+            for (size_t sample = 0; sample < target.num_sample(); ++sample) {
                 size_t loc = m_all_file.header_length
                              + sample * (m_all_file.line_width + NEXT_LENGTH)
                              + NEXT_LENGTH + m_all_file.skip_column_length
                              + m_all_file.processed_threshold
                              + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
-                all_out << std::setprecision(m_precision) << score;
+                all_out << std::setprecision(m_precision)
+                        << target.calculate_score(m_score, sample);
             }
         }
         m_all_file.processed_threshold++;
@@ -975,7 +976,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     }
 
     for (size_t sample_id = 0; sample_id < num_regress_samples; ++sample_id) {
-        std::string sample = target.sample_id(sample_id);
+        // std::string sample = target.sample_id(sample_id);
         m_independent_variables(sample_id, 1) =
             target.calculate_score(m_score, m_matrix_index[sample_id]);
     }
