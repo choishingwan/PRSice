@@ -1940,12 +1940,17 @@ if (provided("pheno_col", argv)) {
         )
         stop(message)
     } else{
-        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
+        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE, check.names=FALSE)
         # This will automatically filter out un-used phenos
         valid.pheno <- phenos %in% colnames(header)
         valid.file.index <- colnames(header) %in% phenos
         if (sum(valid.pheno) == 0) {
             stop("Error: None of the phenotype is identified in phenotype header!")
+        }else if(sum(valid.pheno) != length(phenos)){
+            writeLines("WARNING: Some phenotypes were not identified from the phenotype file:")
+            for(i in phenos[!phenos %in% colnames(header)] ){
+                writeLines(i)
+            }
         }
         binary_target <- binary_target[valid.pheno]
         phenos <- phenos[valid.pheno]
