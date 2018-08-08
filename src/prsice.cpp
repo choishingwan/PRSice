@@ -881,7 +881,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
 
         if (print_all_scores) {
 
-            for (size_t sample = 0; sample < target.num_sample(); ++sample) {
+            for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 size_t loc = m_all_file.header_length
                              + sample * (m_all_file.line_width + NEXT_LENGTH)
                              + NEXT_LENGTH + m_all_file.skip_column_length
@@ -895,6 +895,7 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         m_all_file.processed_threshold++;
         if (no_regress) {
             iter_threshold++;
+            first_run = false;
             continue;
         }
         regress_score(target, cur_threshold, num_thread, pheno_index,
@@ -911,15 +912,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     if (c_commander.permutation() != 0) process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
-        // we don't do competitive for the full set
-        /*
-        if (m_prset && c_commander.perform_set_perm() && region_index != 0) {
-            run_competitive(target, c_commander,
-                            region.num_post_clump_snp(region_index),
-                            region.duplicated_size(region_index),
-                            m_target_binary[pheno_index]);
-        }
-        */
     }
 }
 
