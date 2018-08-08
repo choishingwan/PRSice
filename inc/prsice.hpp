@@ -175,6 +175,16 @@ public:
                 num_phenotype() * (num_region - 2) * (commander.set_perm());
         }
     }
+    void init_prslice_process_count(size_t num_prslice_region,
+                                    size_t num_thresholds)
+    {
+        // we first run PRSice within each region
+        m_total_process =
+            num_thresholds * num_phenotype() * num_prslice_region +
+            // then run PRSice again using best scores from each region
+            num_phenotype() * num_prslice_region;
+        // currently we don't suppor the use of permtation with PRSlice
+    }
     PRSice(const PRSice&) = delete;            // disable copying
     PRSice& operator=(const PRSice&) = delete; // disable assignment
     void print_progress(bool completed = false)
@@ -194,6 +204,12 @@ public:
     }
     void run_competitive(Genotype& target, const Commander& commander,
                          const size_t pheno_index);
+    // this function should perform PRSice on each Slice of the genome
+
+    void get_prslice_best_threshold(const Commander& commander,
+                                    Genotype& target,
+                                    const size_t num_prslice_regions,
+                                    const size_t pheno_index);
 
 protected:
 private:

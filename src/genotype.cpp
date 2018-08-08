@@ -622,9 +622,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                     << m_existed_snps[target_index].chr() << "\t" << chr_out
                     << "\t" << m_existed_snps[target_index].loc() << "\t"
                     << loc_out << "\t" << m_existed_snps[target_index].ref()
-                    << "\t"
-                    << "\t" << ref_allele << m_existed_snps[target_index].alt()
-                    << "\t" << alt_allele_out << "\n";
+                    << "\t" << ref_allele << "\t"
+                    << m_existed_snps[target_index].alt() << "\t"
+                    << alt_allele_out << "\n";
                 num_mismatched++;
                 exclude = true;
             }
@@ -1757,6 +1757,23 @@ bool Genotype::prepare_prsice(Reporter& reporter)
     return true;
 }
 
+size_t Genotype::prepare_prslice(const size_t& window_size)
+{
+    sort_by_coordinates();
+    intptr_t prev_chr = -1;
+    intptr_t prev_loc = -1;
+    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
+        auto&& cur_snp = m_existed_snps[i_snp];
+        if ((prev_chr != cur_snp.chr())
+            || (cur_snp.loc() - prev_loc > window_size))
+        {
+            m_prslice_range.push_back(i_snp);
+            prev_chr = cur_snp.chr();
+            prev_loc = cur_snp.loc();
+        }
+    }
+    return m_prslice_range.size();
+}
 void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               const std::vector<size_t>& background_list,
                               const bool first_run,

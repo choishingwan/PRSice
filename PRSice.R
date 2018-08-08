@@ -286,6 +286,7 @@ help_message <-
     --plot-set              Define the gene set to be plot. Default: Base\n
     --quantile      | -q    Number of quantiles to plot. No quantile plot\n
                             will be generated when this is not provided.\n
+    --quant-break           Quantile groupings for plotting the strata plot\n
     --quant-extract | -e    File containing sample ID to be plot on a separated\n
                             quantile e.g. extra quantile containing only \n
                             schizophrenia samples. Must contain IID. Should\n
@@ -581,11 +582,9 @@ option_list <- list(
 capture <- commandArgs(trailingOnly = TRUE)
 help <- (sum(c("--help", "-h") %in% capture) >= 1)
 has_c <- (sum(c("--prsice") %in% capture) >= 1)
-if (help && !has_c) {
+if (help) {
     cat(help_message)
-    
     quit()
-    
 }
 argv <- parse_args(OptionParser(option_list = option_list))
 
@@ -793,10 +792,10 @@ set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.ind
 }
 # Determine Default -------------------------------------------------------
 # First, determine the bar levels
-if(!provided("bar-levels", argv)){
+if(!provided("bar_levels", argv)){
     if(!provided("msigdb", argv) & !provided("gtf", argv) & !provided("bed", argv)) {
         argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
-        if (!provided("no-full", argv)) {
+        if (!provided("no_full", argv)) {
             argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
         }
     } else if (!provided("fastscore", argv) &
@@ -892,7 +891,8 @@ call_quantile <-
              use.residual,
              use.ggplot,
              binary,
-             extract) {
+             extract,
+             uneven) {
         
     if (!pheno.as.quant) {
         family <- gaussian
@@ -965,14 +965,16 @@ call_quantile <-
                        binary,
                        extract,
                        prefix,
-                       use.residual)
+                       use.residual,
+                       uneven)
         } else{
             plot.quant.no.g(quantiles.df,
                             num_quant,
                             binary,
                             extract,
                             prefix,
-                            use.residual)
+                            use.residual,
+                            uneven)
         }
     } else{
         # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
@@ -1011,13 +1013,15 @@ call_quantile <-
                              use.residual,
                              num_quant,
                              extract,
-                             prefix)
+                             prefix,
+                             uneven)
         } else{
             plot.pheno.quant.no.g(pheno.sum,
                                   use.residual,
                                   num_quant,
                                   extract,
-                                  prefix)
+                                  prefix,
+                                  uneven)
         }
     }
     
@@ -1107,7 +1111,7 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
                   use.residual,
                   use.ggplot,
                   binary,
-                  extract)
+                  extract, TRUE)
 }
 
 
@@ -1209,19 +1213,23 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
                  use.residual,
                  use.ggplot,
                  binary,
-                 extract)
+                 extract, FALSE)
 }
 
-plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix){
+plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
   png(paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   pheno.sum$color <- "#D55E00"
   xlab <- NULL
+  name <- "Quantiles"
+  if(uneven){
+      name <- "Strata"
+  }
   if(use_residual){
-    xlab <-"Quantiles for Residualized Phenotype"
+    xlab <-paste0(name, " for Residualized Phenotype")
   }else{
-    xlab <-"Quantiles for Phenotype"
+    xlab <-paste0(name, " for Phenotype")
   }
   
   
@@ -1230,6 +1238,9 @@ plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, p
     pheno.sum$color[quantiles.df$Group==1] <- "#0072B2"
   }
   ylab <- "Mean PRS given phenotype in quantiles"
+  if(uneven){
+      ylab <- "Mean PRS given phenotype in strata"
+  }
   with(pheno.sum, 
        plot(x=quantile, y=mean, 
             col=color, pch=19, 
@@ -1248,7 +1259,7 @@ plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, p
   g<-dev.off()
 }
 
-plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix){
+plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
   quantiles.plot <-
     ggplot(pheno.sum, aes(
       x = quantile,
@@ -1256,14 +1267,30 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
       ymin = LCI,
       ymax = UCI
     ))+ 
-    theme_sam+
-    ylab("Mean PRS given phenotype in quantiles")
+    theme_sam
+  if(uneven) {
+      quantiles.plot <-
+          quantiles.plot + ylab("Mean PRS given phenotype in strata")
+  } else{
+      quantiles.plot <-
+          quantiles.plot + ylab("Mean PRS given phenotype in quantiles")
+  }
   if(use_residual){
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for Residualized Phenotype")
+      if (uneven) {
+          quantiles.plot <- quantiles.plot +
+              xlab("Strata for Residualized Phenotype")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              xlab("Quantiles for Residualized Phenotype")
+      }
   }else{
-    quantiles.plot <- quantiles.plot+
-      xlab("Quantiles for Phenotype")
+      if (uneven) {
+          quantiles.plot <- quantiles.plot +
+              xlab("Quantiles for Phenotype")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              xlab("Strat for Phenotype")
+      }
   }
   
   if (is.null(extract)) {
@@ -1283,7 +1310,7 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
     quantiles.plot <-
         ggplot(quantiles.df, aes(
             x = DEC,
@@ -1291,20 +1318,40 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
             ymin = CI.L,
             ymax = CI.U
         )) + 
-        theme_sam+
-        xlab("Quantiles for Polygenic Score")
+        theme_sam
+    if(uneven){
+        quantiles.plot <- quantiles.plot+xlab("Strata for Polygenic Score")
+    } else{
+        quantiles.plot <-
+            quantiles.plot + xlab("Quantiles for Polygenic Score")
+    }
     if (binary){
         if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
         }else if(use_residual){
-            quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+            if(uneven){
+                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+            }else{
+                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+            }
         }
     } else if(use_residual){
-        quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+        if (uneven) {
+            quantiles.plot <-
+                quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+        } else{
+            quantiles.plot <-
+                quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+        }
     }else{
-        quantiles.plot <- quantiles.plot +
-            ylab("Change in Phenotype \ngiven score in quantiles")
+        if (uneven) {
+            quantiles.plot <- quantiles.plot +
+                ylab("Change in Phenotype \ngiven score in strata")
+        } else{
+            quantiles.plot <- quantiles.plot +
+                ylab("Change in Phenotype \ngiven score in quantiles")
+        }
     }
     if (is.null(extract)) {
         quantiles.plot <-
@@ -1323,7 +1370,7 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
     )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -1338,15 +1385,35 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, us
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
       }else if(use_residual){
-          quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+          if(uneven) {
+              quantiles.plot <-
+                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+          } else{
+              quantiles.plot <-
+                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+          }
       }
   } else if(use_residual){
-      quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-  }else{
-      quantiles.plot <- quantiles.plot +
-          ylab("Change in Phenotype \ngiven score in quantiles")
+      if (uneven) {
+          quantiles.plot <-
+              quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
+      } else{
+          quantiles.plot <-
+              quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
+      }
+  } else{
+      if(uneven) {
+          quantiles.plot <- quantiles.plot +
+              ylab("Change in Phenotype \ngiven score in strata")
+      } else{
+          quantiles.plot <- quantiles.plot +
+              ylab("Change in Phenotype \ngiven score in quantiles")
+      }
   }
   xlab <- "Quantiles for Polygenic Score"
+  if(uneven){
+      xlab <- "Strata for Polygenic Score"
+  }
   with(quantiles.df, 
        plot(x=DEC, y=Coef, 
             col=color, pch=19, 
@@ -1873,12 +1940,17 @@ if (provided("pheno_col", argv)) {
         )
         stop(message)
     } else{
-        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE)
+        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE, check.names=FALSE)
         # This will automatically filter out un-used phenos
         valid.pheno <- phenos %in% colnames(header)
         valid.file.index <- colnames(header) %in% phenos
         if (sum(valid.pheno) == 0) {
             stop("Error: None of the phenotype is identified in phenotype header!")
+        }else if(sum(valid.pheno) != length(phenos)){
+            writeLines("WARNING: Some phenotypes were not identified from the phenotype file:")
+            for(i in phenos[!phenos %in% colnames(header)] ){
+                writeLines(i)
+            }
         }
         binary_target <- binary_target[valid.pheno]
         phenos <- phenos[valid.pheno]
@@ -2029,7 +2101,7 @@ process_plot <-
         # We know the format of the best file, and it will always contain FID and IID
         
         base.prs <- best[,c(1,2,4)]
-        if(provided("plot_set", parameters) & (provided("msigdb", parameters)| provided("bed", parameters) | provided("gtf", parameters))){
+        if(provided("plot_set", parameters) & (provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)| provided("snp_set", parameters)| provided("snp_sets", parameters))){
             base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
             colnames(base.prs)[3] <- "PRS"
         }
@@ -2083,7 +2155,8 @@ process_plot <-
                 uneven_quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
             }
         }
-        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)){
+        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)
+           | provided("snp_test", parameters) | provided("snp_tests", parameters)){
             if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
                 bar_plot(prsice.result, prefix, parameters, use.ggplot) 
                 if(!provided("fastscore", parameters)){
@@ -2144,7 +2217,7 @@ pheno.file <- NULL
 
 if (provided("pheno_file", argv)) {
     pheno.file <- argv$pheno_file
-} else{
+} else if(provided("target", argv)){
     # Check if external fam / sample file is provided
     target.info <- strsplit(argv$target, split = ",")[[1]]
     if (length(target.info) == 2) {
@@ -2170,6 +2243,16 @@ if (provided("pheno_file", argv)) {
             pheno.file <- paste0(argv$target, ".fam")
         }
     }
+}else if(provided("target_list", argv)){
+    # Assume no header
+    target.list <- read.table(argv$target_list)
+    target.prefix <- target.list[1]
+    pheno.file <- paste0(target.prefix, ".fam")    
+    if(provided("type", argv)){
+        if(argv$type=="bgen"){
+            stop("Error: You must provide a phenotype file for bgen list input")
+        }   
+    }
 }
 
 update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
@@ -2186,50 +2269,52 @@ update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
     if (!ignore_fid) {
         phenotype <- phenotype[, c(1:2, pheno.index)]
         colnames(phenotype) <- c("FID", "IID", "Pheno")
-        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
         phenotype <-
             phenotype[!is.na(phenotype$Pheno), ]
     } else{
         phenotype <- phenotype[, c(1, pheno.index)]
         colnames(phenotype) <- c("IID", "Pheno")
-        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
         phenotype <-
             phenotype[!is.na(phenotype$Pheno), ]
     }
     # Now remove any missing sample from cov.base
     covariance <- NULL
-    if(!ignore_fid){
-        covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
-                                   cov.base$IID %in% phenotype$IID, ]
-    }else{
-        covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
-    }
-    # Note: cov.base only contains the valid headers
-    if(provided("cov_factor", parameters)){
-        factor_cov <- parameters$cov_factor
-        for(i in colnames(covariance)){
-            if(i != "FID" & i != "IID"){
-                if(i %in%factor_cov){
-                    covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
-                }else{
+    if(!is.null(cov.base)){
+        if(!ignore_fid){
+            covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
+                                       cov.base$IID %in% phenotype$IID, ]
+        }else{
+            covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
+        }
+        # Note: cov.base only contains the valid headers
+        if(provided("cov_factor", parameters)){
+            factor_cov <- parameters$cov_factor
+            for(i in colnames(covariance)){
+                if(i != "FID" & i != "IID"){
+                    if(i %in%factor_cov){
+                        covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
+                    }else{
+                        covariance[,i] <- as.numeric(covariance[,i])
+                    }
+                }
+            }
+        }else{
+            for(i in colnames(covariance)){
+                if(i!="FID" & i!="IID"){
                     covariance[,i] <- as.numeric(covariance[,i])
                 }
             }
         }
-    }else{
-        for(i in colnames(covariance)){
-            if(i!="FID" & i!="IID"){
-                covariance[,i] <- as.numeric(covariance[,i])
-            }
-        }
+        if (ignore_fid) { 
+            colnames(covariance) <- 
+                c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
+        } else{ 
+            colnames(covariance) <- 
+                c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
+        } 
     }
-    if (ignore_fid) { 
-        colnames(covariance) <- 
-            c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
-    } else{ 
-        colnames(covariance) <- 
-            c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
-    } 
     return(covariance)
 }
 # To account for the chromosome number
