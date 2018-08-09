@@ -1003,7 +1003,7 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
     // there is only one region, so we can ignore the for loop
     size_t i_region = 0;
     size_t cur_region_size = m_region_list.front().size();
-    while (snp_check_index < cur_region_size) {
+    while (m_snp_check_index[i_region] < cur_region_size) {
         auto&& current_bound =
             m_region_list[i_region][m_snp_check_index[i_region]];
         int region_chr = current_bound.chr;
@@ -1017,7 +1017,7 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
             region_start = current_bound.start;
             region_end = current_bound.end;
         }
-        if (snp_check_index >= cur_region_size) {
+        if (m_snp_check_index[i_region] >= cur_region_size) {
             return false;
         }
         if (region_end < loc) {
