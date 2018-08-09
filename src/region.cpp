@@ -1003,24 +1003,25 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
     // there is only one region, so we can ignore the for loop
     size_t i_region = 0;
     size_t cur_region_size = m_region_list.front().size();
-    auto&& snp_check_index = m_snp_check_index[i_region];
-    if (snp_check_index < cur_region_size) return false;
-    bool chr_switched = false;
-    int prev_chr = m_region_list[i_region][snp_check_index].chr;
     while (snp_check_index < cur_region_size) {
-        auto&& current_bound = m_region_list[i_region][snp_check_index];
+        auto&& current_bound =
+            m_region_list[i_region][m_snp_check_index[i_region]];
         int region_chr = current_bound.chr;
-        if (region_chr != prev_chr) chr_switched = true;
         size_t region_start = current_bound.start;
         size_t region_end = current_bound.end;
-        if (cur_chr != region_chr) {
-            // not the same chromosome, so jump to the correct location
-            if (chr_switched) break;
-            snp_check_index++;
+        while (cur_chr != region_chr) {
+            m_snp_check_index[i_region]++;
+            current_bound =
+                m_region_list[i_region][m_snp_check_index[i_region]];
+            region_chr = current_bound.chr;
+            region_start = current_bound.start;
+            region_end = current_bound.end;
         }
-        else if (region_end < loc)
-        {
-            snp_check_index++;
+        if (snp_check_index >= cur_region_size) {
+            return false;
+        }
+        if (region_end < loc) {
+            m_snp_check_index[i_region]++;
         }
 
         else if (region_start <= loc && region_end >= loc)
@@ -1047,39 +1048,34 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
     size_t region_start, region_end;
     int region_chr;
     int start_chr;
-    bool chr_switched = false;
     // go through each region (including backgroudn)
     for (size_t i_region = 1; i_region < region_size; ++i_region) {
         // find out how many boundaries are there within the current region
         size_t current_region_size = m_region_list[i_region].size();
-        chr_switched = false;
         // while we still have boundary left
         // allow to go through all boundaries
         // as we assume SNPs are read in the correct order (sorted)
         // we use m_snp_check_index to track the last SNP's boundary index
         // and start our search from there so that we can skip un-necessary
         // comparison
-        if (m_snp_check_index[i_region] < current_region_size)
-            start_chr =
-                m_region_list[i_region][m_snp_check_index[i_region]].chr;
         while (m_snp_check_index[i_region] < current_region_size) {
             // obtain the current boundary as defined by m_snp_check_index
             // with YF's test data set, we need to use rs3748592
             auto&& current_bound =
                 m_region_list[i_region][m_snp_check_index[i_region]];
             region_chr = current_bound.chr;
-            if (start_chr != region_chr) {
-                chr_switched = true;
-            }
             region_start = current_bound.start;
             region_end = current_bound.end;
-            if (chr != region_chr) {
-                // not the same chromosome, so jump to the correct location
-                if (chr_switched) break;
+            while (chr != region_chr) {
                 m_snp_check_index[i_region]++;
+                current_bound =
+                    m_region_list[i_region][m_snp_check_index[i_region]];
+                region_chr = current_bound.chr;
+                region_start = current_bound.start;
+                region_end = current_bound.end;
             }
-            else if (region_end < loc)
-            {
+            if (m_snp_check_index[i_region] >= current_region_size) break;
+            if (region_end < loc) {
                 m_snp_check_index[i_region]++;
             }
             else if (region_start <= loc && region_end >= loc)
