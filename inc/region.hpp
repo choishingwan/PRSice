@@ -137,7 +137,7 @@ private:
     // this is use for informing us if we would bother to store the permutation
     // results
     std::unordered_map<int, bool> m_region_size_duplicated;
-    std::unordered_map<int, std::vector<int>> m_chr_index;
+
     int m_5prime = 0;
     int m_3prime = 0;
 

@@ -86,16 +86,6 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
         }
         size_t i_region = m_region_list.size();
         m_region_list.push_back(solve_overlap(current_region, i_region));
-        int prev_chr = -1;
-        for (size_t i = 0; i < m_region_list.back().size(); ++i) {
-            int cur_chr = m_region_list.back()[i].chr;
-            if (prev_chr != cur_chr) {
-                while (m_chr_index[0].size() < cur_chr + 1)
-                    m_chr_index[0].push_back(-1);
-                m_chr_index[0][cur_chr] = i;
-                prev_chr = cur_chr;
-            }
-        }
     }
     m_snp_check_index = std::vector<size_t>(1, 0);
 }
@@ -953,15 +943,8 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
     int prev_chr = -1;
     size_t prev_start = 0;
     size_t prev_end = 0;
-    size_t chr_index = 0;
-    std::vector<int> chr_start;
     // optimize for human for now
-    chr_start.resize(22, -1);
     for (auto&& bound : current_region) {
-
-        if (prev_chr != bound.chr || prev_chr == -1) {
-            chr_start[bound.chr - 1] = chr_index;
-        }
         if (prev_chr == -1) {
             prev_chr = bound.chr;
             prev_start = bound.start;
@@ -983,7 +966,6 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
         {
             prev_end = bound.end;
         }
-        chr_index++;
     }
     if (prev_chr != -1) {
         region_bound cur_bound;
@@ -993,7 +975,6 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region,
         result.push_back(cur_bound);
     }
     result.shrink_to_fit();
-    m_chr_index[i_region] = chr_start;
     return result;
 }
 void Region::print_file(std::string output) const
@@ -1018,46 +999,25 @@ Region::~Region() {}
 bool Region::check_exclusion(const std::string& chr, const size_t loc)
 {
     int cur_chr = get_chrom_code_raw(chr.c_str());
-    if (m_chr_index.empty()) {
-        return false;
-    }
+    if (m_region_list.empty() || m_region_list.front().empty()) return false;
     // there is only one region, so we can ignore the for loop
     size_t i_region = 0;
     size_t cur_region_size = m_region_list.front().size();
-    int region_chr_index = m_chr_index[i_region][cur_chr];
-    bool chr_switched = false;
     auto&& snp_check_index = m_snp_check_index[i_region];
     while (snp_check_index < cur_region_size) {
         auto&& current_bound = m_region_list[i_region][snp_check_index];
-        int region_chr = m_chr_index[i_region][current_bound.chr];
+        int region_chr = current_bound.chr;
         size_t region_start = current_bound.start;
         size_t region_end = current_bound.end;
-        if (region_chr_index != region_chr && !chr_switched) {
-            // only increment if we have passed the chromosome
-            snp_check_index = region_chr_index;
-            chr_switched = true;
+        if (cur_chr != region_chr || region_end < loc) {
+            snp_check_index++;
         }
-        else if (region_chr_index != region_chr)
+        else if (region_start <= loc && region_end >= loc)
         {
+            return true;
+        }
+        else if (region_start > loc)
             break;
-        }
-        else if (region_chr_index == region_chr) // same chromosome
-        {
-            if (region_start <= loc && region_end >= loc) {
-                return true;
-            }
-            else if (region_start > loc)
-                break;
-            else if (region_end < loc)
-            {
-                snp_check_index++;
-            }
-        }
-        else
-        {
-            // not the same chromosome
-            break;
-        }
     }
     return false;
 }
@@ -1065,51 +1025,47 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
 void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                          std::vector<uintptr_t>& flag)
 {
+    // we first make sure the base region is true for all SNPs
     flag[0] |= ONELU;
     m_region_snp_count[0]++;
     // note: the chr is actually the order on the m_chr_order instead of the
-    // sactual chromosome
-    bool chr_switched = false;
+    // actual chromosome
+    // boolean to check if we have switched to next chromosome, we only allow
+    // one chromosome switches
     size_t region_size = m_region_name.size();
     size_t region_start, region_end;
-    int bound_chr_start_index;
+    int region_chr;
+    // go through each region (including backgroudn)
     for (size_t i_region = 1; i_region < region_size; ++i_region) {
-        int snp_region_chr_start_index = m_chr_index[i_region][chr];
+        // find out how many boundaries are there within the current region
         size_t current_region_size = m_region_list[i_region].size();
         // while we still have boundary left
+        // allow to go through all boundaries
+        // as we assume SNPs are read in the correct order (sorted)
+        // we use m_snp_check_index to track the last SNP's boundary index
+        // and start our search from there so that we can skip un-necessary
+        // comparison
         while (m_snp_check_index[i_region] < current_region_size) {
+            // obtain the current boundary as defined by m_snp_check_index
+            // with YF's test data set, we need to use rs3748592
             auto&& current_bound =
                 m_region_list[i_region][m_snp_check_index[i_region]];
-            bound_chr_start_index = m_chr_index[i_region][current_bound.chr];
+            region_chr = current_bound.chr;
             region_start = current_bound.start;
             region_end = current_bound.end;
-            if (snp_region_chr_start_index != bound_chr_start_index
-                && !chr_switched)
-            {
+            if (chr != region_chr || region_end < loc) {
                 // not the same chromosome, so jump to the correct location
-                m_snp_check_index[i_region] = snp_region_chr_start_index;
-                chr_switched = true;
+                m_snp_check_index[i_region]++;
             }
-            else if (bound_chr_start_index != snp_region_chr_start_index)
+            else if (region_start <= loc && region_end >= loc)
             {
-                // already jumped once
+                // This is the region
+                flag[i_region / BITCT] |= ONELU << ((i_region) % BITCT);
+                m_region_snp_count[i_region]++;
                 break;
             }
-            else // same chromosome
-            {
-                if (region_start <= loc && region_end >= loc) {
-                    // This is the region
-                    flag[i_region / BITCT] |= ONELU << ((i_region) % BITCT);
-                    m_region_snp_count[i_region]++;
-                    break;
-                }
-                else if (region_start > loc)
-                    break;
-                else if (region_end < loc)
-                {
-                    m_snp_check_index[i_region]++;
-                }
-            }
+            else if (region_start > loc)
+                break;
         }
     }
 }
