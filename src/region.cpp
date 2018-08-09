@@ -1003,13 +1003,17 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
     // there is only one region, so we can ignore the for loop
     size_t i_region = 0;
     size_t cur_region_size = m_region_list.front().size();
+    bool moved_chr = false;
     while (m_snp_check_index[i_region] < cur_region_size) {
         auto&& current_bound =
             m_region_list[i_region][m_snp_check_index[i_region]];
         int region_chr = current_bound.chr;
         size_t region_start = current_bound.start;
         size_t region_end = current_bound.end;
-        while (cur_chr != region_chr) {
+        while (cur_chr != region_chr
+               && m_snp_check_index[i_region] < cur_region_size)
+        {
+            if (moved_chr) break;
             m_snp_check_index[i_region]++;
             current_bound =
                 m_region_list[i_region][m_snp_check_index[i_region]];
@@ -1017,6 +1021,7 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
             region_start = current_bound.start;
             region_end = current_bound.end;
         }
+        moved_chr = true;
         if (m_snp_check_index[i_region] >= cur_region_size) {
             return false;
         }
@@ -1047,7 +1052,10 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
     size_t region_size = m_region_name.size();
     size_t region_start, region_end;
     int region_chr;
-    int start_chr;
+    // indicate if we have a likelihood of changing chr.
+    // Situation: SNP on chr1 but out of bound of last chr1 boundary,
+    // move to next bound, which is chr2, we don't want it to move at all
+    bool moved_chr = false;
     // go through each region (including backgroudn)
     for (size_t i_region = 1; i_region < region_size; ++i_region) {
         // find out how many boundaries are there within the current region
@@ -1058,6 +1066,7 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
         // we use m_snp_check_index to track the last SNP's boundary index
         // and start our search from there so that we can skip un-necessary
         // comparison
+        moved_chr = false;
         while (m_snp_check_index[i_region] < current_region_size) {
             // obtain the current boundary as defined by m_snp_check_index
             // with YF's test data set, we need to use rs3748592
@@ -1066,7 +1075,10 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
             region_chr = current_bound.chr;
             region_start = current_bound.start;
             region_end = current_bound.end;
-            while (chr != region_chr) {
+            while (chr != region_chr
+                   && m_snp_check_index[i_region] < current_region_size)
+            {
+                if (moved_chr) break;
                 m_snp_check_index[i_region]++;
                 current_bound =
                     m_region_list[i_region][m_snp_check_index[i_region]];
@@ -1074,6 +1086,7 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                 region_start = current_bound.start;
                 region_end = current_bound.end;
             }
+            moved_chr = true;
             if (m_snp_check_index[i_region] >= current_region_size) break;
             if (region_end < loc) {
                 m_snp_check_index[i_region]++;
