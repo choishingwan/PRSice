@@ -1010,7 +1010,7 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
         int region_chr = current_bound.chr;
         size_t region_start = current_bound.start;
         size_t region_end = current_bound.end;
-        while (cur_chr < region_chr
+        while (cur_chr > region_chr
                && m_snp_check_index[i_region] < cur_region_size)
         {
             if (moved_chr) break;
@@ -1067,6 +1067,7 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
         // and start our search from there so that we can skip un-necessary
         // comparison
         moved_chr = false;
+        // problematic SNP is rs2952781
         while (m_snp_check_index[i_region] < current_region_size) {
             // obtain the current boundary as defined by m_snp_check_index
             // with YF's test data set, we need to use rs3748592
@@ -1075,7 +1076,7 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
             region_chr = current_bound.chr;
             region_start = current_bound.start;
             region_end = current_bound.end;
-            while (chr < region_chr
+            while (chr > region_chr
                    && m_snp_check_index[i_region] < current_region_size)
             {
                 if (moved_chr) break;
@@ -1087,7 +1088,8 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                 region_end = current_bound.end;
             }
             moved_chr = true;
-            if (m_snp_check_index[i_region] >= current_region_size) break;
+            if (m_snp_check_index[i_region] >= current_region_size ||  chr < region_chr) break;
+
             if(chr != region_chr){
             	break;
             }
