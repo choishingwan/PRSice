@@ -55,7 +55,7 @@
 
 - `--pheno-file` | `-f`
 
-    Phenotype file containing the phenotype(s).
+    Tab or space delimited phenotype file containing the phenotype(s).
     First column must be FID of the samples and
     the second column must be IID of the samples.
     When `--ignore-fid` is set, first column must

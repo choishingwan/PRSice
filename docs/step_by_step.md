@@ -120,7 +120,8 @@ coded genotypes in PLINK binary format by using the `--allow-inter` option.
 
 ## Phenotype files
 An external phenotype file can be provided to PRSice using the `--pheno-file`
-parameter.
+parameter. 
+This must be a tab / space delimited file and missing data **must** be represented by either `NA` or `-9` (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
 `--ignore-fid` is set, the first column should be the IID.
 The rest of the columns can be the phenotype(s).
