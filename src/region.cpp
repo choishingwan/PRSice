@@ -1067,7 +1067,6 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
         // and start our search from there so that we can skip un-necessary
         // comparison
         moved_chr = false;
-        // problematic SNP is rs2952781
         while (m_snp_check_index[i_region] < current_region_size) {
             // obtain the current boundary as defined by m_snp_check_index
             // with YF's test data set, we need to use rs3748592
