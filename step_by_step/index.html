@@ -397,7 +397,8 @@ Therefore, to speed up the clumping process, you can allow PRSice to generate a 
 coded genotypes in PLINK binary format by using the <code>--allow-inter</code> option. </p>
 <h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
 <p>An external phenotype file can be provided to PRSice using the <code>--pheno-file</code>
-parameter.
+parameter. 
+This must be a tab / space delimited file and missing data <strong>must</strong> be represented by either <code>NA</code> or <code>-9</code> (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
 <code>--ignore-fid</code> is set, the first column should be the IID.
 The rest of the columns can be the phenotype(s).</p>
