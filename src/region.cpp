@@ -1022,11 +1022,15 @@ bool Region::check_exclusion(const std::string& chr, const size_t loc)
             region_end = current_bound.end;
         }
         moved_chr = true;
-        if(cur_chr != region_chr){
-        	return false;
-        }else if (m_snp_check_index[i_region] >= cur_region_size) {
+        if (cur_chr != region_chr) {
             return false;
-        }else if (region_end < loc) {
+        }
+        else if (m_snp_check_index[i_region] >= cur_region_size)
+        {
+            return false;
+        }
+        else if (region_end < loc)
+        {
             m_snp_check_index[i_region]++;
         }
         else if (region_start <= loc && region_end >= loc)
@@ -1087,12 +1091,15 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                 region_end = current_bound.end;
             }
             moved_chr = true;
-            if (m_snp_check_index[i_region] >= current_region_size ||  chr < region_chr) break;
+            if (m_snp_check_index[i_region] >= current_region_size
+                || chr < region_chr)
+                break;
 
-            if(chr != region_chr){
-            	break;
+            if (chr != region_chr) {
+                break;
             }
-            else if (region_end < loc) {
+            else if (region_end < loc)
+            {
                 m_snp_check_index[i_region]++;
             }
             else if (region_start <= loc && region_end >= loc)
