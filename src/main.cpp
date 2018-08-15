@@ -102,18 +102,7 @@ int main(int argc, char* argv[])
             misc::base_name<std::string>(commander.base_name()));
         try
         {
-            target_file->set_info(commander);
-            // load reference panel first so that we have updated the target
 
-            std::string message = "Start processing " + base_name + "\n";
-            message.append("==============================\n");
-            reporter.report(message);
-            target_file->read_base(commander, region, reporter);
-
-
-            // we no longer need the region boundaries
-            // as we don't allow multiple base file input
-            region.clean();
             // TODO: This is no longer useful and can be deleted in next
             // release, once Yunfeng has completed her analysis
             // std::string region_out_name = commander.out() + ".region";
@@ -124,6 +113,8 @@ int main(int argc, char* argv[])
                           target_file->num_sample(), reporter);
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);
+            target_file->set_info(commander);
+            // load reference panel first so that we have updated the target
 
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
@@ -162,6 +153,16 @@ int main(int argc, char* argv[])
                 // immediately free the memory if needed
                 if (commander.use_ref()) delete reference_file;
             }
+            std::string message = "Start processing " + base_name + "\n";
+            message.append("==============================\n");
+            reporter.report(message);
+            target_file->read_base(commander, region, reporter);
+
+
+            // we no longer need the region boundaries
+            // as we don't allow multiple base file input
+            region.clean();
+
             if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =
                     "No SNPs left for PRSice processing";

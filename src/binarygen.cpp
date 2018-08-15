@@ -704,13 +704,14 @@ BinaryGen::gen_snp_vector(const double geno, const double maf,
     snp_res.shrink_to_fit(); // so that it will be more suitable
 
     if (m_is_ref && ref_target_match != target->m_existed_snps.size()) {
-        m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&ref_retain, this](const SNP& s) {
-                               return !ref_retain[&s - &*begin(m_existed_snps)];
-                           }),
-            m_existed_snps.end());
-        m_existed_snps.shrink_to_fit();
+        target->m_existed_snps.erase(
+            std::remove_if(
+                target->m_existed_snps.begin(), target->m_existed_snps.end(),
+                [&ref_retain, &target, this](const SNP& s) {
+                    return !ref_retain[&s - &*begin(target->m_existed_snps)];
+                }),
+            target->m_existed_snps.end());
+        target->m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snps.size() != 0) {
         std::ofstream log_file_stream;

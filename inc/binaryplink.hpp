@@ -60,6 +60,9 @@ private:
             }
             std::string bedname = file_name + ".bed";
             m_bed_file.open(bedname.c_str(), std::ios::binary);
+            if(!m_bed_file.is_open()){
+            	throw std::runtime_error(std::string("Error: Cannot open bed file: "+file_name+".bed"));
+            }
             m_prev_loc = 0;
             m_cur_file = file_name;
         }

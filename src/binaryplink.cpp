@@ -523,13 +523,14 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
 
         // remain_core_snps' follow the post sorted order (p-value sorted)
         // instead of m_existed_snps' index so we need to sort it first
-        m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&ref_retain, this](const SNP& s) {
-                               return !ref_retain[&s - &*begin(m_existed_snps)];
-                           }),
-            m_existed_snps.end());
-        m_existed_snps.shrink_to_fit();
+        target->m_existed_snps.erase(
+            std::remove_if(
+                target->m_existed_snps.begin(), target->m_existed_snps.end(),
+                [&ref_retain, &target, this](const SNP& s) {
+                    return !ref_retain[&s - &*begin(target->m_existed_snps)];
+                }),
+            target->m_existed_snps.end());
+        target->m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snp.size() != 0) {
         std::ofstream log_file_stream;
