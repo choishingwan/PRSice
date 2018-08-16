@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
             message.append("==============================\n");
             reporter.report(message);
             target_file->read_base(commander, region, reporter);
-            if(!commander.no_clump()){
+            if (!commander.no_clump()) {
                 // get the sort by p index vector for target
                 // so that we can still find out the relative coordinates of
                 // each SNPs This is only required for clumping
