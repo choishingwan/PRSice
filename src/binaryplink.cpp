@@ -526,7 +526,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         target->m_existed_snps.erase(
             std::remove_if(
                 target->m_existed_snps.begin(), target->m_existed_snps.end(),
-                [&ref_retain, &target, this](const SNP& s) {
+                [&ref_retain, &target](const SNP& s) {
                     return !ref_retain[&s - &*begin(target->m_existed_snps)];
                 }),
             target->m_existed_snps.end());

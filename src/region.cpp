@@ -893,6 +893,8 @@ void Region::read_background(
     }
     input.close();
     size_t i_region = m_region_list.size();
+
+    m_has_background = (current_bound.size() > 0);
     m_region_list.push_back(solve_overlap(current_bound, i_region));
     m_region_name.push_back("Background");
 }
@@ -904,9 +906,12 @@ void Region::generate_background(
 {
     // this will be very ineffective. But whatever
     std::vector<Region::region_bound> temp_storage;
-    temp_storage.reserve(gtf_info.size());
-    for (auto&& gtf : gtf_info) {
-        temp_storage.push_back(gtf.second);
+    if (gtf_info.size() != 0) {
+        temp_storage.reserve(gtf_info.size());
+        for (auto&& gtf : gtf_info) {
+            temp_storage.push_back(gtf.second);
+        }
+        m_has_background = true;
     }
     /* don't include the bed as background as they are not
      * necessary defined as genic regions
@@ -1047,13 +1052,19 @@ void Region::update_flag(const int chr, const std::string& rs, size_t loc,
                          std::vector<uintptr_t>& flag)
 {
     // we first make sure the base region is true for all SNPs
+    const size_t region_size = m_region_name.size();
     flag[0] |= ONELU;
     m_region_snp_count[0]++;
+    if (!m_has_background && region_size > 1) {
+        // use everything as background
+        flag[(region_size - 1) / BITCT] |= ONELU << ((region_size - 1) % BITCT);
+        m_region_snp_count[region_size - 1]++;
+    }
     // note: the chr is actually the order on the m_chr_order instead of the
     // actual chromosome
     // boolean to check if we have switched to next chromosome, we only allow
     // one chromosome switches
-    size_t region_size = m_region_name.size();
+
     size_t region_start, region_end;
     int region_chr;
     // indicate if we have a likelihood of changing chr.

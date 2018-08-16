@@ -140,7 +140,7 @@ private:
 
     int m_5prime = 0;
     int m_3prime = 0;
-
+    bool m_has_background = false;
     bool in_feature(std::string in) const
     {
         // number of feature should be small enough such that
