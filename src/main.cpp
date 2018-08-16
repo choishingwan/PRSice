@@ -138,6 +138,12 @@ int main(int argc, char* argv[])
                         commander.hard_threshold(), commander.hard_coded(),
                         exclusion, verbose, reporter, target_file);
                 }
+            }
+            std::string message = "Start processing " + base_name + "\n";
+            message.append("==============================\n");
+            reporter.report(message);
+            target_file->read_base(commander, region, reporter);
+            if(!commander.no_clump()){
                 // get the sort by p index vector for target
                 // so that we can still find out the relative coordinates of
                 // each SNPs This is only required for clumping
@@ -153,10 +159,6 @@ int main(int argc, char* argv[])
                 // immediately free the memory if needed
                 if (commander.use_ref()) delete reference_file;
             }
-            std::string message = "Start processing " + base_name + "\n";
-            message.append("==============================\n");
-            reporter.report(message);
-            target_file->read_base(commander, region, reporter);
 
 
             // we no longer need the region boundaries
