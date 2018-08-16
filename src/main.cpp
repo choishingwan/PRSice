@@ -137,6 +137,9 @@ int main(int argc, char* argv[])
                         commander.maf(), commander.info(),
                         commander.hard_threshold(), commander.hard_coded(),
                         exclusion, verbose, reporter, target_file);
+                    // we update the target because we don't store the SNP
+                    // info in reference
+                    target_file->update_snp_index();
                 }
             }
             std::string message = "Start processing " + base_name + "\n";
