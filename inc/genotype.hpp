@@ -75,9 +75,9 @@ public:
                    Region& exclusion, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
     void update_snp_index(){
-    	m_existed_snp_index.clear();
+    	m_existed_snps_index.clear();
     	for(size_t i_snp=0; i_snp < m_existed_snps.size(); ++i_snp){
-    		m_existed_snp_index[m_existed_snps[i_snp].rs()] = i_snp;
+    		m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
     	}
     }
     std::unordered_map<std::string, int> get_chr_order() const
