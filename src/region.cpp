@@ -158,6 +158,10 @@ void Region::run(const std::string& gtf, const std::string& msigdb,
     m_snp_check_index = std::vector<size_t>(m_region_name.size(), 0);
     m_region_snp_count = std::vector<int>(m_region_name.size());
     m_duplicated_names.clear();
+    if (!m_has_background) {
+        reporter.report("Warning: Background not provided, will use all SNPs "
+                        "as background (only affect --set-perm)");
+    }
 }
 void Region::process_snp_sets(const std::string& single_snp_set,
                               const std::string& multi_snp_set,
