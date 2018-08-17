@@ -259,7 +259,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         // bed.seekg(m_bed_offset, std::ios_base::beg);
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
-        prev_snp_processed = 0;
+        prev_snp_processed = -1;
         while (std::getline(bim, line)) {
             misc::trim(line);
             if (line.empty()) continue;
@@ -517,6 +517,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             }
         }
         bim.close();
+        if(bed.is_open()) bed.close();
     }
     snp_info.shrink_to_fit();
     if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
