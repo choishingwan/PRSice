@@ -517,7 +517,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             }
         }
         bim.close();
-        if(bed.is_open()) bed.close();
+        if (bed.is_open()) bed.close();
     }
     snp_info.shrink_to_fit();
     if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
