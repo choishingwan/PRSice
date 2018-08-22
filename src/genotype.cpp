@@ -1269,7 +1269,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
             geno_mask_ptr = &(geno_mask_ptr[founder_ct_192_long]);
             window_data_ptr = &(window_data_ptr[founder_ct_192_long]);
             if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy, m_clump_proxy);
             }
         }
         for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
@@ -1313,7 +1313,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
                   * (dp_result[4] * non_missing_ctd + dyy * dyy);
             r2 = (cov12 * cov12) / dxx;
             if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy, m_clump_proxy);
             }
         }
         cur_target_snp.set_clumped();
@@ -1643,7 +1643,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
 
             if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy,  m_clump_proxy);
             }
         }
         for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair) {
@@ -1693,7 +1693,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
             }
 
             if (r2 >= min_r2) {
-                cur_target_snp.clump(pair_target_snp, r2, m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy, m_clump_proxy);
             }
         }
         cur_target_snp.set_clumped();
