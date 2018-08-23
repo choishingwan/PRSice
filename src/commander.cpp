@@ -1821,9 +1821,11 @@ void Commander::covariate_check(bool& error, std::string& error_message)
     if (covariate.file_name.empty()) return;
     // first, transform all the covariates
     std::unordered_set<std::string> included;
+    std::unordered_set<std::string> ori_input;
     std::vector<std::string> transformed_cov;
     for (auto cov : covariate.covariates) {
         if (cov.empty()) continue;
+        ori_input.insert(cov);
         // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
         // thingy to substitute them
         transformed_cov = transform_covariate(cov);
@@ -1860,10 +1862,12 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         }
     }
     size_t valid_cov = 0;
+    // covariate.covariates.clear();
+    covariate.covariate_index.clear();
     for (auto&& cov : included) {
         if (ref_index.find(cov) != ref_index.end()) {
             covariate.covariate_index.push_back(ref_index[cov]);
-            covariate.covariates.push_back(cov);
+            // covariate.covariates.push_back(cov);
             valid_cov++;
         }
         else if (missing.empty())
@@ -1892,8 +1896,9 @@ void Commander::covariate_check(bool& error, std::string& error_message)
             if (included.find(trans) != included.end()) {
                 covariate.factor_index.push_back(ref_index[trans]);
             }
-            else
+            else if (ori_input.find(cov) == ori_input.end())
             {
+                // only complain if untransform input isn't found in cov-col
                 error = true;
                 error_message.append("Error: All factor covariates must be "
                                      "found in covariate list. "

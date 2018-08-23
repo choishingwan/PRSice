@@ -102,18 +102,7 @@ int main(int argc, char* argv[])
             misc::base_name<std::string>(commander.base_name()));
         try
         {
-            target_file->set_info(commander);
-            // load reference panel first so that we have updated the target
 
-            std::string message = "Start processing " + base_name + "\n";
-            message.append("==============================\n");
-            reporter.report(message);
-            target_file->read_base(commander, region, reporter);
-
-
-            // we no longer need the region boundaries
-            // as we don't allow multiple base file input
-            region.clean();
             // TODO: This is no longer useful and can be deleted in next
             // release, once Yunfeng has completed her analysis
             // std::string region_out_name = commander.out() + ".region";
@@ -124,6 +113,8 @@ int main(int argc, char* argv[])
                           target_file->num_sample(), reporter);
             // check the phenotype input columns
             prsice.pheno_check(commander, reporter);
+            target_file->set_info(commander);
+            // load reference panel first so that we have updated the target
 
             // perform clumping (Main problem with memory here)
             if (!commander.no_clump()) {
@@ -146,7 +137,16 @@ int main(int argc, char* argv[])
                         commander.maf(), commander.info(),
                         commander.hard_threshold(), commander.hard_coded(),
                         exclusion, verbose, reporter, target_file);
+                    // we update the target because we don't store the SNP
+                    // info in reference
+                    target_file->update_snp_index();
                 }
+            }
+            std::string message = "Start processing " + base_name + "\n";
+            message.append("==============================\n");
+            reporter.report(message);
+            target_file->read_base(commander, region, reporter);
+            if (!commander.no_clump()) {
                 // get the sort by p index vector for target
                 // so that we can still find out the relative coordinates of
                 // each SNPs This is only required for clumping
@@ -162,6 +162,12 @@ int main(int argc, char* argv[])
                 // immediately free the memory if needed
                 if (commander.use_ref()) delete reference_file;
             }
+
+
+            // we no longer need the region boundaries
+            // as we don't allow multiple base file input
+            region.clean();
+
             if (!target_file->prepare_prsice(reporter)) {
                 std::string error_message =
                     "No SNPs left for PRSice processing";
@@ -234,6 +240,23 @@ int main(int argc, char* argv[])
             }
             else
             {
+                // First, perform PRSice in each regional segment
+                // Then record the best threshold for each.
+                // And perform PRSice on each block of SNPs
+                // then iterate and prepare
+                size_t num_prslice_region =
+                    target_file->prepare_prslice(commander.prslice_size());
+                for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
+                    // initialize the phenotype & independent variable matrix
+                    fprintf(stderr, "\nProcessing the %zu th phenotype\n",
+                            i_pheno + 1);
+                    prsice.init_prslice_process_count(
+                        num_prslice_region, target_file->num_threshold());
+                    prsice.init_matrix(commander, i_pheno, *target_file,
+                                       reporter);
+                    // get_prslice_best_thresholds
+                    // get_prslice_combination
+                }
                 std::string error_message =
                     "Error: We currently have not implemented PRSlice. We will "
                     "implement PRSlice once the implementation of PRSice is "
