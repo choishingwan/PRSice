@@ -2139,7 +2139,7 @@ process_plot <-
                 family <- binomial
             }
             residual <-
-                rstandard(glm(Pheno ~ ., 
+                resid(glm(Pheno ~ ., 
                               data = temp.pheno[, !colnames(temp.pheno) %in% c("FID", "IID")], 
                               family =family))
             pheno$Pheno <- residual
