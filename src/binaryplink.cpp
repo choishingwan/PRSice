@@ -194,7 +194,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<std::string> bim_info;
     std::vector<bool> ref_retain;
-    if (m_is_ref) ref_retain.resize(m_existed_snps.size(), false);
+    if (m_is_ref) ref_retain.resize(target->m_existed_snps.size(), false);
     std::ifstream bim, bed;
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
@@ -259,7 +259,7 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
         // bed.seekg(m_bed_offset, std::ios_base::beg);
         // now go through the bim & bed file and perform filtering
         num_snp_read = 0;
-        prev_snp_processed = 0;
+        prev_snp_processed = -1;
         while (std::getline(bim, line)) {
             misc::trim(line);
             if (line.empty()) continue;
@@ -269,10 +269,13 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
             // the previous pass change them to upper case to avoid match
             // problems
             if (m_is_ref) {
+
                 // SNP not found in the target file
+
                 if (target->m_existed_snps_index.find(bim_info[+BIM::RS])
                     == target->m_existed_snps_index.end())
                 {
+
                     continue;
                 }
             }
@@ -513,19 +516,22 @@ BinaryPlink::gen_snp_vector(const double geno, const double maf,
                 m_num_ambig++;
             }
         }
+        bim.close();
+        if (bed.is_open()) bed.close();
     }
     snp_info.shrink_to_fit();
     if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
 
         // remain_core_snps' follow the post sorted order (p-value sorted)
         // instead of m_existed_snps' index so we need to sort it first
-        m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&ref_retain, this](const SNP& s) {
-                               return !ref_retain[&s - &*begin(m_existed_snps)];
-                           }),
-            m_existed_snps.end());
-        m_existed_snps.shrink_to_fit();
+        target->m_existed_snps.erase(
+            std::remove_if(
+                target->m_existed_snps.begin(), target->m_existed_snps.end(),
+                [&ref_retain, &target](const SNP& s) {
+                    return !ref_retain[&s - &*begin(target->m_existed_snps)];
+                }),
+            target->m_existed_snps.end());
+        target->m_existed_snps.shrink_to_fit();
     }
     if (duplicated_snp.size() != 0) {
         std::ofstream log_file_stream;

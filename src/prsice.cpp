@@ -543,6 +543,7 @@ void PRSice::process_cov_file(
                                  + cov_file);
     }
     size_t num_factors = factor_cov_index.size();
+
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -586,7 +587,8 @@ void PRSice::process_cov_file(
                     }
                 }
                 factor_level_index +=
-                    (header == factor_cov_index[factor_level_index]);
+                    (factor_level_index >= num_factors
+                     || header == factor_cov_index[factor_level_index]);
             }
             // only do the factor level thing if this
             // sample is valid
@@ -733,22 +735,14 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
     std::vector<uint32_t> cov_start_index;
     uint32_t num_column = 2 + cov_header_index.size();
-    if (factor_cov_index.size() != 0) {
-        /*
-         * What we want:
-         * For each factor of a factor covariate, know which column should we
-         * put the 1 to
-         */
-        process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
-                         cov_header_index, cov_header_name, factor_list,
-                         num_column, reporter);
-    }
-    else
-    {
-        for (size_t i = 0; i < cov_header_index.size(); ++i) {
-            cov_start_index.push_back(i + 2);
-        }
-    }
+    /*
+     * What we want:
+     * For each factor of a factor covariate, know which column should we
+     * put the 1 to
+     */
+    process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
+                     cov_header_index, cov_header_name, factor_list, num_column,
+                     reporter);
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
@@ -841,7 +835,11 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     // fields (e.g. r2) because we will overwrite it anyway
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
-    for (auto&& p : m_prs_results) p.threshold = -1;
+    for (auto&& p : m_prs_results) {
+        p.threshold = -1;
+        p.r2 = 0.0;
+        p.num_snp = 0;
+    }
     // initialize score vector
     m_best_sample_score.resize(target.num_sample());
 
@@ -882,20 +880,22 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         print_progress();
 
         if (print_all_scores) {
+
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
-                double score = target.calculate_score(m_score, sample);
                 size_t loc = m_all_file.header_length
                              + sample * (m_all_file.line_width + NEXT_LENGTH)
                              + NEXT_LENGTH + m_all_file.skip_column_length
                              + m_all_file.processed_threshold
                              + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
-                all_out << std::setprecision(m_precision) << score;
+                all_out << std::setprecision(m_precision)
+                        << target.calculate_score(m_score, sample);
             }
         }
         m_all_file.processed_threshold++;
         if (no_regress) {
             iter_threshold++;
+            first_run = false;
             continue;
         }
         regress_score(target, cur_threshold, num_thread, pheno_index,
@@ -912,15 +912,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     if (c_commander.permutation() != 0) process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
-        // we don't do competitive for the full set
-        /*
-        if (m_prset && c_commander.perform_set_perm() && region_index != 0) {
-            run_competitive(target, c_commander,
-                            region.num_post_clump_snp(region_index),
-                            region.duplicated_size(region_index),
-                            m_target_binary[pheno_index]);
-        }
-        */
     }
 }
 
@@ -977,7 +968,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     }
 
     for (size_t sample_id = 0; sample_id < num_regress_samples; ++sample_id) {
-        std::string sample = target.sample_id(sample_id);
+        // std::string sample = target.sample_id(sample_id);
         m_independent_variables(sample_id, 1) =
             target.calculate_score(m_score, m_matrix_index[sample_id]);
     }
@@ -1376,28 +1367,34 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         std::vector<double> avail_thresholds = target.get_thresholds();
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         size_t num_thresholds = avail_thresholds.size();
-        header_line = "FID IID";
+        std::streampos begin_byte = all_out.tellp();
+        all_out << "FID IID";
+        // size_t header_length = 3+1+3;
         if (!m_prset) {
             for (auto& thres : avail_thresholds) {
-                header_line.append(" " + std::to_string(thres));
+                all_out << " " << thres;
+                // header_length+=1+m_numeric_width;
             }
         }
         else
         {
             for (size_t i = 0; i < region_name.size() - 1; ++i) {
                 for (auto& thres : avail_thresholds) {
-                    header_line.append(" " + region_name[i] + "_"
-                                       + std::to_string(thres));
+                    // header_length+=
+                    // 1+region_name[i].length()+1+m_numeric_width;
+                    all_out << " " << region_name[i] << "_" << thres;
                 }
             }
         }
-        m_all_file.header_length = header_line.length() + 1;
+        all_out << "\n";
+        std::streampos end_byte = all_out.tellp();
+        m_all_file.header_length = end_byte - begin_byte;
         m_all_file.processed_threshold = 0;
         m_all_file.line_width =
             m_max_fid_length + 1 + m_max_iid_length + 1
             + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-        all_out << header_line << "\n";
+        // all_out << header_line << "\n";
     }
 
     // output sample IDs

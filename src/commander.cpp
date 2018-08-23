@@ -1226,23 +1226,60 @@ void Commander::base_check(std::map<std::string, std::string>& message,
             base.col_index[+BASE_INDEX::CHR] = index_check(base.chr, token);
             if (base.col_index[+BASE_INDEX::CHR] != -1)
                 message["chr"] = base.chr;
+            else if (base.provided_chr)
+            {
+                error_message.append("Warning: " + base.chr
+                                     + " not found in base file\n");
+                message.erase("chr");
+            }
             base.col_index[+BASE_INDEX::REF] =
                 index_check(base.effect_allele, token);
             if (base.col_index[+BASE_INDEX::REF] != -1)
                 message["A1"] = base.effect_allele;
+            else if (base.provided_effect_allele)
+            {
+                error_message.append("Warning: " + base.effect_allele
+                                     + " not found in base file\n");
+                message.erase("A1");
+            }
             base.col_index[+BASE_INDEX::ALT] =
                 index_check(base.non_effect_allele, token);
             if (base.col_index[+BASE_INDEX::ALT] != -1)
                 message["A2"] = base.non_effect_allele;
+            else if (base.provided_non_effect_allele)
+            {
+                error_message.append("Warning: " + base.non_effect_allele
+                                     + " not found in base file\n");
+                message.erase("A2");
+            }
             base.col_index[+BASE_INDEX::STAT] =
                 index_check(base.statistic, token);
             if (base.col_index[+BASE_INDEX::STAT] != -1)
                 message["stat"] = base.statistic;
+            else if (base.provided_statistic)
+            {
+                error_message.append("Error: " + base.statistic
+                                     + " not found in base file\n");
+                message.erase("stat");
+            }
             base.col_index[+BASE_INDEX::RS] = index_check(base.snp, token);
             if (base.col_index[+BASE_INDEX::RS] != -1)
                 message["snp"] = base.snp;
+            else if (base.provided_snp)
+            {
+                error_message.append("Error: " + base.snp
+                                     + " not found in base file\n");
+                message.erase("snp");
+            }
             base.col_index[+BASE_INDEX::BP] = index_check(base.bp, token);
-            if (base.col_index[+BASE_INDEX::BP] != -1) message["bp"] = base.bp;
+            if (base.col_index[+BASE_INDEX::BP] != -1)
+                message["bp"] = base.bp;
+            else if (base.provided_bp)
+            {
+                error_message.append("Warning: " + base.bp
+                                     + " not found in base file\n");
+                message.erase("bp");
+            }
             base.col_index[+BASE_INDEX::SE] =
                 index_check(base.standard_error, token);
             if (base.col_index[+BASE_INDEX::SE] != -1)
@@ -1250,6 +1287,12 @@ void Commander::base_check(std::map<std::string, std::string>& message,
             base.col_index[+BASE_INDEX::P] = index_check(base.p_value, token);
             if (base.col_index[+BASE_INDEX::P] != -1)
                 message["pvalue"] = base.p_value;
+            else if (base.provided_p_value)
+            {
+                error_message.append("Error: " + base.p_value
+                                     + " not found in base file\n");
+                message.erase("pvalue");
+            }
 
             if (!base.info_col.empty()) {
                 std::vector<std::string> info = misc::split(base.info_col, ",");
@@ -1778,9 +1821,11 @@ void Commander::covariate_check(bool& error, std::string& error_message)
     if (covariate.file_name.empty()) return;
     // first, transform all the covariates
     std::unordered_set<std::string> included;
+    std::unordered_set<std::string> ori_input;
     std::vector<std::string> transformed_cov;
     for (auto cov : covariate.covariates) {
         if (cov.empty()) continue;
+        ori_input.insert(cov);
         // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
         // thingy to substitute them
         transformed_cov = transform_covariate(cov);
@@ -1817,10 +1862,12 @@ void Commander::covariate_check(bool& error, std::string& error_message)
         }
     }
     size_t valid_cov = 0;
+    // covariate.covariates.clear();
+    covariate.covariate_index.clear();
     for (auto&& cov : included) {
         if (ref_index.find(cov) != ref_index.end()) {
             covariate.covariate_index.push_back(ref_index[cov]);
-            covariate.covariates.push_back(cov);
+            // covariate.covariates.push_back(cov);
             valid_cov++;
         }
         else if (missing.empty())
@@ -1849,8 +1896,9 @@ void Commander::covariate_check(bool& error, std::string& error_message)
             if (included.find(trans) != included.end()) {
                 covariate.factor_index.push_back(ref_index[trans]);
             }
-            else
+            else if (ori_input.find(cov) == ori_input.end())
             {
+                // only complain if untransform input isn't found in cov-col
                 error = true;
                 error_message.append("Error: All factor covariates must be "
                                      "found in covariate list. "

@@ -97,6 +97,19 @@ public:
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     static void sort_snp_for_perm(std::vector<size_t>& index,
                                   const std::vector<SNP>& input);
+    static bool compare_snp(const SNP& a, const SNP& b)
+    {
+        if (a.m_chr == b.m_chr) {
+            if (a.m_loc == b.m_loc) {
+                if (a.m_target_file == b.m_target_file) {
+                    return a.m_target_byte_pos < b.m_target_byte_pos;
+                }
+                return a.m_target_file < b.m_target_file;
+            }
+            return a.m_loc < b.m_loc;
+        }
+        return a.m_chr < b.m_chr;
+    }
 
     inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
@@ -168,14 +181,13 @@ public:
     };
 
     void set_clumped() { m_clumped = true; };
-    void clump(SNP& target, double r2, double proxy = 2)
+    void clump(SNP& target, double r2, bool use_proxy, double proxy = 2)
     {
-        // when proxy = 2, we will not perform proxy
-        // That's because no SNP can have an R2 > 2
         if (target.clumped()) return;
-
         bool completed = false;
-        if (r2 > proxy) {
+        // if we want to use proxy, and that our r2 is higher than
+        // the proxy threshold, we will do clumping
+        if (use_proxy && r2 > proxy) {
             // proxy clump
             for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
                 // two become one
@@ -185,7 +197,7 @@ public:
         }
         else
         {
-            // normal clumping
+            // otherwise, we will just do noraml clumping
             for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
                 target.m_flags[i_flag] =
                     target.m_flags[i_flag]

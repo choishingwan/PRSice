@@ -66,7 +66,7 @@ public:
 
             return new BinaryPlink(binary_file, sample_file, multi_input,
                                    thread, ignore_fid, keep_nonfounder,
-                                   keep_ambig);
+                                   keep_ambig, is_ref);
         }
         case 2:
         {
