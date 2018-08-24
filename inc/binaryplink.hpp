@@ -21,6 +21,7 @@
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "misc.hpp"
+#include "reporter.hpp"
 
 class BinaryPlink : public Genotype
 {
@@ -30,6 +31,8 @@ public:
                 const bool ignore_fid = false,
                 const bool keep_nonfounder = false,
                 const bool keep_ambig = false, const bool is_ref = false);
+    BinaryPlink(const Commander& commander, Reporter& reporter,
+                const bool is_ref = false);
     ~BinaryPlink();
 
 private:

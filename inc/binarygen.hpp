@@ -18,6 +18,7 @@
 
 #include "bgen_lib.hpp"
 #include "genotype.hpp"
+#include "reporter.hpp"
 #include <stdexcept>
 #include <zlib.h>
 
@@ -36,6 +37,8 @@ public:
               const bool ignore_fid = false, const bool keep_nonfounder = false,
               const bool keep_ambig = false, const bool is_ref = false,
               const bool intermediate = false);
+    BinaryGen(const Commander& commander, Reporter& reporter,
+              const bool is_ref = false);
     ~BinaryGen();
 
 private:
