@@ -776,16 +776,16 @@ void Commander::set_help_message()
         "\nClumping:\n"
         "    --clump-kb              The distance for clumping in kb\n"
         "                            Default: "
-        + std::to_string(clumping.distance)
+        + misc::to_string(m_clump_distance)
         + "\n"
           "    --clump-r2              The R2 threshold for clumping\n"
           "                            Default: "
-        + std::to_string(clumping.r2)
+        + misc::to_string(m_clump_r2)
         + "\n"
           "    --clump-p               The p-value threshold use for "
           "clumping.\n"
           "                            Default: "
-        + std::to_string(clumping.p_value)
+        + misc::to_string(m_clump_p)
         + "\n"
           "    --ld            | -L    LD reference file. Use for LD "
           "calculation. If not\n"
@@ -810,7 +810,7 @@ void Commander::set_help_message()
           "call less than\n"
           "                            this will be treated as missing.\n"
           "                            Default: "
-        + std::to_string(reference_snp_filtering.hard_threshold)
+        + misc::to_string(m_ref_hard_threshold)
         + "\n"
           "    --ld-keep               File containing the sample(s) to be "
           "extracted from\n"
@@ -892,11 +892,11 @@ void Commander::set_help_message()
           "                            disable that behaviour\n"
           "    --interval      | -i    The step size of the threshold. "
           "Default: "
-        + std::to_string(p_thresholds.inter)
+        + misc::to_string(m_inter_threshold)
         + "\n"
           "    --lower         | -l    The starting p-value threshold. "
           "Default: "
-        + std::to_string(p_thresholds.lower)
+        + misc::to_string(m_lower_threshold)
         + "\n"
           "    --model                 Genetic model use for regression. The "
           "genetic\n"
@@ -940,7 +940,7 @@ void Commander::set_help_message()
           "                            sum - Direct summation of the effect "
           "size \n"
           "    --upper         | -u    The final p-value threshold. Default: "
-        + std::to_string(p_thresholds.upper)
+        + misc::to_string(m_upper_threshold)
         + "\n"
           "\nPRSet:\n"
           "    --bed           | -B    Bed file containing the selected "

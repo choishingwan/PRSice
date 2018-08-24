@@ -1318,6 +1318,7 @@ private:
                            std::string& error_messages)
     {
         m_provided_memory = true;
+        std::string in = input;
         if (message.find("memory") != message.end()) {
             error_messages.append("Warning: Duplicated argument --memory\n");
         }
@@ -1332,10 +1333,9 @@ private:
             if (input.length() >= 2) {
                 try
                 {
-                    std::transform(input.begin(), input.end(), input.begin(),
-                                   ::toupper);
-                    std::string unit = input.substr(input.length() - 2);
-                    std::string value = input.substr(0, input.length() - 2);
+                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
+                    std::string unit = in.substr(in.length() - 2);
+                    std::string value = in.substr(0, in.length() - 2);
                     if (unit == "KB") {
                         m_memory = misc::convert<size_t>(value) * 1024;
                     }
@@ -1356,8 +1356,8 @@ private:
                     else
                     {
                         // maybe only one input?
-                        unit = input.substr(input.length() - 1);
-                        value = input.substr(0, input.length() - 1);
+                        unit = input.substr(in.length() - 1);
+                        value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
                             m_memory = misc::convert<size_t>(value);
                         }
@@ -1366,19 +1366,18 @@ private:
                 catch (...)
                 {
                     error_messages.append("Error: Undefined memory input: "
-                                          + input);
+                                          + in);
                     return false;
                 }
             }
             else
             {
-                error_messages.append("Error: Undefined memory input: "
-                                      + input);
+                error_messages.append("Error: Undefined memory input: " + in);
                 return false;
             }
         }
 
-        message["memory"] = input;
+        message["memory"] = in;
         return true;
     }
 

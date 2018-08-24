@@ -22,15 +22,17 @@
 #include "genotype.hpp"
 #include "misc.hpp"
 #include "reporter.hpp"
-
+#include <functional>
 class BinaryPlink : public Genotype
 {
 public:
-    BinaryPlink(const std::string& prefix, const std::string& sample_file,
-                const std::string& multi_input, const size_t thread = 1,
-                const bool ignore_fid = false,
-                const bool keep_nonfounder = false,
-                const bool keep_ambig = false, const bool is_ref = false);
+    /*!
+     * \brief Constructor of BinaryPlink
+     * \param commander is the commander object containing all the user input
+     * \param reporter is the logger
+     * \param is_ref indicate if this object should be reference (T) or target
+     * (F)
+     */
     BinaryPlink(const Commander& commander, Reporter& reporter,
                 const bool is_ref = false);
     ~BinaryPlink();
@@ -39,17 +41,33 @@ private:
     std::string m_cur_file;
     std::ifstream m_bed_file;
     std::streampos m_prev_loc = 0;
-    uintptr_t m_bed_offset = 3;
 
+    /*!
+     * \brief Generate the sample vector
+     * \return Vector containing the sample information
+     */
     std::vector<Sample_ID> gen_sample_vector();
-    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info,
-                                    const double hard_threshold,
-                                    const bool hard_coded, Region& exclusion,
-                                    const std::string& out_prefix,
+    /*!
+     * \brief Function to generate the SNP vector
+     * \param commander contain all the user input
+     * \param exclusion contain the exclusion region
+     * \param target contain the target genotype information (if is reference)
+     * \return a vector of SNP
+     */
+    std::vector<SNP> gen_snp_vector(const Commander& commander,
+                                    Region& exclusion,
                                     Genotype* target = nullptr);
 
-    void check_bed(const std::string& bed_name, size_t num_marker);
+    /*!
+     * \brief This function is use to check the bed version. Most importantly,
+     *        this should give the correct bed_offset for file reading
+     * \param bed_name is the name of the file
+     * \param num_marker is the number of markers, use for checking the size of
+     *        the bed file
+     * \param bed_offset is the offset for bed file reading
+     */
+    void check_bed(const std::string& bed_name, size_t num_marker,
+                   uintptr_t& bed_offset);
     // this is for ld calculation only
     inline void read_genotype(uintptr_t* genotype,
                               const std::streampos byte_pos,

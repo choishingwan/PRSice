@@ -32,11 +32,12 @@
 class BinaryGen : public Genotype
 {
 public:
-    BinaryGen(const std::string& prefix, const std::string& sample_file,
-              const std::string& multi_input, const size_t thread = 1,
-              const bool ignore_fid = false, const bool keep_nonfounder = false,
-              const bool keep_ambig = false, const bool is_ref = false,
-              const bool intermediate = false);
+    /*!
+     * \brief Constructor of binarygen object
+     * \param commander contains the user input
+     * \param reporter is the logger
+     * \param is_ref indicate if this is the reference panel
+     */
     BinaryGen(const Commander& commander, Reporter& reporter,
               const bool is_ref = false);
     ~BinaryGen();
@@ -51,17 +52,42 @@ private:
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
+    /*!
+     * \brief Generate the sample vector
+     * \return Vector containing the sample information
+     */
     std::vector<Sample_ID> gen_sample_vector();
-    // check if the sample file is of the sample format specified by bgen
-    // or just a simple text file
+    //
+    /*!
+     * \brief check if the sample file is of the sample format specified by bgen
+     *        or just a simple text file
+     * \return
+     */
     bool check_is_sample_format();
-    std::vector<SNP> gen_snp_vector(const double geno, const double maf,
-                                    const double info_score,
-                                    const double hard_threshold,
-                                    const bool hard_coded, Region& exclusion,
-                                    const std::string& out_prefix,
+    /*!
+     * \brief Generate the SNP vector
+     * \param commander contain the user input
+     * \param exclusion contain the exclusion region information
+     * \param target contain the target genotype (only for m_is_ref)
+     * \return a vector containing the SNP vector or a empty factor if m_is_ref
+     * = T
+     */
+    std::vector<SNP> gen_snp_vector(const Commander& commander,
+                                    Region& exclusion,
                                     Genotype* target = nullptr);
+    /*!
+     * \brief Read in the context information for the bgen. This will propergate
+     * the m_context_map
+     * \param prefix is the input bgen file prefix
+     */
     void get_context(std::string& prefix);
+    /*!
+     * \brief Check if the sample information and ordering of the bgen file
+     *        matched the sample / phenotype file
+     * \param bgen_name is the name of the bgen file
+     * \param context is the context object
+     * \return true if the sample is consistent
+     */
     bool check_sample_consistent(const std::string& bgen_name,
                                  const genfile::bgen::Context& context);
 
