@@ -94,6 +94,12 @@ public:
     }
     inline void set_flipped() { m_flipped = true; };
     std::string get_rs() const { return m_rs; };
+    /*!
+     * \brief Function to sort a vector of SNP by their chr then by their
+     * p-value
+     * \param input is the vector containing the SNPs
+     * \return return a vector containing index to the sort order of the input
+     */
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     static void sort_snp_for_perm(std::vector<size_t>& index,
                                   const std::vector<SNP>& input);
