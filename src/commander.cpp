@@ -1993,6 +1993,16 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
                              "permutation (for competitive p-value) or PRSice "
                              "base permutation (--perm)");
     }
+    if (m_gtf.empty() && m_background.empty() && m_perform_set_perm) {
+        // by default, if background is not provided, we will use the gtf as the
+        // background, otherwise, we will use the whole genome as the background
+        error_message.append("Warrning: Background file and gtf file not "
+                             "provided. Will use the whole genome as the "
+                             "background for competitive p-value calculation");
+        m_full_background = true;
+        message["full-back"] = "";
+    }
+
     return !error;
 }
 
