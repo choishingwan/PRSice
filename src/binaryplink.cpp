@@ -621,6 +621,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
                                        "File\n";
                             }
                         }
+                        m_mismatch_file_output = true;
                         mismatch_snp_record
                             << "Reference\t" << bim_token[+BIM::RS] << "\t"
                             << target->m_existed_snps[target_index].chr()
