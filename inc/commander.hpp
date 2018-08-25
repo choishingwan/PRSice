@@ -127,7 +127,7 @@ public:
      * \brief Get clumping distance in \b bp
      * \return Clumping distance in bp
      */
-    double clump_dist() const { return m_clump_distance; }
+    int clump_dist() const { return m_clump_distance; }
     /*!
      * \brief Check if user want to skip clumping
      * \return true if user want to skip clumping
@@ -531,6 +531,11 @@ public:
      * \return Return true if we want to perform set based permutation
      */
     bool perform_set_perm() const { return m_perform_set_perm; }
+    /*!
+     * \brief Check if we want the whole genome to be act as the background
+     * \return True if we want the whole genome to be used as the background
+     */
+    bool genome_wide_background() const { return m_full_background; }
     // prslice
     bool perform_prslice() const { return m_perform_prslice; }
     /*!
