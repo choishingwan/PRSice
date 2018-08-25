@@ -19,15 +19,22 @@
 std::mutex PRSice::lock_guard;
 void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 {
-    std::vector<std::string> pheno_header = c_commander.pheno_col();
-    std::string pheno_file = c_commander.pheno_file();
+    const std::vector<std::string> pheno_header = c_commander.pheno_col();
+    const std::string pheno_file = c_commander.pheno_file();
     std::string message = "";
     if (pheno_file.empty()) {
+        // user did not provide a phenotype file, will use the information on
+        // the fam file or sample file as input
         pheno_info.use_pheno = false;
+        // we will still need to know if the sample is binary or not. As no
+        // phenotype file is provided, there can only be one phenotype, thus the
+        // first entry of the binary_target should correspond to the binary
+        // status of our phenotype
         pheno_info.binary.push_back(c_commander.is_binary(0));
     }
     else
     {
+        // user provided the phenotype file
         std::ifstream pheno;
         pheno.open(pheno_file.c_str());
         if (!pheno.is_open()) {
@@ -36,7 +43,8 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             throw std::runtime_error(error_message);
         }
         std::string line;
-        std::getline(pheno, line); // assume header line
+        // read in the header line to check if the phenotype is here
+        std::getline(pheno, line);
         if (line.empty()) {
             throw std::runtime_error(
                 "Cannot have empty header line for phenotype file!");
@@ -44,12 +52,19 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         pheno.close();
         misc::trim(line);
         std::vector<std::string> col = misc::split(line);
-        if (col.size() < (size_t)(2 + !m_ignore_fid)) {
+        // we need at least 2 columns (IID + Phenotype)
+        // or 3 if m_ignore_fid != T
+        if (col.size() < static_cast<std::vector<std::string>::size_type>(
+                             2 + !m_ignore_fid))
+        {
             throw std::runtime_error(
                 "Error: Not enough column in Phenotype file. "
                 "Have you use the --ignore-fid option");
         }
+        // the first column must be considered as the ID
         std::string sample_id = col[0];
+        // if we should not ignore the fid, we should then use both the first
+        // and second column as our sample ID
         if (!m_ignore_fid && col.size() > 1) sample_id.append("+" + col[1]);
         message.append("Check Phenotype file: " + pheno_file + "\n");
         message.append("Column Name of Sample ID: " + sample_id + "\n");
@@ -57,33 +72,74 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
                        "the column name will be displayed as the Sample ID "
                        "which is ok.\n");
         bool found = false;
+        // now we want to check if the file contain the phenotype header
         std::unordered_map<std::string, bool> dup_col;
         if (pheno_header.size() == 0) {
+            // user did not provide a phenotype name. We will therefore simply
+            // use the first entry
             pheno_info.use_pheno = true;
+            // The index of the phenotype will be 1 (IID Phenotype) or 2 (FID
+            // IID Pheno)
             pheno_info.col.push_back(1 + !m_ignore_fid);
-
+            // And we will use the default name (as file without header is
+            // still consider as a valid input)
             pheno_info.name.push_back("Phenotype");
+            // phenotype order correspond to the phenotype name in the phenotype
+            // name vector. Here we place 0 as a place holder
             pheno_info.order.push_back(0);
             pheno_info.binary.push_back(c_commander.is_binary(0));
-            message.append("Phenotype Name: " + col[pheno_info.col.back()]
-                           + "\n");
+            message.append(
+                "Phenotype Name: "
+                + col[static_cast<std::vector<std::string>::size_type>(
+                      pheno_info.col.back())]
+                + "\n");
         }
         else
         {
-            for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno) {
+            // if user provide the phenotype names, we will go through the
+            // phenotype header and try to identify the corresponding phenotype
+            // index
+            for (std::vector<std::string>::size_type i_pheno = 0;
+                 i_pheno < pheno_header.size(); ++i_pheno)
+            {
                 if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
+                    // we will ignore any duplicate phenotype input.
+                    // it should still be ok as the binary_target should have
+                    // the same length as the phenotype column name and we will
+                    // store the binary target information
                     found = false;
                     dup_col[pheno_header[i_pheno]] = true;
                     // start from 1+!m_ignore_fid to skip the iid and fid part
-                    for (size_t i_column = 1 + !m_ignore_fid;
+                    for (std::vector<std::string>::size_type i_column =
+                             1 + !m_ignore_fid;
                          i_column < col.size(); ++i_column)
                     {
-                        if (col[i_column].compare(pheno_header[i_pheno]) == 0) {
+                        // now go through each column of the input file to
+                        // identify the index
+                        // NOTE: If there are multiple column with the same
+                        // column name that the user required, we will terminate
+                        // as we don't know which one to use
+                        if (col[i_column] == (pheno_header[i_pheno])) {
+                            if (found) {
+                                std::string error_message =
+                                    "Error: Multiple Column of your phenotype "
+                                    "file matches with the required phenotype "
+                                    "name: "
+                                    + pheno_header[i_pheno];
+                                throw std::runtime_error(error_message);
+                            }
                             found = true;
                             pheno_info.use_pheno = true;
-                            pheno_info.col.push_back(i_column);
+                            // store the column index
+                            pheno_info.col.push_back(
+                                static_cast<int>(i_column));
+                            // store the phenotype name
                             pheno_info.name.push_back(pheno_header[i_pheno]);
-                            pheno_info.order.push_back(i_pheno);
+                            // store the order of the phenotype name in the
+                            // pheno-col
+                            pheno_info.order.push_back(
+                                static_cast<int>(i_pheno));
+                            // store the binary information of teh phenotype
                             pheno_info.binary.push_back(
                                 c_commander.is_binary(i_pheno));
                             break;
@@ -98,17 +154,15 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             }
         }
     }
-    // TODO: Might want to error out when duplicated column is detected within
-    // the phenotype file
     size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
     message.append("There are a total of " + std::to_string(num_pheno)
                    + " phenotype to process\n");
     reporter.report(message);
 }
 
-void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
-                         Genotype& target, Reporter& reporter,
-                         const bool prslice)
+void PRSice::init_matrix(const Commander& c_commander,
+                         const intptr_t pheno_index, Genotype& target,
+                         Reporter& reporter, const bool prslice)
 {
     m_null_r2 = 0.0;
     m_phenotype = Eigen::VectorXd::Zero(0);
@@ -811,7 +865,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
 }
 
 void PRSice::run_prsice(const Commander& c_commander, const Region& region,
-                        const size_t pheno_index, const size_t region_index,
+                        const intptr_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
     // target.reset_sample_prs();
@@ -1297,7 +1351,7 @@ void PRSice::thread_perm(
 
 void PRSice::prep_output(const Commander& c_commander, Genotype& target,
                          std::vector<std::string> region_name,
-                         const size_t pheno_index)
+                         const intptr_t pheno_index)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
@@ -1417,7 +1471,7 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
     if (all_out.is_open()) all_out.close();
 }
 void PRSice::output(const Commander& c_commander, const Region& region,
-                    const size_t pheno_index, const size_t region_index,
+                    const intptr_t pheno_index, const size_t region_index,
                     Genotype& target)
 {
     std::vector<double> prev = c_commander.prevalence();
@@ -1977,7 +2031,7 @@ void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
 */
 
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
-                             const size_t pheno_index)
+                             const intptr_t pheno_index)
 {
     // here we know the R2 and p-value of all pathways
     // storage should be
