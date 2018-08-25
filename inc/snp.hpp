@@ -217,9 +217,18 @@ public:
     bool clumped() const { return m_clumped; };
     bool valid() const { return m_valid; };
     void invalidate() { m_valid = false; };
-    void set_low_bound(uintptr_t low) { m_low_bound = low; };
-
-    void set_up_bound(uintptr_t up) { m_up_bound = up; };
+    /*!
+     * \brief Set the lower boundary (index of m_existed_snp) of this SNP if it
+     * is used as the index
+     * \param low the designated bound index
+     */
+    void set_low_bound(intptr_t low) { m_low_bound = low; }
+    /*!
+     * \brief Set the upper boundary (index of m_existed_snp) of this SNP if it
+     * is used as the index
+     * \param up the designated bound index
+     */
+    void set_up_bound(intptr_t up) { m_up_bound = up; }
     bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
                     uint32_t& missing)
     {
@@ -238,8 +247,8 @@ public:
         m_missing = missing;
         m_has_count = true;
     }
-    uintptr_t up_bound() const { return m_up_bound; };
-    uintptr_t low_bound() const { return m_low_bound; };
+    intptr_t up_bound() const { return m_up_bound; };
+    intptr_t low_bound() const { return m_low_bound; };
 
 private:
     // basic info
@@ -260,8 +269,8 @@ private:
     intptr_t m_chr = -1;
     intptr_t m_category = -1;
     intptr_t m_loc = -1;
-    uintptr_t m_low_bound = 0;
-    uintptr_t m_up_bound = 0;
+    intptr_t m_low_bound = 0;
+    intptr_t m_up_bound = 0;
     uint32_t m_homcom = 0;
     uint32_t m_het = 0;
     uint32_t m_homrar = 0;
