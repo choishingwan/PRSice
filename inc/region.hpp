@@ -92,7 +92,6 @@ public:
      */
     void update_flag(const intptr_t chr, const std::string& rs, intptr_t loc,
                      std::vector<uintptr_t>& flag);
-    int get_count(size_t i) const { return m_region_snp_count.at(i); }
     /*!
      * \brief This will print a log of the number of region included
      * \param reporter the logger
@@ -135,7 +134,7 @@ public:
                                      "calculation of competitive P-value!");
         }
     }
-    size_t num_post_clump_snp(size_t i_region) const
+    int num_post_clump_snp(size_t i_region) const
     {
         return m_region_post_clump_count.at(i_region);
     }
