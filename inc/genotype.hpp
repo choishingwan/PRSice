@@ -134,6 +134,7 @@ public:
         m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
         return true;
     }
+
     bool sort_by_coordinates()
     {
         if (m_existed_snps.size() == 0) return false;
@@ -141,8 +142,7 @@ public:
                   SNP::compare_snp);
         return true;
     }
-    void print_snp(std::string& output, double threshold,
-                   const size_t region_index);
+
     /*!
      * \brief Read in the base file and add the required information to SNP
      * \param c_commander contain all user input
@@ -153,14 +153,15 @@ public:
                    Reporter& reporter);
     /*!
      * \brief Function to carry out clumping. One of the most complicated
-     * function
+     * function.
      *
      * \param reference is the reference genotype object. Will need to use it
      * for clumping. When target is used for clumping, reference=this
      *
      * \param reporter the logger
      * \param use_pearson indicate if we want to perform pearson correlation
-     * calculation instead of the haplotype likelihood clumping
+     * calculation instead of the haplotype likelihood clumping. If this is
+     * true, efficient_clumping will call the pearson_clumping algorithm
      */
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
@@ -309,7 +310,6 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    size_t prepare_prslice(const size_t& window_size);
 
 protected:
     // friend with all child class so that they can also access the protected
@@ -339,7 +339,6 @@ protected:
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<size_t> m_background_snp_index;
-    std::vector<size_t> m_prslice_range;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     // std::vector<int32_t> m_chrom_start;
@@ -423,22 +422,39 @@ protected:
      * \param chr_error indicate if the error is related to chromosome number
      * too big
      * \param error_message contain the error message
-     * \return true if we
-     * want to skip this chromosome
+     * \return true if we want to skip this chromosome
      */
     bool chr_code_check(int32_t chr_code, bool& sex_error, bool& chr_error,
                         std::string& error_message);
-    // responsible for reading in the sample
+    /*!
+     * \brief Function to read in the sample. Any subclass must implement this
+     * function. They \b must initialize the \b m_sample_info \b m_founder_info
+     * \b m_founder_ct \b m_sample_ct \b m_prs_info \b m_in_regression and \b
+     * m_tmp_genotype (optional)
+     * \return vector containing the sample information
+     */
     virtual std::vector<Sample_ID> gen_sample_vector()
     {
         return std::vector<Sample_ID>(0);
     }
+    /*!
+     * \brief Function to read in the SNP information. Any subclass must
+     * implement this function \return a vector containing the SNP information
+     */
     virtual std::vector<SNP> gen_snp_vector(const Commander& /*commander*/,
                                             Region& /*exclusion*/,
                                             Genotype* /*target = nullptr*/)
     {
         return std::vector<SNP>(0);
     }
+    /*!
+     * \brief Function to read in the genotype in PLINK binary format. Any
+     * subclass must implement this function to assist the processing of their
+     * specific file type. The first argument is the genotype vector use to
+     * store the PLINK binary whereas the second parameter is the streampos,
+     * allowing us to seekg to the specific location of the file as indicate in
+     * the thrid parameter
+     */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
                                       const std::streampos /*byte_pos*/,
                                       const std::string& /*file_name*/)
