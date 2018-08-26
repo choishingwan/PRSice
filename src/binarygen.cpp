@@ -573,6 +573,9 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
     bool dummy;
     m_intermediate_file = out_prefix + ".inter";
     m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    // we initialize the plink converter with the sample inclusion vector and
+    // also the tempory genotype vector list. We also provide the hard coding
+    // threshold
     PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
                            m_hard_threshold);
     m_sample_mask.resize(pheno_nm_ctv2);

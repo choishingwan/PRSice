@@ -115,7 +115,7 @@ private:
         {
             // if the location is not equal and seek fail, we have problem
             // reading the bed file
-            throw std::runtime_error("Error: Cannot read the bed file!");
+            throw std::runtime_error("Error: Cannot seek within the bed file!");
         }
         // now we start reading / parsing the binary from the file
         if (load_and_collapse_incl(
