@@ -158,26 +158,34 @@ public:
             return false; // cannot flip nor match
     };
 
-    intptr_t chr() const { return m_chr; };
-    intptr_t loc() const { return m_loc; };
-    intptr_t category() const { return m_category; };
-    double p_value() const { return m_p_value; };
-    double stat() const { return m_stat; };
-    double get_threshold() const { return m_p_threshold; };
-    std::streampos byte_pos() const { return m_target_byte_pos; };
-    std::streampos ref_byte_pos() const { return m_ref_byte_pos; };
-    std::string file_name() const { return m_target_file; };
-    std::string ref_file_name() const { return m_ref_file; };
-    std::string rs() const { return m_rs; };
-    std::string ref() const { return m_ref; };
-    std::string alt() const { return m_alt; };
-    bool is_flipped() { return m_flipped; };
+    intptr_t chr() const { return m_chr; }
+    intptr_t loc() const { return m_loc; }
+    intptr_t category() const { return m_category; }
+    /*!
+     * \brief Get the p-value of the SNP
+     * \return the p-value of the SNP
+     */
+    double p_value() const { return m_p_value; }
+    double stat() const { return m_stat; }
+    /*!
+     * \brief Return the p-value threshold of which this SNP falls into
+     * \return  the p-value threshold
+     */
+    double get_threshold() const { return m_p_threshold; }
+    std::streampos byte_pos() const { return m_target_byte_pos; }
+    std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
+    std::string file_name() const { return m_target_file; }
+    std::string ref_file_name() const { return m_ref_file; }
+    std::string rs() const { return m_rs; }
+    std::string ref() const { return m_ref; }
+    std::string alt() const { return m_alt; }
+    bool is_flipped() { return m_flipped; }
 
     inline bool in(size_t i) const
     {
         if (i / BITCT >= m_max_flag_index)
             throw std::out_of_range("Out of range for flag");
-        return ((m_flags[i / BITCT] >> (i % BITCT)) & 1);
+        return (IS_SET(m_flags.data(), i));
     }
     void set_flag(Region& region)
     {
@@ -185,8 +193,11 @@ public:
         m_flags.resize(m_max_flag_index);
         region.update_flag(m_chr, m_rs, m_loc, m_flags);
     };
-
-    void set_clumped() { m_clumped = true; };
+    /*!
+     * \brief Set the SNP to be clumped such that it will no longer be
+     * considered in clumping
+     */
+    void set_clumped() { m_clumped = true; }
     void clump(SNP& target, double r2, bool use_proxy, double proxy = 2)
     {
         if (target.clumped()) return;
@@ -219,10 +230,14 @@ public:
         // protect from other SNPs tempering its flags
     }
 
-    bool remove() const { return m_remove; };
-    bool clumped() const { return m_clumped; };
-    bool valid() const { return m_valid; };
-    void invalidate() { m_valid = false; };
+    bool remove() const { return m_remove; }
+    /*!
+     * \brief Indicate if this snp is clumped
+     * \return  Return true if this is clumped
+     */
+    bool clumped() const { return m_clumped; }
+    bool valid() const { return m_valid; }
+    void invalidate() { m_valid = false; }
     /*!
      * \brief Set the lower boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
@@ -253,8 +268,16 @@ public:
         m_missing = missing;
         m_has_count = true;
     }
-    intptr_t up_bound() const { return m_up_bound; };
-    intptr_t low_bound() const { return m_low_bound; };
+    /*!
+     * \brief Obtain the upper bound of the clump region correspond to this SNP
+     * \return the upper bound of the region
+     */
+    intptr_t up_bound() const { return m_up_bound; }
+    /*!
+     * \brief Obtain the lower bound of the clump region correspond to this SNP
+     * \return the lower bound of the region
+     */
+    intptr_t low_bound() const { return m_low_bound; }
 
 private:
     // basic info
