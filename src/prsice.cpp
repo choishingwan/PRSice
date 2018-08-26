@@ -1518,17 +1518,13 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     const bool perm = (c_commander.permutation() != 0);
 
     bool valid = m_best_index != -1;
-    if (!valid
-        || region.get_count(region_index)
-               == 0) // we know regions with 0 SNP will not have valid PRS
-    {
-        if (region.get_count(region_index) != 0) {
-            fprintf(stderr, "Error: No valid PRS ");
-            if (m_prset)
-                fprintf(stderr, "for %s",
-                        region.get_name(region_index).c_str());
-            fprintf(stderr, "!\n");
-        }
+    if (!valid) {
+        // we will not perform any operation to regions with 0 SNP to start
+        // with, so we can skip the check for num SNP in region
+        fprintf(stderr, "Error: No valid PRS ");
+        if (m_prset)
+            fprintf(stderr, "for %s", region.get_name(region_index).c_str());
+        fprintf(stderr, "!\n");
         return;
     }
     std::string out_prsice = output_prefix + ".prsice";
@@ -1891,52 +1887,7 @@ void PRSice::produce_null_prs(
         q.emplace(std::make_pair(std::vector<double>(), 0), num_consumer);
     }
 }
-// might want to remove num_selected_snps?
-/*
-void PRSice::produce_null_prs(Thread_Queue<std::vector<double>>& q,
-                              Genotype& target, size_t num_consumer,
-                              size_t num_perm, size_t set_size,
-                              size_t num_selected_snps, double original_p,
-                              bool require_standardize)
-{
-    size_t processed = 0;
-    const size_t num_sample = m_matrix_index.size();
-    const size_t num_regress_sample = m_independent_variables.rows();
 
-    std::mt19937 g(m_seed);
-    const size_t num_background = target.num_background();
-    std::vector<size_t> background = target.background_index();
-    while (processed < num_perm) {
-        size_t begin = 0;
-        // size_t num_snp = set_size;
-        size_t num_snp = num_selected_snps;
-        while (num_snp--) {
-            std::uniform_int_distribution<int> dist(begin, num_background - 1);
-            size_t r = background[begin];
-            size_t advance_index = dist(g);
-            background[begin] = background[advance_index];
-            background[advance_index] = r;
-            ++begin;
-        }
-        target.get_null_score(set_size, num_selected_snps, background,
-                              require_standardize);
-        std::vector<double> prs(num_regress_sample, 0);
-        for (size_t sample_id = 0; sample_id < num_sample; ++sample_id) {
-            prs[sample_id] =
-                target.calculate_score(m_score, m_matrix_index[sample_id]);
-        }
-
-        q.emplace(std::move(prs), num_consumer);
-        m_analysis_done++;
-        print_progress();
-        processed++;
-    }
-    // send termination signal to the consumers
-    for (size_t i = 0; i < num_consumer; ++i) {
-        q.emplace(std::vector<double>(), num_consumer);
-    }
-}
-*/
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
     std::map<uint32_t, std::vector<uint32_t>>& set_index,
@@ -1985,50 +1936,6 @@ void PRSice::consume_prs(
         }
     }
 }
-/*
-void PRSice::consume_prs(Thread_Queue<std::vector<double>>& q,
-                         double original_p, int& num_significant,
-                         bool is_binary, bool store_p)
-{
-    int cur_num_significant = 0;
-    std::vector<double> cur_null_p;
-    Eigen::MatrixXd independent = m_independent_variables;
-    const size_t num_regress_sample = m_independent_variables.rows();
-    while (true) {
-        std::vector<double> prs;
-        q.pop(prs);
-
-        if (prs.empty()) {
-
-            // all job finished
-            break;
-        }
-        for (size_t i_sample = 0; i_sample < num_regress_sample; ++i_sample) {
-            independent(i_sample, 1) = prs[i_sample];
-        }
-        double coefficient, se, r2, r2_adjust;
-        double obs_p = 2.0; // for safety reason, make sure it is out bound
-        if (is_binary) {
-            Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
-                            se, 25, 1, true);
-        }
-        else
-        {
-            Regression::linear_regression(m_phenotype, independent, obs_p, r2,
-                                          r2_adjust, coefficient, se, 1, true);
-        }
-        // thread_mutex
-        cur_num_significant += (original_p > obs_p);
-        cur_null_p.push_back(obs_p);
-    }
-
-    {
-        std::unique_lock<std::mutex> locker(m_thread_mutex);
-
-        num_significant += cur_num_significant;
-    }
-}
-*/
 
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
                              const intptr_t pheno_index)
