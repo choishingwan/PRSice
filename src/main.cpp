@@ -131,11 +131,6 @@ int main(int argc, char* argv[])
                 // only load SNPs that can be found in the target file index
                 reference_file->load_snps(commander, exclusion_region, verbose,
                                           reporter, target_file);
-                // When reading the reference file, we actually update the
-                // SNP list in target file. This lead to the index search in
-                // target to have the wrong index. To avoid that, we need to
-                // update the SNP index accordingly
-                target_file->update_snp_index();
             }
             std::string message = "Start processing " + base_name + "\n";
             message.append("==============================\n");

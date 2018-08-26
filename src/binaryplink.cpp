@@ -657,7 +657,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
     // try to release memory
     snp_info.shrink_to_fit();
     if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
-        // remove any SNP that is not retained
+        // remove any SNP that is not retained, the ref_retain vector should
+        // have the same ID as the target->m_existed_snps so we can use it
+        // directly for SNP removal
         target->m_existed_snps.erase(
             std::remove_if(
                 target->m_existed_snps.begin(), target->m_existed_snps.end(),
@@ -666,8 +668,14 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
                 }),
             target->m_existed_snps.end());
         target->m_existed_snps.shrink_to_fit();
+
+        // When reading the reference file, we actually update the
+        // SNP list in target file. This lead to the index search in
+        // target to have the wrong index. To avoid that, we need to
+        // update the SNP index accordingly
+        target->update_snp_index();
     }
-    if (!m_is_ref && duplicated_snp.size() != 0) {
+    if (duplicated_snp.size() != 0) {
         // there are duplicated SNPs, we will need to terminate with the
         // information
         std::ofstream log_file_stream;
@@ -677,35 +685,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
             std::string error_message = "Error: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for (auto&& snp : m_existed_snps) {
-            if (duplicated_snp.find(snp.rs()) != duplicated_snp.end())
-                log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
-                                << snp.loc() << "\t" << snp.ref() << "\t"
-                                << snp.alt() << "\n";
-        }
-        log_file_stream.close();
-        std::string error_message =
-            "Error: A total of " + std::to_string(duplicated_snp.size())
-            + " duplicated SNP ID detected out of "
-            + misc::to_string(snp_info.size())
-            + " input SNPs! Valid SNP ID (post --extract / "
-              "--exclude, non-duplicated SNPs) stored at "
-            + dup_name + ". You can avoid this error by using --extract "
-            + dup_name;
-        throw std::runtime_error(error_message);
-    }
-    else if (duplicated_snp.size() != 0)
-    {
-        // there are duplicated SNPs, we will need to terminate with the
-        // information
-        std::ofstream log_file_stream;
-        std::string dup_name = out_prefix + ".valid";
-        log_file_stream.open(dup_name.c_str());
-        if (!log_file_stream.is_open()) {
-            std::string error_message = "Error: Cannot open file: " + dup_name;
-            throw std::runtime_error(error_message);
-        }
-        for (auto&& snp : target->m_existed_snps) {
+        for (auto&& snp : (m_is_ref ? target->m_existed_snps : m_existed_snps))
+        {
             if (duplicated_snp.find(snp.rs()) != duplicated_snp.end())
                 log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                                 << snp.loc() << "\t" << snp.ref() << "\t"

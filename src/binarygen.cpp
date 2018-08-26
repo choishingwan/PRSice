@@ -926,8 +926,13 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
                 }),
             target->m_existed_snps.end());
         target->m_existed_snps.shrink_to_fit();
+        // When reading the reference file, we actually update the
+        // SNP list in target file. This lead to the index search in
+        // target to have the wrong index. To avoid that, we need to
+        // update the SNP index accordingly
+        target->update_snp_index();
     }
-    if (!m_is_ref && duplicated_snps.size() != 0) {
+    if (duplicated_snps.size() != 0) {
         // there are duplicated SNPs
         std::ofstream log_file_stream;
         std::string dup_name = out_prefix + ".valid";
@@ -936,35 +941,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
             std::string error_message = "Error: Cannot open file: " + dup_name;
             throw std::runtime_error(error_message);
         }
-        for (auto&& snp : snp_res) {
-            if (duplicated_snps.find(snp.rs()) != duplicated_snps.end())
-                continue;
-            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
-                            << snp.loc() << "\t" << snp.ref() << "\t"
-                            << snp.alt() << "\n";
-        }
-        log_file_stream.close();
-        std::string error_message =
-            "Error: A total of " + std::to_string(duplicated_snps.size())
-            + " duplicated SNP ID detected out of "
-            + std::to_string(snp_res.size())
-            + " input SNPs!. Valid SNP ID stored at " + dup_name
-            + ". You can avoid this error by using --extract " + dup_name;
-        throw std::runtime_error(error_message);
-    }
-    else if (duplicated_snps.size() != 0)
-    {
-        // there are duplicated SNPs
-        // only SNP that passed all QC and that are included to target will
-        // engage in duplication check for the target file
-        std::ofstream log_file_stream;
-        std::string dup_name = out_prefix + ".valid";
-        log_file_stream.open(dup_name.c_str());
-        if (!log_file_stream.is_open()) {
-            std::string error_message = "Error: Cannot open file: " + dup_name;
-            throw std::runtime_error(error_message);
-        }
-        for (auto&& snp : target->m_existed_snps) {
+        for (auto&& snp : (m_is_ref ? target->m_existed_snps : snp_res)) {
             if (duplicated_snps.find(snp.rs()) != duplicated_snps.end())
                 continue;
             log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
