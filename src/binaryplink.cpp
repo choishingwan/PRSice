@@ -233,6 +233,9 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
             // not be included in the regression unless otherwise
             SET_BIT(sample_index, m_sample_include.data());
             m_num_non_founder++;
+            // if we want to keep it as found, we will store it as founder in
+            // the sample ID, which is only use for PRS calculation, not for LD
+            founder = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
         if (token[+FAM::SEX] == "1") {
@@ -795,22 +798,8 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
 BinaryPlink::~BinaryPlink() {}
 
 
-void BinaryPlink::read_score(std::vector<size_t>& index, bool reset_zero)
-{
-    // region_index should be the background index
-    switch (m_model)
-    {
-    case MODEL::HETEROZYGOUS: read_score(index, 0, 1, 0, reset_zero); break;
-    case MODEL::DOMINANT: read_score(index, 0, 1, 1, reset_zero); break;
-    case MODEL::RECESSIVE: read_score(index, 0, 0, 1, reset_zero); break;
-    default: read_score(index, 0, 1, 2, reset_zero); break;
-    }
-}
-
-
-void BinaryPlink::read_score(std::vector<size_t>& index_bound,
-                             uint32_t homcom_wt, uint32_t het_wt,
-                             uint32_t homrar_wt, bool reset_zero)
+void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
+                             bool reset_zero)
 {
     double stat, maf, adj_score, miss_score;
     const uintptr_t final_mask = get_final_mask(m_sample_ct);
@@ -828,13 +817,13 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;
-    uint32_t homcom_weight = homcom_wt;
-    uint32_t het_weight = het_wt;
-    uint32_t homrar_weight = homrar_wt;
+    double homcom_weight = m_homcom_weight;
+    double het_weight = m_het_weight;
+    double homrar_weight = m_homrar_weight;
     intptr_t nanal;
     // For set zero, miss_count will become 0
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
-    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const int miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     bool not_first = !reset_zero;
@@ -898,9 +887,10 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
             cur_snp.invalidate();
             continue;
         }
-        homcom_weight = homcom_wt;
-        het_weight = het_wt;
-        homrar_weight = homrar_wt;
+
+        homcom_weight = m_homcom_weight;
+        het_weight = m_het_weight;
+        homrar_weight = m_homrar_weight;
         maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
               / (double) (nanal * 2.0);
         if (cur_snp.is_flipped()) {
@@ -967,13 +957,13 @@ void BinaryPlink::read_score(std::vector<size_t>& index_bound,
 }
 
 
-void BinaryPlink::read_score(size_t start_index, size_t end_bound,
-                             uint32_t homcom_wt, uint32_t het_wt,
-                             uint32_t homrar_wt, const size_t region_index,
-                             bool set_zero)
+void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
+                             const size_t region_index, bool set_zero)
 {
-    const uintptr_t final_mask = get_final_mask(m_sample_ct);
-    // for array size
+    // for removing unwanted bytes from the end of the genotype vector
+    const uintptr_t final_mask =
+        get_final_mask(static_cast<uint32_t>(m_sample_ct));
+    // this is use for initialize the array sizes
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
@@ -982,34 +972,47 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
+    // for storing the count of each observation
     uint32_t homrar_ct = 0;
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;
-    uint32_t homcom_weight = homcom_wt;
-    uint32_t het_weight = het_wt;
-    uint32_t homrar_weight = homrar_wt;
-    uint32_t temp_weight = 0;
-    // For set zero, miss_count will become 0
+    // those are the weight (0,1,2) for each genotype observation
+    double homcom_weight = m_homcom_weight;
+    double het_weight = m_het_weight;
+    double homrar_weight = m_homrar_weight;
+    // this is required if we want to calculate the MAF from the genotype (for
+    // imputation of missing genotype)
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
-    const uint32_t miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    // if we want to set the missing score to zero, miss_count will equal to 0,
+    // 1 otherwise
+    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    // this indicate if we want the mean of the genotype to be 0 (missingness =
+    // 0)
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
+    // this indicate if we want to impute the missing genotypes using the
+    // population mean
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
+    // check if it is not the frist run, if it is the first run, we will reset
+    // the PRS to zero instead of addint it up
     bool not_first = !set_zero;
+    // for storing the missing counts
     intptr_t nanal;
     double stat, maf, adj_score, miss_score;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
     }
-    // index is w.r.t. partition, which contain all the information
+    // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
         // for each SNP
         auto&& cur_snp = m_existed_snps[i_snp];
-        if (m_cur_file.empty() || m_cur_file.compare(cur_snp.file_name()) != 0)
-        {
-            // If we are processing a new file
+        // only read this SNP if it falls within our region of interest or if
+        // this SNP is invalid
+        if (!cur_snp.in(region_index) || !cur_snp.valid()) continue;
+        if (m_cur_file != cur_snp.file_name()) {
+            // If we are processing a new file we will need to read it
             if (m_bed_file.is_open()) {
                 m_bed_file.close();
             }
@@ -1021,10 +1024,9 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
                     "Error: Cannot open bed file: " + bedname;
                 throw std::runtime_error(error_message);
             }
+            // reset the m_prev_loc flag to 0
             m_prev_loc = 0;
         }
-        // only read this SNP if it falls within our region of interest
-        if (!cur_snp.in(region_index)) continue;
         // current location of the snp in the bed file
         // allow for quick jumping
         // very useful for read score as most SNPs might not
@@ -1033,55 +1035,80 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         if (m_prev_loc != cur_line
             && !m_bed_file.seekg(cur_line, std::ios_base::beg))
         {
+            // only jump to the line if the cur_line does not equal to the
+            // current position. because bed offset != 0, the first SNP will
+            // always be seeked
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
-        m_prev_loc = cur_line + (std::streampos) unfiltered_sample_ct4;
-        // loadbuf_raw is the temporary
-        // loadbuff is where the genotype will be located
-        if (load_and_collapse_incl(m_unfiltered_sample_ct, m_sample_ct,
-                                   m_sample_include.data(), final_mask, false,
-                                   m_bed_file, m_tmp_genotype.data(),
-                                   genotype.data()))
+
+        // we now read the genotype from the file by calling
+        // load_and_collapse_incl
+
+        // important point to note here is the use of m_sample_include and
+        // m_sample_ct instead of using the m_founder m_founder_info as the
+        // founder vector is for LD calculation whereas the sample_include is
+        // for PRS
+        if (load_and_collapse_incl(
+                static_cast<uint32_t>(m_unfiltered_sample_ct),
+                static_cast<uint32_t>(m_sample_ct), m_sample_include.data(),
+                final_mask, false, m_bed_file, m_tmp_genotype.data(),
+                genotype.data()))
         {
             throw std::runtime_error("Error: Cannot read the bed file!");
         }
+        // directly read in the current location
+        m_prev_loc = m_bed_file.tellg();
         // try to calculate MAF here
-        /*
-        genovec_3freq(genotype.data(), sample_include2.data(),
-        pheno_nm_ctv2, &missing_ct, &het_ct, &homcom_ct);
-                      */
-        bool has_count =
-            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
 
-        if (!has_count) {
+        // if we haven't previously calculated the counts, we will need to count
+        // it using PLINK's function
+        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct)) {
+            // plink functions
             genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
                           &missing_ct, &het_ct, &homcom_ct);
+            // now set this piece of information, might become useful if we are
+            // processing the second phenotype / second region
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
-        nanal = m_sample_ct - missing_ct;
+        // number of sample with valid genotypes
+        nanal = static_cast<intptr_t>(m_sample_ct) - missing_ct;
         if (nanal == 0) {
+            // if all samples have a missing genotype, we will remove this SNP
             cur_snp.invalidate();
             continue;
         }
-        homcom_weight = homcom_wt;
-        het_weight = het_wt;
-        homrar_weight = homrar_wt;
-        maf = (double) (het_ct * het_weight + homrar_weight * homrar_ct)
-              / (double) (nanal * 2.0);
+        // reset the weight (as we might have flipped it later on)
+        homcom_weight = m_homcom_weight;
+        het_weight = m_het_weight;
+        homrar_weight = m_homrar_weight;
+        maf =
+            static_cast<double>(het_ct * het_weight + homrar_weight * homrar_ct)
+            / static_cast<double>(nanal * 2.0);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
             // swap the weighting
-            temp_weight = homcom_weight;
-            homcom_weight = homrar_weight;
-            homrar_weight = temp_weight;
+            std::swap(homcom_weight, homrar_weight);
         }
-        stat = cur_snp.stat() * 2; // Multiply by ploidy
+        // Multiply by ploidy
         // we don't allow the use of center and mean impute together
         // if centre, missing = 0 anyway (kinda like mean imputed)
         // centre is 0 if false
-        adj_score = stat * maf * is_centre;
-        miss_score = stat * maf * mean_impute;
+
+        stat = cur_snp.stat() * 2;
+        adj_score = 0;
+        if (is_centre) {
+            // as is_centre will never change, branch prediction might be rather
+            // accurate, therefore we don't need to do the complex
+            // stat*maf*is_centre
+            adj_score = stat * maf;
+        }
+
+        miss_score = 0;
+        if (mean_impute) {
+            // again, mean_impute is stable, branch prediction should be ok
+            miss_score = stat * maf * mean_impute;
+        }
 
 
         // now we go through the SNP vector
@@ -1091,66 +1118,117 @@ void BinaryPlink::read_score(size_t start_index, size_t end_bound,
         ulii = 0;
         do
         {
+            // ulii contain the numeric representation of the current genotype
             ulii = ~(*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
+                // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
                         - ONELU;
             }
+            // ujj sample index of the current genotype block
             ujj = 0;
             while (ujj < BITCT) {
+                // go through the whole genotype block
+                // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
+                // and the sample index can be calculated as uii+(ujj/2)
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
                 {
                 default:
-                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homcom_weight * stat * 0.5 - adj_score;
+                    if (not_first) {
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add 1 to the number of SNP
+                        ++sample_prs.num_snp;
+                        // add the current genotype weight to the score
+                        sample_prs.prs +=
+                            homcom_weight * stat * 0.5 - adj_score;
+                    }
+                    else
+                    {
+                        // reset the number of SNP to 1
+                        sample_prs.num_snp = 1;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homcom_weight * stat * 0.5 - adj_score;
+                    }
+
                     break;
                 case 1:
-                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + het_weight * stat * 0.5 - adj_score;
+                    if (not_first) {
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add 1 to the number of SNP
+                        ++sample_prs.num_snp;
+                        // add the current genotype weight to the score
+                        sample_prs.prs += het_weight * stat * 0.5 - adj_score;
+                    }
+                    else
+                    {
+                        // reset the number of SNP to 1
+                        sample_prs.num_snp = 1;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = het_weight * stat * 0.5 - adj_score;
+                    }
                     break;
                 case 3:
-                    sample_prs.num_snp = sample_prs.num_snp * not_first + 1;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homrar_weight * stat * 0.5 - adj_score;
+                    if (not_first) {
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add 1 to the number of SNP
+                        ++sample_prs.num_snp;
+                        // add the current genotype weight to the score
+                        sample_prs.prs +=
+                            homrar_weight * stat * 0.5 - adj_score;
+                    }
+                    else
+                    {
+                        // reset the number of SNP to 1
+                        sample_prs.num_snp = 1;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homrar_weight * stat * 0.5 - adj_score;
+                    }
                     break;
                 case 2:
-                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + miss_count;
+                    // handle missing sample
+                    if (not_first) {
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add 1 to the number of SNP if we are not setting
+                        // missing samples to 0
+                        sample_prs.num_snp += miss_count;
+                        // add the current genotype weight to the score
+                        sample_prs.prs += miss_score;
+                    }
+                    else
+                    {
+                        // add 1 to the number of SNP if we are not setting
+                        // missing samples to 0
+                        sample_prs.num_snp = miss_count;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = miss_score;
+                    }
                     break;
                 }
-                ulii &= ~((3 * ONELU) << ujj);
+                // ulii &= ~((3 * ONELU) << ujj);
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
                 ujj += 2;
             }
+            // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
+        // indicate that we've already read in the first SNP and no longer need
+        // to reset the PRS
         not_first = true;
-    }
-}
-void BinaryPlink::read_score(size_t start_index, size_t end_bound,
-                             const size_t region_index, bool set_zero)
-{
-    //	std::vector<size_t> index_bound(end_bound-start_index);
-    //  std::iota(index_bound.begin(), index_bound.end(), start_index);
-
-    switch (m_model)
-    {
-    case MODEL::HETEROZYGOUS:
-        read_score(start_index, end_bound, 0, 1, 0, region_index, set_zero);
-        break;
-    case MODEL::DOMINANT:
-        read_score(start_index, end_bound, 0, 1, 1, region_index, set_zero);
-        break;
-    case MODEL::RECESSIVE:
-        read_score(start_index, end_bound, 0, 0, 1, region_index, set_zero);
-        break;
-    default:
-        read_score(start_index, end_bound, 0, 1, 2, region_index, set_zero);
-        break;
     }
 }
