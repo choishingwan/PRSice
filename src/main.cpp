@@ -151,7 +151,6 @@ int main(int argc, char* argv[])
                     return -1;
                 }
                 // now perforrm clumping
-                // TODO
                 target_file->efficient_clumping(
                     commander.use_ref() ? *reference_file : *target_file,
                     reporter, commander.pearson());
@@ -168,7 +167,8 @@ int main(int argc, char* argv[])
             // count the number of SNPs in each region so that we can skip
             // regions that does not contain any SNP
             // Also, print out the SNP matrix if required
-            // TODO
+            // TODO: Maybe consider having an index storage for all set so that
+            // we can jump around quicker
             target_file->count_snp_in_region(region, commander.out(),
                                              commander.print_snp());
 
@@ -206,23 +206,30 @@ int main(int argc, char* argv[])
                                           target_file->num_threshold());
                 // remove background from the region process
                 // background is only there if permutation is to be performed
+                // (It must be there if permutation is to be performed)
                 const size_t num_region_process =
                     region.size()
-                    - (region.size() > 1 ? commander.perform_set_perm() : 0);
+                    - ((region.size() > 1) && commander.perform_set_perm());
+                // go through each phenotype
                 for (intptr_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
                     fprintf(stderr, "\nProcessing the %zu th phenotype\n",
                             i_pheno + 1);
+                    // we now initialize the phenotype and covariance matrix
                     prsice.init_matrix(commander, i_pheno, *target_file,
                                        reporter);
-                    prsice.prep_output(commander, *target_file, region.names(),
-                                       i_pheno);
+                    // we then prepare the output files. Main complication is
+                    // for all score and best score. Others are easier
+                    prsice.prep_output(commander.out(), commander.all_scores(),
+                                       *target_file, region.names(), i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
                     for (size_t i_region = 0; i_region < num_region_process;
                          ++i_region)
                     {
+                        // we will skip any region without SNPs in it
                         if (region.num_post_clump_snp(i_region) == 0) continue;
+                        // now we start running PRSice
                         prsice.run_prsice(commander, region, i_pheno, i_region,
                                           *target_file);
                         if (!commander.no_regress())
