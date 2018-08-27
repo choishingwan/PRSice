@@ -162,41 +162,54 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
 
 void PRSice::init_matrix(const Commander& c_commander,
                          const intptr_t pheno_index, Genotype& target,
-                         Reporter& reporter, const bool prslice)
+                         Reporter& reporter)
 {
+    // reset the null R2 to 0 (different phenotype might lead to different
+    // missingness, thus a different null model R2)
     m_null_r2 = 0.0;
+    // remove all content from phenotype vector and independent matrix so that
+    // we don't get into trouble
     m_phenotype = Eigen::VectorXd::Zero(0);
     m_independent_variables.resize(0, 0);
+    // also clean out the dictionary which indicate which sample contain valid
+    // phenotype
     m_sample_with_phenotypes.clear();
-    m_null_store.clear();
 
+    // check if we want to perform regression
     const bool no_regress = c_commander.no_regress();
+    // get the phenotype file name
     const std::string pheno_file = c_commander.pheno_file();
+    // also get the output file prefix
     const std::string output_name = c_commander.out();
 
     // this reset the in_regression flag of all samples
-    target.reset_sample_pheno();
-    // this includes all samples
-
+    target.reset_in_regression_flag();
     if (!no_regress) {
-        gen_pheno_vec(target, pheno_file, pheno_index, !no_regress, reporter);
-
+        // if we don't want to perform regression, we can start reading in the
+        // phenotype
+        gen_pheno_vec(target, pheno_file, pheno_index, reporter);
+        // now that we've got the phenotype, we can start processing the more
+        // complicated covariate
         gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_name(),
                        c_commander.get_cov_index(),
                        c_commander.get_factor_cov_index(), reporter);
     }
     // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no
-    // longer correct
+    // longer correct as we have not updated that to account for invalid
+    // covariates.
 
-    // now inform PRSice which samples should be included
+    // now inform PRSice which samples should be included in the regression
+    // model (mainly for best score output)
     update_sample_included(target);
 
-    // get the null r2
+    // now we want to calculate the null R2 (if covariates are included)
     double null_r2_adjust = 0.0;
+    // get the number of thread available
     int n_thread = c_commander.thread();
     if (m_independent_variables.cols() > 2 && !no_regress) {
+        // only do it if we have the correct number of sample
         assert(m_independent_variables.rows() == m_phenotype.rows());
-        if (c_commander.is_binary(pheno_index)) {
+        if (c_commander.is_binary(static_cast<size_t>(pheno_index))) {
             // ignore the first column
             // this is ok as both the first column (intercept) and the
             // second column (PRS) is currently 1
@@ -210,6 +223,7 @@ void PRSice::init_matrix(const Commander& c_commander,
         else
         {
             // ignore the first column
+            // and perform linear regression
             Regression::linear_regression(
                 m_phenotype,
                 m_independent_variables.topRightCorner(
@@ -223,56 +237,80 @@ void PRSice::init_matrix(const Commander& c_commander,
 
 void PRSice::update_sample_included(Genotype& target)
 {
+    // this is a bit tricky. The reason we need to calculate the max fid and iid
+    // length is so that we can generate the best file and all score file
+    // vertically by replacing pre-placed space characters with the desired
+    // number
     m_max_fid_length = 3;
     m_max_iid_length = 3;
-    // anyone that's included in the study are considered
-    // therefore, it should work even for multiple different
-    // phenotypes
+    // we also want to avoid always having to search from
+    // m_sample_with_phenotypes. Therefore, we push in the sample index to
+    // m_matrix_index
+    // as our phenotype vector and independent variable matrix all follow the
+    // order of samples appear in the target genotype object, we can safely
+    // store the matrix sequentially and the m_matrix should still correspond to
+    // the phenotype vector and covariance matrix's order correctly
     m_matrix_index.clear();
+    int32_t fid_length, iid_length;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample) {
-        m_max_fid_length = (m_max_fid_length > target.fid(i_sample).length())
-                               ? m_max_fid_length
-                               : target.fid(i_sample).length();
-        m_max_iid_length = (m_max_iid_length > target.iid(i_sample).length())
-                               ? m_max_iid_length
-                               : target.iid(i_sample).length();
-
+        // got through each sample
+        fid_length = static_cast<int32_t>(target.fid(i_sample).length());
+        iid_length = static_cast<int32_t>(target.iid(i_sample).length());
+        if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
+        if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
-
         if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
             != m_sample_with_phenotypes.end())
         {
             m_matrix_index.push_back(i_sample);
+            // the in regression flag is only use for output
             target.set_in_regression(i_sample);
         }
     }
 }
 
+
 void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                           const int pheno_index, bool regress,
-                           Reporter& reporter)
+                           const intptr_t pheno_index, Reporter& reporter)
 {
+    // we will first store the phenotype into the double vector and then later
+    // use this to construct the matrix
     std::vector<double> pheno_store;
     // reserve the maximum size (All samples)
-    pheno_store.reserve(target.num_sample());
-    const bool binary = pheno_info.binary[pheno_index];
-    int max_num = 0;
+    // check if the phenotype is binary or not
+    const bool binary =
+        pheno_info
+            .binary[static_cast<std::vector<bool>::size_type>(pheno_index)];
+    std::string line;
+    int max_pheno_code = 0;
     int num_case = 0;
     int num_control = 0;
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
-    std::string line;
     size_t sample_index_ct = 0;
     size_t sample_ct = target.num_sample();
-    std::unordered_set<double> input_sanity_check; // check if input is sensible
+    pheno_store.reserve(sample_ct);
     std::string pheno_name = "Phenotype";
     std::string id;
+
+    // check if input is sensible
+    double first_pheno = 0.0;
+    bool more_than_one_pheno = false;
+
     if (pheno_info.use_pheno) // use phenotype file
     {
-        int pheno_col_index =
-            pheno_info.col[pheno_index]; // obtain the phenotype index
-        pheno_name = pheno_info.name[pheno_index];
+        // read in the phenotype index
+        std::vector<std::string>::size_type pheno_col_index =
+            static_cast<std::vector<std::string>::size_type>(
+                pheno_info.col[static_cast<std::vector<bool>::size_type>(
+                    pheno_index)]);
+        // and get the phenotype name
+        pheno_name =
+            pheno_info
+                .name[static_cast<std::vector<bool>::size_type>(pheno_index)];
+        // now read in the phenotype file
         std::ifstream pheno_file;
+        // check if the file is open
         pheno_file.open(pheno_file_name.c_str());
         if (!pheno_file.is_open()) {
             std::string error_message =
@@ -280,7 +318,9 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             throw std::runtime_error(error_message);
         }
 
-        // Read in phenotype from phenotype file
+        // we first store everything into a map. This allow the phenotype and
+        // genotype file to have completely different ordering and allow
+        // different samples to be included in each file
         std::unordered_map<std::string, std::string> phenotype_info;
         std::vector<std::string> token;
         // do not remove header line as that won't match anyway
@@ -288,60 +328,91 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             misc::trim(line);
             if (line.empty()) continue;
             token = misc::split(line);
-            if (token.size()
-                <= (size_t)(pheno_index + 1
-                            + !m_ignore_fid)) // need to check the range
-            {
+            // Check if we have the minimal required column number
+            if (token.size() <= static_cast<size_t>(pheno_col_index + 1)) {
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
-                    + std::to_string(pheno_index + 2 + !m_ignore_fid)
+                    + misc::to_string(pheno_col_index + 1)
                     + " columns. "
                       "Have you use the --ignore-fid option?";
                 throw std::runtime_error(error_message);
             }
+            // read in the sample ID
             id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+            // and store the information into the map
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
+            // now we go through all the samples
+            // get the sample ID from the genotype object
             id = target.sample_id(i_sample);
             if (phenotype_info.find(id) != phenotype_info.end()
-                && phenotype_info[id].compare("NA") != 0)
+                && phenotype_info[id] != "NA" && target.is_founder(i_sample))
             {
+                // if this sample is found in the phenotype file, and the
+                // phenotype isn't NA, and the sample is founder (or
+                // keep-founder is used)
                 try
                 {
                     if (binary) {
+                        // if trait is binary
+                        // we first convert it to a temporary
                         int temp = misc::convert<int>(phenotype_info[id]);
+                        // so taht we can check if the input is valid
                         if (temp >= 0 && temp <= 2) {
                             pheno_store.push_back(temp);
-                            max_num = (temp > max_num) ? temp : max_num;
+                            // we will also check what is the maximum phenotype
+                            // code (1 or 2)
+                            // this should happen relatively infrequently so
+                            // branch prediction should be rather accurate?
+                            if (max_pheno_code < temp) max_pheno_code = temp;
+                            // for now, we assume the coding is 0/1
                             num_case += (temp == 1);
                             num_control += (temp == 0);
                         }
                         else
                         {
-                            // so that it will add invalid
+                            // the phenotype of this sample is invalid
                             throw std::runtime_error(
                                 "Invalid binary phenotype format!");
                         }
                     }
                     else
                     {
+                        // we will directly push_back the phenotype, if it is
+                        // not convertable, it will go into the catch
                         pheno_store.push_back(
                             misc::convert<double>(phenotype_info[id]));
-                        if (input_sanity_check.size() < 2) {
-                            input_sanity_check.insert(pheno_store.back());
+                        if (pheno_store.size() == 1) {
+                            // this is the first entrance
+                            first_pheno = pheno_store[0];
+                        }
+                        else if (!more_than_one_pheno
+                                 && misc::logically_equal(first_pheno,
+                                                          pheno_store.back()))
+                        {
+                            // if we found something different from previous
+                            // input, then we will set more than one pheno as
+                            // true
+                            more_than_one_pheno = true;
                         }
                     }
+                    // we indicate we have this phenotype
+                    // sample_index_ct should currently be representative of the
+                    // sample index because we use the suffix++
                     m_sample_with_phenotypes[id] = sample_index_ct++;
                 }
-                catch (const std::runtime_error& error)
+                catch (...)
                 {
                     invalid_pheno++;
                 }
             }
             else
             {
+                // we cannot find this sample in the phenotype file / or that we
+                // don't want to
+                // TODO: Differentiate not include & not include for regression
                 num_not_found++;
             }
         }
@@ -351,22 +422,26 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // No phenotype file is provided
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
-            if (target.pheno_is_na(i_sample)) {
+            if (target.pheno_is_na(i_sample) || !target.is_founder(i_sample)) {
                 // it is ok to skip NA as default = sample.has_pheno = false
                 continue;
             }
             try
             {
                 if (binary) {
+                    // try to convert the input to int (we stored it as string)
                     int temp = misc::convert<int>(target.pheno(i_sample));
                     if (temp >= 0 && temp <= 2) {
+                        // again, check if the input is within reasonable range
                         pheno_store.push_back(temp);
-                        max_num = (temp > max_num) ? temp : max_num;
+                        if (max_pheno_code < temp) max_pheno_code = temp;
+                        // assume 0/1 encoding first
                         num_case += (temp == 1);
                         num_control += (temp == 0);
                     }
                     else
                     {
+                        // this isn't a valid binary phenotype
                         throw std::runtime_error(
                             "Invalid binary phenotype format!");
                     }
@@ -375,14 +450,27 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 {
                     pheno_store.push_back(
                         misc::convert<double>(target.pheno(i_sample)));
-                    if (input_sanity_check.size() < 2) {
-                        input_sanity_check.insert(pheno_store.back());
+                    if (pheno_store.size() == 1) {
+                        // this is the first entrance
+                        first_pheno = pheno_store[0];
+                    }
+                    else if (!more_than_one_pheno
+                             && misc::logically_equal(first_pheno,
+                                                      pheno_store.back()))
+                    {
+                        // if we found something different from previous
+                        // input, then we will set more than one pheno as
+                        // true
+                        more_than_one_pheno = true;
                     }
                 }
+                // we indicate we have this phenotype
+                // sample_index_ct should currently be representative of the
+                // sample index because we use the suffix++
                 m_sample_with_phenotypes[target.sample_id(i_sample)] =
                     sample_index_ct++;
             }
-            catch (const std::runtime_error& error)
+            catch (const std::runtime_error&)
             {
                 invalid_pheno++;
             }
@@ -406,7 +494,10 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         message.append(std::to_string(invalid_pheno)
                        + " sample(s) with invalid phenotype\n");
     }
-    if (num_not_found == sample_ct && regress) {
+
+    if (num_not_found == sample_ct) {
+        // it is also possible that the only sample that were found in the
+        // phenotype file are the non-founder
         message.append(
             "None of the target samples were found in the phenotype file. ");
         if (m_ignore_fid) {
@@ -419,60 +510,61 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 "Maybe your phenotype file doesn not contain the FID?\n");
             message.append("Might want to consider using --ignore-fid\n");
         }
+        message.append("Or it is possible that only non-founder sample contain "
+                       "the phenotype information and you did not use "
+                       "--nonfounders?\n");
         reporter.report(message);
         throw std::runtime_error("Error: No sample left");
     }
-    if (invalid_pheno == sample_ct && regress) {
+    if (invalid_pheno == sample_ct) {
         message.append("Error: All sample has invalid phenotypes!");
         reporter.report(message);
         throw std::runtime_error("Error: No sample left");
     }
-    if (input_sanity_check.size() < 2 && !binary && regress) {
+    if (!binary && !more_than_one_pheno) {
         message.append("Only one phenotype value detected");
-        auto itr = input_sanity_check.begin();
-        if ((*itr) == -9) {
+        if (misc::logically_equal(first_pheno, -9)) {
             message.append(" and they are all -9");
         }
         reporter.report(message);
         throw std::runtime_error("Not enough valid phenotype");
     }
+    // finished basic logs
+    // we now check if the binary encoding is correct
     bool error = false;
-    if (max_num > 1 && binary) {
+    if (max_pheno_code > 1 && binary) {
+        // this is likely code in 1/2
         num_case = 0;
         num_control = 0;
-        size_t check = 0;
         for (auto&& pheno : pheno_store) {
             pheno--;
             if (pheno < 0) {
                 error = true;
             }
             else
-                (pheno == 1) ? num_case++ : num_control++;
-            check++;
+                (misc::logically_equal(pheno, 1)) ? num_case++ : num_control++;
         }
     }
-    if (error && regress) {
+    if (error) {
         reporter.report(message);
         throw std::runtime_error(
             "Mixed encoding! Both 0/1 and 1/2 encoding found!");
     }
-    if (pheno_store.size() == 0 && regress) {
+    if (pheno_store.size() == 0) {
         reporter.report(message);
         throw std::runtime_error("No phenotype presented");
     }
     // now store the vector into the m_phenotype vector
-    m_phenotype =
-        Eigen::Map<Eigen::VectorXd>(pheno_store.data(), pheno_store.size());
+    m_phenotype = Eigen::Map<Eigen::VectorXd>(
+        pheno_store.data(), static_cast<Eigen::Index>(pheno_store.size()));
 
 
     if (binary) {
         message.append(std::to_string(num_control) + " control(s)\n");
         message.append(std::to_string(num_case) + " case(s)\n");
-        if (regress) {
-            if (num_control == 0)
-                throw std::runtime_error("There are no control samples");
-            if (num_case == 0) throw std::runtime_error("There are no cases");
-        }
+        if (num_control == 0)
+            throw std::runtime_error("There are no control samples");
+        if (num_case == 0) throw std::runtime_error("There are no cases");
     }
     else
     {
@@ -480,94 +572,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                        + " sample(s) with valid phenotype\n");
     }
     reporter.report(message);
-}
-
-// Funcion to get the factors from the covariate file
-// This function won't go live until we have good way to handle the factors
-// e.g. determining the base factor & detecting if covariate is actually a
-// factor
-void PRSice::check_factor_cov(
-    const std::string& c_cov_file, const std::vector<std::string>& c_cov_header,
-    const std::vector<size_t>& cov_index,
-    std::vector<std::unordered_map<std::string, int>>& factor_levels)
-{
-    std::ifstream cov;
-    cov.open(c_cov_file.c_str());
-    if (!cov.is_open()) {
-        std::string error_message =
-            "Error: Cannot open covariate file: " + c_cov_file;
-        throw std::runtime_error(error_message);
-    }
-    std::string line;
-    std::getline(cov, line); // remove header
-    std::vector<std::unordered_map<std::string, int>> current_factors(
-        cov_index.size());
-    std::vector<size_t> convertable(cov_index.size(), 0);
-    size_t max_index = cov_index.back() + 1;
-    while (std::getline(cov, line)) {
-        misc::trim(line);
-        if (line.empty()) continue;
-        std::vector<std::string> token = misc::split(line);
-        if (token.size() < max_index) {
-            std::string error_message =
-                "Error: Malformed covariate file, should contain at least "
-                + std::to_string(max_index) + " column!";
-            throw std::runtime_error(error_message);
-        }
-        std::string id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
-        if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
-        { // sample is found in the phenotype vector
-            for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-                size_t covar_index = cov_index[i_cov];
-                if (current_factors[i_cov].find(token[covar_index])
-                    != current_factors[i_cov].end())
-                {
-                    current_factors[i_cov][token[covar_index]]++;
-                }
-                else
-                {
-                    current_factors[i_cov][token[covar_index]] = 1;
-                }
-                try
-                {
-                    // this is for catching unconvertable covariate
-                    misc::convert<double>(token[covar_index]);
-                    convertable[i_cov]++;
-                }
-                catch (const std::runtime_error& error)
-                {
-                    std::string str = token[covar_index];
-                    std::transform(str.begin(), str.end(), str.begin(),
-                                   ::toupper);
-                    // we also consider missing as convertable
-                    if (str.compare("NA") == 0 || str.compare("NULL") == 0)
-                        convertable[i_cov]++;
-                }
-            }
-        }
-    }
-    cov.close();
-    factor_levels.resize(cov_index.size()); // make sure size is ok
-    size_t num_sample = m_sample_with_phenotypes.size();
-    std::ofstream log_file_stream;
-    log_file_stream.open(m_log_file.c_str(), std::ofstream::app);
-    if (!log_file_stream.is_open()) {
-        std::string error_message =
-            "Error: Cannot open log file: " + m_log_file;
-        throw std::runtime_error(error_message);
-    }
-
-    for (size_t i_cov = 0; i_cov < cov_index.size(); ++i_cov) {
-        // if all convertable,then it is not a factor
-        if (convertable[i_cov] == num_sample) continue;
-        factor_levels[i_cov] = current_factors[i_cov];
-        log_file_stream << c_cov_header[cov_index[i_cov]]
-                        << " is a factor with " << factor_levels[i_cov].size()
-                        << " levels"
-                        << "\n";
-    }
-    log_file_stream << "\n";
-    log_file_stream.close();
 }
 
 
@@ -579,23 +583,35 @@ void PRSice::process_cov_file(
     uint32_t& num_column, Reporter& reporter)
 {
     // first, go through the covariate and generate the factor level vector for
-
     std::ifstream cov;
+    // we will generate a vector containing the information of all samples with
+    // valid covariate. The pair contain Sample Name and the index before
+    // removal
     std::vector<std::pair<std::string, size_t>> valid_sample_index;
+    // is the token to store the tokenized string
     std::vector<std::string> token;
+    // contain the current level of factor
+    // at the end, this = number of levels in each factor covariate -1
     std::vector<uint32_t> current_factor_level(factor_cov_index.size(), 0);
+    // is the number of missingness in each covariate
     std::vector<uint32_t> missing_count(cov_index.back() + 1, 0);
     std::string line, id;
+    // is the maximum column index required
     const size_t max_index = cov_index.back() + 1;
-    int factor_level_index = 0;
+    // This is the index for iterating the current_vector_level (reset after
+    // each line)
+    std::vector<uint32_t>::size_type factor_level_index = 0;
     int num_valid = 0, index = 0;
     bool valid = true;
+    // we initialize the storage facility for the factor levels
     factor_levels.resize(factor_cov_index.size());
+    // open the covariate file
     cov.open(cov_file.c_str());
     if (!cov.is_open()) {
         throw std::runtime_error("Error: Cannot open covariate file: "
                                  + cov_file);
     }
+    // the number of factor is used to guard against array out of bound
     size_t num_factors = factor_cov_index.size();
 
     while (std::getline(cov, line)) {
@@ -614,48 +630,61 @@ void PRSice::process_cov_file(
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
-            // next, check if any of the phenotype is NA
-
+            // only samples with a valid phenotype will get into this if case.
+            // Ignore all other samples
             valid = true;
             factor_level_index = 0;
             for (auto&& header : cov_index) {
                 if (token[header] == "NA" || token[header] == "Na"
                     || token[header] == "nA" || token[header] == "na")
                 {
-                    // invalid sample
+                    // check if the covariate of this sample is NA
                     valid = false;
                     ++missing_count[header];
                 }
+                // we first check if the factor_level_index is larger than the
+                // number of factor. If that is the case, this must not be a
+                // factor covaraite.
+                // If not, then we check if the current index corresponds to a
+                // factor index. Only go into this if case if this is not a
+                // factor
                 else if (factor_level_index >= num_factors
                          || header != factor_cov_index[factor_level_index])
                 {
-                    // check if this is covertable
+                    // This if case will check if the input can be convert to a
+                    // value. Doesn't apply to factor
                     try
                     {
                         misc::convert<double>(token[header]);
                     }
-                    catch (const std::runtime_error& error)
+                    catch (const std::runtime_error&)
                     {
                         valid = false;
                         ++missing_count[header];
                     }
                 }
+                // we will iterate the factor_level only if this a factor
                 factor_level_index +=
-                    (factor_level_index >= num_factors
-                     || header == factor_cov_index[factor_level_index]);
+                    header == factor_cov_index[factor_level_index];
             }
-            // only do the factor level thing if this
-            // sample is valid
             if (valid) {
-                index = m_sample_with_phenotypes[id];
-                factor_level_index = 0;
-                ++num_valid;
+                // this is a valid sample, so we want to keep its information in
+                // the valid_sample_index
+                // first, obtain its current index on the phenotype vector
+                index = static_cast<int>(m_sample_with_phenotypes[id]);
+                // store the index information
                 valid_sample_index.push_back(
                     std::pair<std::string, size_t>(id, index));
+                // we reset the factor level index to 0
+                factor_level_index = 0;
+                ++num_valid;
                 for (auto&& factor : factor_cov_index) {
+                    // now we go through each factor covariate and check if we
+                    // have a new level
                     auto&& cur_level = factor_levels[factor_level_index];
                     if (cur_level.find(token[factor]) == cur_level.end()) {
-                        // add factor
+                        // if this input is a new level, we will add it to our
+                        // factor map
                         cur_level[token[factor]] =
                             current_factor_level[factor_level_index]++;
                     }
@@ -669,52 +698,62 @@ void PRSice::process_cov_file(
     // the factor levels
     // now calculate the number of column required
     // 1 for intercept, 1 for PRS
-    // also output factor info
-
+    // first, we generate the output regarding the covariate inclusion
     std::vector<std::string> all_missing_cov;
     std::string message =
         "Include Covariates:\nName\tMissing\tNumber of levels\n";
     uint32_t total_column = 2;
-    uint32_t num_sample = m_sample_with_phenotypes.size();
+    std::unordered_map<std::string, size_t>::size_type num_sample =
+        m_sample_with_phenotypes.size();
+    // reset the factor index
     factor_level_index = 0;
     uint32_t cur_cov_index = 0;
     uint32_t num_level = 0;
+    // iterate through each covariate
     for (auto&& cov : cov_index) {
         cov_start_index.push_back(total_column);
         if (factor_level_index == factor_cov_index.size()
             || cov != factor_cov_index[factor_level_index])
         {
+            // if this is not a factor we will just output the number of
+            // missingness and use - for number of factor
             ++total_column;
             message.append(cov_name[cur_cov_index] + "\t"
                            + std::to_string(missing_count[cov]) + "\t-\n");
         }
         else
         {
-            num_level = factor_levels[factor_level_index++].size();
+            // this is a factor
+            num_level = static_cast<uint32_t>(
+                factor_levels[factor_level_index++].size());
+            // need to add number of level - 1 (as reference level doesn't
+            // require additional column) to the total column required
             total_column += num_level - 1;
+            // output the missing information
             message.append(cov_name[cur_cov_index] + "\t"
                            + std::to_string(missing_count[cov]) + "\t"
                            + std::to_string(num_level) + "\n");
         }
         ++cur_cov_index;
-        // error messages here
     }
+    // we now output the covariate information
     reporter.report(message);
-    // now update the m_phenotype vector
+    // now update the m_phenotype vector, removing any sample with missing
+    // covariates
     if (valid_sample_index.size() != num_sample && num_sample != 0) {
         // helpful to give the overview
-        int removed = num_sample - valid_sample_index.size();
+        int removed = static_cast<int>(num_sample)
+                      - static_cast<int>(valid_sample_index.size());
         message =
             std::to_string(removed) + " sample(s) with invalid covariate:\n\n";
-        double portion = (double) removed / (double) num_sample;
+        double portion =
+            static_cast<double>(removed) / static_cast<double>(num_sample);
         if (valid_sample_index.size() == 0) {
             // if all samples are removed
             cur_cov_index = 0;
             for (auto&& cov : cov_index) {
                 if (missing_count[cov] == num_sample) {
-                    // we sorted the column index so we can't tell what the
-                    // column name is useless we also store the head of the file
-                    // (too troublesome)
+                    // inform user which covariate is the culprits
                     message.append("Error: " + cov_name[cur_cov_index]
                                    + " is invalid, please check it is of the "
                                      "correct format\n");
@@ -725,6 +764,7 @@ void PRSice::process_cov_file(
             throw std::runtime_error("Error: All samples removed due to "
                                      "missingness in covariate file!");
         }
+        // provide a warning if too many samples were removed due to covariate
         if (portion > 0.05) {
             message.append(
                 "Warning: More than " + std::to_string(portion * 100)
@@ -738,7 +778,7 @@ void PRSice::process_cov_file(
         // target file.
         // Also, this does means that the base factor will be the
         // first factor observed within the covariate file, not
-        // the one observed in the first sample
+        // the one observed in the first sample in the genotype
         std::sort(begin(valid_sample_index), end(valid_sample_index),
                   [](std::pair<std::string, size_t> const& t1,
                      std::pair<std::string, size_t> const& t2) {
@@ -760,10 +800,12 @@ void PRSice::process_cov_file(
             m_sample_with_phenotypes[name] = cur_index;
             size_t original_index = std::get<1>(valid_sample_index[cur_index]);
             if (original_index != cur_index) {
-                m_phenotype(cur_index, 0) = m_phenotype(original_index, 0);
+                m_phenotype(static_cast<Eigen::Index>(cur_index), 0) =
+                    m_phenotype(static_cast<Eigen::Index>(original_index), 0);
             }
         }
-        m_phenotype.conservativeResize(valid_sample_index.size(), 1);
+        m_phenotype.conservativeResize(
+            static_cast<Eigen::Index>(valid_sample_index.size()), 1);
     }
     num_column = total_column;
 }
@@ -777,8 +819,12 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // The size of the map should be informative of the number of sample
     size_t num_sample = m_sample_with_phenotypes.size();
     if (c_cov_file.empty()) {
-        // if no covariates, just return a matrix of 1
-        m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
+        // if no covariates, just return a matrix of 1 with two column, one for
+        // the intercept and the other for storing PRS. Both is 1 so that when
+        // we need to calculate null, we can simply remove the first without
+        // trouble
+        m_independent_variables =
+            Eigen::MatrixXd::Ones(static_cast<Eigen::Index>(num_sample), 2);
         return;
     }
     // obtain the index of each covariate
@@ -786,25 +832,33 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // need to account for the situation where the same variable name can
     // occur in different covariates
     // As the index are sorted, we can use vector
+    // the index of the factor_list is the index of the covariate
+    // the key of the nested order map is the factor and the value is the factor
+    // level (similar to column index)
     std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
+    // an indexor to indicate whcih column should each covariate start from (as
+    // there're factor covariates, the some covariates might take up more than
+    // one column
     std::vector<uint32_t> cov_start_index;
-    uint32_t num_column = 2 + cov_header_index.size();
-    /*
-     * What we want:
-     * For each factor of a factor covariate, know which column should we
-     * put the 1 to
-     */
+    // by default the required number of column for the matrix is
+    // intercept+PRS+number of covariate (when there're no factor input)
+    uint32_t num_column = 2 + static_cast<uint32_t>(cov_header_index.size());
+    // we will perform the first pass to the covariate file which will remove
+    // all samples with missing covariate and will also generate the factor
+    // level
     process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
                      cov_header_index, cov_header_name, factor_list, num_column,
                      reporter);
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
-    m_independent_variables = Eigen::MatrixXd::Zero(num_sample, num_column);
+    // initalize the matrix to the desired size
+    m_independent_variables = Eigen::MatrixXd::Zero(
+        static_cast<Eigen::Index>(num_sample), num_column);
     m_independent_variables.col(0).setOnes();
     m_independent_variables.col(1).setOnes();
-    // now we only need to fill in the independent matrix without worry about
-    // other stuff
+    // now we only need to fill in the independent matrix without worry
+    // about other stuff
     std::ifstream cov;
     cov.open(c_cov_file.c_str());
     if (!cov.is_open()) {
@@ -816,8 +870,8 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::string line, id;
     size_t max_index = cov_header_index.back() + 1, index, cur_index, f_level;
     uint32_t cur_cov_index = 0, cur_factor_index = 0,
-             num_factor = factor_cov_index.size(),
-             num_cov = cov_header_index.size();
+             num_factor = static_cast<uint32_t>(factor_cov_index.size()),
+             num_cov = static_cast<uint32_t>(cov_header_index.size());
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -831,9 +885,12 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
-            // now we can propergate the matrix
+            // Only valid samples will be found in the m_sample_with_phenotypes
+            // map structure
+            // reset the index to 0
             cur_cov_index = 0;
             cur_factor_index = 0;
+            // get the row number
             index = m_sample_with_phenotypes[id];
             for (size_t i_cov = 0; i_cov < num_cov; ++i_cov) {
                 if (cur_factor_index >= num_factor
@@ -841,16 +898,29 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                            != factor_cov_index[cur_factor_index])
                 {
                     // noraml covariate
-                    m_independent_variables(index, cov_start_index[i_cov]) =
+                    // we don't need to deal with invalid conversion situation
+                    // as those should be taken cared of by the process_cov_file
+                    // function
+                    m_independent_variables(static_cast<Eigen::Index>(index),
+                                            cov_start_index[i_cov]) =
                         misc::convert<double>(token[cov_header_index[i_cov]]);
                 }
                 else
                 {
+                    // this is a factor
+                    // and the level of the current factor is f_level
                     f_level = factor_list[cur_factor_index]
                                          [token[cov_header_index[i_cov]]];
                     if (f_level != 0) {
+                        // if this is not the reference level, we will add 1 to
+                        // the matrix
+                        // we need to -1 as the reference level = 0 and the
+                        // second level = 1 but for the second level, it should
+                        // propagate the first column
                         cur_index = cov_start_index[i_cov] + f_level - 1;
-                        m_independent_variables(index, cur_index) = 1;
+                        m_independent_variables(
+                            static_cast<Eigen::Index>(index),
+                            static_cast<Eigen::Index>(cur_index)) = 1;
                     }
                     ++cur_factor_index;
                 }
@@ -868,25 +938,27 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
                         const intptr_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
-    // target.reset_sample_prs();
-    // prslice can easily be implemented using PRSet functionality
-    // so maybe remove prslice from this function
     const bool no_regress = c_commander.no_regress();
-    const bool print_all_scores = c_commander.all_scores();
+    // only print out all scores if this is the first phenotype
+    const bool print_all_scores = c_commander.all_scores() && pheno_index == 0;
     const int num_thread = c_commander.thread();
     const bool multi = pheno_info.name.size() > 1;
+    const bool non_cumulate = c_commander.non_cumulate();
     const size_t num_samples_included = target.num_sample();
-    const bool cumulate = c_commander.cumulate();
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
+    // m_num_snp_included will store the current number of SNP included. This is
+    // the global number and the true number per sample might differ due to
+    // missingness. This is only use for display
     m_num_snp_included = 0;
-    m_perm_result.resize(m_num_perm, 2);
+    // m_perm_result stores the result (T-value) from each permutation and is
+    // then used for calculation of empirical p value
+    m_perm_result.resize(
+        static_cast<std::vector<double>::size_type>(m_num_perm), 0);
     m_best_sample_score.clear();
     // if m_prs_results is small (or 0), initialize by resize
-    // otherwise, resize do nothing, but then we can change p-threshold to -1
-    // because we reset best_index to -1, we can safely ignore reseting other
-    // fields (e.g. r2) because we will overwrite it anyway
+    // otherwise, resize do nothing, but then we can change reset the contents
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
     for (auto&& p : m_prs_results) {
@@ -895,7 +967,10 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         p.num_snp = 0;
     }
     // initialize score vector
-    m_best_sample_score.resize(target.num_sample());
+    // this stores the best score for each sample. Ideally, we will only do it
+    // once per phenotype as subsequent region should all have the same number
+    // of samples
+    if (region_index == 0) m_best_sample_score.resize(target.num_sample());
 
     // now prepare all score
     // in theory, we only need to calulate it once for every phenotype + sets
@@ -903,9 +978,6 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
     std::fstream all_out;
     if (print_all_scores) {
         std::string all_out_name = c_commander.out();
-        if (multi) {
-            all_out_name.append("." + pheno_info.name[pheno_index]);
-        }
         all_out_name.append(".all.score");
         all_out.open(all_out_name.c_str(),
                      std::fstream::out | std::fstream::in | std::fstream::ate);
@@ -918,17 +990,24 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
 
 
     // current threshold iteration
+    // must iterate after each threshold even if no-regress is called
     size_t iter_threshold = 0;
-    // +1 such that only 100% when finished
-
-    int cur_category = 0, cur_index = -1;
+    int cur_index = -1;
     double cur_threshold = 0.0;
-    bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    // we want to know if user want to obtain the standardized PRS
+    const bool require_standardize = (m_score == SCORING::STANDARDIZE);
+    // print the progress bar
     print_progress();
+    // indicate if this is the first run. If this is the first run, get_score
+    // will perform assignment instead of addition
     bool first_run = true;
-    while (target.get_score(cur_index, cur_category, cur_threshold,
-                            m_num_snp_included, region_index, cumulate,
-                            require_standardize, first_run))
+    // we will call the read score function from the target genotype, which will
+    // then proceed to read in and calculate the PRS for the given category
+    // (defined by the cur_index, which points to the first SNP of the p-value
+    // threshold)
+    while (target.get_score(cur_index, cur_threshold, m_num_snp_included,
+                            region_index, non_cumulate, require_standardize,
+                            first_run))
     {
         m_analysis_done++;
         print_progress();
@@ -936,40 +1015,49 @@ void PRSice::run_prsice(const Commander& c_commander, const Region& region,
         if (print_all_scores) {
 
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
-                size_t loc = m_all_file.header_length
-                             + sample * (m_all_file.line_width + NEXT_LENGTH)
-                             + NEXT_LENGTH + m_all_file.skip_column_length
-                             + m_all_file.processed_threshold
-                             + m_all_file.processed_threshold * m_numeric_width;
+                // we will calculate the the number of white space we need to
+                // skip to reach the current sample + threshold's output
+                // position
+                int loc = m_all_file.header_length
+                          + static_cast<int>(sample)
+                                * (m_all_file.line_width + NEXT_LENGTH)
+                          + NEXT_LENGTH + m_all_file.skip_column_length
+                          + m_all_file.processed_threshold
+                          + m_all_file.processed_threshold * m_numeric_width;
                 all_out.seekp(loc);
+                // then we will output the score
                 all_out << std::setprecision(m_precision)
                         << target.calculate_score(m_score, sample);
             }
         }
+        // we need to then tell the file that we have finish processing one
+        // threshold. Next time we output another PRS, it should be output in
+        // the column of the next threshold
         m_all_file.processed_threshold++;
-        if (no_regress) {
-            iter_threshold++;
-            first_run = false;
-            continue;
-        }
-        regress_score(target, cur_threshold, num_thread, pheno_index,
-                      iter_threshold);
+        if (!no_regress) {
+            // We only perform the regression analysis if we would like to
+            // perform the regresswion
+            regress_score(target, cur_threshold, num_thread, pheno_index,
+                          iter_threshold);
 
-        if (c_commander.permutation() != 0) {
-            permutation(target, num_thread, m_target_binary[pheno_index]);
+            if (m_perform_perm) {
+                // and perform regression if that is required
+                // TODO
+                permutation(target, num_thread, m_target_binary[pheno_index]);
+            }
         }
         iter_threshold++;
         first_run = false;
     }
 
-    if (all_out.is_open()) all_out.close();
-    if (c_commander.permutation() != 0) process_permutations();
+    // we need to process the permutation result if permutation is required
+    if (m_perform_perm) process_permutations();
     if (!no_regress) {
         print_best(target, pheno_index, c_commander);
     }
 }
 
-void PRSice::print_best(Genotype& target, const size_t pheno_index,
+void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
                         const Commander& commander)
 {
 
@@ -1008,26 +1096,38 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     m_best_file.processed_threshold++;
 }
 
-void PRSice::regress_score(Genotype& target, const double threshold,
-                           size_t thread, const size_t pheno_index,
+void PRSice::regress_score(Genotype& target, const double threshold, int thread,
+                           const intptr_t pheno_index,
                            const size_t iter_threshold)
 {
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
            se = 0.0;
-    const size_t num_regress_samples = m_matrix_index.size();
+    const Eigen::Index num_regress_samples =
+        static_cast<Eigen::Index>(m_matrix_index.size());
     if (m_num_snp_included == 0
-        || (m_num_snp_included == m_prs_results[iter_threshold].num_snp))
+        || (m_num_snp_included
+            == static_cast<uint32_t>(m_prs_results[iter_threshold].num_snp)))
     {
-        return; // didn't got extra SNPs to process
+        // if we haven't read in any SNP, or that we have the same number of SNP
+        // as the previous threshold, we will skip (normally this should not
+        // happen, as we have removed any threshold that doesn't contain any
+        // SNPs)
+        return;
     }
 
-    for (size_t sample_id = 0; sample_id < num_regress_samples; ++sample_id) {
-        // std::string sample = target.sample_id(sample_id);
-        m_independent_variables(sample_id, 1) =
-            target.calculate_score(m_score, m_matrix_index[sample_id]);
+    for (Eigen::Index sample_id = 0; sample_id < num_regress_samples;
+         ++sample_id)
+    {
+        // we can directly read in the matrix index from m_matrix_index vector
+        // and assign the PRS directly to the indep variable matrix
+        m_independent_variables(sample_id, 1) = target.calculate_score(
+            m_score, m_matrix_index[static_cast<std::vector<size_t>::size_type>(
+                         sample_id)]);
     }
 
-    if (m_target_binary[pheno_index]) {
+    if (m_target_binary[static_cast<std::vector<bool>::size_type>(pheno_index)])
+    {
+        // if this is a binary phenotype, we will perform the GLM model
         try
         {
             Regression::glm(m_phenotype, m_independent_variables, p_value, r2,
@@ -1036,9 +1136,14 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         catch (const std::runtime_error& error)
         {
             // This should only happen when the glm doesn't converge.
-            // Let's hope that won't happen...
+            // And it actually happen quite often
             fprintf(stderr, "Error: GLM model did not converge!\n");
-            fprintf(stderr, "       Please send me the DEBUG files\n");
+            fprintf(stderr,
+                    "       This is usually caused by small sample\n"
+                    "       size or caused by problem in the input file\n"
+                    "       If you are certain it is not due to small\n"
+                    "       sample size and problematic input, please\n"
+                    "       send me the DEBUG files\n");
             std::ofstream debug;
             debug.open("DEBUG");
             debug << m_independent_variables << "\n";
@@ -1051,6 +1156,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     }
     else
     {
+        // we can run the linear regression
         Regression::linear_regression(m_phenotype, m_independent_variables,
                                       p_value, r2, r2_adjust, coefficient, se,
                                       thread, true);
@@ -1059,15 +1165,21 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     // If this is the best r2, then we will add it
     int best_index = m_best_index;
     if (iter_threshold == 0 || best_index < 0
-        || m_prs_results[best_index].r2 < r2)
+        || m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
+                             best_index)]
+                   .r2
+               < r2)
     {
-        m_best_index = iter_threshold;
-        // can't remember why I can't just copy the whole vector
+        m_best_index = static_cast<int>(iter_threshold);
         size_t num_include_samples = target.num_sample();
         for (size_t s = 0; s < num_include_samples; ++s) {
+            // we will have to store the best scores. we cannot directly copy
+            // from the m_independent_variable as some samples which might have
+            // excluded from the regression model but we still want their PRS.
             m_best_sample_score[s] = target.calculate_score(m_score, s);
         }
     }
+    // we can now store the prsice_result
     prsice_result cur_result;
     cur_result.threshold = threshold;
     cur_result.r2 = r2;
@@ -1075,7 +1187,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     cur_result.coefficient = coefficient;
     cur_result.p = p_value;
     cur_result.emp_p = -1.0;
-    cur_result.num_snp = m_num_snp_included;
+    cur_result.num_snp = static_cast<int>(m_num_snp_included);
     cur_result.se = se;
     cur_result.competitive_p = -1.0;
     m_prs_results[iter_threshold] = cur_result;
@@ -1349,33 +1461,40 @@ void PRSice::thread_perm(
 }
 
 
-void PRSice::prep_output(const Commander& c_commander, Genotype& target,
-                         std::vector<std::string> region_name,
+void PRSice::prep_output(const std::string& out, const bool all_score,
+                         const Genotype& target,
+                         const std::vector<std::string>& region_name,
                          const intptr_t pheno_index)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
-    std::string pheno_name =
-        (pheno_info.name.size() > 1) ? pheno_info.name[pheno_index] : "";
-    std::string output_prefix = c_commander.out();
+    std::string pheno_name = "";
+    if (pheno_info.name.size() > 1)
+        pheno_name =
+            pheno_info.name[static_cast<std::vector<std::string>::size_type>(
+                pheno_index)];
+    std::string output_prefix = out;
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
-    const bool perm = (c_commander.permutation() != 0);
-    std::string output_name = output_prefix;
-    std::string out_prsice = output_name + ".prsice";
-    std::string out_all = output_name + ".all.score";
-    std::string out_best = output_name + ".best";
+    const std::string output_name = output_prefix;
+    const std::string out_prsice = output_name + ".prsice";
+    // all score will be the same for all phenotype anyway, so we will only
+    // generate it once
+    const std::string out_all = out + ".all.score";
+    const std::string out_best = output_name + ".best";
     std::ofstream prsice_out, best_out, all_out;
 
     // .prsice output
+    // we only need to generate the header for it
     prsice_out.open(out_prsice.c_str());
     if (!prsice_out.is_open()) {
         std::string error_message =
             "Error: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
     }
+    // we won't store the empirical p and competitive p output in the prsice
+    // file now as that seems like a waste (only one threshold will contain that
+    // information, storing that in the summary file should be enough)
     prsice_out << "Set\tThreshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP";
-    // if (m_prset) prsice_out << "\tCompetitive.P";
-    if (perm) prsice_out << "\tEmpirical_P";
     prsice_out << "\n";
     prsice_out.close();
 
@@ -1387,8 +1506,9 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
         throw std::runtime_error(error_message);
     }
     std::string header_line = "FID IID In_Regression";
-    // if not preset, then it is PRS,otherwise, it will be the
-    if (!m_prset)
+    // The default name of the output should be PRS, but if we are running
+    // PRSet, it should be call Base
+    if (!m_perform_prset)
         header_line.append(" PRS");
     else
     {
@@ -1396,21 +1516,34 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
             header_line.append(" " + region_name[i]);
         }
     }
+    // the safetest way to calculate the length we need to speed is to directly
+    // count the number of byte involved
+    auto begin_byte = best_out.tellp();
     best_out << header_line << "\n";
-    m_best_file.header_length = header_line.length() + 1;
+    auto end_byte = best_out.tellp();
+    // we now know the exact number of byte the header contain and can correctly
+    // skip it acordingly
+    m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
+    // we will set the processed_threshold information to 0
     m_best_file.processed_threshold = 0;
+
     // each numeric output took 12 spaces, then for each output, there is one
     // space next to each
-
-    m_best_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1
-                             + region_name.size() * (m_numeric_width + 1) + 1;
+    m_best_file.line_width =
+        m_max_fid_length /* FID */ + 1 /* space */ + m_max_iid_length /* IID */
+        + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
+        + static_cast<int>(region_name.size()) /* each region */
+              * (m_numeric_width + 1 /* space */)
+        + 1 /* new line */;
 
     m_best_file.skip_column_length =
         m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
 
 
     // also handle all score here
-    const bool all_scores = c_commander.all_scores();
+    // but we will only try and generate the all score file when we are dealing
+    // with the first phenotype (pheno_index == 0)
+    const bool all_scores = all_score && !pheno_index;
     if (all_scores) {
         all_out.open(out_all.c_str());
         if (!all_out.is_open()) {
@@ -1418,46 +1551,62 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
                 "Cannot open file " + out_all + " for write";
             throw std::runtime_error(error_message);
         }
+        // we need to know the number of available thresholds so that we can
+        // know how many white spaces we need to pad in
         std::vector<double> avail_thresholds = target.get_thresholds();
+        // we want the threshold to be in sorted order as we will process the
+        // SNPs from the smaller threshold to the highest (therefore, the
+        // processed_threshold index should be correct)
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
-        size_t num_thresholds = avail_thresholds.size();
-        std::streampos begin_byte = all_out.tellp();
+        int num_thresholds = static_cast<int>(avail_thresholds.size());
+        begin_byte = all_out.tellp();
         all_out << "FID IID";
         // size_t header_length = 3+1+3;
-        if (!m_prset) {
+        if (!m_perform_prset) {
             for (auto& thres : avail_thresholds) {
                 all_out << " " << thres;
-                // header_length+=1+m_numeric_width;
+                // if we are not performing PRSet, it is easy, just one
+                // column per threshold
             }
         }
         else
         {
+            // but if we are performing PRSet, we will need to have region
+            // number * threshold number thresholds
             for (size_t i = 0; i < region_name.size() - 1; ++i) {
                 for (auto& thres : avail_thresholds) {
-                    // header_length+=
-                    // 1+region_name[i].length()+1+m_numeric_width;
                     all_out << " " << region_name[i] << "_" << thres;
                 }
             }
         }
         all_out << "\n";
-        std::streampos end_byte = all_out.tellp();
-        m_all_file.header_length = end_byte - begin_byte;
+        end_byte = all_out.tellp();
+        // if the line is too long, we might encounter overflow
+        m_all_file.header_length = static_cast<int>(end_byte - begin_byte);
         m_all_file.processed_threshold = 0;
-        m_all_file.line_width =
-            m_max_fid_length + 1 + m_max_iid_length + 1
-            + num_thresholds * region_name.size() * (m_numeric_width + 1) + 1;
+        m_all_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1
+                                + num_thresholds
+                                      * static_cast<int>(region_name.size())
+                                      * (m_numeric_width + 1)
+                                + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
         // all_out << header_line << "\n";
     }
 
     // output sample IDs
     size_t num_samples_included = target.num_sample();
+    std::string best_line;
+    std::string name;
     for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample) {
-        std::string name = target.fid(i_sample) + " " + target.iid(i_sample);
-        std::string best_line =
-            name + " "
-            + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+        name = target.fid(i_sample) + " " + target.iid(i_sample);
+        // when we print the best file, we want to also print whether the sample
+        // is used in regression or not (so that user can easily reproduce their
+        // results)
+        best_line = name + " "
+                    + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+        // we print a line containing m_best_file.line_width white space
+        // characters, which we can then overwrite later on, therefore achieving
+        // a vertical output
         best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
                  << std::left << best_line << "\n";
         if (all_scores) {
@@ -1465,10 +1614,11 @@ void PRSice::prep_output(const Commander& c_commander, Genotype& target,
                     << std::left << name << "\n";
         }
     }
+    // another one spacing for new line (just to be safe)
     m_all_file.line_width++;
-    m_best_file.line_width++; // now account for new line
-    best_out.close();
-    if (all_out.is_open()) all_out.close();
+    m_best_file.line_width++;
+    // don't need to close the files as they will automatically be closed when
+    // we move out of the function
 }
 void PRSice::output(const Commander& c_commander, const Region& region,
                     const intptr_t pheno_index, const size_t region_index,
