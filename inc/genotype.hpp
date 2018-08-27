@@ -116,12 +116,36 @@ public:
     std::vector<double> get_thresholds() const { return m_thresholds; }
     std::vector<Sample_ID> sample_names() const { return m_sample_id; }
     size_t max_category() const { return m_max_category; }
+    /*!
+     * \brief Return the number of sample we wish to perform PRS on
+     * \return the number of sample
+     */
     size_t num_sample() const { return m_sample_id.size(); }
     uint32_t num_threshold() const { return m_num_threshold; }
-
-    bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
-                   size_t& num_snp_included, const size_t region_index,
-                   const bool cumulate, const bool require_statistic,
+    /*!
+     * \brief Function to obtain PRS score from the genotype file. Will assign
+     * the result information to our PRS vector
+     *
+     * \param cur_index is the index of the starting SNP that we want to read
+     * from
+     *
+     * \param cur_threshold return the p-value threshold of the current
+     * processing chunck. This information is use for generating the output
+     *
+     * \param num_snp_included return the total number of SNP included in this
+     * chunck
+     *
+     * \param region_index is the index of the region of interest
+     * \param non_cumulate indicate if we want to perform cumulated PRS
+     * calculation or not
+     *
+     * \param require_statistic if we want to standardize the PRS
+     * \param first_run if we want to add or reset the PRS input
+     * \return true if we can run, false otherwise
+     */
+    bool get_score(int& cur_index, double& cur_threshold,
+                   uint32_t& num_snp_included, const size_t region_index,
+                   const bool non_cumulate, const bool require_statistic,
                    const bool first_run);
     /*!
      * \brief Function to prepare clumping. Should sort all the SNPs by their
@@ -191,7 +215,12 @@ public:
         loc = m_existed_snps[snp_index->second].loc();
         return true;
     }
-    void reset_sample_pheno()
+    /*!
+     * \brief Before each run of PRSice, we need to reset the in regression flag
+     * to false and propagate it later on to indicate if the sample is used in
+     * the regression model
+     */
+    void reset_in_regression_flag()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
     }
@@ -201,6 +230,11 @@ public:
      * \return True if there are SNPs to process
      */
     bool prepare_prsice();
+    /*!
+     * \brief This function will return the sample ID
+     * \param i is the index of the sample
+     * \return the sample ID
+     */
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_id.size())
@@ -211,7 +245,14 @@ public:
             return m_sample_id[i].FID + "_" + m_sample_id[i].IID;
     }
 
-
+    /*!
+     * \brief Funtion return whether sample is founder (whether sample should be
+     * included in regression)
+     *
+     * \param i is the sample index
+     * \return true if sample is to be included
+     */
+    bool is_founder(size_t i) const { return m_sample_id.at(i).founder; }
     bool sample_in_regression(size_t i) const
     {
         return IS_SET(m_in_regression.data(), i);
@@ -220,9 +261,24 @@ public:
     // bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
+    /*!
+     * \brief This function return if the i th sample has NA as phenotype
+     * \param i is the sample ID
+     * \return true if the phenotype is NA
+     */
     bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }
-    std::string fid(size_t i) const { return m_sample_id[i].FID; }
-    std::string iid(size_t i) const { return m_sample_id[i].IID; }
+    /*!
+     * \brief Return the fid of the i th sample
+     * \param i is the sample index
+     * \return FID of the i th sample
+     */
+    std::string fid(size_t i) const { return m_sample_id.at(i).FID; }
+    /*!
+     * \brief Return the iid fo the i th sample
+     * \param i is the sample index
+     * \return IID of the i th sample
+     */
+    std::string iid(size_t i) const { return m_sample_id.at(i).IID; }
 
     double calculate_score(SCORING score_type, size_t i) const
     {
@@ -248,16 +304,31 @@ public:
             return avg;
         }
     }
-
-    uintptr_t founder_ct() const { return m_founder_ct; }
-    uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
+    /*!
+     * \brief Function to count the number of SNP in each region, thus allow us
+     * to completely ignore any region that does not contain any SNP
+     *
+     * \param region is the region information
+     * \param name is the prefix of the output file
+     * \param print_snp is a boolean to indicate if we want to print the SNP
+     */
     void count_snp_in_region(Region& region, const std::string& name,
                              const bool print_snp)
     {
+        // this function must be performed after prepare prsice or the index
+        // will be all wrong
         std::string snp_file_name = name + ".snp";
         std::ofstream print_file;
+        // TODO: try to store the index of all region instead of just background
+        // so that we can skip them faster (e.g. finding 200 SNP from 500K is
+        // going to be slow)
         m_background_snp_index.clear();
+        // indicate if prset is invovled
         const bool prset = region.size() > 1;
+        // don't do anything if we don't need to print SNP or to perform PRSet
+        if (!prset && !print_snp) return;
+        // if we want to print SNP, we will first write the header of the
+        // file
         if (print_snp) {
             print_file.open(snp_file_name.c_str());
             if (!print_file.is_open()) {
@@ -270,6 +341,8 @@ public:
             }
             print_file << "\n";
         }
+        // we than start iterate through all the SNPs and count their
+        // membership.
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
         for (auto&& snp : m_existed_snps) {
@@ -282,14 +355,18 @@ public:
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
             if (prset && snp.in(region.size() - 1)) {
+                // we will assume the last set is the background. Doesn't matter
+                // if background isn't use
                 m_background_snp_index.push_back(snp_index);
             }
             if (print_snp) print_file << "\n";
             snp_index++;
         }
-        if (print_snp) print_file.close();
-        // this is use for skipping permutation for sets with same size
-        m_background_region_index = region.size() - 1;
+        // by setting the index of the background region, we can avoid spending
+        // time in it again (kinda useless)
+        m_background_region_index = static_cast<intptr_t>(region.size() - 1);
+        // we will store the count in region so that region will be responsible
+        // for the region stuff
         region.post_clump_count(result);
     }
 
@@ -350,6 +427,14 @@ protected:
     double m_clump_r2 = 0.0;
     double m_clump_proxy = 0.0;
     double m_clump_p = 0.0;
+    // normally, we'd like to have weight to be 0,1 or 2. However, it is easier
+    // if we keep it as 0, 0.5, 1 such that when we impute the missingness, the
+    // missingness can be directly replaced by the MAF which is useful (guessing
+    // this is the reason why PLINK implement this way)
+    // also easier for the representation of other genetic model
+    double m_homcom_weight = 0;
+    double m_het_weight = 0.5;
+    double m_homrar_weight = 1;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -460,11 +545,13 @@ protected:
                                       const std::string& /*file_name*/)
     {
     }
-    virtual void read_score(size_t /*start_index*/, size_t /*end_bound*/,
+    virtual void read_score(const size_t /*start_index*/,
+                            const size_t /*end_bound*/,
                             const size_t /*region_index*/, bool /*reset_zero*/)
     {
     }
-    virtual void read_score(std::vector<size_t>& /*index*/, bool /*reset_zero*/)
+    virtual void read_score(const std::vector<size_t>& /*index*/,
+                            bool /*reset_zero*/)
     {
     }
 
@@ -475,14 +562,7 @@ protected:
     // for loading the SNP inclusion / exclusion set
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
-    double get_r2(bool core_missing, bool pair_missing,
-                  std::vector<uint32_t>& core_tot,
-                  std::vector<uint32_t>& pair_tot,
-                  std::vector<uintptr_t>& genotype_vector,
-                  std::vector<uintptr_t>& pair_genotype_vector);
-    double get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
-                  std::vector<uintptr_t>& index_data,
-                  std::vector<uintptr_t>& genotype_vector);
+
     /** Misc information **/
     // uint32_t m_hh_exists;
     /*!
@@ -492,18 +572,23 @@ protected:
      */
     void pearson_clump(Genotype& reference, Reporter& reporter);
 
-
-    // hh_exists
+    /*!
+     * \brief Function to check if the two alleles are ambiguous
+     * \param ref_allele the reference allele
+     * \param alt_allele the alternative allele
+     * \return true if it is ambiguous
+     */
     inline bool ambiguous(const std::string& ref_allele,
                           const std::string& alt_allele) const
     {
+        // the allele should all be in upper case but whatever
         return (ref_allele == "A" && alt_allele == "T")
-               || (ref_allele == "a" && alt_allele == "t")
-               || (ref_allele == "G" && alt_allele == "C")
-               || (ref_allele == "g" && alt_allele == "c")
                || (alt_allele == "A" && ref_allele == "T")
-               || (alt_allele == "a" && ref_allele == "t")
+               || (ref_allele == "G" && alt_allele == "C")
                || (alt_allele == "G" && ref_allele == "C")
+               || (ref_allele == "a" && alt_allele == "t")
+               || (alt_allele == "a" && ref_allele == "t")
+               || (ref_allele == "g" && alt_allele == "c")
                || (alt_allele == "g" && ref_allele == "c");
     };
 

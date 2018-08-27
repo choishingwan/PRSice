@@ -967,120 +967,25 @@ void Genotype::set_info(const Commander& c_commander)
     m_missing_score = c_commander.get_missing_score();
     m_scoring = c_commander.get_score();
     m_seed = c_commander.seed();
-}
-
-double Genotype::get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
-                        std::vector<uintptr_t>& index_data,
-                        std::vector<uintptr_t>& genotype_vector)
-{
-    bool is_x = false;
-    double freq11;
-    double freq11_expected;
-    double freq1x;
-    double freq2x;
-    double freqx1;
-    double freqx2;
-    double dxx;
-    double r2 = -1.0;
-    uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(m_founder_ct);
-    uintptr_t founder_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    uint32_t counts[18];
-    genovec_3freq(genotype_vector.data(), index_data.data(), founder_ctl2,
-                  &(counts[0]), &(counts[1]), &(counts[2]));
-    counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-    genovec_3freq(genotype_vector.data(), &(index_data[founder_ctv2]),
-                  founder_ctl2, &(counts[3]), &(counts[4]), &(counts[5]));
-    counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-    genovec_3freq(genotype_vector.data(), &(index_data[2 * founder_ctv2]),
-                  founder_ctl2, &(counts[6]), &(counts[7]), &(counts[8]));
-    counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-
-    if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x, &freqx1,
-                                &freqx2, &freq11))
+    switch (m_model)
     {
-        freq11_expected = freqx1 * freq1x;
-        dxx = freq11 - freq11_expected;
-        // if r^2 threshold is 0, let everything else through but
-        // exclude the apparent zeroes.  Zeroes *are* included if
-        // r2_thresh is negative,
-        // though (only nans are rejected then).
-        if (fabs(dxx) < SMALL_EPSILON
-            || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-        {
-            r2 = 0.0;
-        }
-        else
-        {
-            r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-        }
+    case MODEL::HETEROZYGOUS:
+        m_homcom_weight = 0;
+        m_het_weight = 1;
+        m_homrar_weight = 0;
+        break;
+    case MODEL::DOMINANT:
+        m_homcom_weight = 0;
+        m_het_weight = 1;
+        m_homrar_weight = 1;
+        break;
+    case MODEL::RECESSIVE:
+        m_homcom_weight = 0;
+        m_het_weight = 0;
+        m_homrar_weight = 1;
+        break;
+    default: break;
     }
-    return r2;
-}
-
-double Genotype::get_r2(bool core_missing, bool pair_missing,
-                        std::vector<uint32_t>& core_tot,
-                        std::vector<uint32_t>& pair_tot,
-                        std::vector<uintptr_t>& genotype_vector,
-                        std::vector<uintptr_t>& pair_genotype_vector)
-{
-
-    uint32_t counts[18];
-    const uint32_t founder_ctv3 = BITCT_TO_ALIGNED_WORDCT(m_founder_ct);
-    double freq11;
-    double freq11_expected;
-    double freq1x;
-    double freq2x;
-    double freqx1;
-    double freqx2;
-    double dxx;
-    double r2 = 0.0;
-
-    if (core_missing) {
-        two_locus_count_table_zmiss1(genotype_vector.data(),
-                                     pair_genotype_vector.data(), counts,
-                                     founder_ctv3, pair_missing);
-        if (pair_missing) {
-            counts[2] = core_tot[0] - counts[0] - counts[1];
-            counts[5] = core_tot[1] - counts[3] - counts[4];
-        }
-        counts[6] = pair_tot[0] - counts[0] - counts[3];
-        counts[7] = pair_tot[1] - counts[1] - counts[4];
-        counts[8] = pair_tot[2] - counts[2] - counts[5];
-    }
-    else
-    {
-        two_locus_count_table(genotype_vector.data(),
-                              pair_genotype_vector.data(), counts, founder_ctv3,
-                              pair_missing);
-        if (pair_missing) {
-            counts[2] = core_tot[0] - counts[0] - counts[1];
-            counts[5] = core_tot[1] - counts[3] - counts[4];
-            counts[8] = core_tot[2] - counts[6] - counts[7];
-        }
-    }
-    // below, the false are basically is_x1 is_x2
-    if (em_phase_hethet_nobase(counts, false, false, &freq1x, &freq2x, &freqx1,
-                               &freqx2, &freq11))
-    {
-        r2 = -1;
-    }
-    else
-    {
-
-        freq11_expected = freqx1 * freq1x;
-        dxx = freq11 - freq11_expected;
-        // also want to avoid divide by 0
-        if (fabs(dxx) < SMALL_EPSILON
-            || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-        {
-            r2 = 0.0;
-        }
-        else
-        {
-            r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-        }
-    }
-    return r2;
 }
 
 void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
@@ -1092,14 +997,14 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(reference.m_unfiltered_sample_ct);
     const uintptr_t founder_ctv2 =
-        QUATERCT_TO_ALIGNED_WORDCT(reference.founder_ct());
-    const uintptr_t founder_ctwd = reference.founder_ct() / BITCT2;
+        QUATERCT_TO_ALIGNED_WORDCT(reference.m_founder_ct);
+    const uintptr_t founder_ctwd = reference.m_founder_ct / BITCT2;
     const uintptr_t founder_ctwd12 = founder_ctwd / 12;
     const uintptr_t founder_ctwd12_rem = founder_ctwd - (12 * founder_ctwd12);
     const uintptr_t lshift_last =
-        2 * ((0x7fffffc0 - reference.founder_ct()) % BITCT2);
+        2 * ((0x7fffffc0 - reference.m_founder_ct) % BITCT2);
     const uintptr_t founder_ct_mld =
-        (reference.founder_ct() + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
+        (reference.m_founder_ct + MULTIPLEX_LD - 1) / MULTIPLEX_LD;
     const uint32_t founder_ctv3 =
         BITCT_TO_ALIGNED_WORDCT(static_cast<uint32_t>(reference.m_founder_ct));
     const uint32_t founder_ctsplit = 3 * founder_ctv3;
@@ -1110,7 +1015,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     // compile time defined
     const uint32_t founder_ct_mld_rem =
         (MULTIPLEX_LD / 192)
-        - (founder_ct_mld * MULTIPLEX_LD - reference.founder_ct()) / 192;
+        - (founder_ct_mld * MULTIPLEX_LD - reference.m_founder_ct) / 192;
 #else
     const uint32_t founder_ct_mld_rem =
         (MULTIPLEX_LD / 48)
@@ -1818,11 +1723,11 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
                      founder_include2.data(), index_data.data());
         // then populate the index_tots
         index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-        vec_datamask(reference.founder_ct(), 2, window_data_ptr,
+        vec_datamask(reference.m_founder_ct, 2, window_data_ptr,
                      founder_include2.data(), &(index_data[founder_ctv2]));
         index_tots[1] =
             popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-        vec_datamask(reference.founder_ct(), 3, window_data_ptr,
+        vec_datamask(reference.m_founder_ct, 3, window_data_ptr,
                      founder_include2.data(), &(index_data[2 * founder_ctv2]));
         index_tots[2] =
             popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
@@ -2081,41 +1986,66 @@ void Genotype::get_null_score(const size_t& set_size,
         m_score_sd = rs.sd();
     }
 }
-bool Genotype::get_score(int& cur_index, int& cur_category,
-                         double& cur_threshold, size_t& num_snp_included,
-                         const size_t region_index, const bool cumulate,
-                         const bool require_statistic, const bool first_run)
+bool Genotype::get_score(int& cur_index, double& cur_threshold,
+                         uint32_t& num_snp_included, const size_t region_index,
+                         const bool non_cumulate, const bool require_statistic,
+                         const bool first_run)
 {
-    if (m_existed_snps.size() == 0 || cur_index == m_existed_snps.size())
+    if (m_existed_snps.size() == 0
+        || cur_index == static_cast<int>(m_existed_snps.size()))
         return false;
-    int end_index = 0;
-    bool ended = false;
+    // we will reset the number of SNP count if we are not running cumulative
+    // PRS
+    if (non_cumulate) num_snp_included = 0;
+    // we will capture the current category and find out all SNPs that fall
+    // within this category
 
     if (cur_index == -1) // first run
     {
         cur_index = 0;
-        cur_category = m_existed_snps[cur_index].category();
     }
-    cur_threshold = m_existed_snps[cur_index].get_threshold();
+    intptr_t cur_category =
+        m_existed_snps[static_cast<std::vector<SNP>::size_type>(cur_index)]
+            .category();
+    bool ended = false;
+    // obtain the current p-value threshold
+    cur_threshold =
+        m_existed_snps[static_cast<std::vector<SNP>::size_type>(cur_index)]
+            .get_threshold();
     // existed snp should be sorted such that the SNPs should be
     // access sequentially
-    for (size_t i = cur_index; i < m_existed_snps.size(); ++i) {
-        if (m_existed_snps[i].category() != cur_category) {
-            end_index = i;
+
+    std::vector<SNP>::size_type end_index =
+        static_cast<std::vector<SNP>::size_type>(cur_index);
+    for (; end_index < m_existed_snps.size(); ++end_index) {
+        // go through each SNP
+        if (m_existed_snps[end_index].category() != cur_category) {
+            // if we are no longer within the same category, we will end our
+            // current iteration
             ended = true;
             break;
         }
-        //		// Use as part of the output
-        if (m_existed_snps[i].in(region_index)) num_snp_included++;
+        // we want to count the number of SNPs included in the current analysis
+        if (m_existed_snps[end_index].in(region_index)) num_snp_included++;
     }
     if (!ended) {
+        // if ended isn't set to true, we have reached the end of the
+        // m_existed_snp (might want to avoid using ended as the flag name as
+        // that is confusing)
         end_index = m_existed_snps.size();
-        cur_category = m_existed_snps.back().category();
+        // we don't update teh cur_category as that will be the same as the one
+        // before
     }
-    else
-        cur_category = m_existed_snps[end_index].category();
-    read_score(cur_index, end_index, region_index, (!cumulate || first_run));
-    cur_index = end_index;
+    // we now run the read_score function which will construct PRS based on the
+    // range specified by cur_index and end_inde for the i th region and will
+    // reset the PRS to 0 if  it is none cumulative PRS calculation or if this
+    // is the first run
+    read_score(static_cast<size_t>(cur_index), end_index, region_index,
+               (non_cumulate || first_run));
+    // update the current index
+    cur_index = static_cast<int>(end_index);
+    // if we require the statistic information, we will need to calculate the
+    // mean and SD
     if (require_statistic) {
         misc::RunningStat rs;
         size_t num_prs = m_prs_info.size();
@@ -2126,7 +2056,8 @@ bool Genotype::get_score(int& cur_index, int& cur_category,
             }
             else
             {
-                rs.push(m_prs_info[i].get_prs());
+                rs.push(m_prs_info[i].prs
+                        / static_cast<double>(m_prs_info[i].num_snp));
             }
         }
         m_mean_score = rs.mean();
