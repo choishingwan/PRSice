@@ -215,6 +215,9 @@ private:
             // We don't need to bother about founder or founder info here as all
             // samples in bgen are considered as founder (at least this is the
             // case at the moment)
+            // TODO, might want to make this struct a member so that we don't
+            // need to re-initialize it? Though it only contain pointers and
+            // doesn't have any big structures
             PLINK_generator setter(&m_sample_include, mainbuf,
                                    m_hard_threshold);
             // we can now use the bgen library to parse the BGEN input and
@@ -252,16 +255,38 @@ private:
     void dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
                       uint32_t het_weight, uint32_t homrar_weight,
                       bool set_zero);
-    void read_score(size_t start_index, size_t end_bound,
+    /*!
+     * \brief read_score is the master function for performing the score reading
+     * \param start_index is the index of SNP that we should start reading from
+     * \param end_bound is the index of the first SNP for us to ignore
+     * \param region_index is the index of the region of interest
+     * \param reset_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void read_score(const size_t start_index, const size_t end_bound,
                     const size_t region_index, bool set_zero);
-    void hard_code_score(size_t start_index, size_t end_bound,
-                         uint32_t homcom_weight, uint32_t het_weight,
-                         uint32_t homrar_weight, const size_t region_index,
-                         bool set_zero);
-    void dosage_score(size_t start_index, size_t end_bound,
-                      uint32_t homcom_weight, uint32_t het_weight,
-                      uint32_t homrar_weight, const size_t region_index,
-                      bool set_zero);
+    /*!
+     * \brief Function responsible for generate the score based on hard coding
+     * \param start_index is the index of SNP that we should start reading from
+     * \param start_index is the index of SNP that we should start reading from
+     * \param region_index is the index of the region of interest
+     * \param set_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void hard_code_score(const size_t start_index, const size_t end_bound,
+                         const size_t region_index, bool set_zero);
+    /*!
+     * \brief Function responsible for generate the score based on the genotype
+     * dosage information
+     *
+     * \param start_index is the index of SNP that we should start reading from
+     * \param start_index is the index of SNP that we should start reading from
+     * \param region_index is the index of the region of interest
+     * \param set_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void dosage_score(size_t start_index, const size_t end_bound,
+                      const size_t region_index, bool set_zero);
 
 
     /*
@@ -270,21 +295,47 @@ private:
     struct PRS_Interpreter
     {
         ~PRS_Interpreter(){};
+        /*!
+         * \brief PRS_Interpreter is the structure used by BGEN library to parse
+         * the probability data
+         *
+         * \param sample_prs is the vector where we store the results
+         * \param sample_inclusion is the vector telling us if the sample is
+         * required
+         *
+         * \param missing contain the method of missingness handling
+         */
         PRS_Interpreter(std::vector<PRS>* sample_prs,
                         std::vector<uintptr_t>* sample_inclusion,
                         MISSING_SCORE missing)
-            : m_sample_prs(sample_prs)
-            , m_sample_inclusion(sample_inclusion)
-            , m_missing_score(missing)
+            : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
         {
-            // m_sample contains only samples extracted
-            // m_score.resize(m_sample_prs->size(), 0);
-
             m_miss_count = (missing != MISSING_SCORE::SET_ZERO);
+            // to account for the missingness, we need to calculate the mean of
+            // the PRS before we can assign the missing value to the sample. As
+            // a result of that, we need a vector to store the index of the
+            // missing sample. The maximum possible number of missing sample is
+            // the number of sample, thus we can reserve the required size
             m_sample_missing_index.reserve(m_sample_prs->size());
+
+            m_setzero = (missing == MISSING_SCORE::SET_ZERO);
+            m_centre = (missing == MISSING_SCORE::CENTER);
         }
-        void set_stat(double stat, uint32_t homcom_weight, uint32_t het_weight,
-                      uint32_t homrar_weight, bool flipped, bool not_first)
+        /*!
+         * \brief As we will reuse this struct in our analysis, we need to
+         * constantly feed in different statistics and to inform this struct
+         * whether we want to reset the PRS
+         *
+         * \param stat is the effect size of the SNP
+         * \param homcom_weight is the weight of the homozygous common variant
+         * \param het_weight is the weight of heterozygous
+         * \param homrar_weight is the weight of homozygous rare variant
+         * \param flipped represent whether we want to flip this SNP
+         * \param not_first inform us if we want to construct a new score or not
+         */
+        void set_stat(const double& stat, const double& homcom_weight,
+                      const double& het_weight, const double& homrar_weight,
+                      const bool flipped, const bool not_first)
         {
             m_stat = stat;
             m_flipped = flipped;
@@ -293,126 +344,184 @@ private:
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
             if (m_flipped) {
+                // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
         }
-        void initialise(std::size_t number_of_samples,
-                        std::size_t number_of_alleles)
+        /*!
+         * \brief This function is called by BGEN whenever a new SNP is
+         * encountered
+         */
+        void initialise(std::size_t, std::size_t)
         {
+            // we will reset the IDs
+            // m_prs_sample_i represent the sample index of the result PRS
+            // vector which does not contain samples that are removed
             m_prs_sample_i = 0;
-            m_bgen_sample_i = 0;
+            // we clear the number of missingness from the data
             m_sample_missing_index.clear();
-            // std::fill(m_sample_missing.begin(), m_sample_missing.end(),
-            // false);  std::fill(m_score.begin(), m_score.end(), 0.0);
+            // every new SNP is start of as a valid SNP
+            m_valid = true;
         }
-        void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
-                                uint32_t min_entries, uint32_t max_entries)
-        {
-        }
+        /*!
+         * \brief Another function mandated by bgen library that we don't use
+         */
+        void set_min_max_ploidy(uint32_t, uint32_t, uint32_t, uint32_t) {}
 
+        /*!
+         * \brief Function to set the current sample ID and return whether we
+         * want to decompose the probability of this sample
+         *
+         * \param i is the sample index w.r.t the bgen file
+         * \return true if we want to process this sample
+         */
         bool set_sample(std::size_t i)
         {
-            m_entry_i = 0;
+            // a flag to indicate if this is a missing sample
             m_is_missing = false;
+            // a flag to indicate this is the first genotype of the sample
+            // we set this to account for the off chance where the set_value
+            // isn't called in the expected order (though in that case, our
+            // m_entry_i might also be wrong)
             m_start_geno = false;
+            // we need to store the sum of value. This is because missingness in
+            // bgen v1.1 is represented by the sum of probability = 0. This also
+            // helps us to avoid adding up the number of SNP 3 times
             m_sum = 0.0;
-            m_bgen_sample_i = i;
-            return IS_SET(m_sample_inclusion->data(), m_bgen_sample_i);
+            // if the byte is set, then we want this sample
+            return IS_SET(m_sample_inclusion->data(), i);
         }
-
-        void set_number_of_entries(std::size_t ploidy,
-                                   std::size_t number_of_entries,
-                                   genfile::OrderType order_type,
-                                   genfile::ValueType value_type)
+        /*!
+         * \brief Another mandated function by bgen lib taht we don't use
+         */
+        void set_number_of_entries(std::size_t, std::size_t, genfile::OrderType,
+                                   genfile::ValueType)
         {
         }
 
         // Called once for each genotype (or haplotype) probability per sample.
-        void set_value(uint32_t, double value)
+        /*!
+         * \brief This function is called for each genotype for each sample.
+         * \param geno  is the genotype dosage w.r.t the last allele
+         * \param value is the probability of the allele
+         */
+        void set_value(uint32_t geno, double value)
         {
-            int geno = 2 - m_entry_i;
-            auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
-            // for bgen 1.1, we will still get set_value even for missing data
-            // however, all values will be 0
-            // Therefore for missing sample, we would've add 1, which is ok if
-            // MISSING_SCORE !=SET_ZERO
+            // as this function is called multiple times per sample, to avoid
+            // adding up three times the SNP number, and to account for the
+            // missingness (bgen v1.1), we will first store the sample PRS in
+            // the double sum and only add it to the sample if it is not missing
             switch (geno)
             {
-            default:
-                sample_prs.num_snp =
-                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
-                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
-                                 + m_homcom_weight * value * m_stat * 0.5;
-                break;
-            case 1:
-                sample_prs.num_snp =
-                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
-                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
-                                 + m_het_weight * value * m_stat * 0.5;
-                break;
-            case 2:
-                sample_prs.num_snp =
-                    sample_prs.num_snp * (m_not_first || m_start_geno) + 1;
-                sample_prs.prs = sample_prs.prs * (m_not_first || m_start_geno)
-                                 + m_homrar_weight * value * m_stat * 0.5;
+            default: m_sum += m_homcom_weight * value * m_stat * 0.5; break;
+            case 1: m_sum += m_het_weight * value * m_stat * 0.5; break;
+            case 2: m_sum += m_homrar_weight * value * m_stat * 0.5; break;
             }
             m_total_prob += value * geno;
-            ++m_entry_i;
-            m_sum += value;
-            m_start_geno = true;
         }
-        // call if sample is missing
-        void set_value(uint32_t, genfile::MissingValue value)
-        {
-            m_is_missing = true;
-        }
-
+        /*!
+         * \brief For bgen v1.2 or later, when there is a missing sample, a
+         * missing signature will be called which leads to this set_value
+         * function instead
+         */
+        void set_value(uint32_t, genfile::MissingValue) { m_is_missing = true; }
+        /*!
+         * \brief This function is called whenever all probability for a sample
+         * are read. We can then perform assignment to the sample
+         */
         void sample_completed()
         {
+            auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
             if (m_sum == 0.0 || m_is_missing) {
                 // this is a missing sample
                 m_sample_missing_index.push_back(m_prs_sample_i);
-                // remove the problematic count if needed
-                (*m_sample_prs)[m_prs_sample_i].num_snp -= m_miss_count;
+                if (!m_setzero) {
+                    // we will try to use either centre scoring or mean
+                    // imputation to account for missing data. This will require
+                    // us to add  / assign 1 to the number of SNP
+                    if (m_not_first)
+                        ++sample_prs.num_snp;
+                    else
+                        sample_prs.num_snp = 1;
+                }
             }
-            // go to next sample
+            // this is not a missing sample and we can either add the prs or
+            // assign the PRS
+            else if (m_not_first)
+            {
+                // this is not the first SNP in the region, we will add
+                ++sample_prs.num_snp;
+                sample_prs.prs += m_sum;
+            }
+            else
+            {
+                sample_prs.num_snp = 1;
+                sample_prs.prs = m_sum;
+            }
+            // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
         }
-
+        /*!
+         * \brief once we finish reading the whole SNP, we can then start
+         * processing samples with missing data. This requires us to calculate
+         * the expected value and use that as the PRS of the samples
+         */
         void finalise()
         {
             size_t num_miss = m_sample_missing_index.size();
             size_t num_prs = m_sample_prs->size();
             if (num_prs == num_miss) {
-                // all samples are missing
+                // all samples are missing. This should in theory invalidate the
+                // SNP
+                m_valid = false;
                 return;
             }
-            double expected_value =
-                m_total_prob / (((double) num_prs - (double) num_miss) * 2);
+            // if we use SET_ZERO as our missing_score handling method, we can
+            // just avoid doing any missingness handling
+            if (m_setzero) return;
+            // here, we multiply the denominator by 2 to ensure the
+            // expected_value is ranging from 0 -1
+            double expected_value = m_total_prob
+                                    / ((static_cast<double>(num_prs)
+                                        - static_cast<double>(num_miss))
+                                       * 2);
+
             // worth separating centre score out
-            size_t miss_index = m_sample_missing_index.front();
-            switch (m_missing_score)
+            if (m_centre) {
+                // we want to minus the expected value from all samples
+                size_t i_miss 0;
+                for (size_t i = 0; i < num_prs; ++i) {
+                    // we will iterate through all the sample that we are using
+                    if (i_miss < num_miss
+                        && m_sample_missing_index[i_miss] == i)
+                    {
+                        // if the missing index is smaller than the number of
+                        // missing sample, and the missing sample index is the
+                        // same as the current sample, we will skip this
+                        // sample
+
+                        ++i_miss;
+                        continue;
+                    }
+                    // otherwise, we will simply remove the expected value from
+                    // the score
+                    (*m_sample_prs)[m_prs_sample_i].prs -= expected_value;
+                }
+            }
+            else
             {
-            default:
-                // centre score
+                // just normal mean imputation
                 for (auto&& index : m_sample_missing_index) {
                     (*m_sample_prs)[index].prs += expected_value;
                 }
-                break;
-            case MISSING_SCORE::CENTER:
-                for (size_t i = 0; i < num_prs; ++i) {
-                    if (miss_index == i) {
-                        ++miss_index;
-                        continue;
-                    }
-                    (*m_sample_prs)[m_prs_sample_i].prs -= expected_value;
-                }
-                break;
-            case MISSING_SCORE::SET_ZERO:
-                // do nothing
-                break;
             }
         }
+
+        /*!
+         * \brief This function will inform us if the current SNP is valid
+         * \return
+         */
+        bool is_valid() const { return m_valid; }
 
     private:
         std::vector<PRS>* m_sample_prs;
@@ -421,25 +530,25 @@ private:
         double m_stat = 0.0;
         double m_total_prob = 0.0;
         double m_sum = 0.0;
-        uint32_t m_homcom_weight = 0;
-        uint32_t m_het_weight = 1;
-        uint32_t m_homrar_weight = 2;
-        uint32_t m_bgen_sample_i = 0;
+        double m_homcom_weight = 0;
+        double m_het_weight = 0.1;
+        double m_homrar_weight = 1;
         uint32_t m_prs_sample_i = 0;
-        uint32_t m_entry_i = 0;
         uint32_t m_miss_count = 0;
-        MISSING_SCORE m_missing_score;
         bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
         bool m_start_geno = false;
+        bool m_setzero = false;
+        bool m_centre = false;
+        bool m_valid = true;
     };
 
     /*!
      * \brief The PLINK_generator struct. This will be passed into the bgen
-     * library and used for parsing the BGEN data. This will generate a plink
-     * binary as an output (stored in the genotype vector passed during
-     * construction)
+     * library and used for parsing the BGEN data. This will generate a
+     * plink binary as an output (stored in the genotype vector passed
+     * during construction)
      */
     struct PLINK_generator
     {
@@ -450,12 +559,11 @@ private:
             , m_hard_threshold(hard_threshold)
         {
         }
-        void initialise(std::size_t number_of_samples,
-                        std::size_t number_of_alleles)
+        void initialise(std::size_t, std::size_t)
         {
             // initialize is called when we meet a new SNP
-            // we therefore want to reset the index and shift, use for indicate
-            // where we push the byte onto genotype
+            // we therefore want to reset the index and shift, use for
+            // indicate where we push the byte onto genotype
             m_index = 0;
             m_shift = 0;
             // we also clean the running stat (not RS ID), so that we can go
@@ -463,19 +571,12 @@ private:
             rs.clear();
         }
         /*!
-         * \brief set_min_max_ploidy is a function required by BGEN. As we only
-         * allow diploid, this function should not concern us (as we will error
-         * out otherwise
+         * \brief set_min_max_ploidy is a function required by BGEN. As we
+         * only allow diploid, this function should not concern us (as we
+         * will error out otherwise
          *
-         * \param min_ploidy
-         * \param max_ploidy
-         * \param min_entries
-         * \param max_entries
          */
-        void set_min_max_ploidy(uint32_t min_ploidy, uint32_t max_ploidy,
-                                uint32_t min_entries, uint32_t max_entries)
-        {
-        }
+        void set_min_max_ploidy(uint32_t, uint32_t, uint32_t, uint32_t) {}
         /*!
          * \brief set_sample is the function to be called when BGEN start to
          * process a new sample
@@ -489,8 +590,6 @@ private:
             m_sample_i = i;
             // set the genotype to 1 (missing)
             m_geno = 1;
-            // and set the entry number to 3 (homozygous effective) bit = 11
-            m_entry_i = 3;
             // we also reset the hard_prob to 0
             m_hard_prob = 0.0;
             // and expected value to 0
@@ -500,46 +599,42 @@ private:
             return IS_SET(m_sample->data(), m_sample_i);
         }
         /*!
-         * \brief set_number_of_entries is yet another function required by bgen
-         * library that we don't use
+         * \brief set_number_of_entries is yet another function required by
+         * bgen library that we don't use
          *
-         * \param ploidy
-         * \param number_of_entries
-         * \param order_type
-         * \param value_type
          */
-        void set_number_of_entries(std::size_t ploidy,
-                                   std::size_t number_of_entries,
-                                   genfile::OrderType order_type,
-                                   genfile::ValueType value_type)
+        void set_number_of_entries(std::size_t, std::size_t, genfile::OrderType,
+                                   genfile::ValueType)
         {
         }
 
-        // Called once for each genotype (or haplotype) probability per sample.
+        // Called once for each genotype (or haplotype) probability per
+        // sample.
         /*!
-         * \brief set_value is called for each genotype or haplotype probability
-         * per sample
-         * \param value where value is the probability of the genotype
+         * \brief set_value is called for each genotype or haplotype
+         * probability per sample \param value where value is the
+         * probability of the genotype
          */
-        void set_value(uint32_t, double value)
+        void set_value(uint32_t geno, double value)
         {
-            // if the current probability is the highest and the value is higher
-            // than the required threshold, we will assign it
+            // if the current probability is the highest and the value is
+            // higher than the required threshold, we will assign it
             if (value > m_hard_prob && value >= m_hard_threshold) {
                 /*
-                 * Representation of each m_entry to their genotype:
-                 *   m_entry   desired binary
-                 *   0           00
-                 *   1           00
-                 *   2           01
-                 *   3           11
-                 *   should in theory not reach 0
+                 * Representation of each geno to their binary code:
+                 *   geno    desired binary  loading
+                 *   0           00              0
+                 *   1           01              0
+                 *   2           11              1
+                 *   the binary code 10 is reserved for missing sample
                  */
-                m_geno = (m_entry_i == 1) ? 0 : m_entry_i;
+                m_geno = (geno == 2) ? 3 : geno;
                 m_hard_prob = value;
             }
-            m_exp_value += m_geno * value;
-            --m_entry_i;
+            // when we calculate the expected value, we want to multiply the
+            // probability with our coding instead of just using byte
+            // representation
+            m_exp_value += static_cast<double>(geno) * value / 2.0;
         }
         /*!
          * \brief set_value will capture the missingness signature and do
@@ -547,33 +642,33 @@ private:
          *
          * \param value this is the missing signature used by bgen v1.2+
          */
-        void set_value(uint32_t, genfile::MissingValue value) {}
+        void set_value(uint32_t, genfile::MissingValue) {}
         /*!
-         * \brief finalise This function is called when the SNP is processed. Do
-         * nothing here
+         * \brief finalise This function is called when the SNP is
+         * processed. Do nothing here
          */
         void finalise() {}
         /*!
-         * \brief sample_completed is called when each sample is completed. This
-         * will set the binary vector accordingly
+         * \brief sample_completed is called when each sample is completed.
+         * This will set the binary vector accordingly
          */
         void sample_completed()
         {
-            // if m_shift is zero, it is when we meet the index for the first
-            // time, therefore we want to initialize it
+            // if m_shift is zero, it is when we meet the index for the
+            // first time, therefore we want to initialize it
             if (m_shift == 0) m_genotype[m_index] = 0;
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
-            // if we reach the boundary, we will now add the index and reset the
-            // shift
+            // if we reach the boundary, we will now add the index and reset
+            // the shift
             if (m_shift == BITCT) {
                 m_index++;
                 m_shift = 0;
             }
-            // we can now push in the expected value for this sample. This can
-            // then use for the calculation of the info score
+            // we can now push in the expected value for this sample. This
+            // can then use for the calculation of the info score
             rs.push(m_exp_value);
         }
         /*!
@@ -600,7 +695,6 @@ private:
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
-        size_t m_entry_i = 3;
     };
 };
 
