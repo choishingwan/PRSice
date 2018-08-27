@@ -253,12 +253,24 @@ public:
      * \return true if sample is to be included
      */
     bool is_founder(size_t i) const { return m_sample_id.at(i).founder; }
+
+    // as we don't check i is within range, the following 2 functions
+    // have a potential of array out of bound
+    /*!
+     * \brief Check if the i th sample has been included in regression
+     * \param i is the index of the sample
+     * \return true if it is included
+     */
     bool sample_in_regression(size_t i) const
     {
         return IS_SET(m_in_regression.data(), i);
     }
-    // this is dangerous but whatever
-    // bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
+    /*!
+     * \brief Inform PRSice that the i th sample has been included in the
+     * regression
+     *
+     * \param i is the sample index
+     */
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
     /*!
@@ -279,10 +291,15 @@ public:
      * \return IID of the i th sample
      */
     std::string iid(size_t i) const { return m_sample_id.at(i).IID; }
-
+    /*!
+     * \brief This function will calculate the required PRS for the i th sample
+     * \param score_type is the type of score user want to calculate
+     * \param i is the sample index
+     * \return the PRS
+     */
     double calculate_score(SCORING score_type, size_t i) const
     {
-        if (i > m_prs_info.size())
+        if (i >= m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
@@ -545,6 +562,11 @@ protected:
                                       const std::string& /*file_name*/)
     {
     }
+    /*!
+     * \brief ead_score is the master function for performing the score reading.
+     * All subclass must implement this function to assist the calculation of
+     * PRS in the corresponding file format
+     */
     virtual void read_score(const size_t /*start_index*/,
                             const size_t /*end_bound*/,
                             const size_t /*region_index*/, bool /*reset_zero*/)
@@ -557,9 +579,20 @@ protected:
 
 
     // for loading the sample inclusion / exclusion set
+    /*!
+     * \brief Function to load in the sample extraction exclusion list
+     * \param input the file name
+     * \param ignore_fid whether we should ignore the FID (use 2 column or 1)
+     * \return an unordered_set use for checking if the sample is in the file
+     */
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
-    // for loading the SNP inclusion / exclusion set
+    /*!
+     * \brief Function to load in SNP extraction exclusion list
+     * \param input the file name of the SNP list
+     * \param reporter the logger
+     * \returnan unordered_set use for checking if the SNP is in the file
+     */
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
 
