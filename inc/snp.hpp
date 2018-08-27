@@ -236,7 +236,15 @@ public:
      * \return  Return true if this is clumped
      */
     bool clumped() const { return m_clumped; }
+    /*!
+     * \brief return whether this is a valid SNP
+     * \return true if valid
+     */
     bool valid() const { return m_valid; }
+    /*!
+     * \brief When call, this function suggest that the SNP is invalid (likely
+     * due to 100% genotype missingness)
+     */
     void invalidate() { m_valid = false; }
     /*!
      * \brief Set the lower boundary (index of m_existed_snp) of this SNP if it
@@ -250,6 +258,17 @@ public:
      * \param up the designated bound index
      */
     void set_up_bound(intptr_t up) { m_up_bound = up; }
+    /*!
+     * \brief get_counts will return the current genotype count for this SNP.
+     * Return true if this was previously calculated (and indicate the need of
+     * calculation)
+     *
+     * \param homcom is the count of homozygous common allele
+     * \param het is the count of heterozygous
+     * \param homrar is the count of homozygous rare allele
+     * \param missing is the number of missing genotypes
+     * \return true if calculation is already done
+     */
     bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
                     uint32_t& missing)
     {
@@ -259,6 +278,15 @@ public:
         missing = m_missing;
         return m_has_count;
     }
+    /*!
+     * \brief This function will set the genotype count for the current SNP, and
+     * will set the has_count to true
+     *
+     * \param homcom is the count of homozygous common allele
+     * \param het is the count of heterozygous
+     * \param homrar is the count of homozygous rare allele
+     * \param missing is the number of missing genotypes
+     */
     void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
                     uint32_t& missing)
     {
