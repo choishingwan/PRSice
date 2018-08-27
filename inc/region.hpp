@@ -116,24 +116,42 @@ public:
      * \return true if the snp falls within an exclusion region
      */
     bool check_exclusion(const std::string& chr, const intptr_t loc);
-
+    /*!
+     * \brief Store information fo the number of SNP in each region
+     * \param count is the input containing the count for each region
+     */
     void post_clump_count(std::vector<int>& count)
     {
         int max = 0;
+        // we resize our region count storage
         m_region_post_clump_count.resize(count.size());
+        // and calculate the last region
         const size_t last_region_index = count.size() - 1;
         for (size_t i = 0; i < count.size(); ++i) {
             if (i != last_region_index && i != 0) {
+                // we want to know what is the maximum number of SNP for all the
+                // set involves (except base and background)
                 max = std::max(count[i], max);
             }
+            // then store in the count
             m_region_post_clump_count[i] = count[i];
         }
         // we won't do background with the base group
-        if (count.size() > 1 && max > count.back()) {
+        if (count.size() > 1 && max > count.back()
+            && m_region_name.back() == "Background")
+        {
+            // if we have more than one group and the maximum SNP count is
+            // larger than the number of SNPs in background (can happen if the
+            // backgroudn isn't generated from GTF &/ region input is bed
             throw std::runtime_error("Error: Not enough background SNP for "
                                      "calculation of competitive P-value!");
         }
     }
+    /*!
+     * \brief Get the number of SNP contain in the region
+     * \param i_region is the region index
+     * \return the number of SNP
+     */
     int num_post_clump_snp(size_t i_region) const
     {
         return m_region_post_clump_count.at(i_region);

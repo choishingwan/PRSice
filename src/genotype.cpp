@@ -130,90 +130,90 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
                                                         Reporter& reporter)
 {
     std::ifstream in;
+    // first, we read in the file
     in.open(input.c_str());
     if (!in.is_open()) {
         std::string error_message = "Error: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
     std::string line;
+    // we will return the "result" variable
     std::unordered_set<std::string> result;
-    bool error = false;
     std::string message;
-    // allow the input to be slightly more flexible
-    // determined by Header
+    // allow the input to be slightly more flexible. This flexibility relies on
+    // the header or the column name of the file
     std::getline(in, line);
     misc::trim(line);
     std::vector<std::string> token = misc::split(line);
-    bool has_three_columns = (token.size() >= 3);
+    // rs_index store the location of the RS ID
     size_t rs_index = 0;
     if (token.size() != 1) {
+        // if we have more than one column, we will try and see if it is some
+        // format we can recognized
         bool has_snp_colname = false;
         for (auto&& name : token) {
+            // we will go through the header and identify any of the followings
+            // (case insensitive): 1) SNP 2) RS 3) RS_ID 4) RS.ID 5) RSID
+
             std::transform(name.begin(), name.end(), name.begin(), ::toupper);
-            if (name.compare("SNP") == 0 || name.compare("RS") == 0
-                || name.compare("RS_ID") == 0 || name.compare("RS.ID") == 0)
+            if (name == "SNP" || name == "RS" || name == "RS_ID"
+                || name == "RS.ID" || name == "RSID")
             {
+                /// we will assume this column to contain the SNP ID
                 has_snp_colname = true;
                 message = name + " assume to be column containing SNP ID";
                 reporter.report(message);
                 break;
             }
+            // we will continue to iterate until we reaches the end or found a
+            // column with the specific names
             rs_index++;
         }
         if (!has_snp_colname) {
-            // did not find the colnames, then we will assume this is a bim file
+            // if we reaches to the end of the column name list and didn't find
+            // the required header, we will resort to familiar file formats
             if (token.size() == 6) {
+                // with 6 column, we will assume this to be a bim file, where
+                // the SNP ID is at the second column
                 message = "SNP extraction/exclusion list contains 6 columns, "
                           "will assume second column contains the SNP ID";
                 reporter.report(message);
+
+                // we set the rs index to 1 (use the second column as the RS ID)
                 rs_index = 1;
             }
             else
             {
+                // otherwise, we will assume the first column contain the SNP ID
                 message = "SNP extraction/exclusion list contains "
                           + std::to_string(token.size())
                           + " columns, "
                             "will assume first column contains the SNP ID";
                 reporter.report(message);
+                // we set the rs index to 0 (use the first column as the RS ID)
                 rs_index = 0;
             }
         }
     }
     else
     {
+        // with only one column, it is easy, just use that column as the SNP ID
+        // rs_index will be 0
         message =
             "Only one column detected, will assume only SNP ID is provided";
         reporter.report(message);
     }
     in.clear();
     in.seekg(0, std::ios::beg);
+    // now that we have identify the format of the file we can read in the file
     while (std::getline(in, line)) {
         misc::trim(line);
         if (line.empty()) continue;
         std::vector<std::string> token = misc::split(line);
-        if (has_three_columns && rs_index == 1
-            && token[rs_index].compare(".") == 0)
-        {
-            if (!error) {
-                error = true;
-                message =
-                    "Warning: Some SNPs from the "
-                    "extraction/exclusion list has rs-id of . "
-                    "They will be excluded unless the file contains at least 3 "
-                    "columns."
-                    "When 3 columns is provided, we will assume the "
-                    "first and third columns are the chromosome and "
-                    "coordinates "
-                    "respectively and will generate an rsid as chr:loc\n";
-                reporter.report(message);
-            }
-            if (token.size() >= 3) {
-                token[rs_index] = token[0] + ":" + token[2];
-            }
-        }
-        if (result.find(token[rs_index]) == result.end()) {
-            result.insert(token[rs_index]);
-        }
+        // don't think the parsing . into chr:bp will be helpful in the context
+        // of an extraction / exclusion list
+        // as this is a set, we don't need to worry about duplicates
+        result.insert(token[rs_index]);
     }
     return result;
 }
@@ -227,7 +227,10 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
         std::string error_message = "Error: Cannot open file: " + input;
         throw std::runtime_error(error_message);
     }
+    // read in the file
     std::string line;
+    // now go through the sample file. We require the FID (if any) and IID  must
+    // be the first 1/2 column of the file
     std::unordered_set<std::string> result;
     while (std::getline(in, line)) {
         misc::trim(line);
@@ -2044,7 +2047,7 @@ bool Genotype::get_score(int& cur_index, double& cur_threshold,
                (non_cumulate || first_run));
     // update the current index
     cur_index = static_cast<int>(end_index);
-    // if we require the statistic information, we will need to calculate the
+    // if we want to perform standardization, we will need to calculate the
     // mean and SD
     if (require_statistic) {
         misc::RunningStat rs;

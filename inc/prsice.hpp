@@ -52,6 +52,7 @@
 //#define pthread_t HANDLE
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
+// we give an extra space for window just in case
 #define NEXT_LENGTH 1
 #else
 #include <thread>
@@ -130,9 +131,17 @@ public:
      */
     void pheno_check(const Commander& c_commander, Reporter& reporter);
     // init_matrix whenever phenotype changes
+    /*!
+     * \brief init_matrix will initialize the independent and dependent matrix
+     * \param c_commander contains all user input
+     * \param pheno_index is the index of the phenotype we are currently
+     * processing
+     *
+     * \param target is the target genotype. Provide the sample ID information
+     * \param reporter is the logger
+     */
     void init_matrix(const Commander& c_commander, const intptr_t pheno_index,
-                     Genotype& target, Reporter& reporter,
-                     const bool prslice = false);
+                     Genotype& target, Reporter& reporter);
     intptr_t num_phenotype() const
     {
         return (pheno_info.use_pheno)
@@ -142,19 +151,40 @@ public:
     void run_prsice(const Commander& c_commander, const Region& region,
                     const intptr_t pheno_index, const size_t region_index,
                     Genotype& target);
-    void regress_score(Genotype& target, const double threshold, size_t thread,
-                       const size_t pheno_index, const size_t iter_threshold);
+    /*!
+     * \brief Before calling this function, the target should have loaded the
+     * PRS. Then this function will fill in the m_independent_variable matrix
+     * and call the required regression algorithms. It will then check if we
+     * encounter a more significant result
+     *
+     * \param target is the target genotype file containing the PRS information
+     * \param threshold is the current p-value threshold, use for output
+     * \param thread is the number of thread allowed
+     * \param pheno_index is the index of the current phenotype
+     * \param iter_threshold is the index of the current threshold
+     */
+    void regress_score(Genotype& target, const double threshold, int thread,
+                       const intptr_t pheno_index, const size_t iter_threshold);
 
     void prsice(const Commander& c_commander, const Region& c_region,
                 const size_t c_pheno_index, bool prslice = false);
     void output(const Commander& c_commander, const Region& region,
                 const intptr_t pheno_index, const size_t region_index,
                 Genotype& target);
-    void prep_output(const Commander& commander, Genotype& target,
-                     std::vector<std::string> region_name,
+    /*!
+     * \brief Function that prepare the output files by writing out white
+     * spaces, this allow us to generate a nice vertical file
+     *
+     * \param out is the output prefix
+     * \param all_score indicate if we want to generate the all score file
+     * \param target is the target genotype object containing the sample names
+     * \param region_name is the name of regions involved
+     * \param pheno_index is the index of the current phenotype
+     */
+    void prep_output(const std::string& out, const bool all_score,
+                     const Genotype& target,
+                     const std::vector<std::string>& region_name,
                      const intptr_t pheno_index);
-    void transpose_all(const Commander& c_commander, const Region& c_region,
-                       size_t pheno_index) const;
     void summarize(const Commander& c_commander, Reporter& reporter);
     /*!
      * \brief Calculate the number of processes required
@@ -240,10 +270,10 @@ private:
     };
     struct column_file_info
     {
-        size_t header_length;
-        size_t skip_column_length;
-        size_t line_width;
-        size_t processed_threshold;
+        int header_length;
+        int skip_column_length;
+        int line_width;
+        int processed_threshold;
     };
     struct Pheno_Info
     {
@@ -259,7 +289,6 @@ private:
 
     Eigen::MatrixXd m_independent_variables;
     Eigen::VectorXd m_phenotype;
-    std::unordered_map<int, std::vector<double>> m_null_store;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
@@ -283,18 +312,18 @@ private:
     uint32_t m_num_snp_included = 0;
     uint32_t m_region_index = 0;
     uint32_t m_all_thresholds = 0;
-    uint32_t m_max_fid_length = 3;
-    uint32_t m_max_iid_length = 3;
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
-    uint32_t m_precision = 9;
+    int32_t m_precision = 9;
     // the 7 are:
     // 1 for sign
     // 1 for dot
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
-    uint32_t m_numeric_width = m_precision + 7;
+    int32_t m_numeric_width = m_precision + 7;
+    int32_t m_max_fid_length = 3;
+    int32_t m_max_iid_length = 3;
     int m_best_index = -1;
     int m_perm_per_slice = 0;
     int m_remain_slice = 0;
@@ -314,31 +343,61 @@ private:
                      size_t start, size_t end, int rank,
                      const Eigen::VectorXd& pre_se, size_t processed);
     void permutation(Genotype& target, const size_t n_thread, bool is_binary);
+    /*!
+     * \brief This function will calculate the maximum length of the FID and
+     * IID, generate the matrix index for quicker search and also set the in
+     * regression flag for each sample
+     *
+     * \param target is the target genotype object
+     */
     void update_sample_included(Genotype& target);
+    /*!
+     * \brief gen_pheno_vec is the function responsible for generating the
+     * phenotype vector
+     *
+     * \param target is the target genotype object, providing information on
+     * FID, IID and also phenotype (e.g. from fam file)
+     *
+     * \param pheno_file_name contains the name of the phenotype file
+     * \param pheno_index contain the index of the current phenotype
+     * \param reporter is the logger
+     */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const int pheno_index, bool regress, Reporter& reporter);
+                       const intptr_t pheno_index, Reporter& reporter);
     void gen_cov_matrix(const std::string& c_cov_file,
                         std::vector<std::string> cov_header_name,
                         std::vector<uint32_t> cov_header_index,
                         std::vector<uint32_t> factor_cov_index,
                         Reporter& reporter);
+    /*!
+     * \brief Function use to process the covariate file, should be able to
+     * determine the level of factors
+     *
+     * \param cov_file is the name of the covariate file
+     * \param factor_cov_index is the column index for factor covariates
+     * \param cov_start_index is the starting position of each column (return)
+     * \param cov_index is the column index for all covariates
+     * \param cov_name is the name of each covariates
+     * \param factor_levels is a structure to store the factor levels. It's size
+     * should equal to the number of factor level. The nested map should contain
+     * the variable to level matching information
+     *
+     * \param num_column is the number of column required (return)
+     * \param reporter is the logger
+     */
     void process_cov_file(
         const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
         std::vector<uint32_t>& cov_start_index,
         std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
         uint32_t& num_column, Reporter& reporter);
-    void check_factor_cov(
-        const std::string& c_cov_file,
-        const std::vector<std::string>& c_cov_header,
-        const std::vector<size_t>& cov_index,
-        std::vector<std::unordered_map<std::string, int>>& factor_levels);
+
     // This should help us to update the m_prs_results
     void process_permutations();
     void summary();
     void gen_perm_memory(const Commander& commander, const size_t sample_ct,
                          Reporter& reporter);
-    void print_best(Genotype& target, const size_t pheno_index,
+    void print_best(Genotype& target, const intptr_t pheno_index,
                     const Commander& commander);
     void run_competitive(Genotype& target, const Commander& commander,
                          const size_t num_snp, const bool store_null,
