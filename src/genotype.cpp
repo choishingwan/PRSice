@@ -261,9 +261,9 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
     {
         // we ignore Sex chromosomes and haploid chromosome
 
-        fprintf(stderr, "Warning: Currently not support "
+        error_message = "Warning: Currently not support "
                         "haploid chromosome and sex "
-                        "chromosomes\n");
+                        "chromosomes\n";
         sex_error = true;
         return true;
     }
@@ -820,14 +820,22 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
 
     m_existed_snps_index.clear();
     // now m_existed_snps is ok and can be used directly
+    // it is ok here because read_base is the last function that will alter the
+    // number of SNPs included in the object before performing clumping
+    // vector index is the current index on m_existed_snp
     intptr_t vector_index = 0;
     // we do it here such that the m_existed_snps is sorted correctly
+    // low_bound is where the current snp should read from and last_snp is where
+    // the last_snp in the vector which doesn't have the up_bound set
     intptr_t low_bound = 0, last_snp = 0;
-    intptr_t prev_chr = 0, prev_loc = 0;
+    intptr_t prev_chr = -1, prev_loc = 0;
+    intptr_t diff = 0;
     m_max_window_size = 0;
     // now we iterate thorugh all the SNPs to define the clumping window
     for (auto&& cur_snp : m_existed_snps) {
         if (prev_chr != cur_snp.chr()) {
+            // if prev_chr not equal to  current chromosome, we update the
+            // previous information to the current SNP (reset)
             prev_chr = cur_snp.chr();
             prev_loc = cur_snp.loc();
             low_bound = vector_index;
@@ -835,11 +843,14 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         else if (cur_snp.loc() - prev_loc
                  > static_cast<intptr_t>(m_clump_distance))
         {
+            // now the chromosome didn't change, and the distance of our current
+            // SNP is further away from the previous SNP than our required
+            // threshold
             while (cur_snp.loc() - prev_loc
                        > static_cast<intptr_t>(m_clump_distance)
                    && low_bound < vector_index)
             {
-                low_bound++;
+                ++low_bound;
                 prev_loc =
                     m_existed_snps[static_cast<std::vector<SNP>::size_type>(
                                        low_bound)]
@@ -849,7 +860,7 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
         // now low_bound should be the first SNP where the core index SNP need
         // to read from
         cur_snp.set_low_bound(low_bound);
-        // set this as the default
+        // set the end of the vector as the default up bound
         cur_snp.set_up_bound(static_cast<intptr_t>(m_existed_snps.size()));
         // update all previous SNPs that are out bounud
         while (
@@ -863,19 +874,28 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                                  .loc()
                    > static_cast<intptr_t>(m_clump_distance))
         {
-            low_bound = m_existed_snps[static_cast<std::vector<SNP>::size_type>(
-                                           last_snp)]
-                            .low_bound();
+            // if the last SNP is on a differenet chromosome or it is to far
+            // from the current SNP
+
+            diff = vector_index
+                   - m_existed_snps[static_cast<std::vector<SNP>::size_type>(
+                                        last_snp)]
+                         .low_bound();
+            // we will set the up bound of that SNP to the current SNP
             m_existed_snps[static_cast<std::vector<SNP>::size_type>(last_snp)]
                 .set_up_bound(vector_index);
             ++last_snp;
-            if (m_max_window_size < vector_index - low_bound) {
-                m_max_window_size = vector_index - low_bound;
+            if (m_max_window_size < diff) {
+                m_max_window_size = diff;
             }
         }
+        // assign the index
+        /*
         m_existed_snps_index[cur_snp.rs()] =
             static_cast<std::vector<SNP>::size_type>(vector_index);
+            */
         ++vector_index;
+        // then we assign the flag for the current SNP
         cur_snp.set_flag(region);
     }
     for (int i = static_cast<int>(m_existed_snps.size()) - 1; i >= 0; i--) {
@@ -2094,13 +2114,13 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
                                    double* freqx2_ptr, double* freq11_ptr,
                                    uint32_t* onside_sol_ct_ptr)
 {
-    // Returns 1 if at least one SNP is monomorphic over all valid observations;
-    // returns 0 otherwise, and fills all frequencies using the maximum
-    // likelihood solution to the cubic equation.
-    // (We're discontinuing most use of EM phasing since better algorithms have
-    // been developed, but the two marker case is mathematically clean and fast
-    // enough that it'll probably remain useful as an input for some of those
-    // better algorithms...)
+    // Returns 1 if at least one SNP is monomorphic over all valid
+    // observations; returns 0 otherwise, and fills all frequencies
+    // using the maximum likelihood solution to the cubic equation.
+    // (We're discontinuing most use of EM phasing since better
+    // algorithms have been developed, but the two marker case is
+    // mathematically clean and fast enough that it'll probably remain
+    // useful as an input for some of those better algorithms...)
     double center_ct_d = (int32_t) center_ct;
     double twice_tot = known11 + known12 + known21 + known22 + 2 * center_ct_d;
     uint32_t sol_start_idx = 0;
@@ -2125,7 +2145,8 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
     double lbound;
     double dxx;
     uint32_t cur_sol_idx;
-    // shouldn't have to worry about subtractive cancellation problems here
+    // shouldn't have to worry about subtractive cancellation problems
+    // here
     if (twice_tot == 0.0) {
         return 1;
     }
@@ -2137,8 +2158,8 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
     prod_1122 = freq11 * freq22;
     prod_1221 = freq12 * freq21;
     half_hethet_share = center_ct_d * twice_tot_recip;
-    // the following four values should all be guaranteed nonzero except in the
-    // NAN case
+    // the following four values should all be guaranteed nonzero except
+    // in the NAN case
     freq1x = freq11 + freq12 + half_hethet_share;
     freq2x = 1.0 - freq1x;
     freqx1 = freq11 + freq21 + half_hethet_share;
@@ -2166,12 +2187,14 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
                    && (solutions[sol_start_idx] < -SMALLISH_EPSILON))
             {
                 sol_start_idx++;
-                // assert((sol_start_idx < sol_end_idx) &&sol_start_idx < 3);
+                // assert((sol_start_idx < sol_end_idx) &&sol_start_idx
+                // < 3);
             }
             if (sol_start_idx == sol_end_idx) {
-                // Lost a planet Master Obi-Wan has.  How embarrassing...
-                // lost root must be a double root at one of the boundary
-                // points, just check their likelihoods
+                // Lost a planet Master Obi-Wan has.  How
+                // embarrassing... lost root must be a double root at
+                // one of the boundary points, just check their
+                // likelihoods
                 sol_start_idx = 0;
                 sol_end_idx = 2;
                 solutions[0] = 0;
@@ -2233,9 +2256,10 @@ uint32_t Genotype::em_phase_hethet(double known11, double known12,
             {
                 dxx = 0.0;
             }
-            // okay to NOT count suboptimal boundary points because they don't
-            // permit direction changes within the main interval this should
-            // exactly match haploview_blocks_classify()'s D sign check
+            // okay to NOT count suboptimal boundary points because they
+            // don't permit direction changes within the main interval
+            // this should exactly match haploview_blocks_classify()'s D
+            // sign check
             if ((freq11 + best_sol) - freqx1 * freq1x >= 0.0) {
                 if (best_sol > dxx + SMALLISH_EPSILON) {
                     lbound = dxx + SMALLISH_EPSILON;
@@ -2300,7 +2324,8 @@ uint32_t Genotype::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1,
                                           double* freqx2_ptr,
                                           double* freq11_ptr)
 {
-    // if is_x1 and/or is_x2 is set, counts[9]..[17] are male-only counts.
+    // if is_x1 and/or is_x2 is set, counts[9]..[17] are male-only
+    // counts.
     double known11 = (double) (2 * counts[0] + counts[1] + counts[3]);
     double known12 = (double) (2 * counts[2] + counts[1] + counts[5]);
     double known21 = (double) (2 * counts[6] + counts[3] + counts[7]);
@@ -2552,9 +2577,9 @@ void Genotype::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
                 count12 = _mm_sub_epi64(
                     count12, _mm_and_si128(_mm_srli_epi64(count12, 1), m1));
             two_locus_3x3_tablev_two_left:
-                // unlike the zmiss variant, this apparently does not suffer
-                // from enough register spill to justify shrinking the inner
-                // loop
+                // unlike the zmiss variant, this apparently does not
+                // suffer from enough register spill to justify
+                // shrinking the inner loop
                 loader1 = *vec1++;
                 loader20 = *vec20++;
                 loader21 = *vec21++;
@@ -2572,8 +2597,8 @@ void Genotype::two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
                 loader1 = *vec1++;
                 loader20 = *vec20++;
                 loader21 = _mm_and_si128(loader1, loader20); // half1
-                loader22 =
-                    _mm_and_si128(_mm_srli_epi64(loader21, 1), m1); // half2
+                loader22 = _mm_and_si128(_mm_srli_epi64(loader21, 1),
+                                         m1); // half2
                 count10 = _mm_add_epi64(count10, _mm_and_si128(loader21, m1));
                 count20 = _mm_add_epi64(count20, loader22);
                 loader20 = *vec21++;

@@ -328,7 +328,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             if (line.empty()) continue;
             token = misc::split(line);
             // Check if we have the minimal required column number
-            if (token.size() <= static_cast<size_t>(pheno_col_index + 1)) {
+            if (token.size() < static_cast<size_t>(pheno_col_index + 1)) {
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
                     + misc::to_string(pheno_col_index + 1)

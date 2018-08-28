@@ -39,8 +39,9 @@ int main(int argc, char* argv[])
         Commander commander;
         try
         {
-            if (!commander.init(argc, argv, reporter))
+            if (!commander.init(argc, argv, reporter)) {
                 return 0; // only require the usage information
+            }
         }
         catch (...)
         {
@@ -169,6 +170,7 @@ int main(int argc, char* argv[])
             // Also, print out the SNP matrix if required
             // TODO: Maybe consider having an index storage for all set so that
             // we can jump around quicker
+            // NOTE: When PRSet isn't performed, this has no effect
             target_file->count_snp_in_region(region, commander.out(),
                                              commander.print_snp());
             // we should never sort the ordering of m_existed_snp from now on or
@@ -177,7 +179,11 @@ int main(int argc, char* argv[])
             // check which region are removed
             std::ofstream removed_regions;
             size_t region_size = region.size();
-            for (size_t i = 0; i < region_size; ++i) {
+            // We do not initialize the num_post_clump_snp index if we don't
+            // perform PRSet
+            for (size_t i = 0; i < region_size && commander.perform_set_perm();
+                 ++i)
+            {
                 if (region.num_post_clump_snp(i) == 0) {
                     // this is not included in the analysis
                     if (!removed_regions.is_open()) {
@@ -230,8 +236,11 @@ int main(int argc, char* argv[])
                     for (size_t i_region = 0; i_region < num_region_process;
                          ++i_region)
                     {
-                        // we will skip any region without SNPs in it
-                        if (region.num_post_clump_snp(i_region) == 0) continue;
+                        // we will skip any region without SNPs in it but never
+                        // skip the first set (Base  set)
+                        if (i_region != 0
+                            && region.num_post_clump_snp(i_region) == 0)
+                            continue;
                         // now we start running PRSice
                         prsice.run_prsice(commander, i_pheno, i_region,
                                           *target_file);

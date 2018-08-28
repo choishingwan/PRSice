@@ -278,7 +278,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "bar-levels")
             {
                 error = error
-                        == !load_numeric_vector<double>(optarg, message_store,
+                        || !load_numeric_vector<double>(optarg, message_store,
                                                         error_messages,
                                                         m_barlevel, command);
                 m_set_use_thresholds = true;
@@ -510,7 +510,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-
     error = error || !base_check(message_store, error_messages);
     error = error || !clump_check(message_store, error_messages);
     error = error || !covariate_check(error_messages);
@@ -519,7 +518,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     error = error || !prset_check(message_store, error_messages);
     error = error || !prsice_check(message_store, error_messages);
     error = error || !prslice_check(error_messages);
-    error = error || target_check(message_store, error_messages);
+    error = error || !target_check(message_store, error_messages);
     if (m_perform_prset && m_perform_prslice) {
         error = true;
         error_messages.append(
@@ -613,7 +612,8 @@ void Commander::set_help_message()
         "(non-effective allele)\n"
         "                            Default: A2\n"
         "    --base          | -b    Base association file\n"
-        "    --beta                  Whether the test statistic is in the form "
+        "    --beta                  Whether the test statistic is in the "
+        "form "
         "of \n"
         "                            BETA or OR. If set, test statistic is "
         "assume\n"
@@ -621,37 +621,48 @@ void Commander::set_help_message()
         "    --bp                    Column header containing the SNP "
         "coordinate\n"
         "                            Default: BP\n"
-        "    --chr                   Column header containing the chromosome\n"
+        "    --chr                   Column header containing the "
+        "chromosome\n"
         "                            Default: CHR\n"
-        "    --index                 If set, assume the INDEX instead of NAME  "
+        "    --index                 If set, assume the INDEX instead of "
+        "NAME  "
         "for\n"
-        "                            the corresponding columns are provided. "
+        "                            the corresponding columns are "
+        "provided. "
         "Index\n"
-        "                            should be 0-based (start counting from "
+        "                            should be 0-based (start counting "
+        "from "
         "0)\n"
-        "    --info-base             Base INFO score filtering. Format should "
+        "    --info-base             Base INFO score filtering. Format "
+        "should "
         "be\n"
-        "                            <Column name>,<Threshold>. SNPs with info "
+        "                            <Column name>,<Threshold>. SNPs with "
+        "info "
         "\n"
         "                            score less than <Threshold> will be "
         "ignored\n"
         "                            Column name default: INFO\n"
         "                            Threshold default: 0.9\n"
         "    --maf-base              Base MAF filtering. Format should be\n"
-        "                            <Column name>,<Threshold>. SNPs with maf\n"
-        "                            less than <Threshold> will be ignored. "
+        "                            <Column name>,<Threshold>. SNPs with "
+        "maf\n"
+        "                            less than <Threshold> will be "
+        "ignored. "
         "An\n"
         "                            additional column can also be added "
         "(e.g.\n"
-        "                            also filter MAF for cases), using the\n"
+        "                            also filter MAF for cases), using "
+        "the\n"
         "                            following format:\n"
         "                            <Column name>,<Threshold>:<Column "
         "name>,<Threshold>\n"
         "    --no-default            Remove all default options. If set, "
         "PRSice\n"
-        "                            will not set any default column name and "
+        "                            will not set any default column name "
+        "and "
         "you\n"
-        "                            will have to ensure all required columns "
+        "                            will have to ensure all required "
+        "columns "
         "are\n"
         "                            provided. (--snp, --stat, --A1, "
         "--pvalue)\n"
@@ -671,23 +682,29 @@ void Commander::set_help_message()
         "                            of the base file\n"
         // TARGET FILE
         "\nTarget File:\n"
-        "    --binary-target         Indicate whether the target phenotype\n"
-        "                            is binary or not. Either T or F should "
+        "    --binary-target         Indicate whether the target "
+        "phenotype\n"
+        "                            is binary or not. Either T or F "
+        "should "
         "be\n"
         "                            provided where T represent a binary "
         "phenotype.\n"
-        "                            For multiple phenotypes, the input should "
+        "                            For multiple phenotypes, the input "
+        "should "
         "be\n"
         "                            separated by comma without space. \n"
-        "                            Default: T if --beta and F if --beta is "
+        "                            Default: T if --beta and F if --beta "
+        "is "
         "not\n"
-        "    --geno                  Filter SNPs based on gentype missingness\n"
+        "    --geno                  Filter SNPs based on gentype "
+        "missingness\n"
         "    --info                  Filter SNPs based on info score. Only "
         "used\n"
         "                            for imputed target\n"
         "    --keep                  File containing the sample(s) to be "
         "extracted from\n"
-        "                            the target file. First column should be "
+        "                            the target file. First column should "
+        "be "
         "FID and\n"
         "                            the second column should be IID. If "
         "--ignore-fid is\n"
@@ -696,43 +713,54 @@ void Commander::set_help_message()
         "    --maf                   Filter SNPs based on minor allele "
         "frequency (MAF)\n"
         "    --nonfounders           Keep the nonfounders in the analysis\n"
-        "                            Note: They will still be excluded from LD "
+        "                            Note: They will still be excluded "
+        "from LD "
         "calculation\n"
-        "    --pheno-col     | -F    Headers of phenotypes to be included from "
+        "    --pheno-col     | -F    Headers of phenotypes to be included "
+        "from "
         "the\n"
         "                            phenotype file\n"
         "    --pheno-file    | -f    Phenotype file containing the "
         "phenotype(s).\n"
-        "                            First column must be FID of the samples "
+        "                            First column must be FID of the "
+        "samples "
         "and\n"
         "                            the second column must be IID of the "
         "samples.\n"
-        "                            When --ignore-fid is set, first column "
+        "                            When --ignore-fid is set, first "
+        "column "
         "must\n"
         "                            be the IID of the samples.\n"
-        "                            Must contain a header if --pheno-col is\n"
+        "                            Must contain a header if --pheno-col "
+        "is\n"
         "                            specified\n"
         "    --prevalence    | -k    Prevalence of all binary trait. If "
         "provided\n"
-        "                            will adjust the ascertainment bias of the "
+        "                            will adjust the ascertainment bias of "
+        "the "
         "R2.\n"
-        "                            Note that when multiple binary trait is "
+        "                            Note that when multiple binary trait "
+        "is "
         "found,\n"
-        "                            prevalence information must be provided "
+        "                            prevalence information must be "
+        "provided "
         "for\n"
         "                            all of them (Either adjust all binary "
         "traits,\n"
         "                            or don't adjust at all)\n"
         "    --remove                File containing the sample(s) to be "
         "removed from\n"
-        "                            the target file. First column should be "
+        "                            the target file. First column should "
+        "be "
         "FID and\n"
         "                            the second column should be IID. If "
         "--ignore-fid is\n"
         "                            set, first column should be IID\n"
         "                            Mutually exclusive from --keep\n"
-        "    --target        | -t    Target genotype file. Currently support\n"
-        "                            both BGEN and binary PLINK format. For \n"
+        "    --target        | -t    Target genotype file. Currently "
+        "support\n"
+        "                            both BGEN and binary PLINK format. "
+        "For \n"
         "                            multiple chromosome input, simply "
         "substitute\n"
         "                            the chromosome number with #. PRSice "
@@ -744,33 +772,43 @@ void Commander::set_help_message()
         "file>\n"
         "    --target-list           File containing prefix of target "
         "genotype\n"
-        "                            files. Similar to --target but allow more "
+        "                            files. Similar to --target but allow "
+        "more "
         "\n"
-        "                            flexibility. Do not support external fam "
+        "                            flexibility. Do not support external "
+        "fam "
         "file\n"
         "                            at the moment\n"
-        "    --type                  File type of the target file. Support bed "
+        "    --type                  File type of the target file. Support "
+        "bed "
         "\n"
-        "                            (binary plink) and bgen format. Default: "
+        "                            (binary plink) and bgen format. "
+        "Default: "
         "bed\n"
         // dosage
         "\nDosage:\n"
-        "    --allow-inter           Allow the generate of intermediate file. "
+        "    --allow-inter           Allow the generate of intermediate "
+        "file. "
         "This will\n"
-        "                            speed up PRSice when using dosage data as "
+        "                            speed up PRSice when using dosage "
+        "data as "
         "clumping\n"
         "                            reference and for hard coding PRS "
         "calculation\n"
-        "    --hard-thres            Hard threshold for dosage data. Any call "
+        "    --hard-thres            Hard threshold for dosage data. Any "
+        "call "
         "less than\n"
         "                            this will be treated as missing. Note "
         "that if dosage\n"
-        "                            data is used as a LD reference, it will "
+        "                            data is used as a LD reference, it "
+        "will "
         "always be\n"
         "                            hard coded to calculate the LD\n"
-        "    --hard                  Use hard coding instead of dosage for PRS "
+        "    --hard                  Use hard coding instead of dosage for "
+        "PRS "
         "construction.\n"
-        "                            Default is to use dosage instead of hard "
+        "                            Default is to use dosage instead of "
+        "hard "
         "coding\n"
         // clumping
         "\nClumping:\n"
@@ -789,21 +827,26 @@ void Commander::set_help_message()
         + "\n"
           "    --ld            | -L    LD reference file. Use for LD "
           "calculation. If not\n"
-          "                            provided, will use the post-filtered "
+          "                            provided, will use the "
+          "post-filtered "
           "target genotype\n"
-          "                            for LD calculation. Support multiple "
+          "                            for LD calculation. Support "
+          "multiple "
           "chromosome input\n"
           "                            Please see --target for more "
           "information\n"
-          "    --ld-list               File containing prefix of LD reference "
+          "    --ld-list               File containing prefix of LD "
+          "reference "
           "files.\n"
           "                            Similar to --ld but allow more \n"
-          "                            flexibility. Do not support external "
+          "                            flexibility. Do not support "
+          "external "
           "fam file\n"
           "                            at the moment\n"
           "    --ld-geno               Filter SNPs based on genotype "
           "missingness\n"
-          "    --ld-info               Filter SNPs based on info score. Only "
+          "    --ld-info               Filter SNPs based on info score. "
+          "Only "
           "used\n"
           "                            for imputed LD reference\n"
           "    --ld-hard-thres         Hard threshold for dosage data. Any "
@@ -819,7 +862,8 @@ void Commander::set_help_message()
           "                            the second column should be IID. If "
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
-          "                            Mutually exclusive from --ld-remove\n"
+          "                            Mutually exclusive from "
+          "--ld-remove\n"
           "                            No effect if --ld was not provided\n"
           "    --ld-maf                Filter SNPs based on minor allele "
           "frequency\n"
@@ -831,56 +875,70 @@ void Commander::set_help_message()
           "--ignore-fid is\n"
           "                            set, first column should be IID\n"
           "                            Mutually exclusive from --ld-keep\n"
-          "    --ld-type               File type of the LD file. Support bed "
+          "    --ld-type               File type of the LD file. Support "
+          "bed "
           "(binary plink)\n"
           "                            and bgen format. Default: bed\n"
-          "    --no-clump              Stop PRSice from performing clumping\n"
+          "    --no-clump              Stop PRSice from performing "
+          "clumping\n"
           "    --proxy                 Proxy threshold for index SNP to be "
           "considered\n"
-          "                            as part of the region represented by "
+          "                            as part of the region represented "
+          "by "
           "the clumped\n"
           "                            SNP(s). e.g. --proxy 0.8 means the "
           "index SNP will\n"
-          "                            represent region of any clumped SNP(s) "
+          "                            represent region of any clumped "
+          "SNP(s) "
           "that has a\n"
-          "                            R2>=0.8 even if the index SNP does not "
+          "                            R2>=0.8 even if the index SNP does "
+          "not "
           "physically\n"
           "                            locate within the region\n"
           // Covariates
           "\nCovariate:\n"
-          "    --cov-col       | -c    Header of covariates. If not provided, "
+          "    --cov-col       | -c    Header of covariates. If not "
+          "provided, "
           "will use\n"
-          "                            all variables in the covariate file. By "
+          "                            all variables in the covariate "
+          "file. By "
           "adding\n"
-          "                            @ in front of the string, any numbers "
+          "                            @ in front of the string, any "
+          "numbers "
           "within [\n"
           "                            and ] will be parsed. E.g. @PC[1-3] "
           "will be\n"
           "                            read as PC1,PC2,PC3. Discontinuous "
           "input are also\n"
-          "                            supported: @cov[1.3-5] will be parsed "
+          "                            supported: @cov[1.3-5] will be "
+          "parsed "
           "as \n"
           "                            cov1,cov3,cov4,cov5\n"
           "    --cov-factor            Header of categorical covariate(s). "
           "Dummy variable\n"
-          "                            will be automatically generated. Any "
+          "                            will be automatically generated. "
+          "Any "
           "items in\n"
           "                            --cov-factor must also be found in "
           "--cov-col\n"
           "                            Also accept continuous input (start "
           "with @).\n"
-          "    --cov-file      | -C    Covariate file. First column should be "
+          "    --cov-file      | -C    Covariate file. First column should "
+          "be "
           "FID and \n"
           "                            the second column should be IID. If "
           "--ignore-fid\n"
           "                            is set, first column should be IID\n"
           // PRSice
           "\nP-value Thresholding:\n"
-          "    --bar-levels            Level of barchart to be plotted. When "
+          "    --bar-levels            Level of barchart to be plotted. "
+          "When "
           "--fastscore\n"
-          "                            is set, PRSice will only calculate the "
+          "                            is set, PRSice will only calculate "
+          "the "
           "PRS for \n"
-          "                            threshold within the bar level. Levels "
+          "                            threshold within the bar level. "
+          "Levels "
           "should be\n"
           "                            comma separated without space\n"
           "    --fastscore             Only calculate threshold stated in "
@@ -898,20 +956,26 @@ void Commander::set_help_message()
           "Default: "
         + misc::to_string(m_lower_threshold)
         + "\n"
-          "    --model                 Genetic model use for regression. The "
+          "    --model                 Genetic model use for regression. "
+          "The "
           "genetic\n"
           "                            encoding is based on the base data "
           "where the\n"
-          "                            encoding represent number of the coding "
+          "                            encoding represent number of the "
+          "coding "
           "allele\n"
           "                            Available models include:\n"
           "                            add - Additive model, code as 0/1/2 "
           "(default)\n"
-          "                            dom - Dominant model, code as 0/1/1\n"
-          "                            rec - Recessive model, code as 0/0/1\n"
-          "                            het - Heterozygous only model, code as "
+          "                            dom - Dominant model, code as "
+          "0/1/1\n"
+          "                            rec - Recessive model, code as "
+          "0/0/1\n"
+          "                            het - Heterozygous only model, code "
+          "as "
           "0/1/0\n"
-          "    --missing               Method to handle missing genotypes. By "
+          "    --missing               Method to handle missing genotypes. "
+          "By "
           "default, \n"
           "                            final scores are averages of valid "
           "per-allele \n"
@@ -921,14 +985,18 @@ void Commander::set_help_message()
           "frequency. To throw\n"
           "                            out missing observations instead "
           "(decreasing the\n"
-          "                            denominator in the final average when "
+          "                            denominator in the final average "
+          "when "
           "this happens),\n"
-          "                            use the 'no_mean_imputation' modifier. "
+          "                            use the 'no_mean_imputation' "
+          "modifier. "
           "Alternatively,\n"
-          "                            you can use the 'center' modifier to "
+          "                            you can use the 'center' modifier "
+          "to "
           "shift all scores\n"
           "                            to mean zero. \n"
-          "    --no-regress            Do not perform the regression analysis "
+          "    --no-regress            Do not perform the regression "
+          "analysis "
           "and simply\n"
           "                            output all PRS.\n"
           "    --score                 Method to calculate the polygenic "
@@ -937,22 +1005,28 @@ void Commander::set_help_message()
           "                            avg - Take the average effect size "
           "(default)\n"
           "                            std - Standardize the effect size \n"
-          "                            sum - Direct summation of the effect "
+          "                            sum - Direct summation of the "
+          "effect "
           "size \n"
-          "    --upper         | -u    The final p-value threshold. Default: "
+          "    --upper         | -u    The final p-value threshold. "
+          "Default: "
         + misc::to_string(m_upper_threshold)
         + "\n"
           "\nPRSet:\n"
           "    --bed           | -B    Bed file containing the selected "
           "regions.\n"
-          "                            Name of bed file will be used as the "
+          "                            Name of bed file will be used as "
+          "the "
           "region\n"
           "                            identifier. WARNING: Bed file is "
           "0-based\n"
-          "    --feature               Feature(s) to be included from the gtf "
+          "    --feature               Feature(s) to be included from the "
+          "gtf "
           "file.\n"
-          "                            Default: exon,CDS,gene,protein_coding.\n"
-          "    --gtf           | -g    GTF file containing gene boundaries. "
+          "                            Default: "
+          "exon,CDS,gene,protein_coding.\n"
+          "    --gtf           | -g    GTF file containing gene "
+          "boundaries. "
           "Required\n"
           "                            when --msigdb is used\n"
           "    --msigdb        | -m    MSIGDB file containing the pathway "
@@ -960,59 +1034,76 @@ void Commander::set_help_message()
           "                            Require the gtf file\n"
           "    --snp-set               Provide a SNP set file containing a "
           "single snp set.\n"
-          "                            Name of SNP set file will be used as "
+          "                            Name of SNP set file will be used "
+          "as "
           "the region\n"
-          "                            identifier. This file should contain "
+          "                            identifier. This file should "
+          "contain "
           "only one column.\n"
           "    --snp-sets              Provide a SNP set file containing "
           "multiple snp sets.\n"
           "                            Each row represent a single SNP set "
           "with the first\n"
-          "                            column containing name of the SNP set.\n"
+          "                            column containing name of the SNP "
+          "set.\n"
           // PRSlice
           "\nPRSlice:\n"
-          "    --prslice               Perform PRSlice where the whole genome "
+          "    --prslice               Perform PRSlice where the whole "
+          "genome "
           "is first cut\n"
-          "                            into bin size specified by this option. "
+          "                            into bin size specified by this "
+          "option. "
           "PRSice will\n"
-          "                            then be performed on each bin. Bins are "
+          "                            then be performed on each bin. Bins "
+          "are "
           "then sorted\n"
-          "                            according to the their R2. PRSice is "
+          "                            according to the their R2. PRSice "
+          "is "
           "then performed\n"
           "                            again to find the best bin "
           "combination.\n"
-          "                            This cannot be performed together with "
+          "                            This cannot be performed together "
+          "with "
           "PRSet\n"
           "                            (Currently not implemented)\n"
           // Misc
           "\nMisc:\n"
-          "    --all-score             Output PRS for ALL threshold. WARNING: "
+          "    --all-score             Output PRS for ALL threshold. "
+          "WARNING: "
           "This\n"
           "                            will generate a huge file\n"
-          "    --non-cumulate          Calculate non-cumulative PRS. PRS will "
+          "    --non-cumulate          Calculate non-cumulative PRS. PRS "
+          "will "
           "be reset\n"
           "                            to 0 for each new P-value threshold "
           "instead of\n"
           "                            adding up\n"
-          "    --exclude               File contains SNPs to be excluded from "
+          "    --exclude               File contains SNPs to be excluded "
+          "from "
           "the\n"
           "                            analysis\n"
-          "    --extract               File contains SNPs to be included in "
+          "    --extract               File contains SNPs to be included "
+          "in "
           "the \n"
           "                            analysis\n"
-          "    --ignore-fid            Ignore FID for all input. When this is "
+          "    --ignore-fid            Ignore FID for all input. When this "
+          "is "
           "set,\n"
-          "                            first column of all file will be assume "
+          "                            first column of all file will be "
+          "assume "
           "to\n"
           "                            be IID instead of FID\n"
-          "    --logit-perm            When performing permutation, still use "
+          "    --logit-perm            When performing permutation, still "
+          "use "
           "logistic\n"
           "                            regression instead of linear "
           "regression. This\n"
-          "                            will substantially slow down PRSice\n"
+          "                            will substantially slow down "
+          "PRSice\n"
           "    --keep-ambig            Keep ambiguous SNPs. Only use this "
           "option\n"
-          "                            if you are certain that the base and "
+          "                            if you are certain that the base "
+          "and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
           "    --out           | -o    Prefix for all file output\n"
@@ -1020,33 +1111,43 @@ void Commander::set_help_message()
           "calculation\n"
           "                            instead of the maximum likelihood "
           "haplotype\n"
-          "                            frequency estimates. This will slightly "
+          "                            frequency estimates. This will "
+          "slightly "
           "\n"
-          "                            decrease the accuracy of LD estimates, "
+          "                            decrease the accuracy of LD "
+          "estimates, "
           "but\n"
-          "                            should increase the speed of clumping\n"
-          "    --perm                  Number of permutation to perform. This "
+          "                            should increase the speed of "
+          "clumping\n"
+          "    --perm                  Number of permutation to perform. "
+          "This "
           "swill\n"
           "                            generate the empirical p-value. "
           "Recommend to\n"
           "                            use value larger than 10,000\n"
-          "    --print-snp             Print all SNPs used to construct the "
+          "    --print-snp             Print all SNPs used to construct "
+          "the "
           "best PRS\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
-          "                            system time will be used as seed. When "
+          "                            system time will be used as seed. "
+          "When "
           "same\n"
-          "                            seed and same input is provided, same "
+          "                            seed and same input is provided, "
+          "same "
           "result\n"
           "                            can be generated\n"
           "    --thread        | -n    Number of thread use\n"
-          "    --x-range               Range of SNPs to be excluded from the "
+          "    --x-range               Range of SNPs to be excluded from "
+          "the "
           "whole\n"
-          "                            analysis. It can either be a single bed "
+          "                            analysis. It can either be a single "
+          "bed "
           "file\n"
           "                            or a comma seperated list of range. "
           "Range must\n"
-          "                            be in the format of chr:start-end or "
+          "                            be in the format of chr:start-end "
+          "or "
           "chr:coordinate\n"
           "    --help          | -h    Display this help message\n";
 }
@@ -1284,8 +1385,9 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                         if (m_base_info_threshold < 0
                             || m_base_info_threshold > 1)
                         {
-                            // TODO: It is possible for some INFO score to have
-                            // range beyond 1, but that's not considered for now
+                            // TODO: It is possible for some INFO score to
+                            // have range beyond 1, but that's not
+                            // considered for now
                             error_message.append(
                                 "Error: Base INFO threshold must "
                                 "be within 0 and 1!\n");
@@ -1562,8 +1664,8 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
     if (!m_no_clump) {
         if (!m_ref_keep.empty() && !m_ref_remove.empty()) {
             error = true;
-            error_message.append(
-                "Error: Can only use either --keep or --remove but not both\n");
+            error_message.append("Error: Can only use either --keep or "
+                                 "--remove but not both\n");
         }
         // require clumping
         if (m_use_proxy_clump
@@ -1612,9 +1714,9 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
             error_message.append("Error: LD genotype missingness threshold "
                                  "must be larger than 0 and smaller than 1!\n");
         }
-        // if the reference panel is bgen, or reference panel not provided but
-        // the target is bgen then we will like to enforce hard thresholding to
-        // the files for LD calculation
+        // if the reference panel is bgen, or reference panel not provided
+        // but the target is bgen then we will like to enforce hard
+        // thresholding to the files for LD calculation
         if (m_ref_type == "bgen"
             || (m_ref_file.empty() && !m_ref_list_provided
                 && m_target_type == "bgen"))
@@ -1626,16 +1728,17 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
             }
             else if (!m_ref_file.empty() || m_ref_list_provided)
             {
-                // reference file is provided, so hard thresholding is added to
-                // ld-hard-thres
-                // (doens't matter if user has provided this parameter or not)
+                // reference file is provided, so hard thresholding is added
+                // to ld-hard-thres (doens't matter if user has provided
+                // this parameter or not)
                 message["ld-hard-thres"] = std::to_string(m_ref_hard_threshold);
             }
             else
             {
-                // reference file is not provided, so hard thresholding is added
-                // to hard-thres as it is to be applied to the target-ish
-                // (doens't matter if user has provided this parameter or not)
+                // reference file is not provided, so hard thresholding is
+                // added to hard-thres as it is to be applied to the
+                // target-ish (doens't matter if user has provided this
+                // parameter or not)
                 message["hard-thres"] = std::to_string(m_target_hard_threshold);
             }
         }
@@ -1689,7 +1792,8 @@ std::vector<std::string> Commander::transform_covariate(std::string& cov)
             }
             else
             {
-                // TODO: this can only be a nested list, should issue a warning
+                // TODO: this can only be a nested list, should issue a
+                // warning
                 info.push_back(o);
                 list.push_back(false);
             }
@@ -1835,8 +1939,8 @@ bool Commander::covariate_check(std::string& error_message)
         ref_index[cov_header[i]] = static_cast<uint32_t>(i);
     }
 
-    // when user provide a covariate file but not the covariate name, we will
-    // just read in every covariates
+    // when user provide a covariate file but not the covariate name, we
+    // will just read in every covariates
     if (m_cov_colname.size() == 0) {
         // add all headers to the covariate list
         for (std::vector<int>::size_type i = (1 + !m_ignore_fid);
@@ -1927,9 +2031,9 @@ bool Commander::filter_check(std::string& error_message)
     }
     if (m_target_geno_filter && (m_target_geno < 0 || m_target_geno > 1)) {
         error = true;
-        error_message.append(
-            "Error: Genotype missingness threshold cannot be bigger than 1.0 "
-            "or smaller than 0.0\n");
+        error_message.append("Error: Genotype missingness threshold cannot "
+                             "be bigger than 1.0 "
+                             "or smaller than 0.0\n");
     }
     if (m_target_maf_filter && (m_target_maf < 0 || m_target_maf > 1)) {
         error = true;
@@ -1955,8 +2059,8 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
         error_message.append("Error: Number of thread must be larger than 1\n");
     }
     if (!m_perform_permutation && m_logit_perm) {
-        error_message.append(
-            "Warning: Permutation not required, --logit-perm has no effect\n");
+        error_message.append("Warning: Permutation not required, "
+                             "--logit-perm has no effect\n");
     }
     if (m_no_regress) m_print_all_scores = true;
     if (m_thread == 1) message["thread"] = "1";
@@ -1994,8 +2098,9 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
                              "base permutation (--perm)");
     }
     if (m_gtf.empty() && m_background.empty() && m_perform_set_perm) {
-        // by default, if background is not provided, we will use the gtf as the
-        // background, otherwise, we will use the whole genome as the background
+        // by default, if background is not provided, we will use the gtf as
+        // the background, otherwise, we will use the whole genome as the
+        // background
         error_message.append("Warrning: Background file and gtf file not "
                              "provided. Will use the whole genome as the "
                              "background for competitive p-value calculation");
@@ -2025,7 +2130,8 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
     case MODEL::HETEROZYGOUS: message["model"] = "het"; break;
     }
     if (m_barlevel.size() == 0 && !m_perform_prset) {
-        // always output the bar_message so that we can tell R what to do next
+        // always output the bar_message so that we can tell R what to do
+        // next
         m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
         if (!m_no_full) m_barlevel.push_back(1);
     }
