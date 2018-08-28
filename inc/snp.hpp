@@ -53,7 +53,7 @@ public:
         , m_missing(missing)
     {
         m_has_count = true;
-    };
+    }
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos)
@@ -68,9 +68,15 @@ public:
         , m_loc(loc)
     {
         m_has_count = false;
-    };
+    }
     virtual ~SNP();
-
+    /*!
+     * \brief Add the statistic information for this SNP
+     * \param stat is the effect size
+     * \param p_value is the p-value
+     * \param category is the category of this SNP
+     * \param p_threshold is the p-value threshold this SNP fall into
+     */
     void set_statistic(const double stat, const double p_value,
                        const intptr_t category, const double p_threshold)
     {
@@ -78,7 +84,16 @@ public:
         m_p_value = p_value;
         m_category = category;
         m_p_threshold = p_threshold;
-    };
+    }
+    /*!
+     * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
+     * reference panel. Without reference panel, ref_file and byte_pos equals to
+     * those observed in target
+     * \param ref_file is the file name of the reference panel that contain this
+     * SNP
+     * \param ref_byte_pos is the location of this SNP on the reference panel
+     * file
+     */
     void add_reference(const std::string& ref_file,
                        const std::streampos ref_byte_pos)
     {
@@ -86,14 +101,9 @@ public:
         m_ref_byte_pos = ref_byte_pos;
     }
 
-    void update_target(const std::string& ref_file,
-                       const std::streampos ref_byte_pos)
-    {
-        m_target_file = ref_file;
-        m_target_byte_pos = ref_byte_pos;
-    }
-    inline void set_flipped() { m_flipped = true; };
-    std::string get_rs() const { return m_rs; };
+
+    inline void set_flipped() { m_flipped = true; }
+    std::string get_rs() const { return m_rs; }
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
      * p-value
@@ -103,20 +113,17 @@ public:
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
     static void sort_snp_for_perm(std::vector<size_t>& index,
                                   const std::vector<SNP>& input);
-    static bool compare_snp(const SNP& a, const SNP& b)
-    {
-        if (a.m_chr == b.m_chr) {
-            if (a.m_loc == b.m_loc) {
-                if (a.m_target_file == b.m_target_file) {
-                    return a.m_target_byte_pos < b.m_target_byte_pos;
-                }
-                return a.m_target_file < b.m_target_file;
-            }
-            return a.m_loc < b.m_loc;
-        }
-        return a.m_chr < b.m_chr;
-    }
 
+    /*!
+     * \brief Compare the current SNP with another SNP
+     * \param chr is the chromosome encoding of the other SNP
+     * \param loc is the coordinate of the other SNP
+     * \param ref is the reference allele of the other SNP
+     * \param alt is the alternative allele of teh other SNP
+     * \param flipped is used as a return value. If flipping is required,
+     * flipped = true
+     * \return true if it is a match
+     */
     inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
@@ -156,7 +163,7 @@ public:
         }
         else
             return false; // cannot flip nor match
-    };
+    }
 
     intptr_t chr() const { return m_chr; }
     intptr_t loc() const { return m_loc; }
@@ -166,6 +173,10 @@ public:
      * \return the p-value of the SNP
      */
     double p_value() const { return m_p_value; }
+    /*!
+     * \brief Get the effect size of the SNP
+     * \return the effect size of the SNP
+     */
     double stat() const { return m_stat; }
     /*!
      * \brief Return the p-value threshold of which this SNP falls into
@@ -181,56 +192,88 @@ public:
     std::string alt() const { return m_alt; }
     bool is_flipped() { return m_flipped; }
 
+    /*!
+     * \brief check if this SNP is within the i th region
+     * \param i is the index of the region
+     * \return true if this SNP falls within the i th region
+     */
     inline bool in(size_t i) const
     {
         if (i / BITCT >= m_max_flag_index)
             throw std::out_of_range("Out of range for flag");
         return (IS_SET(m_flags.data(), i));
     }
+    /*!
+     * \brief Set the gene set flag for this SNP
+     * \param region is the region object that will construct the gene set flag
+     */
     void set_flag(Region& region)
     {
         m_max_flag_index = BITCT_TO_WORDCT(region.size());
         m_flags.resize(m_max_flag_index);
         region.update_flag(m_chr, m_rs, m_loc, m_flags);
-    };
+    }
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be
      * considered in clumping
      */
     void set_clumped() { m_clumped = true; }
+
+    /*!
+     * \brief This is the clumping algorithm. The current SNP will remove
+     * another SNP if their R2 is higher than a threshold
+     * \param target is the target SNP
+     * \param r2 is the observed R2
+     * \param use_proxy indicate if we want to perform proxy clump
+     * \param proxy is the threshold for proxy clumping
+     */
     void clump(SNP& target, double r2, bool use_proxy, double proxy = 2)
     {
+        // if the target is already clumped, we will do nothing
         if (target.clumped()) return;
+        // we need to check if the target SNP is completely clumped (e.g. no
+        // longer representing any set)
         bool completed = false;
         // if we want to use proxy, and that our r2 is higher than
-        // the proxy threshold, we will do clumping
+        // the proxy threshold, we will do the proxy clumping
         if (use_proxy && r2 > proxy) {
-            // proxy clump
+            // If the observed R2 is higher than the proxy clumping threshold,
+            // we will capture the flag of the target SNP (using |= )
             for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
                 // two become one
                 m_flags[i_flag] |= target.m_flags[i_flag];
             }
+            // for proxy clumping, the target SNP will always be removed after
+            // the clump as the current SNP will represent all sets the target
+            // SNP is a member of
             completed = true;
         }
         else
         {
             // otherwise, we will just do noraml clumping
             for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+                // For normal clumping, we will remove set identity from the
+                // target SNP whenever both SNPs are within the same set.
+                // i.e. if flag of SNP A (current) is 11011 and SNP B (target)
+                // is 11110, by the end of clumping, it will become SNP A
+                // =11111, SNP B = 00100
                 target.m_flags[i_flag] =
                     target.m_flags[i_flag]
                     ^ (m_flags[i_flag] & target.m_flags[i_flag]);
+                // if all flags of the target SNP == 0, it means that it no
+                // longer represent any gene set and is consided as "clumped"
                 completed = (target.m_flags[i_flag] == 0);
             }
         }
         if (completed) {
+            // if the target SNP no longer represent any gene set, it is
+            // considered as clumped and can be removed
             target.set_clumped();
-            target.m_remove = true;
         }
         m_clumped = true;
         // protect from other SNPs tempering its flags
     }
 
-    bool remove() const { return m_remove; }
     /*!
      * \brief Indicate if this snp is clumped
      * \return  Return true if this is clumped
@@ -335,7 +378,6 @@ private:
     bool m_has_count = false;
     bool m_clumped = false;
     bool m_valid = true;
-    bool m_remove = false;
     bool m_flipped = false;
     // This indicate where this SNP's bound is at
     // useful for PRSlice and also clumping

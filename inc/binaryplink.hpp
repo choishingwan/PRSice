@@ -129,7 +129,12 @@ private:
         // error
         m_prev_loc = m_bed_file.tellg();
     }
-
+    /*!
+     * \brief read_score is the master function for performing the score reading
+     * \param index contain the index of SNPs that we should read from
+     * \param reset_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
     void read_score(const std::vector<size_t>& index, bool reset_zero);
     /*!
      * \brief read_score is the master function for performing the score reading

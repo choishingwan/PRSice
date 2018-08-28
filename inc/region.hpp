@@ -156,9 +156,22 @@ public:
     {
         return m_region_post_clump_count.at(i_region);
     }
-
+    /*!
+     * \brief Return the number of regions involved
+     * \return the number of regions involved
+     */
     size_t size() const { return m_region_name.size(); }
+    /*!
+     * \brief Return the name of the i th set
+     * \param i is the set index
+     * \return  return the name of the i th set
+     */
+
     std::string get_name(size_t i) const { return m_region_name.at(i); }
+    /*!
+     * \brief return the names of all sets
+     * \return a string vector containing the name of all sets
+     */
     std::vector<std::string> names() const { return m_region_name; }
 
 private:

@@ -1930,15 +1930,28 @@ bool Genotype::prepare_prsice()
     return true;
 }
 
-void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
+void Genotype::get_null_score(const int& set_size, const int& prev_size,
                               const std::vector<size_t>& background_list,
                               const bool first_run,
                               const bool require_statistic)
 {
-    // selection_list = permuted list of SNP index
-    if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
+
+    if (m_existed_snps.empty()
+        || static_cast<std::vector<SNP>::size_type>(set_size)
+               >= m_existed_snps.size())
+        return;
+    // we will initailize a selected_snp_index containing the index of SNPs that
+    // we'd like to add / assign to our PRS in the current round.
+    // we will get anything from (prev_size , set_size]
     std::vector<size_t> selected_snp_index(background_list.begin() + prev_size,
                                            background_list.begin() + set_size);
+    // background_list contain the index stored in the m_background_snp_index.
+    // This index is related to the order of m_existed_snp. If user used our
+    // default input (e.g. bar-levels  =1 and fastscore), this should be the
+    // most optimum sorting order. Thus we shouldn't do anything (if user use
+    // other threshold, then that will cause an array of other problem)
+    // TODO: provide an error if user use p-value thresholding together with
+    // PRSet?
     std::sort(selected_snp_index.begin(), selected_snp_index.end());
     read_score(selected_snp_index, first_run);
     if (require_statistic) {
@@ -1951,7 +1964,8 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
             }
             else
             {
-                rs.push(m_prs_info[i].get_prs());
+                rs.push(m_prs_info[i].prs
+                        / static_cast<double>(m_prs_info[i].num_snp));
             }
         }
         m_mean_score = rs.mean();
@@ -1960,35 +1974,6 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
 }
 
 
-void Genotype::get_null_score(const size_t& set_size,
-                              const size_t& num_selected_snps,
-                              // const std::vector<size_t>& selection_list,
-                              const std::vector<size_t>& background_list,
-                              const bool require_statistic)
-{
-    // selection_list = permuted list of SNP index
-    if (m_existed_snps.size() == 0 || set_size >= m_existed_snps.size()) return;
-    std::vector<size_t> selected_snp_index(
-        background_list.begin(), background_list.begin() + num_selected_snps);
-    std::sort(selected_snp_index.begin(), selected_snp_index.end());
-    read_score(selected_snp_index, true);
-    if (require_statistic) {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i) {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) {
-                rs.push(0.0);
-            }
-            else
-            {
-                rs.push(m_prs_info[i].get_prs());
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
-}
 bool Genotype::get_score(int& cur_index, double& cur_threshold,
                          uint32_t& num_snp_included, const size_t region_index,
                          const bool non_cumulate, const bool require_statistic,

@@ -484,10 +484,10 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        "pvalue", error_messages);
             break;
         case 's':
-            error =
-                error
-                || !set_numeric<size_t>(optarg, message_store, error_messages,
-                                        m_seed, m_provided_seed, "seed");
+            error = error
+                    || !set_numeric<std::random_device::result_type>(
+                           optarg, message_store, error_messages, m_seed,
+                           m_provided_seed, "seed");
             break;
         case 't':
             set_string(optarg, message_store, m_target_file, dummy, "target",
@@ -1948,7 +1948,7 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
         error_message.append("Error: Negative number of permutation!\n");
     }
     if (!m_provided_seed) {
-        message["seed"] = std::to_string(m_seed);
+        message["seed"] = misc::to_string(m_seed);
     }
     if (m_thread <= 0) {
         error = true;

@@ -171,6 +171,8 @@ int main(int argc, char* argv[])
             // we can jump around quicker
             target_file->count_snp_in_region(region, commander.out(),
                                              commander.print_snp());
+            // we should never sort the ordering of m_existed_snp from now on or
+            // it will distord the background index and cause problem
 
             // check which region are removed
             std::ofstream removed_regions;
@@ -221,7 +223,8 @@ int main(int argc, char* argv[])
                     // we then prepare the output files. Main complication is
                     // for all score and best score. Others are easier
                     prsice.prep_output(commander.out(), commander.all_scores(),
-                                       *target_file, region.names(), i_pheno);
+                                       commander.has_prevalence(), *target_file,
+                                       region.names(), i_pheno);
                     // go through each region separately
                     // this should reduce the memory usage
                     for (size_t i_region = 0; i_region < num_region_process;
@@ -230,15 +233,17 @@ int main(int argc, char* argv[])
                         // we will skip any region without SNPs in it
                         if (region.num_post_clump_snp(i_region) == 0) continue;
                         // now we start running PRSice
-                        prsice.run_prsice(commander, region, i_pheno, i_region,
+                        prsice.run_prsice(commander, i_pheno, i_region,
                                           *target_file);
                         if (!commander.no_regress())
-                            prsice.output(commander, region, i_pheno, i_region,
-                                          *target_file);
+                            // if we performed regression, we'd like to generate
+                            // the output file (.prsice)
+                            prsice.output(commander, region, i_pheno, i_region);
                     }
                     if (!commander.no_regress() && commander.perform_set_perm())
                     {
-                        // only perform permutation if required
+                        // only perform permutation if regression is performed
+                        // and user request it
                         prsice.run_competitive(*target_file, commander,
                                                i_pheno);
                     }
@@ -247,6 +252,7 @@ int main(int argc, char* argv[])
                 prsice.print_progress(true);
                 fprintf(stderr, "\n");
                 if (!commander.no_regress())
+                    // now generate the summary file
                     prsice.summarize(commander, reporter);
             }
             else

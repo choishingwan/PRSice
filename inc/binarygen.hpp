@@ -248,13 +248,30 @@ private:
         return 0;
     }
 
-    void read_score(std::vector<size_t>& index, bool reset_zero);
-    void hard_code_score(std::vector<size_t>& index, int32_t homcom_weight,
-                         uint32_t het_weight, uint32_t homrar_weight,
-                         bool set_zero);
-    void dosage_score(std::vector<size_t>& index, uint32_t homcom_weight,
-                      uint32_t het_weight, uint32_t homrar_weight,
-                      bool set_zero);
+    /*!
+     * \brief read_score is the master function for performing the score reading
+     * \param index contain the index of SNPs that we should read from
+     * \param reset_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void read_score(const std::vector<size_t>& index, bool reset_zero);
+    /*!
+     * \brief Function responsible for generate the score based on hard coding
+     * \param index contain the index of SNP we want to include in our analysis
+     * \param region_index is the index of the region of interest
+     * \param set_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void hard_code_score(const std::vector<size_t>& index, bool set_zero);
+    /*!
+     * \brief Function responsible for generate the score based on the genotype
+     * dosage information
+     * \param index contain the index of SNP we want to include in our analysis
+     * \param region_index is the index of the region of interest
+     * \param set_zero is a boolean indicate if we want to reset the score to
+     * 0
+     */
+    void dosage_score(const std::vector<size_t>& index, bool set_zero);
     /*!
      * \brief read_score is the master function for performing the score reading
      * \param start_index is the index of SNP that we should start reading from
@@ -268,7 +285,7 @@ private:
     /*!
      * \brief Function responsible for generate the score based on hard coding
      * \param start_index is the index of SNP that we should start reading from
-     * \param start_index is the index of SNP that we should start reading from
+     * \param end_bound is the index of first SNP that we stop reading from
      * \param region_index is the index of the region of interest
      * \param set_zero is a boolean indicate if we want to reset the score to
      * 0
@@ -278,9 +295,8 @@ private:
     /*!
      * \brief Function responsible for generate the score based on the genotype
      * dosage information
-     *
      * \param start_index is the index of SNP that we should start reading from
-     * \param start_index is the index of SNP that we should start reading from
+     * \param end_bound is the index of first SNP that we stop reading from
      * \param region_index is the index of the region of interest
      * \param set_zero is a boolean indicate if we want to reset the score to
      * 0
@@ -489,7 +505,7 @@ private:
             // worth separating centre score out
             if (m_centre) {
                 // we want to minus the expected value from all samples
-                size_t i_miss 0;
+                size_t i_miss = 0;
                 for (size_t i = 0; i < num_prs; ++i) {
                     // we will iterate through all the sample that we are using
                     if (i_miss < num_miss

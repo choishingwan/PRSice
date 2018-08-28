@@ -112,15 +112,25 @@ public:
             m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
         }
     }
-
+    /*!
+     * \brief Return all p-value threshold in used in the analysis. Mainly for
+     * constructing the all score file
+     *
+     * \return all p-value threshold used in the analysis, exclude any threshold
+     * that doesn't contain any SNP
+     */
     std::vector<double> get_thresholds() const { return m_thresholds; }
-    std::vector<Sample_ID> sample_names() const { return m_sample_id; }
+
     size_t max_category() const { return m_max_category; }
     /*!
      * \brief Return the number of sample we wish to perform PRS on
      * \return the number of sample
      */
     size_t num_sample() const { return m_sample_id.size(); }
+    /*!
+     * \brief Return the number of p-value threshold that contain at least 1 SNP
+     * \return  the number of p-value threshold included in the analysis
+     */
     uint32_t num_threshold() const { return m_num_threshold; }
     /*!
      * \brief Function to obtain PRS score from the genotype file. Will assign
@@ -159,13 +169,6 @@ public:
         return true;
     }
 
-    bool sort_by_coordinates()
-    {
-        if (m_existed_snps.size() == 0) return false;
-        std::sort(m_existed_snps.begin(), m_existed_snps.end(),
-                  SNP::compare_snp);
-        return true;
-    }
 
     /*!
      * \brief Read in the base file and add the required information to SNP
@@ -254,7 +257,7 @@ public:
      */
     bool is_founder(size_t i) const { return m_sample_id.at(i).founder; }
 
-    // as we don't check i is within range, the following 2 functions
+    // as we don't check i is within range, the following 3 functions
     // have a potential of array out of bound
     /*!
      * \brief Check if the i th sample has been included in regression
@@ -272,6 +275,11 @@ public:
      * \param i is the sample index
      */
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
+    /*!
+     * \brief Return the phenotype stored in the fam file of the i th sample
+     * \param i is the index of the  sample
+     * \return the phenotype of the sample
+     */
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
     /*!
      * \brief This function return if the i th sample has NA as phenotype
@@ -386,18 +394,37 @@ public:
         // for the region stuff
         region.post_clump_count(result);
     }
-
-    void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
-                        const std::vector<size_t>& background_list,
-                        const bool require_standardize);
-    void get_null_score(const size_t& set_size, const size_t& prev_size,
+    /*!
+     * \brief Function for calculating the PRS from the null set
+     * \param set_size is the size of the set
+     * \param prev_size is the amount of SNPs we have already processed
+     * \param background_list is the vector containing the permuted background
+     * index
+     * \param first_run is a boolean representing if we need to reset the PRS to
+     * 0
+     * \param require_standardize is a boolean representing if we need to
+     * calculate the mean and SD
+     */
+    void get_null_score(const int& set_size, const int& prev_size,
                         const std::vector<size_t>& background_list,
                         const bool first_run, const bool require_standardize);
-    size_t num_background() const { return m_background_snp_index.size(); };
+    /*!
+     * \brief Return the number of SNPs included in the background
+     * \return  the number of background SNPs
+     */
+    size_t num_background() const { return m_background_snp_index.size(); }
+    /*!
+     * \brief Get the index of background SNPs on the m_existed_snp vector
+     * \return the index of background SNPs on the m_existed_snp vector
+     */
     std::vector<size_t> background_index() const
     {
         return m_background_snp_index;
     }
+    /*!
+     * \brief return the largest chromosome allowed
+     * \return  the largest chromosome
+     */
     uint32_t max_chr() const { return m_max_code; }
     /*!
      * \brief Indicate we will be using a reference file. Use for bgen
@@ -563,15 +590,19 @@ protected:
     {
     }
     /*!
-     * \brief ead_score is the master function for performing the score reading.
-     * All subclass must implement this function to assist the calculation of
-     * PRS in the corresponding file format
+     * \brief read_score is the master function for performing the score
+     * reading. All subclass must implement this function to assist the
+     * calculation of PRS in the corresponding file format
      */
     virtual void read_score(const size_t /*start_index*/,
                             const size_t /*end_bound*/,
                             const size_t /*region_index*/, bool /*reset_zero*/)
     {
     }
+    /*!
+     * \brief similar to read_score function, but instead of using the index as
+     * an input, we use a vector containing the required index as an input
+     */
     virtual void read_score(const std::vector<size_t>& /*index*/,
                             bool /*reset_zero*/)
     {

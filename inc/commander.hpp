@@ -307,7 +307,7 @@ public:
      * \brief Return the seed used for the run
      * \return the seed
      */
-    unsigned long seed() const { return m_seed; }
+    std::random_device::result_type seed() const { return m_seed; }
     /*!
      * \brief Return the number of thread to be used
      * \return the number of thread
@@ -622,6 +622,11 @@ public:
      */
     std::vector<double> prevalence() const { return m_prevalence; }
     /*!
+     * \brief return whether prevalence is provided
+     * \return true if prevalence is provided
+     */
+    bool has_prevalence() const { return !m_prevalence.empty(); }
+    /*!
      * \brief Check if we have phenotype names
      * \return true if we have phenotype names
      */
@@ -707,7 +712,7 @@ private:
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
     size_t m_memory = 0;
-    size_t m_seed = std::random_device()();
+    std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
