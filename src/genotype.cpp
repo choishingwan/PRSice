@@ -2028,6 +2028,7 @@ bool Genotype::get_score(int& cur_index, double& cur_threshold,
     for (; end_index < m_existed_snps.size(); ++end_index) {
         // go through each SNP
         if (m_existed_snps[end_index].category() != cur_category) {
+            cur_category = m_existed_snps[end_index].category();
             // if we are no longer within the same category, we will end our
             // current iteration
             ended = true;
