@@ -57,13 +57,18 @@ endif( ZLIB_FOUND )
 target_link_libraries (PRSice ${CMAKE_THREAD_LIBS_INIT})
 target_compile_features(PRSice PRIVATE cxx_range_for)
 
-# Create main.cpp which uses gtest
-#file(WRITE test/main.cpp "#include \"gtest/gtest.h\"\n\n")
-#file(APPEND test/main.cpp "TEST(A, B) { SUCCEED(); }\n")
-#file(APPEND test/main.cpp "int main(int argc, char **argv) {\n")
-#file(APPEND test/main.cpp "  testing::InitGoogleTest(&argc, argv);\n")
-#file(APPEND test/main.cpp "  return RUN_ALL_TESTS();\n")
-#file(APPEND test/main.cpp "}\n")
-#add_executable(PRSice_Test ${PROJECT_SOURCE_DIR}/test/main.cpp)
-#target_link_libraries(PRSice_Test gtest gtest_main)
-#add_test(NAME example_test COMMAND example)
+file(GLOB HEADERS "test/inc/*.hpp")
+set(TEST_INPUT "test/data/")
+include_directories( ${PROJECT_SOURCE_DIR}/test/inc )
+# We don't want to include the PRSice main to our test program
+list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+add_executable(PRSice_Test ${PROJECT_SOURCE_DIR}/test/main.cpp
+    ${HEADERS}
+    ${SOURCES})
+target_include_directories(PRSice_Test PRIVATE ${PROJECT_SOURCE_DIR}/inc)
+target_link_libraries(PRSice_Test gtest gtest_main)
+target_link_libraries( PRSice_Test ${ZLIB_LIBRARIES} )
+target_link_libraries( PRSice_Test  ${CMAKE_THREAD_LIBS_INIT} )
+target_compile_features(PRSice_Test PRIVATE cxx_range_for)
+enable_testing()
+add_test(PRSice_Test COMMAND PRSice_Test ${TEST_INPUT})
