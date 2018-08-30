@@ -33,6 +33,8 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
                 // in theory, we can also add in the stat and se,
                 // but as they are double, there might be problem
                 // (have tried to use stat and that cause seg fault)
+                if (input[i1].m_loc == input[i2].m_loc)
+                    return input[i1].m_rs < input[i2].m_rs;
                 return input[i1].m_loc < input[i2].m_loc;
             }
             else
@@ -42,18 +44,4 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
             return input[i1].m_chr < input[i2].m_chr;
     });
     return idx;
-}
-
-void SNP::sort_snp_for_perm(std::vector<size_t>& index,
-                            const std::vector<SNP>& input)
-{
-    // now index is sorted, we want to sort the top select_size entry of index
-    // by the file info
-    std::sort(index.begin(), index.end(), [&input](size_t i1, size_t i2) {
-        if (input[i1].m_target_file == input[i2].m_target_file) {
-            return input[i1].m_target_byte_pos < input[i2].m_target_byte_pos;
-        }
-        else
-            return (input[i1].m_target_file < input[i2].m_target_file);
-    });
 }

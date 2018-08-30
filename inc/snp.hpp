@@ -32,7 +32,7 @@ class Genotype;
 class SNP
 {
 public:
-    SNP(){};
+    SNP() {}
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
@@ -82,6 +82,9 @@ public:
     {
         m_stat = stat;
         m_p_value = p_value;
+        // by our algorithm, we should always have category bigger than or equal
+        // to 0
+        assert(category < 0);
         m_category = category;
         m_p_threshold = p_threshold;
     }
@@ -111,8 +114,7 @@ public:
      * \return return a vector containing index to the sort order of the input
      */
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
-    static void sort_snp_for_perm(std::vector<size_t>& index,
-                                  const std::vector<SNP>& input);
+
 
     /*!
      * \brief Compare the current SNP with another SNP
