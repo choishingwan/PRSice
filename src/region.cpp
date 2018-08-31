@@ -305,7 +305,8 @@ void Region::process_snp_sets(const std::string& single_snp_set,
                     region_bound cur_bound;
                     cur_bound.chr = chr;
                     cur_bound.start = loc;
-                    cur_bound.end = loc;
+                    // end is non-inclusive
+                    cur_bound.end = loc + 1;
                     current_region.push_back(cur_bound);
                 }
             }
@@ -362,7 +363,8 @@ void Region::process_snp_sets(const std::string& single_snp_set,
                     region_bound cur_bound;
                     cur_bound.chr = chr;
                     cur_bound.start = loc;
-                    cur_bound.end = loc;
+                    // end is non-inclusive
+                    cur_bound.end = loc + 1;
                     current_region.push_back(cur_bound);
                 }
             }
