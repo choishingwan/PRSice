@@ -703,7 +703,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
                 // target
                 exclude_snp = true;
             }
-            if (exclusion.check_exclusion(chromosome,
+            if (exclusion.check_exclusion(chr_code,
                                           static_cast<int>(SNP_position)))
             {
                 // remove the SNP if it is within the exclusion region

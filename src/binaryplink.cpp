@@ -481,7 +481,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
             }
             // check if we want to exclude this SNP because this fall within the
             // exclusion region(s)
-            if (exclusion.check_exclusion(chr, loc)) {
+            if (exclusion.check_exclusion(chr_code, loc)) {
                 continue;
             }
             // check if this is a duplicated SNP
