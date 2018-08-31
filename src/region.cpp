@@ -58,6 +58,13 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                 {
                     std::vector<std::string> coordinates =
                         misc::split(token[1], "-");
+                    if (coordinates.size() != 1 && coordinates.size() != 2) {
+                        std::string error =
+                            "Error: Undefined coordinate format: " + token[1]
+                            + ". Format of --x-range must either be chr:start "
+                              "or chr:start-end";
+                        throw std::runtime_error(error);
+                    }
                     // try and see if there is a - in the region, if yes, it is
                     // a start-end format
                     temp = misc::convert<int>(coordinates[0].c_str());
@@ -82,6 +89,15 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                 {
                     fprintf(stderr, "Error: Non-numeric coordinate(s)!\n");
                     throw std::runtime_error(error.what());
+                }
+
+                if (start > end) {
+                    std::string message =
+                        "Error: Start coordinate should be smaller than "
+                        "end coordinate!\n";
+                    message.append("start: " + misc::to_string(start) + "\n");
+                    message.append("end: " + misc::to_string(end) + "\n");
+                    throw std::runtime_error(message);
                 }
                 region_bound cur_bound;
                 cur_bound.chr = chr;
@@ -1081,50 +1097,94 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region)
 }
 
 Region::~Region() {}
-
-bool Region::check_exclusion(const std::string& chr, const intptr_t loc)
+std::vector<Region::region_bound>::size_type
+Region::binary_search_region(const intptr_t chr, const intptr_t loc,
+                             std::vector<region_bound>::size_type left,
+                             std::vector<region_bound>::size_type right) const
 {
-    auto&& cur_chr = get_chrom_code_raw(chr.c_str());
+    std::vector<region_bound>::size_type midPoint = left + (right - left) / 2;
+    while (left < right) {
+        midPoint = left + (right - left) / 2;
+        auto&& cur = m_region_list.front()[midPoint];
+        if (chr > cur.chr) {
+            left = midPoint + 1;
+        }
+        else if (chr == cur.chr)
+        {
+            if (loc >= cur.end) {
+                // if the target location is larger or equal to the end of the
+                // range, move up
+                left = midPoint + 1;
+            }
+            else if (loc < cur.start)
+            {
+                // if the target location is smaller than the start of range,
+                // move down
+                right = midPoint;
+            }
+            else
+            {
+                // we are not bigger than the end and not smaller than the
+                // start, therefore we are there
+                return midPoint;
+            }
+        }
+        else
+        {
+            right = midPoint;
+        }
+    }
+    return midPoint;
+}
+
+bool Region::check_exclusion(const intptr_t chr, const intptr_t loc)
+{
     if (m_region_list.empty() || m_region_list.front().empty()) return false;
     // there is only one region, so we can ignore the for loop
-    size_t i_region = 0;
-    size_t cur_region_size = m_region_list.front().size();
-    bool moved_chr = false;
-    while (m_snp_check_index[i_region] < cur_region_size) {
-        auto&& current_bound =
-            m_region_list[i_region][m_snp_check_index[i_region]];
-        auto&& region_chr = current_bound.chr;
-        auto&& region_start = current_bound.start;
-        auto&& region_end = current_bound.end;
-        while (cur_chr > region_chr
-               && m_snp_check_index[i_region] < cur_region_size)
+    // problem with check_exclusion is that the input might not be sorted
+    // (looking at you, listed input). Therefore, we cannot use our O(1)
+    // searching algorithm, but might need something like the binary search
+    std::vector<region_bound>::size_type left = 0;
+    std::vector<region_bound>::size_type right = m_region_list.front().size();
+    std::vector<region_bound>::size_type midPoint = left + (right - left) / 2;
+    while (left < right) {
+        midPoint = left + (right - left) / 2;
+        auto&& cur = m_region_list.front()[midPoint];
+        if (chr > cur.chr) {
+            left = midPoint + 1;
+        }
+        else if (chr == cur.chr)
         {
-            if (moved_chr) break;
-            m_snp_check_index[i_region]++;
-            current_bound =
-                m_region_list[i_region][m_snp_check_index[i_region]];
-            region_chr = current_bound.chr;
-            region_start = current_bound.start;
-            region_end = current_bound.end;
+            if (loc >= cur.end) {
+                // if the target location is larger or equal to the end of the
+                // range, move up
+                left = midPoint + 1;
+            }
+            else if (loc < cur.start)
+            {
+                // if the target location is smaller than the start of range,
+                // move down
+                right = midPoint;
+            }
+            else
+            {
+                // we are not bigger than the end and not smaller than the
+                // start, therefore we are there
+                break;
+            }
         }
-        moved_chr = true;
-        if (cur_chr != region_chr) {
-            return false;
-        }
-        else if (m_snp_check_index[i_region] >= cur_region_size)
+        else
         {
-            return false;
+            right = midPoint;
         }
-        else if (region_end < loc)
-        {
-            m_snp_check_index[i_region]++;
-        }
-        else if (region_start <= loc && region_end >= loc)
-        {
-            return true;
-        }
-        else if (region_start > loc)
-            break;
+    }
+
+    if (midPoint >= m_region_list.front().size())
+        return false;
+    else
+    {
+        auto&& cur = m_region_list.front()[midPoint];
+        if (cur.chr == chr && cur.start <= loc && cur.end > loc) return true;
     }
     return false;
 }
@@ -1132,7 +1192,8 @@ bool Region::check_exclusion(const std::string& chr, const intptr_t loc)
 void Region::update_flag(const intptr_t chr, const std::string& rs,
                          intptr_t loc, std::vector<uintptr_t>& flag)
 {
-    // while rs is unused here, we will keep it as it is useful for debugging
+    // while rs is unused here, we will keep it as it is useful for
+    // debugging
 
 
     // we first make sure the base region is true for all SNPs
@@ -1140,8 +1201,8 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
         m_region_name.size();
     SET_BIT(0, flag.data());
     m_region_snp_count[0]++;
-    // if we want to perform competitive p-value calclation and use all SNP as
-    // background, we can just add that in
+    // if we want to perform competitive p-value calclation and use all SNP
+    // as background, we can just add that in
     if (m_genome_wide_background && m_run_perm && region_size > 1) {
         // use everything as background
         SET_BIT(region_size - 1, flag.data());
@@ -1183,8 +1244,8 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
                 // if we have previously jumped to a specific chromosome, we
                 // should not jump again
                 if (moved_chr) break;
-                // we will move to the next boundary and see if we are now in
-                // the correct chr
+                // we will move to the next boundary and see if we are now
+                // in the correct chr
                 m_snp_check_index[i_region]++;
                 current_bound = current_region[m_snp_check_index[i_region]];
                 region_chr = current_bound.chr;
@@ -1193,21 +1254,23 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
             moved_chr = true;
             if (m_snp_check_index[i_region] >= current_region_size
                 || chr < region_chr)
-                // if the region chr code is larger than the SNP chr or if we
-                // have exhaused all boundary, break
+                // if the region chr code is larger than the SNP chr or if
+                // we have exhaused all boundary, break
                 break;
-            // when we reach here, the only possible reason for this break is
-            // chr < region_chr (So technically, we can remove this if clause)
+            // when we reach here, the only possible reason for this break
+            // is chr < region_chr (So technically, we can remove this if
+            // clause)
             if (chr != region_chr) {
                 break;
             }
-            else if (current_bound.end < loc)
+            else if (current_bound.end <= loc)
             {
-                // if the region bound is still earlier than this current SNP's
-                // location, we will iterate to next bound
+                // if the region bound is still earlier than or equal to
+                // this current SNP's location, we will iterate to next
+                // bound (because the end is non-inclusive)
                 m_snp_check_index[i_region]++;
             }
-            else if (current_bound.start <= loc && current_bound.end >= loc)
+            else if (current_bound.start <= loc && current_bound.end > loc)
             {
                 // This is the region
                 SET_BIT(i_region, flag.data());
@@ -1215,8 +1278,8 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
                 break;
             }
             else if (current_bound.start > loc)
-                // the current bound has already passed the current region. no
-                // need to do anything
+                // the current bound has already passed the current region.
+                // no need to do anything
                 break;
         }
     }
@@ -1230,8 +1293,8 @@ void Region::print_region_number(Reporter& reporter) const
     }
     else if (m_region_name.size() > 1)
     {
-        // -1 to remove the background count, as we are not going to print the
-        // background anyway
+        // -1 to remove the background count, as we are not going to print
+        // the background anyway
         message = "A total of " + misc::to_string(m_region_name.size() - 2)
                   + " regions plus the base region are included";
     }

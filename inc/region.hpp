@@ -24,6 +24,7 @@
 #include "storage.hpp"
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits.h>
 #include <map>
 #include <set>
@@ -60,6 +61,10 @@ public:
     Region(std::vector<std::string> feature, const int window_5,
            const int window_3, const bool run_perm,
            const bool genome_wide_background);
+    /*!
+     * \brief Default constructor that do nothing
+     */
+    Region() {}
     virtual ~Region();
     /*!
      * \brief To generate the region boundaries
@@ -110,12 +115,12 @@ public:
     }
     /*!
      * \brief This function will take the coordinate of a SNP and check if it
-     * falls within the exclusion region
+     * falls within the exclusion region using binary search function
      * \param chr is the chromosome string
      * \param loc is the coordinate
      * \return true if the snp falls within an exclusion region
      */
-    bool check_exclusion(const std::string& chr, const intptr_t loc);
+    bool check_exclusion(const intptr_t chr, const intptr_t loc);
     /*!
      * \brief Store information fo the number of SNP in each region
      * \param count is the input containing the count for each region
@@ -174,6 +179,7 @@ public:
      */
     std::vector<std::string> names() const { return m_region_name; }
 
+
 private:
     // IMPORTANT: The end is non-inclusive
     struct region_bound
@@ -208,6 +214,11 @@ private:
     bool m_has_background = false;
     bool m_run_perm = false;
     bool m_genome_wide_background = false;
+
+    std::vector<Region::region_bound>::size_type
+    binary_search_region(const intptr_t chr, const intptr_t loc,
+                         std::vector<region_bound>::size_type left,
+                         std::vector<region_bound>::size_type right) const;
     /*!
      * \brief A simple function to check if the string equals to one of the
      * feature
