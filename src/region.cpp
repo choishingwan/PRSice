@@ -143,6 +143,9 @@ Region::Region(std::vector<std::string> feature, const int window_5,
     // initialize the region list, add an empty vector as a place holder,
     // we will handle the base region differently
     m_region_list.push_back(std::vector<region_bound>(1));
+    // need to also initialize snp_count vector with one item or it might cause
+    // trouble in update_flag if user didn't perform generate_region
+    m_region_snp_count.push_back(0);
 }
 
 // Function to generate all required regions
@@ -153,8 +156,9 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
                               const std::string& background,
                               const Genotype& target, Reporter& reporter)
 {
-    // ensure we don't add the background flag if we don't want to perform perm
-    // set
+
+    // ensure we don't add the background flag if we don't want to perform
+    // perm set
     if (gtf.empty() && bed.size() == 0 && snp_set.empty()
         && multi_snp_sets.empty())
     {
@@ -408,22 +412,27 @@ void Region::process_bed(const std::vector<std::string>& bed,
         bed_file.open(file.c_str());
         if (!bed_file.is_open())
         {
+            // previously we allow user to provide missing bed files. But better
+            // way should be to terminate and let user check their input
             message =
-                "Warning: " + file + " cannot be open. It will be ignored";
-            reporter.report(message);
-            continue;
+                "Error: " + file
+                + " cannot be open. Please check you have the correct input";
+
+            throw std::runtime_error(message);
         }
         if (m_duplicated_names.find(name) != m_duplicated_names.end())
         {
-            message = "Warning: " + name
-                      + " is duplicated, it will only be read once";
-            reporter.report(message);
-            continue;
+            message =
+                "Error: " + name
+                + " is duplicated, please check you have the correct input";
+            throw std::runtime_error(message);
         }
         std::vector<region_bound> current_region;
         size_t num_line = 0;
 
         // now start reading in the bed file
+        bool first_read = true;
+        bool has_strand = false;
         while (std::getline(bed_file, line))
         {
             num_line++;
@@ -434,9 +443,25 @@ void Region::process_bed(const std::vector<std::string>& bed,
             {
 
                 message = "Error: " + file
-                          + " contain less than 3 columns, it will be ignored";
-                reporter.report(message);
-                break;
+                          + " contain less than 3 columns, please check your "
+                            "bed files in the correct format";
+                throw std::runtime_error(message);
+            }
+            if (first_read)
+            {
+                first_read = false;
+                if (token.size() > +BED::STRAND) has_strand = true;
+            }
+            if (has_strand && token.size() <= +BED::STRAND)
+            {
+                message = "Error: line " + misc::to_string(num_line)
+                          + " of the bed file: " + file
+                          + " contain less than than "
+                          + misc::to_string(+BED::STRAND)
+                          + " columns. BED file should have the same number of "
+                            "column for each row. Please check if you have the "
+                            "correct input format!";
+                throw std::runtime_error(message);
             }
             if (token.size() <= +BED::STRAND && (m_5prime > 0 || m_3prime > 0)
                 && (m_5prime != m_3prime) && !print_warning)
@@ -518,8 +543,8 @@ void Region::process_bed(const std::vector<std::string>& bed,
             }
             if (error)
             {
-                message.append("We will ignore this file");
-                break;
+                message.append("Please check your input is correct");
+                throw std::runtime_error(message);
             }
             // only include regions that falls into the chromosome of interest
             if (token.size() > +BED::STRAND)
@@ -678,6 +703,8 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
                     id_to_name.clear();
                     throw std::runtime_error(error);
                 }
+                // end is non-inclusive, so we need to add 1 to it
+                ++end;
             }
             catch (...)
             {
@@ -1294,6 +1321,7 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
     const std::vector<std::string>::size_type region_size =
         m_region_name.size();
     SET_BIT(0, flag.data());
+
     m_region_snp_count[0]++;
     // if we want to perform competitive p-value calclation and use all SNP
     // as background, we can just add that in

@@ -1,9 +1,12 @@
 #ifndef REGION_TEST_HPP
 #define REGION_TEST_HPP
+#include "genotype.hpp"
+#include "plink_common.hpp"
 #include "region.hpp"
 #include "reporter.hpp"
 #include "gtest/gtest.h"
 #include <fstream>
+#include <string>
 TEST(REGION, SINGLE_INIT)
 {
     Reporter reporter;
@@ -97,12 +100,12 @@ TEST(REGION, WRONG_INPUT)
     {
         Region region("chr1", reporter);
         // in this case, we will assume this is a bed file, but we can't read
-        // it, so we will have 0 regions
-        ASSERT_EQ(region.size(), 0);
+        // it, so we will have throw an error
+        FAIL();
     }
     catch (...)
     {
-        FAIL();
+        SUCCEED();
     }
 }
 TEST(REGION, WRONG_RANGE_FORMAT)
@@ -280,7 +283,7 @@ TEST_F(REGION_STRING_MIX, RUN_OVER)
     ASSERT_FALSE(region.check_exclusion(1, 5679));
     ASSERT_TRUE(region.check_exclusion(2, 1234));
 }
-class REGION_BED_MIN : public ::testing::Test
+class REGION_BED_MIN_TAB_NO_OVER : public ::testing::Test
 {
 
 protected:
@@ -291,17 +294,1365 @@ protected:
         // also we want to check chromosome overrun (e.g.
         // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
         // and make sure the input is not in sorted order
-        std::string range =
-            "chr2:1234-1357,chr1:4601-5678,chr12:314,chr6:98741-102380";
-        Reporter reporter;
-        region = Region(range, reporter);
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2\t19182\t32729\n"
+                 << "2\t94644\t98555\n"
+                 << "3\t3209\t18821\n"
+                 << "3\t29863\t38285\n"
+                 << "4\t20139\t97433\n"
+                 << "5\t13998\t35076\n"
+                 << "5\t50433\t97855\n"
+                 << "6\t34611\t45099\n"
+                 << "7\t7080\t45054\n"
+                 << "10\t54504\t62968\n"
+                 << "11\t20844\t26475\n"
+                 << "12\t38890\t50405\n"
+                 << "13\t56146\t67102\n"
+                 << "14\t1694\t47285\n"
+                 << "15\t4706\t10214\n"
+                 << "15\t26926\t85344\n"
+                 << "16\t12143\t36596\n"
+                 << "16\t43942\t85160\n"
+                 << "19\t22463\t39329\n"
+                 << "19\t46559\t49131\n"
+                 << "20\t64037\t98171\n"
+                 << "21\t9363\t49431\n";
+        bed_file.close();
+        Reporter reporter("LOG");
+        region = Region(bed_name, reporter);
     }
 };
+TEST_F(REGION_BED_MIN_TAB_NO_OVER, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(1);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_BED_MIN_TAB_NO_OVER, CHECK_INCLUSION)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+    EXPECT_FALSE(region.check_exclusion(2, 19181 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 19182 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 19183 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(2, 32728 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 32729 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 94643 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 94644 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 94645 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(2, 98554 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 98555 + 1));
+    EXPECT_FALSE(region.check_exclusion(3, 3208 + 1));
+    EXPECT_TRUE(region.check_exclusion(3, 3209 + 1));
+    EXPECT_TRUE(region.check_exclusion(3, 3210 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(3, 18820 + 1));
+    EXPECT_FALSE(region.check_exclusion(3, 18821 + 1));
+    EXPECT_FALSE(region.check_exclusion(13, 56145 + 1));
+    EXPECT_TRUE(region.check_exclusion(13, 56146 + 1));
+    EXPECT_TRUE(region.check_exclusion(13, 56147 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(13, 67101 + 1));
+    EXPECT_FALSE(region.check_exclusion(13, 67102 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 49431 + 1));
+}
+TEST_F(REGION_BED_MIN_TAB_NO_OVER, RANDOM_ORDER)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+    EXPECT_FALSE(region.check_exclusion(13, 56145 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 19183 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_FALSE(region.check_exclusion(3, 3208 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(2, 32728 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 32729 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 94645 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(2, 19182 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 98554 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 98555 + 1));
+    EXPECT_TRUE(region.check_exclusion(3, 3209 + 1));
+    EXPECT_TRUE(region.check_exclusion(3, 3210 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(3, 18820 + 1));
+    EXPECT_FALSE(region.check_exclusion(3, 18821 + 1));
+    EXPECT_TRUE(region.check_exclusion(13, 56147 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 19181 + 1));
+    EXPECT_FALSE(region.check_exclusion(2, 94643 + 1));
+    EXPECT_TRUE(region.check_exclusion(2, 94644 + 1));
+    EXPECT_TRUE(region.check_exclusion(13, 56146 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(13, 67101 + 1));
+    EXPECT_FALSE(region.check_exclusion(13, 67102 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    // end of bed is non-inclusive
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+}
+class REGION_BED_MIN_TAB : public ::testing::Test
+{
 
-// bed file exclusion region performance (we don't allow multibed)
-// bed file read
-// multibed without name (should use the file name)
-// multibed with name
+protected:
+    Region region;
+    void SetUp() override
+    {
+        // we need to account for both range and single base input
+        // also we want to check chromosome overrun (e.g.
+        // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
+        // and make sure the input is not in sorted order
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2\t19182\t32729\n"
+                 << "2\t94644\t98555\n"
+                 << "3\t3209\t18821\n"
+                 << "3\t29863\t38285\n"
+                 << "4\t20139\t97433\n"
+                 << "5\t13998\t35076\n"
+                 << "5\t50433\t97855\n"
+                 << "6\t34611\t45099\n"
+                 << "6\t45503\t49751\n"
+                 << "7\t7080\t45054\n"
+                 << "7\t30305\t45723\n" // overlap
+                 << "10\t54504\t62968\n"
+                 << "11\t20844\t26475\n"
+                 << "12\t38890\t50405\n"
+                 << "13\t56146\t67102\n"
+                 << "14\t1694\t47285\n"
+                 << "14\t5225\t78548\n"  // overlap
+                 << "14\t13102\t45658\n" // overlap
+                 << "15\t4706\t10214\n"
+                 << "15\t26926\t85344\n"
+                 << "15\t78969\t98716\n" // overlap
+                 << "16\t7139\t73747\n"
+                 << "16\t12143\t36596\n" // overlap
+                 << "16\t31326\t56532\n" // overlap
+                 << "16\t43942\t85160\n" // overlap
+                 << "19\t22463\t39329\n"
+                 << "19\t46559\t49131\n"
+                 << "20\t64037\t98171\n"
+                 << "21\t9363\t49431\n"
+                 << "21\t43440\t82120\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        region = Region(bed_name, reporter);
+    }
+};
+TEST_F(REGION_BED_MIN_TAB, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(1);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_BED_MIN_TAB, CHECK_INCLUSION_OVERLAPPED)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+
+    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+}
+class REGION_BED_MIN_SPACE : public ::testing::Test
+{
+
+protected:
+    Region region;
+    void SetUp() override
+    {
+        // we need to account for both range and single base input
+        // also we want to check chromosome overrun (e.g.
+        // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
+        // and make sure the input is not in sorted order
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2 19182 32729\n"
+                 << "2 94644 98555\n"
+                 << "3 3209 18821\n"
+                 << "3 29863 38285\n"
+                 << "4 20139 97433\n"
+                 << "5 13998 35076\n"
+                 << "5 50433 97855\n"
+                 << "6 34611 45099\n"
+                 << "6 45503 49751\n"
+                 << "7 7080 45054\n"
+                 << "7 30305 45723\n" // overlap
+                 << "10 54504 62968\n"
+                 << "11 20844 26475\n"
+                 << "12 38890 50405\n"
+                 << "13 56146 67102\n"
+                 << "14 1694 47285\n"
+                 << "14 5225 78548\n"  // overlap
+                 << "14 13102 45658\n" // overlap
+                 << "15 4706 10214\n"
+                 << "15 26926 85344\n"
+                 << "15 78969 98716\n" // overlap
+                 << "16 7139 73747\n"
+                 << "16 12143 36596\n" // overlap
+                 << "16 31326 56532\n" // overlap
+                 << "16 43942 85160\n" // overlap
+                 << "19 22463 39329\n"
+                 << "19 46559 49131\n"
+                 << "20 64037 98171\n"
+                 << "21 9363 49431\n"
+                 << "21 43440 82120\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        region = Region(bed_name, reporter);
+    }
+};
+TEST_F(REGION_BED_MIN_SPACE, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(1);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_BED_MIN_SPACE, CHECK_INCLUSION_OVERLAPPED)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+
+    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+}
+class REGION_BED_5_COLUMN : public ::testing::Test
+{
+
+protected:
+    Region region;
+    void SetUp() override
+    {
+        // not enough for stand yet
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2 19182 32729 . .\n"
+                 << "2 94644 98555 . .\n"
+                 << "3 3209 18821 . .\n"
+                 << "3 29863 38285 . .\n"
+                 << "4 20139 97433 . .\n"
+                 << "5 13998 35076 . .\n"
+                 << "5 50433 97855 . .\n"
+                 << "6 34611 45099 . .\n"
+                 << "6 45503 49751 . .\n"
+                 << "7 7080 45054 . .\n"
+                 << "7 30305 45723 . .\n" // overlap
+                 << "10 54504 62968 . .\n"
+                 << "11 20844 26475 . .\n"
+                 << "12 38890 50405 . .\n"
+                 << "13 56146 67102 . .\n"
+                 << "14 1694 47285 . .\n"
+                 << "14 5225 78548 . .\n"  // overlap
+                 << "14 13102 45658 . .\n" // overlap
+                 << "15 4706 10214 . .\n"
+                 << "15 26926 85344 . .\n"
+                 << "15 78969 98716 . .\n" // overlap
+                 << "16 7139 73747 . .\n"
+                 << "16 12143 36596 . .\n" // overlap
+                 << "16 31326 56532 . .\n" // overlap
+                 << "16 43942 85160 . .\n" // overlap
+                 << "19 22463 39329 . .\n"
+                 << "19 46559 49131 . .\n"
+                 << "20 64037 98171 . .\n"
+                 << "21 9363 49431 . .\n"
+                 << "21 43440 82120 . .\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        region = Region(bed_name, reporter);
+    }
+};
+TEST_F(REGION_BED_5_COLUMN, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(1);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_BED_5_COLUMN, CHECK_INCLUSION_OVERLAPPED)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+
+    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+}
+class REGION_BED_5_WITH_STRAND : public ::testing::Test
+{
+    // For exclusion, strand information should not alter result (window padding
+    // should all be 0)
+protected:
+    Region region;
+    void SetUp() override
+    {
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2 19182 32729 . . .\n"
+                 << "2 94644 98555 . . .\n"
+                 << "3 3209 18821 . . .\n"
+                 << "3 29863 38285 . . .\n"
+                 << "4 20139 97433 . . .\n"
+                 << "5 13998 35076 . . .\n"
+                 << "5 50433 97855 . . .\n"
+                 << "6 34611 45099 . . .\n"
+                 << "6 45503 49751 . . .\n"
+                 << "7 7080 45054 . . .\n"
+                 << "7 30305 45723 . . .\n" // overlap
+                 << "10 54504 62968 . . .\n"
+                 << "11 20844 26475 . . .\n"
+                 << "12 38890 50405 . . .\n"
+                 << "13 56146 67102 . . .\n"
+                 << "14 1694 47285 . . .\n"
+                 << "14 5225 78548 . . .\n"  // overlap
+                 << "14 13102 45658 . . .\n" // overlap
+                 << "15 4706 10214 . . .\n"
+                 << "15 26926 85344 . . .\n"
+                 << "15 78969 98716 . . .\n" // overlap
+                 << "16 7139 73747 . . .\n"
+                 << "16 12143 36596 . . .\n" // overlap
+                 << "16 31326 56532 . . .\n" // overlap
+                 << "16 43942 85160 . . .\n" // overlap
+                 << "19 22463 39329 . . .\n"
+                 << "19 46559 49131 . . .\n"
+                 << "20 64037 98171 . . .\n"
+                 << "21 9363 49431 . . .\n"
+                 << "21 43440 82120 . . .\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        region = Region(bed_name, reporter);
+    }
+};
+TEST_F(REGION_BED_5_WITH_STRAND, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(1);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_BED_5_WITH_STRAND, CHECK_INCLUSION_OVERLAPPED)
+{
+    // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
+    // base, but check_exclusion expect a 1 based input
+
+    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
+    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
+    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
+    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
+    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+
+    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
+    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
+    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+}
+// now test different type of malform BED file
+TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182\n"
+             << "2 94644 \n"
+             << "3 3209\n"
+             << "21 43440\n"; // overlap
+    bed_file.close();
+    Reporter reporter("LOG");
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region region(bed_name, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 .  \n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    Reporter reporter("LOG");
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region region(bed_name, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MALFORM_BED, NOT_FOUND)
+{
+    std::string bed_name = "404.bed";
+    Reporter reporter("LOG");
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region region(bed_name, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 . . L\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    Reporter reporter("LOG");
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region region(bed_name, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 -94644 123567 . . +\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    Reporter reporter("LOG");
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region region(bed_name, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_STD_BED_INPUT, NO_RUN)
+{
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, false, false);
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    ASSERT_EQ(region.size(), 1);
+    std::vector<uintptr_t> index = {0};
+    // this is a SNP found in the bed file, but as we have not generated the
+    // region (we haven't use the bed file), this will always be considered as
+    // not found
+    region.update_flag(5, "", 50533 + 1, index);
+    ASSERT_EQ(index, not_found);
+}
+class REGION_STD_BED : public ::testing::Test
+{
+    // For exclusion, strand information should not alter result (window
+    // padding should all be 0)
+protected:
+    Region region;
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
+    void SetUp() override
+    {
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2 19182 32729 . . .\n"
+                 << "2 94644 98555 . . .\n"
+                 << "3 3209 18821 . . .\n"
+                 << "3 29863 38285 . . .\n"
+                 << "4 20139 97433 . . .\n"
+                 << "5 13998 35076 . . .\n"
+                 << "5 50433 97855 . . .\n"
+                 << "6 34611 45099 . . .\n"
+                 << "6 45503 49751 . . .\n"
+                 << "7 7080 45054 . . .\n"
+                 << "7 30305 45723 . . .\n" // overlap
+                 << "10 54504 62968 . . .\n"
+                 << "11 20844 26475 . . .\n"
+                 << "12 38890 50405 . . .\n"
+                 << "13 56146 67102 . . .\n"
+                 << "14 1694 47285 . . .\n"
+                 << "14 5225 78548 . . .\n"  // overlap
+                 << "14 13102 45658 . . .\n" // overlap
+                 << "15 4706 10214 . . .\n"
+                 << "15 26926 85344 . . .\n"
+                 << "15 78969 98716 . . .\n" // overlap
+                 << "16 7139 73747 . . .\n"
+                 << "16 12143 36596 . . .\n" // overlap
+                 << "16 31326 56532 . . .\n" // overlap
+                 << "16 43942 85160 . . .\n" // overlap
+                 << "19 22463 39329 . . .\n"
+                 << "19 46559 49131 . . .\n"
+                 << "20 64037 98171 . . .\n"
+                 << "21 9363 49431 . . .\n"
+                 << "21 43440 82120 . . .\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        region = Region(feature, 0, 0, false, false);
+        std::vector<std::string> bed_names = {bed_name};
+        Genotype dummy;
+        region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+    }
+};
+TEST_F(REGION_STD_BED, CHECK_INPUT_PARSING)
+{
+    // for exclusion set, we will only have one set
+    try
+    {
+        ASSERT_EQ(region.num_bound(0), 1);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        ASSERT_EQ(region.num_bound(1), 22);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        // and we will through error if we are out of bound
+        region.num_bound(2);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST_F(REGION_STD_BED, CHECK_INCLUSION_OVERLAPPED)
+{
+    // with standard input, we can no longer use check_exclusion function as
+    // that always uses the base region, which doesn't contain any boundary
+    // instead, we must use the update flag function
+    std::vector<uintptr_t> input = {0};
+    input.front() = 0;
+    region.update_flag(7, "", 7079 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 7080 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 7081 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45053 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45054 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45055 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30303 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30305 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30306 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45722 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45723 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45724 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 1693 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 1695 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47284 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47285 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47286 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    // normally, unordered input will not work. But here, it work, because
+    // we will not iterate to the next bound unless we have passed the
+    // current bound. As the previous check and the current check falls
+    // within the same bound, we should be able to get true for inclusion
+    region.update_flag(14, "", 5224 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 5225 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 5226 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13101 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13102 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13103 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45657 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45658 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45659 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 78547 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 78548 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 78549 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+}
+TEST_F(REGION_STD_BED, UNORDERED_INCLUSION)
+{
+    // When the input isn't sorted. We will encounter false negative
+    std::vector<uintptr_t> input = {0};
+    input.front() = 0;
+    region.update_flag(14, "", 1693 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 1695 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47284 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47285 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 47286 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    // normally, unordered input will not work. But here, it work, because
+    // we will not iterate to the next bound unless we have passed the
+    // current bound. As the previous check and the current check falls
+    // within the same bound, we should be able to get true for inclusion
+    region.update_flag(14, "", 5224 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 5225 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 5226 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13101 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13102 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 13103 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45657 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45658 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 45659 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    // even though some of the below SNPs are within the bed file, they will
+    // always return false as we have already moved onto chromosome 14
+    input.front() = 0;
+    region.update_flag(7, "", 7079 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 7080 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 7081 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45053 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45054 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45055 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30303 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30305 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 30306 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45722 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45723 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(7, "", 45724 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    // but we should continue to be able to identify the chr14 findings as
+    // we should not move on to the next bound when we encounter a chr
+    // smaller than the current one
+    input.front() = 0;
+    region.update_flag(14, "", 78547 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 78548 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(14, "", 78549 + 1, input);
+    // the flag should be set as 110 if not found
+    EXPECT_EQ(input.front(), not_found.front());
+}
+TEST_F(REGION_STD_BED, RUN_OVER)
+{
+    // when a SNP is bigger than any region within the same chromosome, we
+    // should move onto the first region on the next chromosome
+    std::vector<uintptr_t> input = {0};
+    input.front() = 0;
+    region.update_flag(19, "", 49131 + 1, input);
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(20, "", 64037 + 1, input);
+    EXPECT_EQ(input.front(), found.front());
+}
+TEST_F(REGION_STD_BED, MID_NOT_FOUND)
+{
+    std::vector<uintptr_t> input = {0};
+    input.front() = 0;
+    region.update_flag(19, "", 39329 + 1, input);
+    EXPECT_EQ(input.front(), not_found.front());
+    input.front() = 0;
+    region.update_flag(20, "", 64037 + 1, input);
+    EXPECT_EQ(input.front(), found.front());
+}
+class REGION_STD_BED_PAD : public ::testing::Test
+{
+    // For exclusion, strand information should not alter result (window
+    // padding should all be 0)
+protected:
+    Region region;
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
+    void SetUp() override
+    {
+        std::ofstream bed_file;
+        std::string bed_name = "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "2 19182 32729 . . .\n"
+                 << "2 94644 98555 . . .\n"
+                 << "3 3209 18821 . . .\n"
+                 << "3 29863 38285 . . .\n"
+                 << "4 20139 97433 . . +\n"
+                 << "5 13998 35076 . . .\n"
+                 << "5 50433 97855 . . .\n"
+                 << "6 34611 45099 . . -\n"
+                 << "6 45503 49751 . . .\n"
+                 << "7 7080 45054 . . +\n"
+                 << "7 30305 45723 . . .\n" // overlap
+                 << "10 54504 62968 . . .\n"
+                 << "11 20844 26475 . . .\n"
+                 << "12 38890 50405 . . .\n"
+                 << "13 56146 67102 . . .\n"
+                 << "14 1694 47285 . . .\n"
+                 << "14 5225 78548 . . .\n"  // overlap
+                 << "14 13102 45658 . . -\n" // overlap
+                 << "15 4706 10214 . . .\n"
+                 << "15 26926 85344 . . .\n"
+                 << "15 78969 98716 . . .\n" // overlap
+                 << "16 7139 73747 . . .\n"
+                 << "16 12143 36596 . . .\n" // overlap
+                 << "16 31326 56532 . . .\n" // overlap
+                 << "16 43942 85160 . . .\n" // overlap
+                 << "19 22463 39329 . . .\n"
+                 << "19 46559 49131 . . .\n"
+                 << "20 64037 98171 . . .\n"
+                 << "21 9363 49431 . . .\n"
+                 << "21 43440 82120 . . .\n"; // overlap
+        bed_file.close();
+        Reporter reporter("LOG");
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        region = Region(feature, 10, 20, false, false);
+        std::vector<std::string> bed_names = {bed_name};
+        Genotype dummy;
+        region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+    }
+};
+TEST_F(REGION_STD_BED_PAD, CHECK_PAD)
+{
+    // normally, with standard input, we need to use the update_flag option
+    // to check inclusion, but here we only have one set
+
+    // We will see how the padding change the inclusion criteria
+    std::vector<uintptr_t> index = {0};
+    // this SNP doesn't contain the strand info, we should assume the start
+    // is the 5' end
+    index.front() = 0;
+    region.update_flag(3, "", 29863 + 1 - 11, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(3, "", 29863 + 1 - 10, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(3, "", 29863 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(3, "", 38285 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(3, "", 38285 + 1 + 19, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(3, "", 38285 + 1 + 20, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+
+    index.front() = 0;
+    region.update_flag(4, "", 20139 + 1 - 11, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20139 + 1 - 10, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20139 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 97433 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 97433 + 1 + 19, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 97433 + 1 + 20, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+
+    // negative strand
+    index.front() = 0;
+    region.update_flag(6, "", 34611 + 1 - 21, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(6, "", 34611 + 1 - 20, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(6, "", 34611 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(6, "", 45099 + 1, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(6, "", 45099 + 1 + 9, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(6, "", 45099 + 1 + 10, index);
+    // we have pad 10 bp to the 5' and 20 to the 3'
+    EXPECT_EQ(index.front(), not_found.front());
+}
+TEST(REGION_MULTI_BED, CHECK_NAME)
+{
+    Reporter reporter("LOG");
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    std::string second_bed_name = "Test2.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n";
+    bed_file.close();
+    bed_file.open(second_bed_name.c_str());
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n";
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 10, 20, false, false);
+    std::vector<std::string> bed_names = {std::string(bed_name + ":Name"),
+                                          second_bed_name};
+    Genotype dummy;
+    region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
+    ASSERT_STREQ(region.get_name(0).c_str(), "Base");
+    ASSERT_STREQ(region.get_name(1).c_str(), "Name");
+    ASSERT_STREQ(region.get_name(2).c_str(), "Test2.bed");
+}
+TEST(REGION_MULTI_BED, CHECK_NAME2)
+{
+    Reporter reporter("LOG");
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    std::string second_bed_name = "Test2.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n";
+    bed_file.close();
+    bed_file.open(second_bed_name.c_str());
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n";
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 10, 20, false, false);
+    std::vector<std::string> bed_names = {
+        bed_name,
+        std::string(second_bed_name + ":Name"),
+    };
+    Genotype dummy;
+    region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
+    ASSERT_STREQ(region.get_name(0).c_str(), "Base");
+    ASSERT_STREQ(region.get_name(1).c_str(), "Test.bed");
+    ASSERT_STREQ(region.get_name(2).c_str(), "Name");
+}
 // gtf read
 // msigdb read
+// SNP Test
 #endif // REGION_TEST_HPP
