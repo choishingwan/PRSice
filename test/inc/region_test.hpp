@@ -1654,5 +1654,52 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
 }
 // gtf read
 // msigdb read
-// SNP Test
+// problem is, with the current design of region class, we can't test gtf file
+// and msigdb file separately
+
+// Any error in the GTF file will lead to throw
+TEST(REGION_GTF_BASIC, NOT_EXIST)
+{
+    std::string gtf_name = "Test.gtf";
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, false, false);
+    std::vector<std::string> bed_names = {};
+    Genotype dummy;
+    try
+    {
+        region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
+                                reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_GTF_BASIC, EMPTY)
+{
+    std::string gtf_name = "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf.close();
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, false, false);
+    std::vector<std::string> bed_names = {};
+    Genotype dummy;
+    try
+    {
+        region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
+                                reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+// SNP Test (this will require information form Genotype)
 #endif // REGION_TEST_HPP
