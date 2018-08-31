@@ -3,7 +3,6 @@
 #include "commander.hpp"
 #include "reporter.hpp"
 #include "gtest/gtest.h"
-#include <iostream>
 // Guess I will have to assume the data is always located at
 // ../test/data
 // This is currently causing me too much stress as for some reason, the command

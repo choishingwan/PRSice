@@ -2,7 +2,7 @@
 #define SNP_TEST_HPP
 #include "snp.hpp"
 #include "gtest/gtest.h"
-#include <iostream>
+#include <vector>
 
 TEST(SNP_TEST, INITIALIZE_NO_COUNT)
 {
