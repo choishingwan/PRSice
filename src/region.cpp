@@ -28,15 +28,15 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
     // chr:start-end,chr:start-end
     std::vector<std::string> region_range = misc::split(exclusion_range, ",");
     bool file_input = false;
-    if (region_range.size() == 1) {
+    if (region_range.size() == 1)
+    {
         // this can either be: 1 range, or an input bed file
         std::vector<std::string> token = misc::split(region_range[0], ":");
         // a range should contain :, if not, this is likely a bed file
-        if (token.size() == 1) {
-            file_input = true;
-        }
+        if (token.size() == 1) { file_input = true; }
     }
-    if (file_input) {
+    if (file_input)
+    {
         // we need to use a vector, because process_bed takes a vector of string
         // as input
         std::vector<std::string> bed;
@@ -47,10 +47,12 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
     {
         // we will manually insert the regions
         std::vector<region_bound> current_region;
-        for (auto&& range : region_range) {
+        for (auto&& range : region_range)
+        {
             // go through each exclusion region, separated by comma
             std::vector<std::string> token = misc::split(range, ":");
-            if (token.size() >= 2) {
+            if (token.size() >= 2)
+            {
                 // this region is in the form of chr:start[-end]
                 int chr = get_chrom_code_raw(token[0].c_str());
                 int temp, start, end;
@@ -58,7 +60,8 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                 {
                     std::vector<std::string> coordinates =
                         misc::split(token[1], "-");
-                    if (coordinates.size() != 1 && coordinates.size() != 2) {
+                    if (coordinates.size() != 1 && coordinates.size() != 2)
+                    {
                         std::string error =
                             "Error: Undefined coordinate format: " + token[1]
                             + ". Format of --x-range must either be chr:start "
@@ -68,7 +71,8 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                     // try and see if there is a - in the region, if yes, it is
                     // a start-end format
                     temp = misc::convert<int>(coordinates[0].c_str());
-                    if (temp < 0) {
+                    if (temp < 0)
+                    {
                         std::string error = "Error: Negative Start Coordinate "
                                             "for exclusion range!";
                         throw std::runtime_error(error);
@@ -78,7 +82,8 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                     // adding 1 to start
                     temp = misc::convert<int>(
                         coordinates[(coordinates.size() > 1)].c_str());
-                    if (temp < 0) {
+                    if (temp < 0)
+                    {
                         std::string error = "Error: Negative End Coordinate "
                                             "for exclusion range!";
                         throw std::runtime_error(error);
@@ -91,7 +96,8 @@ Region::Region(const std::string& exclusion_range, Reporter& reporter)
                     throw std::runtime_error(error.what());
                 }
 
-                if (start > end) {
+                if (start > end)
+                {
                     std::string message =
                         "Error: Start coordinate should be smaller than "
                         "end coordinate!\n";
@@ -162,7 +168,8 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
     // Issue a warning to users regarding behaviour of PRSet when we are
     // uncertain of the strand of the region
     // doesn't matter if m_5prime==m_3prime though
-    if ((m_5prime > 0 || m_3prime > 0) && (m_5prime != m_3prime)) {
+    if ((m_5prime > 0 || m_3prime > 0) && (m_5prime != m_3prime))
+    {
         std::string message = "Warning: We will assume a positive strand for "
                               "any features with unspecific strand information "
                               "e.g. \".\"";
@@ -179,7 +186,8 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
     // we want to construct a region boundary for each gene. Thus we store the
     // information wihtin the unordered_map
     std::unordered_multimap<std::string, region_bound> gtf_boundary;
-    if (!gtf.empty()) {
+    if (!gtf.empty())
+    {
         // only process the gtf and msigdb file if we have the gtf file
         reporter.report("Processing the GTF file");
         try
@@ -203,7 +211,8 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
                               + misc::to_string(gtf_boundary.size())
                               + " genes found in the GTF file";
         reporter.report(message);
-        if (gtf_boundary.size() != 0) {
+        if (gtf_boundary.size() != 0)
+        {
             // if we have more than one gene read from the GTF, we will start
             // processing the msigdb
             process_msigdb(msigdb, gtf_boundary, id_to_name, reporter);
@@ -217,9 +226,11 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
     }
     // Now we will read in the snp set(s) and add them to the region
     process_snp_sets(snp_set, multi_snp_sets, target, reporter);
-    if (m_run_perm) {
+    if (m_run_perm)
+    {
         // only generate the background when we want to run the permutation
-        if (background.empty() && !m_genome_wide_background && !gtf.empty()) {
+        if (background.empty() && !m_genome_wide_background && !gtf.empty())
+        {
             // We want to generate the background region based on the gtf
             // information
             generate_background(gtf_boundary);
@@ -243,7 +254,8 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
     // region from the analysis
     m_region_snp_count = std::vector<int>(m_region_name.size(), 0);
     m_duplicated_names.clear();
-    if (!m_has_background && m_run_perm && !m_genome_wide_background) {
+    if (!m_has_background && m_run_perm && !m_genome_wide_background)
+    {
         reporter.report("Warning: Background not provided, will use all SNPs "
                         "as background (only affect --set-perm)");
     }
@@ -258,12 +270,14 @@ void Region::process_snp_sets(const std::string& single_snp_set,
     // NOTE: For SNP set, we will not do 3' 5' padding
     if (single_snp_set.empty() && multi_snp_set.empty()) return;
     std::string message = "";
-    if (!single_snp_set.empty()) {
+    if (!single_snp_set.empty())
+    {
         std::ifstream input;
         // read in the file contain one and only one SNP set
         // TODO: Maybe allow user input name?
         input.open(single_snp_set.c_str());
-        if (!input.is_open()) {
+        if (!input.is_open())
+        {
             message = "Error: " + single_snp_set + " cannot be open!";
             throw std::runtime_error(message);
         }
@@ -277,11 +291,13 @@ void Region::process_snp_sets(const std::string& single_snp_set,
         {
             std::vector<region_bound> current_region;
             std::string line;
-            while (std::getline(input, line)) {
+            while (std::getline(input, line))
+            {
                 misc::trim(line);
                 intptr_t chr, loc;
                 // get the SNP coordinate from the target file
-                if (target.get_snp_loc(line, chr, loc)) {
+                if (target.get_snp_loc(line, chr, loc))
+                {
                     region_bound cur_bound;
                     cur_bound.chr = chr;
                     cur_bound.start = loc;
@@ -292,35 +308,41 @@ void Region::process_snp_sets(const std::string& single_snp_set,
             input.close();
             // then remove duplcate. However, this is unlikely for there to be
             // any duplciate unless multiple SNP at the same location is found
-            if (current_region.size() > 0) {
+            if (current_region.size() > 0)
+            {
                 m_region_list.push_back(solve_overlap(current_region));
                 m_region_name.push_back(single_snp_set);
                 m_duplicated_names.insert(single_snp_set);
             }
         }
     }
-    if (!multi_snp_set.empty()) {
+    if (!multi_snp_set.empty())
+    {
         std::ifstream input;
         input.open(multi_snp_set.c_str());
         // we now process the multi snp set input
-        if (!input.is_open()) {
+        if (!input.is_open())
+        {
             message = "Error: " + multi_snp_set + " cannot be open!";
             throw std::runtime_error(message);
         }
         std::string line;
         std::vector<std::string> token;
-        while (std::getline(input, line)) {
+        while (std::getline(input, line))
+        {
             misc::trim(line);
             if (line.empty()) continue;
             token = misc::split(line);
-            if (token.size() <= 1) {
+            if (token.size() <= 1)
+            {
                 message = "Error: Multi-set file should contain at least 2 "
                           "columns. Did you want to use --snp-set instead?";
                 // can be less stringent
                 throw std::runtime_error(message);
             }
             // first column should contain the set name
-            if (m_duplicated_names.find(token[0]) != m_duplicated_names.end()) {
+            if (m_duplicated_names.find(token[0]) != m_duplicated_names.end())
+            {
                 message = "Warning: Set name of " + token[0]
                           + " is duplicated, it will be ignored";
                 reporter.report(message);
@@ -328,9 +350,11 @@ void Region::process_snp_sets(const std::string& single_snp_set,
             }
             // now generate ther region
             std::vector<region_bound> current_region;
-            for (auto&& snp : token) {
+            for (auto&& snp : token)
+            {
                 intptr_t chr, loc;
-                if (target.get_snp_loc(snp, chr, loc)) {
+                if (target.get_snp_loc(snp, chr, loc))
+                {
                     region_bound cur_bound;
                     cur_bound.chr = chr;
                     cur_bound.start = loc;
@@ -338,7 +362,8 @@ void Region::process_snp_sets(const std::string& single_snp_set,
                     current_region.push_back(cur_bound);
                 }
             }
-            if (current_region.size() > 0) {
+            if (current_region.size() > 0)
+            {
                 m_region_list.push_back(solve_overlap(current_region));
                 m_region_name.push_back(token[0]);
                 m_duplicated_names.insert(token[0]);
@@ -356,10 +381,12 @@ void Region::process_bed(const std::vector<std::string>& bed,
     bool print_warning = false;
     std::vector<std::string> token;
     std::string message, name, file, line;
-    for (auto& b : bed) {
+    for (auto& b : bed)
+    {
         //  first, check if the input contain a name
         token = misc::split(b, ":");
-        if (token.size() == 2) {
+        if (token.size() == 2)
+        {
             file = token[0];
             name = token[1];
         }
@@ -379,13 +406,15 @@ void Region::process_bed(const std::vector<std::string>& bed,
         std::ifstream bed_file;
         bool error = false;
         bed_file.open(file.c_str());
-        if (!bed_file.is_open()) {
+        if (!bed_file.is_open())
+        {
             message =
                 "Warning: " + file + " cannot be open. It will be ignored";
             reporter.report(message);
             continue;
         }
-        if (m_duplicated_names.find(name) != m_duplicated_names.end()) {
+        if (m_duplicated_names.find(name) != m_duplicated_names.end())
+        {
             message = "Warning: " + name
                       + " is duplicated, it will only be read once";
             reporter.report(message);
@@ -395,12 +424,14 @@ void Region::process_bed(const std::vector<std::string>& bed,
         size_t num_line = 0;
 
         // now start reading in the bed file
-        while (std::getline(bed_file, line)) {
+        while (std::getline(bed_file, line))
+        {
             num_line++;
             misc::trim(line);
             if (line.empty()) continue;
             token = misc::split(line);
-            if (token.size() < 3) {
+            if (token.size() < 3)
+            {
 
                 message = "Error: " + file
                           + " contain less than 3 columns, it will be ignored";
@@ -445,10 +476,29 @@ void Region::process_bed(const std::vector<std::string>& bed,
             try
             {
                 end = misc::convert<intptr_t>(token[+BED::END]);
-                if (end < 0) {
+                if (end < 0)
+                {
                     message.append("Error: Negative End Coordinate at line "
                                    + misc::to_string(num_line) + "!");
                     error = true;
+                }
+                else
+                {
+                    /* If we have
+                     *
+                     *  chr1   | T | A | C | C | G |
+                     *         | | | | | | | | | | |
+                     * 1-base  | 1 | 2 | 3 | 4 | 5 |
+                     * 0-base  0   1   2   3   4   5
+                     *
+                     * For bed file with input of
+                     * chr1 1 5
+                     * we will want the region_bound variable to be
+                     * 1 2 6
+                     * Such that any SNP with coordinate of chr1:2-5 on the 1
+                     * base coordinate system will be included in the analysis
+                     */
+                    ++end;
                 }
             }
             catch (...)
@@ -457,7 +507,8 @@ void Region::process_bed(const std::vector<std::string>& bed,
                                + misc::to_string(num_line) + ")!");
                 error = true;
             }
-            if (!error && start > end) {
+            if (!error && start > end)
+            {
                 // only do this check if there isn't an error before
                 error = true;
                 message.append("Error: Start coordinate should be smaller than "
@@ -465,15 +516,18 @@ void Region::process_bed(const std::vector<std::string>& bed,
                 message.append("start: " + misc::to_string(start) + "\n");
                 message.append("end: " + misc::to_string(end) + "\n");
             }
-            if (error) {
+            if (error)
+            {
                 message.append("We will ignore this file");
                 break;
             }
             // only include regions that falls into the chromosome of interest
-            if (token.size() > +BED::STRAND) {
+            if (token.size() > +BED::STRAND)
+            {
                 // we haev the strand information, therefore can add the padding
                 // accordingly
-                if (token[+BED::STRAND] == "-") {
+                if (token[+BED::STRAND] == "-")
+                {
                     // negative strand, so add 3' to start and 5' to end
                     start -= m_3prime;
                     if (start < 1) start = 1;
@@ -510,7 +564,8 @@ void Region::process_bed(const std::vector<std::string>& bed,
             current_region.push_back(cur_bound);
         }
 
-        if (!error) {
+        if (!error)
+        {
             // Then we push_back the non-overlapping region
             m_region_list.emplace_back(solve_overlap(current_region));
             // and then we provide the name information
@@ -543,9 +598,11 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
     bool gz_input = false;
     // we want to allow gz file input (as GTF file can be big)
     GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
-    if (gtf.substr(gtf.find_last_of(".") + 1).compare("gz") == 0) {
+    if (gtf.substr(gtf.find_last_of(".") + 1).compare("gz") == 0)
+    {
         gz_gtf_file.open(gtf.c_str());
-        if (!gz_gtf_file.good()) {
+        if (!gz_gtf_file.good())
+        {
             std::string error_message =
                 "Error: Cannot open GTF (gz) to read!\n";
             throw std::runtime_error(error_message);
@@ -555,9 +612,11 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
 
     // but user can also provide the depressed file
     std::ifstream gtf_file;
-    if (!gz_input) {
+    if (!gz_input)
+    {
         gtf_file.open(gtf.c_str());
-        if (!gtf_file.is_open()) {
+        if (!gtf_file.is_open())
+        {
             std::string error_message = "Cannot open gtf file: " + gtf;
             throw std::runtime_error(error_message);
         }
@@ -579,13 +638,15 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
         token = misc::split(line, "\t");
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
-        if (in_feature(token[+GTF::FEATURE]) && chr_code <= max_chr) {
+        if (in_feature(token[+GTF::FEATURE]) && chr_code <= max_chr)
+        {
             start = 0;
             end = 0;
             try
             {
                 start = misc::convert<intptr_t>(token[+GTF::START]);
-                if (start < 0) {
+                if (start < 0)
+                {
                     // we opt for extreme stringency. Will definitely want the
                     // whole gtf file to contain valid entries
                     std::string error =
@@ -607,7 +668,8 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
             try
             {
                 end = misc::convert<intptr_t>(token[+GTF::END]);
-                if (end < 0) {
+                if (end < 0)
+                {
                     std::string error =
                         "Error: Negative End Coordinate! (line: "
                         + misc::to_string(num_line)
@@ -629,10 +691,13 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
             attribute = misc::split(token[+GTF::ATTRIBUTE], ";");
             name = "";
             id = "";
-            for (auto& info : attribute) {
-                if (info.find("gene_id") != std::string::npos) {
+            for (auto& info : attribute)
+            {
+                if (info.find("gene_id") != std::string::npos)
+                {
                     extract = misc::split(info);
-                    if (extract.size() > 1) {
+                    if (extract.size() > 1)
+                    {
                         // WARNING: HARD CODING HERE
                         // we assume this should be of the format gene_id "ID"
                         extract[1].erase(std::remove(extract[1].begin(),
@@ -644,7 +709,8 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
                 else if (info.find("gene_name") != std::string::npos)
                 {
                     extract = misc::split(info);
-                    if (extract.size() > 1) {
+                    if (extract.size() > 1)
+                    {
                         // WARNING: HARD CODING HERE
                         // Again, we assume this should be of the format
                         // gene_name "Name"
@@ -658,12 +724,11 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
             // the GTF only mandate the ID field, so GTF can miss out the name
             // field.
             // if we have both the name and ID, we will build the dictionary
-            if (!id.empty() && !name.empty()) {
-                id_to_name[name].insert(id);
-            }
+            if (!id.empty() && !name.empty()) { id_to_name[name].insert(id); }
             // it is ok to not check for previous error as they all result in
             // throw
-            if (start > end) {
+            if (start > end)
+            {
                 std::string message = "Error: Start coordinate should be "
                                       "smaller than end coordinate!\n";
                 message.append("start: " + misc::to_string(start) + "\n");
@@ -672,7 +737,8 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
                 throw std::runtime_error(message);
             }
             // add padding
-            if (token[+GTF::STRAND].compare("-") == 0) {
+            if (token[+GTF::STRAND].compare("-") == 0)
+            {
                 start -= m_3prime;
                 if (start < 1) start = 1;
                 end += m_5prime;
@@ -707,12 +773,14 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
         }
     }
     std::string message = "";
-    if (exclude_feature == 1) {
+    if (exclude_feature == 1)
+    {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entry removed due to feature selection");
         reporter.report(message);
     }
-    if (exclude_feature > 1) {
+    if (exclude_feature > 1)
+    {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entries removed due to feature selection");
         reporter.report(message);
@@ -736,9 +804,11 @@ void Region::process_msigdb(
     bool has_open = false;
     std::string line, name;
     std::vector<std::string> token;
-    for (auto&& m : msigdb_files) {
+    for (auto&& m : msigdb_files)
+    {
         input.open(m.c_str());
-        if (!input.is_open()) {
+        if (!input.is_open())
+        {
             std::string error_message = "Warning: Cannot open " + msigdb =
                                             ", will skip this file";
             reporter.report(error_message);
@@ -747,7 +817,8 @@ void Region::process_msigdb(
         {
             has_open = true;
             std::vector<region_bound> current_region;
-            while (std::getline(input, line)) {
+            while (std::getline(input, line))
+            {
                 misc::trim(line);
                 if (line.empty()) continue;
                 token = misc::split(line);
@@ -767,22 +838,26 @@ void Region::process_msigdb(
                     current_region.clear();
                     current_region.shrink_to_fit();
                     current_region.reserve(token.size());
-                    for (auto& gene : token) {
+                    for (auto& gene : token)
+                    {
                         // for each gene, see if we can find it in the gtf file
                         auto&& gtf_search = gtf_info.equal_range(gene);
                         // for equal range, first==second when not found
-                        if (gtf_search.first == gtf_search.second) {
+                        if (gtf_search.first == gtf_search.second)
+                        {
                             // we cannot find the gene name in the gtf
                             // information, check if we can find the id?
                             auto&& gene_name_iter = id_to_name.find(gene);
-                            if (gene_name_iter != id_to_name.end()) {
+                            if (gene_name_iter != id_to_name.end())
+                            {
                                 // we found a way to convert the gene name
                                 // to gene id
                                 auto& gene_name = gene_name_iter->second;
                                 // when one gene name correspond to
                                 // multiple gene id, we will take
                                 // all of them
-                                for (auto&& translate : gene_name) {
+                                for (auto&& translate : gene_name)
+                                {
                                     auto&& gene_gtf =
                                         gtf_info.equal_range(translate);
                                     // now read in all the regions
@@ -829,14 +904,16 @@ void Region::read_background(
         {"bed", 1}, {"range", 0}, {"gene", 2}};
     // format of the background string should be name:format
     std::vector<std::string> background_info = misc::split(background, ":");
-    if (background_info.size() != 2) {
+    if (background_info.size() != 2)
+    {
         std::string error =
             "Error: Format of --background should be <File Name>:<File Type>";
         throw std::runtime_error(error);
     }
     // check if we know the format
     auto&& type = file_type.find(background_info[1]);
-    if (type == file_type.end()) {
+    if (type == file_type.end())
+    {
         std::string error = "Error: Undefined file type. Supported formats are "
                             "bed, gene or range";
         throw std::runtime_error(error);
@@ -844,7 +921,8 @@ void Region::read_background(
     // now read in the file
     std::ifstream input;
     input.open(background_info[0].c_str());
-    if (!input.is_open()) {
+    if (!input.is_open())
+    {
         std::string error =
             "Error: Cannot open background file: " + background_info[0];
         throw std::runtime_error(error);
@@ -852,17 +930,20 @@ void Region::read_background(
     bool print_warning = false, error = false;
     std::vector<Region::region_bound> current_bound;
     std::string line;
-    if (type->second == 0 || type->second == 1) {
+    if (type->second == 0 || type->second == 1)
+    {
         // this is either a range format or a bed file
         // the only difference is range is 1 based and bed is 0 based
         size_t num_line = 0;
         std::vector<std::string> token;
-        while (std::getline(input, line)) {
+        while (std::getline(input, line))
+        {
             num_line++;
             misc::trim(line);
             if (line.empty()) continue;
             token = misc::split(line);
-            if (token.size() < 3) {
+            if (token.size() < 3)
+            {
                 std::string message =
                     "Error: " + background_info[0]
                     + " contain less than 3 columns, it will be ignored";
@@ -906,7 +987,8 @@ void Region::read_background(
                 // we add 1 to end if it is type range because our end is
                 // non-inclusive but for range the end is inclusive
                 end = misc::convert<int>(token[+BED::END]) + 1 - type->second;
-                if (end < 0) {
+                if (end < 0)
+                {
                     message.append("Error: Negative End Coordinate at line "
                                    + misc::to_string(num_line) + "!");
                     error = true;
@@ -918,7 +1000,8 @@ void Region::read_background(
                                + std::to_string(num_line) + ")!");
                 error = true;
             }
-            if (!error || start > end) {
+            if (!error || start > end)
+            {
                 // don't check if it's already error out
                 error = true;
                 message.append("Error: Start coordinate should be smaller than "
@@ -934,8 +1017,10 @@ void Region::read_background(
             std::vector<std::string>::size_type strand_index =
                 (type->second == 1) ? (+BED::STRAND) : (+BED::END + 1);
 
-            if (token.size() > strand_index) {
-                if (token[strand_index] == "-") {
+            if (token.size() > strand_index)
+            {
+                if (token[strand_index] == "-")
+                {
                     start -= m_3prime;
                     if (start < 1) start = m_3prime;
                     end += m_5prime;
@@ -973,21 +1058,25 @@ void Region::read_background(
     else
     {
         // gene list format
-        while (std::getline(input, line)) {
+        while (std::getline(input, line))
+        {
             // read in the gene file
             misc::trim(line);
             if (line.empty()) continue;
             auto&& gtf_search = gtf_info.equal_range(line);
-            if (gtf_search.first == gtf_search.second) {
+            if (gtf_search.first == gtf_search.second)
+            {
                 // we cannot find the gene name in the gtf information (which
                 // uses gene ID)
                 auto&& id_search = id_to_name.find(line);
-                if (id_search != id_to_name.end()) {
+                if (id_search != id_to_name.end())
+                {
                     // we found a way to convert the gene name to gene id
                     auto& name = id_search->second;
                     // problem is, one gene name can correspond to multiple gene
                     // id in that case, wee will take all of them
-                    for (auto&& translate : name) {
+                    for (auto&& translate : name)
+                    {
                         auto&& gtf_name_search =
                             gtf_info.equal_range(translate);
                         for (auto&& it = gtf_name_search.first;
@@ -1009,7 +1098,8 @@ void Region::read_background(
     input.close();
     // only indicate there is a background when we read in more than one region
     m_has_background = (current_bound.size() > 0);
-    if (!m_has_background) {
+    if (!m_has_background)
+    {
         throw std::runtime_error("Error: Background is empty. Please make sure "
                                  "your background file is valid.");
     }
@@ -1025,14 +1115,14 @@ void Region::generate_background(
     // one way to speed things up is to perform the overlap removal as we loop
     // through
     std::vector<Region::region_bound> temp_storage;
-    if (gtf_info.size() != 0) {
+    if (gtf_info.size() != 0)
+    {
         temp_storage.reserve(gtf_info.size());
-        for (auto&& gtf : gtf_info) {
-            temp_storage.push_back(gtf.second);
-        }
+        for (auto&& gtf : gtf_info) { temp_storage.push_back(gtf.second); }
         m_has_background = true;
     }
-    if (temp_storage.size() == 0) {
+    if (temp_storage.size() == 0)
+    {
         throw std::runtime_error(
             "Error: background generated from the GTF file is empty. Maybe all "
             "gene regions are filtered by feature or you gtf file is empty?");
@@ -1047,9 +1137,10 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region)
     // sort the region according to their coordinate
     std::sort(begin(current_region), end(current_region),
               [](region_bound const& t1, region_bound const& t2) {
-                  if (t1.chr == t2.chr) {
+                  if (t1.chr == t2.chr)
+                  {
                       if (t1.start == t2.start) return t1.end < t2.end;
-                      return t1.start < t2.end;
+                      return t1.start < t2.start;
                   }
                   else
                       return t1.chr < t2.chr;
@@ -1060,8 +1151,10 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region)
     intptr_t prev_start = 0;
     intptr_t prev_end = 0;
     // optimize for human for now
-    for (auto&& bound : current_region) {
-        if (prev_chr == -1) {
+    for (auto&& bound : current_region)
+    {
+        if (prev_chr == -1)
+        {
             prev_chr = bound.chr;
             prev_start = bound.start;
             prev_end = bound.end;
@@ -1084,7 +1177,8 @@ Region::solve_overlap(std::vector<Region::region_bound>& current_region)
             prev_end = bound.end;
         }
     }
-    if (prev_chr != -1) {
+    if (prev_chr != -1)
+    {
         // we need to remember to add in the last region
         region_bound cur_bound;
         cur_bound.chr = prev_chr;
@@ -1103,15 +1197,15 @@ Region::binary_search_region(const intptr_t chr, const intptr_t loc,
                              std::vector<region_bound>::size_type right) const
 {
     std::vector<region_bound>::size_type midPoint = left + (right - left) / 2;
-    while (left < right) {
+    while (left < right)
+    {
         midPoint = left + (right - left) / 2;
         auto&& cur = m_region_list.front()[midPoint];
-        if (chr > cur.chr) {
-            left = midPoint + 1;
-        }
+        if (chr > cur.chr) { left = midPoint + 1; }
         else if (chr == cur.chr)
         {
-            if (loc >= cur.end) {
+            if (loc >= cur.end)
+            {
                 // if the target location is larger or equal to the end of the
                 // range, move up
                 left = midPoint + 1;
@@ -1147,15 +1241,15 @@ bool Region::check_exclusion(const intptr_t chr, const intptr_t loc)
     std::vector<region_bound>::size_type left = 0;
     std::vector<region_bound>::size_type right = m_region_list.front().size();
     std::vector<region_bound>::size_type midPoint = left + (right - left) / 2;
-    while (left < right) {
+    while (left < right)
+    {
         midPoint = left + (right - left) / 2;
         auto&& cur = m_region_list.front()[midPoint];
-        if (chr > cur.chr) {
-            left = midPoint + 1;
-        }
+        if (chr > cur.chr) { left = midPoint + 1; }
         else if (chr == cur.chr)
         {
-            if (loc >= cur.end) {
+            if (loc >= cur.end)
+            {
                 // if the target location is larger or equal to the end of the
                 // range, move up
                 left = midPoint + 1;
@@ -1203,7 +1297,8 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
     m_region_snp_count[0]++;
     // if we want to perform competitive p-value calclation and use all SNP
     // as background, we can just add that in
-    if (m_genome_wide_background && m_run_perm && region_size > 1) {
+    if (m_genome_wide_background && m_run_perm && region_size > 1)
+    {
         // use everything as background
         SET_BIT(region_size - 1, flag.data());
         m_region_snp_count[region_size - 1]++;
@@ -1229,7 +1324,8 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
         // and start our search from there so that we can skip un-necessary
         // comparison
         moved_chr = false;
-        while (m_snp_check_index[i_region] < current_region_size) {
+        while (m_snp_check_index[i_region] < current_region_size)
+        {
             // obtain the current boundary as defined by m_snp_check_index
             auto&& current_bound = current_region[m_snp_check_index[i_region]];
             region_chr = current_bound.chr;
@@ -1260,9 +1356,7 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
             // when we reach here, the only possible reason for this break
             // is chr < region_chr (So technically, we can remove this if
             // clause)
-            if (chr != region_chr) {
-                break;
-            }
+            if (chr != region_chr) { break; }
             else if (current_bound.end <= loc)
             {
                 // if the region bound is still earlier than or equal to
@@ -1288,9 +1382,7 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
 void Region::print_region_number(Reporter& reporter) const
 {
     std::string message = "";
-    if (m_region_name.size() == 1) {
-        message = "1 region included";
-    }
+    if (m_region_name.size() == 1) { message = "1 region included"; }
     else if (m_region_name.size() > 1)
     {
         // -1 to remove the background count, as we are not going to print

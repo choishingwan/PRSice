@@ -132,8 +132,10 @@ public:
         m_region_post_clump_count.resize(count.size());
         // and calculate the last region
         const size_t last_region_index = count.size() - 1;
-        for (size_t i = 0; i < count.size(); ++i) {
-            if (i != last_region_index && i != 0) {
+        for (size_t i = 0; i < count.size(); ++i)
+        {
+            if (i != last_region_index && i != 0)
+            {
                 // we want to know what is the maximum number of SNP for all the
                 // set involves (except base and background)
                 max = std::max(count[i], max);
@@ -166,6 +168,13 @@ public:
      * \return the number of regions involved
      */
     size_t size() const { return m_region_name.size(); }
+    /*!
+     * \brief Return the number of boundaries for the i th set. Use for unit
+     * testing
+     * \param i is the index of the set
+     * \return The number of boundaries for the i th set
+     */
+    size_t num_bound(size_t i) const { return m_region_list.at(i).size(); }
     /*!
      * \brief Return the name of the i th set
      * \param i is the set index
