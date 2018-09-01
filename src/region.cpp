@@ -623,6 +623,7 @@ std::unordered_multimap<std::string, Region::region_bound> Region::process_gtf(
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
         if (in_feature(token[+GTF::FEATURE]) && chr_code <= max_chr) {
+
             start = 0;
             end = 0;
             try

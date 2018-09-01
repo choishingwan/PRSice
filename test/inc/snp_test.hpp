@@ -2,6 +2,8 @@
 #define SNP_TEST_HPP
 #include "snp.hpp"
 #include "gtest/gtest.h"
+#include "genotype.hpp"
+#include "region.hpp"
 #include <vector>
 
 TEST(SNP_TEST, INITIALIZE_NO_COUNT)
@@ -318,4 +320,250 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
 }
 // clump will need a special test just for that (Need to take into account of
 // both region and SNP)
+class GenotypeSNPTest : public Genotype
+{
+public:
+    GenotypeSNPTest() { m_max_code = 22; }
+};
+// Any error in the GTF file will lead to throw
+class SNP_REGION : public ::testing::Test
+{
+    // For exclusion, strand information should not alter result (window
+    // padding should all be 0)
+protected:
+    Region region;
+    std::vector<uintptr_t> not_found = {0};
+    void SetUp() override
+    {
+        std::string gtf_name = "Test.gtf";
+        std::string gmt_name = "Test.gmt";
+        std::ofstream gtf, gmt;
+        gtf.open(gtf_name.c_str());
+        gmt.open(gmt_name.c_str());
+        gtf << "#!genome-build GRCh38.p7\n"
+               "#!genome - version GRCh38\n"
+               "#!genome - date 2013 - 12\n"
+               "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+               "#!genebuild - last - updated 2016 - 06\n"
+               "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+               "\"ENSG00000223972\"; "
+               "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+               "\"havana\"; "
+               "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+               "havana_gene "
+               "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+               "1\thavana\tfive_prime_utr\t15869\t16409\t.\t+\t.\tgene_id "
+               "\"ENSG00000223973\"; "
+               "gene_version \"5\"; gene_name \"DDX11L2\"; gene_source "
+               "\"havana\"; "
+               "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+               "havana_gene "
+               "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_id "
+               "\"ENSG00000255790\"; gene_version \"5\"; transcript_id "
+               "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+               "\"RP11-711K1.7\"; gene_source \"havana\"; gene_biotype "
+               "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+               "havana_gene_version \"2\"; transcript_name "
+               "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+               "transcript_biotype \"sense_intronic\"; havana_transcript "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"basic\"; transcript_support_level \"4\";\n"
+
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+               "gene_biotype \"protein_coding\"; havana_gene "
+               "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+               "transcript_name \"CIT-001\"; transcript_source "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+               "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+               "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+               "\"basic\"; transcript_support_level \"1\";\n"
+
+               "15\tensembl\tCDS\t55320275\t55320410\t.\t+\t2\tgene_id "
+               "\"ENSG00000069943\"; gene_version \"9\"; transcript_id "
+               "\"ENST00000539642\"; transcript_version \"5\"; exon_number "
+               "\"2\"; gene_name \"PIGB\"; gene_source \"ensembl_havana\"; "
+               "gene_biotype \"protein_coding\"; havana_gene "
+               "\"OTTHUMG00000172654\"; havana_gene_version \"1\"; "
+               "transcript_name \"PIGB-201\"; transcript_source \"ensembl\"; "
+               "transcript_biotype \"protein_coding\"; protein_id "
+               "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
+               "transcript_support_level \"5\";\n";
+        gtf.close();
+        gmt << "SET1 ENSG00000223972" << std::endl;
+        gmt << "SET2 ENSG00000223973" << std::endl; // should be filtered
+        gmt << "SET3 ENSG00000255790" << std::endl; // should also be filtered
+        gmt << "SET4 CIT" << std::endl;
+        gmt << "SET5 www.google.com ENSG00000069943" << std::endl;
+        gmt << "SET6 www.google.com ENSG00000223972 ENSG00000255790 "
+               "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
+            << std::endl;
+        gmt.close();
+        Reporter reporter("LOG");
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        region = Region(feature, 0, 0, false, false);
+        std::vector<std::string> bed_names = {};
+        Genotype dummy = GenotypeSNPTest();
+        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
+                                dummy, reporter);
+        SET_BIT(0, not_found.data());
+    }
+};
+
+TEST_F(SNP_REGION, BASE_SET1_STANDARD){
+    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+    base_snp.set_flag(region);
+    set_snp.set_flag(region);
+    ASSERT_FALSE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+
+    for(size_t i = 0; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        if(i == 0 || i == 1 || i == 6){
+            ASSERT_TRUE(set_snp.in(i));
+        }else{
+            ASSERT_FALSE(set_snp.in(i));
+        }
+    }
+    base_snp.clump(set_snp, 0.1,false, 0.8);
+    // will set clumped to true to protect itself
+    ASSERT_TRUE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+// the set SNP should've lost the base flag
+    for(size_t i = 0; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        if( i == 1 || i == 6){
+            ASSERT_TRUE(set_snp.in(i));
+        }else{
+            ASSERT_FALSE(set_snp.in(i));
+        }
+    }
+}
+TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO){
+    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+    base_snp.set_flag(region);
+    set_snp.set_flag(region);
+    ASSERT_FALSE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+
+    for(size_t i = 0; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        if(i == 0 || i == 1 || i == 6){
+            ASSERT_TRUE(set_snp.in(i));
+        }else{
+            ASSERT_FALSE(set_snp.in(i));
+        }
+    }
+    base_snp.clump(set_snp, 0.1,true, 0.8);
+    // will set clumped to true to protect itself
+    ASSERT_TRUE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+// the set SNP should've lost the base flag
+    for(size_t i = 0; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        if( i == 1 || i == 6){
+            ASSERT_TRUE(set_snp.in(i));
+        }else{
+            ASSERT_FALSE(set_snp.in(i));
+        }
+    }
+}
+
+TEST_F(SNP_REGION, BASE_SET1_PROXY_GO){
+    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+    base_snp.set_flag(region);
+    set_snp.set_flag(region);
+    ASSERT_FALSE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+
+    for(size_t i = 0; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        if(i == 0 || i == 1 || i == 6){
+            ASSERT_TRUE(set_snp.in(i));
+        }else{
+            ASSERT_FALSE(set_snp.in(i));
+        }
+    }
+    base_snp.clump(set_snp, 0.1,true, 0.01);
+    // will set clumped to true to protect itself
+    ASSERT_TRUE(base_snp.clumped());
+    ASSERT_TRUE(set_snp.clumped());
+    for(size_t i = 0; i < 7; ++i){
+        // we should have acquire the flag from set_snp
+        if(i==0 || i == 1 || i == 6){
+            ASSERT_TRUE(base_snp.in(i));
+        }else{
+        ASSERT_FALSE(base_snp.in(i));
+        }
+    }
+    // we simply set the set_snp to clumped without setting its flags to zero
+}
+TEST_F(SNP_REGION, BASE_BASE_STANDARD){
+    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
+    SNP set_snp("Set_SNP", 1, 2, "A","C","Test", 1);
+    base_snp.set_flag(region);
+    set_snp.set_flag(region);
+    ASSERT_FALSE(base_snp.clumped());
+    ASSERT_FALSE(set_snp.clumped());
+
+    ASSERT_TRUE(base_snp.in(0));
+    ASSERT_TRUE(set_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+        ASSERT_FALSE(set_snp.in(i));
+    }
+
+    base_snp.clump(set_snp, 0.1,false, 0.8);
+    // will set clumped to true to protect itself
+    ASSERT_TRUE(base_snp.clumped());
+    ASSERT_TRUE(set_snp.clumped());
+    ASSERT_TRUE(base_snp.in(0));
+    for(size_t i = 1; i < 7; ++i){
+        // we should not acquire the flag from set_snp
+        ASSERT_FALSE(base_snp.in(i));
+    }
+// the set SNP should've lost the base flag
+    for(size_t i = 0; i < 7; ++i){
+            ASSERT_FALSE(set_snp.in(i));
+    }
+}
 #endif // SNP_TEST_HPP

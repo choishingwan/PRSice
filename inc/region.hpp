@@ -132,10 +132,8 @@ public:
         m_region_post_clump_count.resize(count.size());
         // and calculate the last region
         const size_t last_region_index = count.size() - 1;
-        for (size_t i = 0; i < count.size(); ++i)
-        {
-            if (i != last_region_index && i != 0)
-            {
+        for (size_t i = 0; i < count.size(); ++i) {
+            if (i != last_region_index && i != 0) {
                 // we want to know what is the maximum number of SNP for all the
                 // set involves (except base and background)
                 max = std::max(count[i], max);
