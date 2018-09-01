@@ -238,6 +238,8 @@ void Region::generate_regions(const std::string& gtf, const std::string& msigdb,
             // we must still add the background name as it is used to determine
             // the number of region later on
             m_region_name.push_back("Background");
+            // we need to give it an empty vector in the area
+            m_region_list.push_back(std::vector<region_bound>());
         }
     }
     // initialize snp_check_index to 0, which is the front of each region
@@ -956,11 +958,12 @@ void Region::read_background(
                 if (start >= 0)
                     // That's because bed is 0 based and range format is 1
                     // based. and type for bed is 1 and type for range is 0
-                    start = start + type->second;
+                    start += type->second;
                 else
                 {
                     message.append("Error: Negative Start Coordinate at line "
                                    + misc::to_string(num_line) + "!");
+                    reporter.report(message);
                     error = true;
                 }
             }
@@ -968,32 +971,36 @@ void Region::read_background(
             {
                 message.append("Error: Cannot convert start coordinate! (line: "
                                + misc::to_string(num_line) + ")!");
+                reporter.report(message);
                 error = true;
             }
             try
             {
-                // we add 1 to end if it is type range because our end is
-                // non-inclusive but for range the end is inclusive
-                end = misc::convert<int>(token[+BED::END]) + 1 - type->second;
+                // we add 1 to end because our end is non-inclusive
+                end = misc::convert<int>(token[+BED::END]);
                 if (end < 0) {
                     message.append("Error: Negative End Coordinate at line "
                                    + misc::to_string(num_line) + "!");
+                    reporter.report(message);
                     error = true;
                 }
+                ++end;
             }
             catch (...)
             {
                 message.append("Error: Cannot convert end coordinate! (line: "
                                + std::to_string(num_line) + ")!");
+                reporter.report(message);
                 error = true;
             }
-            if (!error || start > end) {
+            if (!error && start > end) {
                 // don't check if it's already error out
                 error = true;
                 message.append("Error: Start coordinate should be smaller than "
                                "end coordinate!\n");
                 message.append("start: " + std::to_string(start) + "\n");
                 message.append("end: " + std::to_string(end) + "\n");
+                reporter.report(message);
             }
             if (error) break;
             // only include regions that falls into the chromosome of interest
@@ -1278,7 +1285,6 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
         SET_BIT(region_size - 1, flag.data());
         m_region_snp_count[region_size - 1]++;
     }
-
     intptr_t region_chr;
     // indicate if we have a likelihood of changing chr.
     // Situation: SNP on chr1 but out of bound of last chr1 boundary,
@@ -1291,7 +1297,6 @@ void Region::update_flag(const intptr_t chr, const std::string& rs,
         // find out how many boundaries are there within the current region
         auto&& current_region = m_region_list[i_region];
         const size_t current_region_size = current_region.size();
-
         // while we still have boundary left
         // allow to go through all boundaries
         // as we assume SNPs are read in the correct order (sorted)
