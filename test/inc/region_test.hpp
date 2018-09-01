@@ -2732,6 +2732,550 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
         FAIL();
     }
 }
+TEST(REGION_BACKGROUND, GTF_BACKGROUND)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = "Test.gtf";
+    std::string gmt_name = "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
-//TODO  SNP Test (this will require information from Genotype)
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122967\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CCTV\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2 CIT" << std::endl;
+    gmt.close();
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, true, false);
+    std::vector<std::string> bed_names = {};
+    Genotype dummy = GenotypeTest();
+    try
+    {
+        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
+                                dummy, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 2 sets, the base and the background
+    ASSERT_EQ(region.size(), 4);
+    std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(3, found.data());
+    // 12 11399381 11486678
+    // SNP not in any location
+    region.update_flag(12, "", 1139, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    // SNP not in any region, but in background
+    region.update_flag(12, "", 11399381, index);
+    ASSERT_EQ(index.front(), found.front());
+}
+TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = "Test.gtf";
+    std::string gmt_name = "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122967\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CCTV\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2 CIT" << std::endl;
+    gmt.close();
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, true, true);
+    std::vector<std::string> bed_names = {};
+    Genotype dummy = GenotypeTest();
+    region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "", dummy,
+                            reporter);
+    // we should have the 2 sets, the base and the background
+    ASSERT_EQ(region.size(), 4);
+    std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(3, found.data());
+    // 12 11399381 11486678
+    // SNP not in any location will still be included in the background (genome
+    // wide background)
+    region.update_flag(12, "", 1139, index);
+    ASSERT_EQ(index.front(), found.front());
+    index[0] = 0;
+    // SNP not in any region, but in background
+    region.update_flag(12, "", 11399381, index);
+    ASSERT_EQ(index.front(), found.front());
+}
+TEST(REGION_BACKGROUND, BED_BACKGROUND)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, true, false);
+    std::vector<std::string> bed_names = {bed_name};
+    Genotype dummy;
+    region.generate_regions("", "", bed_names, "", "", background, dummy,
+                            reporter);
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    // 4  3016 87782
+    //"4 20139 97433 . . .\n"
+    // 4  87000 should be found in both the set and the background
+    // 13 53970 should only be found in the background
+    region.update_flag(4, "", 3015 + 1, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 3016 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 3017 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20138 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    SET_BIT(1, found.data());
+    index.front() = 0;
+    region.update_flag(4, "", 20139 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20140 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 87781 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    index.front() = 0;
+    region.update_flag(4, "", 87782 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 87783 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    SET_BIT(2, found.data());
+    region.update_flag(13, "", 53970 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    // anything on chromosome 17 should only be found in the base
+    index.front() = 0;
+    region.update_flag(17, "", 53970 + 1, index);
+    ASSERT_EQ(index.front(), not_found.front());
+}
+TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
+{
+    std::ofstream bed_file;
+    std::string bed_name = "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":range");
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, true, false);
+    std::vector<std::string> bed_names = {bed_name};
+    Genotype dummy;
+    region.generate_regions("", "", bed_names, "", "", background, dummy,
+                            reporter);
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    // 4  3016 87782
+    //"4 20139 97433 . . .\n"
+    // 4  87000 should be found in both the set and the background
+    // 13 53970 should only be found in the background
+    region.update_flag(4, "", 3015, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 3016, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 3017, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20138 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    SET_BIT(1, found.data());
+    index.front() = 0;
+    // the non-background range should be bed format
+    region.update_flag(4, "", 20139 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 20140 + 1, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 87781, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(4, "", 87782, index);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    index.front() = 0;
+    region.update_flag(4, "", 87783, index);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    SET_BIT(2, found.data());
+    region.update_flag(13, "", 53970, index);
+    ASSERT_EQ(index.front(), found.front());
+    // anything on chromosome 17 should only be found in the base
+    index.front() = 0;
+    region.update_flag(17, "", 53970, index);
+    ASSERT_EQ(index.front(), not_found.front());
+}
+TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = "Test.gtf";
+    std::string gmt_name = "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223974\"; "
+           "gene_version \"5\"; gene_name \"DDX11L3\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122967\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CCTV\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2 CIT" << std::endl;
+    gmt.close();
+    std::string background = "background";
+    gmt.open(background.c_str());
+    gmt << "DDX11L1" << std::endl;
+    gmt << "CIT" << std::endl;
+    gmt << "CCTV" << std::endl;
+    gmt.close();
+    background.append(":gene");
+    Reporter reporter("LOG");
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    Region region(feature, 0, 0, true, false);
+    std::vector<std::string> bed_names = {};
+    Genotype dummy = GenotypeTest();
+    region.generate_regions(gtf_name, gmt_name, bed_names, "", "", background,
+                            dummy, reporter);
+    // we should have the 2 sets, the base and the background
+    ASSERT_EQ(region.size(), 4);
+    std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
+    // 1 11869 14409 1101
+
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    SET_BIT(3, found.data());
+    index.front() = 0;
+    region.update_flag(1, "", 11868, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(1, "", 11869, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(1, "", 11870, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(1, "", 14408, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(1, "", 14409, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(1, "", 14410, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    // 2 15869 16409 1000
+    index.front() = 0;
+    region.update_flag(2, "", 15868, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(2, "", 15869, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(2, "", 15870, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(2, "", 16408, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(2, "", 16409, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(2, "", 16410, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    // 12 11399381 11486678 1001
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(3, found.data());
+    index.front() = 0;
+    region.update_flag(12, "", 11399380, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 11399381, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 11399382, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 11486677, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 11486678, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 11486679, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    // 12 119697659 119697838 1011
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    SET_BIT(3, found.data());
+    index.front() = 0;
+    region.update_flag(12, "", 119697658, index);
+    ASSERT_EQ(index.front(), not_found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 119697659, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 119697660, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 119697837, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 119697838, index);
+    ASSERT_EQ(index.front(), found.front());
+    index.front() = 0;
+    region.update_flag(12, "", 119697839, index);
+    ASSERT_EQ(index.front(), not_found.front());
+}
+// TODO  SNP Test (this will require information from Genotype)
 #endif // REGION_TEST_HPP
