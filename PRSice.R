@@ -1,29 +1,4 @@
 #!/usr/bin/env Rscript
-# Here is the guide to this protentially long R code
-# To go to each section, just search for the corresponding header as stated here
-# The code structure are as follow
-# The easiest way will be to use RStudio and go to the corresponding section by
-# selecting it on the bottom left corner of the script console
-#
-# INSTALL_PACKAGE
-# - Contains functions responsible for installing all required packages
-#
-# COMMAND_FUNC
-# - Functions required for command line argument parsing
-#
-# COMMAD_BUILD
-# - Building the command line parser using argparser
-#
-# CALL_PRSICE
-# - call the cpp prsice
-#
-# PLOTTING
-# - Here contains all the function for plotting
-# - quantile_plot: plotting the quantile plots
-# - run_plot: The function used for calling different plotting functions
-#
-# CALL PLOTTING FUNCTION
-# - Process the input names and call the actual plotting function
 #
 # Environment stuff: This will allow us to locate the cpp file correctly
 #
@@ -342,7 +317,6 @@ if (!exists('startsWith', mode = 'function')) {
     }
 }
 
-
 libraries <-
     c("ggplot2",
       "data.table",
@@ -578,7 +552,7 @@ option_list <- list(
   make_option("--dir", type = "character")
 )
 
-
+# We want to know if user used --help, if they do, we will print the help message ourselves
 capture <- commandArgs(trailingOnly = TRUE)
 help <- (sum(c("--help", "-h") %in% capture) >= 1)
 has_c <- (sum(c("--prsice") %in% capture) >= 1)
@@ -586,8 +560,10 @@ if (help) {
     cat(help_message)
     quit()
 }
+# If help is not invoked, we can start processing the input
 argv <- parse_args(OptionParser(option_list = option_list))
 
+# Exclude the non-C++ parameters
 not_cpp <- c(
     "help",
     "plot",
@@ -609,17 +585,13 @@ not_cpp <- c(
     "no-install"
 )
 
+# For backward compatibility. We want to remove the --cov-header in the future
 if (is.null(argv$cov_col) && !is.null(argv$cov_header))
 {
     argv$cov_col = argv$cov_header
 }
 
 # Check help messages --------------------------------------------------
-
-provided <- function(name, argv) {
-    return(name %in% names(argv))
-}
-
 get_os <- function(){
     sysinf <- Sys.info()
     if (!is.null(sysinf)){
@@ -640,6 +612,10 @@ get_os <- function(){
 # To ensure the excutable is set correctly
 # For window, we might not be able to start an executable by simply adding ./
 # therefore Window people will need to be careful with their parameter input
+#  Function to check if the argument was used
+provided <- function(name, argv) {
+    return(name %in% names(argv))
+}
 os <- get_os()
 if (provided("prsice", argv)) {
     if (!startsWith(argv$prsice, "/") &&
@@ -648,8 +624,8 @@ if (provided("prsice", argv)) {
     }
 }
 
-# Running PRSice ----------------------------------------------------------
 
+# Running PRSice ----------------------------------------------------------
 # We don't bother to check if the input is correct, the parameter should be checked by the c++ program
 add_command <- function(input) {
     if (length(input) == 1) {
@@ -687,7 +663,7 @@ flags <-
         "non-cumulate",
         "print-snp"
     )
-
+# Skip PRSice core function if only plotting is requirec
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
@@ -804,6 +780,12 @@ if(!provided("bar_levels", argv)){
         # This is prset, so by default, we don't do all threshold
         # unless user use some of the parameter related to the thresholding
         argv$bar_levels <- "1"
+    }else{
+        # this should be PRSet but user want thresholding
+        argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
+        if (!provided("no_full", argv)) {
+            argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
+        }
     }
 }
 # Next, we need to determine if we are doing binary target
@@ -884,6 +866,7 @@ if(use.ggplot){
 
 call_quantile <-
     function(pheno.merge,
+             covariance, 
              prefix,
              num_quant,
              quant.index,
@@ -897,12 +880,12 @@ call_quantile <-
     if (!pheno.as.quant) {
         family <- gaussian
         if (binary) {
-            if (!use.residual) {
-                family <- binomial
-            }
+            family <- binomial
         }
+        pheno.merge <- merge(pheno.merge, covariance)
+        independent.variables <- c("quantile", colnames(covariance[,!colnames(covariance)%in%c("FID","IID")]))
         reg <-
-            summary(glm(Pheno ~ quantile, family, data = pheno.merge))
+            summary(glm(Pheno ~ ., family, data = pheno.merge[, independent.variables]))
         coef.quantiles <- (reg$coefficients[1:num_quant, 1])
         ci <- (1.96 * reg$coefficients[1:num_quant, 2])
         
@@ -910,18 +893,18 @@ call_quantile <-
             coef.quantiles + ci
         ci.quantiles.l <-
             coef.quantiles - ci
-        if (binary & !use.residual) {
+        if (binary) {
             ci.quantiles.u <- exp(ci.quantiles.u)
             ci.quantiles.l <- exp(ci.quantiles.l)
             coef.quantiles <- exp(coef.quantiles)
         }
         
         coef.quantiles[1] <-
-            ifelse(binary & !use.residual, 1, 0)
+            ifelse(binary , 1, 0)
         ci.quantiles.u[1] <-
-            ifelse(binary & !use.residual, 1, 0)
+            ifelse(binary , 1, 0)
         ci.quantiles.l[1] <-
-            ifelse(binary & !use.residual, 1, 0)
+            ifelse(binary , 1, 0)
         quantiles.for.table <- factor(levels(pheno.merge$quantile), levels(pheno.merge$quantile))
         quantiles.df <-
             data.frame(
@@ -965,7 +948,6 @@ call_quantile <-
                        binary,
                        extract,
                        prefix,
-                       use.residual,
                        uneven)
         } else{
             plot.quant.no.g(quantiles.df,
@@ -973,7 +955,6 @@ call_quantile <-
                             binary,
                             extract,
                             prefix,
-                            use.residual,
                             uneven)
         }
     } else{
@@ -1028,7 +1009,7 @@ call_quantile <-
     }
 
 
-uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
+uneven_quantile_plot <- function(base.prs, pheno,covariance,  prefix, argv, binary, use.ggplot){
     binary <- as.logical(binary)
     writeLines("Plotting the quantile plot")
     extract <- NULL
@@ -1076,11 +1057,24 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
     }
     quants <- NULL
     quant.index <- NULL
+    use.residual <- F
     if (!pheno.as.quant) {
         quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$PRS, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
     } else{
+        # If we use phenotype as quantile, we will want to residualize the phenotype first
+        if(!is.null(covariance)){
+            pheno.cov <- merge(pheno.merge, covariance)
+            # We will have FID IID PRS Pheno
+            family <- gaussian()
+            if(binary){
+                family <- binomial()
+            }
+            pheno.cov$Pheno <- resid(glm(Pheno ~ . , data=pheno.cov[,!colnames(pheno.cov)%in%c("FID", "IID", "PRS")], na.action = na.exclude))
+            pheno.merge <- pheno.cov[,colnames(pheno.cov)%in%c("FID", "IID", "Pheno", "PRS")]
+            use.residual<-T
+        }
         quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$Pheno, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
@@ -1104,6 +1098,7 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
     }
     pheno.merge$quantile <- quants
     call_quantile(pheno.merge,
+                  covariance,
                   prefix,
                   num_quant,
                   quant.index,
@@ -1115,7 +1110,7 @@ uneven_quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggpl
 }
 
 
-quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use.residual){
+quantile_plot <- function(base.prs, pheno, covariance,  prefix, argv, binary, use.ggplot){
     binary <- as.logical(binary)
     writeLines("Plotting the quantile plot")
     extract <- NULL
@@ -1182,9 +1177,22 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
         }
     }
     quants <- NULL
+    use.residual <- F
     if (!pheno.as.quant) {
         quants <- get_quantile(pheno.merge$PRS, num_quant, quant.ref)
     } else{
+        # If we use phenotype as quantile, we will want to residualize the phenotype first
+        if(!is.null(covariance)){
+            pheno.cov <- merge(pheno.merge, covariance)
+            # We will have FID IID PRS Pheno
+            family <- gaussian()
+            if(binary){
+                family <- binomial()
+            }
+            pheno.cov$Pheno <- resid(glm(Pheno ~ . , data=pheno.cov[,!colnames(pheno.cov)%in%c("FID", "IID", "PRS")], na.action = na.exclude))
+            pheno.merge <- pheno.cov[,colnames(pheno.cov)%in%c("FID", "IID", "Pheno", "PRS")]
+            use.residual<-T
+        }
         quants <- get_quantile(pheno.merge$Pheno, num_quant, quant.ref)
     }
     num_quant <- length(levels(quants))
@@ -1206,6 +1214,7 @@ quantile_plot <- function(base.prs, pheno, prefix, argv, binary, use.ggplot, use
     quant.index <- c(quant.ref, c(1:num_quant)[-quant.ref])
     pheno.merge$quantile <- quants
     call_quantile(pheno.merge,
+                  covariance, 
                  prefix,
                  num_quant,
                  quant.index,
@@ -1310,7 +1319,7 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
   )
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven){
     quantiles.plot <-
         ggplot(quantiles.df, aes(
             x = DEC,
@@ -1326,24 +1335,8 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
             quantiles.plot + xlab("Quantiles for Polygenic Score")
     }
     if (binary){
-        if(!use_residual) {
             quantiles.plot <-
                 quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-        }else if(use_residual){
-            if(uneven){
-                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
-            }else{
-                quantiles.plot <- quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-            }
-        }
-    } else if(use_residual){
-        if (uneven) {
-            quantiles.plot <-
-                quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
-        } else{
-            quantiles.plot <-
-                quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-        }
     }else{
         if (uneven) {
             quantiles.plot <- quantiles.plot +
@@ -1370,7 +1363,7 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, use_res
     )
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, use_residual, uneven){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix,  uneven){
   png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -1381,26 +1374,8 @@ plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix, us
   }
   ylab <- NULL
   if (binary){
-      if(!use_residual) {
           quantiles.plot <-
               quantiles.plot + ylab("Odds Ratio for Score on Phenotype")
-      }else if(use_residual){
-          if(uneven) {
-              quantiles.plot <-
-                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
-          } else{
-              quantiles.plot <-
-                  quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-          }
-      }
-  } else if(use_residual){
-      if (uneven) {
-          quantiles.plot <-
-              quantiles.plot + ylab("Change in residualized\nPhenotype given score in strata")
-      } else{
-          quantiles.plot <-
-              quantiles.plot + ylab("Change in residualized\nPhenotype given score in quantiles")
-      }
   } else{
       if(uneven) {
           quantiles.plot <- quantiles.plot +
@@ -2044,6 +2019,13 @@ if (provided("cov_file", argv)) {
     } else {
         covariance <- read.table(argv$cov_file, header = T)
     }
+    # We assume the first two columns are always FID and IID unless user used ignore-fid
+    if(provided("ignore_fid", argv)){
+        colnames(covariance)[1] <- "IID"
+    }else{
+        colnames(covariance)[1:2] <- c("FID", "IID")
+    }
+    colnames(covariance)
     cov.header <- colnames(covariance)
     selected.cov <- cov.header[!cov.header%in%c("FID", "IID")]
     if(provided("cov_col", argv)){
@@ -2051,17 +2033,41 @@ if (provided("cov_file", argv)) {
         c <- update_cov_header(c)
         selected.cov <- cov.header[cov.header %in% c]
     }
+    # We need to ensure all the factor covariates are as factored
     covariance.base <- covariance[, cov.header%in%c("FID", "IID",selected.cov)]
+    factor.cov <- NULL
+    if (provided("cov_factor", argv)) {
+        factor.cov <- strsplit(argv$cov_factor, split = ",")[[1]]
+        factor.cov <- update_cov_header(factor.cov)
+    }
+    
+    for (i in colnames(covariance.base)) {
+        if (i != "FID" && i != "IID") {
+            if (i %in% factor.cov) {
+                covariance.base[, i] <- as.factor(covariance.base[, i])
+            } else{
+                covariance.base[, i] <-
+                    as.numeric(as.character(covariance.base[, i]))
+            }
+        }
+    }
+    if(ignore_fid){
+        colnames(covariance.base) <-
+            c("IID", paste0("Cov", (1:(
+                ncol(covariance.base) - 1
+            ))))
+    } else{
+        colnames(covariance.base) <-
+            c("FID", "IID", paste0("Cov", (1:(
+                ncol(covariance.base) - 2
+            ))))
+    }
 }
 
-# we no longer have those complication
+
 prefix <- argv$out
 
-#regions <- read.table(paste(prefix, "region", sep = "."), header =T)
-#num_region = nrow(regions)
-
 # Process plot functions --------------------------------------------------
-
 process_plot <-
     function(prefix,
              covariance,
@@ -2130,29 +2136,14 @@ process_plot <-
                 pheno$Pheno <- pheno$Pheno-1
             }
         }
-        if(!is.null(covariance)){
-            # We will regress out the residual
-            # Can direct merge as we have standardized the header
-            temp.pheno <- merge(pheno, covariance)
-            family <- gaussian
-            if(is_binary){
-                family <- binomial
-            }
-            residual <-
-                resid(glm(Pheno ~ ., 
-                              data = temp.pheno[, !colnames(temp.pheno) %in% c("FID", "IID")], 
-                              family =family))
-            pheno$Pheno <- residual
-            use.residual <- T
-        }
         
 # Start calling functions -------------------------------------------------
         if (provided("quantile", parameters) && parameters$quantile > 0) {
             # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
             if(!provided("quant_break", parameters)){
-                quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+                quantile_plot(base.prs, pheno, covariance,  prefix, parameters, is_binary, use.ggplot)
             }else{
-                uneven_quantile_plot(base.prs, pheno, prefix, parameters, is_binary, use.ggplot, use.residual)
+                uneven_quantile_plot(base.prs, pheno, covariance, prefix, parameters, is_binary, use.ggplot)
             }
         }
         if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)
@@ -2173,7 +2164,6 @@ process_plot <-
             multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
         }
     }
-
 
 # Check if phenotype file is of sample format -----------------------------
 is_sample_format <- function(file) {
@@ -2255,78 +2245,17 @@ if (provided("pheno_file", argv)) {
     }
 }
 
-update_cov_factor <- function(parameters, pheno.file, pheno.index, cov.base){
-    
-    phenotype <- NULL
-    if (use.data.table) {
-        phenotype <-
-            fread(pheno.file, data.table = F, header = F)
-    } else{
-        # Allow header = false for fam or for phenotype files that does not contain phenotype name
-        phenotype <- read.table(pheno.file, header = F)
-    }
-    ignore_fid <- provided("ignore_fid", parameters)
-    if (!ignore_fid) {
-        phenotype <- phenotype[, c(1:2, pheno.index)]
-        colnames(phenotype) <- c("FID", "IID", "Pheno")
-        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
-        phenotype <-
-            phenotype[!is.na(phenotype$Pheno), ]
-    } else{
-        phenotype <- phenotype[, c(1, pheno.index)]
-        colnames(phenotype) <- c("IID", "Pheno")
-        phenotype$Pheno <- suppressWarnings(as.numeric(as.character(phenotype$Pheno)))
-        phenotype <-
-            phenotype[!is.na(phenotype$Pheno), ]
-    }
-    # Now remove any missing sample from cov.base
-    covariance <- NULL
-    if(!is.null(cov.base)){
-        if(!ignore_fid){
-            covariance <- cov.base[cov.base$FID %in% phenotype$FID & 
-                                       cov.base$IID %in% phenotype$IID, ]
-        }else{
-            covariance <- cov.base[cov.base$IID %in% phenotype$IID, ]
-        }
-        # Note: cov.base only contains the valid headers
-        if(provided("cov_factor", parameters)){
-            factor_cov <- parameters$cov_factor
-            for(i in colnames(covariance)){
-                if(i != "FID" & i != "IID"){
-                    if(i %in%factor_cov){
-                        covariance[,i] <- factor(covariance[,i], levels=unique(covariance[,i]))
-                    }else{
-                        covariance[,i] <- as.numeric(covariance[,i])
-                    }
-                }
-            }
-        }else{
-            for(i in colnames(covariance)){
-                if(i!="FID" & i!="IID"){
-                    covariance[,i] <- as.numeric(covariance[,i])
-                }
-            }
-        }
-        if (ignore_fid) { 
-            colnames(covariance) <- 
-                c("IID", paste0("Cov", 1:(ncol(covariance) - 1))) 
-        } else{ 
-            colnames(covariance) <- 
-                c("FID", "IID", paste0("Cov", 1:(ncol(covariance) - 2))) 
-        } 
-    }
-    return(covariance)
-}
 # To account for the chromosome number
+
 pheno.file <- gsub("#", "1", pheno.file)
 if (!is.null(phenos) &
     length(phenos) > 1) {
     for (i in 1:length(phenos)) {
         # Update the covariance matrix accordingly
-        covariance <- update_cov_factor(argv, pheno.file, pheno.index[i], covariance.base)
+        
         process_plot(
             argv$out,
-            covariance,
+            covariance.base,
             binary_target[i],
             pheno.file,
             argv,
@@ -2340,10 +2269,9 @@ if (!is.null(phenos) &
         multi_pheno_plot(argv, use.ggplot, use.data.table)
     }
 } else if (!is.null(phenos)) {
-    covariance <- update_cov_factor(argv, pheno.file, pheno.index[1], covariance.base)
     process_plot(
         argv$out,
-        covariance,
+        covariance.base,
         binary_target[1],
         pheno.file,
         argv,
@@ -2353,10 +2281,9 @@ if (!is.null(phenos) &
         "-"
     )
 } else{
-    covariance <- update_cov_factor(argv, pheno.file, pheno.index[1], covariance.base)
     process_plot(
         argv$out,
-        covariance,
+        covariance.base,
         binary_target[1],
         pheno.file,
         argv,
