@@ -928,7 +928,8 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
         maf =
-            static_cast<double>(het_ct * het_weight + homrar_weight * homrar_ct)
+            static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
+                                + homrar_weight * homrar_ct)
             / static_cast<double>(nanal * 2.0);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
@@ -1204,7 +1205,8 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
         maf =
-            static_cast<double>(het_ct * het_weight + homrar_weight * homrar_ct)
+            static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
+                                + homrar_weight * homrar_ct)
             / static_cast<double>(nanal * 2.0);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
