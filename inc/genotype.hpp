@@ -31,6 +31,7 @@
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <random>
 #include <string>
@@ -431,10 +432,14 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
+    void perform_shrinkage(Genotype& reference, double maf_bin,
+                           double prevalence, int num_perm, uint32_t num_sample,
+                           uint32_t num_case, uint32_t num_control,
+                           bool is_case_control);
 
 protected:
-    // friend with all child class so that they can also access the protected
-    // elements
+    // friend with all child class so that they can also access the
+    // protected elements
     friend class BinaryPlink;
     friend class BinaryGen;
     // need to consider cacheline efficiency, so we need to organize the member
@@ -493,7 +498,7 @@ protected:
     uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
-    unsigned long m_seed = 0;
+    std::random_device::result_type m_seed = 0;
     uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;
     uint32_t m_num_maf_filter = 0;
@@ -517,6 +522,36 @@ protected:
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
 
+    /*!
+     * \brief Calculate the threshold bin based on the p-value and bound info
+     * \param pvalue the input p-value
+     * \param bound_start is the start of p-value threshold
+     * \param bound_inter is the step size of p-value threshold
+     * \param bound_end is the end of p-value threshold
+     * \param pthres return the name of p-value threshold this SNP belongs to
+     * \param no_full indicate if we want the p=1 threshold
+     * \return the category where this SNP belongs to
+     */
+    int calculate_threshold(const double pvalue, const double bound_start,
+                            const double bound_inter, const double bound_end,
+                            double& pthres, const bool no_full)
+    {
+        // NOTE: Threshold is x < p <= end and minimum category is 0
+        int category = 0;
+        if (pvalue > bound_end && !no_full) {
+            category = static_cast<int>(
+                std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
+            pthres = 1.0;
+        }
+        else
+        {
+            category = static_cast<int>(
+                std::ceil((pvalue - bound_start) / bound_inter));
+            category = (category < 0) ? 0 : category;
+            pthres = category * bound_inter + bound_start;
+        }
+        return category;
+    }
     // functions
     /*!
      * \brief Replace # in the name of the genotype file and generate list of
@@ -646,17 +681,27 @@ protected:
                           const std::string& alt_allele) const
     {
         // the allele should all be in upper case but whatever
+        // true if equal
+        if (ref_allele == alt_allele) return true;
         return (ref_allele == "A" && alt_allele == "T")
                || (alt_allele == "A" && ref_allele == "T")
                || (ref_allele == "G" && alt_allele == "C")
-               || (alt_allele == "G" && ref_allele == "C")
-               || (ref_allele == "a" && alt_allele == "t")
-               || (alt_allele == "a" && ref_allele == "t")
-               || (ref_allele == "g" && alt_allele == "c")
-               || (alt_allele == "g" && ref_allele == "c");
+               || (alt_allele == "G" && ref_allele == "C");
     };
 
-
+    /*!
+     * \brief This function should get a vector of MAF and generate the null
+     * beta using the order statistic method
+     * \param maf is the minor allele frequency of SNPs involved
+     * \param sample_size is the sample size for the summary statistic. Use
+     * size_t here to avoid overflow error (because we will do sample_size^2)
+     * \param num_perm is the number of permutation used for calculating the
+     * order stat. 1000 should generally be enough
+     * \return A vector containing the null beta
+     */
+    std::vector<double> get_null_beta(std::vector<double>& maf,
+                                      size_t sample_size,
+                                      size_t num_perm = 1000);
     // no touchy area (PLINK Code)
     uint32_t em_phase_hethet(double known11, double known12, double known21,
                              double known22, uint32_t center_ct,

@@ -71,6 +71,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"fastscore", no_argument, &m_fastscore, 1},
         {"pearson", no_argument, &m_pearson, 1},
         {"print-snp", no_argument, &m_print_snp, 1},
+        {"shrinkage", no_argument, &m_perform_shrinkage, 1},
         {"full-back", required_argument, &m_full_background, 0},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
@@ -100,18 +101,24 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-geno", required_argument, nullptr, 0},
         {"ld-hard-thres", required_argument, nullptr, 0},
         {"ld-info", required_argument, nullptr, 0},
-        {"maf-base", required_argument, nullptr, 0},
         {"maf", required_argument, nullptr, 0},
+        {"maf-base", required_argument, nullptr, 0},
+        {"maf-bin", required_argument, nullptr, 0},
         {"memory", required_argument, nullptr, 0},
         {"missing", required_argument, nullptr, 0},
         {"model", required_argument, nullptr, 0},
+        {"nsample", required_argument, nullptr, 0},
+        {"ncase", required_argument, nullptr, 0},
+        {"ncontrol", required_argument, nullptr, 0},
         {"perm", required_argument, nullptr, 0},
+        {"prev-base", required_argument, nullptr, 0},
         {"proxy", required_argument, nullptr, 0},
         {"prslice", required_argument, nullptr, 0},
         {"remove", required_argument, nullptr, 0},
         {"score", required_argument, nullptr, 0},
         {"se", required_argument, nullptr, 0},
         {"set-perm", required_argument, nullptr, 0},
+        {"shrink-perm", required_argument, nullptr, 0},
         {"snp", required_argument, nullptr, 0},
         {"snp-set", required_argument, nullptr, 0},
         {"snp-sets", required_argument, nullptr, 0},
@@ -396,6 +403,50 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 load_string_vector(optarg, message_store, m_factor_cov, command,
                                    error_messages);
             }
+            else if (command == "nsample")
+            {
+                error = error
+                        || !set_numeric<uint32_t>(
+                               optarg, message_store, error_messages,
+                               m_num_sample, m_provided_num_sample, command);
+            }
+            else if (command == "ncase")
+            {
+                error = error
+                        || !set_numeric<uint32_t>(optarg, message_store,
+                                                  error_messages, m_num_case,
+                                                  m_provided_num_case, command);
+            }
+            else if (command == "ncontrol")
+            {
+                error = error
+                        || !set_numeric<uint32_t>(
+                               optarg, message_store, error_messages,
+                               m_num_control, m_provided_num_control, command);
+            }
+            else if (command == "maf-bin")
+            {
+                error = error
+                        || !set_numeric<double>(optarg, message_store,
+                                                error_messages, m_maf_bin,
+                                                m_provided_maf_bin, command);
+            }
+            else if (command == "prev-base")
+            {
+                error = error
+                        || !set_numeric<double>(
+                               optarg, message_store, error_messages,
+                               m_base_prevalence, m_provided_base_prevalence,
+                               command);
+            }
+            else if (command == "shrink-perm")
+            {
+                error =
+                    error
+                    || !set_numeric<int>(optarg, message_store, error_messages,
+                                         m_shrink_perm,
+                                         m_provided_shrink_perm_num, command);
+            }
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -536,22 +587,23 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     reporter.initiailize(log_name);
 
 
-    if (m_stat_is_beta) message_store["beta"] = "";
-    if (m_input_is_index) message_store["index"] = "";
-    if (m_user_no_default) message_store["no-default"] = "";
-    if (m_no_clump) message_store["no-clump"] = "";
-    if (m_target_is_hard_coded) message_store["hard"] = "";
-    if (m_keep_ambig) message_store["keep-ambig"] = "";
     if (m_print_all_scores) message_store["all-score"] = "";
-    if (m_ignore_fid) message_store["ignore-fid"] = "";
-    if (m_logit_perm) message_store["logit-perm"] = "";
-    if (m_pearson) message_store["pearson"] = "";
-    if (m_print_snp) message_store["print-snp"] = "";
+    if (m_allow_inter) message_store["allow-intermediate"] = "";
+    if (m_stat_is_beta) message_store["beta"] = "";
     if (m_fastscore) message_store["fastscore"] = "";
+    if (m_target_is_hard_coded) message_store["hard"] = "";
+    if (m_ignore_fid) message_store["ignore-fid"] = "";
+    if (m_input_is_index) message_store["index"] = "";
+    if (m_keep_ambig) message_store["keep-ambig"] = "";
+    if (m_logit_perm) message_store["logit-perm"] = "";
+    if (m_no_clump) message_store["no-clump"] = "";
+    if (m_user_no_default) message_store["no-default"] = "";
     if (m_no_full) message_store["no-full"] = "";
     if (m_no_regress) message_store["no-regress"] = "";
     if (m_include_nonfounders) message_store["nonfounders"] = "";
-    if (m_allow_inter) message_store["allow-intermediate"] = "";
+    if (m_pearson) message_store["pearson"] = "";
+    if (m_print_snp) message_store["print-snp"] = "";
+    if (m_perform_shrinkage) message_store["shrinkage"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -2065,6 +2117,42 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
     if (m_no_regress) m_print_all_scores = true;
     if (m_thread == 1) message["thread"] = "1";
     message["out"] = m_out_prefix;
+    // now check the shrinkage parameters
+    if (m_perform_shrinkage) {
+        if (!m_provided_num_sample && !m_provided_num_case
+            && !m_provided_num_control)
+        {
+            error = true;
+            error_message.append("Error: Number of sample in base data must be "
+                                 "provided for shrinkage to be performed!\n");
+        }
+        if (m_shrink_perm <= 0) {
+            error = true;
+            error_message.append("Error: Number of shrinkage permutation must "
+                                 "be higher than 0\n");
+        }
+        if (m_provided_num_case && m_provided_num_control
+            && !m_provided_base_prevalence)
+        {
+            error = true;
+            error_message.append("Error: Prevalence of base data is required "
+                                 "for case control data\n");
+        }
+        if (!error) {
+            message["maf-bin"] = misc::to_string(m_maf_bin);
+            message["shrink-perm"] = misc::to_string(m_shrink_perm);
+        }
+    }
+    else
+    {
+        // remove all shrinkage related parameter from list
+        message.erase("nsample");
+        message.erase("ncase");
+        message.erase("ncontrol");
+        message.erase("maf-bin");
+        message.erase("shrink-perm");
+        message.erase("prev-base");
+    }
     return !error;
 }
 

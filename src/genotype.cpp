@@ -758,18 +758,9 @@ void Genotype::read_base(const Commander& c_commander, Region& region,
                 else
                 {
                     // calculate the threshold instead
-                    if (pvalue > bound_end && !no_full) {
-                        category = static_cast<int>(std::ceil(
-                            (bound_end + 0.1 - bound_start) / bound_inter));
-                        pthres = 1.0;
-                    }
-                    else
-                    {
-                        category = static_cast<int>(
-                            std::ceil((pvalue - bound_start) / bound_inter));
-                        category = (category < 0) ? 0 : category;
-                        pthres = category * bound_inter + bound_start;
-                    }
+                    category =
+                        calculate_threshold(pvalue, bound_start, bound_inter,
+                                            bound_end, pthres, no_full);
                 }
                 if (flipped) cur_snp.set_flipped();
                 // ignore the SE as it currently serves no purpose
@@ -2075,7 +2066,155 @@ bool Genotype::get_score(int& cur_index, double& cur_threshold,
     return true;
 }
 
+void Genotype::perform_shrinkage(Genotype& reference, double maf_bin,
+                                 double prevalence, int num_perm,
+                                 uint32_t num_sample, uint32_t num_case,
+                                 uint32_t num_control, bool is_case_control)
+{
+    const bool use_reference = (&reference == this);
+    const uintptr_t pheno_nm_ctv2 =
+        QUATERCT_TO_ALIGNED_WORDCT(reference.m_sample_ct);
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(reference.m_unfiltered_sample_ct);
+    m_sample_mask.resize(pheno_nm_ctv2);
+    // fill it with the required mask (copy from PLINK2)
+    fill_quatervec_55(static_cast<uint32_t>(reference.m_sample_ct),
+                      m_sample_mask.data());
+    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
 
+
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
+    // for storing the missing counts
+    intptr_t nanal;
+    std::vector<MAF_Store> maf;
+    std::vector<SNP>::size_type num_snp = m_existed_snps.size();
+    maf.reserve(num_snp);
+    double cur_maf, dummy;
+    int category;
+    std::hash<std::string> hasher;
+    // we want to generate a seed using the m_seed for every category so
+    // that we can kinda replicate the result whenever we use the same seed
+    std::unordered_map<int, unsigned long> seed_store;
+    for (size_t i_snp = 0; i_snp < num_snp; i_snp++) {
+        // read in the SNP for analysis using data on the reference panel
+        auto&& snp = m_existed_snps[i_snp];
+        reference.read_genotype(genotype.data(), snp.ref_byte_pos(),
+                                snp.ref_file_name());
+        genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                      &missing_ct, &het_ct, &homcom_ct);
+        nanal = static_cast<intptr_t>(m_sample_ct) - missing_ct;
+        if (nanal == 0) {
+            // if all samples have a missing genotype, we will remove this SNP
+            // While this might not be the case in the target panel (therefore
+            // consider valid without shrinkage), we simply can't calculate the
+            // MAF for SNP with complete missingness. Without the MAF, we can't
+            // calculate the NULL beta. To avoid problem, we invalidate this SNP
+            snp.invalidate();
+            continue;
+        }
+        if (!use_reference) {
+            // if we are not using a reference panel, we can set the count too
+            // to speed things up later on
+            snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        }
+        // reset the weight (as we might have flipped it later on)
+        cur_maf = static_cast<double>(het_ct + 2 * homrar_ct)
+                  / static_cast<double>(nanal * 2.0);
+        category = calculate_threshold(cur_maf, 0, maf_bin, 0.5, dummy, true);
+        MAF_Store cur_store;
+        cur_store.maf = cur_maf;
+        cur_store.category = category;
+        cur_store.index = i_snp;
+        maf.push_back(cur_store);
+        if (seed_store.find(category) == seed_store.end()) {
+            // each category will have seed defined as seed + the hash of the
+            // RS ID of the first SNP occured. This allow us to have a different
+            // seed for each different categories
+            seed_store[category] = m_seed + hasher(snp.rs());
+        }
+    }
+    // first, sort the "SNPs" by their MAF categories and then by the absolute
+    // of their statistic
+    std::sort(
+        maf.begin(), maf.end(), [this](const MAF_Store& i, const MAF_Store& j) {
+            if (i.category == j.category) {
+                if (misc::logically_equal(
+                        std::abs(this->m_existed_snps[i.index].stat()),
+                        std::abs(this->m_existed_snps[j.index].stat())))
+                    return i.maf < j.maf;
+                else
+                    return std::abs(this->m_existed_snps[i.index].stat())
+                           < std::abs(this->m_existed_snps[j.index].stat());
+            }
+            else
+                return i.category < j.category;
+        });
+    // now perform the adjustment directly
+    // if we perform threading, each thread will need to know the following:
+    // the range of MAF categories they are managing (index to maf?)
+    // the seed of their categories (can do copy, very lightweight)
+    // the last category of previous job. If this equal to the start of current
+    // range, continue until it is different. Other informations such as number
+    // of permutation and sample sizes
+}
+
+
+std::vector<double> Genotype::get_null_beta(std::vector<double>& maf,
+                                            size_t sample_size, size_t num_perm)
+{
+    // first, calculate the signal
+    std::vector<double>::size_type num_snp = maf.size();
+    std::vector<double> sigma(num_snp, 0.0), result(num_snp, 0.0),
+        storage(num_snp, 0.0);
+    double upper = log(static_cast<double>(sample_size - 2));
+    for (std::vector<double>::size_type i = 0; i < num_snp; ++i) {
+        sigma[i] =
+            sqrt(exp(upper
+                     - log(static_cast<double>((sample_size - 4) * sample_size
+                                               * 2 * maf[i] * (1 - maf[i])))));
+    }
+
+    std::mt19937 rand_gen{m_seed};
+    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    double rand = 0.0;
+    for (size_t perm = 1; perm <= num_perm; ++perm) {
+        // generate num_snp random number from uniform distribution
+        // in each round of permutation, our SD can randomly land on on of the
+        // rank
+        // As the random number is not sorted, we don't need to shuffle the
+        // sigma because it will be coupled with a random number in a random
+        // order, exactly what we wanted to achieve. An extra shuffle will only
+        // slow the algorithm down
+        // std::shuffle(sigma.begin(), sigma.end(),
+        for (std::vector<double>::size_type i = 0; i < num_snp; ++i) {
+            // might be problematic if the random generator generate 0 or 1
+            // so we make sure we never exactly get 0.0 or 1.0 (might be
+            // slightly bias I guess?)
+            rand = distribution(rand_gen);
+            while (misc::logically_equal(rand, 0.0)
+                   || misc::logically_equal(rand, 1.0))
+            {
+                rand = distribution(rand_gen);
+            }
+            // use lower.tail = F to remove the need of 1- the number
+            storage[i] =
+                misc::qnorm((1.0 - rand) / 2.0, 0, sigma[i], false, false);
+        }
+        // sort the vector so that it is in order
+        std::sort(storage.begin(), storage.end());
+        // then use the online mean calculation algorithm to obtain the mean
+        // such that we can avoid overflow problem
+        std::transform(result.begin(), result.end(), storage.begin(),
+                       result.begin(), [&perm](double mean, double value) {
+                           return mean
+                                  + (value - mean) / static_cast<double>(perm);
+                       });
+    }
+    return result;
+}
 /**
  * DON'T TOUCH AREA
  *

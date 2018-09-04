@@ -42,6 +42,12 @@ struct Sample_ID
     Sample_ID() : FID(""), IID(""), pheno(""), founder(false) {}
 };
 
+struct MAF_Store
+{
+    double maf;
+    size_t index;
+    int category;
+};
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP
 template <typename T>

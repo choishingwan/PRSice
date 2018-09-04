@@ -868,7 +868,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::vector<std::string> token;
     std::string line, id;
     size_t max_index = cov_header_index.back() + 1, index, cur_index, f_level;
-    uint32_t cur_cov_index = 0, cur_factor_index = 0,
+    uint32_t cur_factor_index = 0,
              num_factor = static_cast<uint32_t>(factor_cov_index.size()),
              num_cov = static_cast<uint32_t>(cov_header_index.size());
     while (std::getline(cov, line)) {
@@ -887,7 +887,6 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
             // Only valid samples will be found in the m_sample_with_phenotypes
             // map structure
             // reset the index to 0
-            cur_cov_index = 0;
             cur_factor_index = 0;
             // get the row number
             index = m_sample_with_phenotypes[id];

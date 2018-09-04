@@ -156,8 +156,20 @@ int main(int argc, char* argv[])
                     commander.use_ref() ? *reference_file : *target_file,
                     reporter, commander.pearson());
                 // immediately free the memory
-                if (commander.use_ref()) delete reference_file;
             }
+
+            if (commander.perform_shrinkage()) {
+                // Perform order statistic shrinkage using the reference panel
+                target_file->perform_shrinkage(
+                    commander.use_ref() ? *reference_file : *target_file,
+                    commander.maf_bin(), commander.base_prevalence(),
+                    commander.num_shrinkage_perm(), commander.num_sample(),
+                    commander.num_case(), commander.num_control(),
+                    commander.base_is_binary());
+            }
+
+            if (commander.use_ref()) delete reference_file;
+
             // Prepare the SNP vector in target for PRS calculation
             if (!target_file->prepare_prsice()) {
                 std::string error_message =

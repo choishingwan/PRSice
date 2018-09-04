@@ -642,7 +642,27 @@ public:
      * \return True if non-founders should be included
      */
     bool nonfounders() const { return m_include_nonfounders; }
-
+    /*!
+     * \brief Check if we want to perform shrinkage analysis
+     * \return True if shrinkage is to be performed
+     */
+    bool perform_shrinkage() const { return m_perform_shrinkage; }
+    /*!
+     * \brief Indicate if Base input is binary trait and therefore require
+     * adjustment
+     * \return True if base input is binary
+     */
+    bool base_is_binary() const
+    {
+        return m_provided_num_case && m_provided_num_control
+               && m_provided_base_prevalence;
+    }
+    double maf_bin() const { return m_maf_bin; }
+    double base_prevalence() const { return m_base_prevalence; }
+    uint32_t num_sample() const { return m_num_sample; }
+    uint32_t num_case() const { return m_num_case; }
+    uint32_t num_control() const { return m_num_control; }
+    int num_shrinkage_perm() const { return m_shrink_perm; }
 
 protected:
 private:
@@ -711,35 +731,42 @@ private:
     double m_target_hard_threshold = 0.9;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
+    double m_maf_bin = 0.01;
+    double m_base_prevalence = 0.01;
     size_t m_memory = 0;
+    uint32_t m_num_sample = 0;
+    uint32_t m_num_case = 0;
+    uint32_t m_num_control = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
-    int m_target_is_hard_coded = false;
-    int m_keep_ambig = false;
     int m_set_perm = 0;
     int m_window_5 = 0;
     int m_window_3 = 0;
+    int m_clump_distance = 250000;
+    int m_permutation = 0;
+    int m_thread = 1;
+    int m_shrink_perm = 1000;
+    int m_target_is_hard_coded = false;
+    int m_keep_ambig = false;
     int m_no_regress = false;
     int m_fastscore = false;
     int m_no_full = false;
     int m_stat_is_beta = false;
     int m_input_is_index = false;
     int m_user_no_default = false;
-    int m_clump_distance = 250000;
     int m_no_clump = false;
     int m_non_cumulate_prs = false;
     int m_print_all_scores = false;
     int m_ignore_fid = false;
     int m_logit_perm = false;
     int m_pearson = false;
-    int m_permutation = 0;
     int m_print_snp = false;
-    int m_thread = 1;
     int m_include_nonfounders = false;
     int m_allow_inter = false;
     int m_full_background = false;
+    int m_perform_shrinkage = false;
     // TODO: Most likely not going to use this
     int m_prslice_size = 0;
     bool m_use_reference = false;
@@ -755,6 +782,12 @@ private:
     bool m_provided_bp = false;
     bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
+    bool m_provided_maf_bin = false;
+    bool m_provided_num_sample = false;
+    bool m_provided_num_case = false;
+    bool m_provided_num_control = false;
+    bool m_provided_base_prevalence = false;
+    bool m_provided_shrink_perm_num = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
     bool m_perform_base_maf_case_filter = false;

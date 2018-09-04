@@ -255,6 +255,7 @@ public:
     void run_competitive(Genotype& target, const Commander& commander,
                          const intptr_t pheno_index);
 
+
 protected:
 private:
     struct prsice_result
