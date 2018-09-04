@@ -853,6 +853,8 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
+    // update the number of sample to account for missing covariates
+    num_sample = m_sample_with_phenotypes.size();
     // initalize the matrix to the desired size
     m_independent_variables = Eigen::MatrixXd::Zero(
         static_cast<Eigen::Index>(num_sample), num_column);
