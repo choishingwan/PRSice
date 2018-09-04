@@ -804,19 +804,18 @@ void Region::process_msigdb(
     // us to have the url as a gene
     std::ifstream input;
     std::vector<std::string> msigdb_files = misc::split(msigdb, ",");
-    bool has_open = false;
     std::string line, name;
     std::vector<std::string> token;
     for (auto&& m : msigdb_files) {
         input.open(m.c_str());
         if (!input.is_open()) {
-            std::string error_message = "Warning: Cannot open " + msigdb =
-                                            ", will skip this file";
-            reporter.report(error_message);
+            std::string error_message =
+                "Warning: Cannot open " + msigdb =
+                    ", please check you have the correct input";
+            throw std::runtime_error(error_message);
         }
         else
         {
-            has_open = true;
             std::vector<region_bound> current_region;
             while (std::getline(input, line)) {
                 misc::trim(line);
