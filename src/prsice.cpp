@@ -663,8 +663,10 @@ void PRSice::process_cov_file(
                     }
                 }
                 // we will iterate the factor_level only if this a factor
-                factor_level_index +=
-                    header == factor_cov_index[factor_level_index];
+                if (factor_level_index < num_factors) {
+                    factor_level_index +=
+                        (header == factor_cov_index[factor_level_index]);
+                }
             }
             if (valid) {
                 // this is a valid sample, so we want to keep its information in
