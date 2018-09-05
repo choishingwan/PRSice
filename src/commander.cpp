@@ -1982,6 +1982,8 @@ bool Commander::covariate_check(std::string& error_message)
         error_message.append("Error: First line of covariate file is empty!\n");
         return false;
     }
+    // remove all the special characters
+    misc::trim(line);
     cov_file.close();
     std::vector<std::string> cov_header = misc::split(line);
     std::string missing = "";
@@ -2014,9 +2016,13 @@ bool Commander::covariate_check(std::string& error_message)
         }
         // store information of covariates not found in the covarite file
         else if (missing.empty())
+        {
             missing = cov;
+        }
         else
+        {
             missing.append("," + cov);
+        }
     }
     if (!missing.empty()) {
         error_message.append("Warning: Covariate(s) missing from file: "

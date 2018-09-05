@@ -53,8 +53,6 @@ target_link_libraries (prsice_lib ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(PRSice prsice_lib)
 
 
-
-
 ################################
 #  Googletest configuration
 ################################
@@ -87,10 +85,11 @@ endif()
 
 # Header files
 
-file(GLOB SOURCES "src/*.cpp")
+file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
+file(GLOB TEST_UNITS "${PROJECT_SOURCE_DIR}/test/inc/*.hpp")
 include_directories( ${PROJECT_SOURCE_DIR}/test/inc )
 # We don't want to include the PRSice main to our test program
-add_executable(runUnitTests ${PROJECT_SOURCE_DIR}/test/main.cpp)
+add_executable(runUnitTests ${PROJECT_SOURCE_DIR}/test/main.cpp ${TEST_UNITS})
 target_include_directories(runUnitTests PRIVATE ${PROJECT_SOURCE_DIR}/inc)
 target_link_libraries(runUnitTests prsice_lib)
 target_link_libraries(runUnitTests gtest gtest_main)
@@ -98,4 +97,4 @@ target_link_libraries( runUnitTests ${ZLIB_LIBRARIES} )
 target_link_libraries( runUnitTests  ${CMAKE_THREAD_LIBS_INIT} )
 target_compile_features(runUnitTests PRIVATE cxx_range_for)
 enable_testing()
-add_test(runUnitTests COMMAND PRSice_Test ${TEST_INPUT})
+add_test(runUnitTests COMMAND runUnitTests)

@@ -47,6 +47,20 @@ TEST_F(PRSICE_PHENO_PARSE, SOME_PHENO_MISS)
     }
     ASSERT_EQ(num_phenotype(), 2);
 }
+TEST_F(PRSICE_PHENO_PARSE, NO_PHENO_COL)
+{
+    std::vector<std::string> col_names;
+    std::vector<bool> is_binary = {true};
+    try
+    {
+        pheno_check(pheno_name, col_names, is_binary, reporter);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    ASSERT_EQ(num_phenotype(), 1);
+}
 
 TEST_F(PRSICE_PHENO_PARSE, NO_PHENO_FILE)
 {
