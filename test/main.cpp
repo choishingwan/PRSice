@@ -1,4 +1,5 @@
 #include "genotype_test.hpp"
+#include "prsice_test.hpp"
 #include "region_test.hpp"
 #include "snp_test.hpp"
 #include "gtest/gtest.h"

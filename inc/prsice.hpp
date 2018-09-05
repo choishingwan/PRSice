@@ -70,6 +70,7 @@
 class PRSice
 {
 public:
+    PRSice() {}
     /*!
      * \brief PRSice constructor
      * \param commander contains all user input
