@@ -125,10 +125,13 @@ public:
     /*!
      * \brief This function will read in the phenotype information and determine
      * which phenotype to include
-     * \param c_commander contain the user input
+     * \param file_name is the name of the phenotype file
+     * \param is the column name of the desired phenotypes
      * \param reporter is the logger
      */
-    void pheno_check(const Commander& c_commander, Reporter& reporter);
+    void pheno_check(const std::string& file_name,
+                     const std::vector<std::string>& col_names,
+                     const std::vector<bool>& is_binary, Reporter& reporter);
     // init_matrix whenever phenotype changes
     /*!
      * \brief init_matrix will initialize the independent and dependent matrix

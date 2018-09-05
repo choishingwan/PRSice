@@ -17,10 +17,10 @@
 #include "prsice.hpp"
 
 std::mutex PRSice::lock_guard;
-void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
+void PRSice::pheno_check(const std::string& pheno_file,
+                         const std::vector<std::string>& pheno_header,
+                         const std::vector<bool>& is_binary, Reporter& reporter)
 {
-    const std::vector<std::string> pheno_header = c_commander.pheno_col();
-    const std::string pheno_file = c_commander.pheno_file();
     std::string message = "";
     if (pheno_file.empty())
     {
@@ -31,7 +31,7 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
         // phenotype file is provided, there can only be one phenotype, thus the
         // first entry of the binary_target should correspond to the binary
         // status of our phenotype
-        pheno_info.binary.push_back(c_commander.is_binary(0));
+        pheno_info.binary.push_back(is_binary[0]);
     }
     else
     {
@@ -91,7 +91,7 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
             // phenotype order correspond to the phenotype name in the phenotype
             // name vector. Here we place 0 as a place holder
             pheno_info.order.push_back(0);
-            pheno_info.binary.push_back(c_commander.is_binary(0));
+            pheno_info.binary.push_back(is_binary[0]);
             message.append(
                 "Phenotype Name: "
                 + col[static_cast<std::vector<std::string>::size_type>(
@@ -147,8 +147,7 @@ void PRSice::pheno_check(const Commander& c_commander, Reporter& reporter)
                             pheno_info.order.push_back(
                                 static_cast<int>(i_pheno));
                             // store the binary information of teh phenotype
-                            pheno_info.binary.push_back(
-                                c_commander.is_binary(i_pheno));
+                            pheno_info.binary.push_back(is_binary[i_pheno]);
                             break;
                         }
                     }

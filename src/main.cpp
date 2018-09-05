@@ -116,7 +116,8 @@ int main(int argc, char* argv[])
             // initialize PRSice class
             PRSice prsice(commander, region.size() > 1, reporter);
             // check the phenotype input columns
-            prsice.pheno_check(commander, reporter);
+            prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),
+                               commander.is_binary(), reporter);
             // set the clumping information to the target file
             target_file->set_info(commander);
             if (!commander.no_clump() && commander.use_ref()) {
