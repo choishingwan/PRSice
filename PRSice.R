@@ -882,8 +882,10 @@ call_quantile <-
         if (binary) {
             family <- binomial
         }
-        pheno.merge <- merge(pheno.merge, covariance)
-        independent.variables <- c("quantile", colnames(covariance[,!colnames(covariance)%in%c("FID","IID")]))
+        if(!is.null(covariance)){
+            pheno.merge <- merge(pheno.merge, covariance)
+        }
+        independent.variables <- c("quantile", "Pheno", colnames(covariance[,!colnames(covariance)%in%c("FID","IID")]))
         reg <-
             summary(glm(Pheno ~ ., family, data = pheno.merge[, independent.variables]))
         coef.quantiles <- (reg$coefficients[1:num_quant, 1])
@@ -1059,6 +1061,7 @@ uneven_quantile_plot <- function(base.prs, pheno,covariance,  prefix, argv, bina
     quant.index <- NULL
     use.residual <- F
     if (!pheno.as.quant) {
+        
         quant.info <- set_uneven_quant(argv$quant_break, argv$quant_ref, num_quant, pheno.merge$PRS, quant.index)
         quants <- quant.info[[1]]
         quant.index <- quant.info[[2]]
@@ -1182,6 +1185,7 @@ quantile_plot <- function(base.prs, pheno, covariance,  prefix, argv, binary, us
         quants <- get_quantile(pheno.merge$PRS, num_quant, quant.ref)
     } else{
         # If we use phenotype as quantile, we will want to residualize the phenotype first
+        # 
         if(!is.null(covariance)){
             pheno.cov <- merge(pheno.merge, covariance)
             # We will have FID IID PRS Pheno
