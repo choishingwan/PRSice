@@ -167,8 +167,10 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
                          == m_sample_selection_list.end());
         }
 
-        if (founder_info.find(token[+FAM::FATHER]) == founder_info.end()
-            && founder_info.find(token[+FAM::MOTHER]) == founder_info.end()
+        if (founder_info.find(token[+FAM::FID] + "_" + token[+FAM::FATHER])
+                == founder_info.end()
+            && founder_info.find(token[+FAM::FID] + "_" + token[+FAM::MOTHER])
+                   == founder_info.end()
             && inclusion)
         {
             // this is a founder (with no dad / mum)
@@ -243,19 +245,14 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 }
 
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
-                                             Region& exclusion,
-                                             Genotype* target)
+std::vector<SNP> BinaryPlink::gen_snp_vector(
+    const std::string& out_prefix, const double& maf_threshold,
+    const bool maf_filter, const double& geno_threshold, const bool geno_filter,
+    const double&, const bool, const double&, const bool, Region& exclusion,
+    Genotype* target)
 {
-    const std::string out_prefix = commander.out();
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    double maf_threshold = 0.0;
-    const bool maf_filter = m_is_ref ? commander.ref_maf(maf_threshold)
-                                     : commander.target_maf(maf_threshold);
-    double geno_threshold = 0.0;
-    const bool geno_filter = m_is_ref ? commander.ref_geno(geno_threshold)
-                                      : commander.target_geno(geno_threshold);
     const uintptr_t final_mask =
         get_final_mask(static_cast<uint32_t>(m_sample_ct));
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
@@ -499,9 +496,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
                     }
                     // filter by genotype missingness
                     if (geno_filter
-                        && static_cast<double>(missing_ct)
-                                   / static_cast<double>(m_sample_ct)
-                               > geno_threshold)
+                        && geno_threshold
+                               < static_cast<double>(missing_ct)
+                                     / static_cast<double>(m_sample_ct))
                     {
                         m_num_geno_filter++;
                         continue;
@@ -645,7 +642,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const Commander& commander,
         }
         // we should not use m_existed_snps unless it is for reference
         for (auto&& snp : (m_is_ref ? target->m_existed_snps : snp_info)) {
-            if (duplicated_snp.find(snp.rs()) != duplicated_snp.end())
+            // we only output the valid SNPs.
+            if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
                 log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                                 << snp.loc() << "\t" << snp.ref() << "\t"
                                 << snp.alt() << "\n";

@@ -84,7 +84,6 @@ endif()
 
 # Header files
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/test)
 file(GLOB TEST_SRC "${PROJECT_SOURCE_DIR}/test/src/*.cpp")
 include_directories( ${PROJECT_SOURCE_DIR}/test/inc )
 # We don't want to include the PRSice main to our test program

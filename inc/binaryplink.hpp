@@ -59,14 +59,24 @@ protected:
     std::vector<Sample_ID> gen_sample_vector();
     /*!
      * \brief Function to generate the SNP vector
-     * \param commander contain all the user input
-     * \param exclusion contain the exclusion region
-     * \param target contain the target genotype information (if is reference)
+     * \param out_prefix is the output prefix
+     * \param maf_threshold is the maf threshold
+     * \param maf_filter is the boolean indicate if we want to perform maf
+     * filtering
+     * \param geno_threshold is the geno threshold
+     * \param geno_filter is the boolean indicate if we want to perform geno
+     * filtering
+     * \param exclusion is the exclusion region
+     * \param target  contain the target genotype information (if is reference)
      * \return a vector of SNP
      */
-    std::vector<SNP> gen_snp_vector(const Commander& commander,
-                                    Region& exclusion,
-                                    Genotype* target = nullptr);
+    std::vector<SNP>
+    gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
+                   const bool maf_filter, const double& geno_threshold,
+                   const bool geno_filter, const double& /*hard_threshold*/,
+                   const bool /*hard_coded*/, const double& /*info_threshold*/,
+                   const bool /*info_filter*/, Region& exclusion,
+                   Genotype* target = nullptr);
 
     /*!
      * \brief This function is use to check the bed version. Most importantly,
@@ -102,14 +112,14 @@ protected:
 
         // we don't need to check if m_cur_file is empty because empty equals
         // only to empty, which shouldn't happen
-        if (m_cur_file != file_name)
-        {
-            if (m_bed_file.is_open()) { m_bed_file.close(); }
+        if (m_cur_file != file_name) {
+            if (m_bed_file.is_open()) {
+                m_bed_file.close();
+            }
             std::string bedname = file_name + ".bed";
             // open the bed file in binary mode
             m_bed_file.open(bedname.c_str(), std::ios::binary);
-            if (!m_bed_file.is_open())
-            {
+            if (!m_bed_file.is_open()) {
                 throw std::runtime_error(std::string(
                     "Error: Cannot open bed file: " + file_name + ".bed"));
             }
@@ -132,7 +142,9 @@ protected:
                 static_cast<uint32_t>(m_unfiltered_sample_ct),
                 static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
                 final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
-        { throw std::runtime_error("Error: Cannot read the bed file!"); }
+        {
+            throw std::runtime_error("Error: Cannot read the bed file!");
+        }
         // directly read in the current location to avoid possible calculation
         // error
         m_prev_loc = m_bed_file.tellg();
@@ -184,11 +196,14 @@ protected:
         uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
-        if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
+        if (unfiltered_sample_ct == sample_ct) {
+            rawbuf = mainbuf;
+        }
         // we try to read in the data and store it in rawbug
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
-        { return RET_READ_FAIL; } if (unfiltered_sample_ct != sample_ct)
-        {
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
+            return RET_READ_FAIL;
+        }
+        if (unfiltered_sample_ct != sample_ct) {
             // if we need to perform selection, we will remove all unwanted
             // sample and push the data forward
             copy_quaterarr_nonempty_subset(rawbuf, sample_include,
@@ -201,8 +216,7 @@ protected:
             // region (to avoid the leftover, if any)
             mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
-        if (do_reverse)
-        {
+        if (do_reverse) {
             // this will never be callsed in PRSice
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
         }

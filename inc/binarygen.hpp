@@ -67,16 +67,32 @@ private:
      */
     bool check_is_sample_format();
     /*!
-     * \brief Generate the SNP vector
-     * \param commander contain the user input
-     * \param exclusion contain the exclusion region information
-     * \param target contain the target genotype (only for m_is_ref)
-     * \return a vector containing the SNP vector or a empty factor if m_is_ref
-     * = T
+     * \brief Function to generate the SNP vector
+     * \param out_prefix is the output prefix
+     * \param maf_threshold is the maf threshold
+     * \param maf_filter is the boolean indicate if we want to perform maf
+     * filtering
+     * \param geno_threshold is the geno threshold
+     * \param geno_filter is the boolean indicate if we want to perform geno
+     * filtering
+     * \param hard_threshold is the hard coding threshold
+     * \param hard_coded is the boolean indicate if hard coding should be
+     * performed
+     * \param info_threshold is the INFO score threshold
+     * \param info_filter is the boolean indicate if we want to perform INFO
+     * score filtering
+     * \param exclusion is the exclusion region
+     * \param target  contain the target genotype information (if is reference)
+     * \return a vector of SNP
      */
-    std::vector<SNP> gen_snp_vector(const Commander& commander,
-                                    Region& exclusion,
-                                    Genotype* target = nullptr);
+    std::vector<SNP>
+    gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
+                   const bool maf_filter, const double& geno_threshold,
+                   const bool geno_filter, const double& hard_threshold,
+                   const bool hard_coded, const double& info_threshold,
+                   const bool info_filter, Region& exclusion,
+                   Genotype* target = nullptr);
+    ;
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map

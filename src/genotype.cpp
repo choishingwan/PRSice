@@ -312,21 +312,28 @@ void Genotype::load_samples(const std::string& keep_file,
 }
 
 
-void Genotype::load_snps(const Commander& commander, Region& exclusion,
-                         bool verbose, Reporter& reporter, Genotype* target)
+void Genotype::load_snps(const std::string& out, const std::string& exclude,
+                         const std::string& extract, const double& maf,
+                         const double& geno, const double& info,
+                         const double& hard_threshold, const bool maf_filter,
+                         const bool geno_filter, const bool info_filter,
+                         const bool hard_coded, Region& exclusion, bool verbose,
+                         Reporter& reporter, Genotype* target)
 {
+
     if (!m_is_ref) {
-        if (!commander.extract_file().empty()) {
+        if (!extract.empty()) {
             m_exclude_snp = false;
-            m_snp_selection_list =
-                load_snp_list(commander.extract_file(), reporter);
+            m_snp_selection_list = load_snp_list(extract, reporter);
         }
-        if (!commander.exclude_file().empty()) {
-            m_snp_selection_list =
-                load_snp_list(commander.exclude_file(), reporter);
+        else if (!exclude.empty())
+        {
+            m_snp_selection_list = load_snp_list(exclude, reporter);
         }
     }
-    m_existed_snps = gen_snp_vector(commander, exclusion, target);
+    m_existed_snps =
+        gen_snp_vector(out, maf, maf_filter, geno, geno_filter, hard_threshold,
+                       hard_coded, info, info_filter, exclusion, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {

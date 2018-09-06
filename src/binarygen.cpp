@@ -509,22 +509,16 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     }
     return true;
 }
-std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
-                                           Region& exclusion, Genotype* target)
+std::vector<SNP>
+BinaryGen::gen_snp_vector(const std::string& out_prefix,
+                          const double& maf_threshold, const bool maf_filter,
+                          const double& geno_threshold, const bool geno_filter,
+                          const double& hard_threshold, const bool hard_coded,
+                          const double& info_threshold, const bool info_filter,
+                          Region& exclusion, Genotype* target)
 {
-    const std::string out_prefix = commander.out();
-    double maf_threshold = 0.0;
-    const bool maf_filter = m_is_ref ? commander.ref_maf(maf_threshold)
-                                     : commander.target_maf(maf_threshold);
-    double geno_threshold = 0.0;
-    const bool geno_filter = m_is_ref ? commander.ref_geno(geno_threshold)
-                                      : commander.target_geno(geno_threshold);
-    double info_threshold = 0.0;
-    const bool info_filter = m_is_ref ? commander.ref_info(info_threshold)
-                                      : commander.target_info(info_threshold);
-    m_hard_coded = m_is_ref
-                       ? commander.ref_hard_threshold(m_hard_threshold)
-                       : commander.target_hard_thresholding(m_hard_threshold);
+    m_hard_coded = hard_coded;
+    m_hard_threshold = hard_threshold;
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);

@@ -53,6 +53,14 @@ int main(int argc, char* argv[])
 
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
+        double maf, geno, info, hard_threshold;
+        bool maf_filter, geno_filter, hard_coded, info_filter;
+        // load the filtering parameters for the target file
+        maf_filter = commander.target_maf(maf);
+        geno_filter = commander.target_geno(geno);
+        info_filter = commander.target_info(info);
+        hard_coded = commander.target_hard_threshold(hard_threshold);
+
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
         try
@@ -69,8 +77,11 @@ int main(int argc, char* argv[])
             // reference intermediate
             if (commander.use_ref()) target_file->expect_reference();
             // Finally, we can read in the SNP information
-            target_file->load_snps(commander, exclusion_region, verbose,
-                                   reporter);
+            target_file->load_snps(commander.out(), commander.exclude_file(),
+                                   commander.extract_file(), maf, geno, info,
+                                   hard_threshold, maf_filter, geno_filter,
+                                   info_filter, hard_coded, exclusion_region,
+                                   verbose, reporter);
         }
         catch (const std::invalid_argument& ia)
         {
@@ -130,9 +141,18 @@ int main(int argc, char* argv[])
                 reference_file->load_samples(commander.ref_keep_file(),
                                              commander.ref_remove_file(),
                                              verbose, reporter);
+                // load the filtering for reference panel
+                maf_filter = commander.ref_maf(maf);
+                geno_filter = commander.ref_geno(geno);
+                info_filter = commander.ref_info(info);
+                hard_coded = commander.ref_hard_threshold(hard_threshold);
                 // only load SNPs that can be found in the target file index
-                reference_file->load_snps(commander, exclusion_region, verbose,
-                                          reporter, target_file);
+                // we don't need to load the extraction and exclude files as
+                // they should already be in effect on the target SNPs
+                reference_file->load_snps(
+                    commander.out(), "", "", maf, geno, info, hard_threshold,
+                    maf_filter, geno_filter, info_filter, hard_coded,
+                    exclusion_region, verbose, reporter, target_file);
             }
             std::string message = "Start processing " + base_name + "\n";
             message.append("==============================\n");

@@ -315,7 +315,7 @@ public:
      * \return true if calculation is already done
      */
     bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing)
+                    uint32_t& missing) const
     {
         homcom = m_homcom;
         het = m_het;

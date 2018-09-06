@@ -92,16 +92,40 @@ public:
      * \brief Function to load SNPs into the genotype class object. Will call
      *        gen_snp_vector function. Will only generate the vector if this is
      *        the target
-     * \param commander is the container of user input
+     * * \param maf_threshold is the maf threshold
+     * \param maf_filter is the boolean indicate if we want to perform maf
+     * filtering
+     * \param geno_threshold is the geno threshold
+     * \param geno_filter is the boolean indicate if we want to perform geno
+     * filtering
+     * \param hard_threshold is the hard coding threshold
+     * \param hard_coded is the boolean indicate if hard coding should be
+     * performed
+     * \param info_threshold is the INFO score threshold
+     * \param info_filter is the boolean indicate if we want to perform INFO
+     * score filtering
      * \param exclusion is the region of exclusion
      * \param verbose is the boolean indicate if we want to print the message
      * \param reporter is the logger
      * \param target is the target genotype. Equal to nullptr if this is the
      * target
      */
-    void load_snps(const Commander& commander, Region& exclusion, bool verbose,
+    void load_snps(const std::string& out, const std::string& exclude,
+                   const std::string& extract, const double& maf_threshold,
+                   const double& geno_threshold, const double& info_threshold,
+                   const double& hard_threshold, const bool maf_filter,
+                   const bool geno_filter, const bool info_filter,
+                   const bool hard_coded, Region& exclusion, bool verbose,
                    Reporter& reporter, Genotype* target = nullptr);
 
+    /*!
+     * \brief Return the number of SNPs, use for unit test
+     * \return reuturn the number of SNPs included
+     */
+    std::vector<SNP>::size_type num_snps() const
+    {
+        return m_existed_snps.size();
+    }
     /*!
      * \brief Function to re-propagate the m_existed_snps_index after reading
      * the reference panel
@@ -605,9 +629,13 @@ protected:
      * \brief Function to read in the SNP information. Any subclass must
      * implement this function \return a vector containing the SNP information
      */
-    virtual std::vector<SNP> gen_snp_vector(const Commander& /*commander*/,
-                                            Region& /*exclusion*/,
-                                            Genotype* /*target = nullptr*/)
+    virtual std::vector<SNP>
+    gen_snp_vector(const std::string& /*out_prefix*/,
+                   const double& /*maf_threshold*/, const bool /*maf_filter*/,
+                   const double& /*geno_threshold*/, const bool /*geno_filter*/,
+                   const double& /*hard_threshold*/, const bool /*hard_coded*/,
+                   const double& /*info_threshold*/, const bool /*info_filter*/,
+                   Region& /*exclusion*/, Genotype* /*target*/)
     {
         return std::vector<SNP>(0);
     }
