@@ -957,6 +957,7 @@ std::vector<SNP> BinaryGen::gen_snp_vector(const Commander& commander,
                             << snp.loc() << "\t" << snp.ref() << "\t"
                             << snp.alt() << "\n";
         }
+
         log_file_stream.close();
         std::string error_message =
             "Error: A total of " + std::to_string(duplicated_snps.size())
