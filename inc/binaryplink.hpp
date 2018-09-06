@@ -28,16 +28,26 @@ class BinaryPlink : public Genotype
 public:
     /*!
      * \brief Constructor of BinaryPlink
-     * \param commander is the commander object containing all the user input
-     * \param reporter is the logger
+     * \param file_list is the file contain all genotype file prefix
+     * \param file is the prefix of genotype file
+     * \param thread is the allowed number of thread
+     * \param ignore_fid indicate if we should assume FID is absent from all
+     * input
+     * \param keep_nonfounder indicate if user wish to include non-founders in
+     * their model
+     * \param keep_ambig indicate if user wish to include ambiguous SNPs
      * \param is_ref indicate if this object should be reference (T) or target
      * (F)
+     * \param reporter is the logger
      */
-    BinaryPlink(const Commander& commander, Reporter& reporter,
-                const bool is_ref = false);
+    BinaryPlink(const std::string& file_list, const std::string& file,
+                const uint32_t thread, const bool ignore_fid,
+                const bool keep_nonfounder, const bool keep_ambig,
+                const bool is_ref, Reporter& reporter);
+    BinaryPlink() {}
     ~BinaryPlink();
 
-private:
+protected:
     std::string m_cur_file;
     std::ifstream m_bed_file;
     std::streampos m_prev_loc = 0;
@@ -92,14 +102,14 @@ private:
 
         // we don't need to check if m_cur_file is empty because empty equals
         // only to empty, which shouldn't happen
-        if (m_cur_file != file_name) {
-            if (m_bed_file.is_open()) {
-                m_bed_file.close();
-            }
+        if (m_cur_file != file_name)
+        {
+            if (m_bed_file.is_open()) { m_bed_file.close(); }
             std::string bedname = file_name + ".bed";
             // open the bed file in binary mode
             m_bed_file.open(bedname.c_str(), std::ios::binary);
-            if (!m_bed_file.is_open()) {
+            if (!m_bed_file.is_open())
+            {
                 throw std::runtime_error(std::string(
                     "Error: Cannot open bed file: " + file_name + ".bed"));
             }
@@ -122,9 +132,7 @@ private:
                 static_cast<uint32_t>(m_unfiltered_sample_ct),
                 static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
                 final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
-        {
-            throw std::runtime_error("Error: Cannot read the bed file!");
-        }
+        { throw std::runtime_error("Error: Cannot read the bed file!"); }
         // directly read in the current location to avoid possible calculation
         // error
         m_prev_loc = m_bed_file.tellg();
@@ -176,14 +184,11 @@ private:
         uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
-        if (unfiltered_sample_ct == sample_ct) {
-            rawbuf = mainbuf;
-        }
+        if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
         // we try to read in the data and store it in rawbug
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
-            return RET_READ_FAIL;
-        }
-        if (unfiltered_sample_ct != sample_ct) {
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
+        { return RET_READ_FAIL; } if (unfiltered_sample_ct != sample_ct)
+        {
             // if we need to perform selection, we will remove all unwanted
             // sample and push the data forward
             copy_quaterarr_nonempty_subset(rawbuf, sample_include,
@@ -196,7 +201,8 @@ private:
             // region (to avoid the leftover, if any)
             mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
-        if (do_reverse) {
+        if (do_reverse)
+        {
             // this will never be callsed in PRSice
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
         }

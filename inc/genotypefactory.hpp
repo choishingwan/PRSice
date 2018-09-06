@@ -40,16 +40,31 @@ public:
         const std::string type =
             (is_ref) ? commander.ref_type() : commander.target_type();
         int code = 0;
-        if (file_type.find(type) != file_type.end()) {
-            code = file_type.at(type);
-        }
-        else
+        if (file_type.find(type) != file_type.end())
+        { code = file_type.at(type); } else
         {
             throw std::invalid_argument("ERROR: Only support bgen and bed");
         }
         switch (code)
         {
-        case 0: { return new BinaryPlink(commander, reporter, is_ref);
+        case 0:
+        {
+            if (is_ref)
+            {
+                return new BinaryPlink(
+                    commander.ref_list(), commander.ref_name(),
+                    commander.thread(), commander.ignore_fid(),
+                    commander.nonfounders(), commander.keep_ambig(), is_ref,
+                    reporter);
+            }
+            else
+            {
+                return new BinaryPlink(
+                    commander.target_list(), commander.target_name(),
+                    commander.thread(), commander.ignore_fid(),
+                    commander.nonfounders(), commander.keep_ambig(), is_ref,
+                    reporter);
+            }
         }
         case 2: { return new BinaryGen(commander, reporter, is_ref);
         }
