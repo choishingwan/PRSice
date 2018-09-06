@@ -876,7 +876,6 @@ call_quantile <-
              binary,
              extract,
              uneven) {
-        
     if (!pheno.as.quant) {
         family <- gaussian
         if (binary) {
@@ -1230,8 +1229,23 @@ quantile_plot <- function(base.prs, pheno, covariance,  prefix, argv, binary, us
 }
 
 plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
-  png(paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
-      height=10, width=10, res=300, unit="in")
+    if(uneven) {
+        png(
+            paste(prefix, "_STRATA_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
+            height = 10,
+            width = 10,
+            res = 300,
+            unit = "in"
+        )
+    } else{
+        png(
+            paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
+            height = 10,
+            width = 10,
+            res = 300,
+            unit = "in"
+        )
+    }
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   pheno.sum$color <- "#D55E00"
   xlab <- NULL
@@ -1297,7 +1311,7 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
               xlab("Quantiles for Residualized Phenotype")
       }
   }else{
-      if (uneven) {
+      if (!uneven) {
           quantiles.plot <- quantiles.plot +
               xlab("Quantiles for Phenotype")
       } else{
@@ -1316,11 +1330,22 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
       geom_pointrange(aes(color = Group), size = 0.9) +
       scale_colour_manual(values = c("#D55E00","#0072B2"))
   }
-  ggsave(
-    paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(),".png", sep = "_"),
-    quantiles.plot,
-    height=10,width=10
-  )
+  
+  if (!uneven) {
+      ggsave(
+          paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = "_"),
+          quantiles.plot,
+          height = 10,
+          width = 10
+      )
+  } else{
+      ggsave(
+          paste(prefix, "STRATA_PHENO_PLOT_", Sys.Date(), ".png", sep = "_"),
+          quantiles.plot,
+          height = 10,
+          width = 10
+      )
+  }
 }
 
 plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven){
@@ -1360,16 +1385,29 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven)
             geom_pointrange(aes(color = Group), size = 0.9) +
             scale_colour_manual(values = c("#0072B2", "#D55E00"))
     }
-    ggsave(
-        paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
-        quantiles.plot,
-        height=10, width=10
-    )
+    if(uneven){
+        ggsave(
+            paste(prefix, "_STRATA_PLOT_", Sys.Date(),".png", sep = ""),
+            quantiles.plot,
+            height=10, width=10
+        )
+    }else{
+        ggsave(
+            paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
+            quantiles.plot,
+            height=10, width=10
+        )
+    }
 }
 
 plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix,  uneven){
-  png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
+  if(!uneven){
+      png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
       height=10, width=10, res=300, unit="in")
+  }else{
+      png(paste(prefix, "_STRATA_PLOT_", Sys.Date(), ".png", sep = ""),
+          height=10, width=10, res=300, unit="in")
+  }
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   quantiles.df$color <- "royalblue2"
   if(!is.null(extract)){
