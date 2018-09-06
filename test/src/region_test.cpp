@@ -1,6 +1,7 @@
 #ifndef REGION_TEST_HPP
 #define REGION_TEST_HPP
 #include "genotype.hpp"
+#include "global.hpp"
 #include "plink_common.hpp"
 #include "region.hpp"
 #include "reporter.hpp"
@@ -11,7 +12,7 @@
 
 TEST(REGION, SINGLE_INIT)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr2:1234";
     try
     {
@@ -25,7 +26,7 @@ TEST(REGION, SINGLE_INIT)
 }
 TEST(REGION, SINGLE_RANGE_INIT)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr2:1234-1357";
     try
     {
@@ -39,7 +40,7 @@ TEST(REGION, SINGLE_RANGE_INIT)
 }
 TEST(REGION, SINGLE_RANGE_WRONG)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     // start must be smaller than end
     std::string range = "chr2:12341-1357";
     try
@@ -54,7 +55,7 @@ TEST(REGION, SINGLE_RANGE_WRONG)
 }
 TEST(REGION, MULTI_RANGE_INIT)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234-1357";
     try
     {
@@ -68,7 +69,7 @@ TEST(REGION, MULTI_RANGE_INIT)
 }
 TEST(REGION, MULTI_MIX_INIT)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234";
     try
     {
@@ -82,7 +83,7 @@ TEST(REGION, MULTI_MIX_INIT)
 }
 TEST(REGION, MULTI_MORE_MIX_INIT)
 {
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234,chr1:312345-9437690";
     try
     {
@@ -97,7 +98,7 @@ TEST(REGION, MULTI_MORE_MIX_INIT)
 TEST(REGION, WRONG_INPUT)
 {
 
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         Region region("chr1", reporter);
@@ -113,7 +114,7 @@ TEST(REGION, WRONG_INPUT)
 TEST(REGION, WRONG_RANGE_FORMAT)
 {
 
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         Region region("chr1:1-2-3", reporter);
@@ -127,7 +128,7 @@ TEST(REGION, WRONG_RANGE_FORMAT)
 TEST(REGION, RANGE_PARSE_PROBLEM)
 {
 
-    Reporter reporter;
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         Region region("chr1:1-,2", reporter);
@@ -146,7 +147,7 @@ protected:
     void SetUp() override
     {
         std::string range = "chr2:1234";
-        Reporter reporter;
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(range, reporter);
     }
 };
@@ -193,7 +194,7 @@ protected:
     void SetUp() override
     {
         std::string range = "chr2:1234-1357";
-        Reporter reporter;
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(range, reporter);
     }
 };
@@ -231,7 +232,7 @@ protected:
         // and make sure the input is not in sorted order
         std::string range =
             "chr2:1234-1357,chr1:4601-5678,chr12:314,chr6:98741-102380";
-        Reporter reporter;
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(range, reporter);
     }
 };
@@ -297,11 +298,10 @@ protected:
         // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
         // and make sure the input is not in sorted order
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
                  << "2\t94644\t98555\n"
@@ -326,7 +326,7 @@ protected:
                  << "20\t64037\t98171\n"
                  << "21\t9363\t49431\n";
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(bed_name, reporter);
     }
 };
@@ -434,11 +434,10 @@ protected:
         // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
         // and make sure the input is not in sorted order
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
                  << "2\t94644\t98555\n"
@@ -471,7 +470,7 @@ protected:
                  << "21\t9363\t49431\n"
                  << "21\t43440\t82120\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(bed_name, reporter);
     }
 };
@@ -559,11 +558,10 @@ protected:
         // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
         // and make sure the input is not in sorted order
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729\n"
                  << "2 94644 98555\n"
@@ -596,7 +594,7 @@ protected:
                  << "21 9363 49431\n"
                  << "21 43440 82120\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(bed_name, reporter);
     }
 };
@@ -681,11 +679,10 @@ protected:
     {
         // not enough for stand yet
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . .\n"
                  << "2 94644 98555 . .\n"
@@ -718,7 +715,7 @@ protected:
                  << "21 9363 49431 . .\n"
                  << "21 43440 82120 . .\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(bed_name, reporter);
     }
 };
@@ -803,11 +800,10 @@ protected:
     void SetUp() override
     {
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -840,7 +836,7 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         region = Region(bed_name, reporter);
     }
 };
@@ -920,18 +916,17 @@ TEST_F(REGION_BED_5_WITH_STRAND, CHECK_INCLUSION_OVERLAPPED)
 TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182\n"
              << "2 94644 \n"
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         // we want to penalize any form of malformed input
@@ -946,18 +941,17 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 .  \n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         // we want to penalize any form of malformed input
@@ -971,8 +965,8 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 }
 TEST(REGION_MALFORM_BED, NOT_FOUND)
 {
-    std::string bed_name = "404.bed";
-    Reporter reporter("LOG");
+    std::string bed_name = path + "404.bed";
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         // we want to penalize any form of malformed input
@@ -987,18 +981,17 @@ TEST(REGION_MALFORM_BED, NOT_FOUND)
 TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . L\n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         // we want to penalize any form of malformed input
@@ -1013,18 +1006,17 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
 TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 -94644 123567 . . +\n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     try
     {
         // we want to penalize any form of malformed input
@@ -1041,11 +1033,10 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -1078,7 +1069,7 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
              << "21 9363 49431 . . .\n"
              << "21 43440 82120 . . .\n"; // overlap
     bed_file.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1104,11 +1095,10 @@ protected:
     void SetUp() override
     {
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -1141,7 +1131,7 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
@@ -1474,11 +1464,10 @@ protected:
     void SetUp() override
     {
         std::ofstream bed_file;
-        std::string bed_name = "Test.bed";
+        std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -1511,7 +1500,7 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 10, 20, false, false);
@@ -1610,14 +1599,13 @@ TEST_F(REGION_STD_BED_PAD, CHECK_PAD)
 }
 TEST(REGION_MULTI_BED, CHECK_NAME)
 {
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
-    std::string second_bed_name = "Test2.bed";
+    std::string bed_name = path + "Test.bed";
+    std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -1635,18 +1623,18 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
     region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
     ASSERT_STREQ(region.get_name(0).c_str(), "Base");
     ASSERT_STREQ(region.get_name(1).c_str(), "Name");
-    ASSERT_STREQ(region.get_name(2).c_str(), "Test2.bed");
+    ASSERT_STREQ(region.get_name(2).c_str(),
+                 std::string(path + "Test2.bed").c_str());
 }
 TEST(REGION_MULTI_BED, CHECK_NAME2)
 {
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
-    std::string second_bed_name = "Test2.bed";
+    std::string bed_name = path + "Test.bed";
+    std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -1659,12 +1647,14 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
                                         "CDS"};
     Region region(feature, 10, 20, false, false);
     std::vector<std::string> bed_names = {
-        bed_name, std::string(second_bed_name + ":Name"),
+        bed_name,
+        std::string(second_bed_name + ":Name"),
     };
     Genotype dummy;
     region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
     ASSERT_STREQ(region.get_name(0).c_str(), "Base");
-    ASSERT_STREQ(region.get_name(1).c_str(), "Test.bed");
+    ASSERT_STREQ(region.get_name(1).c_str(),
+                 std::string(path + "Test.bed").c_str());
     ASSERT_STREQ(region.get_name(2).c_str(), "Name");
 }
 // gtf read
@@ -1680,9 +1670,9 @@ public:
 // Any error in the GTF file will lead to throw
 TEST(REGION_GTF_BASIC, NOT_EXIST)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     remove(gtf_name.c_str());
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1701,11 +1691,11 @@ TEST(REGION_GTF_BASIC, NOT_EXIST)
 }
 TEST(REGION_GTF_BASIC, EMPTY)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1724,7 +1714,7 @@ TEST(REGION_GTF_BASIC, EMPTY)
 }
 TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1743,7 +1733,7 @@ TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1762,7 +1752,7 @@ TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
 }
 TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1776,7 +1766,7 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1795,7 +1785,7 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
 }
 TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1814,7 +1804,7 @@ TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1833,7 +1823,7 @@ TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
 }
 TEST(REGION_GTF_BASIC, BIGGER_START)
 {
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1852,7 +1842,7 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1872,7 +1862,7 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
 TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
 {
 
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1891,7 +1881,7 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1911,7 +1901,7 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
 TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
 {
 
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1931,7 +1921,7 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1951,7 +1941,7 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
 TEST(REGION_GTF_BASIC, NO_GENE_ID)
 {
 
-    std::string gtf_name = "Test.gtf";
+    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -1969,7 +1959,7 @@ TEST(REGION_GTF_BASIC, NO_GENE_ID)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -1995,8 +1985,8 @@ protected:
     std::vector<uintptr_t> not_found = {0};
     void SetUp() override
     {
-        std::string gtf_name = "Test.gtf";
-        std::string gmt_name = "Test.gmt";
+        std::string gtf_name = path + "Test.gtf";
+        std::string gmt_name = path + "Test.gmt";
         std::ofstream gtf, gmt;
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
@@ -2065,7 +2055,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
@@ -2207,8 +2197,8 @@ protected:
     std::vector<uintptr_t> not_found = {0};
     void SetUp() override
     {
-        std::string gtf_name = "Test.gtf";
-        std::string gmt_name = "Test.gmt";
+        std::string gtf_name = path + "Test.gtf";
+        std::string gmt_name = path + "Test.gmt";
         std::ofstream gtf, gmt;
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
@@ -2277,7 +2267,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 10, 20, false, false);
@@ -2422,8 +2412,8 @@ protected:
     std::vector<uintptr_t> not_found = {0};
     void SetUp() override
     {
-        std::string gtf_name = "Test.gtf";
-        std::string gmt_name = "Test.gmt";
+        std::string gtf_name = path + "Test.gtf";
+        std::string gmt_name = path + "Test.gmt";
         std::ofstream gtf, gmt;
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
@@ -2479,7 +2469,7 @@ protected:
         gmt << "SET5 ENSG00000223973" << std::endl;
         gmt << "SET6 ENSG00000122966" << std::endl;
         gmt.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
@@ -2589,8 +2579,8 @@ TEST_F(REGION_GTF_MULTI_EX, SIMPLE_MULTI)
 TEST(REGION_MSIGDB, NAME_CROSS_CHR)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = "Test.gtf";
-    std::string gmt_name = "Test.gmt";
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -2642,7 +2632,7 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -2662,8 +2652,8 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
 TEST(REGION_MSIGDB, ID_CROSS_CHR)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = "Test.gtf";
-    std::string gmt_name = "Test.gmt";
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -2715,7 +2705,7 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
@@ -2735,8 +2725,8 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
 TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = "Test.gtf";
-    std::string gmt_name = "Test.gmt";
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -2788,7 +2778,7 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, true, false);
@@ -2822,8 +2812,8 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = "Test.gtf";
-    std::string gmt_name = "Test.gmt";
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -2875,7 +2865,7 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, true, true);
@@ -2902,11 +2892,10 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
 TEST(REGION_BACKGROUND, BED_BACKGROUND)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -2939,7 +2928,7 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
              << "21 9363 49431 . . .\n"
              << "21 43440 82120 . . .\n"; // overlap
     bed_file.close();
-    std::string background = "background";
+    std::string background = path + "background";
     bed_file.open(background);
     bed_file << "1 89557 96038\n"
                 "4  3016 87782\n"
@@ -2948,7 +2937,7 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
                 "14 22104 47572\n";
     bed_file.close();
     background.append(":bed");
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, true, false);
@@ -3009,11 +2998,10 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
 TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
 {
     std::ofstream bed_file;
-    std::string bed_name = "Test.bed";
+    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -3046,7 +3034,7 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
              << "21 9363 49431 . . .\n"
              << "21 43440 82120 . . .\n"; // overlap
     bed_file.close();
-    std::string background = "background";
+    std::string background = path + "background";
     bed_file.open(background);
     bed_file << "1 89557 96038\n"
                 "4  3016 87782\n"
@@ -3055,7 +3043,7 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
                 "14 22104 47572\n";
     bed_file.close();
     background.append(":range");
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, true, false);
@@ -3117,8 +3105,8 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
 TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = "Test.gtf";
-    std::string gmt_name = "Test.gmt";
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -3170,14 +3158,14 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    std::string background = "background";
+    std::string background = path + "background";
     gmt.open(background.c_str());
     gmt << "DDX11L1" << std::endl;
     gmt << "CIT" << std::endl;
     gmt << "CCTV" << std::endl;
     gmt.close();
     background.append(":gene");
-    Reporter reporter("LOG");
+    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     Region region(feature, 0, 0, true, false);

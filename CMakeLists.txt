@@ -82,14 +82,13 @@ if(CMAKE_VERSION VERSION_LESS 2.8.11)
 endif()
 
 
-
 # Header files
 
-file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
-file(GLOB TEST_UNITS "${PROJECT_SOURCE_DIR}/test/inc/*.hpp")
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/test)
+file(GLOB TEST_SRC "${PROJECT_SOURCE_DIR}/test/src/*.cpp")
 include_directories( ${PROJECT_SOURCE_DIR}/test/inc )
 # We don't want to include the PRSice main to our test program
-add_executable(runUnitTests ${PROJECT_SOURCE_DIR}/test/main.cpp ${TEST_UNITS})
+add_executable(runUnitTests ${PROJECT_SOURCE_DIR}/test/main.cpp ${TEST_SRC})
 target_include_directories(runUnitTests PRIVATE ${PROJECT_SOURCE_DIR}/inc)
 target_link_libraries(runUnitTests prsice_lib)
 target_link_libraries(runUnitTests gtest gtest_main)
@@ -97,4 +96,4 @@ target_link_libraries( runUnitTests ${ZLIB_LIBRARIES} )
 target_link_libraries( runUnitTests  ${CMAKE_THREAD_LIBS_INIT} )
 target_compile_features(runUnitTests PRIVATE cxx_range_for)
 enable_testing()
-add_test(runUnitTests COMMAND runUnitTests)
+add_test(runUnitTests COMMAND runUnitTests "${CMAKE_CURRENT_LIST_DIR}/test/data/")

@@ -1,11 +1,11 @@
 #ifndef SNP_TEST_HPP
 #define SNP_TEST_HPP
+#include "genotype.hpp"
+#include "global.hpp"
+#include "region.hpp"
 #include "snp.hpp"
 #include "gtest/gtest.h"
-#include "genotype.hpp"
-#include "region.hpp"
 #include <vector>
-
 TEST(SNP_TEST, INITIALIZE_NO_COUNT)
 {
     // check if the initialization sets all the parameters correctly
@@ -335,8 +335,8 @@ protected:
     std::vector<uintptr_t> not_found = {0};
     void SetUp() override
     {
-        std::string gtf_name = "Test.gtf";
-        std::string gmt_name = "Test.gmt";
+        std::string gtf_name = path + "Test.gtf";
+        std::string gmt_name = path + "Test.gmt";
         std::ofstream gtf, gmt;
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
@@ -405,7 +405,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter("LOG");
+        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
@@ -417,128 +417,142 @@ protected:
     }
 };
 
-TEST_F(SNP_REGION, BASE_SET1_STANDARD){
-    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+TEST_F(SNP_REGION, BASE_SET1_STANDARD)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
     base_snp.set_flag(region);
     set_snp.set_flag(region);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for(size_t i = 0; i < 7; ++i){
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if(i == 0 || i == 1 || i == 6){
-            ASSERT_TRUE(set_snp.in(i));
-        }else{
+        if (i == 0 || i == 1 || i == 6) { ASSERT_TRUE(set_snp.in(i)); }
+        else
+        {
             ASSERT_FALSE(set_snp.in(i));
         }
     }
-    base_snp.clump(set_snp, 0.1,false, 0.8);
+    base_snp.clump(set_snp, 0.1, false, 0.8);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-// the set SNP should've lost the base flag
-    for(size_t i = 0; i < 7; ++i){
+    // the set SNP should've lost the base flag
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if( i == 1 || i == 6){
-            ASSERT_TRUE(set_snp.in(i));
-        }else{
+        if (i == 1 || i == 6) { ASSERT_TRUE(set_snp.in(i)); }
+        else
+        {
             ASSERT_FALSE(set_snp.in(i));
         }
     }
 }
-TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO){
-    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
     base_snp.set_flag(region);
     set_snp.set_flag(region);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
-
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for(size_t i = 0; i < 7; ++i){
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if(i == 0 || i == 1 || i == 6){
-            ASSERT_TRUE(set_snp.in(i));
-        }else{
+        if (i == 0 || i == 1 || i == 6) { ASSERT_TRUE(set_snp.in(i)); }
+        else
+        {
             ASSERT_FALSE(set_snp.in(i));
         }
     }
-    base_snp.clump(set_snp, 0.1,true, 0.8);
+    base_snp.clump(set_snp, 0.1, true, 0.8);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-// the set SNP should've lost the base flag
-    for(size_t i = 0; i < 7; ++i){
+    // the set SNP should've lost the base flag
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if( i == 1 || i == 6){
-            ASSERT_TRUE(set_snp.in(i));
-        }else{
+        if (i == 1 || i == 6) { ASSERT_TRUE(set_snp.in(i)); }
+        else
+        {
             ASSERT_FALSE(set_snp.in(i));
         }
     }
 }
 
-TEST_F(SNP_REGION, BASE_SET1_PROXY_GO){
-    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A","C","Test", 1);
+TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
     base_snp.set_flag(region);
     set_snp.set_flag(region);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for(size_t i = 0; i < 7; ++i){
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if(i == 0 || i == 1 || i == 6){
-            ASSERT_TRUE(set_snp.in(i));
-        }else{
+        if (i == 0 || i == 1 || i == 6) { ASSERT_TRUE(set_snp.in(i)); }
+        else
+        {
             ASSERT_FALSE(set_snp.in(i));
         }
     }
-    base_snp.clump(set_snp, 0.1,true, 0.01);
+    base_snp.clump(set_snp, 0.1, true, 0.01);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
-    for(size_t i = 0; i < 7; ++i){
+    for (size_t i = 0; i < 7; ++i)
+    {
         // we should have acquire the flag from set_snp
-        if(i==0 || i == 1 || i == 6){
-            ASSERT_TRUE(base_snp.in(i));
-        }else{
-        ASSERT_FALSE(base_snp.in(i));
+        if (i == 0 || i == 1 || i == 6) { ASSERT_TRUE(base_snp.in(i)); }
+        else
+        {
+            ASSERT_FALSE(base_snp.in(i));
         }
     }
     // we simply set the set_snp to clumped without setting its flags to zero
 }
-TEST_F(SNP_REGION, BASE_BASE_STANDARD){
-    SNP base_snp("Base_SNP", 1, 1, "A","C","Test", 1);
-    SNP set_snp("Set_SNP", 1, 2, "A","C","Test", 1);
+TEST_F(SNP_REGION, BASE_BASE_STANDARD)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
+    SNP set_snp("Set_SNP", 1, 2, "A", "C", "Test", 1);
     base_snp.set_flag(region);
     set_snp.set_flag(region);
     ASSERT_FALSE(base_snp.clumped());
@@ -546,24 +560,24 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD){
 
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(set_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
         ASSERT_FALSE(set_snp.in(i));
     }
 
-    base_snp.clump(set_snp, 0.1,false, 0.8);
+    base_snp.clump(set_snp, 0.1, false, 0.8);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for(size_t i = 1; i < 7; ++i){
+    for (size_t i = 1; i < 7; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-// the set SNP should've lost the base flag
-    for(size_t i = 0; i < 7; ++i){
-            ASSERT_FALSE(set_snp.in(i));
-    }
+    // the set SNP should've lost the base flag
+    for (size_t i = 0; i < 7; ++i) { ASSERT_FALSE(set_snp.in(i)); }
 }
 #endif // SNP_TEST_HPP
