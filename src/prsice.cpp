@@ -1156,9 +1156,10 @@ void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
         {
             // samples that are extracted are ignored
             // sample excluded will not be output here
-            std::string has_pheno =
+            /* std::string has_pheno =
                 target.sample_in_regression(static_cast<size_t>(sample)) ? "Yes"
                                                                          : "No";
+                                                                         */
             int loc = m_best_file.header_length
                       + sample * (m_best_file.line_width + NEXT_LENGTH)
                       + NEXT_LENGTH + m_best_file.skip_column_length
