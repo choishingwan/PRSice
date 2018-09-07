@@ -16,3 +16,4 @@ src/bk/
 PRSice\.*
 *.gz
 site/
+test/data/bk/*
