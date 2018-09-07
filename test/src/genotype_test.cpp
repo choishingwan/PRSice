@@ -21,7 +21,8 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITH_HASH)
     m_autosome_ct = 22;
     m_genotype_files = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name = "chr" + std::to_string(i) + "test";
         ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
     }
@@ -35,7 +36,8 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_MULTI_HASH)
     m_autosome_ct = 22;
     m_genotype_files = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name =
             "chr" + std::to_string(i) + "test" + std::to_string(i);
         ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
@@ -81,7 +83,7 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
     bool not_include_pt1 = true;
     // anything less than lowest threshold is consider 0
     category =
-        calculate_threshold(0.0, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+        calculate_category(0.0, 0.05, 0.01, 0.5, pthres, not_include_pt1);
     ASSERT_EQ(category, 0);
     ASSERT_DOUBLE_EQ(pthres, 0.05);
     // anything above the upper threshold is considered as 1.0 and with category
@@ -90,25 +92,44 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
     // that are bigger than the last required threshold
     // the pthres is meaningless in this situation
     category =
-        calculate_threshold(0.6, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+        calculate_category(0.6, 0.05, 0.01, 0.5, pthres, not_include_pt1);
     ASSERT_GT(category, 0.5 / 0.01 - 0.05 / 0.01);
     // if we want full model, we will still do the same
     category =
-        calculate_threshold(0.6, 0.05, 0.01, 0.5, pthres, !not_include_pt1);
+        calculate_category(0.6, 0.05, 0.01, 0.5, pthres, !not_include_pt1);
     ASSERT_GT(category, 0.5 / 0.01 - 0.05 / 0.01);
     ASSERT_DOUBLE_EQ(pthres, 1);
 
     category =
-        calculate_threshold(0.05, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+        calculate_category(0.05, 0.05, 0.01, 0.5, pthres, not_include_pt1);
     // this should be the first threshold
     ASSERT_EQ(category, 0);
     ASSERT_DOUBLE_EQ(pthres, 0.05);
 
     category =
-        calculate_threshold(0.055, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+        calculate_category(0.055, 0.05, 0.01, 0.5, pthres, not_include_pt1);
     // this should be the first threshold
     ASSERT_EQ(category, 1);
     ASSERT_DOUBLE_EQ(pthres, 0.06);
+}
+TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
+{
+    int category;
+    double pthres;
+    std::vector<double> barlevels = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+    // anything less than lowest threshold is consider 0
+    category = calculate_category(0.0, barlevels, pthres);
+    ASSERT_EQ(category, 0);
+    ASSERT_DOUBLE_EQ(pthres, 0.001);
+    category = calculate_category(0.001, barlevels, pthres);
+    ASSERT_EQ(category, 0);
+    ASSERT_DOUBLE_EQ(pthres, 0.001);
+    category = calculate_category(0.5, barlevels, pthres);
+    ASSERT_EQ(category, 6);
+    ASSERT_DOUBLE_EQ(pthres, 0.5);
+    category = calculate_category(0.7, barlevels, pthres);
+    ASSERT_EQ(category, 7);
+    ASSERT_DOUBLE_EQ(pthres, 1);
 }
 
 

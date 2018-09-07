@@ -133,10 +133,8 @@ public:
     void update_snp_index()
     {
         m_existed_snps_index.clear();
-        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
-            m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
-        }
-    }
+        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
+        { m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp; } }
     /*!
      * \brief Return all p-value threshold in used in the analysis. Mainly for
      * constructing the all score file
@@ -201,8 +199,16 @@ public:
      * \param region contain the region information. Use for defining the flag
      * \param reporter is the logger
      */
-    void read_base(const Commander& c_commander, Region& region,
-                   Reporter& reporter);
+    void read_base(const std::string& base_file, const std::string& out,
+                   const std::vector<int>& col_index,
+                   const std::vector<double>& bar_levels,
+                   const double& bound_start, const double& bound_inter,
+                   const double& bound_end, const double& maf_control,
+                   const double& maf_case, const double& info_threshold,
+                   const bool maf_control_filter, const bool maf_case_filter,
+                   const bool info_filter, const bool fastscore,
+                   const bool no_full, const bool is_beta, const bool is_index,
+                   Region& region, Reporter& reporter);
     /*!
      * \brief Function to carry out clumping. One of the most complicated
      * function.
@@ -337,9 +343,7 @@ public:
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
         double avg = prs;
-        if (num_snp == 0) {
-            avg = 0.0;
-        }
+        if (num_snp == 0) { avg = 0.0; }
         else
         {
             avg = prs / static_cast<double>(num_snp);
@@ -379,32 +383,36 @@ public:
         if (!prset && !print_snp) return;
         // if we want to print SNP, we will first write the header of the
         // file
-        if (print_snp) {
+        if (print_snp)
+        {
             print_file.open(snp_file_name.c_str());
-            if (!print_file.is_open()) {
+            if (!print_file.is_open())
+            {
                 throw std::runtime_error(
                     "Error: Cannot open snp file to write: " + snp_file_name);
             }
             print_file << "CHR\tSNP\tBP\tP";
-            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
-                print_file << "\t" << region.get_name(i_region);
-            }
+            for (size_t i_region = 0; i_region < region.size(); ++i_region)
+            { print_file << "\t" << region.get_name(i_region); }
             print_file << "\n";
         }
         // we than start iterate through all the SNPs and count their
         // membership.
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
-        for (auto&& snp : m_existed_snps) {
+        for (auto&& snp : m_existed_snps)
+        {
             if (print_snp)
                 print_file << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
                            << "\t" << snp.p_value();
-            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+            for (size_t i_region = 0; i_region < region.size(); ++i_region)
+            {
                 result[i_region] += snp.in(i_region);
                 if (print_snp)
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
-            if (prset && snp.in(region.size() - 1)) {
+            if (prset && snp.in(region.size() - 1))
+            {
                 // we will assume the last set is the background. Doesn't matter
                 // if background isn't use
                 m_background_snp_index.push_back(snp_index);
@@ -456,6 +464,12 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
+    /*!
+     * \brief Return the i th SNP, only use for unit testing
+     * \param i is the index to the SNP
+     * \return the ith SNP object
+     */
+    SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
     void perform_shrinkage(Genotype& reference, double maf_bin,
                            double prevalence, int num_perm, uint32_t num_sample,
                            uint32_t num_case, uint32_t num_control,
@@ -556,13 +570,14 @@ protected:
      * \param no_full indicate if we want the p=1 threshold
      * \return the category where this SNP belongs to
      */
-    int calculate_threshold(const double pvalue, const double bound_start,
-                            const double bound_inter, const double bound_end,
-                            double& pthres, const bool no_full)
+    int calculate_category(const double& pvalue, const double& bound_start,
+                           const double& bound_inter, const double& bound_end,
+                           double& pthres, const bool no_full)
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
         int category = 0;
-        if (pvalue > bound_end && !no_full) {
+        if (pvalue > bound_end && !no_full)
+        {
             category = static_cast<int>(
                 std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
             pthres = 1.0;
@@ -576,12 +591,34 @@ protected:
         }
         return category;
     }
-    // functions
+
     /*!
-     * \brief Replace # in the name of the genotype file and generate list of
-     *        file for subsequent analysis
-     * \param prefix contains the name of the genotype file
-     * \return a vector of string containing names of the genotype files
+     * \brief Calculate the category based on the input pvalue and barlevels
+     * \param pvalue the input pvalue
+     * \param barlevels the bar levels
+     * \param pthres the p-value threshold this SNP belong to
+     * \return the category of this SNP
+     */
+    int calculate_category(const double& pvalue,
+                           const std::vector<double>& barlevels, double& pthres)
+    {
+        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i)
+        {
+            if (pvalue < barlevels[i]
+                || misc::logically_equal(pvalue, barlevels[i]))
+            {
+                pthres = barlevels[i];
+                return static_cast<int>(i);
+            }
+        }
+        pthres = 1.0;
+        return static_cast<int>(barlevels.size());
+    }
+    /*!
+     * \brief Replace # in the name of the genotype file and generate list
+     * of file for subsequent analysis \param prefix contains the name of
+     * the genotype file \return a vector of string containing names of the
+     * genotype files
      */
     std::vector<std::string> set_genotype_files(const std::string& prefix);
     /*!
@@ -786,7 +823,8 @@ protected:
         __univec acc11;
         __univec acc10;
         uint32_t ct2;
-        while (sample_ctv6 >= 30) {
+        while (sample_ctv6 >= 30)
+        {
             sample_ctv6 -= 30;
             vend = &(veca0[30]);
             acc00.vi = _mm_setzero_si128();
@@ -904,7 +942,8 @@ protected:
             counts_3x3[3] +=
                 ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (sample_ctv6) {
+        if (sample_ctv6)
+        {
             vend = &(veca0[sample_ctv6]);
             ct2 = sample_ctv6 % 2;
             sample_ctv6 = 0;
@@ -912,7 +951,8 @@ protected:
             acc01.vi = _mm_setzero_si128();
             acc11.vi = _mm_setzero_si128();
             acc10.vi = _mm_setzero_si128();
-            if (ct2) {
+            if (ct2)
+            {
                 countx00 = _mm_setzero_si128();
                 countx01 = _mm_setzero_si128();
                 countx11 = _mm_setzero_si128();
@@ -953,7 +993,8 @@ protected:
             new_mask = (((~cur_geno) & FIVEMASK) | shifted_masked_geno) * 3;
             *mask_buf_ptr++ = new_mask;
         } while (geno_ptr < geno_end);
-        if (is_x) {
+        if (is_x)
+        {
             geno_ptr = geno_buf;
             do
             {
@@ -963,7 +1004,8 @@ protected:
                                  & (*founder_male_include2++));
             } while (geno_ptr < geno_end);
         }
-        if (founder_ct % BITCT2) {
+        if (founder_ct % BITCT2)
+        {
             mask_buf[founder_ct / BITCT2] &=
                 (ONELU << (2 * (founder_ct % BITCT2))) - ONELU;
         }
@@ -1211,7 +1253,8 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             ld_dot_prod_batch((__m128i*) vec1, (__m128i*) vec2,
                               (__m128i*) mask1, (__m128i*) mask2, return_vals,
                               MULTIPLEX_LD / 192);
@@ -1292,7 +1335,8 @@ protected:
     {
         // accelerated implementation for no-missing-loci case
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             result -= ld_dot_prod_nm_batch((__m128i*) vec1, (__m128i*) vec2,
                                            MULTIPLEX_LD / 192);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1443,7 +1487,8 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals,
                               MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1497,7 +1542,8 @@ protected:
                            uint32_t last_batch_size)
     {
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             result -= ld_dot_prod_nm_batch(vec1, vec2, MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
             vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
@@ -1527,7 +1573,8 @@ protected:
         __m128i loader2;
         __univec acc;
 
-        while (word12_ct >= 10) {
+        while (word12_ct >= 10)
+        {
             word12_ct -= 10;
             vend1 = &(vptr1[60]);
         ld_missing_ct_intersect_main_loop:
@@ -1568,7 +1615,8 @@ protected:
                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
             tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (word12_ct) {
+        if (word12_ct)
+        {
             vend1 = &(vptr1[word12_ct * 6]);
             word12_ct = 0;
             goto ld_missing_ct_intersect_main_loop;
@@ -1580,7 +1628,8 @@ protected:
         uintptr_t tmp_stor;
         uintptr_t loader1;
         uintptr_t loader2;
-        while (lptr1 < lptr1_end) {
+        while (lptr1 < lptr1_end)
+        {
             loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
@@ -1604,10 +1653,10 @@ protected:
         }
 #endif
         lptr1_end2 = &(lptr1[word12_rem]);
-        while (lptr1 < lptr1_end2) {
-            tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK);
-        }
-        if (lshift_last) {
+        while (lptr1 < lptr1_end2)
+        { tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK); }
+        if (lshift_last)
+        {
             tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK)
                                   << lshift_last);
         }

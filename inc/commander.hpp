@@ -60,35 +60,55 @@ public:
      * \return Base file name
      */
     std::string base_name() const { return m_base_file; }
+
     /*!
-     * \brief Get the info thresholod
-     * \param Threhsold storage
-     * \return true if info filtering is used
+     * \brief Get the base info score threshold
+     * \return return the base info score filtering threshold, 0.0 if not used
      */
-    bool base_info_score(double& thresold) const
+    double base_info_score() const
     {
-        thresold = m_base_info_threshold;
+        if (!m_provided_info_threshold) return 0.0;
+        return m_base_info_threshold;
+    }
+    /*!
+     * \brief Return if base info score filtering should be performed
+     * \return T if it should be
+     */
+    bool perform_base_info_score_filter() const
+    {
         return m_provided_info_threshold;
     }
     /*!
      * \brief Get the base maf threshold for controls
-     * \param Storage of maf threshold
-     * \return true if maf threshold filtering is required
+     * \return return the maf base control filtering threshold, 0.0 if not used
      */
-    bool maf_base_control(double& maf) const
+    double maf_base_control() const
     {
-        maf = m_control_maf_threshold;
+        if (!m_perform_base_maf_control_filter) return 0.0;
+        return m_control_maf_threshold;
+    }
+    /*!
+     * \brief Return if base maf control filter should be performed
+     * \return  T if it should be
+     */
+    bool perform_maf_base_control_filter() const
+    {
         return m_perform_base_maf_control_filter;
     }
-
     /*!
      * \brief Get the base maf threshold for cases
-     * \param Storage of maf threshold
-     * \return true if maf threshold filtering is required
+     * \return return the maf base case filtering threshold, 0.0 if not used
      */
-    bool maf_base_case(double& maf) const
+    double maf_base_case() const
     {
-        maf = m_case_maf_threshold;
+        if (!m_perform_base_maf_case_filter) return 0.0;
+        return m_case_maf_threshold;
+    } /*!
+       * \brief Return if base maf case filter should be performed
+       * \return  T if it should be
+       */
+    bool perform_maf_base_case_filter() const
+    {
         return m_perform_base_maf_case_filter;
     }
     /*!
@@ -351,7 +371,11 @@ public:
     {
         return *std::max_element(m_barlevel.begin(), m_barlevel.end());
     }
-
+    /*!
+     * \brief Return the full bar level
+     * \return the vector containing the sorted bar levels
+     */
+    std::vector<double> bar_levels() const { return m_barlevel; }
     /*!
      * \brief Return the p-value threshold corresponding to the category.
      *        For fastscoring only
@@ -394,7 +418,8 @@ public:
     {
         // iterate through the bar-level and return first index
         // containing p-value larger than or equal to the input p-value
-        for (std::vector<int>::size_type i = 0; i < m_barlevel.size(); ++i) {
+        for (std::vector<int>::size_type i = 0; i < m_barlevel.size(); ++i)
+        {
             if (p < m_barlevel[i] || misc::logically_equal(p, m_barlevel[i]))
                 return static_cast<int>(i);
         }
@@ -563,7 +588,8 @@ public:
      */
     int window_5() const
     {
-        if (m_window_5 < 0) {
+        if (m_window_5 < 0)
+        {
             throw std::runtime_error("Error: Length of 5' extension must be "
                                      "greater than or equal to zero!");
         }
@@ -575,7 +601,8 @@ public:
      */
     int window_3() const
     {
-        if (m_window_3 < 0) {
+        if (m_window_3 < 0)
+        {
             throw std::runtime_error("Error: Length of 5' extension must be "
                                      "greater than or equal to zero!");
         }
@@ -944,15 +971,14 @@ private:
         // allow more complex regrex
         // should not come in without something
         if (input.empty()) return false;
-        if (message.find(c) == message.end()) {
-            message[c] = input;
-        }
+        if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
             // we will append instead of overwrite
             message[c] = "," + input;
         }
-        if (!input.empty() && input.back() == ',') {
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)");
@@ -960,10 +986,12 @@ private:
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
-            for (auto&& bin : token) {
+            for (auto&& bin : token)
+            {
                 // check if this is true or false, if, not, try parsing
                 std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
-                if (bin.length() == 1) {
+                if (bin.length() == 1)
+                {
                     switch (bin.at(0))
                     {
                     case 'T': target.push_back(true); break;
@@ -999,16 +1027,12 @@ private:
                         {
                         case 'T':
                             num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i) {
-                                target.push_back(true);
-                            }
-                            break;
+                            for (int i = 0; i < num; ++i)
+                            { target.push_back(true); } break;
                         case 'F':
                             num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i) {
-                                target.push_back(false);
-                            }
-                            break;
+                            for (int i = 0; i < num; ++i)
+                            { target.push_back(false); } break;
                         default:
                             error_message.append(
                                 "Error: Invalid argument passed to " + c + ": "
@@ -1057,14 +1081,13 @@ private:
     {
 
         if (input.empty()) return;
-        if (message.find(c) == message.end()) {
-            message[c] = input;
-        }
+        if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
             message[c] = "," + input;
         }
-        if (!input.empty() && input.back() == ',') {
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
@@ -1091,15 +1114,14 @@ private:
     {
         // should always have an input
         if (input.empty()) return false;
-        if (message.find(c) == message.end()) {
-            message[c] = input;
-        }
+        if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
             // we will append instead of overwrite
             message[c] = "," + input;
         }
-        if (!input.empty() && input.back() == ',') {
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
@@ -1133,7 +1155,8 @@ private:
                             std::string& error_message, Type& target,
                             bool& target_boolean, const std::string& c)
     {
-        if (message.find(c) != message.end()) {
+        if (message.find(c) != message.end())
+        {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -1163,13 +1186,15 @@ private:
                                std::string& error_message, int& target,
                                const std::string& c)
     {
-        if (message.find(c) != message.end()) {
+        if (message.find(c) != message.end())
+        {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
         // first check if there are any suffix
         // KB, MB, BP are the only 3 valid options
-        if (input.length() > 3) {
+        if (input.length() > 3)
+        {
             std::string suffix = input.substr(input.length() - 2);
             std::transform(suffix.begin(), suffix.end(), suffix.begin(),
                            ::toupper);
@@ -1177,9 +1202,7 @@ private:
             try
             {
                 int num = misc::convert<int>(prefix);
-                if (suffix == "BP") {
-                    target = num;
-                }
+                if (suffix == "BP") { target = num; }
                 else if (suffix == "KB")
                 {
                     target = num * 1000;
@@ -1223,12 +1246,14 @@ private:
                           std::string& error_message)
     {
         std::string input = in;
-        if (input.empty()) {
+        if (input.empty())
+        {
             error_message.append("Error: Model cannot be empty!\n");
             return false;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'A') {
+        if (input.at(0) == 'A')
+        {
             input = "add";
             m_genetic_model = MODEL::ADDITIVE;
         }
@@ -1252,9 +1277,8 @@ private:
             error_message.append("Error: Unrecognized model: " + input + "!\n");
             return false;
         }
-        if (message.find("model") != message.end()) {
-            error_message.append("Warning: Duplicated argument --model\n");
-        }
+        if (message.find("model") != message.end())
+        { error_message.append("Warning: Duplicated argument --model\n"); }
         message["model"] = input;
         return true;
     }
@@ -1271,24 +1295,28 @@ private:
                           std::string& error_message)
     {
         std::string input = in;
-        if (input.empty()) {
+        if (input.empty())
+        {
             error_message.append(
                 "Error: Score method string cannot be empty!\n");
             return false;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'A') {
+        if (input.at(0) == 'A')
+        {
             input = "add";
             m_scoring_method = SCORING::AVERAGE;
         }
         else if (input.at(0) == 'S')
         {
-            if (input.length() < 2) {
+            if (input.length() < 2)
+            {
                 error_message.append("Error: Ambiguous scoring method: " + input
                                      + "!\n");
                 return false;
             }
-            if (input.at(1) == 'T') {
+            if (input.at(1) == 'T')
+            {
                 input = "standard";
                 m_scoring_method = SCORING::STANDARDIZE;
             }
@@ -1304,9 +1332,8 @@ private:
                                  + "!\n");
             return false;
         }
-        if (message.find("model") != message.end()) {
-            error_message.append("Warning: Duplicated argument --score\n");
-        }
+        if (message.find("model") != message.end())
+        { error_message.append("Warning: Duplicated argument --score\n"); }
         message["score"] = input;
         return true;
     }
@@ -1323,13 +1350,15 @@ private:
                             std::string& error_message)
     {
         std::string input = in;
-        if (input.empty()) {
+        if (input.empty())
+        {
             error_message.append(
                 "Error: Missing handling method string cannot be empty!\n");
             return false;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'C') {
+        if (input.at(0) == 'C')
+        {
             input = "center";
             m_missing_score = MISSING_SCORE::CENTER;
         }
@@ -1347,9 +1376,8 @@ private:
                                  + input + "!\n");
             return false;
         }
-        if (message.find("missing") != message.end()) {
-            error_message.append("Warning: Duplicated argument --score\n");
-        }
+        if (message.find("missing") != message.end())
+        { error_message.append("Warning: Duplicated argument --score\n"); }
         message["score"] = input;
         return true;
     }
@@ -1369,7 +1397,8 @@ private:
                            const std::string& c, std::string& error_message)
     {
 
-        if (message.find(c) != message.end()) {
+        if (message.find(c) != message.end())
+        {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -1390,9 +1419,8 @@ private:
     {
         m_provided_memory = true;
         std::string in = input;
-        if (message.find("memory") != message.end()) {
-            error_messages.append("Warning: Duplicated argument --memory\n");
-        }
+        if (message.find("memory") != message.end())
+        { error_messages.append("Warning: Duplicated argument --memory\n"); }
         try
         {
             size_t memory = misc::convert<size_t>(input);
@@ -1401,15 +1429,15 @@ private:
         catch (...)
         {
             // contain MB KB or B here
-            if (input.length() >= 2) {
+            if (input.length() >= 2)
+            {
                 try
                 {
                     std::transform(in.begin(), in.end(), in.begin(), ::toupper);
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
-                    if (unit == "KB") {
-                        m_memory = misc::convert<size_t>(value) * 1024;
-                    }
+                    if (unit == "KB")
+                    { m_memory = misc::convert<size_t>(value) * 1024; }
                     else if (unit == "MB")
                     {
                         m_memory = misc::convert<size_t>(value) * 1024 * 1024;
@@ -1429,10 +1457,8 @@ private:
                         // maybe only one input?
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
-                        if (unit == "B") {
-                            m_memory = misc::convert<size_t>(value);
-                        }
-                    }
+                        if (unit == "B")
+                        { m_memory = misc::convert<size_t>(value); } }
                 }
                 catch (...)
                 {
@@ -1462,10 +1488,9 @@ private:
     inline int index_check(const std::string& target,
                            const std::vector<std::string>& ref) const
     {
-        for (std::vector<int>::size_type i = 0; i < ref.size(); ++i) {
-            if (target == ref[i]) {
-                return static_cast<int>(i);
-            }
+        for (std::vector<int>::size_type i = 0; i < ref.size(); ++i)
+        {
+            if (target == ref[i]) { return static_cast<int>(i); }
         }
         return -1;
     }
@@ -1485,13 +1510,15 @@ private:
         try
         {
             int index = misc::convert<int>(target);
-            if (index >= max) {
+            if (index >= max)
+            {
                 error = true;
                 error_message.append("Error: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
-            if (index < 0) {
+            if (index < 0)
+            {
                 error = true;
                 error_message.append("Error: Negative " + name + " index!\n");
                 return -1;
