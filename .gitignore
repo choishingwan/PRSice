@@ -17,3 +17,4 @@ PRSice\.*
 *.gz
 site/
 test/data/bk/*
+test/data/*

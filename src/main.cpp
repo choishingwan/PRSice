@@ -39,8 +39,7 @@ int main(int argc, char* argv[])
         Commander commander;
         try
         {
-            if (!commander.init(argc, argv, reporter))
-            {
+            if (!commander.init(argc, argv, reporter)) {
                 return 0; // only require the usage information
             }
         }
@@ -132,8 +131,7 @@ int main(int argc, char* argv[])
                                commander.is_binary(), reporter);
             // set the clumping information to the target file
             target_file->set_info(commander);
-            if (!commander.no_clump() && commander.use_ref())
-            {
+            if (!commander.no_clump() && commander.use_ref()) {
                 // load the reference file if we require it
                 reporter.report("Loading reference "
                                 "panel\n==============================\n");
@@ -173,13 +171,11 @@ int main(int argc, char* argv[])
             // remove all boundaries from the region object to free up memory
             region.clean();
             // skip clumping if not required
-            if (!commander.no_clump())
-            {
+            if (!commander.no_clump()) {
                 // get the sort by p index vector for target
                 // so that we can still find out the relative coordinates of
                 // each SNPs This is only required for clumping
-                if (!target_file->sort_by_p())
-                {
+                if (!target_file->sort_by_p()) {
                     std::string error_message =
                         "No SNPs left for PRSice processing";
                     reporter.report(error_message);
@@ -192,22 +188,20 @@ int main(int argc, char* argv[])
                 // immediately free the memory
             }
 
-            if (commander.perform_shrinkage())
-            {
+            if (commander.perform_shrinkage()) {
                 // Perform order statistic shrinkage using the reference panel
                 target_file->perform_shrinkage(
                     commander.use_ref() ? *reference_file : *target_file,
                     commander.maf_bin(), commander.base_prevalence(),
                     commander.num_shrinkage_perm(), commander.num_sample(),
                     commander.num_case(), commander.num_control(),
-                    commander.base_is_binary());
+                    commander.base_is_binary(), reporter);
             }
 
             if (commander.use_ref()) delete reference_file;
 
             // Prepare the SNP vector in target for PRS calculation
-            if (!target_file->prepare_prsice())
-            {
+            if (!target_file->prepare_prsice()) {
                 std::string error_message =
                     "No SNPs left for PRSice processing";
                 reporter.report(error_message);
@@ -232,18 +226,15 @@ int main(int argc, char* argv[])
             for (size_t i = 0; i < region_size && commander.perform_set_perm();
                  ++i)
             {
-                if (region.num_post_clump_snp(i) == 0)
-                {
+                if (region.num_post_clump_snp(i) == 0) {
                     // this is not included in the analysis
-                    if (!removed_regions.is_open())
-                    {
+                    if (!removed_regions.is_open()) {
                         // only generate this file if there are region that are
                         // excluded from the analysis
                         removed_regions.open(
                             std::string(commander.out() + ".excluded_regions")
                                 .c_str());
-                        if (!removed_regions.is_open())
-                        {
+                        if (!removed_regions.is_open()) {
                             fprintf(stderr,
                                     "Error: Cannot open file to write: %s\n",
                                     std::string(commander.out()
@@ -258,8 +249,7 @@ int main(int argc, char* argv[])
             if (removed_regions.is_open()) removed_regions.close();
             // now we start processing each phenotype
             const intptr_t num_pheno = prsice.num_phenotype();
-            if (!perform_prslice)
-            {
+            if (!perform_prslice) {
                 // Initialize the progress bar
                 prsice.init_process_count(commander,
                                           static_cast<intptr_t>(region.size()),
@@ -271,8 +261,7 @@ int main(int argc, char* argv[])
                     region.size()
                     - ((region.size() > 1) && commander.perform_set_perm());
                 // go through each phenotype
-                for (intptr_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
-                {
+                for (intptr_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
                     fprintf(stderr, "\nProcessing the %zu th phenotype\n",
                             i_pheno + 1);

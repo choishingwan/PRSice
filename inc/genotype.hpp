@@ -42,6 +42,14 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
+
+#ifdef _WIN32
+#include <mingw.mutex.h>
+#include <mingw.thread.h>
+#else
+#include <mutex>
+#include <thread>
+#endif
 // class BinaryPlink;
 // class BinaryGen;
 #define MULTIPLEX_LD 1920
@@ -133,8 +141,10 @@ public:
     void update_snp_index()
     {
         m_existed_snps_index.clear();
-        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
-        { m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp; } }
+        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
+            m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
+        }
+    }
     /*!
      * \brief Return all p-value threshold in used in the analysis. Mainly for
      * constructing the all score file
@@ -343,7 +353,9 @@ public:
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
         double avg = prs;
-        if (num_snp == 0) { avg = 0.0; }
+        if (num_snp == 0) {
+            avg = 0.0;
+        }
         else
         {
             avg = prs / static_cast<double>(num_snp);
@@ -383,36 +395,32 @@ public:
         if (!prset && !print_snp) return;
         // if we want to print SNP, we will first write the header of the
         // file
-        if (print_snp)
-        {
+        if (print_snp) {
             print_file.open(snp_file_name.c_str());
-            if (!print_file.is_open())
-            {
+            if (!print_file.is_open()) {
                 throw std::runtime_error(
                     "Error: Cannot open snp file to write: " + snp_file_name);
             }
             print_file << "CHR\tSNP\tBP\tP";
-            for (size_t i_region = 0; i_region < region.size(); ++i_region)
-            { print_file << "\t" << region.get_name(i_region); }
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
+                print_file << "\t" << region.get_name(i_region);
+            }
             print_file << "\n";
         }
         // we than start iterate through all the SNPs and count their
         // membership.
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
-        for (auto&& snp : m_existed_snps)
-        {
+        for (auto&& snp : m_existed_snps) {
             if (print_snp)
                 print_file << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
                            << "\t" << snp.p_value();
-            for (size_t i_region = 0; i_region < region.size(); ++i_region)
-            {
+            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
                 result[i_region] += snp.in(i_region);
                 if (print_snp)
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
-            if (prset && snp.in(region.size() - 1))
-            {
+            if (prset && snp.in(region.size() - 1)) {
                 // we will assume the last set is the background. Doesn't matter
                 // if background isn't use
                 m_background_snp_index.push_back(snp_index);
@@ -473,7 +481,7 @@ public:
     void perform_shrinkage(Genotype& reference, double maf_bin,
                            double prevalence, int num_perm, uint32_t num_sample,
                            uint32_t num_case, uint32_t num_control,
-                           bool is_case_control);
+                           bool is_case_control, Reporter& reporter);
 
 protected:
     // friend with all child class so that they can also access the
@@ -482,7 +490,6 @@ protected:
     friend class BinaryGen;
     // need to consider cacheline efficiency, so we need to organize the member
     // variable in most efficient way
-
 
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
@@ -508,6 +515,8 @@ protected:
     // std::vector<int32_t> m_chrom_start;
     // sample file name. Fam for plink
     std::string m_sample_file;
+    std::mutex m_get_maf_mutex;
+    std::mutex m_update_beta_mutex;
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
@@ -556,17 +565,39 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
+    bool m_has_se = false;
+    bool m_has_maf = false;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
-
     /*!
-     * \brief Calculate the threshold bin based on the p-value and bound info
-     * \param pvalue the input p-value
-     * \param bound_start is the start of p-value threshold
-     * \param bound_inter is the step size of p-value threshold
-     * \param bound_end is the end of p-value threshold
-     * \param pthres return the name of p-value threshold this SNP belongs to
+     * \brief This function is responsible for calculating the null beta and
+     * remove it from the observed betas
+     * \param maf is a vector containing the MAF_Store object.
+     * \param cur_index is the current index on the vector
+     * \param seed_store is a seed storage. Different seed is use for different
+     * maf bin
+     * \param prevalence is the prevalence of the trait. Has no use for now
+     * \param num_perm is the number of permutation to perform
+     * \param num_sample is the number of sample in the base sample
+     * \param num_case is the number of cases in the base data
+     * \param num_control is the number of control in the base data
+     * \param is_case_control is a boolean indicate if base is case control
+     */
+    void
+    adjust_beta(std::vector<MAF_Store>& maf,
+                std::vector<MAF_Store>::size_type& cur_index,
+                const std::unordered_map<int, std::random_device::result_type>&
+                    seed_store,
+                const double& prevalence, const size_t& num_perm,
+                const uint32_t& num_sample, const uint32_t& num_case,
+                const uint32_t& num_control, bool is_case_control);
+    /*!
+     * \brief Calculate the threshold bin based on the p-value and bound
+     * info \param pvalue the input p-value \param bound_start is the start
+     * of p-value threshold \param bound_inter is the step size of p-value
+     * threshold \param bound_end is the end of p-value threshold \param
+     * pthres return the name of p-value threshold this SNP belongs to
      * \param no_full indicate if we want the p=1 threshold
      * \return the category where this SNP belongs to
      */
@@ -576,8 +607,7 @@ protected:
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
         int category = 0;
-        if (pvalue > bound_end && !no_full)
-        {
+        if (pvalue > bound_end && !no_full) {
             category = static_cast<int>(
                 std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
             pthres = 1.0;
@@ -602,8 +632,7 @@ protected:
     int calculate_category(const double& pvalue,
                            const std::vector<double>& barlevels, double& pthres)
     {
-        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i)
-        {
+        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i) {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
@@ -752,21 +781,43 @@ protected:
                || (alt_allele == "A" && ref_allele == "T")
                || (ref_allele == "G" && alt_allele == "C")
                || (alt_allele == "G" && ref_allele == "C");
-    };
+    }
 
-    /*!
-     * \brief This function should get a vector of MAF and generate the null
-     * beta using the order statistic method
-     * \param maf is the minor allele frequency of SNPs involved
-     * \param sample_size is the sample size for the summary statistic. Use
-     * size_t here to avoid overflow error (because we will do sample_size^2)
-     * \param num_perm is the number of permutation used for calculating the
-     * order stat. 1000 should generally be enough
-     * \return A vector containing the null beta
-     */
-    std::vector<double> get_null_beta(std::vector<double>& maf,
-                                      size_t sample_size,
-                                      size_t num_perm = 1000);
+    double cal_maf(Genotype& reference, SNP& snp,
+                   std::vector<uintptr_t>& genotype, bool use_reference)
+    {
+        uint32_t homrar_ct = 0;
+        uint32_t missing_ct = 0;
+        uint32_t het_ct = 0;
+        uint32_t homcom_ct = 0;
+        // for storing the missing counts
+        intptr_t nanal;
+        const uintptr_t pheno_nm_ctv2 =
+            QUATERCT_TO_ALIGNED_WORDCT(reference.m_sample_ct);
+        reference.read_genotype(genotype.data(), snp.ref_byte_pos(),
+                                snp.ref_file_name());
+        genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                      &missing_ct, &het_ct, &homcom_ct);
+        nanal = static_cast<intptr_t>(reference.m_sample_ct) - missing_ct;
+        if (nanal == 0) {
+            // if all samples have a missing genotype, we will remove this SNP
+            // While this might not be the case in the target panel (therefore
+            // consider valid without shrinkage), we simply can't calculate the
+            // MAF for SNP with complete missingness. Without the MAF, we can't
+            // calculate the NULL beta. To avoid problem, we invalidate this SNP
+            throw std::runtime_error("Error: All missing");
+        }
+        if (!use_reference) {
+            // if we are not using a reference panel, we can set the count too
+            // to speed things up later on
+            snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        }
+        // reset the weight (as we might have flipped it later on)
+        double cur_maf = static_cast<double>(het_ct + 2 * homrar_ct)
+                         / static_cast<double>(nanal * 2.0);
+        if (cur_maf > 0.5) return 1 - cur_maf;
+        return cur_maf;
+    }
     // no touchy area (PLINK Code)
     uint32_t em_phase_hethet(double known11, double known12, double known21,
                              double known22, uint32_t center_ct,
@@ -823,8 +874,7 @@ protected:
         __univec acc11;
         __univec acc10;
         uint32_t ct2;
-        while (sample_ctv6 >= 30)
-        {
+        while (sample_ctv6 >= 30) {
             sample_ctv6 -= 30;
             vend = &(veca0[30]);
             acc00.vi = _mm_setzero_si128();
@@ -942,8 +992,7 @@ protected:
             counts_3x3[3] +=
                 ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (sample_ctv6)
-        {
+        if (sample_ctv6) {
             vend = &(veca0[sample_ctv6]);
             ct2 = sample_ctv6 % 2;
             sample_ctv6 = 0;
@@ -951,8 +1000,7 @@ protected:
             acc01.vi = _mm_setzero_si128();
             acc11.vi = _mm_setzero_si128();
             acc10.vi = _mm_setzero_si128();
-            if (ct2)
-            {
+            if (ct2) {
                 countx00 = _mm_setzero_si128();
                 countx01 = _mm_setzero_si128();
                 countx11 = _mm_setzero_si128();
@@ -993,8 +1041,7 @@ protected:
             new_mask = (((~cur_geno) & FIVEMASK) | shifted_masked_geno) * 3;
             *mask_buf_ptr++ = new_mask;
         } while (geno_ptr < geno_end);
-        if (is_x)
-        {
+        if (is_x) {
             geno_ptr = geno_buf;
             do
             {
@@ -1004,8 +1051,7 @@ protected:
                                  & (*founder_male_include2++));
             } while (geno_ptr < geno_end);
         }
-        if (founder_ct % BITCT2)
-        {
+        if (founder_ct % BITCT2) {
             mask_buf[founder_ct / BITCT2] &=
                 (ONELU << (2 * (founder_ct % BITCT2))) - ONELU;
         }
@@ -1253,8 +1299,7 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--)
-        {
+        while (batch_ct_m1--) {
             ld_dot_prod_batch((__m128i*) vec1, (__m128i*) vec2,
                               (__m128i*) mask1, (__m128i*) mask2, return_vals,
                               MULTIPLEX_LD / 192);
@@ -1335,8 +1380,7 @@ protected:
     {
         // accelerated implementation for no-missing-loci case
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--)
-        {
+        while (batch_ct_m1--) {
             result -= ld_dot_prod_nm_batch((__m128i*) vec1, (__m128i*) vec2,
                                            MULTIPLEX_LD / 192);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1487,8 +1531,7 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--)
-        {
+        while (batch_ct_m1--) {
             ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals,
                               MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1542,8 +1585,7 @@ protected:
                            uint32_t last_batch_size)
     {
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--)
-        {
+        while (batch_ct_m1--) {
             result -= ld_dot_prod_nm_batch(vec1, vec2, MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
             vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
@@ -1573,8 +1615,7 @@ protected:
         __m128i loader2;
         __univec acc;
 
-        while (word12_ct >= 10)
-        {
+        while (word12_ct >= 10) {
             word12_ct -= 10;
             vend1 = &(vptr1[60]);
         ld_missing_ct_intersect_main_loop:
@@ -1615,8 +1656,7 @@ protected:
                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
             tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (word12_ct)
-        {
+        if (word12_ct) {
             vend1 = &(vptr1[word12_ct * 6]);
             word12_ct = 0;
             goto ld_missing_ct_intersect_main_loop;
@@ -1628,8 +1668,7 @@ protected:
         uintptr_t tmp_stor;
         uintptr_t loader1;
         uintptr_t loader2;
-        while (lptr1 < lptr1_end)
-        {
+        while (lptr1 < lptr1_end) {
             loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
@@ -1653,10 +1692,10 @@ protected:
         }
 #endif
         lptr1_end2 = &(lptr1[word12_rem]);
-        while (lptr1 < lptr1_end2)
-        { tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK); }
-        if (lshift_last)
-        {
+        while (lptr1 < lptr1_end2) {
+            tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK);
+        }
+        if (lshift_last) {
             tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK)
                                   << lshift_last);
         }

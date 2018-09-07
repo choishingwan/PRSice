@@ -73,11 +73,13 @@ public:
     /*!
      * \brief Add the statistic information for this SNP
      * \param stat is the effect size
+     * \param se is the standard error of the effect size
      * \param p_value is the p-value
      * \param category is the category of this SNP
      * \param p_threshold is the p-value threshold this SNP fall into
      */
-    void set_statistic(const double stat, const double p_value,
+    void set_statistic(const double& stat, const double& p_value,
+                       const double& se, const double& maf,
                        const intptr_t category, const double p_threshold)
     {
         m_stat = stat;
@@ -87,6 +89,8 @@ public:
         assert(category < 0);
         m_category = category;
         m_p_threshold = p_threshold;
+        m_standard_error = se;
+        m_maf = maf;
     }
     /*!
      * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
@@ -181,10 +185,30 @@ public:
      */
     double stat() const { return m_stat; }
     /*!
+     * \brief Get the SE of the SNP
+     * \return the standard error of the SNP
+     */
+    double get_se() const { return m_standard_error; }
+    /*!
+     * \brief Return the MAF of the SNP
+     * \return the MAF of the SNP based on Base data
+     */
+    double get_maf() const { return m_maf; }
+    /*!
      * \brief Return the p-value threshold of which this SNP falls into
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
+    /*!
+     * \brief Update the beta by minusing the null from it
+     * \param null is the null beta
+     */
+    void update_stat(const double& null)
+    {
+        double temp = std::abs(m_stat) - null;
+        // we multiply the sign of the statistic to the adjusted beta
+        m_stat = ((m_stat > 0) - (m_stat < 0)) * std::max(temp, 0.0);
+    }
     std::streampos byte_pos() const { return m_target_byte_pos; }
     std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
     std::string file_name() const { return m_target_file; }
@@ -368,6 +392,8 @@ private:
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
+    double m_maf = 0.0;
+    double m_standard_error = 0.0;
     intptr_t m_chr = -1;
     intptr_t m_category = -1;
     intptr_t m_loc = -1;

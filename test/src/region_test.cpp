@@ -300,8 +300,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
                  << "2\t94644\t98555\n"
@@ -436,8 +437,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
                  << "2\t94644\t98555\n"
@@ -560,8 +562,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2 19182 32729\n"
                  << "2 94644 98555\n"
@@ -681,8 +684,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2 19182 32729 . .\n"
                  << "2 94644 98555 . .\n"
@@ -802,8 +806,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -918,8 +923,9 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182\n"
              << "2 94644 \n"
@@ -943,8 +949,9 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 .  \n"
@@ -983,8 +990,9 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . L\n"
@@ -1008,8 +1016,9 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 -94644 123567 . . +\n"
@@ -1035,8 +1044,9 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -1097,8 +1107,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -1466,8 +1477,9 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open())
-        { throw std::runtime_error("Error: Cannot open bed file"); }
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -1604,8 +1616,9 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -1633,8 +1646,9 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -1647,8 +1661,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
                                         "CDS"};
     Region region(feature, 10, 20, false, false);
     std::vector<std::string> bed_names = {
-        bed_name,
-        std::string(second_bed_name + ":Name"),
+        bed_name, std::string(second_bed_name + ":Name"),
     };
     Genotype dummy;
     region.generate_regions("", "", bed_names, "", "", "", dummy, reporter);
@@ -1677,7 +1690,7 @@ TEST(REGION_GTF_BASIC, NOT_EXIST)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1771,7 +1784,7 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1809,7 +1822,7 @@ TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1847,7 +1860,7 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1886,7 +1899,7 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1926,7 +1939,7 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -1964,7 +1977,7 @@ TEST(REGION_GTF_BASIC, NO_GENE_ID)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, "", bed_names, "", "", "", dummy,
@@ -2060,7 +2073,7 @@ protected:
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
         std::vector<std::string> bed_names = {};
-        Genotype dummy = GenotypeTest();
+        GenotypeTest dummy;
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
                                 dummy, reporter);
         SET_BIT(0, not_found.data());
@@ -2272,7 +2285,7 @@ protected:
                                             "CDS"};
         region = Region(feature, 10, 20, false, false);
         std::vector<std::string> bed_names = {};
-        Genotype dummy = GenotypeTest();
+        GenotypeTest dummy;
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
                                 dummy, reporter);
         SET_BIT(0, not_found.data());
@@ -2474,7 +2487,7 @@ protected:
                                             "CDS"};
         region = Region(feature, 0, 0, false, false);
         std::vector<std::string> bed_names = {};
-        Genotype dummy = GenotypeTest();
+        GenotypeTest dummy;
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
                                 dummy, reporter);
         SET_BIT(0, not_found.data());
@@ -2637,7 +2650,7 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
@@ -2710,7 +2723,7 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
                                         "CDS"};
     Region region(feature, 0, 0, false, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
@@ -2783,7 +2796,7 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
                                         "CDS"};
     Region region(feature, 0, 0, true, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     try
     {
         region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
@@ -2870,7 +2883,7 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
                                         "CDS"};
     Region region(feature, 0, 0, true, true);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "", dummy,
                             reporter);
     // we should have the 2 sets, the base and the background
@@ -2894,8 +2907,9 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -3000,8 +3014,9 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open())
-    { throw std::runtime_error("Error: Cannot open bed file"); }
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -3170,7 +3185,7 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
                                         "CDS"};
     Region region(feature, 0, 0, true, false);
     std::vector<std::string> bed_names = {};
-    Genotype dummy = GenotypeTest();
+    GenotypeTest dummy;
     region.generate_regions(gtf_name, gmt_name, bed_names, "", "", background,
                             dummy, reporter);
     // we should have the 2 sets, the base and the background
