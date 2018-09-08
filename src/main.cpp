@@ -131,7 +131,9 @@ int main(int argc, char* argv[])
                                commander.is_binary(), reporter);
             // set the clumping information to the target file
             target_file->set_info(commander);
-            if (!commander.no_clump() && commander.use_ref()) {
+            if ((!commander.no_clump() || commander.perform_shrinkage())
+                && commander.use_ref())
+            {
                 // load the reference file if we require it
                 reporter.report("Loading reference "
                                 "panel\n==============================\n");
