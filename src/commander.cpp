@@ -1409,6 +1409,12 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                 index_check(m_standard_error, token);
             if (m_base_col_index[+BASE_INDEX::SE] != -1)
                 message["se"] = m_standard_error;
+            else if (m_provided_standard_error)
+            {
+                error_message.append("Warning: " + m_standard_error
+                                     + " not found in base file\n");
+                message.erase("se");
+            }
             m_base_col_index[+BASE_INDEX::P] = index_check(m_p_value, token);
             if (m_base_col_index[+BASE_INDEX::P] != -1)
                 message["pvalue"] = m_p_value;
