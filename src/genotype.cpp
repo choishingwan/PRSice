@@ -2105,8 +2105,8 @@ bool Genotype::get_score(int& cur_index, double& cur_threshold,
 
 void Genotype::perform_shrinkage(Genotype& reference, double maf_bin,
                                  double prevalence, int num_perm,
-                                 uint32_t num_sample, uint32_t num_case,
-                                 uint32_t num_control, bool is_case_control,
+                                 size_t num_sample, size_t num_case,
+                                 size_t num_control, bool is_case_control,
                                  Reporter& reporter)
 {
     reporter.report("Start performing shrinkage adjustment");
@@ -2209,8 +2209,8 @@ void Genotype::adjust_beta(
     // don't know how things work for case control
     // samples
     const double& /*prevalence*/, const size_t& num_perm,
-    const uint32_t& num_sample, const uint32_t& num_case,
-    const uint32_t& num_control, bool is_case_control)
+    const size_t& num_sample, const size_t& num_case, const size_t& num_control,
+    bool is_case_control)
 {
     assert(cur_index >= 0);
     auto total_snp = maf.size();
@@ -2224,7 +2224,7 @@ void Genotype::adjust_beta(
     sigma.reserve(total_snp);
     null_beta.reserve(total_snp);
     null_store.reserve(total_snp);
-    uint32_t sample_size = num_sample;
+    size_t sample_size = num_sample;
     std::vector<double>::size_type num_snp;
     if (is_case_control) sample_size = num_case + num_control;
     double upper = log(static_cast<double>(sample_size - 2));

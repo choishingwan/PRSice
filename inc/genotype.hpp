@@ -479,8 +479,8 @@ public:
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
     void perform_shrinkage(Genotype& reference, double maf_bin,
-                           double prevalence, int num_perm, uint32_t num_sample,
-                           uint32_t num_case, uint32_t num_control,
+                           double prevalence, int num_perm, size_t num_sample,
+                           size_t num_case, size_t num_control,
                            bool is_case_control, Reporter& reporter);
 
 protected:
@@ -590,8 +590,8 @@ protected:
                 const std::unordered_map<int, std::random_device::result_type>&
                     seed_store,
                 const double& prevalence, const size_t& num_perm,
-                const uint32_t& num_sample, const uint32_t& num_case,
-                const uint32_t& num_control, bool is_case_control);
+                const size_t& num_sample, const size_t& num_case,
+                const size_t& num_control, bool is_case_control);
     /*!
      * \brief Calculate the threshold bin based on the p-value and bound
      * info \param pvalue the input p-value \param bound_start is the start
