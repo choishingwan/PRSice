@@ -46,8 +46,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE)
     keep.open(keep_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 123; i < 234; ++i)
-    {
+    for (size_t i = 123; i < 234; ++i) {
         keep << "CAS_" << i << "\t"
              << "CAS_" << i << std::endl;
         keep << "CONT_" << i << "\t"
@@ -70,8 +69,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, REMOVE_SAMPLE)
     remove.open(remove_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 321; i < 432; ++i)
-    {
+    for (size_t i = 321; i < 432; ++i) {
         remove << "CAS_" << i << "\t"
                << "CAS_" << i << std::endl;
         remove << "CONT_" << i << "\t"
@@ -92,8 +90,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE_IID)
     keep.open(keep_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 123; i < 234; ++i)
-    {
+    for (size_t i = 123; i < 234; ++i) {
         keep << "CAS_" << i << std::endl;
         keep << "CONT_" << i << std::endl;
     }
@@ -168,8 +165,9 @@ TEST(BPLINK_FOUNDER, FOUNDER_REMOVE)
     // we still keep the non-founders, just not using them for regression
     ASSERT_EQ(plinkBinary.num_sample(), 2000);
     int sum_founder = 0;
-    for (size_t i = 0; i < 2000; ++i)
-    { sum_founder += plinkBinary.is_founder(i); }
+    for (size_t i = 0; i < 2000; ++i) {
+        sum_founder += plinkBinary.is_founder(i);
+    }
     // NOTE: This was intended to be 859. But our dummy has two of the
     // founders set to have a different FID, the script correctly account for
     // samples in these family to be a fonuder, because while the IID of
@@ -402,14 +400,15 @@ TEST(BPLINK_GEN_SNP, DUP_SNP)
     {
         reporter.report(e.what());
         std::ifstream valid(std::string(out + ".valid").c_str());
-        if (!valid.is_open())
-        {
+        if (!valid.is_open()) {
             // we should have the valid file
             FAIL();
         }
         int num_retain = 0;
         std::string line;
-        while (std::getline(valid, line)) { num_retain++; }
+        while (std::getline(valid, line)) {
+            num_retain++;
+        }
         ASSERT_EQ(num_retain, 88640);
     }
     catch (...)
@@ -508,6 +507,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_BETA)
     bool no_full = false;
     bool beta = true;
     bool is_index = false;
+    bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
     Reporter reporter(std::string(path + "LOG"));
@@ -516,7 +516,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_BETA)
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
                          maf_control, maf_case, info_score, maf_control_filter,
                          maf_case_filter, info_filter, fastscore, no_full, beta,
-                         is_index, region, reporter);
+                         is_index, perform_shrinkage, region, reporter);
     }
     catch (const std::runtime_error& e)
     {
@@ -558,7 +558,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_OR)
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
                          maf_control, maf_case, info_score, maf_control_filter,
                          maf_case_filter, info_filter, fastscore, no_full, beta,
-                         is_index, region, reporter);
+                         is_index, perform_shrinkage, region, reporter);
     }
     catch (const std::runtime_error& e)
     {
@@ -597,7 +597,7 @@ TEST_F(BPLINK_BASE_READ, PROBLEM_OR)
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
                          maf_control, maf_case, info_score, maf_control_filter,
                          maf_case_filter, info_filter, fastscore, no_full, beta,
-                         is_index, region, reporter);
+                         is_index, perform_shrinkage, region, reporter);
     }
     catch (const std::runtime_error& e)
     {
@@ -641,7 +641,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_P)
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
                          maf_control, maf_case, info_score, maf_control_filter,
                          maf_case_filter, info_filter, fastscore, no_full, beta,
-                         is_index, region, reporter);
+                         is_index, perform_shrinkage, region, reporter);
     }
     catch (const std::runtime_error& e)
     {
@@ -685,7 +685,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_COORDINATE)
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
                          maf_control, maf_case, info_score, maf_control_filter,
                          maf_case_filter, info_filter, fastscore, no_full, beta,
-                         is_index, region, reporter);
+                         is_index, perform_shrinkage, region, reporter);
         FAIL();
     }
     catch (const std::runtime_error& e)
