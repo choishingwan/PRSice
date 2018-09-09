@@ -169,7 +169,8 @@ int main(int argc, char* argv[])
                 commander.perform_maf_base_case_filter(),
                 commander.perform_base_info_score_filter(),
                 commander.fastscore(), commander.no_full(), commander.beta(),
-                commander.is_index(), region, reporter);
+                commander.is_index(), commander.perform_shrinkage(), region,
+                reporter);
             // remove all boundaries from the region object to free up memory
             region.clean();
             // skip clumping if not required
@@ -192,12 +193,18 @@ int main(int argc, char* argv[])
 
             if (commander.perform_shrinkage()) {
                 // Perform order statistic shrinkage using the reference panel
+                double max_p_value =
+                    (commander.no_full())
+                        ? (commander.fastscore() ? commander.bar_upper()
+                                                 : commander.upper())
+                        : 1;
                 target_file->perform_shrinkage(
                     commander.use_ref() ? *reference_file : *target_file,
                     commander.maf_bin(), commander.base_prevalence(),
-                    commander.num_shrinkage_perm(), commander.num_sample(),
-                    commander.num_case(), commander.num_control(),
-                    commander.base_is_binary(), reporter);
+                    max_p_value, commander.num_shrinkage_perm(),
+                    commander.num_sample(), commander.num_case(),
+                    commander.num_control(), commander.base_is_binary(),
+                    reporter);
             }
 
             if (commander.use_ref()) delete reference_file;

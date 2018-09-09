@@ -373,17 +373,15 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
 
 Genotype::~Genotype() {}
 
-void Genotype::read_base(const std::string& base_file, const std::string& out,
-                         const std::vector<int>& col_index,
-                         const std::vector<double>& barlevels,
-                         const double& bound_start, const double& bound_inter,
-                         const double& bound_end, const double& maf_control,
-                         const double& maf_case, const double& info_threshold,
-                         const bool maf_control_filter,
-                         const bool maf_case_filter, const bool info_filter,
-                         const bool fastscore, const bool no_full,
-                         const bool is_beta, const bool is_index,
-                         Region& region, Reporter& reporter)
+void Genotype::read_base(
+    const std::string& base_file, const std::string& out,
+    const std::vector<int>& col_index, const std::vector<double>& barlevels,
+    const double& bound_start, const double& bound_inter,
+    const double& bound_end, const double& maf_control, const double& maf_case,
+    const double& info_threshold, const bool maf_control_filter,
+    const bool maf_case_filter, const bool info_filter, const bool fastscore,
+    const bool no_full, const bool is_beta, const bool is_index,
+    const bool run_shrinkage, Region& region, Reporter& reporter)
 {
     // can assume region is of the same order as m_existed_snp
     // because they use the same chr encoding and similar sorting algorithm
@@ -411,7 +409,9 @@ void Genotype::read_base(const std::string& base_file, const std::string& out,
     double max_threshold =
         fastscore ? *std::max_element(barlevels.begin(), barlevels.end())
                   : bound_end;
-    if (!no_full) max_threshold = 1.0;
+    // if we are going to perform shrinkage, we should not remove SNPs based on
+    // P-value as that will change the effective number of SNPs etc
+    if (!no_full || run_shrinkage) max_threshold = 1.0;
     // Start reading the base file. If the base file contain gz as its suffix,
     // we will read it as a gz file
     bool gz_input = false;
@@ -2104,10 +2104,10 @@ bool Genotype::get_score(int& cur_index, double& cur_threshold,
 }
 
 void Genotype::perform_shrinkage(Genotype& reference, double maf_bin,
-                                 double prevalence, int num_perm,
-                                 size_t num_sample, size_t num_case,
-                                 size_t num_control, bool is_case_control,
-                                 Reporter& reporter)
+                                 double prevalence, const double max_p_value,
+                                 int num_perm, size_t num_sample,
+                                 size_t num_case, size_t num_control,
+                                 bool is_case_control, Reporter& reporter)
 {
     reporter.report("Start performing shrinkage adjustment");
     const bool use_reference = (&reference == this);
@@ -2198,6 +2198,26 @@ void Genotype::perform_shrinkage(Genotype& reference, double maf_bin,
     }
     for (auto&& thread : thread_store) {
         thread.join();
+    }
+    // now remove SNP with p-value larger than certain number
+    std::vector<bool> retain(m_existed_snps.size(), false);
+    size_t num_retained = 0;
+    bool retained = false;
+    for (size_t i = 0; i < m_existed_snps.size(); ++i) {
+
+        retained = !(m_existed_snps[i].p_value() > max_p_value);
+        retain[i] = retained;
+        num_retained += retained;
+    }
+    if (num_retained != m_existed_snps.size()) {
+        // remove all SNPs that we don't want to retain
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain, this](const SNP& s) {
+                               return !retain[&s - &*begin(m_existed_snps)];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
     }
 }
 

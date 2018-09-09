@@ -218,7 +218,8 @@ public:
                    const bool maf_control_filter, const bool maf_case_filter,
                    const bool info_filter, const bool fastscore,
                    const bool no_full, const bool is_beta, const bool is_index,
-                   Region& region, Reporter& reporter);
+                   const bool run_shrinkage, Region& region,
+                   Reporter& reporter);
     /*!
      * \brief Function to carry out clumping. One of the most complicated
      * function.
@@ -479,9 +480,10 @@ public:
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
     void perform_shrinkage(Genotype& reference, double maf_bin,
-                           double prevalence, int num_perm, size_t num_sample,
-                           size_t num_case, size_t num_control,
-                           bool is_case_control, Reporter& reporter);
+                           double prevalence, const double max_p_value,
+                           int num_perm, size_t num_sample, size_t num_case,
+                           size_t num_control, bool is_case_control,
+                           Reporter& reporter);
 
 protected:
     // friend with all child class so that they can also access the
