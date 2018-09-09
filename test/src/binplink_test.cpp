@@ -550,6 +550,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_OR)
     bool no_full = false;
     bool beta = false;
     bool is_index = false;
+    bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
     Reporter reporter(std::string(path + "LOG"));
@@ -589,6 +590,7 @@ TEST_F(BPLINK_BASE_READ, PROBLEM_OR)
     bool no_full = false;
     bool beta = false;
     bool is_index = false;
+    bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
     Reporter reporter(std::string(path + "LOG"));
@@ -633,6 +635,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_P)
     bool no_full = false;
     bool beta = true;
     bool is_index = false;
+    bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
     Reporter reporter(std::string(path + "LOG"));
@@ -677,6 +680,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_COORDINATE)
     bool no_full = false;
     bool beta = true;
     bool is_index = false;
+    bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
     Reporter reporter(std::string(path + "LOG"));
