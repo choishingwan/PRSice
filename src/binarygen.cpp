@@ -591,7 +591,29 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
     // first pass to get the total SNP number such that we can speed up the
     // push back might need time to reserve large amount of memory for the
     // large number of SNPs included in bgen
-    snp_res.reserve(total_unfiltered_snps);
+    try{
+        // this might be overkill if user uses something like the --info, --maf, --extract
+        // but this is the easiest way. Better let user know what level of memory they should have
+        snp_res.reserve(total_unfiltered_snps);
+    }catch(...){
+        std::string error_message = "Error: Insufficient memory!";
+        double memory = total_unfiltered_snps *sizeof (SNP);
+        std::string unit= "byte";
+        if(memory > 1024){
+            unit = "KB";
+            memory /= 1024.0;
+        }
+        if(memory > 1024){
+            unit = "MB";
+            memory /= 1024.0;
+        }
+        if(memory > 1024){
+            unit = "GB";
+            memory /= 1024.0;
+        }
+        error_message.append(" It is estimated that you need at least "+misc::to_string(std::ceil(memory))+unit+" ram\n");
+        throw std::runtime_error(error_message);
+    }
     // to allow multiple file for one chromosome, we put these variable
     // outside the for loop
     if (m_intermediate) {
