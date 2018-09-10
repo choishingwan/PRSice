@@ -588,7 +588,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
 
 
     if (m_print_all_scores) message_store["all-score"] = "";
-    if (m_allow_inter) message_store["allow-intermediate"] = "";
+    if (m_allow_inter) message_store["allow-inter"] = "";
     if (m_stat_is_beta) message_store["beta"] = "";
     if (m_fastscore) message_store["fastscore"] = "";
     if (m_target_is_hard_coded) message_store["hard"] = "";

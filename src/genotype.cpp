@@ -356,7 +356,7 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
     }
     if (m_num_info_filter != 0) {
         message.append(
-            std::to_string(m_num_maf_filter)
+            std::to_string(m_num_info_filter)
             + " variant(s) excluded based on INFO score threshold\n");
     }
     if (!m_is_ref) {
