@@ -50,6 +50,7 @@ private:
     std::string m_cur_file;
     std::string m_intermediate_file;
     std::streampos m_prev_loc = 0;
+    std::string m_base_file;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -92,7 +93,7 @@ private:
                    const bool hard_coded, const double& info_threshold,
                    const bool info_filter, Region& exclusion,
                    Genotype* target = nullptr);
-    ;
+
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map
@@ -205,6 +206,7 @@ private:
             if (!m_bgen_file.is_open()) {
                 std::string error_message =
                     "Error: Cannot open bgen file: " + bgen_name;
+                if (intermediate) error_message.append(" (intermediate file)");
                 throw std::runtime_error(error_message);
             }
             // reset the name of current file

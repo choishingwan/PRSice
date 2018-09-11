@@ -28,9 +28,10 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     m_is_ref = is_ref;
     const bool no_regress = commander.no_regress();
     const std::string pheno_file = commander.pheno_file();
+    const std::string base_file = commander.base_name();
     // set the chromosome information
-    // will need to add more script here if we want to support something other
-    // than human
+    // will need to add more script here if we want to support something
+    // other than human
     m_xymt_codes.resize(XYMT_OFFSET_CT);
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     // main use of following function is to set the max code
@@ -90,6 +91,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     }
     else
     {
+
         std::string target_name;
         if (commander.target_list(target_name)) {
             // has listed input
@@ -591,27 +593,33 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
     // first pass to get the total SNP number such that we can speed up the
     // push back might need time to reserve large amount of memory for the
     // large number of SNPs included in bgen
-    try{
-        // this might be overkill if user uses something like the --info, --maf, --extract
-        // but this is the easiest way. Better let user know what level of memory they should have
+    try
+    {
+        // this might be overkill if user uses something like the --info, --maf,
+        // --extract but this is the easiest way. Better let user know what
+        // level of memory they should have
         snp_res.reserve(total_unfiltered_snps);
-    }catch(...){
+    }
+    catch (...)
+    {
         std::string error_message = "Error: Insufficient memory!";
-        double memory = total_unfiltered_snps *sizeof (SNP);
-        std::string unit= "byte";
-        if(memory > 1024){
+        double memory = total_unfiltered_snps * sizeof(SNP);
+        std::string unit = "byte";
+        if (memory > 1024) {
             unit = "KB";
             memory /= 1024.0;
         }
-        if(memory > 1024){
+        if (memory > 1024) {
             unit = "MB";
             memory /= 1024.0;
         }
-        if(memory > 1024){
+        if (memory > 1024) {
             unit = "GB";
             memory /= 1024.0;
         }
-        error_message.append(" It is estimated that you need at least "+misc::to_string(std::ceil(memory))+unit+" ram\n");
+        error_message.append(" It is estimated that you need at least "
+                             + misc::to_string(std::ceil(memory)) + unit
+                             + " ram\n");
         throw std::runtime_error(error_message);
     }
     // to allow multiple file for one chromosome, we put these variable
