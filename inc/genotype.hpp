@@ -557,6 +557,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    uint32_t m_base_missed = 0;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_is_ref = false;

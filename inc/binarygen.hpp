@@ -51,6 +51,7 @@ private:
     std::string m_intermediate_file;
     std::streampos m_prev_loc = 0;
     std::string m_base_file;
+    size_t m_rs_id_index;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -158,8 +159,7 @@ private:
         }
         // if not, we will try to parse the binary GEN format into a plink
         // format (using the default intermediate flag = false)
-        else if (load_and_collapse_incl(byte_pos, file_name,
-                                        m_founder_info.data(), genotype))
+        else if (load_and_collapse_incl(byte_pos, file_name, genotype))
         {
             throw std::runtime_error("Error: Cannot read the bgen file!");
         }

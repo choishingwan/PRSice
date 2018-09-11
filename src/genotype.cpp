@@ -336,6 +336,11 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
                        hard_coded, info, info_filter, exclusion, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
+    if (!m_is_ref && m_base_missed) {
+        message.append(
+            misc::to_string(m_base_missed)
+            + " variant(s) were pre-filtered as they did not appeared in base");
+    }
     if (m_num_ambig != 0 && !m_keep_ambig) {
         message.append(std::to_string(m_num_ambig)
                        + " ambiguous variant(s) excluded\n");
@@ -367,6 +372,7 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
         message.append(std::to_string(target->m_existed_snps.size())
                        + " variant(s) remained\n");
     }
+
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
 }

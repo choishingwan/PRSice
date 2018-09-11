@@ -28,7 +28,8 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     m_is_ref = is_ref;
     const bool no_regress = commander.no_regress();
     const std::string pheno_file = commander.pheno_file();
-    const std::string base_file = commander.base_name();
+    m_base_file = commander.base_name();
+    m_rs_id_index = static_cast<size_t>(commander.index()[+BASE_INDEX::RS]);
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -519,6 +520,48 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                           const double& info_threshold, const bool info_filter,
                           Region& exclusion, Genotype* target)
 {
+    // before we do anything, do a super quick pre-filtering of SNPs
+    std::unordered_set<std::string> base_snps;
+    std::ifstream base_file;
+    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
+    bool gz_input = false;
+    if (m_base_file.substr(m_base_file.find_last_of(".") + 1).compare("gz")
+        == 0)
+    {
+        gz_snp_file.open(m_base_file.c_str());
+        if (!gz_snp_file.good()) {
+            std::string error_message = "Error: Cannot open base file: "
+                                        + m_base_file + " (gz) to read!\n";
+            throw std::runtime_error(error_message);
+        }
+        gz_input = true;
+    }
+    else
+    {
+        base_file.open(m_base_file.c_str());
+        if (!base_file.is_open()) {
+            std::string error_message =
+                "Error: Cannot open base file: " + m_base_file;
+            throw std::runtime_error(error_message);
+        }
+    }
+    std::string line;
+    std::vector<std::string> token;
+    // don't read if this is the reference panels.
+    while (!m_is_ref
+           && ((!gz_input && std::getline(base_file, line))
+               || (gz_input && std::getline(gz_snp_file, line))))
+    {
+        misc::trim(line);
+        if (line.empty()) continue;
+        token = misc::split(line);
+        if (token.size() <= m_rs_id_index) {
+            std::string error_message = "Error: ";
+            throw std::runtime_error(error_message);
+        }
+        base_snps.insert(token[m_rs_id_index]);
+    }
+    base_file.close();
     m_hard_coded = hard_coded;
     m_hard_threshold = hard_threshold;
     const uintptr_t unfiltered_sample_ctl =
@@ -732,6 +775,11 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
             {
                 // remove the SNP if it is within the exclusion region
                 exclude_snp = true;
+            }
+            // only do this if it is not reference panel
+            if (!m_is_ref && base_snps.find(RSID) == base_snps.end()) {
+                exclude_snp = true;
+                ++m_base_missed;
             }
             if (duplicate_check_list.find(RSID) != duplicate_check_list.end()) {
                 duplicated_snps.insert(RSID);
