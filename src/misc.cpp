@@ -27,7 +27,8 @@ double dnorm(double x, double mu, double sigma, bool log)
 #endif
     if (!(std::isfinite(sigma))) return 0.0;
     if (!(std::isfinite(x)) && mu == x) throw std::runtime_error("NA produced");
-    if (sigma <= 0) {
+    if (sigma <= 0)
+    {
         if (sigma < 0) throw std::runtime_error("Negative sigma not allowed");
         return (x == mu) ? std::numeric_limits<double>::infinity() : 0.0;
     }
@@ -181,12 +182,13 @@ std::vector<std::string> split(const std::string& seq,
 {
     std::size_t prev = 0, pos;
     std::vector<std::string> result;
-    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
-        if (pos > prev) result.push_back(seq.substr(prev, pos - prev));
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
+    {
+        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
     if (prev < seq.length())
-        result.push_back(seq.substr(prev, std::string::npos));
+        result.emplace_back(seq.substr(prev, std::string::npos));
     return result;
 }
 }

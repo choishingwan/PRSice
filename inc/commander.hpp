@@ -41,7 +41,7 @@
 #include <windows.h>
 #endif
 const std::string version = "2.1.3.beta";
-const std::string date = "20 July 2018";
+const std::string date = "5 September 2018";
 class Commander
 {
 public:
@@ -50,346 +50,816 @@ public:
     bool init(int argc, char* argv[], Reporter& reporter);
 
     // base
-    std::vector<int> index() const { return base.col_index; };
-    bool is_index() const { return base.is_index; };
-    bool beta() const { return base.is_beta; };
-    double base_info_score() const { return base.info_score_threshold; };
-    double maf_base_control() const { return base.maf_control_threshold; };
-    std::string base_name() const { return base.name; };
-    double maf_base_case() const { return base.maf_case_threshold; };
+    /*!
+     * \brief Return the column index of the base file
+     * \return The column index of the base
+     */
+    std::vector<int> index() const { return m_base_col_index; }
+    /*!
+     * \brief Get the base file name
+     * \return Base file name
+     */
+    std::string base_name() const { return m_base_file; }
+
+    /*!
+     * \brief Get the base info score threshold
+     * \return return the base info score filtering threshold, 0.0 if not used
+     */
+    double base_info_score() const
+    {
+        if (!m_provided_info_threshold) return 0.0;
+        return m_base_info_threshold;
+    }
+    /*!
+     * \brief Return if base info score filtering should be performed
+     * \return T if it should be
+     */
+    bool perform_base_info_score_filter() const
+    {
+        return m_provided_info_threshold;
+    }
+    /*!
+     * \brief Get the base maf threshold for controls
+     * \return return the maf base control filtering threshold, 0.0 if not used
+     */
+    double maf_base_control() const
+    {
+        if (!m_perform_base_maf_control_filter) return 0.0;
+        return m_control_maf_threshold;
+    }
+    /*!
+     * \brief Return if base maf control filter should be performed
+     * \return  T if it should be
+     */
+    bool perform_maf_base_control_filter() const
+    {
+        return m_perform_base_maf_control_filter;
+    }
+    /*!
+     * \brief Get the base maf threshold for cases
+     * \return return the maf base case filtering threshold, 0.0 if not used
+     */
+    double maf_base_case() const
+    {
+        if (!m_perform_base_maf_case_filter) return 0.0;
+        return m_case_maf_threshold;
+    } /*!
+       * \brief Return if base maf case filter should be performed
+       * \return  T if it should be
+       */
+    bool perform_maf_base_case_filter() const
+    {
+        return m_perform_base_maf_case_filter;
+    }
+    /*!
+     * \brief Check if column input is in index form
+     * \return true if input is in index
+     */
+    bool is_index() const { return m_input_is_index; }
+    /*!
+     * \brief Check if input statistic is beta
+     * \return true if it is beta
+     */
+    bool beta() const { return m_stat_is_beta; }
 
     // clump
-    bool no_clump() const { return clumping.no_clump; };
-    bool use_proxy() const { return clumping.provided_proxy; };
-    double proxy() const { return clumping.proxy; };
-    double clump_p() const { return clumping.p_value; };
-    double clump_r2() const { return clumping.r2; };
-    double clump_dist() const { return clumping.distance * 1000; };
+    /*!
+     * \brief Get proxy clump threshold
+     * \param storage of threshold
+     * \return true if proxy clump is to be performed
+     */
+    bool proxy(double& threshold) const
+    {
+        threshold = m_proxy_threshold;
+        return m_use_proxy_clump;
+    }
+    /*!
+     * \brief Get p-value threshold for clumping
+     * \return p-value threshold
+     */
+    double clump_p() const { return m_clump_p; }
+    /*!
+     * \brief Get r2 threshold for clumping
+     * \return R2 threshold
+     */
+    double clump_r2() const { return m_clump_r2; }
+    /*!
+     * \brief Get clumping distance in \b bp
+     * \return Clumping distance in bp
+     */
+    int clump_dist() const { return m_clump_distance; }
+    /*!
+     * \brief Check if user want to skip clumping
+     * \return true if user want to skip clumping
+     */
+    bool no_clump() const { return m_no_clump; }
+    /*!
+     * \brief Check if user want to perform proxy clumping
+     * \return true if user want to perform proxy clumping
+     */
+    bool use_proxy() const { return m_use_proxy_clump; }
 
     // covariate
-    std::string get_cov_file() const { return covariate.file_name; };
-    std::vector<uint32_t> get_cov_index() const
-    {
-        return covariate.covariate_index;
-    };
-    std::vector<std::string> get_cov_name() const
-    {
-        return covariate.covariates;
-    };
+    /*!
+     * \brief Return the covariate file name
+     * \return The covariate file name. An empty string if user did not
+     *         provide a covariate file
+     */
+    std::string get_cov_file() const { return m_cov_file; }
+    /*!
+     * \brief Get the name of the covariates
+     * \return The name of the covariates in form of vector
+     */
+    std::vector<std::string> get_cov_name() const { return m_cov_colname; }
+    /*!
+     * \brief Get the index of the covariates
+     * \return The column index of the covariates
+     */
+    std::vector<uint32_t> get_cov_index() const { return m_col_index_of_cov; }
+    /*!
+     * \brief Get the index of the covariate that are factor
+     * \return The column index of the factor covariates
+     */
     std::vector<uint32_t> get_factor_cov_index() const
     {
-        return covariate.factor_index;
+        return m_col_index_of_factor_cov;
     }
     // reference panel
+    /*!
+     * \brief Function to return the reference file name
+     * \param String to store the reference file name to
+     * \return True if reference file is provided, false otherwise
+     */
+    bool ref_name(std::string& ref_name) const
+    {
+        ref_name = m_ref_file;
+        return m_use_reference;
+    }
+    /*!
+     * \brief Function to directly return the reference file name
+     * \return empty if reference file name is not provided
+     */
     std::string ref_name() const
     {
-        return (reference_panel.file_name.empty()) ? "-"
-                                                   : reference_panel.file_name;
-    };
-    std::string ref_list() const { return reference_panel.multi_name; };
-    std::string ref_type() const { return reference_panel.type; };
-    std::string ld_keep_file() const { return reference_panel.keep_file; };
-    std::string ld_remove_file() const { return reference_panel.remove_file; };
+        if (m_use_reference) return m_ref_file;
+        return "";
+    }
+    /*!
+     * \brief Function to return the file name containing names to the reference
+     *        files
+     * \param String to store the file name
+     * \return true if file is provided, false otherwise
+     */
+    bool ref_list(std::string& ref_list) const
+    {
+        ref_list = m_ref_list;
+        return m_ref_list_provided;
+    }
+    /*!
+     * \brief function to directly return the file name contain names to the
+     * reference files
+     * \return empty string if reference list file is not provided
+     */
+    std::string ref_list() const
+    {
+        if (m_ref_list_provided) return m_ref_list;
+        return "";
+    }
+    /*!
+     * \brief Return the type of the reference file
+     * \return the type of the reference file
+     */
+    std::string ref_type() const { return m_ref_type; }
+    /*!
+     * \brief Return the file containing samples to keep in reference
+     * \return The file name of the keep file
+     */
+    std::string ref_keep_file() const { return m_ref_keep; }
+    /*!
+     * \brief Return the file containing samples to remove in reference
+     * \return The file name of the remove file
+     */
+    std::string ref_remove_file() const { return m_ref_remove; }
+    /*!
+     * \brief Check if reference panel is used
+     * \return true if reference panel is used
+     */
+    bool use_ref() const { return m_use_reference; }
+    /*!
+     * \brief Check if intermediate file is allowed
+     * \return true if intermeidate file is allowed
+     */
+    bool use_inter() const { return m_allow_inter; }
     // reference filtering
-    double ld_geno() const { return reference_snp_filtering.geno; };
-    double ld_hard_threshold() const
+    /*!
+     * \brief Get genotype filtering threshold for reference
+     * \param geno is the storage of threshold
+     * \return true if user want to perform genotype missingness filtering
+     */
+    bool ref_geno(double& geno) const
     {
-        return reference_snp_filtering.hard_threshold;
-    };
-    double ld_maf() const { return reference_snp_filtering.maf; };
-    double ld_info() const { return reference_snp_filtering.info_score; };
-    bool use_ref() const
+        geno = m_ref_geno;
+        return m_perform_ref_geno_filter;
+    }
+    /*!
+     * \brief Get the hard threshold for reference
+     * \param threshold is the storage of threshold
+     * \return true if hard thresholding is required
+     */
+    bool ref_hard_threshold(double& threshold) const
     {
-        return (!reference_panel.file_name.empty()
-                || !reference_panel.multi_name.empty());
-    };
-    bool intermediate() const { return reference_panel.allow_inter; };
+        threshold = m_ref_hard_threshold;
+        return m_perform_ref_hard_thresholding;
+    }
+    /*!
+     * \brief Get the MAF filtering threshold for reference
+     * \param maf is the storage of the threshold
+     * \return true if maf filtering is required
+     */
+    bool ref_maf(double& maf) const
+    {
+        maf = m_ref_maf;
+        return m_perform_ref_maf_filter;
+    }
+    /*!
+     * \brief Get the info score threshold for reference
+     * \param info is the storage of threshold
+     * \return true if info score filtering is required
+     */
+    bool ref_info(double& info) const
+    {
+        info = m_ref_info_score;
+        return m_perform_ref_info_filter;
+    }
     // misc
-    std::string out() const { return misc.out; };
-    std::string exclusion_range() const { return misc.exclusion_range; };
-    bool all_scores() const { return misc.print_all_scores; };
-    bool cumulate() const { return !misc.non_cumulate; };
-    bool ignore_fid() const { return misc.ignore_fid; };
-    bool logit_perm() const { return misc.logit_perm; };
-    bool print_snp() const { return misc.print_snp; };
-    bool pearson() const { return misc.pearson; };
-    int permutation() const { return misc.permutation; };
-    int seed() const { return misc.seed; };
-    int thread() const { return misc.thread; };
+    /*!
+     * \brief Get output prefix
+     * \return the output prefix
+     */
+    std::string out() const { return m_out_prefix; }
+    /*!
+     * \brief Get the exclusion_range
+     * \return The string containign the exclusion range
+     */
+    std::string exclusion_range() const { return m_exclusion_range; }
+    /*!
+     * \brief Return if all score should be printed
+     * \return True if all score should be printed
+     */
+    bool all_scores() const { return m_print_all_scores; }
+    /*!
+     * \brief Return if non-cumulative PRS should be calculated
+     * \return True for non-cumulative PRS calculation
+     */
+    bool non_cumulate() const { return m_non_cumulate_prs; }
+    /*!
+     * \brief Return if we should ignore the FID field for all input
+     * \return True if we should
+     */
+    bool ignore_fid() const { return m_ignore_fid; }
+    /*!
+     * \brief Return if we should perform logistic regression for permutation
+     * \return true if we should
+     */
+    bool logit_perm() const { return m_logit_perm; }
+    /*!
+     * \brief Return if we should generate the .snp file
+     * \return true if we should
+     */
+    bool print_snp() const { return m_print_snp; }
+    /*!
+     * \brief Return if pearson correlation should be used instead
+     * \return True if pearson correlation should be used
+     */
+    bool pearson() const { return m_pearson; }
+    /*!
+     * \brief Get the number of permutation to be performed
+     * \param perm stores the number of permutation to be performed
+     * \return true if we want to perform permutation
+     */
+    bool num_perm(int& perm) const
+    {
+        perm = m_permutation;
+        return m_perform_permutation;
+    }
+    /*!
+     * \brief Return the seed used for the run
+     * \return the seed
+     */
+    std::random_device::result_type seed() const { return m_seed; }
+    /*!
+     * \brief Return the number of thread to be used
+     * \return the number of thread
+     */
+    int thread() const { return m_thread; }
+    /*!
+     * \brief Return the maximum memory allowed to use
+     * \param detected should be the available memory
+     * \return Maximum memory we can use
+     */
     size_t max_memory(const size_t detected) const
     {
-        if (!misc.provided_memory)
-            return detected;
-        else
-            return (misc.memory > detected) ? detected : misc.memory;
+        return (!m_provided_memory || m_memory > detected) ? detected
+                                                           : m_memory;
     }
     // p_thresholds
-    double bar_upper() const { return p_thresholds.barlevel.back(); };
+    /*!
+     * \brief Obtain the largest bar level
+     * \return the largest bar level threshold
+     */
+    double bar_upper() const
+    {
+        return *std::max_element(m_barlevel.begin(), m_barlevel.end());
+    }
+    /*!
+     * \brief Return the full bar level
+     * \return the vector containing the sorted bar levels
+     */
+    std::vector<double> bar_levels() const { return m_barlevel; }
+    /*!
+     * \brief Return the p-value threshold corresponding to the category.
+     *        For fastscoring only
+     * \param i is the category id
+     * \return the p-value threshold corresponding to the category id
+     */
     double get_threshold(int i) const
     {
-        return (i < 0) ? p_thresholds.barlevel.at(0)
-                       : ((i >= (int) p_thresholds.barlevel.size())
-                              ? 1.0
-                              : p_thresholds.barlevel.at(i));
-    };
-    double lower() const { return p_thresholds.lower; };
-    double upper() const { return p_thresholds.upper; };
-    double inter() const { return p_thresholds.inter; };
+        // Any category less than 0 is assume to be 0
+        if (i < 0) return m_barlevel.front();
+        // Any category larger than the bar-level size will be assumed to have p
+        // threshold of 1
+        // use intermediate to avoid implicite conversion
+        auto&& index = static_cast<std::vector<int>::size_type>(i);
+        if (index > m_barlevel.size()) return 1.0;
+        return m_barlevel.at(index);
+    }
+    /*!
+     * \brief Get the starting threhsold for high resolution scoring
+     * \return The starting threshold
+     */
+    double lower() const { return m_lower_threshold; }
+    /*!
+     * \brief Get the last threhsold for high resolution scoring
+     * \return The last threshold
+     */
+    double upper() const { return m_upper_threshold; }
+    /*!
+     * \brief Get the step size for high resolution scoring
+     * \return The step size
+     */
+    double inter() const { return m_inter_threshold; }
 
+    /*!
+     * \brief Given a p-value, generate the category ID from the bar-level input
+     * \param p the input p-value
+     * \return the category ID based on the bar-level input
+     */
     int get_category(double p) const
     {
-        for (size_t i = 0; i < p_thresholds.barlevel.size(); ++i) {
-            if (p <= p_thresholds.barlevel[i]) {
-                return i;
-            }
+        // iterate through the bar-level and return first index
+        // containing p-value larger than or equal to the input p-value
+        for (std::vector<int>::size_type i = 0; i < m_barlevel.size(); ++i)
+        {
+            if (p < m_barlevel[i] || misc::logically_equal(p, m_barlevel[i]))
+                return static_cast<int>(i);
         }
-        if (p > p_thresholds.barlevel.back())
-            return p_thresholds.barlevel.size();
-        return -2; // this is impossible because something will always either be
-                   // bigger than the end or smaller than the front
-    };
-    bool no_full() const { return p_thresholds.no_full; };
-    bool fastscore() const { return p_thresholds.fastscore; };
+        return static_cast<int>(m_barlevel.size());
+    }
+    /*!
+     * \brief Check if user do not want to include p-value threshold of 1
+     * \return True if user do not want to include p-value threshold of 1
+     */
+    bool no_full() const { return m_no_full; }
+    /*!
+     * \brief Check if user wants to perform fastscoring
+     * \return true if user wants to perform fastscoring
+     */
+    bool fastscore() const { return m_fastscore; }
 
     // prs_calculation
-    MISSING_SCORE get_missing_score() const
-    {
-        std::string s = prs_calculation.missing_score;
-        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-        if (s == "NO_MEAN_IMPUTATION")
-            return MISSING_SCORE::SET_ZERO;
-        else if (s == "CENTER")
-            return MISSING_SCORE::CENTER;
-        else
-            return MISSING_SCORE::MEAN_IMPUTE;
-    }
-
-    SCORING get_score() const
-    {
-        std::string s = prs_calculation.score_calculation;
-        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-        if (s == "STD")
-            return SCORING::STANDARDIZE;
-        else if (s == "SUM")
-            return SCORING::SUM;
-        else
-            return SCORING::AVERAGE;
-    }
-
-    MODEL model() const { return prs_calculation.model; };
-    bool no_regress() const { return prs_calculation.no_regress; };
+    /*!
+     * \brief Get the missing score handling method
+     * \return return the missing score enum
+     */
+    MISSING_SCORE get_missing_score() const { return m_missing_score; }
+    /*!
+     * \brief Get the PRS score calculation method
+     * \return  return the scoring enum
+     */
+    SCORING get_score() const { return m_scoring_method; }
+    /*!
+     * \brief Get the genetic model use for calculation
+     * \return return the model enum
+     */
+    MODEL model() const { return m_genetic_model; }
+    /*!
+     * \brief Indicate if we want to skip performing regression
+     * \return true if regression is to be skipped
+     */
+    bool no_regress() const { return m_no_regress; }
 
     // prs_snp_filtering
-    std::string exclude_file() const { return prs_snp_filtering.exclude_file; };
-    std::string extract_file() const { return prs_snp_filtering.extract_file; };
-    double geno() const { return prs_snp_filtering.geno; };
-    double hard_threshold() const { return prs_snp_filtering.hard_threshold; };
-    double maf() const { return prs_snp_filtering.maf; };
-    double info() const { return prs_snp_filtering.info_score; };
-    bool hard_coded() const { return prs_snp_filtering.is_hard_coded; };
-    bool keep_ambig() const { return prs_snp_filtering.keep_ambig; };
+    /*!
+     * \brief Return the file name of the exclusion file
+     * \return the name of the exclusion file
+     */
+    std::string exclude_file() const { return m_exclude_file; }
+    /*!
+     * \brief Return the file name of the extraction file
+     * \return the name of the extract file
+     */
+    std::string extract_file() const { return m_extract_file; }
+    /*!
+     * \brief Get the genotype filtering threshold of target
+     * \param The threshold is stored in geno
+     * \return True if genotype filtering is required
+     */
+    bool target_geno(double& geno) const
+    {
+        geno = m_target_geno;
+        return m_target_geno_filter;
+    }
+    /*!
+     * \brief Get the hard threshold of target
+     * \param threshold stores the hard threshold
+     * \return return true if hard thresholding is required
+     */
+    bool target_hard_threshold(double& threshold) const
+    {
+        threshold = m_target_hard_threshold;
+        return m_target_hard_thresholding;
+    }
+    /*!
+     * \brief Get the maf filtering threshold of target
+     * \param The threshold is stored in maf
+     * \return True if maf filtering is required
+     */
+    bool target_maf(double& maf) const
+    {
+        maf = m_target_maf;
+        return m_target_maf_filter;
+    }
+
+    /*!
+     * \brief Get the INFO filtering threshold of target
+     * \param The threshold is stored in info
+     * \return True if INFO filtering is required
+     */
+    bool target_info(double& info) const
+    {
+        info = m_target_info_score;
+        return m_target_info_filter;
+    }
+
+    /*!
+     * \brief check if target should be hard coded
+     * \return true if target should be hard coded
+     */
+    bool hard_coded() const { return m_target_is_hard_coded; }
+    /*!
+     * \brief Check if we should retain ambiguous SNPs
+     * \return true if ambiguous SNPs should be retained
+     */
+    bool keep_ambig() const { return m_keep_ambig; }
 
     // prset
-    std::vector<std::string> bed() const { return prset.bed; };
-    std::vector<std::string> feature() const { return prset.feature; };
-    std::string gtf() const { return prset.gtf; };
-    std::string msigdb() const { return prset.msigdb; };
-    std::string single_snp_set() const { return prset.single_snp_set; };
-    std::string multi_snp_sets() const { return prset.multi_snp_sets; };
-    std::string background() const { return prset.background; };
-    int set_perm() const { return prset.set_perm; };
-    // prslice
-    bool perform_prslice() const { return prslice.provided; };
-    bool perform_set_perm() const { return prset.perform_set_perm; }
-    int prslice_size() const { return prslice.size; };
-    int window_5() const { return prset.window_5; };
-    int window_3() const { return prset.window_3; };
-    // target
-    std::string target_name() const
-    {
-        return (target.name.empty()) ? "-" : target.name;
-    };
-    std::string target_list() const { return target.multi_name; };
-    std::string target_type() const { return target.type; };
-    std::string pheno_file() const { return target.pheno_file; };
-    std::string pheno_col(size_t index) const
-    {
-        return target.pheno_col.at(index);
-    };
-    std::string keep_sample_file() const { return target.keep_file; };
-    std::string remove_sample_file() const { return target.remove_file; };
-    std::vector<std::string> pheno_col() const { return target.pheno_col; };
-    std::vector<bool> is_binary() const { return target.is_binary; };
-    std::vector<double> prevalence() const { return target.prevalence; };
-    bool has_pheno_col() const { return !target.pheno_col.empty(); };
-    bool is_binary(size_t index) const { return target.is_binary.at(index); };
-    bool nonfounders() const { return target.include_nonfounders; };
+    /*!
+     * \brief Return the list of bed files
+     * \return vector contain bed file names
+     */
+    std::vector<std::string> bed() const { return m_bed_files; }
+    /*!
+     * \brief Return the features to be included
+     * \return vector containing the features
+     */
+    std::vector<std::string> feature() const { return m_feature; }
+    /*!
+     * \brief Return the gtf file name
+     * \return GTF file name
+     */
+    std::string gtf() const { return m_gtf; }
+    /*!
+     * \brief Return the msigdb file name
+     * \return MSigDB file name
+     */
+    std::string msigdb() const { return m_msigdb; }
+    // TODO: Maybe allow multiple single SNP set input?
+    /*!
+     * \brief Return file name containing the single SNP Set
+     * \return File name containing the single SNP set
+     */
+    std::string single_snp_set() const { return m_single_snp_set; }
+    /*!
+     * \brief Return file name containing the multiple SNP Sets
+     * \return File name containing the multiple SNP sets
+     */
+    std::string multi_snp_sets() const { return m_multi_snp_sets; }
+    /*!
+     * \brief Return file name containing background regions
+     * \return File name containing backgroudn regions
+     */
+    std::string background() const { return m_background; }
 
+    /*!
+     * \brief Get the number of permutation to be performed for each set
+     * \param perm stores the number of permutation
+     * \return Return true if we want to perform set based permutation
+     */
+    bool set_perm(int& perm) const
+    {
+        perm = m_set_perm;
+        return m_perform_set_perm;
+    }
+    /*!
+     * \brief Check if we want to perform set based permutation
+     * \return Return true if we want to perform set based permutation
+     */
+    bool perform_set_perm() const { return m_perform_set_perm; }
+    /*!
+     * \brief Check if we want the whole genome to be act as the background
+     * \return True if we want the whole genome to be used as the background
+     */
+    bool genome_wide_background() const { return m_full_background; }
+    // prslice
+    bool perform_prslice() const { return m_perform_prslice; }
+    /*!
+     * \brief Return the 5' extension of regions in \b bp
+     * \return The length of extension to 5' regions
+     */
+    int window_5() const
+    {
+        if (m_window_5 < 0)
+        {
+            throw std::runtime_error("Error: Length of 5' extension must be "
+                                     "greater than or equal to zero!");
+        }
+        return m_window_5;
+    }
+    /*!
+     * \brief Return the 3' extension of regions in \b bp
+     * \return The length of extension to 3' regions
+     */
+    int window_3() const
+    {
+        if (m_window_3 < 0)
+        {
+            throw std::runtime_error("Error: Length of 5' extension must be "
+                                     "greater than or equal to zero!");
+        }
+        return m_window_3;
+    }
+    // target
+    /*!
+     * \brief Return the target file name
+     * \return the target file name. If target list is set, will return an empty
+     * string
+     */
+    std::string target_name() const { return m_target_file; }
+    /*!
+     * \brief Return the file containing list of target files
+     * \param target_list will be used to store the file name
+     * \return true if target list is used
+     */
+    bool target_list(std::string& target_list) const
+    {
+        target_list = m_target_file_list;
+        return m_use_target_list;
+    }
+    /*!
+     * \brief Directly return the target file list
+     * \return Return empty string if not provided
+     */
+    std::string target_list() const
+    {
+        if (m_use_target_list) return m_target_file_list;
+        return "";
+    }
+    /*!
+     * \brief Return the type of target
+     * \return Type of target
+     */
+    std::string target_type() const { return m_target_type; }
+    /*!
+     * \brief Return the name of the phenotype file
+     * \return name of phenotype file, empty if not provided
+     */
+    std::string pheno_file() const { return m_pheno_file; }
+    /*!
+     * \brief name of phenotype given the index
+     * \param index is the column index of the phenotype file
+     * \return The name of the phenotype. Error if out of bound
+     */
+    std::string pheno_col(size_t index) const { return m_pheno_col.at(index); }
+    /*!
+     * \brief File containing sample ID to be kept in target
+     * \return name of the keep file
+     */
+    std::string keep_sample_file() const { return m_target_keep; }
+    /*!
+     * \brief File containing sample ID to be removed in target
+     * \return name of the remove file
+     */
+    std::string remove_sample_file() const { return m_target_remove; }
+    /*!
+     * \brief Return the vector containing the phenotype names
+     * \return Vector containing the phenotype names
+     */
+    std::vector<std::string> pheno_col() const { return m_pheno_col; }
+    /*!
+     * \brief Return vector containing if target phenotype is binary or not
+     * \return Vector containing if teh target phenotype is binary or not
+     */
+    std::vector<bool> is_binary() const { return m_is_binary; }
+    /*!
+     * \brief Return vector containing the prevalence of target binary
+     * phenotypes
+     * \return vector containing the prevalence
+     */
+    std::vector<double> prevalence() const { return m_prevalence; }
+    /*!
+     * \brief return whether prevalence is provided
+     * \return true if prevalence is provided
+     */
+    bool has_prevalence() const { return !m_prevalence.empty(); }
+    /*!
+     * \brief Check if we have phenotype names
+     * \return true if we have phenotype names
+     */
+    bool has_pheno_col() const { return !m_pheno_col.empty(); }
+    /*!
+     * \brief Check if the ith phenotype is binary
+     * \param index of phenotype
+     * \return true if phenotype should be binary
+     */
+    bool is_binary(size_t index) const { return m_is_binary.at(index); }
+    /*!
+     * \brief Check if we want to include non-founders in our analysis
+     * \return True if non-founders should be included
+     */
+    bool nonfounders() const { return m_include_nonfounders; }
+    /*!
+     * \brief Check if we want to perform shrinkage analysis
+     * \return True if shrinkage is to be performed
+     */
+    bool perform_shrinkage() const { return m_perform_shrinkage; }
+    /*!
+     * \brief Indicate if Base input is binary trait and therefore require
+     * adjustment
+     * \return True if base input is binary
+     */
+    bool base_is_binary() const
+    {
+        return m_provided_num_case && m_provided_num_control
+               && m_provided_base_prevalence;
+    }
+    double maf_bin() const { return m_maf_bin; }
+    double base_prevalence() const { return m_base_prevalence; }
+    uint32_t num_sample() const { return m_num_sample; }
+    uint32_t num_case() const { return m_num_case; }
+    uint32_t num_control() const { return m_num_control; }
+    int num_shrinkage_perm() const { return m_shrink_perm; }
 
 protected:
 private:
-    bool process(int argc, char* argv[], const char* optString,
-                 const struct option longOpts[], Reporter& reporter);
-    std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
-    struct Base
-    {
-        std::string name;
-        std::string chr;
-        std::string effect_allele;
-        std::string non_effect_allele;
-        std::string statistic;
-        std::string snp;
-        std::string bp;
-        std::string standard_error;
-        std::string p_value;
-        std::string info_col;
-        std::string maf_col;
-        std::vector<int> col_index;
-        int is_beta;
-        int is_index;
-        int no_default;
-        double info_score_threshold;
-        double maf_control_threshold;
-        double maf_case_threshold;
-        // determine if we are going to use default
-        bool provided_chr;
-        bool provided_effect_allele;
-        bool provided_non_effect_allele;
-        bool provided_statistic;
-        bool provided_snp;
-        bool provided_bp;
-        bool provided_standard_error;
-        bool provided_p_value;
-        bool provided_info;
-    } base;
-
-    struct Clump
-    {
-        int no_clump;
-        double proxy;
-        double p_value;
-        double r2;
-        int distance;
-        bool provided_proxy;
-    } clumping;
-
-    struct Covar
-    {
-        std::string file_name;
-        std::vector<std::string> covariates;
-        std::vector<std::string> factor_covariates;
-        std::vector<uint32_t> covariate_index;
-        std::vector<uint32_t> factor_index;
-    } covariate;
-
-    struct Misc
-    {
-        std::string out;
-        std::string exclusion_range;
-        int non_cumulate;
-        int print_all_scores;
-        int ignore_fid;
-        int logit_perm;
-        int pearson;
-        int permutation;
-        int print_snp;
-        int thread;
-        size_t memory;
-        size_t seed;
-        bool provided_seed;
-        bool provided_memory;
-    } misc;
-
-    struct Reference
-    {
-        std::string file_name;
-        std::string multi_name;
-        std::string type;
-        std::string keep_file;
-        std::string remove_file;
-        int allow_inter;
-    } reference_panel;
-
-    struct Ref_filtering
-    {
-        double geno;
-        double hard_threshold;
-        double maf;
-        double info_score;
-        // Need to have the same snp as the target
-        // so not necessary to have another set of exclude/extract files
-        // must be hard coded for reference
-    } reference_snp_filtering;
-
-    struct Thresholding
-    {
-        std::vector<double> barlevel;
-        double lower;
-        double inter;
-        double upper;
-        int fastscore;
-        int no_full;
-        bool set_use_thresholds;
-    } p_thresholds;
-
-    struct Calculation
-    {
-        std::string missing_score;
-        std::string model_name;
-        std::string score_calculation;
-        MODEL model; // use model enum
-        int no_regress;
-    } prs_calculation;
-
-    struct Filtering
-    {
-        std::string exclude_file;
-        std::string extract_file;
-        double geno;
-        double hard_threshold;
-        double maf;
-        double info_score;
-        int is_hard_coded;
-        int keep_ambig;
-        int predict_ambig; // PRSoS stuff?
-    } prs_snp_filtering;
-
-    struct PRSet
-    {
-        std::vector<std::string> bed;
-        std::vector<std::string> feature;
-        std::string gtf;
-        std::string msigdb;
-        std::string background;
-        std::string single_snp_set;
-        std::string multi_snp_sets;
-        int set_perm;
-        int window_5;
-        int window_3;
-        bool perform_prset;
-        bool perform_set_perm;
-    } prset;
-
-    struct PRSlice
-    {
-        int size;
-        bool provided;
-    } prslice;
-
-    struct Target
-    {
-        std::string name;
-        std::string keep_file;
-        std::string multi_name;
-        std::string pheno_file;
-        std::string remove_file;
-        std::string type;
-        std::vector<std::string> pheno_col;
-        // should equal to number of binary target
-        std::vector<double> prevalence;
-        std::vector<bool> is_binary;
-        int include_nonfounders;
-    } target;
+    const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
+    std::vector<std::string> m_cov_colname;
+    std::vector<std::string> m_factor_cov;
+    std::vector<std::string> m_bed_files;
+    std::vector<std::string> m_feature;
+    std::vector<std::string> m_pheno_col;
+    std::vector<double> m_barlevel;
+    // should equal to number of binary target
+    std::vector<double> m_prevalence;
+    std::vector<uint32_t> m_col_index_of_cov;
+    std::vector<uint32_t> m_col_index_of_factor_cov;
+    std::vector<int> m_base_col_index;
+    std::vector<bool> m_is_binary;
+    std::string m_target_file = "";
+    std::string m_target_keep = "";
+    std::string m_target_file_list = "";
+    std::string m_pheno_file = "";
+    std::string m_target_remove = "";
+    std::string m_target_type = "bed";
+    std::string m_gtf = "";
+    std::string m_msigdb = "";
+    std::string m_background = "";
+    std::string m_single_snp_set = "";
+    std::string m_multi_snp_sets = "";
+    std::string m_cov_file;
+    std::string m_base_file = "";
+    std::string m_chr = "CHR";
+    std::string m_effect_allele = "A1";
+    std::string m_non_effect_allele = "A2";
+    std::string m_statistic = "";
+    std::string m_snp = "SNP";
+    std::string m_bp = "BP";
+    std::string m_standard_error = "SE";
+    std::string m_p_value = "P";
+    std::string m_info_col = "INFO,0.9";
+    std::string m_maf_col;
+    std::string m_out_prefix = "PRSice";
+    std::string m_exclusion_range = "";
+    std::string m_ref_file = "";
+    std::string m_ref_list = "";
+    std::string m_ref_type = "bed";
+    std::string m_ref_keep = "";
+    std::string m_ref_remove = "";
+    std::string m_exclude_file = "";
+    std::string m_extract_file = "";
+    std::string m_help_message;
+    double m_base_info_threshold = 0.0;
+    // control maf threhsold is also used for quantitative trait
+    double m_control_maf_threshold = 0.0;
+    double m_case_maf_threshold = 0.0;
+    double m_proxy_threshold = -1.0;
+    double m_clump_p = 1.0;
+    double m_clump_r2 = 0.1;
+    double m_ref_geno = 1.0;
+    double m_ref_hard_threshold = 0.9;
+    double m_ref_maf = 0.0;
+    double m_ref_info_score = 0.0;
+    // TODO: might consider using 1e-8 instead
+    double m_lower_threshold = 0.0001;
+    double m_inter_threshold = 0.00005;
+    double m_upper_threshold = 0.5;
+    double m_target_geno = 1.0;
+    double m_target_hard_threshold = 0.9;
+    double m_target_maf = 0.0;
+    double m_target_info_score = 0.0;
+    double m_maf_bin = 0.01;
+    double m_base_prevalence = 0.01;
+    size_t m_memory = 0;
+    uint32_t m_num_sample = 0;
+    uint32_t m_num_case = 0;
+    uint32_t m_num_control = 0;
+    std::random_device::result_type m_seed = std::random_device()();
+    MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    SCORING m_scoring_method = SCORING::AVERAGE;
+    MODEL m_genetic_model = MODEL::ADDITIVE;
+    int m_set_perm = 0;
+    int m_window_5 = 0;
+    int m_window_3 = 0;
+    int m_clump_distance = 250000;
+    int m_permutation = 0;
+    int m_thread = 1;
+    int m_shrink_perm = 1000;
+    int m_target_is_hard_coded = false;
+    int m_keep_ambig = false;
+    int m_no_regress = false;
+    int m_fastscore = false;
+    int m_no_full = false;
+    int m_stat_is_beta = false;
+    int m_input_is_index = false;
+    int m_user_no_default = false;
+    int m_no_clump = false;
+    int m_non_cumulate_prs = false;
+    int m_print_all_scores = false;
+    int m_ignore_fid = false;
+    int m_logit_perm = false;
+    int m_pearson = false;
+    int m_print_snp = false;
+    int m_include_nonfounders = false;
+    int m_allow_inter = false;
+    int m_full_background = false;
+    int m_perform_shrinkage = false;
+    // TODO: Most likely not going to use this
+    int m_prslice_size = 0;
+    bool m_use_reference = false;
+    bool m_ref_list_provided = false;
+    bool m_provided_seed = false;
+    bool m_provided_memory = false;
+    bool m_perform_permutation = false;
+    bool m_provided_chr_col = false;
+    bool m_provided_effect_allele = false;
+    bool m_provided_non_effect_allele = false;
+    bool m_provided_statistic = false;
+    bool m_provided_snp_id = false;
+    bool m_provided_bp = false;
+    bool m_provided_standard_error = false;
+    bool m_provided_p_value = false;
+    bool m_provided_maf_bin = false;
+    bool m_provided_num_sample = false;
+    bool m_provided_num_case = false;
+    bool m_provided_num_control = false;
+    bool m_provided_base_prevalence = false;
+    bool m_provided_shrink_perm_num = false;
+    bool m_provided_info_threshold = false;
+    bool m_perform_base_maf_control_filter = false;
+    bool m_perform_base_maf_case_filter = false;
+    bool m_use_proxy_clump = false;
+    bool m_perform_ref_geno_filter = false;
+    bool m_perform_ref_hard_thresholding = false;
+    bool m_perform_ref_maf_filter = false;
+    bool m_perform_ref_info_filter = false;
+    bool m_set_use_thresholds = false;
+    bool m_target_geno_filter = false;
+    bool m_target_hard_thresholding = false;
+    bool m_target_maf_filter = false;
+    bool m_target_info_filter = false;
+    bool m_perform_prset = false;
+    bool m_perform_set_perm = false;
+    bool m_perform_prslice = false;
+    bool m_use_target_list = false;
 
     ////////////////////////////////////////////
     //
@@ -397,37 +867,118 @@ private:
     //
     ////////////////////////////////////////////
 
-
-    std::string help_message;
+    /*!
+     * \brief Parsing all command line arguments
+     * \param argc
+     * \param argv
+     * \param optString is the string containing the short flags
+     * \param longOpts is the struct containing all the options
+     * \param reporter is the object to report all messages
+     * \return true if we want to continue the program
+     */
+    bool parse_command(int argc, char* argv[], const char* optString,
+                       const struct option longOpts[], Reporter& reporter);
+    /*!
+     * \brief Print the usage information
+     */
     void usage();
+    /*!
+     * \brief Set the help message
+     */
     void set_help_message();
-    void base_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters related to base are correct
+     * \param message the parameter storage
+     * \param error_message the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool base_check(std::map<std::string, std::string>& message,
                     std::string& error_message);
-    void clump_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters for clumping and reference
+     * panel are correct
+     * \param message is the parameter storage
+     * \param
+     * error_message is the storage for error messages
+     * \return  return true if
+     * clumping parameters are alright
+     */
+    bool clump_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
-    void covariate_check(bool& error, std::string& error_message);
-    void filter_check(bool& error, std::string& error_message);
-    void misc_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters for covariate are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool covariate_check(std::string& error_message);
+    /*!
+     * \brief Function to check if parameters for filtering are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool filter_check(std::string& error_message);
+    /*!
+     * \brief Function to check if parameters for misc options are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool misc_check(std::map<std::string, std::string>& message,
                     std::string& error_message);
-    void prset_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters for prset are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool prset_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
-    void prslice_check(bool& error, std::string& error_message);
-    void prsice_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters for prslice are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool prslice_check(std::string& error_message);
+    /*!
+     * \brief Function to check if parameters for prsice thresholding are
+     * correct \param error_message is the storage for error messages \return
+     * true if parameters are alright
+     */
+    bool prsice_check(std::map<std::string, std::string>& message,
                       std::string& error_message);
-    void target_check(std::map<std::string, std::string>& message, bool& error,
+    /*!
+     * \brief Function to check if parameters for target are correct
+     * \param error_message is the storage for error messages
+     * \return true if parameters are alright
+     */
+    bool target_check(std::map<std::string, std::string>& message,
                       std::string& error_message);
 
-    inline void load_binary_vector(const std::string& input,
-                                   std::map<std::string, std::string>& message,
-                                   std::string& error_message,
-                                   std::vector<bool>& target, bool& error,
-                                   const std::string& c)
+    /*!
+     * \brief Function to parse the binary vector input. Support short form
+     * (e.g. 4T)
+     * \param input is the input string
+     * \param message is the parameter storage
+     * \param error_message is the error message storage
+     * \param target is the target variable
+     * \param c is the flag
+     * \return true if conversion is successful
+     */
+    inline bool parse_binary_vector(const std::string& input,
+                                    std::map<std::string, std::string>& message,
+                                    std::string& error_message,
+                                    std::vector<bool>& target,
+                                    const std::string& c)
     {
-        if (input.empty()) return;
-        message[c] = message[c] + input;
-        // check if the input is ended with , which is usually the case
-        // when someone mixed in the space
-        if (!input.empty() && input.back() == ',') {
+        // allow more complex regrex
+        // should not come in without something
+        if (input.empty()) return false;
+        if (message.find(c) == message.end()) { message[c] = input; }
+        else
+        {
+            // we will append instead of overwrite
+            message[c] = "," + input;
+        }
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)");
@@ -435,17 +986,93 @@ private:
         std::vector<std::string> token = misc::split(input, ",");
         try
         {
-            for (auto&& bin : token) target.push_back(misc::to_bool(bin));
+            for (auto&& bin : token)
+            {
+                // check if this is true or false, if, not, try parsing
+                std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
+                if (bin.length() == 1)
+                {
+                    switch (bin.at(0))
+                    {
+                    case 'T': target.push_back(true); break;
+                    case 'F': target.push_back(false); break;
+                    default:
+                        error_message.append(
+                            "Error: Invalid argument passed to " + c + ": "
+                            + input
+                            + "! Require binary arguments e.g. T/F, "
+                              "True/False\n");
+                        return false;
+                    }
+                }
+                else if (bin == "TRUE")
+                {
+                    target.push_back(true);
+                }
+                else if (bin == "FALSE")
+                {
+                    target.push_back(false);
+                }
+                // we likely have numeric input
+                else
+                {
+                    // only allow T/F for simplicity
+                    // no point being paritally lazy with 2True, right?
+                    char value = bin.at(bin.length() - 1);
+                    std::string prefix = bin.substr(0, bin.size() - 1);
+                    int num = 0;
+                    try
+                    {
+                        switch (value)
+                        {
+                        case 'T':
+                            num = misc::convert<int>(prefix);
+                            for (int i = 0; i < num; ++i)
+                            { target.push_back(true); } break;
+                        case 'F':
+                            num = misc::convert<int>(prefix);
+                            for (int i = 0; i < num; ++i)
+                            { target.push_back(false); } break;
+                        default:
+                            error_message.append(
+                                "Error: Invalid argument passed to " + c + ": "
+                                + input
+                                + "! Require binary arguments e.g. T/F, "
+                                  "True/False\n");
+                            return false;
+                        }
+                    }
+                    catch (...)
+                    {
+                        // to capture problem when we cannot convert prefix
+                        // into number
+                        error_message.append(
+                            "Error: Invalid argument passed to " + c + ": "
+                            + input
+                            + "! Require binary arguments e.g. T/F, "
+                              "True/False\n");
+                        return false;
+                    }
+                }
+            }
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
-            error = true;
             error_message.append(
                 "Error: Invalid argument passed to " + c + ": " + input
                 + "! Require binary arguments e.g. T/F, True/False\n");
+            return false;
         }
+        return true;
     }
-
+    /*!
+     * \brief Load the string input into a vector
+     * \param input the input
+     * \param message the parameter storage
+     * \param target where we store the output
+     * \param c the flag of command
+     * \param error_message the storage of the error messages
+     */
     inline void load_string_vector(const std::string& input,
                                    std::map<std::string, std::string>& message,
                                    std::vector<std::string>& target,
@@ -454,8 +1081,13 @@ private:
     {
 
         if (input.empty()) return;
-        message[c] = message[c] + input;
-        if (!input.empty() && input.back() == ',') {
+        if (message.find(c) == message.end()) { message[c] = input; }
+        else
+        {
+            message[c] = "," + input;
+        }
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
@@ -464,22 +1096,32 @@ private:
         target.insert(target.end(), token.begin(), token.end());
     }
 
+    /*!
+     * \brief Convert input into a vector of numeric values
+     * \param input is the input value
+     * \param message is the parameter storage
+     * \param error_message is the error message storage
+     * \param target is where we store the result
+     * \param c the command flag
+     * \return true if this is sucess
+     */
     template <typename T>
-    inline void load_numeric_vector(const std::string& input,
+    inline bool load_numeric_vector(const std::string& input,
                                     std::map<std::string, std::string>& message,
                                     std::string& error_message,
-                                    std::vector<T>& target, bool& error,
+                                    std::vector<T>& target,
                                     const std::string& c)
     {
-        if (input.empty()) return;
-        if (message.find(c) == message.end()) {
-            message[c] = input;
-        }
+        // should always have an input
+        if (input.empty()) return false;
+        if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
+            // we will append instead of overwrite
             message[c] = "," + input;
         }
-        if (!input.empty() && input.back() == ',') {
+        if (!input.empty() && input.back() == ',')
+        {
             error_message.append("Warning: , detected at end of input: " + input
                                  + ". Have you accidentally included space in "
                                    "your input? (Space is not allowed)\n");
@@ -489,22 +1131,32 @@ private:
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
             error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
-            error = true;
+            return false;
         }
+        return true;
     }
-
+    /*!
+     * \brief Convert input into numeric value
+     * \param input is the input value
+     * \param message is the current output message related to command parse
+     * \param error_message is the current error emssage store
+     * \param target is where we are going to store the value
+     * \param target_boolean is a boolean to indicate if the value is set
+     * \param c is the command flag
+     * \return true if we have sucessfully set the value
+     */
     template <typename Type>
-    inline void set_numeric(const std::string& input,
+    inline bool set_numeric(const std::string& input,
                             std::map<std::string, std::string>& message,
                             std::string& error_message, Type& target,
-                            bool& target_boolean, bool& error,
-                            const std::string& c)
+                            bool& target_boolean, const std::string& c)
     {
-        if (message.find(c) != message.end()) {
+        if (message.find(c) != message.end())
+        {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -513,61 +1165,240 @@ private:
             target = misc::convert<Type>(input);
             target_boolean = true;
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
-            error = true;
             error_message.append("Error: Non numeric argument passed to " + c
                                  + ": " + input + "!\n");
+            return false;
         }
+        return true;
     }
 
-    inline void set_model(const std::string& in,
+    /*!
+     * \brief Function to convert user clump distance into a numeric
+     * distance \param input the input value \param message the parameter
+     * storage \param error_message the error message storage \param target
+     * the target storage \param c the command flag \return true if we can
+     * parse the distance value
+     */
+    inline bool parse_distance(const std::string& input,
+                               std::map<std::string, std::string>& message,
+                               std::string& error_message, int& target,
+                               const std::string& c)
+    {
+        if (message.find(c) != message.end())
+        {
+            error_message.append("Warning: Duplicated argument --" + c + "\n");
+        }
+        message[c] = input;
+        // first check if there are any suffix
+        // KB, MB, BP are the only 3 valid options
+        if (input.length() > 3)
+        {
+            std::string suffix = input.substr(input.length() - 2);
+            std::transform(suffix.begin(), suffix.end(), suffix.begin(),
+                           ::toupper);
+            std::string prefix = input.substr(0, input.size() - 2);
+            try
+            {
+                int num = misc::convert<int>(prefix);
+                if (suffix == "BP") { target = num; }
+                else if (suffix == "KB")
+                {
+                    target = num * 1000;
+                }
+                else if (suffix == "MB")
+                {
+                    target = num * 1000000;
+                }
+            }
+            catch (...)
+            {
+                error_message.append("Error: Non numeric argument passed to "
+                                     + c + ": " + input + "!\n");
+                return false;
+            }
+        }
+        else
+        {
+            try
+            {
+                // default is KB, so we will multiply it by 1000
+                target = misc::convert<int>(input) * 1000;
+            }
+            catch (...)
+            {
+                error_message.append("Error: Cannot parse clump distance!\n");
+                return false;
+            }
+        }
+        return true;
+    }
+    /*!
+     * \brief Function parsing string into genetic model used
+     * \param in the input
+     * \param message the parameter storage
+     * \param error_message the error message storage
+     * \return true if successfully parse the input into genetic model enum
+     */
+    inline bool set_model(const std::string& in,
                           std::map<std::string, std::string>& message,
-                          std::string& error_message, bool& error)
+                          std::string& error_message)
     {
         std::string input = in;
-        if (input.empty()) {
+        if (input.empty())
+        {
             error_message.append("Error: Model cannot be empty!\n");
-            error = true;
+            return false;
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-        if (input.at(0) == 'A') {
+        if (input.at(0) == 'A')
+        {
             input = "add";
-            prs_calculation.model = MODEL::ADDITIVE;
+            m_genetic_model = MODEL::ADDITIVE;
         }
         else if (input.at(0) == 'D')
         {
             input = "dom";
-            prs_calculation.model = MODEL::DOMINANT;
+            m_genetic_model = MODEL::DOMINANT;
         }
         else if (input.at(0) == 'R')
         {
             input = "rec";
-            prs_calculation.model = MODEL::RECESSIVE;
+            m_genetic_model = MODEL::RECESSIVE;
         }
         else if (input.at(0) == 'H')
         {
             input = "het";
-            prs_calculation.model = MODEL::HETEROZYGOUS;
+            m_genetic_model = MODEL::HETEROZYGOUS;
         }
         else
         {
-            error = true;
             error_message.append("Error: Unrecognized model: " + input + "!\n");
+            return false;
         }
-        if (message.find("model") != message.end()) {
-            error_message.append("Warning: Duplicated argument --model\n");
-        }
+        if (message.find("model") != message.end())
+        { error_message.append("Warning: Duplicated argument --model\n"); }
         message["model"] = input;
+        return true;
+    }
+
+    /*!
+     * \brief Function parsing string into MISSING enum
+     * \param in the input
+     * \param message the parameter storage
+     * \param error_message the error message storage
+     * \return true if successfully parse the input into MISSING enum
+     */
+    inline bool set_score(const std::string& in,
+                          std::map<std::string, std::string>& message,
+                          std::string& error_message)
+    {
+        std::string input = in;
+        if (input.empty())
+        {
+            error_message.append(
+                "Error: Score method string cannot be empty!\n");
+            return false;
+        }
+        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        if (input.at(0) == 'A')
+        {
+            input = "add";
+            m_scoring_method = SCORING::AVERAGE;
+        }
+        else if (input.at(0) == 'S')
+        {
+            if (input.length() < 2)
+            {
+                error_message.append("Error: Ambiguous scoring method: " + input
+                                     + "!\n");
+                return false;
+            }
+            if (input.at(1) == 'T')
+            {
+                input = "standard";
+                m_scoring_method = SCORING::STANDARDIZE;
+            }
+            else
+            {
+                input = "sum";
+                m_scoring_method = SCORING::SUM;
+            }
+        }
+        else
+        {
+            error_message.append("Error: Unrecognized scoring method: " + input
+                                 + "!\n");
+            return false;
+        }
+        if (message.find("model") != message.end())
+        { error_message.append("Warning: Duplicated argument --score\n"); }
+        message["score"] = input;
+        return true;
+    }
+
+    /*!
+     * \brief Function parsing string into PRS calculation enum
+     * \param in the input
+     * \param message the parameter storage
+     * \param error_message the error message storage
+     * \return true if successfully parse the input into PRS scoring enum
+     */
+    inline bool set_missing(const std::string& in,
+                            std::map<std::string, std::string>& message,
+                            std::string& error_message)
+    {
+        std::string input = in;
+        if (input.empty())
+        {
+            error_message.append(
+                "Error: Missing handling method string cannot be empty!\n");
+            return false;
+        }
+        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        if (input.at(0) == 'C')
+        {
+            input = "center";
+            m_missing_score = MISSING_SCORE::CENTER;
+        }
+        else if (input.at(0) == 'M')
+        {
+            m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+        }
+        else if (input.at(0) == 'S')
+        {
+            m_missing_score = MISSING_SCORE::SET_ZERO;
+        }
+        else
+        {
+            error_message.append("Error: Unrecognized Missing handling method: "
+                                 + input + "!\n");
+            return false;
+        }
+        if (message.find("missing") != message.end())
+        { error_message.append("Warning: Duplicated argument --score\n"); }
+        message["score"] = input;
+        return true;
     }
     std::vector<std::string> transform_covariate(std::string& cov);
+    /*!
+     * \brief Simply store the string input into the target variable
+     * \param input The input string
+     * \param message the parameter storage
+     * \param target the target variable
+     * \param target_boolean boolean indicate if the target is set
+     * \param c the command flag
+     * \param error_message error message storage
+     */
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
                            const std::string& c, std::string& error_message)
     {
 
-        if (message.find(c) != message.end()) {
+        if (message.find(c) != message.end())
+        {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
         message[c] = input;
@@ -575,88 +1406,103 @@ private:
         target_boolean = true;
     }
 
-    inline void set_memory(const std::string& input,
+    /*!
+     * \brief Convert user input into valid memory format
+     * \param input the input string
+     * \param message the parameter storage
+     * \param error_messages the string containing all error messages
+     * \return true if successfully set the memory info
+     */
+    inline bool set_memory(const std::string& input,
                            std::map<std::string, std::string>& message,
-                           std::string& error_messages, bool& error)
+                           std::string& error_messages)
     {
-        misc.provided_memory = true;
-        if (message.find("memory") != message.end()) {
-            error_messages.append("Warning: Duplicated argument --memory\n");
-        }
+        m_provided_memory = true;
+        std::string in = input;
+        if (message.find("memory") != message.end())
+        { error_messages.append("Warning: Duplicated argument --memory\n"); }
         try
         {
-            int memory = misc::convert<int>(input);
-            misc.memory = memory;
+            size_t memory = misc::convert<size_t>(input);
+            m_memory = memory;
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
             // contain MB KB or B here
-            if (input.length() >= 2) {
+            if (input.length() >= 2)
+            {
                 try
                 {
-                    std::string unit = input.substr(input.length() - 2);
-                    std::string value = input.substr(0, input.length() - 2);
-                    std::transform(unit.begin(), unit.end(), unit.begin(),
-                                   ::toupper);
-                    if (unit.compare("KB") == 0) {
-                        misc.memory = misc::convert<size_t>(value) * 1024;
-                    }
-                    else if (unit.compare("MB") == 0)
+                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
+                    std::string unit = in.substr(in.length() - 2);
+                    std::string value = in.substr(0, in.length() - 2);
+                    if (unit == "KB")
+                    { m_memory = misc::convert<size_t>(value) * 1024; }
+                    else if (unit == "MB")
                     {
-                        misc.memory =
-                            misc::convert<size_t>(value) * 1024 * 1024;
+                        m_memory = misc::convert<size_t>(value) * 1024 * 1024;
                     }
-                    else if (unit.compare("GB") == 0)
+                    else if (unit == "GB")
                     {
-                        misc.memory =
+                        m_memory =
                             misc::convert<size_t>(value) * 1024 * 1024 * 1024;
                     }
-                    else if (unit.compare("TB") == 0)
+                    else if (unit == "TB")
                     {
-                        misc.memory = misc::convert<size_t>(value) * 1024 * 1024
-                                      * 1024 * 1024;
+                        m_memory = misc::convert<size_t>(value) * 1024 * 1024
+                                   * 1024 * 1024;
                     }
                     else
                     {
                         // maybe only one input?
-                        unit = input.substr(input.length() - 1);
-                        value = input.substr(0, input.length() - 1);
-                        std::transform(unit.begin(), unit.end(), unit.begin(),
-                                       ::toupper);
-                        if (unit.compare("B") == 0) {
-                            misc.memory = misc::convert<size_t>(value);
-                        }
-                    }
+                        unit = input.substr(in.length() - 1);
+                        value = input.substr(0, in.length() - 1);
+                        if (unit == "B")
+                        { m_memory = misc::convert<size_t>(value); } }
                 }
-                catch (const std::runtime_error& er_info)
+                catch (...)
                 {
-                    error = true;
                     error_messages.append("Error: Undefined memory input: "
-                                          + input);
+                                          + in);
+                    return false;
                 }
             }
             else
             {
-                error = true;
-                error_messages.append("Error: Undefined memory input: "
-                                      + input);
+                error_messages.append("Error: Undefined memory input: " + in);
+                return false;
             }
         }
 
-        message["memory"] = input;
+        message["memory"] = in;
+        return true;
     }
 
+    /*!
+     * \brief Get the column index based on file header and the input string
+     * \param target is the input string
+     * \param ref is the vector containing the column header
+     * \return the index to the column containing the column name. -1 if it is
+     * not found
+     */
     inline int index_check(const std::string& target,
                            const std::vector<std::string>& ref) const
     {
-        for (size_t i = 0; i < ref.size(); ++i) {
-            if (target.compare(ref[i]) == 0) {
-                return i;
-            }
+        for (std::vector<int>::size_type i = 0; i < ref.size(); ++i)
+        {
+            if (target == ref[i]) { return static_cast<int>(i); }
         }
         return -1;
-    };
-
+    }
+    /*!
+     * \brief Check if the column index is out of bound
+     * \param target the column index
+     * \param max is the number of column observed in base file
+     * \param error indicate if the input is valid (T = invalid)
+     * \param error_message contain the error messages
+     * \param name contain the name of the column
+     * \return return -1 if invalid, otherwise return the index as numberic
+     */
     inline int index_check(const std::string& target, const int max,
                            bool& error, std::string& error_message,
                            const std::string& name)
@@ -664,20 +1510,22 @@ private:
         try
         {
             int index = misc::convert<int>(target);
-            if (index >= max) {
+            if (index >= max)
+            {
                 error = true;
                 error_message.append("Error: " + name
                                      + " index out of bound!\n");
                 return -1;
             }
-            if (index < 0) {
+            if (index < 0)
+            {
                 error = true;
                 error_message.append("Error: Negative " + name + " index!\n");
                 return -1;
             }
             return index;
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
             error = true;
             error_message.append("Error: " + name + " index is not numeric!\n");
