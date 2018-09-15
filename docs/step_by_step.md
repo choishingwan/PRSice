@@ -50,6 +50,7 @@ By default, PRSice will look for the following column names automatically from t
 > CHR, BP, A1, A2, SNP, P, INFO, SE (case sensitive) and OR / BETA (case insensitive)
 
 `--no-default` can be used to disable all the defaults of PRSice.
+
 !!! Note
     PRSice will ignore any columns that were not found in the base file (e.g. If`--A2 B` is specified but none of the column header is *B*,  then PRSice will treat it as if no *A2* information is presented)
 
@@ -73,12 +74,12 @@ If the **.fam** file follow a different prefix from the **.bed** and **bim** fil
 Missing phenotype data can be coded as NA, or -9 for binary traits and NA for quantitative traits.
 !!! Note
 
-    -9 will NOT be considered as missing for quantitative traits
+    -9 will **NOT** be considered as missing for quantitative traits
 
 If the binary file is separated into individual chromosomes, then an # can be used to specify the location of the chromosome number in the file name.
 PRSice will automatically substitute # with 1-22
 
-i.e. If tje files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use
+i.e. If the files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use
 ```
 --target chr#
 ```
@@ -86,6 +87,9 @@ i.e. If tje files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|f
 !!! Note
 
     Chromosome number substitution will not be performed on the external fam file as the fam file should be the same for all chromosomes. 
+
+Alternatively, if your PLINK files do not have a unified prefix, you can use `--target-list` to provide a file containing all
+prefix to PRSice. 
 
 ### BGEN
 PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the `--type bgen` or `--ld-type bgen` to the PRSice command
@@ -110,9 +114,14 @@ coded as missing
 - `--hard-thres`: The genotype probability threshold. SNPs with no genotype having a probability larger than this
 threshold will be treated as missing
 
+To perform clumping on BGEN file, we need to repeatly decompress the genotype dosage and convert them into PLINK binary format. 
+Therefore, to speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
+coded genotypes in PLINK binary format by using the `--allow-inter` option. 
+
 ## Phenotype files
 An external phenotype file can be provided to PRSice using the `--pheno-file`
-parameter.
+parameter. 
+This must be a tab / space delimited file and missing data **must** be represented by either `NA` or `-9` (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
 `--ignore-fid` is set, the first column should be the IID.
 The rest of the columns can be the phenotype(s).
@@ -160,6 +169,7 @@ will be used as the LD reference panel
 !!! Note
 
     BGEN file will always be hard coded when used to estimate the LD
+
 
 # Clumping
 By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
@@ -222,17 +232,17 @@ Then depending on the `--score` option, the PRS is calculated as (assuming $M$ i
 
 `--score avg` (default):
 $$
-    PRS = \sum{\frac{S\times G}{2}}\div M
+    PRS = \sum_i{\frac{S_i\times G_i}{M}}
 $$
 
 `--score sum`:
 $$
-    PRS = \sum{\frac{S\times G}{2}}
+    PRS = \sum_i{S_i\times G_i}
 $$
 
 `--score std`:
 $$
-    PRS = (\sum{\frac{S\times G}{2}} - \text{Mean}(PRS))\div \text{SD}(PRS)
+    PRS = \frac{\sum_i({S_i\times G_i}) - \text{Mean}(PRS)}{\text{SD}(PRS)}
 $$
 
 Sometimes, sample can have missing genotype. 
@@ -298,27 +308,29 @@ The point of each quantile is their OR (if binary) or coefficient (otherwise) fr
 
 A text file [Name]\_QUANTILE\\_[date].txt is also produced, which provides all the data used for the plotting. 
 
-Moreover, uneven distribution of quantiles can be specified using the `--quant-break` function. 
-For example, to replicate the quantile break from Wen et al (2016):
+Moreover, uneven distribution of quantiles can be specified using the `--quant-break` function, which will generate
+the strata plot. 
+For example, to replicate the quantile break from Natarajan et al (2015):
 
-|PRS (%)| Predicted OR | Observed OR (95% CI) |
-|:-:|:-:|:-:|
-|0–1|0.37| 0.39 (0.27–0.57)|
-|0–10|0.52| 0.55 (0.49–0.61)|
-|10–20|0.67|0.71 (0.64–0.79)|
-|20–30|0.77|0.74 (0.66–0.82)|
-|30–40|0.86|0.88 (0.80–0.98)|
-|40–60|1.00, reference|1.00, reference|
-|60–70|1.16|1.10 (0.99–1.21)|
-|70–80|1.29|1.24 (1.13–1.37)|
-|80–90|1.49|1.52 (1.38–1.67)|
-|90–100|1.97|1.93 (1.76–2.12)|
+|Percentile of PRS, %| 	All studies in iCOGS excluding pKARMA <br> OR (95% CI)| 	pKARMA only <br> OR (95% CI) |
+|:-:|:-:|:-:| 
+|<1| 	0.29 (0.23 to 0.37)| 	0.48 (0.28 to 0.83) |
+|>1–5| 	0.42 (0.37 to 0.47) |	0.48 (0.36 to 0.63) |
+|5–10| 	0.55 (0.50 to 0.61) |	0.58 (0.45 to 0.74) |
+|10–20| 	0.65 (0.60 to 0.70)| 	0.68 (0.57 to 0.81) |
+|20–40| 	0.80 (0.76 to 0.85) |	0.81 (0.71 to 0.94) |
+|40–60| 	1 (referent)| 	1 (referent) |
+|60–80| 	1.18 (1.12 to 1.24)| 	1.35 (1.19 to 1.54) |
+|80–90| 	1.48 (1.39 to 1.57) |	1.56 (1.34 to 1.82) |
+|90–95| 	1.69 (1.56 to 1.82) |	2.05 (1.70 to 2.47) |
+|95–99| 	2.20 (2.03 to 2.38) |	2.12 (1.73 to 2.59) |
+|>99|	2.81 (2.43 to 3.24) |	3.06 (2.16 to 4.34) |
 
 The following command can be added to PRSice command:
 
 ```
 --quantile 100 \
---quant-break 1,10,20,30,40,60,70,80,90,100 \
+--quant-break 1,5,10,20,40,60,80,90,95,99,100 \
 --quant-ref 60
 ```
 

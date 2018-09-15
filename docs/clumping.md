@@ -54,6 +54,11 @@
     the second column should be IID. If `--ignore-fid` is
     set, first column should be IID.
     Mutually exclusive from `--ld-remove`. No effect if `--ld` was not provided
+- `--ld-list`
+
+    File containing prefix of multiple LD reference files. 
+    Similar to --ld but allow more flexibility. 
+    Do not support external fam file\ at the moment
 
 - `--ld-maf`
 

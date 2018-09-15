@@ -23,9 +23,9 @@ Then the PRSice executable will be located within PRSice/bin
 
 If you don't have git installed, you can still do
 ```
-curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.0.beta > PRSice.tar.gz
+curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.3.beta > PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.1.0.beta
+cd PRSice-2.1.3.beta
 mkdir build
 cd build
 cmake ../
@@ -40,15 +40,15 @@ Without CMake, you can simply do the following
 ```
 git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 ```
 Then PRSice will be located in the current directory
 
 Alternatively, if you don't have git installed, you can still do
 ```
-curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.0.beta > PRSice.tar.gz
+curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.1.3.beta > PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.1.0.beta
-g++ -std=c++11 -O2 -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+cd PRSice-2.1.3.beta
+g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 ```
 

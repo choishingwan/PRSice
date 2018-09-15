@@ -55,7 +55,7 @@
 
 - `--pheno-file` | `-f`
 
-    Phenotype file containing the phenotype(s).
+    Tab or space delimited phenotype file containing the phenotype(s).
     First column must be FID of the samples and
     the second column must be IID of the samples.
     When `--ignore-fid` is set, first column must
@@ -102,6 +102,12 @@
     File type of the target file. Support bed (binary plink) and bgen format. Default: bed
 
 # Dosage Related Commands
+- `--allow-inter`
+
+    Allow the generate of intermediate file. This will
+    speed up PRSice when using dosage data as clumping
+    reference and for hard coding PRS calculation
+
 - `--hard-thres`
 
     Hard threshold for the dosage data. SNPs with be coded as

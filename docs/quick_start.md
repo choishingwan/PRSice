@@ -72,5 +72,5 @@ plink --bfile ($target) \
     --out ($target).qc
 ```
 
-Then, `--keep ($target).qc.fam --extract ($target).qc.bim` can be added to tje PRSice command to filter out
+Then, `--keep ($target).qc.fam --extract ($target).qc.bim` can be added to the PRSice command to filter out
 the samples and SNPs

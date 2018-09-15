@@ -55,6 +55,11 @@ Below are some other parameters available for PRSice
 - `--no-full`
 
     Do not include the p-value threshold of 1 unless specified in `--bar-levels` or `--upper`
+ 
+- `--non-cumulate`
+    
+    Calculate non-cumulative PRS. PRS will be reset
+    to 0 for each new P-value threshold instead ofadding up
 
 - `--out` | `-o`
 
@@ -107,6 +112,12 @@ Below are some other parameters available for PRSice
     !!! note
 
         PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.
+
+- `--x-range`               
+    Range of SNPs to be excluded from the whole
+    analysis. It can either be a single bed file
+    or a comma seperated list of range. Range must
+    be in the format of *chr:start-end* or *chr:coordinate*
 
 - `--help` | `-h`
 
