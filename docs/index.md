@@ -1,5 +1,9 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
-
+!!! announcement ""
+    Our paper: [A guide to performing Polygenic Risk Score analyses](https://www.biorxiv.org/content/early/2018/09/14/416545) is now out on Biorxiv!
+    
+    Please contact us if you have any feedback on the paper as we’d like it to be as useful to readers as possible!
+<br/>
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
@@ -10,8 +14,7 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 6. Incorporation of covariates
 7. Application across multiple target traits simultaneously
 8. Results plotted in several formats (bar plots, high-res plots, quantile plots)
-
-[//]: # (9. PRSet: function for calculating PRS across user-defined pathways / gene sets)
+9. PRSet: function for calculating PRS across user-defined pathways / gene sets
 
 # Executable downloads
 | Operating System | Link |
