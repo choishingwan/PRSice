@@ -917,8 +917,8 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                         // calculation, so we should update the reference file
                         // information to the intermediate file
 
-                        snp_res.back.add_reference(m_intermediate_file,
-                                                   tmp_byte_pos);
+                        snp_res.back().add_reference(m_intermediate_file,
+                                                     tmp_byte_pos);
                     }
                 }
                 else
