@@ -135,7 +135,7 @@ private:
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
                 if (!m_bgen_file.is_open()) {
                     std::string error_message =
-                        "Error: Cannot open bgen file: " + file_name;
+                        "Error: Cannot open intermediate file: " + file_name;
                     throw std::runtime_error(error_message);
                 }
                 // update the binary file name
@@ -149,7 +149,7 @@ private:
                 // if the location is not equal and seek fail, we have problem
                 // reading the bed file
                 throw std::runtime_error(
-                    "Error: Cannot seek within the bgen file!");
+                    "Error: Cannot seek within the intermediate file!");
             }
             // directly read in the binary data to genotype, this should already
             // be well formated when we write it into the fiel
