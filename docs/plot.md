@@ -10,13 +10,13 @@ To see some example of PRSice output, please refer to [here](step_by_step.md#out
 
 # Command
 
-- `--bar-col-high`
+- `--bar-col-high [colour-code]`
 
-   Colour of the most predicting threshold. Default: `firebrick`
+   Colour of the most predicting threshold. Can either be a colour code like `red` or `\#E55738`, _e.g._ `--bar-col-high \#E55738`. Default: `firebrick`
 
-- `--bar-col-lower`
+- `--bar-col-lower [colour-code]`
 
-  Colour of the poorest predicting threshold. Default: `dodgerblue`
+  Colour of the poorest predicting threshold. Can either be a colour code like `blue` or `\#1290D9`, _e.g._ `--bar-col-high blue`. Default: `dodgerblue`
 
 - `--bar-col-p`
 
@@ -27,9 +27,9 @@ To see some example of PRSice output, please refer to [here](step_by_step.md#out
 
   Colour palatte to be used for bar plotting when `--bar_col_p` is set. Default: `YlOrRd`
 
-- `--multi-plot`
+- `--multi-plot [N]`
 
-  Plot the top N target phenotypes / gene sets in a summary plot
+  Plot the top N target phenotypes / gene sets in a summary plot, _e.g._ `--multi-plot 5`.
 
 
 - `--plot`
@@ -46,9 +46,9 @@ To see some example of PRSice output, please refer to [here](step_by_step.md#out
   specific set of interest.
 
 
-- `--quantile` | `-q`
+- `--quantile [N]` | `-q [N]`
 
-    Number of quantiles to plot.
+    Number N of quantiles to plot, _e.g._ `--quantile 10`.
     No quantile plot will be generated when this is not provided.
 
 -  `--quant-break`
