@@ -214,10 +214,10 @@ private:
             // and reset the prev_loc counter
             m_prev_loc = 0;
         }
-        if (m_prev_loc != byte_pos
-            || !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
+        if ((m_prev_loc != byte_pos)
+            && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
         {
-            // if the location is not equal and seek fail, we have problem
+            // if the location is not equal AND seek fail, we have problem
             // reading the bed file
             throw std::runtime_error(
                 "Error: Cannot seek within the bgen file!");
