@@ -129,7 +129,9 @@ private:
             // when m_ref_plink is set, it suggest we are using the
             // intermediate, which is a binary plink format. Therefore we can
             // directly read from the file
-            if (file_name != m_cur_file || !m_bgen_file.is_open()) {
+            if (m_cur_file.empty() || file_name != m_cur_file
+                || !m_bgen_file.is_open())
+            {
                 if (m_bgen_file.is_open()) m_bgen_file.close();
                 // read in the file in binary format
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
@@ -192,7 +194,9 @@ private:
         // check sample size != 0
         assert(m_unfiltered_sample_ct);
         // we first check if we will read in a new file
-        if (file_name != m_cur_file || !m_bgen_file.is_open()) {
+        if (m_cur_file.empty() || file_name != m_cur_file
+            || !m_bgen_file.is_open())
+        {
             if (m_bgen_file.is_open()) m_bgen_file.close();
 
             std::string bgen_name = file_name + ".bgen";
@@ -214,8 +218,8 @@ private:
             // and reset the prev_loc counter
             m_prev_loc = 0;
         }
-        if (m_prev_loc != byte_pos
-            || !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
+        if ((m_prev_loc != byte_pos)
+            && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
         {
             // if the location is not equal and seek fail, we have problem
             // reading the bed file

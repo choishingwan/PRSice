@@ -1084,7 +1084,8 @@ void BinaryGen::dosage_score(const size_t start_index, const size_t end_bound,
         auto&& snp = m_existed_snps[i_snp];
         // skip SNPs that are not in the region or that are invalid
         if (!snp.in(region_index) || !snp.valid()) continue;
-        if (snp.file_name() == m_cur_file) {
+        // if the file name differ, or the file isn't open, we will open it
+        if (snp.file_name() != m_cur_file || !m_bgen_file.is_open()) {
             // open the bgen file if required
             if (m_bgen_file.is_open()) m_bgen_file.close();
             bgen_name = snp.file_name() + ".bgen";
@@ -1537,7 +1538,7 @@ void BinaryGen::dosage_score(const std::vector<size_t>& index, bool set_zero)
         auto&& snp = m_existed_snps[i_snp];
         // skip SNPs that are not in the region or that are invalid
         if (!snp.valid()) continue;
-        if (snp.file_name() == m_cur_file) {
+        if (snp.file_name() != m_cur_file || !m_bgen_file.is_open()) {
             // open the bgen file if required
             if (m_bgen_file.is_open()) m_bgen_file.close();
             bgen_name = snp.file_name() + ".bgen";
