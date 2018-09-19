@@ -932,6 +932,10 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
                 // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
+
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
@@ -1209,6 +1213,9 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
                 // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)

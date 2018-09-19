@@ -1225,6 +1225,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
                 // ukk is the genotype
                 ukk = (ulii >> ujj) & 3;
                 // uii+ujj/2 is the sample index
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
@@ -1440,6 +1443,9 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
             while (ujj < BITCT) {
                 // ukk is the genotype
                 ukk = (ulii >> ujj) & 3;
+                if (uii + (ujj / 2) > m_sample_ct) {
+                    break;
+                }
                 // uii+ujj/2 is the sample index
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
