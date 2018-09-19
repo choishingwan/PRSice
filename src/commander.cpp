@@ -1435,14 +1435,18 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                                          "ColName,Threshold.\n");
                     error = true;
                 }
-                else if(m_provided_info_threshold && m_base_col_index[+BASE_INDEX::INFO]==-1){
-                    error_message.append("Error: "+info[0]+" not found in base file\n");
+                else if (m_provided_info_threshold
+                         && m_base_col_index[+BASE_INDEX::INFO] == -1)
+                {
+                    error_message.append("Error: " + info[0]
+                                         + " not found in base file\n");
                     message.erase("info-base");
                     m_provided_info_threshold = false;
                 }
-                else if(m_base_col_index[+BASE_INDEX::INFO]!=-1)
+                else if (m_base_col_index[+BASE_INDEX::INFO] != -1)
                 {
-                    // Only do the info score filtering if the info column is found
+                    // Only do the info score filtering if the info column is
+                    // found
                     try
                     {
                         m_base_info_threshold = misc::convert<double>(info[1]);
@@ -1489,32 +1493,40 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                 }
                 else
                 {
-                    // valid format (either 1 or 2 maf filtering threshold provided)
+                    // valid format (either 1 or 2 maf filtering threshold
+                    // provided)
                     std::vector<std::string> maf =
                         misc::split(maf_type[0], ",");
                     if (maf.size() != 2) {
                         error_message.append(maf_error);
                         error = true;
                     }
-                    else{
+                    else
+                    {
                         m_base_col_index[+BASE_INDEX::MAF] =
-                                index_check(maf[0], token);
-                        if(m_perform_base_maf_control_filter && m_base_col_index[+BASE_INDEX::MAF]==-1){
-                            error_message.append("Error: "+maf[0]+" not found in base file\n");
+                            index_check(maf[0], token);
+                        if (m_perform_base_maf_control_filter
+                            && m_base_col_index[+BASE_INDEX::MAF] == -1)
+                        {
+                            error_message.append("Error: " + maf[0]
+                                                 + " not found in base file\n");
                             m_perform_base_maf_control_filter = false;
                             message.erase("maf-base");
                         }
-                        else{
-                            // only bother parsing this if we have found the MAF column
+                        else
+                        {
+                            // only bother parsing this if we have found the MAF
+                            // column
                             try
                             {
-                                m_control_maf_threshold = misc::convert<double>(maf[1]);
+                                m_control_maf_threshold =
+                                    misc::convert<double>(maf[1]);
                                 if (m_control_maf_threshold < 0
-                                        || m_control_maf_threshold > 1)
+                                    || m_control_maf_threshold > 1)
                                 {
                                     error_message.append(
-                                                "Error: Base MAF threshold must "
-                                                "be within 0 and 1!\n");
+                                        "Error: Base MAF threshold must "
+                                        "be within 0 and 1!\n");
                                     error = true;
                                 }
                                 message["maf-base"] = m_maf_col;
@@ -1522,33 +1534,39 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                             catch (...)
                             {
                                 error_message.append(
-                                            "Error: Invalid argument passed to --maf-base: "
-                                            + m_maf_col + "! Threshold must be numeric\n");
+                                    "Error: Invalid argument passed to "
+                                    "--maf-base: "
+                                    + m_maf_col
+                                    + "! Threshold must be numeric\n");
                                 error = true;
                             }
                         }
                     }
-                    // only process the case maf filtering if control is provided
-                    if (maf_type.size() > 1 && !m_perform_base_maf_control_filter) {
+                    // only process the case maf filtering if control is
+                    // provided
+                    if (maf_type.size() > 1
+                        && !m_perform_base_maf_control_filter)
+                    {
                         maf = misc::split(maf_type[1], ",");
                         if (maf.size() != 2) {
                             error_message.append(maf_error);
                             error = true;
                         }
-                        else{
+                        else
+                        {
                             m_base_col_index[+BASE_INDEX::MAF_CASE] =
-                                    index_check(maf[0], token);
-                            if(m_base_col_index[+BASE_INDEX::MAF_CASE]!=-1){
+                                index_check(maf[0], token);
+                            if (m_base_col_index[+BASE_INDEX::MAF_CASE] != -1) {
                                 try
                                 {
                                     m_case_maf_threshold =
-                                            misc::convert<double>(maf[1]);
+                                        misc::convert<double>(maf[1]);
                                     if (m_case_maf_threshold < 0
-                                            || m_case_maf_threshold > 1)
+                                        || m_case_maf_threshold > 1)
                                     {
                                         error_message.append(
-                                                    "Error: Base MAF threshold must "
-                                                    "be within 0 and 1!\n");
+                                            "Error: Base MAF threshold must "
+                                            "be within 0 and 1!\n");
                                         error = true;
                                     }
                                     message["maf-base"] = m_maf_col;
@@ -1557,21 +1575,24 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                                 catch (...)
                                 {
                                     error_message.append(
-                                                "Error: Invalid argument "
-                                                "passed to --maf-base: "
-                                                + m_maf_col + "! Threshold must be numeric\n");
+                                        "Error: Invalid argument "
+                                        "passed to --maf-base: "
+                                        + m_maf_col
+                                        + "! Threshold must be numeric\n");
                                     error = true;
                                 }
                             }
-                            else{
+                            else
+                            {
                                 // column not found
                                 // also remove the maf filtering altogether?
                                 // much easier that way tbh
                                 message.erase("maf-base");
-                                m_perform_base_maf_case_filter =false;
+                                m_perform_base_maf_case_filter = false;
                                 m_perform_base_maf_control_filter = false;
-                                error_message.append("Error: "+maf[0]+" not found in base file\n");
-
+                                error_message.append(
+                                    "Error: " + maf[0]
+                                    + " not found in base file\n");
                             }
                         }
                     }
