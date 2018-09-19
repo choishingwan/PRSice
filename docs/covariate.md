@@ -18,7 +18,7 @@ PRSice allow the incorporation of covariates into the analysis.
     PRSice currently only support numeric covariates. To include non-numeric
     covariates, dummy variable must be generated beforehand.
 
-# Comamnds
+# Commands
 - `--cov-col` | `-c`
     Header of covariates. If not provided, will use
     all variables in the covariate file. By adding
