@@ -14,7 +14,7 @@ To see some example of PRSice output, please refer to [here](step_by_step.md#out
 
    Colour of the most predicting threshold. Default: `firebrick`
 
-- `--bar-col-lower`
+- `--bar-col-low`
 
   Colour of the poorest predicting threshold. Default: `dodgerblue`
 
