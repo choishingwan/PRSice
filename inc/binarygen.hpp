@@ -422,10 +422,13 @@ private:
             // isn't called in the expected order (though in that case, our
             // m_entry_i might also be wrong)
             m_start_geno = false;
-            // we need to store the sum of value. This is because missingness in
-            // bgen v1.1 is represented by the sum of probability = 0. This also
-            // helps us to avoid adding up the number of SNP 3 times
+            // we store the weighted sum of the genotypes to obtain the final
+            // dosage
             m_sum = 0.0;
+            // and we need to keep track of the sum of probability to check if
+            // we have encountered missing genotype for V11 which is represented
+            // by a sum of probability = 0
+            m_sum_prob = 0.0;
             // if the byte is set, then we want this sample
             return IS_SET(m_sample_inclusion->data(), i);
         }
@@ -451,10 +454,11 @@ private:
             // the double sum and only add it to the sample if it is not missing
             switch (geno)
             {
-            default: m_sum += m_homcom_weight * value * m_stat * 0.5; break;
-            case 1: m_sum += m_het_weight * value * m_stat * 0.5; break;
-            case 2: m_sum += m_homrar_weight * value * m_stat * 0.5; break;
+            default: m_sum += m_homcom_weight * value * m_stat; break;
+            case 1: m_sum += m_het_weight * value * m_stat; break;
+            case 2: m_sum += m_homrar_weight * value * m_stat; break;
             }
+            m_sum_prob += value;
             m_total_prob += value * geno;
         }
         /*!
@@ -470,7 +474,7 @@ private:
         void sample_completed()
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
-            if (m_sum == 0.0 || m_is_missing) {
+            if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
                 // this is a missing sample
                 m_sample_missing_index.push_back(m_prs_sample_i);
                 if (!m_setzero) {
@@ -523,7 +527,6 @@ private:
                                     / ((static_cast<double>(num_prs)
                                         - static_cast<double>(num_miss))
                                        * 2);
-
             // worth separating centre score out
             if (m_centre) {
                 // we want to minus the expected value from all samples
@@ -568,6 +571,7 @@ private:
         double m_stat = 0.0;
         double m_total_prob = 0.0;
         double m_sum = 0.0;
+        double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
