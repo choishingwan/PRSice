@@ -851,14 +851,11 @@ if(provided("pheno_col", argv) & provided("binary_target", argv)){
 # Standard Theme for all plots
 theme_sam <- NULL
 if(use.ggplot){
-  theme_sam <- theme_bw()+theme(axis.title=element_text(face="bold", size=18),
+  theme_sam <- theme_classic()+theme(axis.title=element_text(face="bold", size=18),
                               axis.text=element_text(size=14),
                               legend.title=element_text(face="bold", size=18),
                               legend.text=element_text(size=14),
-                              axis.text.x=element_text(angle=45, hjust=1),
-                              panel.grid = element_blank(),
-                              panel.border = element_blank(), 
-                              axis.line = element_line()
+                              axis.text.x=element_text(angle=45, hjust=1)
                               )
 }
 
@@ -1465,23 +1462,29 @@ high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
     PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
-    for (i in 1:length(barchart.levels)) {
-        if (sum(barchart.levels[i] - threshold > 0) > 0) {
-            target <- max(threshold[barchart.levels[i] - threshold >= 0])
+    for (i in barchart.levels) {
+        # Only proceed if this is something we want to fill in 
+        if(i %in% PRS.ori$Threshold){
+            next
+        }
+        if (sum(i - threshold > 0) > 0) {
+            # our current bar is bigger than at least one observed bar level
+            # and we will duplicate it as 
+            target <- max(threshold[i - threshold >= 0])
             temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- barchart.levels[i]
+            temp$Threshold <- i
             PRS <- rbind(PRS, temp)
             
         } else{
-            target <-
-                (threshold[which(abs(threshold - barchart.levels[i]) == min(abs(threshold - barchart.levels[i])))])
-            temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- barchart.levels[i]
+            # Our current bar level is not bigger than any other observed bar leve
+            # This suggest there isn't any SNP located within this bar, and therefore
+            # this bar should be NA (or 0)
+            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
             PRS <- rbind(PRS, temp)
             
         }
     }
-    PRS = unique(PRS)
+    PRS <- unique(PRS)
     # Need to also plot the barchart level stuff with green
     if(use.ggplot){
       plot.high.res(argv, PRS, prefix, barchart.levels)
@@ -1559,31 +1562,37 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
             unique(barchart.levels), decreasing = F
         )))
     threshold <- as.numeric(as.character(PRS$Threshold))
-    PRS.ori = PRS
+    PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
-    for (i in 1:length(barchart.levels)) {
-        if (sum(barchart.levels[i] - threshold > 0) > 0) {
-            target <- max(threshold[barchart.levels[i] - threshold >= 0])
+    # Basically, a very inefficient way to fill in all the bar-level if some of the bar are being skipped
+    for (i in barchart.levels) {
+        # Only proceed if this is something we want to fill in 
+        if(i %in% PRS.ori$Threshold){
+            next
+        }
+        if (sum(i - threshold > 0) > 0) {
+            # our current bar is bigger than at least one observed bar level
+            # and we will duplicate it as 
+            target <- max(threshold[i - threshold >= 0])
             temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- barchart.levels[i]
-            PRS = rbind(PRS, temp)
+            temp$Threshold <- i
+            PRS <- rbind(PRS, temp)
             
         } else{
-            target <-
-                (threshold[which(abs(threshold - barchart.levels[i]) == min(abs(threshold - barchart.levels[i])))])
-            temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- barchart.levels[i]
-            PRS = rbind(PRS, temp)
+            # Our current bar level is not bigger than any other observed bar leve
+            # This suggest there isn't any SNP located within this bar, and therefore
+            # this bar should be NA (or 0)
+            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
+            PRS <- rbind(PRS, temp)
             
         }
     }
     PRS <- unique(PRS[order(PRS$Threshold),])
     # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
     output <- PRS[PRS$Threshold %in% barchart.levels, ]
-    output$print.p[round(output$P, digits = 3) != 0] <-
-        round(output$P[round(output$P, digits = 3) != 0], digits = 3)
-    output$print.p[round(output$P, digits = 3) == 0] <-
-        format(output$P[round(output$P, digits = 3) == 0], digits = 2)
+    output$print.p <- round(output$P, digits = 3)
+    output$print.p[!is.na(output$print.p) & output$print.p == 0 ] <-
+        format(output$P[!is.na(output$print.p) & output$print.p == 0 ], digits = 2)
     output$sign <- sign(output$Coefficient)
     output$print.p <- sub("e", "*x*10^", output$print.p)
     if(use.ggplot){
@@ -1667,18 +1676,20 @@ plot.bar.no.g <- function(argv, output, prefix){
 }
 
 plot.bar <- function(argv, output, prefix){
-  ggfig.plot <- ggplot(data = output, aes(x = factor(Threshold), y = R2)) + geom_text(
-    aes(label = paste(print.p)),
-    vjust = -1.5,
-    hjust = 0,
-    angle = 45,
-    cex = 4,
-    parse = T
-  )  +
-    theme_sam + 
-    scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
-    xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
-    ylab(expression(paste("PRS model fit:  ", R ^ 2)))
+    ggfig.plot <-
+        ggplot(data = output, aes(x = factor(Threshold), y = R2)) +
+        geom_text(
+            aes(label = paste(print.p)),
+            vjust = -1.5,
+            hjust = 0,
+            angle = 45,
+            cex = 4,
+            parse = T
+        )  +
+        theme_sam +
+        scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
+        xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
+        ylab(expression(paste("PRS model fit:  ", R ^ 2)))
   if (argv$bar_col_p) {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(fill = factor(Threshold)), stat = "identity") +
@@ -1687,9 +1698,11 @@ plot.bar <- function(argv, output, prefix){
   }else {
     ggfig.plot <-
       ggfig.plot + geom_bar(aes(fill = -log10(P)), stat = "identity") +
-      scale_fill_gradient(
+      scale_fill_gradient2(
         low = argv$bar_col_low,
         high = argv$bar_col_high,
+        mid=argv$bar_col_low,
+        midpoint=1e-4,
         name = bquote(atop(-log[10] ~ model, italic(P) - value), )
       )
   }
