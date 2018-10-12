@@ -1908,7 +1908,7 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
                 prefix,
                 "_MULTISET_BARPLOT_",
                 Sys.Date(),
-                ".", device
+                ".", device,
                 sep = ""
             ),
             height = 10,
