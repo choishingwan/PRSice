@@ -549,6 +549,7 @@ option_list <- list(
               default = "YlOrRd",
               dest = "bar_palatte"),
   make_option("--prsice", type = "character"),
+  make_option("--device", type="character", default="png"),
   make_option("--dir", type = "character")
 )
 
@@ -578,6 +579,7 @@ not_cpp <- c(
     "bar-col-low",
     "bar-col-high",
     "bar-palatte",
+    "device",
     "prsice",
     "multi-plot",
     "plot-set",
@@ -872,6 +874,7 @@ call_quantile <-
              use.ggplot,
              binary,
              extract,
+             device,
              uneven) {
     if (!pheno.as.quant) {
         family <- gaussian
@@ -946,14 +949,16 @@ call_quantile <-
                        binary,
                        extract,
                        prefix,
-                       uneven)
+                       uneven,
+                       device)
         } else{
             plot.quant.no.g(quantiles.df,
                             num_quant,
                             binary,
                             extract,
                             prefix,
-                            uneven)
+                            uneven,
+                            device)
         }
     } else{
         # TODO: Maybe also change this to regression? Though might be problematic if we have binary pheno without cov
@@ -993,14 +998,16 @@ call_quantile <-
                              num_quant,
                              extract,
                              prefix,
-                             uneven)
+                             uneven,
+                             device)
         } else{
             plot.pheno.quant.no.g(pheno.sum,
                                   use.residual,
                                   num_quant,
                                   extract,
                                   prefix,
-                                  uneven)
+                                  uneven,
+                                  device)
         }
     }
     
@@ -1213,30 +1220,44 @@ quantile_plot <- function(base.prs, pheno, covariance,  prefix, argv, binary, us
     }
     quant.index <- c(quant.ref, c(1:num_quant)[-quant.ref])
     pheno.merge$quantile <- quants
-    call_quantile(pheno.merge,
-                  covariance, 
-                 prefix,
-                 num_quant,
-                 quant.index,
-                 pheno.as.quant,
-                 use.residual,
-                 use.ggplot,
-                 binary,
-                 extract, FALSE)
+    call_quantile(
+        pheno.merge,
+        covariance,
+        prefix,
+        num_quant,
+        quant.index,
+        pheno.as.quant,
+        use.residual,
+        use.ggplot,
+        binary,
+        extract,
+        argv$device,
+        FALSE
+    )
 }
 
-plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
+plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven,device){
+    dev.function <- png
+    if(device=="tiff"){
+        dev.function <- tiff
+    }else if(device=="pdf"){
+        dev.function <- pdf
+    }else if(device=="bmp"){
+        dev.function <- bmp
+    }else if(device=="jpeg"){
+        dev.function <- jpeg
+    }
     if(uneven) {
-        png(
-            paste(prefix, "_STRATA_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
+        dev.function(
+            paste(prefix, "_STRATA_PHENO_PLOT_", Sys.Date(), ".",device, sep = ""),
             height = 10,
             width = 10,
             res = 300,
             unit = "in"
         )
     } else{
-        png(
-            paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = ""),
+        dev.function(
+            paste(prefix, "_QUANTILES_PHENO_PLOT_", Sys.Date(), ".",device, sep = ""),
             height = 10,
             width = 10,
             res = 300,
@@ -1283,7 +1304,7 @@ plot.pheno.quant.no.g <- function(pheno.sum, use_residual, num_quant, extract, p
   g<-dev.off()
 }
 
-plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven){
+plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix, uneven,device){
   quantiles.plot <-
     ggplot(pheno.sum, aes(
       x = quantile,
@@ -1330,14 +1351,14 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
   
   if (!uneven) {
       ggsave(
-          paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(), ".png", sep = "_"),
+          paste(prefix, "QUANTILES_PHENO_PLOT_", Sys.Date(), ".",device, sep = "_"),
           quantiles.plot,
           height = 10,
           width = 10
       )
   } else{
       ggsave(
-          paste(prefix, "STRATA_PHENO_PLOT_", Sys.Date(), ".png", sep = "_"),
+          paste(prefix, "STRATA_PHENO_PLOT_", Sys.Date(), ".",device, sep = "_"),
           quantiles.plot,
           height = 10,
           width = 10
@@ -1345,7 +1366,7 @@ plot.pheno.quant <- function(pheno.sum, use_residual, num_quant, extract, prefix
   }
 }
 
-plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven){
+plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven, device){
     quantiles.plot <-
         ggplot(quantiles.df, aes(
             x = DEC,
@@ -1384,25 +1405,36 @@ plot.quant <- function(quantiles.df, num_quant, binary, extract, prefix, uneven)
     }
     if(uneven){
         ggsave(
-            paste(prefix, "_STRATA_PLOT_", Sys.Date(),".png", sep = ""),
+            paste(prefix, "_STRATA_PLOT_", Sys.Date(),".",device, sep = ""),
             quantiles.plot,
             height=10, width=10
         )
     }else{
         ggsave(
-            paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".png", sep = ""),
+            paste(prefix, "_QUANTILES_PLOT_", Sys.Date(),".",device, sep = ""),
             quantiles.plot,
             height=10, width=10
         )
     }
 }
 
-plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix,  uneven){
+plot.quant.no.g <- function(quantiles.df, num_quant, binary, extract, prefix,  uneven,device){
+    dev.function <- png
+    if(device=="tiff"){
+        dev.function <- tiff
+    }else if(device=="pdf"){
+        dev.function <- pdf
+    }else if(device=="bmp"){
+        dev.function <- bmp
+    }else if(device=="jpeg"){
+        dev.function <- jpeg
+    }
+    
   if(!uneven){
-      png(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".png", sep = ""),
+      dev.function(paste(prefix, "_QUANTILES_PLOT_", Sys.Date(), ".",device, sep = ""),
       height=10, width=10, res=300, unit="in")
   }else{
-      png(paste(prefix, "_STRATA_PLOT_", Sys.Date(), ".png", sep = ""),
+      dev.function(paste(prefix, "_STRATA_PLOT_", Sys.Date(), ".",device, sep = ""),
           height=10, width=10, res=300, unit="in")
   }
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
@@ -1487,14 +1519,24 @@ high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     PRS <- unique(PRS)
     # Need to also plot the barchart level stuff with green
     if(use.ggplot){
-      plot.high.res(argv, PRS, prefix, barchart.levels)
+      plot.high.res(argv, PRS, prefix, barchart.levels, argv$device)
     }else{
-      plot.high.res.no.g(argv, PRS, prefix, barchart.levels)
+      plot.high.res.no.g(argv, PRS, prefix, barchart.levels, argv$device)
     }
 }
 
-plot.high.res.no.g <- function(argv, PRS, prefix, barchart.levels){
-  png(paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
+plot.high.res.no.g <- function(argv, PRS, prefix, barchart.levels,device){
+    dev.function <- png
+    if(device=="tiff"){
+        dev.function <- tiff
+    }else if(device=="pdf"){
+        dev.function <- pdf
+    }else if(device=="bmp"){
+        dev.function <- bmp
+    }else if(device=="jpeg"){
+        dev.function <- jpeg
+    }
+  dev.function(paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".",device, sep = ""),
       height=10, width=10, res=300, unit="in")
   par(pty="s", cex.lab=1.5, cex.axis=1.25, font.lab=2, mai=c(0.5,1.25,0.1,0.1))
   xlab <- expression(italic(P) - value ~ threshold ~ (italic(P)[T]))
@@ -1526,7 +1568,7 @@ plot.high.res.no.g <- function(argv, PRS, prefix, barchart.levels){
   g<-dev.off()
 }
 
-plot.high.res <- function(argv, PRS, prefix, barchart.levels){
+plot.high.res <- function(argv, PRS, prefix, barchart.levels,device){
   ggfig.points <- ggplot(data = PRS, aes(x = Threshold)) +
     xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
     theme_sam
@@ -1543,7 +1585,7 @@ plot.high.res <- function(argv, PRS, prefix, barchart.levels){
     
   }
   ggsave(
-    paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".png", sep = ""),
+    paste(prefix, "_HIGH-RES_PLOT_", Sys.Date(), ".",device, sep = ""),
     ggfig.points,
     height=10, width=10
   )
@@ -1596,14 +1638,25 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     output$sign <- sign(output$Coefficient)
     output$print.p <- sub("e", "*x*10^", output$print.p)
     if(use.ggplot){
-      plot.bar(argv, output, prefix)
+      plot.bar(argv, output, prefix,argv$device)
     }else{
-      plot.bar.no.g(argv, output,prefix)
+      plot.bar.no.g(argv, output,prefix, argv$device)
     }
 }
 
-plot.bar.no.g <- function(argv, output, prefix){
-  png(paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
+plot.bar.no.g <- function(argv, output, prefix, device){
+    dev.function <- png
+    if(device=="tiff"){
+        dev.function <- tiff
+    }else if(device=="pdf"){
+        dev.function <- pdf
+    }else if(device=="bmp"){
+        dev.function <- bmp
+    }else if(device=="jpeg"){
+        dev.function <- jpeg
+    }
+    
+  dev.function(paste(prefix, "_BARPLOT_", Sys.Date(), ".",device, sep = ""),
       height=10, width=10, res=300, unit="in")
   layout(t(1:2), widths=c(8.8,1.2))
   par( cex.lab=1.5, cex.axis=1.25, font.lab=2, 
@@ -1675,7 +1728,7 @@ plot.bar.no.g <- function(argv, output, prefix){
   g<-dev.off()
 }
 
-plot.bar <- function(argv, output, prefix){
+plot.bar <- function(argv, output, prefix, device){
     ggfig.plot <-
         ggplot(data = output, aes(x = factor(Threshold), y = R2)) +
         geom_text(
@@ -1708,7 +1761,7 @@ plot.bar <- function(argv, output, prefix){
   }
   
   ggsave(
-    paste(prefix, "_BARPLOT_", Sys.Date(), ".png", sep = ""),
+    paste(prefix, "_BARPLOT_", Sys.Date(), ".",device, sep = ""),
     ggfig.plot,
     height=10,width=10
   )
@@ -1717,7 +1770,7 @@ plot.bar <- function(argv, output, prefix){
 
 # Plot multi-phenotype plot -----------------------------------------------
 
-multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
+multi_pheno_plot <- function(parameters, use.ggplot, use.data.table, device){
     writeLines("Plotting the Multi-Phenotype Plot")
     prs.summary <- NULL
     if(use.data.table){
@@ -1746,11 +1799,22 @@ multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
             parameters$out,
             "_MULTIPHENO_BARPLOT_",
             Sys.Date(),
-            ".png",
+            ".",device,
             sep = ""
         ))
     }else{
-        png(paste(parameters$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".png", sep = ""),
+        dev.function <- png
+        if(device=="tiff"){
+            dev.function <- tiff
+        }else if(device=="pdf"){
+            dev.function <- pdf
+        }else if(device=="bmp"){
+            dev.function <- bmp
+        }else if(device=="jpeg"){
+            dev.function <- jpeg
+        }
+        
+        dev.function(paste(parameters$out, "_MULTIPHENO_BARPLOT_", Sys.Date(), ".",device, sep = ""),
             height=10, width=10, res=300, unit="in")
         layout(t(1:2), widths=c(8.8,1.2))
         
@@ -1791,7 +1855,7 @@ multi_pheno_plot <- function(parameters, use.ggplot, use.data.table){
 # Plot multi-set plot -----------------------------------------------------
 
 
-multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggplot){
+multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggplot, device){
     writeLines("Plotting Multi-Set-Plot")
     if (nrow(prs.summary) < 1)
         stop((
@@ -1821,19 +1885,30 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
             paste(prefix,
                   "_MULTISET_BARPLOT_",
                   Sys.Date(),
-                  ".png",
+                  ".",device,
                   sep = ""),
             b,
             height = 10,
             width = 10
         )
     } else{
-        png(
+        dev.function <- png
+        if(device=="tiff"){
+            dev.function <- tiff
+        }else if(device=="pdf"){
+            dev.function <- pdf
+        }else if(device=="bmp"){
+            dev.function <- bmp
+        }else if(device=="jpeg"){
+            dev.function <- jpeg
+        }
+        
+        dev.function(
             paste(
                 prefix,
                 "_MULTISET_BARPLOT_",
                 Sys.Date(),
-                ".png",
+                ".", device
                 sep = ""
             ),
             height = 10,
@@ -2321,7 +2396,7 @@ if (!is.null(phenos) &
         )
     }
     if(provided("multi_plot", argv)){
-        multi_pheno_plot(argv, use.ggplot, use.data.table)
+        multi_pheno_plot(argv, use.ggplot, use.data.table, argv$device)
     }
 } else if (!is.null(phenos)) {
     process_plot(
