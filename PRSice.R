@@ -255,6 +255,9 @@ help_message <-
                             instead of the association with phenotype\n
     --bar-palatte           Colour palatte to be used for bar plotting when\n
                             --bar_col_p is set. Default: YlOrRd\n
+    --device                Select different plotting devices. You can choose\n
+                            any plotting devices supported by base R.\n
+                            Default: png\n
     --multi-plot            Plot the top N phenotype / gene set in a\n
                             summary plot\n 
     --plot                  When set, will only perform plotting.\n
