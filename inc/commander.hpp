@@ -40,8 +40,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.3.beta";
-const std::string date = "19 September 2018";
+const std::string version = "2.1.4.beta";
+const std::string date = "19 October 2018";
 class Commander
 {
 public:
@@ -1354,15 +1354,17 @@ private:
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'C') {
-            input = "center";
+            input = "CENTER";
             m_missing_score = MISSING_SCORE::CENTER;
         }
         else if (input.at(0) == 'M')
         {
+            input = "MEAN_IMPUTE";
             m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
         }
         else if (input.at(0) == 'S')
         {
+            input = "SET_ZERO";
             m_missing_score = MISSING_SCORE::SET_ZERO;
         }
         else
