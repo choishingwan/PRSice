@@ -43,6 +43,12 @@
 
         Curated MSigDB files can be downloaded from [here](http://software.broadinstitute.org/gsea/msigdb/) after registration in [here](http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb)
 
+- `--set-perm`               
+
+    The number of set base permutation to perform. 
+    This is only used for calculating the competitive p-value. 
+    10,000 generally will be enough. 
+
 - `--snp-set`               
 
     Provide a SNP set file containing a single snp set.

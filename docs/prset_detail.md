@@ -60,6 +60,17 @@ However, it is also likely for SNPs outside the region to influence functions of
 Therefore we provide the `--proxy` option. Essentially, this provide a soft cutoff to SNP membership.
 For example, when user define `--proxy 0.8`, if LD between SNP A and SNP B is more than 0.8, then SNP A will be considered to be within the same regions as SNP B and vice versa.
 
+## P-value thresholding
+By default, PRSet do not perform p-value thresholding and will simply calculate the set based PRS at P-value threshold of 1. 
+This is because it is unclear whether the set is associated with the phenotype when the best-threshold contained only a small portion of SNPs within the gene sets.
+If you wish to perform p-value thresholding with PRSet, you will need to specify any of the parameters related to p-value thresholding, i.e. `--interval`, `--lower`, `--upper`, `--fastscore` or `--bar-levels`.
+
+# Set Based Association
+A challenge in Set base analysis is to obtain a competitive p-value, which indicates the level of enrichment, as opposed to the self-contained p-value which indicates the level of association. 
+To obtain a competitive p-value, PRSet can perform a permutation analysis. 
+Briefly, for a set containing $N$ SNPs, PRSet will construct a null set by randomly selecting $N$ SNPs from the background (default is the genic region). 
+A null p-value is then obtained by performing an association between the PRS of the null set with the phenotype. You can specify the number of permutation by `--set-perm`
+
 # Output Data
 
 ## PRS model-fit
