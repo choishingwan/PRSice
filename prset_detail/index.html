@@ -113,7 +113,12 @@
         
             <li><a class="toctree-l4" href="#proxy-prset">Proxy PRSet</a></li>
         
+            <li><a class="toctree-l4" href="#p-value-thresholding">P-value thresholding</a></li>
+        
         </ul>
+    
+
+    <li class="toctree-l3"><a href="#set-based-association">Set Based Association</a></li>
     
 
     <li class="toctree-l3"><a href="#output-data">Output Data</a></li>
@@ -309,6 +314,15 @@ The default option of PRSet is to only include SNPs that are physically within t
 However, it is also likely for SNPs outside the region to influence functions of the set.
 Therefore we provide the <code>--proxy</code> option. Essentially, this provide a soft cutoff to SNP membership.
 For example, when user define <code>--proxy 0.8</code>, if LD between SNP A and SNP B is more than 0.8, then SNP A will be considered to be within the same regions as SNP B and vice versa.</p>
+<h2 id="p-value-thresholding">P-value thresholding<a class="headerlink" href="#p-value-thresholding" title="Permanent link">&para;</a></h2>
+<p>By default, PRSet do not perform p-value thresholding and will simply calculate the set based PRS at P-value threshold of 1. 
+This is because it is unclear whether the set is associated with the phenotype when the best-threshold contained only a small portion of SNPs within the gene sets.
+If you wish to perform p-value thresholding with PRSet, you will need to specify any of the parameters related to p-value thresholding, i.e. <code>--interval</code>, <code>--lower</code>, <code>--upper</code>, <code>--fastscore</code> or <code>--bar-levels</code>.</p>
+<h1 id="set-based-association">Set Based Association<a class="headerlink" href="#set-based-association" title="Permanent link">&para;</a></h1>
+<p>A challenge in Set base analysis is to obtain a competitive p-value, which indicates the level of enrichment, as opposed to the self-contained p-value which indicates the level of association. 
+To obtain a competitive p-value, PRSet can perform a permutation analysis. 
+Briefly, for a set containing <span class="arithmatex">\(N\)</span> SNPs, PRSet will construct a null set by randomly selecting <span class="arithmatex">\(N\)</span> SNPs from the background (default is the genic region). 
+A null p-value is then obtained by performing an association between the PRS of the null set with the phenotype. You can specify the number of permutation by <code>--set-perm</code></p>
 <h1 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h1>
 <h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
 <p>A file containing the PRS model fit across thresholds is named <strong>[Name].prsice</strong>, where <strong>[Name]</strong> is the
