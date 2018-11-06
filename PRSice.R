@@ -946,6 +946,7 @@ call_quantile <-
             quote = F,
             row.names = F
         )
+        
         if (use.ggplot) {
             plot.quant(quantiles.df,
                        num_quant,
@@ -1115,7 +1116,10 @@ uneven_quantile_plot <- function(base.prs, pheno,covariance,  prefix, argv, bina
                   use.residual,
                   use.ggplot,
                   binary,
-                  extract, TRUE)
+                  extract, 
+                  argv$device, 
+                  TRUE)
+
 }
 
 
