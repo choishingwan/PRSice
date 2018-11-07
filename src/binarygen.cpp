@@ -104,7 +104,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
                 target_name = token[0];
                 external_sample = true;
             }
-            message.append(" info from file " + target_name + " (bed)\n");
+            message.append(" info from file " + target_name + " (bgen)\n");
             if (external_sample) {
                 message.append("With external fam file: " + m_sample_file
                                + "\n");
@@ -129,7 +129,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
                 target_name = token[0];
                 external_sample = true;
             }
-            message.append(" file: " + target_name + " (bed)\n");
+            message.append(" file: " + target_name + " (bgen");
             if (external_sample) {
                 message.append("With external fam file: " + m_sample_file
                                + "\n");
