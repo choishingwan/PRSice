@@ -1376,7 +1376,7 @@ private:
         if (message.find("missing") != message.end()) {
             error_message.append("Warning: Duplicated argument --score\n");
         }
-        message["score"] = input;
+        message["missing"] = input;
         return true;
     }
     std::vector<std::string> transform_covariate(std::string& cov);
