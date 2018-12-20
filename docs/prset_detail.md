@@ -2,7 +2,7 @@
 ## MSigDB
 One simple way to obtain gene sets or pathway is through the [MSigDB](http://software.broadinstitute.org/gsea/msigdb/).
 After registration in [here](http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb), you can download different gene sets curated by the Broad Institute.
-Alternatively, you can also generate your own gene sets in the MSigDB format:
+Alternatively, you can also generate your own gene sets in the GMT format:
 
 <pre>
 [Set A] [Gene 1] [Gene 2] ...
@@ -23,7 +23,7 @@ As MSigDB file does not contain the genome boundary of the genes within the gene
 one must also provide a GTF file. A GTF file contains the genome boundary of the genetic
 elements within the human genome and PRSet can use the information from GTF to determine if
 a SNP falls within a specific gene.
-One can download the GTF file file Human (Genome build GTCh38.p7)[here](ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens).
+One can download the GTF file file Human (Genome build GTCh38.p7) [here](ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens).
 
 PRSet will look for any regions with feature  of **exon**, **gene**, **protein_coding** or **CDS** (*case sensitive*).
 Any genomic regions without these features will be ignored.
@@ -63,28 +63,27 @@ For example, when user define `--proxy 0.8`, if LD between SNP A and SNP B is mo
 # Output Data
 
 ## PRS model-fit
-A file containing the PRS model fit across thresholds is named **[Name].[Set].prsice**, where **[Name]** is the
-output prefix name as specified by `--out` and **[Set]** is the name of the gene set; this is stored as
+A file containing the PRS model fit across thresholds is named **[Name].prsice**, where **[Name]** is the
+output prefix name as specified by `--out` this is stored as
 
-Threshold, R2, P-value, Coefficient, and Number of SNPs at this threshold
+Name of Set, Threshold, R2, P-value, Coefficient, Standard Error, and Number of SNPs at this threshold
 
 ## Scores for each individual
 A file containing PRS for each individual at the best-fit PRS named
 
-**[Name].[Set].best** is provide.
+**[Name].best** is provide.
 This file has the format of:
 
-FID,IID,PRS at best threshold, Has Phenotype
+FID,IID, In Regression, PRS at best threshold for Set 1, PRS at best threshold for Set 2, ...
 
 Where the has phenotype column indicate whether the sample contain all
 the required phenotype for PRSice analysis (e.g. Samples with missing
 phenotype/covariate will not be included in the regression.
-These samples will be indicated as "No" under the has phenotype column)
+These samples will be indicated as "No" under the in regression column)
 
 If `--all` option is used, a file named
 
-**[Name].[Set].all.score** is also generated
-
+**[Name].all.score** is also generated
 
 Please note, if `--all` options is used, the PRS for each individual at all threshold will be given.
 In the event where the target sample size is large and a lot of threshold are tested, this file can be large.
@@ -93,6 +92,8 @@ This is especially true when large number of gene sets were provided.
 !!! note
 
     PRSice also supports multiple phenotypes for target data.
+    All output prefix will change to [Name].[Pheno] where [Pheno]
+    is the name of the phenotype. 
     For more details on the options used to implement this, see
     [here](step_by_step.md#phenotype-files).
 
@@ -112,6 +113,7 @@ The summary file contain the following fields:
 9. **P** - P value of the model fit
 10. **Num_SNP** - Number of SNPs included in the model
 11. **Empirical-P** - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting
+12. **Competitive-P** - Only provided if set permutation is performed. This is the competitive p-value and should measure the enrichment of signal of the gene set
 
 ## Multi-Set Plot
 When the `--multi-plot <N>` option is set, the results of the top *N* gene sets will be plotted.

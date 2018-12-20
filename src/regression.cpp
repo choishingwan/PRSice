@@ -22,7 +22,7 @@ namespace Regression
 // on purposely perform the copying of x
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
                        double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double& standard_error, size_t thread,
+                       double& coeff, double& standard_error, intptr_t thread,
                        bool intercept)
 {
     Eigen::setNbThreads(thread);
@@ -126,8 +126,8 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
                                     const Eigen::VectorXd& mu,
                                     const Eigen::VectorXd& wt)
 {
-    int n = y.rows();
-    int lmu = mu.rows(), lwt = wt.rows();
+    Eigen::Index n = y.rows();
+    Eigen::Index lmu = mu.rows(), lwt = wt.rows();
     Eigen::VectorXd ans = y;
     if (lmu != n && lmu != 1) {
         std::string error_message =
@@ -143,7 +143,7 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     }
     double mui, yi;
     if (lmu > 1) {
-        for (size_t i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i) {
             mui = mu(i);
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
@@ -153,7 +153,7 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (size_t i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i) {
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
                      * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -166,8 +166,8 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
                                const Eigen::VectorXd& mu,
                                const Eigen::VectorXd& wt)
 {
-    int n = y.rows();
-    int lmu = mu.rows(), lwt = wt.rows();
+    Eigen::Index n = y.rows();
+    Eigen::Index lmu = mu.rows(), lwt = wt.rows();
     double ans = 0.0;
     if (lmu != n && lmu != 1) {
         std::string error_message =
@@ -183,7 +183,7 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     }
     double mui, yi;
     if (lmu > 1) {
-        for (size_t i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i) {
             mui = mu(i);
             yi = y(i);
             ans += 2 * wt((lwt > 1) ? i : 0)
@@ -193,7 +193,7 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (size_t i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i) {
             yi = y(i);
             ans += 2 * wt((lwt > 1) ? i : 0)
                    * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -206,12 +206,12 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          double& r2, double& coeff, double& standard_error, size_t max_iter,
-         size_t thread, bool intercept)
+         intptr_t thread, bool intercept)
 {
-    Eigen::setNbThreads(thread);
+    Eigen::setNbThreads(static_cast<int>(thread));
     Eigen::MatrixXd A = x;
-    int nobs = y.rows();
-    int nvars = A.cols();
+    Eigen::Index nobs = y.rows();
+    Eigen::Index nvars = A.cols();
     Eigen::VectorXd weights = Eigen::VectorXd::Ones(nobs);
     Eigen::VectorXd mustart =
         (weights.array() * y.array() + 0.5) / (weights.array() + 1);
@@ -234,10 +234,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         good = (mu_eta_val.array() != 0).select(mu_eta_val.array(), 0);
         z = weights;
         w = weights;
-        size_t i_good = 0;
-        //			for(size_t i_weights=0; i_weights < weights.rows();
-        //++i_weights){
-        for (size_t i_weights = 0; i_weights < good.rows(); ++i_weights) {
+        Eigen::Index i_good = 0;
+        for (Eigen::Index i_weights = 0; i_weights < good.rows(); ++i_weights) {
             if (good(i_weights) > 0) {
                 // because offset is 0, we ignore it
                 z(i_good) =
@@ -254,7 +252,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         w.conservativeResize(i_good);
         A.conservativeResize(i_good, nvars);
         A_tmp = A;
-        for (size_t i = 0; i < nvars; ++i) {
+        for (Eigen::Index i = 0; i < nvars; ++i) {
             A_tmp.col(i) = A.col(i).array() * w.array();
         }
         qr.compute(A_tmp);
@@ -286,9 +284,9 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         (y.array() - mu.array()) / (logit_mu_eta(eta).array());
     int sum_good = 0;
     int weight_bad = 0;
-    for (size_t i = 0; i < good.rows(); ++i) {
-        if (good(i) != 0) sum_good++;
-        if (weights(i) == 0) weight_bad++;
+    for (Eigen::Index i = 0; i < good.rows(); ++i) {
+        if (!misc::logically_equal(good(i), 0)) sum_good++;
+        if (misc::logically_equal(weights(i), 0)) weight_bad++;
     }
     Eigen::VectorXd wtdmu =
         (intercept) ? Eigen::VectorXd::Constant(
@@ -296,16 +294,16 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
                                     / weights.array().sum())
                     : logit_linkinv(Eigen::VectorXd::Zero(nobs));
     double nulldev = binomial_dev_resids_sum(y, wtdmu, weights);
-    int rank = qr.rank();
+    Eigen::Index rank = qr.rank();
     Eigen::MatrixXd R =
         qr.matrixQR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
     Eigen::VectorXd se =
         ((R.transpose() * R).inverse().diagonal()).array().sqrt();
     // again, we are ony interested in one of the variable
-    r2 = (1.0 - std::exp((dev - nulldev) / (double) nobs))
-         / (1 - std::exp(-nulldev / (double) nobs));
-    size_t se_index = intercept;
-    for (size_t ind = 0; ind < start.rows(); ++ind) {
+    r2 = (1.0 - std::exp((dev - nulldev) / static_cast<double>(nobs)))
+         / (1 - std::exp(-nulldev / static_cast<double>(nobs)));
+    Eigen::Index se_index = intercept;
+    for (Eigen::Index ind = 0; ind < start.rows(); ++ind) {
         if (qr.colsPermutation().indices()(ind) == intercept) {
             se_index = ind;
             break;

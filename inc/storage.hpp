@@ -25,14 +25,7 @@ struct PRS
 {
     double prs;
     int num_snp;
-    PRS() : prs(0.0), num_snp(0){};
-    double get_prs() const
-    {
-        if (num_snp == 0)
-            return 0.0;
-        else
-            return prs / (double) num_snp;
-    };
+    PRS() : prs(0.0), num_snp(0) {}
 };
 
 struct Sample_ID
@@ -40,11 +33,21 @@ struct Sample_ID
     std::string FID;
     std::string IID;
     std::string pheno;
-    Sample_ID(const std::string& F, const std::string& I, const std::string& P)
-        : FID(F), IID(I), pheno(P){};
-    Sample_ID() : FID(""), IID(""), pheno(""){};
+    bool founder;
+    Sample_ID(const std::string& F, const std::string& I, const std::string& P,
+              const bool& Founder)
+        : FID(F), IID(I), pheno(P), founder(Founder)
+    {
+    }
+    Sample_ID() : FID(""), IID(""), pheno(""), founder(false) {}
 };
 
+struct MAF_Store
+{
+    double maf;
+    size_t index;
+    int category;
+};
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP
 template <typename T>

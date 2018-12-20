@@ -13,11 +13,6 @@ PRSice allow the incorporation of covariates into the analysis.
     in the best score output is used to indicate whether the sample is
     included in the regression model (*Yes* for included; *No* for excluded)
 
-!!! Important
-
-    PRSice currently only support numeric covariates. To include non-numeric
-    covariates, dummy variable must be generated beforehand.
-
 # Comamnds
 - `--cov-col` | `-c`
     Header of covariates. If not provided, will use
@@ -27,6 +22,13 @@ PRSice allow the incorporation of covariates into the analysis.
     read as **PC1,PC2,PC3**. Discontinuous input are also
     supported: `@cov[1.3-5]` will be parsed as
     **cov1,cov3,cov4,cov5**
+    
+- `--cov-factor`
+
+    Header of categorical covariate(s). Dummy variable 
+    will be automatically generated. Any items in
+    `--cov-factor` must also be found in `--cov-col`
+    Also accept continuous input (start with `@`).
 
 - `--cov-file` | `-C`
     Covariate file. First column should be FID and

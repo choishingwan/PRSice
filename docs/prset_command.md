@@ -31,8 +31,8 @@
 
 - `--msigdb` | `-m`
 
-    MSIGDB file containing the pathway information. Require the gtf file.
-    The MSigDB file format is a simple tab/space delimited text file
+    MSigDB file containing the pathway information. Require the gtf file.
+    The GMT file format used by MSigDB is a simple tab/space delimited text file
     where each line correspond to a single gene set following by Gene IDs:
     ```
         [Set A] [Gene 1] [Gene 2] ...
@@ -42,3 +42,15 @@
     !!! tip
 
         Curated MSigDB files can be downloaded from [here](http://software.broadinstitute.org/gsea/msigdb/) after registration in [here](http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb)
+
+- `--snp-set`               
+
+    Provide a SNP set file containing a single snp set.
+    Name of SNP set file will be used as the region
+    identifier. This file should contain only one column.
+    
+- `--snp-sets`
+
+    Provide a SNP set file containing multiple snp sets.
+    Each row represent a single SNP set with the first
+    column containing name of the SNP set.    

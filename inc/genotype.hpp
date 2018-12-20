@@ -31,6 +31,7 @@
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <random>
 #include <string>
@@ -41,6 +42,14 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
+
+#ifdef _WIN32
+#include <mingw.mutex.h>
+#include <mingw.thread.h>
+#else
+#include <mutex>
+#include <thread>
+#endif
 // class BinaryPlink;
 // class BinaryGen;
 #define MULTIPLEX_LD 1920
@@ -49,31 +58,86 @@
 class Genotype
 {
 public:
-    Genotype(){};
-    Genotype(const size_t thread, const bool ignore_fid,
+    /*!
+     * \brief default constructor of Genotype
+     */
+    Genotype() {}
+    /*!
+     * \brief Genotype constructor
+     * \param thread = number of thread
+     * \param ignore_fid = if FID should be ignored
+     * \param keep_nonfounder = if we should keep non-founders
+     * \param keep_ambig = if we should keep ambiguous SNPs
+     * \param is_ref = if this is a reference genome
+     */
+    Genotype(const uint32_t thread, const bool ignore_fid,
              const bool keep_nonfounder, const bool keep_ambig,
              const bool is_ref = false)
         : m_thread(thread)
         , m_ignore_fid(ignore_fid)
         , m_is_ref(is_ref)
         , m_keep_nonfounder(keep_nonfounder)
-        , m_keep_ambig(keep_ambig){};
+        , m_keep_ambig(keep_ambig)
+    {
+    }
     virtual ~Genotype();
 
     // after load samples, samples that we don't want to include
     // will all have their FID, IID and phenotype masked by empty string
+    /*!
+     * \brief Function to load samples into the genotype class object. Will call
+     *        gen_sample_vector. Will only store the sample info if this is the
+     *        target.
+     * \param keep_file is the file containing samples to be included
+     * \param remove_file is the file containing samples to be excluded
+     * \param verbose boolean indicate whether we should output the count
+     * \param reporter is the logger
+     */
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, bool verbose,
                       Reporter& reporter);
-    // we use pointer for the target such that we can have a nullptr as default
-    // therefore not providing any input argument for target file processing
-    void load_snps(const std::string out_prefix,
-                   const std::string& extract_file,
-                   const std::string& exclude_file, const double geno,
-                   const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   Region& exclusion, bool verbose, Reporter& reporter,
-                   Genotype* target = nullptr);
+    /*!
+     * \brief Function to load SNPs into the genotype class object. Will call
+     *        gen_snp_vector function. Will only generate the vector if this is
+     *        the target
+     * * \param maf_threshold is the maf threshold
+     * \param maf_filter is the boolean indicate if we want to perform maf
+     * filtering
+     * \param geno_threshold is the geno threshold
+     * \param geno_filter is the boolean indicate if we want to perform geno
+     * filtering
+     * \param hard_threshold is the hard coding threshold
+     * \param hard_coded is the boolean indicate if hard coding should be
+     * performed
+     * \param info_threshold is the INFO score threshold
+     * \param info_filter is the boolean indicate if we want to perform INFO
+     * score filtering
+     * \param exclusion is the region of exclusion
+     * \param verbose is the boolean indicate if we want to print the message
+     * \param reporter is the logger
+     * \param target is the target genotype. Equal to nullptr if this is the
+     * target
+     */
+    void load_snps(const std::string& out, const std::string& exclude,
+                   const std::string& extract, const double& maf_threshold,
+                   const double& geno_threshold, const double& info_threshold,
+                   const double& hard_threshold, const bool maf_filter,
+                   const bool geno_filter, const bool info_filter,
+                   const bool hard_coded, Region& exclusion, bool verbose,
+                   Reporter& reporter, Genotype* target = nullptr);
+
+    /*!
+     * \brief Return the number of SNPs, use for unit test
+     * \return reuturn the number of SNPs included
+     */
+    std::vector<SNP>::size_type num_snps() const
+    {
+        return m_existed_snps.size();
+    }
+    /*!
+     * \brief Function to re-propagate the m_existed_snps_index after reading
+     * the reference panel
+     */
     void update_snp_index()
     {
         m_existed_snps_index.clear();
@@ -81,60 +145,141 @@ public:
             m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
         }
     }
-    std::unordered_map<std::string, int> get_chr_order() const
-    {
-        return m_chr_order;
-    };
+    /*!
+     * \brief Return all p-value threshold in used in the analysis. Mainly for
+     * constructing the all score file
+     *
+     * \return all p-value threshold used in the analysis, exclude any threshold
+     * that doesn't contain any SNP
+     */
+    std::vector<double> get_thresholds() const { return m_thresholds; }
 
-    std::unordered_map<std::string, size_t> index() const
-    {
-        return m_existed_snps_index;
-    };
-    std::vector<double> get_thresholds() const { return m_thresholds; };
-    std::vector<Sample_ID> sample_names() const { return m_sample_id; };
-    size_t max_category() const { return m_max_category; };
+    size_t max_category() const { return m_max_category; }
+    /*!
+     * \brief Return the number of sample we wish to perform PRS on
+     * \return the number of sample
+     */
     size_t num_sample() const { return m_sample_id.size(); }
-
-    bool get_score(int& cur_index, int& cur_category, double& cur_threshold,
-                   size_t& num_snp_included, const size_t region_index,
-                   const bool cumulate, const bool require_statistic,
+    /*!
+     * \brief Return the number of p-value threshold that contain at least 1 SNP
+     * \return  the number of p-value threshold included in the analysis
+     */
+    uint32_t num_threshold() const { return m_num_threshold; }
+    /*!
+     * \brief Function to obtain PRS score from the genotype file. Will assign
+     * the result information to our PRS vector
+     *
+     * \param cur_index is the index of the starting SNP that we want to read
+     * from
+     *
+     * \param cur_threshold return the p-value threshold of the current
+     * processing chunck. This information is use for generating the output
+     *
+     * \param num_snp_included return the total number of SNP included in this
+     * chunck
+     *
+     * \param region_index is the index of the region of interest
+     * \param non_cumulate indicate if we want to perform cumulated PRS
+     * calculation or not
+     *
+     * \param require_statistic if we want to standardize the PRS
+     * \param first_run if we want to add or reset the PRS input
+     * \return true if we can run, false otherwise
+     */
+    bool get_score(int& cur_index, double& cur_threshold,
+                   uint32_t& num_snp_included, const size_t region_index,
+                   const bool non_cumulate, const bool require_statistic,
                    const bool first_run);
-    // this is to prepare the genotypes for clumping
+    /*!
+     * \brief Function to prepare clumping. Should sort all the SNPs by their
+     * chromosome number and then by their p-value
+     * \return true if there are SNPs to sort
+     */
     bool sort_by_p()
     {
         if (m_existed_snps.size() == 0) return false;
         m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
         return true;
     }
-    bool sort_by_coordinates()
-    {
-        if (m_existed_snps.size() == 0) return false;
-        std::sort(m_existed_snps.begin(), m_existed_snps.end(),
-                  SNP::compare_snp);
-        return true;
-    }
-    void print_snp(std::string& output, double threshold,
-                   const size_t region_index);
-    size_t num_threshold() const { return m_num_threshold; };
-    void read_base(const Commander& c_commander, Region& region,
+
+
+    /*!
+     * \brief Read in the base file and add the required information to SNP
+     * \param c_commander contain all user input
+     * \param region contain the region information. Use for defining the flag
+     * \param reporter is the logger
+     */
+    void read_base(const std::string& base_file, const std::string& out,
+                   const std::vector<int>& col_index,
+                   const std::vector<double>& bar_levels,
+                   const double& bound_start, const double& bound_inter,
+                   const double& bound_end, const double& maf_control,
+                   const double& maf_case, const double& info_threshold,
+                   const bool maf_control_filter, const bool maf_case_filter,
+                   const bool info_filter, const bool fastscore,
+                   const bool no_full, const bool is_beta, const bool is_index,
+                   const bool run_shrinkage, Region& region,
                    Reporter& reporter);
-    // void clump(Genotype& reference);
+    /*!
+     * \brief Function to carry out clumping. One of the most complicated
+     * function.
+     *
+     * \param reference is the reference genotype object. Will need to use it
+     * for clumping. When target is used for clumping, reference=this
+     *
+     * \param reporter the logger
+     * \param use_pearson indicate if we want to perform pearson correlation
+     * calculation instead of the haplotype likelihood clumping. If this is
+     * true, efficient_clumping will call the pearson_clumping algorithm
+     */
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
-    void set_info(const Commander& c_commander, const bool ld = false);
-    bool get_snp_loc(const std::string& rs_id, int& chr, int& loc) const
+
+    /*!
+     * \brief This function helps to load all command line dependencies into the
+     * object so that we don't need to pass along the commander any more
+     *
+     * \param c_commander the container containing the required information
+     */
+    void set_info(const Commander& c_commander);
+    /*!
+     * \brief This function will provide the snp coordinate of a single snp,
+     * return true when the SNP is found and false when it is not
+     * \param rs_id is the rs id of the SNP
+     * \param chr is chr return value
+     * \param loc is the bp of the SNP
+     * \return true if found, false if not
+     */
+    bool get_snp_loc(const std::string& rs_id, intptr_t& chr,
+                     intptr_t& loc) const
     {
         auto&& snp_index = m_existed_snps_index.find(rs_id);
         if (snp_index == m_existed_snps_index.end()) return false;
+        // TODO: Might want to unify the int type usage
         chr = m_existed_snps[snp_index->second].chr();
         loc = m_existed_snps[snp_index->second].loc();
         return true;
     }
-    void reset_sample_pheno()
+    /*!
+     * \brief Before each run of PRSice, we need to reset the in regression flag
+     * to false and propagate it later on to indicate if the sample is used in
+     * the regression model
+     */
+    void reset_in_regression_flag()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
-    };
-    bool prepare_prsice(Reporter& reporter);
+    }
+    /*!
+     * \brief Function to prepare the object for PRSice. Will sort the
+     * m_existed_snp vector according to their p-value.
+     * \return True if there are SNPs to process
+     */
+    bool prepare_prsice();
+    /*!
+     * \brief This function will return the sample ID
+     * \param i is the index of the sample
+     * \return the sample ID
+     */
     std::string sample_id(size_t i) const
     {
         if (i > m_sample_id.size())
@@ -145,22 +290,66 @@ public:
             return m_sample_id[i].FID + "_" + m_sample_id[i].IID;
     }
 
+    /*!
+     * \brief Funtion return whether sample is founder (whether sample should be
+     * included in regression)
+     *
+     * \param i is the sample index
+     * \return true if sample is to be included
+     */
+    bool is_founder(size_t i) const { return m_sample_id.at(i).founder; }
 
+    // as we don't check i is within range, the following 3 functions
+    // have a potential of array out of bound
+    /*!
+     * \brief Check if the i th sample has been included in regression
+     * \param i is the index of the sample
+     * \return true if it is included
+     */
     bool sample_in_regression(size_t i) const
     {
         return IS_SET(m_in_regression.data(), i);
     }
-    // this is dangerous but whatever
-    // bool is_include(size_t i) const { return IS_SET(m_sample_include, i); }
+    /*!
+     * \brief Inform PRSice that the i th sample has been included in the
+     * regression
+     *
+     * \param i is the sample index
+     */
     void set_in_regression(size_t i) { SET_BIT(i, m_in_regression.data()); }
+    /*!
+     * \brief Return the phenotype stored in the fam file of the i th sample
+     * \param i is the index of the  sample
+     * \return the phenotype of the sample
+     */
     std::string pheno(size_t i) const { return m_sample_id[i].pheno; }
+    /*!
+     * \brief This function return if the i th sample has NA as phenotype
+     * \param i is the sample ID
+     * \return true if the phenotype is NA
+     */
     bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }
-    std::string fid(size_t i) const { return m_sample_id[i].FID; }
-    std::string iid(size_t i) const { return m_sample_id[i].IID; }
-
+    /*!
+     * \brief Return the fid of the i th sample
+     * \param i is the sample index
+     * \return FID of the i th sample
+     */
+    std::string fid(size_t i) const { return m_sample_id.at(i).FID; }
+    /*!
+     * \brief Return the iid fo the i th sample
+     * \param i is the sample index
+     * \return IID of the i th sample
+     */
+    std::string iid(size_t i) const { return m_sample_id.at(i).IID; }
+    /*!
+     * \brief This function will calculate the required PRS for the i th sample
+     * \param score_type is the type of score user want to calculate
+     * \param i is the sample index
+     * \return the PRS
+     */
     double calculate_score(SCORING score_type, size_t i) const
     {
-        if (i > m_prs_info.size())
+        if (i >= m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
@@ -170,31 +359,43 @@ public:
         }
         else
         {
-            avg = prs / (double) num_snp;
+            avg = prs / static_cast<double>(num_snp);
         }
 
         switch (score_type)
         {
-        case SCORING::SUM: return m_prs_info[i].prs; break;
-        case SCORING::STANDARDIZE:
-            return (avg - m_mean_score) / m_score_sd;
-            break;
+        case SCORING::SUM: return m_prs_info[i].prs;
+        case SCORING::STANDARDIZE: return (avg - m_mean_score) / m_score_sd;
         default:
             // default is avg
             return avg;
-            break;
         }
     }
-
-    uintptr_t founder_ct() const { return m_founder_ct; }
-    uintptr_t unfiltered_sample_ct() const { return m_unfiltered_sample_ct; }
+    /*!
+     * \brief Function to count the number of SNP in each region, thus allow us
+     * to completely ignore any region that does not contain any SNP
+     *
+     * \param region is the region information
+     * \param name is the prefix of the output file
+     * \param print_snp is a boolean to indicate if we want to print the SNP
+     */
     void count_snp_in_region(Region& region, const std::string& name,
                              const bool print_snp)
     {
+        // this function must be performed after prepare prsice or the index
+        // will be all wrong
         std::string snp_file_name = name + ".snp";
         std::ofstream print_file;
+        // TODO: try to store the index of all region instead of just background
+        // so that we can skip them faster (e.g. finding 200 SNP from 500K is
+        // going to be slow)
         m_background_snp_index.clear();
+        // indicate if prset is invovled
         const bool prset = region.size() > 1;
+        // don't do anything if we don't need to print SNP or to perform PRSet
+        if (!prset && !print_snp) return;
+        // if we want to print SNP, we will first write the header of the
+        // file
         if (print_snp) {
             print_file.open(snp_file_name.c_str());
             if (!print_file.is_open()) {
@@ -207,6 +408,8 @@ public:
             }
             print_file << "\n";
         }
+        // we than start iterate through all the SNPs and count their
+        // membership.
         std::vector<int> result(region.size(), 0);
         size_t snp_index = 0;
         for (auto&& snp : m_existed_snps) {
@@ -219,45 +422,81 @@ public:
                     print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
             }
             if (prset && snp.in(region.size() - 1)) {
+                // we will assume the last set is the background. Doesn't matter
+                // if background isn't use
                 m_background_snp_index.push_back(snp_index);
             }
             if (print_snp) print_file << "\n";
             snp_index++;
         }
-        if (print_snp) print_file.close();
-        // this is use for skipping permutation for sets with same size
-        m_background_region_index = region.size() - 1;
+        // by setting the index of the background region, we can avoid spending
+        // time in it again (kinda useless)
+        m_background_region_index = static_cast<intptr_t>(region.size() - 1);
+        // we will store the count in region so that region will be responsible
+        // for the region stuff
         region.post_clump_count(result);
-    };
-
-    void get_null_score(const size_t& set_size, const size_t& num_selected_snps,
-                        const std::vector<size_t>& background_list,
-                        const bool require_standardize);
-    void get_null_score(const size_t& set_size, const size_t& prev_size,
+    }
+    /*!
+     * \brief Function for calculating the PRS from the null set
+     * \param set_size is the size of the set
+     * \param prev_size is the amount of SNPs we have already processed
+     * \param background_list is the vector containing the permuted background
+     * index
+     * \param first_run is a boolean representing if we need to reset the PRS to
+     * 0
+     * \param require_standardize is a boolean representing if we need to
+     * calculate the mean and SD
+     */
+    void get_null_score(const int& set_size, const int& prev_size,
                         const std::vector<size_t>& background_list,
                         const bool first_run, const bool require_standardize);
-    size_t num_background() const { return m_background_snp_index.size(); };
+    /*!
+     * \brief Return the number of SNPs included in the background
+     * \return  the number of background SNPs
+     */
+    size_t num_background() const { return m_background_snp_index.size(); }
+    /*!
+     * \brief Get the index of background SNPs on the m_existed_snp vector
+     * \return the index of background SNPs on the m_existed_snp vector
+     */
     std::vector<size_t> background_index() const
     {
         return m_background_snp_index;
-    };
-    uint32_t max_chr() const { return m_max_code; };
-
+    }
+    /*!
+     * \brief return the largest chromosome allowed
+     * \return  the largest chromosome
+     */
+    uint32_t max_chr() const { return m_max_code; }
+    /*!
+     * \brief Indicate we will be using a reference file. Use for bgen
+     * intermediate output generation
+     */
     void expect_reference() { m_expect_reference = true; }
-    size_t prepare_prslice(const size_t& window_size);
+    /*!
+     * \brief Return the i th SNP, only use for unit testing
+     * \param i is the index to the SNP
+     * \return the ith SNP object
+     */
+    SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
+    void perform_shrinkage(Genotype& reference, double maf_bin,
+                           double prevalence, const double max_p_value,
+                           int num_perm, size_t num_sample, size_t num_case,
+                           size_t num_control, bool is_case_control,
+                           Reporter& reporter);
 
 protected:
+    // friend with all child class so that they can also access the
+    // protected elements
     friend class BinaryPlink;
     friend class BinaryGen;
     // need to consider cacheline efficiency, so we need to organize the member
     // variable in most efficient way
 
-
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
-    std::unordered_map<std::string, int> m_chr_order;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
     std::vector<Sample_ID> m_sample_id;
@@ -273,18 +512,27 @@ protected:
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
     std::vector<size_t> m_background_snp_index;
-    std::vector<size_t> m_prslice_range;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     // std::vector<int32_t> m_chrom_start;
     // sample file name. Fam for plink
     std::string m_sample_file;
+    std::mutex m_get_maf_mutex;
+    std::mutex m_update_beta_mutex;
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
     double m_clump_r2 = 0.0;
     double m_clump_proxy = 0.0;
     double m_clump_p = 0.0;
+    // normally, we'd like to have weight to be 0,1 or 2. However, it is easier
+    // if we keep it as 0, 0.5, 1 such that when we impute the missingness, the
+    // missingness can be directly replaced by the MAF which is useful (guessing
+    // this is the reason why PLINK implement this way)
+    // also easier for the representation of other genetic model
+    double m_homcom_weight = 0;
+    double m_het_weight = 0.5;
+    double m_homrar_weight = 1;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -292,14 +540,14 @@ protected:
     uintptr_t m_founder_ct = 0;
     uintptr_t m_marker_ct = 0;
     intptr_t m_background_region_index = -1;
+    intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
     uint32_t m_region_size = 1;
     uint32_t m_num_threshold = 0;
-    uint32_t m_max_window_size = 0;
     uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
-    unsigned int m_seed = 0;
+    std::random_device::result_type m_seed = 0;
     uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;
     uint32_t m_num_maf_filter = 0;
@@ -309,6 +557,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    uint32_t m_base_missed = 0;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_is_ref = false;
@@ -319,69 +568,259 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
+    bool m_has_se = false;
+    bool m_has_maf = false;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
+    /*!
+     * \brief This function is responsible for calculating the null beta and
+     * remove it from the observed betas
+     * \param maf is a vector containing the MAF_Store object.
+     * \param cur_index is the current index on the vector
+     * \param seed_store is a seed storage. Different seed is use for different
+     * maf bin
+     * \param prevalence is the prevalence of the trait. Has no use for now
+     * \param num_perm is the number of permutation to perform
+     * \param num_sample is the number of sample in the base sample
+     * \param num_case is the number of cases in the base data
+     * \param num_control is the number of control in the base data
+     * \param is_case_control is a boolean indicate if base is case control
+     */
+    void
+    adjust_beta(std::vector<MAF_Store>& maf,
+                std::vector<MAF_Store>::size_type& cur_index,
+                const std::unordered_map<int, std::random_device::result_type>&
+                    seed_store,
+                const double& prevalence, const size_t& num_perm,
+                const size_t& num_sample, const size_t& num_case,
+                const size_t& num_control, bool is_case_control);
+    /*!
+     * \brief Calculate the threshold bin based on the p-value and bound
+     * info \param pvalue the input p-value \param bound_start is the start
+     * of p-value threshold \param bound_inter is the step size of p-value
+     * threshold \param bound_end is the end of p-value threshold \param
+     * pthres return the name of p-value threshold this SNP belongs to
+     * \param no_full indicate if we want the p=1 threshold
+     * \return the category where this SNP belongs to
+     */
+    int calculate_category(const double& pvalue, const double& bound_start,
+                           const double& bound_inter, const double& bound_end,
+                           double& pthres, const bool no_full)
+    {
+        // NOTE: Threshold is x < p <= end and minimum category is 0
+        int category = 0;
+        if (pvalue > bound_end && !no_full) {
+            category = static_cast<int>(
+                std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
+            pthres = 1.0;
+        }
+        else
+        {
+            category = static_cast<int>(
+                std::ceil((pvalue - bound_start) / bound_inter));
+            category = (category < 0) ? 0 : category;
+            pthres = category * bound_inter + bound_start;
+        }
+        return category;
+    }
 
-    // functions
-    // function to substitute the # in the sample name
+    /*!
+     * \brief Calculate the category based on the input pvalue and barlevels
+     * \param pvalue the input pvalue
+     * \param barlevels the bar levels
+     * \param pthres the p-value threshold this SNP belong to
+     * \return the category of this SNP
+     */
+    int calculate_category(const double& pvalue,
+                           const std::vector<double>& barlevels, double& pthres)
+    {
+        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i) {
+            if (pvalue < barlevels[i]
+                || misc::logically_equal(pvalue, barlevels[i]))
+            {
+                pthres = barlevels[i];
+                return static_cast<int>(i);
+            }
+        }
+        pthres = 1.0;
+        return static_cast<int>(barlevels.size());
+    }
+    /*!
+     * \brief Replace # in the name of the genotype file and generate list
+     * of file for subsequent analysis \param prefix contains the name of
+     * the genotype file \return a vector of string containing names of the
+     * genotype files
+     */
     std::vector<std::string> set_genotype_files(const std::string& prefix);
+    /*!
+     * \brief Read in the genotype list file and add the genotype file names to
+     *        the vector
+     * \param file_name is the name of the list file
+     * \return a vector of string containing names of all genotype files
+     */
     std::vector<std::string> load_genotype_prefix(const std::string& file_name);
+    /*!
+     * \brief Initialize vector related to chromosome information e.g.haplotype.
+     *        Currently not really useful except for setting the max_code which
+     *        is later used to transform chromosome strings to chromosome code
+     * \param num_auto is the number of autosome, we fix it to 22 for human
+     * \param no_x indicate if chrX is missing for this organism
+     * \param no_y indicate if chrY is missing for this organism
+     * \param no_xy indicate if chrXY is missing for this organism
+     * \param no_mt indicate if chrMT is missing for this organism
+     */
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
-    // responsible for reading in the sample
+    /*!
+     * \brief For a given error code, check if this chromsome should be kept
+     * \param chr_code is the chromosome code
+     * \param sex_error indicate if the error is related to sex chromosome
+     * \param chr_error indicate if the error is related to chromosome number
+     * too big
+     * \param error_message contain the error message
+     * \return true if we want to skip this chromosome
+     */
+    bool chr_code_check(int32_t chr_code, bool& sex_error, bool& chr_error,
+                        std::string& error_message);
+    /*!
+     * \brief Function to read in the sample. Any subclass must implement this
+     * function. They \b must initialize the \b m_sample_info \b m_founder_info
+     * \b m_founder_ct \b m_sample_ct \b m_prs_info \b m_in_regression and \b
+     * m_tmp_genotype (optional)
+     * \return vector containing the sample information
+     */
     virtual std::vector<Sample_ID> gen_sample_vector()
     {
         return std::vector<Sample_ID>(0);
-    };
+    }
+    /*!
+     * \brief Function to read in the SNP information. Any subclass must
+     * implement this function \return a vector containing the SNP information
+     */
     virtual std::vector<SNP>
-    gen_snp_vector(const double geno, const double maf, const double info,
-                   const double hard_threshold, const bool hard_coded,
-                   Region& exclusion, const std::string& out_prefix,
-                   Genotype* target = nullptr)
+    gen_snp_vector(const std::string& /*out_prefix*/,
+                   const double& /*maf_threshold*/, const bool /*maf_filter*/,
+                   const double& /*geno_threshold*/, const bool /*geno_filter*/,
+                   const double& /*hard_threshold*/, const bool /*hard_coded*/,
+                   const double& /*info_threshold*/, const bool /*info_filter*/,
+                   Region& /*exclusion*/, Genotype* /*target*/)
     {
         return std::vector<SNP>(0);
-    };
+    }
+    /*!
+     * \brief Function to read in the genotype in PLINK binary format. Any
+     * subclass must implement this function to assist the processing of their
+     * specific file type. The first argument is the genotype vector use to
+     * store the PLINK binary whereas the second parameter is the streampos,
+     * allowing us to seekg to the specific location of the file as indicate in
+     * the thrid parameter
+     */
+    virtual inline void read_genotype(uintptr_t* /*genotype*/,
+                                      const std::streampos /*byte_pos*/,
+                                      const std::string& /*file_name*/)
+    {
+    }
+    /*!
+     * \brief read_score is the master function for performing the score
+     * reading. All subclass must implement this function to assist the
+     * calculation of PRS in the corresponding file format
+     */
+    virtual void read_score(const size_t /*start_index*/,
+                            const size_t /*end_bound*/,
+                            const size_t /*region_index*/, bool /*reset_zero*/)
+    {
+    }
+    /*!
+     * \brief similar to read_score function, but instead of using the index as
+     * an input, we use a vector containing the required index as an input
+     */
+    virtual void read_score(const std::vector<size_t>& /*index*/,
+                            bool /*reset_zero*/)
+    {
+    }
+
+
     // for loading the sample inclusion / exclusion set
+    /*!
+     * \brief Function to load in the sample extraction exclusion list
+     * \param input the file name
+     * \param ignore_fid whether we should ignore the FID (use 2 column or 1)
+     * \return an unordered_set use for checking if the sample is in the file
+     */
     std::unordered_set<std::string> load_ref(std::string input,
                                              bool ignore_fid);
-    // for loading the SNP inclusion / exclusion set
+    /*!
+     * \brief Function to load in SNP extraction exclusion list
+     * \param input the file name of the SNP list
+     * \param reporter the logger
+     * \returnan unordered_set use for checking if the SNP is in the file
+     */
     std::unordered_set<std::string> load_snp_list(std::string input,
                                                   Reporter& reporter);
-    double get_r2(bool core_missing, bool pair_missing,
-                  std::vector<uint32_t>& core_tot,
-                  std::vector<uint32_t>& pair_tot,
-                  std::vector<uintptr_t>& genotype_vector,
-                  std::vector<uintptr_t>& pair_genotype_vector);
-    double get_r2(bool core_missing, std::vector<uint32_t>& index_tots,
-                  std::vector<uintptr_t>& index_data,
-                  std::vector<uintptr_t>& genotype_vector);
+
     /** Misc information **/
     // uint32_t m_hh_exists;
+    /*!
+     * \brief Function to perform the pearson correlation calculation
+     * \param reference is the reference genotype
+     * \param reporter is the logger
+     */
     void pearson_clump(Genotype& reference, Reporter& reporter);
-    virtual inline void read_genotype(uintptr_t* genotype,
-                                      const std::streampos byte_pos,
-                                      const std::string& file_name){};
-    virtual void read_score(size_t start_index, size_t end_bound,
-                            const size_t region_index, bool reset_zero){};
-    virtual void read_score(std::vector<size_t>& index, bool reset_zero){};
 
-
-    // hh_exists
+    /*!
+     * \brief Function to check if the two alleles are ambiguous
+     * \param ref_allele the reference allele
+     * \param alt_allele the alternative allele
+     * \return true if it is ambiguous
+     */
     inline bool ambiguous(const std::string& ref_allele,
                           const std::string& alt_allele) const
     {
+        // the allele should all be in upper case but whatever
+        // true if equal
+        if (ref_allele == alt_allele) return true;
         return (ref_allele == "A" && alt_allele == "T")
-               || (ref_allele == "a" && alt_allele == "t")
-               || (ref_allele == "G" && alt_allele == "C")
-               || (ref_allele == "g" && alt_allele == "c")
                || (alt_allele == "A" && ref_allele == "T")
-               || (alt_allele == "a" && ref_allele == "t")
-               || (alt_allele == "G" && ref_allele == "C")
-               || (alt_allele == "g" && ref_allele == "c");
-    };
+               || (ref_allele == "G" && alt_allele == "C")
+               || (alt_allele == "G" && ref_allele == "C");
+    }
 
-
+    double cal_maf(Genotype& reference, SNP& snp,
+                   std::vector<uintptr_t>& genotype, bool use_reference)
+    {
+        uint32_t homrar_ct = 0;
+        uint32_t missing_ct = 0;
+        uint32_t het_ct = 0;
+        uint32_t homcom_ct = 0;
+        // for storing the missing counts
+        intptr_t nanal;
+        const uintptr_t pheno_nm_ctv2 =
+            QUATERCT_TO_ALIGNED_WORDCT(reference.m_sample_ct);
+        reference.read_genotype(genotype.data(), snp.ref_byte_pos(),
+                                snp.ref_file_name());
+        genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
+                      &missing_ct, &het_ct, &homcom_ct);
+        nanal = static_cast<intptr_t>(reference.m_sample_ct) - missing_ct;
+        if (nanal == 0) {
+            // if all samples have a missing genotype, we will remove this SNP
+            // While this might not be the case in the target panel (therefore
+            // consider valid without shrinkage), we simply can't calculate the
+            // MAF for SNP with complete missingness. Without the MAF, we can't
+            // calculate the NULL beta. To avoid problem, we invalidate this SNP
+            throw std::runtime_error("Error: All missing");
+        }
+        if (!use_reference) {
+            // if we are not using a reference panel, we can set the count too
+            // to speed things up later on
+            snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        }
+        // reset the weight (as we might have flipped it later on)
+        double cur_maf = static_cast<double>(het_ct + 2 * homrar_ct)
+                         / static_cast<double>(nanal * 2.0);
+        if (cur_maf > 0.5) return 1 - cur_maf;
+        return cur_maf;
+    }
     // no touchy area (PLINK Code)
     uint32_t em_phase_hethet(double known11, double known12, double known21,
                              double known22, uint32_t center_ct,

@@ -13,7 +13,7 @@
 
     Base (i.e. GWAS) association file. This is a whitespace delimited file
     containing association results for SNPs on the base phenotype.
-    This file can be *gzipped*.
+    This file can be *gzipped* (must have the .gz suffix).
     For PRSice to run, the base file must contain the effective allele
     (`--A1`), effect size estimates (`--stat`), p-value for association
     (`--pvalue`), and the SNP ID (`--snp`).
@@ -22,7 +22,7 @@
 
     This flag is used to indicate if the test statistic is in the form
     of BETA. When not set, PRSice assume the statistic is in the form
-    of Odd Ratios, performnatural log transformation on the test statistic.
+    of Odd Ratios, perform natural log transformation on the test statistic.
 
 - `--bp`
 
@@ -64,8 +64,7 @@
 - `--pvalue` | `-p`
 
     Column header containing the p-value.
-    The p-value information is required for clumping and
-    this information must be provided even `--no-clump` is specified
+    The p-value information must be provided 
 
 - `--se`
 

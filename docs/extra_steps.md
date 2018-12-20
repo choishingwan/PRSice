@@ -7,6 +7,9 @@ After installation of R, additional steps might be require for MAC and Window us
 2. Run `xcode-select --install` on your terminal
    -  This will install the required zlib package on your system, which is required by PRSice (for decompressing bgen files)
 
+!!! note
+    For anyone with older Mac Versions (e.g. Mountain Lion or before), you should follow the guide [here](https://www.moncefbelyamani.com/how-to-install-xcode-homebrew-git-rvm-ruby-on-mac/) to install the require *Command Line Tools*.
+    
 # Window Users
 As installation of R does not automatically add it to the system path, one will need to type the full path of the R.exe and Rscript.exe in order to use PRSice. To avoid this complication, we can manually add the folder containing the R binary to the system path:
 

@@ -182,11 +182,11 @@ std::vector<std::string> split(const std::string& seq,
     std::size_t prev = 0, pos;
     std::vector<std::string> result;
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
-        if (pos > prev) result.push_back(seq.substr(prev, pos - prev));
+        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
     if (prev < seq.length())
-        result.push_back(seq.substr(prev, std::string::npos));
+        result.emplace_back(seq.substr(prev, std::string::npos));
     return result;
 }
 }

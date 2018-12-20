@@ -110,11 +110,9 @@ inline bool to_bool(const std::string& input)
 {
     std::string str = input;
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    if (str.compare("T") == 0 || str.compare("TRUE") == 0
-        || str.compare("1") == 0)
+    if (str.compare("T") == 0 || str.compare("TRUE") == 0)
         return true;
-    else if (str.compare("F") == 0 || str.compare("FALSE") == 0
-             || str.compare("0") == 0)
+    else if (str.compare("F") == 0 || str.compare("FALSE") == 0)
         return false;
     else
     {
@@ -1013,6 +1011,23 @@ inline double chiprob_p(double chisq, uint32_t df)
     // todo: figure out when we were depending on this to return -9, and decide
     // how to handle those situations now
     return gamma_incomplete_imp2(df, chisq * 0.5, 1, nullptr);
+}
+
+/*!
+ * \brief Function to check if two double are equal from
+ *        https://stackoverflow.com/a/4010279/1441789
+ * \param a the first double
+ * \param b the second double
+ * \param error_factor level of error, should be of no concern to us at the
+ *        moment
+ * \return True if two double are equal
+ */
+inline bool logically_equal(double a, double b, double error_factor = 1.0)
+{
+    return ((a == b)
+            || (std::abs(a - b) < std::abs(std::min(a, b))
+                                      * std::numeric_limits<double>::epsilon()
+                                      * error_factor));
 }
 }
 #endif /* misc_hpp */
