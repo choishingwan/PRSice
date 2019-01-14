@@ -775,6 +775,9 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
+    double max_weight = homrar_weight;
+    if(max_weight < het_weight) max_weight = het_weight;
+    if(max_weight < homcom_weight) max_weight = homcom_weight;
     // this is required if we want to calculate the MAF from the genotype (for
     // imputation of missing genotype)
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
@@ -883,7 +886,7 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * max_weight);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -906,8 +909,8 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
 
         miss_score = 0;
         if (mean_impute) {
-            // again, mean_impute is stable, branch prediction should be ok
-            miss_score = stat * maf * mean_impute;
+            // again, mean_impute is fixed, branch prediction should be ok
+            miss_score = stat * maf;
         }
 
 
@@ -1061,6 +1064,9 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
+    double max_weight = homrar_weight;
+    if(max_weight < het_weight) max_weight = het_weight;
+    if(max_weight < homcom_weight) max_weight = homcom_weight;
     // this is required if we want to calculate the MAF from the genotype (for
     // imputation of missing genotype)
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
@@ -1146,6 +1152,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
             // plink functions
             genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
                           &missing_ct, &het_ct, &homcom_ct);
+            homrar_ct = m_sample_ct-missing_ct-homcom_ct- het_ct;
             // now set this piece of information, might become useful if we are
             // processing the second phenotype / second region
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
@@ -1161,10 +1168,11 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
+
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * max_weight);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -1188,8 +1196,9 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         miss_score = 0;
         if (mean_impute) {
             // again, mean_impute is stable, branch prediction should be ok
-            miss_score = stat * maf * mean_impute;
+            miss_score = stat * maf;
         }
+
 
 
         // now we go through the SNP vector
