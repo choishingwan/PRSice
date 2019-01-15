@@ -348,14 +348,14 @@ private:
                         MISSING_SCORE missing)
             : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
         {
-            m_miss_count = (missing != MISSING_SCORE::SET_ZERO);
+            m_ploidy = 2;
+            m_miss_count = m_ploidy*(missing != MISSING_SCORE::SET_ZERO);
             // to account for the missingness, we need to calculate the mean of
             // the PRS before we can assign the missing value to the sample. As
             // a result of that, we need a vector to store the index of the
             // missing sample. The maximum possible number of missing sample is
             // the number of sample, thus we can reserve the required size
             m_sample_missing_index.reserve(m_sample_prs->size());
-
             m_setzero = (missing == MISSING_SCORE::SET_ZERO);
             m_centre = (missing == MISSING_SCORE::CENTER);
         }
@@ -454,12 +454,11 @@ private:
             // the double sum and only add it to the sample if it is not missing
             switch (geno)
             {
-            default: m_sum += m_homcom_weight * value * m_stat; break;
-            case 1: m_sum += m_het_weight * value * m_stat; break;
-            case 2: m_sum += m_homrar_weight * value * m_stat; break;
+            default: m_sum += m_homcom_weight * value; break;
+            case 1: m_sum += m_het_weight * value ; break;
+            case 2: m_sum += m_homrar_weight * value ; break;
             }
             m_sum_prob += value;
-            m_total_prob += value * geno;
         }
         /*!
          * \brief For bgen v1.2 or later, when there is a missing sample, a
@@ -482,9 +481,9 @@ private:
                     // imputation to account for missing data. This will require
                     // us to add  / assign 1 to the number of SNP
                     if (m_not_first)
-                        ++sample_prs.num_snp;
+                        sample_prs.num_snp+= m_ploidy;
                     else
-                        sample_prs.num_snp = 1;
+                        sample_prs.num_snp = m_ploidy;
                 }
             }
             // this is not a missing sample and we can either add the prs or
@@ -492,13 +491,13 @@ private:
             else if (m_not_first)
             {
                 // this is not the first SNP in the region, we will add
-                ++sample_prs.num_snp;
-                sample_prs.prs += m_sum;
+                sample_prs.num_snp+=m_ploidy;
+                sample_prs.prs += m_sum*m_stat;
             }
             else
             {
-                sample_prs.num_snp = 1;
-                sample_prs.prs = m_sum;
+                sample_prs.num_snp = m_ploidy;
+                sample_prs.prs = m_sum*m_stat;
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -523,10 +522,10 @@ private:
             if (m_setzero) return;
             // here, we multiply the denominator by 2 to ensure the
             // expected_value is ranging from 0 -1
-            double expected_value = m_total_prob
+            double expected_value = m_stat*(m_sum
                                     / ((static_cast<double>(num_prs)
                                         - static_cast<double>(num_miss))
-                                       * 2);
+                                       * m_ploidy));
             // worth separating centre score out
             if (m_centre) {
                 // we want to minus the expected value from all samples
@@ -569,14 +568,14 @@ private:
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<uint32_t> m_sample_missing_index;
         double m_stat = 0.0;
-        double m_total_prob = 0.0;
         double m_sum = 0.0;
         double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
         uint32_t m_prs_sample_i = 0;
-        uint32_t m_miss_count = 0;
+        int m_miss_count = 0;
+        int m_ploidy = 2;
         bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
