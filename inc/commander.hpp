@@ -40,8 +40,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.5";
-const std::string date = "7 November 2018";
+const std::string version = "2.1.6";
+const std::string date = "15 Janurary 2019";
 class Commander
 {
 public:
@@ -806,6 +806,7 @@ private:
     int m_fastscore = false;
     int m_no_full = false;
     int m_stat_is_beta = false;
+    int m_stat_is_or = false;
     int m_input_is_index = false;
     int m_user_no_default = false;
     int m_no_clump = false;

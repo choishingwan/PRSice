@@ -34,7 +34,8 @@ help_message <-
     --base          | -b    Base association file\n
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
-                            to be in the form of BETA.\n
+                            to be in the form of BETA. Mutually exclusive\n
+                            from --or \n
     --bp                    Column header containing the SNP coordinate\n
                             Default: BP\n
     --chr                   Column header containing the chromosome\n
@@ -58,6 +59,10 @@ help_message <-
                             will not set any default column name and you\n
                             will have to ensure all required columns are\n
                             provided. (--snp, --stat, --A1, --pvalue)\n
+    --or                    Whether the test statistic is in the form of \n
+                            BETA or OR. If set, test statistic is assume\n
+                            to be in the form of OR. Mutually exclusive \n
+                            from --beta \n
     --pvalue        | -p    Column header containing the p-value\n
                             Default: P\n
     --se                    Column header containing the standard error\n
@@ -223,11 +228,18 @@ help_message <-
                             sum - Direct summation of the effect size \n
     --upper         | -u    The final p-value threshold. Default: 0.5 \n
 \nPRSet:\n
+    --background            String to indicate a background file. This string\n
+                            should have the format of Name:Type where type can be\n
+                            bed   - 0-based range with 3 column. Chr Start End\n
+                            range - 1-based range with 3 column. Chr Start End\n
+                            gene  - A file contain a column of gene name\n
     --bed           | -B    Bed file containing the selected regions.\n
                             Name of bed file will be used as the region\n
                             identifier. WARNING: Bed file is 0-based\n
     --feature               Feature(s) to be included from the gtf file.\n
                             Default: exon,CDS,gene,protein_coding.\n
+    --full-back             Use the whole genome as background for competitive\n
+                            p-value calculation\n
     --gtf           | -g    GTF file containing gene boundaries. Required\n
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
@@ -238,6 +250,8 @@ help_message <-
     --snp-sets              Provide a SNP set file containing multiple snp sets.\n
                             Each row represent a single SNP set with the first\n
                             column containing name of the SNP set.\n    
+    --wind-3                Add N base(s) to the 3' region of each feature(s) \n
+    --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
 \nPRSlice:\n
     --prslice               Perform PRSlice where the whole genome is first cut\n
                             into bin size specified by this option. PRSice will\n
@@ -666,6 +680,7 @@ flags <-
         "no-xy",
         "no-y",
         "non-cumulate",
+        "or",
         "print-snp"
     )
 # Skip PRSice core function if only plotting is requirec
@@ -2298,7 +2313,7 @@ process_plot <-
             }
         }
         if(provided("multi_plot", parameters)){
-            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
+            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot, argv$device)
         }
     }
 
