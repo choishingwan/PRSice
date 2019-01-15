@@ -1197,7 +1197,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
 
 
         // now we go through the SNP vector
-        std::cerr << stat << "\t" << miss_score << std::endl;
+
         lbptr = genotype.data();
         uii = 0;
         ulii = 0;
