@@ -104,7 +104,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
                 target_name = token[0];
                 external_sample = true;
             }
-            message.append(" info from file " + target_name + " (bed)\n");
+            message.append(" info from file " + target_name + " (bgen)\n");
             if (external_sample) {
                 message.append("With external fam file: " + m_sample_file
                                + "\n");
@@ -129,7 +129,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
                 target_name = token[0];
                 external_sample = true;
             }
-            message.append(" file: " + target_name + " (bed)\n");
+            message.append(" file: " + target_name + " (bgen");
             if (external_sample) {
                 message.append("With external fam file: " + m_sample_file
                                + "\n");
@@ -799,15 +799,13 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
             read_genotype_data_block(bgen_file, context, &m_buffer1);
             // if we want to exclude this SNP, we will not perform
             // decompression
-            if (!exclude_snp) {
+            if (!exclude_snp && !user_exclude) {
                 // now filter
                 file_name = prefix;
                 // while we allow user excluded SNP to come into this function,
                 // we will not perform filtering or generate the intermediate
                 // for it
-                if (!user_exclude
-                    && (maf_filter || geno_filter || info_filter
-                        || m_intermediate))
+                if (maf_filter || geno_filter || info_filter || m_intermediate)
                 {
                     genfile::bgen::uncompress_probability_data(
                         context, m_buffer1, &m_buffer2);
@@ -892,11 +890,12 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                         }
                     }
                 }
-                if (!m_is_ref && !user_exclude) {
+                if (!m_is_ref) {
                     // this is not a reference file
                     m_existed_snps_index[RSID] = snp_res.size();
                     if (m_target_plink) {
-                        // we have constructed the
+                        // we have constructed the intermediate file for
+                        // target file for hard coding
                         byte_pos = tmp_byte_pos;
                         file_name = m_intermediate_file;
                     }
@@ -912,6 +911,15 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                     snp_res.emplace_back(SNP(RSID, chr_code, SNP_position,
                                              alleles.back(), alleles.front(),
                                              file_name, byte_pos));
+                    if (!m_expect_reference && m_ref_plink) {
+                        // we don't expect a reference panel, and we have
+                        // already generated the intermediate for LD
+                        // calculation, so we should update the reference file
+                        // information to the intermediate file
+
+                        snp_res.back().add_reference(m_intermediate_file,
+                                                     tmp_byte_pos);
+                    }
                 }
                 else
                 {
@@ -971,8 +979,7 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                     else if (!user_exclude)
                     {
                         // the information matched between the reference and
-                        // target and this is not a user exclude SNP
-                        // therefore we allow the check of duplication
+                        // target
                         duplicate_check_list.insert(RSID);
                         if (m_ref_plink) {
                             byte_pos = tmp_byte_pos;
@@ -1077,7 +1084,8 @@ void BinaryGen::dosage_score(const size_t start_index, const size_t end_bound,
         auto&& snp = m_existed_snps[i_snp];
         // skip SNPs that are not in the region or that are invalid
         if (!snp.in(region_index) || !snp.valid()) continue;
-        if (snp.file_name() == m_cur_file) {
+        // if the file name differ, or the file isn't open, we will open it
+        if (snp.file_name() != m_cur_file || !m_bgen_file.is_open()) {
             // open the bgen file if required
             if (m_bgen_file.is_open()) m_bgen_file.close();
             bgen_name = snp.file_name() + ".bgen";
@@ -1217,6 +1225,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
                 // ukk is the genotype
                 ukk = (ulii >> ujj) & 3;
                 // uii+ujj/2 is the sample index
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
@@ -1432,6 +1443,9 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
             while (ujj < BITCT) {
                 // ukk is the genotype
                 ukk = (ulii >> ujj) & 3;
+                if (uii + (ujj / 2) > m_sample_ct) {
+                    break;
+                }
                 // uii+ujj/2 is the sample index
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
@@ -1530,7 +1544,7 @@ void BinaryGen::dosage_score(const std::vector<size_t>& index, bool set_zero)
         auto&& snp = m_existed_snps[i_snp];
         // skip SNPs that are not in the region or that are invalid
         if (!snp.valid()) continue;
-        if (snp.file_name() == m_cur_file) {
+        if (snp.file_name() != m_cur_file || !m_bgen_file.is_open()) {
             // open the bgen file if required
             if (m_bgen_file.is_open()) m_bgen_file.close();
             bgen_name = snp.file_name() + ".bgen";

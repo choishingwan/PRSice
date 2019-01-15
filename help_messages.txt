@@ -1,4 +1,4 @@
-help_message =
+m_help_message =
        "usage: PRSice [options] <-b base_file> <-t target_file>\n"
            // Base file
        "\nBase File:\n"
@@ -9,7 +9,8 @@ help_message =
        "    --base          | -b    Base association file\n"
        "    --beta                  Whether the test statistic is in the form of \n"
        "                            BETA or OR. If set, test statistic is assume\n"
-       "                            to be in the form of BETA.\n"
+       "                            to be in the form of BETA. Mutually exclusive\n"
+       "                            from --or \n"
        "    --bp                    Column header containing the SNP coordinate\n"
        "                            Default: BP\n"
        "    --chr                   Column header containing the chromosome\n"
@@ -33,6 +34,10 @@ help_message =
        "                            will not set any default column name and you\n"
        "                            will have to ensure all required columns are\n"
        "                            provided. (--snp, --stat, --A1, --pvalue)\n"
+       "    --or                    Whether the test statistic is in the form of \n"
+       "                            BETA or OR. If set, test statistic is assume\n"
+       "                            to be in the form of OR. Mutually exclusive \n"
+       "                            from --beta \n"
        "    --pvalue        | -p    Column header containing the p-value\n"
        "                            Default: P\n"
        "    --se                    Column header containing the standard error\n"
@@ -191,8 +196,8 @@ help_message =
        "                            proportional to imputed allele frequency. To throw\n"
        "                            out missing observations instead (decreasing the\n"
        "                            denominator in the final average when this happens),\n"
-       "                            use the 'no_mean_imputation' modifier. Alternatively,\n"
-       "                            you can use the 'center' modifier to shift all scores\n"
+       "                            use the 'SET_ZERO' modifier. Alternatively,\n"
+       "                            you can use the 'CENTER' modifier to shift all scores\n"
        "                            to mean zero. \n"
        "    --no-regress            Do not perform the regression analysis and simply\n"
        "                            output all PRS.\n"
@@ -225,7 +230,9 @@ help_message =
        "                            identifier. This file should contain only one column.\n"
        "    --snp-sets              Provide a SNP set file containing multiple snp sets.\n"
        "                            Each row represent a single SNP set with the first\n"
-       "                            column containing name of the SNP set.\n"                     
+       "                            column containing name of the SNP set.\n"    
+       "    --wind-3                Add N base(s) to the 3' region of each feature(s) \n"
+       "    --wind-5                Add N base(s) to the 5' region of each feature(s) \n"     
        //PRSlice
        "\nPRSlice:\n"
        "    --prslice               Perform PRSlice where the whole genome is first cut\n"

@@ -337,9 +337,9 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (!m_is_ref && m_base_missed) {
-        message.append(
-            misc::to_string(m_base_missed)
-            + " variant(s) were pre-filtered as they did not appeared in base");
+        message.append(misc::to_string(m_base_missed)
+                       + " variant(s) were pre-filtered as they did not "
+                         "appeared in base\n");
     }
     if (m_num_ambig != 0 && !m_keep_ambig) {
         message.append(std::to_string(m_num_ambig)
@@ -1076,7 +1076,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
 #else
     const uint32_t founder_ct_mld_rem =
         (MULTIPLEX_LD / 48)
-        - (founder_ct_mld * MULTIPLEX_LD - reference.founder_ct()) / 48;
+        - (founder_ct_mld * MULTIPLEX_LD - reference.m_founder_ct) / 48;
 #endif
 
     const uintptr_t founder_ct_192_long =

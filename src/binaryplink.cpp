@@ -771,16 +771,21 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;
+    // for now, hard code this
+    int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
+    double max_weight = homrar_weight;
+    if(max_weight < het_weight) max_weight = het_weight;
+    if(max_weight < homcom_weight) max_weight = homcom_weight;
     // this is required if we want to calculate the MAF from the genotype (for
     // imputation of missing genotype)
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     // if we want to set the missing score to zero, miss_count will equal to 0,
     // 1 otherwise
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
     // this indicate if we want the mean of the genotype to be 0 (missingness =
     // 0)
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
@@ -883,7 +888,7 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * max_weight);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -895,7 +900,7 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         // if centre, missing = 0 anyway (kinda like mean imputed)
         // centre is 0 if false
 
-        stat = cur_snp.stat() * 2;
+        stat = cur_snp.stat() ;
         adj_score = 0;
         if (is_centre) {
             // as is_centre will never change, branch prediction might be rather
@@ -906,10 +911,9 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
 
         miss_score = 0;
         if (mean_impute) {
-            // again, mean_impute is stable, branch prediction should be ok
-            miss_score = stat * maf * mean_impute;
+            // again, mean_impute is fixed, branch prediction should be ok
+            miss_score = ploidy * stat * maf;
         }
-
 
         // now we go through the SNP vector
 
@@ -932,6 +936,10 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
                 // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
+
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
@@ -942,38 +950,35 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
                         // Again, we might have a faster run time using if case
                         // here due to its simplicity + consistency in the
                         // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homcom_weight * stat * 0.5 - adj_score;
+                            homcom_weight * stat  - adj_score;
                     }
                     else
                     {
-                        // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = homcom_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = homcom_weight * stat  - adj_score;
                     }
 
                     break;
                 case 1:
                     if (not_first) {
                         // not first should only be false for the first SNP.
-                        // Again, we might have a faster run time using if case
-                        // here due to its simplicity + consistency in the
-                        // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs += het_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs += het_weight * stat  - adj_score;
                     }
                     else
                     {
                         // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = het_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = het_weight * stat  - adj_score;
                     }
                     break;
                 case 3:
@@ -982,18 +987,18 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
                         // Again, we might have a faster run time using if case
                         // here due to its simplicity + consistency in the
                         // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homrar_weight * stat * 0.5 - adj_score;
+                            homrar_weight * stat  - adj_score;
                     }
                     else
                     {
-                        // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = homrar_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = homrar_weight * stat  - adj_score;
                     }
                     break;
                 case 2:
@@ -1053,6 +1058,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;
+    int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;
@@ -1062,7 +1068,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     // if we want to set the missing score to zero, miss_count will equal to 0,
     // 1 otherwise
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const int miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy;
     // this indicate if we want the mean of the genotype to be 0 (missingness =
     // 0)
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
@@ -1142,6 +1148,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
             // plink functions
             genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
                           &missing_ct, &het_ct, &homcom_ct);
+            homrar_ct = static_cast<uint32_t>(m_sample_ct)-missing_ct-homcom_ct- het_ct;
             // now set this piece of information, might become useful if we are
             // processing the second phenotype / second region
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
@@ -1157,10 +1164,11 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
+
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * ploidy);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -1172,7 +1180,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         // if centre, missing = 0 anyway (kinda like mean imputed)
         // centre is 0 if false
 
-        stat = cur_snp.stat() * 2;
+        stat = cur_snp.stat() ;
         adj_score = 0;
         if (is_centre) {
             // as is_centre will never change, branch prediction might be rather
@@ -1184,7 +1192,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         miss_score = 0;
         if (mean_impute) {
             // again, mean_impute is stable, branch prediction should be ok
-            miss_score = stat * maf * mean_impute;
+            miss_score = ploidy * stat * maf;
         }
 
 
@@ -1209,6 +1217,9 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
                 // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
+                if (uii + (ujj / 2) >= m_sample_ct) {
+                    break;
+                }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
@@ -1216,41 +1227,35 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
                 default:
                     if (not_first) {
                         // not first should only be false for the first SNP.
-                        // Again, we might have a faster run time using if case
-                        // here due to its simplicity + consistency in the
-                        // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homcom_weight * stat * 0.5 - adj_score;
+                            homcom_weight * stat - adj_score;
                     }
                     else
                     {
                         // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = homcom_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = homcom_weight * stat - adj_score;
                     }
 
                     break;
                 case 1:
                     if (not_first) {
-                        // not first should only be false for the first SNP.
-                        // Again, we might have a faster run time using if case
-                        // here due to its simplicity + consistency in the
-                        // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // not first should only be false for the first SNP
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs += het_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs += het_weight * stat  - adj_score;
                     }
                     else
                     {
-                        // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = het_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = het_weight * stat - adj_score;
                     }
                     break;
                 case 3:
@@ -1259,18 +1264,18 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
                         // Again, we might have a faster run time using if case
                         // here due to its simplicity + consistency in the
                         // true/false
-                        // add 1 to the number of SNP
-                        ++sample_prs.num_snp;
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
                         // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homrar_weight * stat * 0.5 - adj_score;
+                            homrar_weight * stat - adj_score;
                     }
                     else
                     {
-                        // reset the number of SNP to 1
-                        sample_prs.num_snp = 1;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
                         // directly assign the new PRS to the storage
-                        sample_prs.prs = homrar_weight * stat * 0.5 - adj_score;
+                        sample_prs.prs = homrar_weight * stat - adj_score;
                     }
                     break;
                 case 2:

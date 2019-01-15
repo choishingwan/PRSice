@@ -1,9 +1,10 @@
-CXX=x86_64-w64-mingw32-g++
+#CXX=x86_64-w64-mingw32-g++
+CXX=/usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-x86_64/bin/x86_64-w64-mingw32-g++
 CXXFLAGS=-Wall -O3 -std=gnu++11 -DNDEBUG -msse4.2 -mbmi -static -lpthread -lpsapi
 INCLUDES := -I inc/ -isystem lib/ -isystem window/zlib-1.2.11/
 CPPSRC := src/*.cpp
 OBJ := bgen_lib.o binaryplink.o genotype.o misc.o prslice.o regression.o snp.o binarygen.o commander.o main.o plink_common.o prsice.o region.o reporter.o gzstream.o
-ZLIB := window/zlib-1.2.11/libz.a /usr/local/Cellar/mingw-w64/5.0.3/toolchain-x86_64/x86_64-w64-mingw32/lib/libpsapi.a 
+ZLIB := window/zlib-1.2.11/libz.a /usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-x86_64/x86_64-w64-mingw32/lib/libpsapi.a 
 %.o: src/%.cpp
 		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 

@@ -129,13 +129,15 @@ private:
             // when m_ref_plink is set, it suggest we are using the
             // intermediate, which is a binary plink format. Therefore we can
             // directly read from the file
-            if (file_name != m_cur_file || !m_bgen_file.is_open()) {
+            if (m_cur_file.empty() || file_name != m_cur_file
+                || !m_bgen_file.is_open())
+            {
                 if (m_bgen_file.is_open()) m_bgen_file.close();
                 // read in the file in binary format
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
                 if (!m_bgen_file.is_open()) {
                     std::string error_message =
-                        "Error: Cannot open bgen file: " + file_name;
+                        "Error: Cannot open intermediate file: " + file_name;
                     throw std::runtime_error(error_message);
                 }
                 // update the binary file name
@@ -149,7 +151,7 @@ private:
                 // if the location is not equal and seek fail, we have problem
                 // reading the bed file
                 throw std::runtime_error(
-                    "Error: Cannot seek within the bgen file!");
+                    "Error: Cannot seek within the intermediate file!");
             }
             // directly read in the binary data to genotype, this should already
             // be well formated when we write it into the fiel
@@ -192,7 +194,9 @@ private:
         // check sample size != 0
         assert(m_unfiltered_sample_ct);
         // we first check if we will read in a new file
-        if (file_name != m_cur_file || !m_bgen_file.is_open()) {
+        if (m_cur_file.empty() || file_name != m_cur_file
+            || !m_bgen_file.is_open())
+        {
             if (m_bgen_file.is_open()) m_bgen_file.close();
 
             std::string bgen_name = file_name + ".bgen";
@@ -214,8 +218,8 @@ private:
             // and reset the prev_loc counter
             m_prev_loc = 0;
         }
-        if (m_prev_loc != byte_pos
-            || !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
+        if ((m_prev_loc != byte_pos)
+            && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
         {
             // if the location is not equal and seek fail, we have problem
             // reading the bed file
@@ -344,14 +348,14 @@ private:
                         MISSING_SCORE missing)
             : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
         {
-            m_miss_count = (missing != MISSING_SCORE::SET_ZERO);
+            m_ploidy = 2;
+            m_miss_count = m_ploidy*(missing != MISSING_SCORE::SET_ZERO);
             // to account for the missingness, we need to calculate the mean of
             // the PRS before we can assign the missing value to the sample. As
             // a result of that, we need a vector to store the index of the
             // missing sample. The maximum possible number of missing sample is
             // the number of sample, thus we can reserve the required size
             m_sample_missing_index.reserve(m_sample_prs->size());
-
             m_setzero = (missing == MISSING_SCORE::SET_ZERO);
             m_centre = (missing == MISSING_SCORE::CENTER);
         }
@@ -418,10 +422,13 @@ private:
             // isn't called in the expected order (though in that case, our
             // m_entry_i might also be wrong)
             m_start_geno = false;
-            // we need to store the sum of value. This is because missingness in
-            // bgen v1.1 is represented by the sum of probability = 0. This also
-            // helps us to avoid adding up the number of SNP 3 times
+            // we store the weighted sum of the genotypes to obtain the final
+            // dosage
             m_sum = 0.0;
+            // and we need to keep track of the sum of probability to check if
+            // we have encountered missing genotype for V11 which is represented
+            // by a sum of probability = 0
+            m_sum_prob = 0.0;
             // if the byte is set, then we want this sample
             return IS_SET(m_sample_inclusion->data(), i);
         }
@@ -447,11 +454,11 @@ private:
             // the double sum and only add it to the sample if it is not missing
             switch (geno)
             {
-            default: m_sum += m_homcom_weight * value * m_stat * 0.5; break;
-            case 1: m_sum += m_het_weight * value * m_stat * 0.5; break;
-            case 2: m_sum += m_homrar_weight * value * m_stat * 0.5; break;
+            default: m_sum += m_homcom_weight * value; break;
+            case 1: m_sum += m_het_weight * value ; break;
+            case 2: m_sum += m_homrar_weight * value ; break;
             }
-            m_total_prob += value * geno;
+            m_sum_prob += value;
         }
         /*!
          * \brief For bgen v1.2 or later, when there is a missing sample, a
@@ -466,7 +473,7 @@ private:
         void sample_completed()
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
-            if (m_sum == 0.0 || m_is_missing) {
+            if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
                 // this is a missing sample
                 m_sample_missing_index.push_back(m_prs_sample_i);
                 if (!m_setzero) {
@@ -474,9 +481,9 @@ private:
                     // imputation to account for missing data. This will require
                     // us to add  / assign 1 to the number of SNP
                     if (m_not_first)
-                        ++sample_prs.num_snp;
+                        sample_prs.num_snp+= m_ploidy;
                     else
-                        sample_prs.num_snp = 1;
+                        sample_prs.num_snp = m_ploidy;
                 }
             }
             // this is not a missing sample and we can either add the prs or
@@ -484,13 +491,13 @@ private:
             else if (m_not_first)
             {
                 // this is not the first SNP in the region, we will add
-                ++sample_prs.num_snp;
-                sample_prs.prs += m_sum;
+                sample_prs.num_snp+=m_ploidy;
+                sample_prs.prs += m_sum*m_stat;
             }
             else
             {
-                sample_prs.num_snp = 1;
-                sample_prs.prs = m_sum;
+                sample_prs.num_snp = m_ploidy;
+                sample_prs.prs = m_sum*m_stat;
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -515,11 +522,10 @@ private:
             if (m_setzero) return;
             // here, we multiply the denominator by 2 to ensure the
             // expected_value is ranging from 0 -1
-            double expected_value = m_total_prob
+            double expected_value = m_stat*(m_sum
                                     / ((static_cast<double>(num_prs)
                                         - static_cast<double>(num_miss))
-                                       * 2);
-
+                                       * m_ploidy));
             // worth separating centre score out
             if (m_centre) {
                 // we want to minus the expected value from all samples
@@ -562,13 +568,14 @@ private:
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<uint32_t> m_sample_missing_index;
         double m_stat = 0.0;
-        double m_total_prob = 0.0;
         double m_sum = 0.0;
+        double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
         uint32_t m_prs_sample_i = 0;
-        uint32_t m_miss_count = 0;
+        int m_miss_count = 0;
+        int m_ploidy = 2;
         bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
