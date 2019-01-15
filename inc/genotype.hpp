@@ -525,14 +525,9 @@ protected:
     double m_clump_r2 = 0.0;
     double m_clump_proxy = 0.0;
     double m_clump_p = 0.0;
-    // normally, we'd like to have weight to be 0,1 or 2. However, it is easier
-    // if we keep it as 0, 0.5, 1 such that when we impute the missingness, the
-    // missingness can be directly replaced by the MAF which is useful (guessing
-    // this is the reason why PLINK implement this way)
-    // also easier for the representation of other genetic model
     double m_homcom_weight = 0;
-    double m_het_weight = 0.5;
-    double m_homrar_weight = 1;
+    double m_het_weight = 1;
+    double m_homrar_weight = 2;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
