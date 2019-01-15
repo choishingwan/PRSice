@@ -1076,7 +1076,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
 #else
     const uint32_t founder_ct_mld_rem =
         (MULTIPLEX_LD / 48)
-        - (founder_ct_mld * MULTIPLEX_LD - reference.founder_ct()) / 48;
+        - (founder_ct_mld * MULTIPLEX_LD - reference.m_founder_ct) / 48;
 #endif
 
     const uintptr_t founder_ct_192_long =
