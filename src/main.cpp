@@ -59,7 +59,8 @@ int main(int argc, char* argv[])
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
         info_filter = commander.target_info(info);
-        hard_coded = commander.target_hard_threshold(hard_threshold);
+        commander.target_hard_threshold(hard_threshold);
+        hard_coded = commander.hard_coded();
 
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
