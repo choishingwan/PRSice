@@ -551,7 +551,7 @@ private:
                     }
                     // otherwise, we will simply remove the expected value from
                     // the score
-                    (*m_sample_prs)[m_prs_sample_i].prs -= expected_value;
+                    (*m_sample_prs)[i].prs -= expected_value;
                 }
             }
             else
