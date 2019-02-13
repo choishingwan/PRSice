@@ -193,7 +193,7 @@ public:
     void prep_output(const std::string& out, const bool all_score,
                      const bool has_prev, const Genotype& target,
                      const std::vector<std::string>& region_name,
-                     const intptr_t pheno_index);
+                     const intptr_t pheno_index, const bool has_background);
     /*!
      * \brief This function will summarize all PRSice / PRSet results and
      * generate the .summary file
