@@ -1218,7 +1218,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
         do
         {
             // ulii contain the numeric representation of the current genotype
-            ulii = ~(*lbptr++);
+            //ulii = ~(*lbptr++);
+            // when we generate the PLINK binary, we were doing what's equivalent to ~
+            ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
                 // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
@@ -1457,7 +1459,8 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
         do
         {
             // ulii contain the numeric representation of the current genotype
-            ulii = ~(*lbptr++);
+            //ulii = ~(*lbptr++);
+            ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
                 // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
