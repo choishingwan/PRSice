@@ -2141,6 +2141,7 @@ void PRSice::consume_prs(
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
                              const intptr_t pheno_index)
 {
+    m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
     int num_perm;
     if (!commander.set_perm(num_perm)) {
