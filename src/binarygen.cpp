@@ -1144,7 +1144,7 @@ void BinaryGen::hard_code_score(const size_t start_index,
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
 
     int ploidy = 2;
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1386,7 +1386,7 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
     // this is needed if we want to calculate the MAF of the sample
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     int ploidy = 2;
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
