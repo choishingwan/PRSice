@@ -1202,20 +1202,15 @@ void BinaryGen::hard_code_score(const size_t start_index,
 
         // only set these value to the imputed value if we require them
         adj_score = 0;
-        adj_score = 0;
         if (is_centre) {
             adj_score = stat * maf;
         }
-        miss_score = 0;
         miss_score = 0;
         if (mean_impute) {
             // again, mean_impute is stable, branch prediction should be ok
             miss_score = ploidy * stat * maf;
         }
 
-        lbptr = genotype.data();
-        uii = 0;
-        ulii = 0;
         // start reading the genotype
         lbptr = genotype.data();
         uii = 0;

@@ -267,6 +267,7 @@ private:
         // that we will need to seek for every SNP as there are padded data
         // between each SNP's genotype
         m_prev_loc = m_bgen_file.tellg();
+
         return 0;
     }
 
