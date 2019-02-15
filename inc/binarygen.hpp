@@ -670,10 +670,10 @@ private:
             if (value > m_hard_prob && value >= m_hard_threshold) {
                 /*
                  * Representation of each geno to their binary code:
-                 *   geno    desired binary  loading
+                 *   geno    desired binary  decimal representation
                  *   0           00              0
-                 *   1           01              0
-                 *   2           11              1
+                 *   1           01              1
+                 *   2           11              3
                  *   the binary code 10 is reserved for missing sample
                  */
                 m_geno = (geno == 2) ? 3 : geno;
