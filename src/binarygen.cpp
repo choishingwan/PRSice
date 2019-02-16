@@ -1143,7 +1143,8 @@ void BinaryGen::hard_code_score(const size_t start_index,
     // this is needed if we want to calculate the MAF of the sample
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
 
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    int ploidy = 2;
+    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1187,44 +1188,51 @@ void BinaryGen::hard_code_score(const size_t start_index,
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * ploidy);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
             // swap the weighting
             std::swap(homcom_weight, homrar_weight);
         }
-        stat = cur_snp.stat() * 2; // Multiply by ploidy
+        stat = cur_snp.stat(); // Multiply by ploidy
 
         // only set these value to the imputed value if we require them
         adj_score = 0;
-        if (is_centre) adj_score = stat * maf;
+        if (is_centre) {
+            adj_score = stat * maf;
+        }
         miss_score = 0;
-        if (mean_impute) miss_score = stat * maf;
+        if (mean_impute) {
+            // again, mean_impute is stable, branch prediction should be ok
+            miss_score = ploidy * stat * maf;
+        }
 
+        // start reading the genotype
         lbptr = genotype.data();
         uii = 0;
         ulii = 0;
-        // start reading the genotype
         do
         {
-            // the genotype block we are reading
-            ulii = ~(*lbptr++);
+            // ulii contain the numeric representation of the current genotype
+            //ulii = ~(*lbptr++);
+            // when we generate the PLINK binary, we were doing what's equivalent to ~
+            ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
-                // PLINK not sure what it does
+                // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
                         - ONELU;
             }
+            // ujj sample index of the current genotype block
             ujj = 0;
-            // ujj represent the sample index in the current block
             while (ujj < BITCT) {
-                // ukk is the genotype
+                // go through the whole genotype block
+                // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
-                // uii+ujj/2 is the sample index
+                // and the sample index can be calculated as uii+(ujj/2)
                 if (uii + (ujj / 2) >= m_sample_ct) {
                     break;
                 }
@@ -1234,43 +1242,56 @@ void BinaryGen::hard_code_score(const size_t start_index,
                 {
                 default:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
+                        // not first should only be false for the first SNP.
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homcom_weight * stat * 0.5 - adj_score;
+                            homcom_weight * stat - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = homcom_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to 1
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homcom_weight * stat - adj_score;
                     }
+
                     break;
                 case 1:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
-                        sample_prs.prs += het_weight * stat * 0.5 - adj_score;
+                        // not first should only be false for the first SNP
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
+                        sample_prs.prs += het_weight * stat  - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = het_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = het_weight * stat - adj_score;
                     }
                     break;
                 case 3:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homrar_weight * stat * 0.5 - adj_score;
+                            homrar_weight * stat - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = homrar_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homrar_weight * stat - adj_score;
                     }
                     break;
                 case 2:
@@ -1297,11 +1318,11 @@ void BinaryGen::hard_code_score(const size_t start_index,
                     break;
                 }
                 // ulii &= ~((3 * ONELU) << ujj);
-                // each sample is represented by two byte, so we increment the
-                // index by 2
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
                 ujj += 2;
             }
-            // we finish one block of samples.
+            // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
         // we've finish processing the first SNP no longer need to reset the PRS
@@ -1361,8 +1382,8 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
     double homrar_weight = m_homrar_weight;
     // this is needed if we want to calculate the MAF of the sample
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
-
-    const bool miss_count = (m_missing_score != MISSING_SCORE::SET_ZERO);
+    int ploidy = 2;
+    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1408,88 +1429,109 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
         homrar_weight = m_homrar_weight;
 
         maf =
-            static_cast<double>(homcom_ct * homcom_weight + het_ct * het_weight
+            static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * 2.0);
+            / static_cast<double>(nanal * ploidy);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
             // swap the weighting
             std::swap(homcom_weight, homrar_weight);
         }
-        stat = cur_snp.stat() * 2; // Multiply by ploidy
-
-        // only set these value to the imputed value if we require them
+        stat = cur_snp.stat() ;
         adj_score = 0;
-        if (is_centre) adj_score = stat * maf;
-        miss_score = 0;
-        if (mean_impute) miss_score = stat * maf;
+        if (is_centre) {
+            // as is_centre will never change, branch prediction might be rather
+            // accurate, therefore we don't need to do the complex
+            // stat*maf*is_centre
+            adj_score = stat * maf;
+        }
 
+        miss_score = 0;
+        if (mean_impute) {
+            // again, mean_impute is stable, branch prediction should be ok
+            miss_score = ploidy * stat * maf;
+        }
+        // start reading the genotype
         lbptr = genotype.data();
         uii = 0;
         ulii = 0;
-        // start reading the genotype
         do
         {
-            // the genotype block we are reading
-            ulii = ~(*lbptr++);
+            // ulii contain the numeric representation of the current genotype
+            //ulii = ~(*lbptr++);
+            ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
-                // PLINK not sure what it does
+                // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
                         - ONELU;
             }
+            // ujj sample index of the current genotype block
             ujj = 0;
-            // ujj represent the sample index in the current block
             while (ujj < BITCT) {
-                // ukk is the genotype
+                // go through the whole genotype block
+                // ukk is the current genotype
                 ukk = (ulii >> ujj) & 3;
-                if (uii + (ujj / 2) > m_sample_ct) {
+                // and the sample index can be calculated as uii+(ujj/2)
+                if (uii + (ujj / 2) >= m_sample_ct) {
                     break;
                 }
-                // uii+ujj/2 is the sample index
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 switch (ukk)
                 {
                 default:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
+                        // not first should only be false for the first SNP.
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homcom_weight * stat * 0.5 - adj_score;
+                            homcom_weight * stat - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = homcom_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to 1
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homcom_weight * stat - adj_score;
                     }
+
                     break;
                 case 1:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
-                        sample_prs.prs += het_weight * stat * 0.5 - adj_score;
+                        // not first should only be false for the first SNP
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
+                        sample_prs.prs += het_weight * stat  - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = het_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = het_weight * stat - adj_score;
                     }
                     break;
                 case 3:
                     if (not_first) {
-                        // we will just add the information
-                        ++sample_prs.num_snp;
+                        // not first should only be false for the first SNP.
+                        // Again, we might have a faster run time using if case
+                        // here due to its simplicity + consistency in the
+                        // true/false
+                        // add ploidy to the number of SNP
+                        sample_prs.num_snp+=ploidy;
+                        // add the current genotype weight to the score
                         sample_prs.prs +=
-                            homrar_weight * stat * 0.5 - adj_score;
+                            homrar_weight * stat - adj_score;
                     }
                     else
                     {
-                        // we want to reset the prs
-                        sample_prs.num_snp = 1;
-                        sample_prs.prs = homrar_weight * stat * 0.5 - adj_score;
+                        // reset the number of SNP to ploidy
+                        sample_prs.num_snp = ploidy;
+                        // directly assign the new PRS to the storage
+                        sample_prs.prs = homrar_weight * stat - adj_score;
                     }
                     break;
                 case 2:
@@ -1516,11 +1558,11 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
                     break;
                 }
                 // ulii &= ~((3 * ONELU) << ujj);
-                // each sample is represented by two byte, so we increment the
-                // index by 2
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
                 ujj += 2;
             }
-            // we finish one block of samples.
+            // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
         // we've finish processing the first SNP no longer need to reset the PRS

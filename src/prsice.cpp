@@ -1516,7 +1516,7 @@ void PRSice::consume_null_pheno(
 void PRSice::prep_output(const std::string& out, const bool all_score,
                          const bool has_prev, const Genotype& target,
                          const std::vector<std::string>& region_name,
-                         const intptr_t pheno_index)
+                         const intptr_t pheno_index, const bool has_background)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
@@ -1566,7 +1566,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         header_line.append(" PRS");
     else
     {
-        for (size_t i = 0; i < region_name.size() - 1; ++i) {
+        for (size_t i = 0; i < region_name.size() - has_background; ++i) {
             header_line.append(" " + region_name[i]);
         }
     }
@@ -2141,6 +2141,7 @@ void PRSice::consume_prs(
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
                              const intptr_t pheno_index)
 {
+    m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
     int num_perm;
     if (!commander.set_perm(num_perm)) {
