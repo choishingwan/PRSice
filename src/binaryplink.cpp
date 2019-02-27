@@ -872,6 +872,10 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
                           &missing_ct, &het_ct, &homcom_ct);
             // now set this piece of information, might become useful if we are
             // processing the second phenotype / second region
+            nanal = static_cast<uint32_t>(m_sample_ct) - missing_ct;
+            // calculate the hom rare count
+            homrar_ct =
+                static_cast<uint32_t>(nanal) - het_ct - homcom_ct;
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
         // number of sample with valid genotypes
