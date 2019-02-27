@@ -1782,7 +1782,10 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prs_sum.top = top;
     prs_sum.bottom = bottom;
     prs_sum.prevalence = prevalence;
-    prs_sum.has_competitive = false;
+    // we don't run competitive testing on the base region
+    // therefore we skip region_index == 0 (base is always
+    // the first region)
+    prs_sum.has_competitive = (region_index==0);
     m_prs_summary.push_back(prs_sum);
 
     if (best_info.p > 0.1)
@@ -2172,7 +2175,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     size_t start_index = 1;
     bool started = false;
     // start at 1 to avoid the base set
-    for (size_t i = 1; i < num_prs_res; ++i) {
+    size_t cur_set_index = 0;
+    for (size_t i = 0; i < num_prs_res; ++i) {
         // if we have already calculated the competitive p-value for the set, we
         // will just skip them. This help us to handle multiple-phenotype
         // without too much additional coding
@@ -2182,10 +2186,11 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
             // competitive p-value calculation. This allow us to later reassign
             // results to the sets
             start_index = i;
-            started = false;
+            started = true;
         }
         auto&& res = m_prs_summary[i].result;
-        set_index[res.num_snp].push_back(ori_t_value.size());
+        // store the location of this set w.r.t number of SNPs in set
+        set_index[res.num_snp].push_back(cur_set_index++);
         // ori_t_value will contain the obesrved t-value
         ori_t_value.push_back(std::abs(res.coefficient / res.se));
         set_perm_res.push_back(0);
@@ -2272,12 +2277,20 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         null_set_no_thread(target, set_index, ori_t_value, set_perm_res,
                            num_perm, is_binary, require_standardize);
     }
+    // start_index is the index of m_prs_summary[i], not the actual index
+    // on set_perm_res.
+    // this will iterate all sets from beginning of current phenotype
+    // to the last set within the current phenotype
+    // because of the sequence of how set_perm_res is contructed,
+    // the results for each set should be sequentially presented in
+    // set_perm_res. Index for set_perm_res results are therefore
+    // i - start_index
     for (size_t i = start_index; i < num_prs_res; ++i) {
         auto&& res = m_prs_summary[i].result;
         // we need to minus out the start index from i such that our index start
         // at 0, which is the assumption of set_perm_res
         res.competitive_p =
-            (static_cast<double>(set_perm_res[(i - start_index) - 1]) + 1.0)
+            (static_cast<double>(set_perm_res[(i - start_index)]) + 1.0)
             / (static_cast<double>(num_perm) + 1.0);
         m_prs_summary[i].has_competitive = true;
     }
