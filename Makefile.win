@@ -8,5 +8,5 @@ ZLIB := window/zlib-1.2.11/libz.a /usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-
 %.o: src/%.cpp
 		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-PRSice.exe: $(OBJ)
+PRSice_win64.exe: $(OBJ)
 		$(CXX) $(CXXFLAGS) $(INCLUDES)  $^ $(ZLIB) -o $@
