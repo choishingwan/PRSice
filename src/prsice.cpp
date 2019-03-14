@@ -594,12 +594,13 @@ void PRSice::process_cov_file(
     // is the number of missingness in each covariate
     std::vector<uint32_t> missing_count(cov_index.back() + 1, 0);
     std::string line, id;
+    std::unordered_set<std::string> dup_id_check;
     // is the maximum column index required
     const size_t max_index = cov_index.back() + 1;
     // This is the index for iterating the current_vector_level (reset after
     // each line)
     std::vector<uint32_t>::size_type factor_level_index = 0;
-    int num_valid = 0, index = 0;
+    int num_valid = 0, index = 0, dup_id_count = 0;
     bool valid = true;
     // we initialize the storage facility for the factor levels
     factor_levels.resize(factor_cov_index.size());
@@ -628,6 +629,7 @@ void PRSice::process_cov_file(
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
+
             // only samples with a valid phenotype will get into this if case.
             // Ignore all other samples
             valid = true;
@@ -668,6 +670,12 @@ void PRSice::process_cov_file(
                 }
             }
             if (valid) {
+                if (dup_id_check.find(id) != dup_id_check.end()) {
+                    // check if there are duplicated ID in the covariance file
+                    dup_id_count++;
+                    continue;
+                }
+                dup_id_check.insert(id);
                 // this is a valid sample, so we want to keep its information in
                 // the valid_sample_index
                 // first, obtain its current index on the phenotype vector
@@ -694,6 +702,12 @@ void PRSice::process_cov_file(
         }
     }
     cov.close();
+
+    if (dup_id_count != 0) {
+        std::string message =
+            "Error: " + std::to_string(dup_id_count) + " duplicated IDs\n";
+        throw std::runtime_error(message);
+    }
     // Here, we should know the identity of the valid sample and also
     // the factor levels
     // now calculate the number of column required
@@ -804,6 +818,7 @@ void PRSice::process_cov_file(
                     m_phenotype(static_cast<Eigen::Index>(original_index), 0);
             }
         }
+
         m_phenotype.conservativeResize(
             static_cast<Eigen::Index>(valid_sample_index.size()), 1);
     }
