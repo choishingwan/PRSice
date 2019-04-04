@@ -1094,6 +1094,8 @@ void Commander::set_help_message()
           "                            if you are certain that the base and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
+          "    --memory                Maximum memory usage allowed. PRSice will try\n"
+          "                            its best to honor this setting\n"
           "    --out           | -o    Prefix for all file output\n"
           "    --pearson               Use Pearson Correlation for LD "
           "calculation\n"
