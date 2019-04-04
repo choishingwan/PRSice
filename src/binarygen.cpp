@@ -465,6 +465,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                                   &sample_block_size);
         genfile::bgen::read_little_endian_integer(bgen_file,
                                                   &actual_number_of_samples);
+        const bool has_fid = !m_sample_id.front().FID.empty();
         // +8 here to account for the sample_block_size and
         // actual_number_of_samples read above. Direct Copy and paste from
         // BGEN lib function read_sample_identifier_block
@@ -491,7 +492,12 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 bytes_read += sizeof(identifier_size) + identifier_size;
                 // Only need to use IID as BGEN doesn't have the FID
                 // information
-                if (m_sample_id[i].IID != identifier) {
+                if ((has_fid
+                     && std::string(m_sample_id[i].FID + " "
+                                    + m_sample_id[i].IID)
+                            != identifier)
+                    || m_sample_id[i].IID != identifier)
+                {
                     std::string error_message =
                         "Error: Sample mismatch "
                         "between bgen and phenotype file! Name in BGEN "
@@ -1144,7 +1150,8 @@ void BinaryGen::hard_code_score(const size_t start_index,
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
 
     int ploidy = 2;
-    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
+    const int miss_count =
+        static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1218,8 +1225,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
         do
         {
             // ulii contain the numeric representation of the current genotype
-            //ulii = ~(*lbptr++);
-            // when we generate the PLINK binary, we were doing what's equivalent to ~
+            // ulii = ~(*lbptr++);
+            // when we generate the PLINK binary, we were doing what's
+            // equivalent to ~
             ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
                 // this is PLINK, not sure exactly what this is about
@@ -1244,10 +1252,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
                     if (not_first) {
                         // not first should only be false for the first SNP.
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs +=
-                            homcom_weight * stat - adj_score;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
                     }
                     else
                     {
@@ -1262,9 +1269,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
                     if (not_first) {
                         // not first should only be false for the first SNP
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs += het_weight * stat  - adj_score;
+                        sample_prs.prs += het_weight * stat - adj_score;
                     }
                     else
                     {
@@ -1281,10 +1288,9 @@ void BinaryGen::hard_code_score(const size_t start_index,
                         // here due to its simplicity + consistency in the
                         // true/false
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs +=
-                            homrar_weight * stat - adj_score;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
                     }
                     else
                     {
@@ -1383,7 +1389,8 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
     // this is needed if we want to calculate the MAF of the sample
     const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     int ploidy = 2;
-    const int miss_count = static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO)* ploidy);
+    const int miss_count =
+        static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy);
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1438,7 +1445,7 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
             // swap the weighting
             std::swap(homcom_weight, homrar_weight);
         }
-        stat = cur_snp.stat() ;
+        stat = cur_snp.stat();
         adj_score = 0;
         if (is_centre) {
             // as is_centre will never change, branch prediction might be rather
@@ -1459,7 +1466,7 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
         do
         {
             // ulii contain the numeric representation of the current genotype
-            //ulii = ~(*lbptr++);
+            // ulii = ~(*lbptr++);
             ulii = (*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
                 // this is PLINK, not sure exactly what this is about
@@ -1484,10 +1491,9 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
                     if (not_first) {
                         // not first should only be false for the first SNP.
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs +=
-                            homcom_weight * stat - adj_score;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
                     }
                     else
                     {
@@ -1502,9 +1508,9 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
                     if (not_first) {
                         // not first should only be false for the first SNP
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs += het_weight * stat  - adj_score;
+                        sample_prs.prs += het_weight * stat - adj_score;
                     }
                     else
                     {
@@ -1521,10 +1527,9 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
                         // here due to its simplicity + consistency in the
                         // true/false
                         // add ploidy to the number of SNP
-                        sample_prs.num_snp+=ploidy;
+                        sample_prs.num_snp += ploidy;
                         // add the current genotype weight to the score
-                        sample_prs.prs +=
-                            homrar_weight * stat - adj_score;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
                     }
                     else
                     {

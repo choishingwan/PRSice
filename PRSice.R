@@ -465,7 +465,7 @@ option_list <- list(
   make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
   make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
   make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
-  make_option(c("-k", "--prevalence"), type = "numeric"),
+  make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
   make_option(c("--target-list"), type = "character", dest="target_list"),
