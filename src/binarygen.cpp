@@ -22,6 +22,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
 {
     m_intermediate = commander.use_inter();
     m_thread = static_cast<uint32_t>(commander.thread());
+    m_id_delim = commander.delim();
     m_ignore_fid = commander.ignore_fid();
     m_keep_nonfounder = commander.nonfounders();
     m_keep_ambig = commander.keep_ambig();
@@ -178,7 +179,6 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             }
         }
         // now we read in the second line
-        // read in the second line
         std::getline(sample_file, line);
         if (sex_col != -1) {
             // double check if the format is alright
@@ -253,11 +253,11 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             }
             else
             {
-                // not a sample format and does not use ignore fid
+                // not a sample format or used ignore fid
                 FID = "";
                 IID = token[0];
             }
-            std::string id = (m_ignore_fid) ? IID : FID + "_" + IID;
+            std::string id = (m_ignore_fid) ? IID : FID + m_id_delim + IID;
             // we assume all bgen samples are founders
             if (!m_remove_sample) {
                 inclusion = (m_sample_selection_list.find(id)
@@ -454,7 +454,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         genfile::bgen::Context tmp_context;
         genfile::bgen::read_offset(bgen_file, &tmp_offset);
         genfile::bgen::read_header_block(bgen_file, &tmp_context);
-
+        const bool has_fid = !m_sample_id.front().FID.empty();
         uint32_t sample_block_size = 0;
         uint32_t actual_number_of_samples = 0;
         uint16_t identifier_size;
@@ -490,26 +490,25 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                     throw std::runtime_error(
                         "Error: Problem reading bgen file!");
                 bytes_read += sizeof(identifier_size) + identifier_size;
-                // Only need to use IID as BGEN doesn't have the FID
-                // information
-                if ((has_fid
-                     && std::string(m_sample_id[i].FID + " "
-                                    + m_sample_id[i].IID)
-                            != identifier)
-                    || m_sample_id[i].IID != identifier)
-                {
+                // Need to double check. BGEN format might differ depends
+                // if FID is provided. When FID is provided, then the ID
+                // should be FID + delimitor + IID; otherwise it'd be IID
+                if (m_sample_id[i].IID != identifier &&
+                        (m_sample_id[i].FID+m_id_delim+m_sample_id[i].IID) != identifier) {
                     std::string error_message =
                         "Error: Sample mismatch "
                         "between bgen and phenotype file! Name in BGEN "
                         "file is "
                         ":"
                         + identifier
-                        + " and in phentoype file is: " + m_sample_id[i].IID
-                        + ". Please note that PRSice require the bgen file and "
+                        + " and in phentoype file is: ";
+                    if(has_fid) error_message.append(m_sample_id[i].FID+m_id_delim+m_sample_id[i].IID);
+                            else error_message.append(m_sample_id[i].IID);
+                    error_message.append(". Please note that PRSice require the bgen file and "
                           "the .sample (or phenotype file if sample file is "
                           "not provided) to have sample in the same order. (We "
                           "might be able to losen this requirement in future "
-                          "when we have more time)";
+                          "when we have more time)");
                     throw std::runtime_error(error_message);
                 }
             }

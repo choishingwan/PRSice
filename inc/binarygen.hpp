@@ -47,11 +47,12 @@ private:
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
-    std::string m_cur_file;
-    std::string m_intermediate_file;
-    std::streampos m_prev_loc = 0;
     std::string m_base_file;
+    std::string m_cur_file;
+    std::string m_id_delim;
+    std::string m_intermediate_file;
     size_t m_rs_id_index;
+    std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;

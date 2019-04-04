@@ -296,6 +296,7 @@ help_message <-
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
+    --id-delim              Delimiter used to concatinate FID and IID in bgen\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
@@ -525,6 +526,7 @@ option_list <- list(
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
+  make_option(c("--id-delim"), type="character"),
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
   make_option(c("--memory"), type = "character", dest="memory"),
@@ -690,7 +692,11 @@ flags <-
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
-        if (i %in% flags) {
+        if(i=="id-delim") {
+            if(!is.na(i)){
+                command = paste(command, " --", i, " \"",argv_c[[i]],"\"", sep="" )
+            }
+        }else if (i %in% flags) {
             if (argv_c[[i]])
                 command = paste(command, " --", i, sep = "")
         } else if (i %in% not_cpp) {

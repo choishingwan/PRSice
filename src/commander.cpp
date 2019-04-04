@@ -91,6 +91,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"feature", required_argument, nullptr, 0},
         {"geno", required_argument, nullptr, 0},
         {"hard-thres", required_argument, nullptr, 0},
+    {"id-delim", required_argument, nullptr, 0},
         {"info-base", required_argument, nullptr, 0},
         {"info", required_argument, nullptr, 0},
         {"keep", required_argument, nullptr, 0},
@@ -221,6 +222,10 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                optarg, message_store, error_messages,
                                m_proxy_threshold, m_use_proxy_clump, command);
             // Long opts for misc
+            else if (command == "id-delim"){
+                set_string(optarg, message_store, m_id_delim, m_set_delim, command,
+                           error_messages, true);
+            }
             else if (command == "perm")
             {
                 // use double to account for scientific?
@@ -1079,6 +1084,7 @@ void Commander::set_help_message()
           "    --extract               File contains SNPs to be included in "
           "the \n"
           "                            analysis\n"
+          "    --id-delim              Delimiter used to concatinate FID and IID in bgen\n"
           "    --ignore-fid            Ignore FID for all input. When this is "
           "set,\n"
           "                            first column of all file will be assume "
