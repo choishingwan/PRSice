@@ -465,7 +465,6 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                                                   &sample_block_size);
         genfile::bgen::read_little_endian_integer(bgen_file,
                                                   &actual_number_of_samples);
-        const bool has_fid = !m_sample_id.front().FID.empty();
         // +8 here to account for the sample_block_size and
         // actual_number_of_samples read above. Direct Copy and paste from
         // BGEN lib function read_sample_identifier_block
