@@ -910,7 +910,7 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
             // as is_centre will never change, branch prediction might be rather
             // accurate, therefore we don't need to do the complex
             // stat*maf*is_centre
-            adj_score = stat * maf;
+            adj_score = ploidy*stat * maf;
         }
 
         miss_score = 0;
@@ -1190,7 +1190,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
             // as is_centre will never change, branch prediction might be rather
             // accurate, therefore we don't need to do the complex
             // stat*maf*is_centre
-            adj_score = stat * maf;
+            adj_score = ploidy*stat * maf;
         }
 
         miss_score = 0;
