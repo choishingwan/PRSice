@@ -34,10 +34,11 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"base", required_argument, nullptr, 'b'},
         {"bed", required_argument, nullptr, 'B'},
         {"cov-col", required_argument, nullptr, 'c'},
-        // cov-header retain here for backward compatibility
-        {"cov-header", required_argument, nullptr, 'c'},
-        {"cov-file", required_argument, nullptr, 'C'},
-        {"pheno-file", required_argument, nullptr, 'f'},
+        // Add short form (because I am lazy)
+    {"cov", required_argument, nullptr, 'C'},
+    {"cov-file", required_argument, nullptr, 'C'},
+    {"pheno", required_argument, nullptr, 'f'},
+    {"pheno-file", required_argument, nullptr, 'f'},
         {"pheno-col", required_argument, nullptr, 'F'},
         {"gtf", required_argument, nullptr, 'g'},
         {"help", no_argument, nullptr, 'h'},
@@ -73,12 +74,14 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"pearson", no_argument, &m_pearson, 1},
         {"print-snp", no_argument, &m_print_snp, 1},
         {"shrinkage", no_argument, &m_perform_shrinkage, 1},
-        {"full-back", required_argument, &m_full_background, 0},
+        {"full-back", required_argument, &m_full_background, 1},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
         {"A2", required_argument, nullptr, 0},
         {"background", required_argument, nullptr, 0},
         {"bar-levels", required_argument, nullptr, 0},
+        {"base-info", required_argument, nullptr, 0},
+    {"base-maf", required_argument, nullptr, 0},
         {"binary-target", required_argument, nullptr, 0},
         {"bp", required_argument, nullptr, 0},
         {"chr", required_argument, nullptr, 0},
@@ -91,8 +94,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"feature", required_argument, nullptr, 0},
         {"geno", required_argument, nullptr, 0},
         {"hard-thres", required_argument, nullptr, 0},
-    {"id-delim", required_argument, nullptr, 0},
-        {"info-base", required_argument, nullptr, 0},
+        {"id-delim", required_argument, nullptr, 0},
         {"info", required_argument, nullptr, 0},
         {"keep", required_argument, nullptr, 0},
         {"ld-keep", required_argument, nullptr, 0},
@@ -104,26 +106,17 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ld-hard-thres", required_argument, nullptr, 0},
         {"ld-info", required_argument, nullptr, 0},
         {"maf", required_argument, nullptr, 0},
-        {"maf-base", required_argument, nullptr, 0},
-        {"maf-bin", required_argument, nullptr, 0},
         {"memory", required_argument, nullptr, 0},
         {"missing", required_argument, nullptr, 0},
         {"model", required_argument, nullptr, 0},
-        {"nsample", required_argument, nullptr, 0},
-        {"ncase", required_argument, nullptr, 0},
-        {"ncontrol", required_argument, nullptr, 0},
         {"perm", required_argument, nullptr, 0},
-        {"prev-base", required_argument, nullptr, 0},
         {"proxy", required_argument, nullptr, 0},
-        {"prslice", required_argument, nullptr, 0},
         {"remove", required_argument, nullptr, 0},
         {"score", required_argument, nullptr, 0},
-        {"se", required_argument, nullptr, 0},
         {"set-perm", required_argument, nullptr, 0},
         {"shrink-perm", required_argument, nullptr, 0},
         {"snp", required_argument, nullptr, 0},
         {"snp-set", required_argument, nullptr, 0},
-        {"snp-sets", required_argument, nullptr, 0},
         {"stat", required_argument, nullptr, 0},
         {"target-list", required_argument, nullptr, 0},
         {"type", required_argument, nullptr, 0},
@@ -140,7 +133,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
 {
 
     int32_t max_threads = 1;
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    // max thread estimation using windows
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     max_threads = sysinfo.dwNumberOfProcessors;
@@ -149,8 +143,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     int32_t known_procs = static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN));
     max_threads = (known_procs == -1) ? 1 : known_procs;
 #endif
-
-
     int longIndex = 0;
     int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     // storing all the used parameters
@@ -161,7 +153,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     // the following two variables are used for scientific input
     // e.g. 1e6
     double dummy_double = 0.0;
-    double intpart;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
@@ -170,10 +161,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         case 0:
             command = longOpts[longIndex].name;
             if (longOpts[longIndex].flag != nullptr) break;
-            // Long opts for base
-            else if (command == "chr")
-                set_string(optarg, message_store, m_chr, m_provided_chr_col,
-                           command, error_messages);
+            // reorganize all long ops according to alphabetical order
             else if (command == "A1")
                 set_string(optarg, message_store, m_effect_allele,
                            m_provided_effect_allele, command, error_messages);
@@ -181,278 +169,163 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_non_effect_allele,
                            m_provided_non_effect_allele, command,
                            error_messages);
-            else if (command == "stat")
-                set_string(optarg, message_store, m_statistic,
-                           m_provided_statistic, command, error_messages);
-            else if (command == "snp")
-                set_string(optarg, message_store, m_snp, m_provided_snp_id,
-                           command, error_messages);
-            else if (command == "bp")
-                set_string(optarg, message_store, m_bp, m_provided_bp, command,
+            else if (command == "background")
+                set_string(optarg, message_store, m_background, dummy, command,
                            error_messages);
-            else if (command == "se")
-                set_string(optarg, message_store, m_standard_error,
-                           m_provided_standard_error, command, error_messages);
-            else if (command == "info-base")
-                set_string(optarg, message_store, m_info_col,
-                           m_provided_info_threshold, command, error_messages);
-            else if (command == "maf-base")
-                set_string(optarg, message_store, m_maf_col,
-                           m_perform_base_maf_control_filter, command,
-                           error_messages);
-            // Long opts for clumping
-            else if (command == "clump-p")
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_clump_p,
-                                                dummy, command);
-            else if (command == "clump-r2")
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_clump_r2,
-                                                dummy, command);
-            else if (command == "clump-kb")
-                error =
-                    error
-                    || !parse_distance(optarg, message_store, error_messages,
-                                       m_clump_distance, command);
-            else if (command == "proxy")
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_proxy_threshold, m_use_proxy_clump, command);
-            // Long opts for misc
-            else if (command == "id-delim"){
-                set_string(optarg, message_store, m_id_delim, m_set_delim, command,
-                           error_messages, true);
-            }
-            else if (command == "perm")
-            {
-                // use double to account for scientific?
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, dummy_double,
-                                                dummy, command);
-                if (!error) {
-                    std::modf(dummy_double, &intpart);
-                    m_permutation = static_cast<int>(intpart);
-                    m_perform_permutation = true;
-                    if (m_permutation == 0) {
-                        error_messages.append("Warning: 0 permutation "
-                                              "requested. Permutation will not "
-                                              "be performed\n");
-                        m_perform_permutation = false;
-                    }
-                }
-            }
-            else if (command.compare("x-range") == 0)
-            {
-                // Require additional processing
-                set_string(optarg, message_store, m_exclusion_range, dummy,
-                           command, error_messages);
-            }
-            // Long opts for reference_panel
-            else if (command == "ld-keep")
-                set_string(optarg, message_store, m_ref_keep, dummy, command,
-                           error_messages);
-            else if (command == "ld-list")
-                set_string(optarg, message_store, m_ref_list,
-                           m_ref_list_provided, command, error_messages);
-            else if (command == "ld-remove")
-                set_string(optarg, message_store, m_ref_remove, dummy, command,
-                           error_messages);
-            else if (command == "ld-type")
-                set_string(optarg, message_store, m_ref_type, dummy, command,
-                           error_messages);
-            // Long opts for reference_snp_filtering
-            else if (command == "ld-maf")
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages, m_ref_maf,
-                               m_perform_ref_maf_filter, command);
-            else if (command == "ld-geno")
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_ref_geno, m_perform_ref_geno_filter, command);
-            else if (command == "ld-info")
-                error =
-                    error
-                    || !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_ref_info_score,
-                                            m_perform_ref_info_filter, command);
-            else if (command == "ld-hard-thres")
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_ref_hard_threshold,
-                               m_perform_ref_hard_thresholding, command);
-            // Long opts for p_thresholds
             else if (command == "bar-levels")
             {
-                error = error
-                        || !load_numeric_vector<double>(optarg, message_store,
+                error |= !load_numeric_vector<double>(optarg, message_store,
                                                         error_messages,
                                                         m_barlevel, command);
                 m_set_use_thresholds = true;
             }
-            // Long opts for prs_calculation
-            else if (command == "model")
-                error =
-                    error || !set_model(optarg, message_store, error_messages);
-            else if (command.compare("score") == 0)
-                error =
-                    error || !set_score(optarg, message_store, error_messages);
-            else if (command == "missing")
-                error = error
-                        || !set_missing(optarg, message_store, error_messages);
-            // Long opts for prs_snp_filtering
+            else if (command == "base-info")
+                set_string(optarg, message_store, m_info_col,
+                           m_provided_info_threshold, command, error_messages);
+            else if (command == "base-maf")
+                set_string(optarg, message_store, m_maf_col,
+                           m_perform_base_maf_control_filter, command,
+                           error_messages);
+            else if (command == "binary-target")
+                error |= !parse_binary_vector(optarg, message_store,
+                                                error_messages, m_is_binary,
+                                                command);
+            else if (command == "bp")
+                set_string(optarg, message_store, m_bp, m_provided_bp, command,
+                           error_messages);
+            else if (command == "chr")
+                set_string(optarg, message_store, m_chr, m_provided_chr_col,
+                           command, error_messages);
+            else if (command == "clump-kb")
+                error |= !parse_distance(optarg, message_store, error_messages,
+                                       m_clump_distance, command);
+            else if (command == "clump-p")
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, m_clump_p,
+                                                dummy, command);
+            else if (command == "clump-r2")
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, m_clump_r2,
+                                                dummy, command);
+
+            else if (command == "cov-factor")
+                load_string_vector(optarg, message_store, m_factor_cov, command,
+                                   error_messages);
             else if (command == "exclude")
                 set_string(optarg, message_store, m_exclude_file, dummy,
                            command, error_messages);
             else if (command == "extract")
                 set_string(optarg, message_store, m_extract_file, dummy,
                            command, error_messages);
-            else if (command.compare("geno") == 0)
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_target_geno,
-                                                m_target_geno_filter, command);
-            else if (command == "hard-thres")
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_target_hard_threshold,
-                               m_target_hard_thresholding, command);
-            else if (command == "maf")
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_target_maf,
-                                                m_target_maf_filter, command);
-            else if (command == "info")
-                error =
-                    error
-                    || !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_target_info_score,
-                                            m_target_info_filter, command);
-            // Long opts for PRSet
             else if (command == "feature")
                 load_string_vector(optarg, message_store, m_feature, command,
                                    error_messages);
-            else if (command == "snp-set")
-                set_string(optarg, message_store, m_single_snp_set, dummy,
-                           command, error_messages);
-            else if (command == "snp-sets")
-                set_string(optarg, message_store, m_multi_snp_sets, dummy,
-                           command, error_messages);
-            else if (command == "set-perm")
-            {
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, dummy_double,
-                                                dummy, command);
-                if (!error) {
-                    std::modf(dummy_double, &intpart);
-                    m_set_perm = static_cast<int>(intpart);
-                    m_perform_set_perm = true;
-                    if (m_set_perm == 0) {
-                        error_messages.append(
-                            "Warning: 0 permutation "
-                            "requested. Set based permutation will not "
-                            "be performed\n");
-                        m_perform_set_perm = false;
-                    }
-                }
-            }
-            else if (command == "background")
-                set_string(optarg, message_store, m_background, dummy, command,
-                           error_messages);
-            else if (command == "wind-5")
-                error =
-                    error
-                    || !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_window_5, dummy, command);
-            else if (command == "wind-3")
-                error =
-                    error
-                    || !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_window_3, dummy, command);
-            // Long opts for PRSlice
-            else if (command == "prslice")
-                error = error
-                        || !set_numeric<int>(optarg, message_store,
-                                             error_messages, m_prslice_size,
-                                             m_perform_prslice, command);
-            // Long opts for target
+            else if (command.compare("geno") == 0)
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, m_target_geno,
+                                                m_target_geno_filter, command);
+            else if (command == "hard-thres")
+                error |= !set_numeric<double>(
+                               optarg, message_store, error_messages,
+                               m_target_hard_threshold,
+                               m_target_hard_thresholding, command);
+
+            else if (command == "id-delim")
+                set_string(optarg, message_store, m_id_delim, m_set_delim, command,
+                           error_messages, true);
+            else if (command == "info")
+                error |= !set_numeric<double>(optarg, message_store,
+                                            error_messages, m_target_info_score,
+                                            m_target_info_filter, command);
             else if (command == "keep")
                 set_string(optarg, message_store, m_target_keep, dummy, command,
                            error_messages);
+
+            else if (command == "ld-geno")
+                error |= !set_numeric<double>(
+                               optarg, message_store, error_messages,
+                               m_ref_geno, m_perform_ref_geno_filter, command);
+            else if (command == "ld-hard-thres")
+                error |= !set_numeric<double>(
+                               optarg, message_store, error_messages,
+                               m_ref_hard_threshold,
+                               m_perform_ref_hard_thresholding, command);
+            else if (command == "ld-info")
+                error |= !set_numeric<double>(optarg, message_store,
+                                            error_messages, m_ref_info_score,
+                                            m_perform_ref_info_filter, command);
+            else if (command == "ld-keep")
+                set_string(optarg, message_store, m_ref_keep, dummy, command,
+                           error_messages);
+            else if (command == "ld-list")
+                set_string(optarg, message_store, m_ref_list,
+                           m_ref_list_provided, command, error_messages);
+            else if (command == "ld-maf")
+                error |= !set_numeric<double>(
+                               optarg, message_store, error_messages, m_ref_maf,
+                               m_perform_ref_maf_filter, command);
+            else if (command == "ld-remove")
+                set_string(optarg, message_store, m_ref_remove, dummy, command,
+                           error_messages);
+            else if (command == "ld-type")
+                set_string(optarg, message_store, m_ref_type, dummy, command,
+                           error_messages);
+            else if (command == "maf")
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, m_target_maf,
+                                                m_target_maf_filter, command);
+            else if (command == "memory")
+                error |= !set_memory(optarg, message_store, error_messages);
+            else if (command == "missing")
+                error |= !set_missing(optarg, message_store, error_messages);
+            else if (command == "model")
+                error |= !set_model(optarg, message_store, error_messages);
+            else if (command == "perm")
+                // use double to account for scientific?
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, dummy_double,
+                                                dummy, command);
+            else if (command == "proxy")
+                error |= !set_numeric<double>(
+                               optarg, message_store, error_messages,
+                               m_proxy_threshold, m_use_proxy_clump, command);
+
             else if (command == "remove")
                 set_string(optarg, message_store, m_target_remove, dummy,
                            command, error_messages);
-            else if (command == "type")
-                set_string(optarg, message_store, m_target_type, dummy, command,
-                           error_messages);
+            else if (command.compare("score") == 0)
+                error |= !set_score(optarg, message_store, error_messages);
+            else if (command == "se")
+                set_string(optarg, message_store, m_standard_error,
+                           m_provided_standard_error, command, error_messages);
+            else if (command == "set-perm")
+                error |= !set_numeric<double>(optarg, message_store,
+                                                error_messages, dummy_double,
+                                                dummy, command);
+            else if (command == "snp")
+                set_string(optarg, message_store, m_snp, m_provided_snp_id,
+                           command, error_messages);
+            else if (command == "snp-set")
+                set_string(optarg, message_store, m_single_snp_set, dummy,
+                           command, error_messages);
+            else if (command == "stat")
+                set_string(optarg, message_store, m_statistic,
+                           m_provided_statistic, command, error_messages);
             else if (command == "target-list")
                 set_string(optarg, message_store, m_target_file_list,
                            m_use_target_list, command, error_messages);
-            else if (command == "binary-target")
-                error = error
-                        || !parse_binary_vector(optarg, message_store,
-                                                error_messages, m_is_binary,
-                                                command);
-            else if (command == "memory")
-                error =
-                    error || !set_memory(optarg, message_store, error_messages);
-            else if (command == "cov-factor")
-            {
-                load_string_vector(optarg, message_store, m_factor_cov, command,
-                                   error_messages);
-            }
-            else if (command == "nsample")
-            {
-                error = error
-                        || !set_numeric<uint32_t>(
-                               optarg, message_store, error_messages,
-                               m_num_sample, m_provided_num_sample, command);
-            }
-            else if (command == "ncase")
-            {
-                error = error
-                        || !set_numeric<uint32_t>(optarg, message_store,
-                                                  error_messages, m_num_case,
-                                                  m_provided_num_case, command);
-            }
-            else if (command == "ncontrol")
-            {
-                error = error
-                        || !set_numeric<uint32_t>(
-                               optarg, message_store, error_messages,
-                               m_num_control, m_provided_num_control, command);
-            }
-            else if (command == "maf-bin")
-            {
-                error = error
-                        || !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_maf_bin,
-                                                m_provided_maf_bin, command);
-            }
-            else if (command == "prev-base")
-            {
-                error = error
-                        || !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_base_prevalence, m_provided_base_prevalence,
-                               command);
-            }
-            else if (command == "shrink-perm")
-            {
-                error =
-                    error
-                    || !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_shrink_perm,
-                                         m_provided_shrink_perm_num, command);
-            }
+            else if (command == "type")
+                set_string(optarg, message_store, m_target_type, dummy, command,
+                           error_messages);
+            else if (command == "wind-3")
+                error |= !set_numeric<int>(optarg, message_store, error_messages,
+                                         m_window_3, dummy, command);
+            else if (command == "wind-5")
+                error |= !set_numeric<int>(optarg, message_store, error_messages,
+                                         m_window_5, dummy, command);
+            else if (command.compare("x-range") == 0)
+                set_string(optarg, message_store, m_exclusion_range, dummy,
+                           command, error_messages);
             else
             {
                 std::string er = "Error: Undefined operator: " + command
@@ -490,20 +363,17 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        error_messages);
             break;
         case 'i':
-            error = error
-                    || !set_numeric<double>(optarg, message_store,
+            error |= !set_numeric<double>(optarg, message_store,
                                             error_messages, m_inter_threshold,
                                             m_set_use_thresholds, "interval");
             break;
         case 'k':
-            error = error
-                    || !load_numeric_vector<double>(optarg, message_store,
+            error |= !load_numeric_vector<double>(optarg, message_store,
                                                     error_messages,
                                                     m_prevalence, "prevalence");
             break;
         case 'l':
-            error = error
-                    || !set_numeric<double>(optarg, message_store,
+            error |= !set_numeric<double>(optarg, message_store,
                                             error_messages, m_lower_threshold,
                                             m_set_use_thresholds, "lower");
             break;
@@ -522,9 +392,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             }
             else
             {
-                error =
-                    error
-                    || !set_numeric<int>(optarg, message_store, error_messages,
+                error |= !set_numeric<int>(optarg, message_store, error_messages,
                                          m_thread, dummy, "thread");
                 if (m_thread > max_threads) {
                     m_thread = max_threads;
@@ -541,8 +409,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        "pvalue", error_messages);
             break;
         case 's':
-            error = error
-                    || !set_numeric<std::random_device::result_type>(
+            error |= !set_numeric<std::random_device::result_type>(
                            optarg, message_store, error_messages, m_seed,
                            m_provided_seed, "seed");
             break;
@@ -551,8 +418,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        error_messages);
             break;
         case 'u':
-            error = error
-                    || !set_numeric<double>(optarg, message_store,
+            error |= !set_numeric<double>(optarg, message_store,
                                             error_messages, m_upper_threshold,
                                             m_set_use_thresholds, "upper");
             break;
@@ -567,15 +433,15 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    error = error || !base_check(message_store, error_messages);
-    error = error || !clump_check(message_store, error_messages);
-    error = error || !covariate_check(error_messages);
-    error = error || !filter_check(error_messages);
-    error = error || !misc_check(message_store, error_messages);
-    error = error || !prset_check(message_store, error_messages);
-    error = error || !prsice_check(message_store, error_messages);
-    error = error || !prslice_check(error_messages);
-    error = error || !target_check(message_store, error_messages);
+    error |= !base_check(message_store, error_messages);
+    error |= !clump_check(message_store, error_messages);
+    error |= !covariate_check(error_messages);
+    error |= !filter_check(error_messages);
+    error |= !misc_check(message_store, error_messages);
+    error |= !prset_check(message_store, error_messages);
+    error |= !prsice_check(message_store, error_messages);
+    error |= !prslice_check(error_messages);
+    error |= !target_check(message_store, error_messages);
     if (m_perform_prset && m_perform_prslice) {
         error = true;
         error_messages.append(
