@@ -594,12 +594,13 @@ void PRSice::process_cov_file(
     // is the number of missingness in each covariate
     std::vector<uint32_t> missing_count(cov_index.back() + 1, 0);
     std::string line, id;
+    std::unordered_set<std::string> dup_id_check;
     // is the maximum column index required
     const size_t max_index = cov_index.back() + 1;
     // This is the index for iterating the current_vector_level (reset after
     // each line)
     std::vector<uint32_t>::size_type factor_level_index = 0;
-    int num_valid = 0, index = 0;
+    int num_valid = 0, index = 0, dup_id_count = 0;
     bool valid = true;
     // we initialize the storage facility for the factor levels
     factor_levels.resize(factor_cov_index.size());
@@ -628,6 +629,7 @@ void PRSice::process_cov_file(
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
+
             // only samples with a valid phenotype will get into this if case.
             // Ignore all other samples
             valid = true;
@@ -668,6 +670,12 @@ void PRSice::process_cov_file(
                 }
             }
             if (valid) {
+                if (dup_id_check.find(id) != dup_id_check.end()) {
+                    // check if there are duplicated ID in the covariance file
+                    dup_id_count++;
+                    continue;
+                }
+                dup_id_check.insert(id);
                 // this is a valid sample, so we want to keep its information in
                 // the valid_sample_index
                 // first, obtain its current index on the phenotype vector
@@ -694,6 +702,12 @@ void PRSice::process_cov_file(
         }
     }
     cov.close();
+
+    if (dup_id_count != 0) {
+        std::string message =
+            "Error: " + std::to_string(dup_id_count) + " duplicated IDs\n";
+        throw std::runtime_error(message);
+    }
     // Here, we should know the identity of the valid sample and also
     // the factor levels
     // now calculate the number of column required
@@ -804,6 +818,7 @@ void PRSice::process_cov_file(
                     m_phenotype(static_cast<Eigen::Index>(original_index), 0);
             }
         }
+
         m_phenotype.conservativeResize(
             static_cast<Eigen::Index>(valid_sample_index.size()), 1);
     }
@@ -1516,7 +1531,7 @@ void PRSice::consume_null_pheno(
 void PRSice::prep_output(const std::string& out, const bool all_score,
                          const bool has_prev, const Genotype& target,
                          const std::vector<std::string>& region_name,
-                         const intptr_t pheno_index)
+                         const intptr_t pheno_index, const bool has_background)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
@@ -1566,7 +1581,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         header_line.append(" PRS");
     else
     {
-        for (size_t i = 0; i < region_name.size() - 1; ++i) {
+        for (size_t i = 0; i < region_name.size() - has_background; ++i) {
             header_line.append(" " + region_name[i]);
         }
     }
@@ -1782,7 +1797,10 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     prs_sum.top = top;
     prs_sum.bottom = bottom;
     prs_sum.prevalence = prevalence;
-    prs_sum.has_competitive = false;
+    // we don't run competitive testing on the base region
+    // therefore we skip region_index == 0 (base is always
+    // the first region)
+    prs_sum.has_competitive = (region_index==0);
     m_prs_summary.push_back(prs_sum);
 
     if (best_info.p > 0.1)
@@ -2141,6 +2159,7 @@ void PRSice::consume_prs(
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
                              const intptr_t pheno_index)
 {
+    m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
     int num_perm;
     if (!commander.set_perm(num_perm)) {
@@ -2171,7 +2190,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     size_t start_index = 1;
     bool started = false;
     // start at 1 to avoid the base set
-    for (size_t i = 1; i < num_prs_res; ++i) {
+    size_t cur_set_index = 0;
+    for (size_t i = 0; i < num_prs_res; ++i) {
         // if we have already calculated the competitive p-value for the set, we
         // will just skip them. This help us to handle multiple-phenotype
         // without too much additional coding
@@ -2181,10 +2201,11 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
             // competitive p-value calculation. This allow us to later reassign
             // results to the sets
             start_index = i;
-            started = false;
+            started = true;
         }
         auto&& res = m_prs_summary[i].result;
-        set_index[res.num_snp].push_back(ori_t_value.size());
+        // store the location of this set w.r.t number of SNPs in set
+        set_index[res.num_snp].push_back(cur_set_index++);
         // ori_t_value will contain the obesrved t-value
         ori_t_value.push_back(std::abs(res.coefficient / res.se));
         set_perm_res.push_back(0);
@@ -2271,12 +2292,20 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         null_set_no_thread(target, set_index, ori_t_value, set_perm_res,
                            num_perm, is_binary, require_standardize);
     }
+    // start_index is the index of m_prs_summary[i], not the actual index
+    // on set_perm_res.
+    // this will iterate all sets from beginning of current phenotype
+    // to the last set within the current phenotype
+    // because of the sequence of how set_perm_res is contructed,
+    // the results for each set should be sequentially presented in
+    // set_perm_res. Index for set_perm_res results are therefore
+    // i - start_index
     for (size_t i = start_index; i < num_prs_res; ++i) {
         auto&& res = m_prs_summary[i].result;
         // we need to minus out the start index from i such that our index start
         // at 0, which is the assumption of set_perm_res
         res.competitive_p =
-            (static_cast<double>(set_perm_res[(i - start_index) - 1]) + 1.0)
+            (static_cast<double>(set_perm_res[(i - start_index)]) + 1.0)
             / (static_cast<double>(num_perm) + 1.0);
         m_prs_summary[i].has_competitive = true;
     }

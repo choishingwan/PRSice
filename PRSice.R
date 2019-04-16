@@ -34,7 +34,8 @@ help_message <-
     --base          | -b    Base association file\n
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
-                            to be in the form of BETA.\n
+                            to be in the form of BETA. Mutually exclusive\n
+                            from --or \n
     --bp                    Column header containing the SNP coordinate\n
                             Default: BP\n
     --chr                   Column header containing the chromosome\n
@@ -58,6 +59,10 @@ help_message <-
                             will not set any default column name and you\n
                             will have to ensure all required columns are\n
                             provided. (--snp, --stat, --A1, --pvalue)\n
+    --or                    Whether the test statistic is in the form of \n
+                            BETA or OR. If set, test statistic is assume\n
+                            to be in the form of OR. Mutually exclusive \n
+                            from --beta \n
     --pvalue        | -p    Column header containing the p-value\n
                             Default: P\n
     --se                    Column header containing the standard error\n
@@ -223,11 +228,18 @@ help_message <-
                             sum - Direct summation of the effect size \n
     --upper         | -u    The final p-value threshold. Default: 0.5 \n
 \nPRSet:\n
+    --background            String to indicate a background file. This string\n
+                            should have the format of Name:Type where type can be\n
+                            bed   - 0-based range with 3 column. Chr Start End\n
+                            range - 1-based range with 3 column. Chr Start End\n
+                            gene  - A file contain a column of gene name\n
     --bed           | -B    Bed file containing the selected regions.\n
                             Name of bed file will be used as the region\n
                             identifier. WARNING: Bed file is 0-based\n
     --feature               Feature(s) to be included from the gtf file.\n
                             Default: exon,CDS,gene,protein_coding.\n
+    --full-back             Use the whole genome as background for competitive\n
+                            p-value calculation\n
     --gtf           | -g    GTF file containing gene boundaries. Required\n
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
@@ -238,6 +250,8 @@ help_message <-
     --snp-sets              Provide a SNP set file containing multiple snp sets.\n
                             Each row represent a single SNP set with the first\n
                             column containing name of the SNP set.\n    
+    --wind-3                Add N base(s) to the 3' region of each feature(s) \n
+    --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
 \nPRSlice:\n
     --prslice               Perform PRSlice where the whole genome is first cut\n
                             into bin size specified by this option. PRSice will\n
@@ -255,6 +269,9 @@ help_message <-
                             instead of the association with phenotype\n
     --bar-palatte           Colour palatte to be used for bar plotting when\n
                             --bar_col_p is set. Default: YlOrRd\n
+    --device                Select different plotting devices. You can choose\n
+                            any plotting devices supported by base R.\n
+                            Default: png\n
     --multi-plot            Plot the top N phenotype / gene set in a\n
                             summary plot\n 
     --plot                  When set, will only perform plotting.\n
@@ -279,12 +296,15 @@ help_message <-
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
+    --id-delim              Delimiter used to concatinate FID and IID in bgen\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
+    --memory                Maximum memory usage allowed. PRSice will try\n
+                           its best to honor this setting\n
     --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
@@ -446,7 +466,7 @@ option_list <- list(
   make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
   make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
   make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
-  make_option(c("-k", "--prevalence"), type = "numeric"),
+  make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
   make_option(c("--target-list"), type = "character", dest="target_list"),
@@ -506,8 +526,10 @@ option_list <- list(
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
+  make_option(c("--id-delim"), type="character"),
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
+  make_option(c("--memory"), type = "character", dest="memory"),
   make_option(c("-o", "--out"), type = "character", default = "PRSice"),
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
@@ -663,13 +685,18 @@ flags <-
         "no-xy",
         "no-y",
         "non-cumulate",
+        "or",
         "print-snp"
     )
 # Skip PRSice core function if only plotting is requirec
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
-        if (i %in% flags) {
+        if(i=="id-delim") {
+            if(!is.na(i)){
+                command = paste(command, " --", i, " \"",argv_c[[i]],"\"", sep="" )
+            }
+        }else if (i %in% flags) {
             if (argv_c[[i]])
                 command = paste(command, " --", i, sep = "")
         } else if (i %in% not_cpp) {
@@ -943,6 +970,7 @@ call_quantile <-
             quote = F,
             row.names = F
         )
+        
         if (use.ggplot) {
             plot.quant(quantiles.df,
                        num_quant,
@@ -1112,7 +1140,10 @@ uneven_quantile_plot <- function(base.prs, pheno,covariance,  prefix, argv, bina
                   use.residual,
                   use.ggplot,
                   binary,
-                  extract, TRUE)
+                  extract, 
+                  argv$device, 
+                  TRUE)
+
 }
 
 
@@ -2291,7 +2322,7 @@ process_plot <-
             }
         }
         if(provided("multi_plot", parameters)){
-            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot)
+            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot, argv$device)
         }
     }
 

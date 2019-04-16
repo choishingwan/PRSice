@@ -4,7 +4,7 @@ A new feature of PRSice is the ability to perform set base/pathway based analysi
 Paper on PRSet currently under preparation.
 
 !!! Important
-    PRSet is currently under active development. Notably, the current version of PRSet only provides self-contained pathway results, which eg. do not account for pathway size. For now other leading pathway approaches (eg. [MAGMA](https://ctg.cncr.nl/software/magma)) might be more powerful for identification of causal pathways.
+    PRSet is currently under active development.
 
 # Preparation
 PRSet is based on [PRSice](quick_start.md), with additional input requirements

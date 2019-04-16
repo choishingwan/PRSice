@@ -59,7 +59,8 @@ int main(int argc, char* argv[])
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
         info_filter = commander.target_info(info);
-        hard_coded = commander.target_hard_threshold(hard_threshold);
+        commander.target_hard_threshold(hard_threshold);
+        hard_coded = commander.hard_coded();
 
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
@@ -266,9 +267,10 @@ int main(int argc, char* argv[])
                 // remove background from the region process
                 // background is only there if permutation is to be performed
                 // (It must be there if permutation is to be performed)
+                const bool has_background =
+                    ((region.size() > 1) && commander.perform_set_perm());
                 const size_t num_region_process =
-                    region.size()
-                    - ((region.size() > 1) && commander.perform_set_perm());
+                    region.size() - has_background;
                 // go through each phenotype
                 for (intptr_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                     // initialize the phenotype & independent variable matrix
@@ -281,7 +283,7 @@ int main(int argc, char* argv[])
                     // for all score and best score. Others are easier
                     prsice.prep_output(commander.out(), commander.all_scores(),
                                        commander.has_prevalence(), *target_file,
-                                       region.names(), i_pheno);
+                                       region.names(), i_pheno, has_background);
                     // go through each region separately
                     // this should reduce the memory usage
                     for (size_t i_region = 0; i_region < num_region_process;

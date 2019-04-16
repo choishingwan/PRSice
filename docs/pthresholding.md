@@ -61,8 +61,8 @@ the phenotype and can be used for downstream analysis.
     Available methods include:
     - `MEAN_IMPUTE` - Missing genotypes contribute an amount
     proportional to imputed allele frequency (default)
-    - `no_mean_imputation` - To throw out missing observations instead
-    - `center` - shift all scores to mean zero.
+    - `SET_ZERO` - To throw out missing observations instead
+    - `CENTER` - shift all scores to mean zero.
 
 - `--no-regress`            
 

@@ -40,8 +40,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.3.beta";
-const std::string date = "19 September 2018";
+const std::string version = "2.1.11";
+const std::string date = "4 April 2019";
 class Commander
 {
 public:
@@ -292,6 +292,7 @@ public:
         return m_perform_ref_info_filter;
     }
     // misc
+    std::string delim() const { return m_id_delim; }
     /*!
      * \brief Get output prefix
      * \return the output prefix
@@ -752,6 +753,7 @@ private:
     std::string m_bp = "BP";
     std::string m_standard_error = "SE";
     std::string m_p_value = "P";
+    std::string m_id_delim = " ";
     std::string m_info_col = "INFO,0.9";
     std::string m_maf_col;
     std::string m_out_prefix = "PRSice";
@@ -806,6 +808,7 @@ private:
     int m_fastscore = false;
     int m_no_full = false;
     int m_stat_is_beta = false;
+    int m_stat_is_or = false;
     int m_input_is_index = false;
     int m_user_no_default = false;
     int m_no_clump = false;
@@ -849,6 +852,7 @@ private:
     bool m_perform_ref_maf_filter = false;
     bool m_perform_ref_info_filter = false;
     bool m_set_use_thresholds = false;
+    bool m_set_delim = false;
     bool m_target_geno_filter = false;
     bool m_target_hard_thresholding = false;
     bool m_target_maf_filter = false;
@@ -1354,15 +1358,17 @@ private:
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'C') {
-            input = "center";
+            input = "CENTER";
             m_missing_score = MISSING_SCORE::CENTER;
         }
         else if (input.at(0) == 'M')
         {
+            input = "MEAN_IMPUTE";
             m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
         }
         else if (input.at(0) == 'S')
         {
+            input = "SET_ZERO";
             m_missing_score = MISSING_SCORE::SET_ZERO;
         }
         else
@@ -1374,7 +1380,7 @@ private:
         if (message.find("missing") != message.end()) {
             error_message.append("Warning: Duplicated argument --score\n");
         }
-        message["score"] = input;
+        message["missing"] = input;
         return true;
     }
     std::vector<std::string> transform_covariate(std::string& cov);
@@ -1390,13 +1396,17 @@ private:
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
-                           const std::string& c, std::string& error_message)
+                           const std::string& c, std::string& error_message, bool add_quote=false)
     {
 
         if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
-        message[c] = input;
+        if(add_quote){
+            message[c] = "\""+input+"\"";
+        }else{
+            message[c] = input;
+        }
         target = input;
         target_boolean = true;
     }

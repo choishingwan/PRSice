@@ -47,11 +47,12 @@ private:
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
-    std::string m_cur_file;
-    std::string m_intermediate_file;
-    std::streampos m_prev_loc = 0;
     std::string m_base_file;
+    std::string m_cur_file;
+    std::string m_id_delim;
+    std::string m_intermediate_file;
     size_t m_rs_id_index;
+    std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -267,6 +268,7 @@ private:
         // that we will need to seek for every SNP as there are padded data
         // between each SNP's genotype
         m_prev_loc = m_bgen_file.tellg();
+
         return 0;
     }
 
@@ -348,14 +350,14 @@ private:
                         MISSING_SCORE missing)
             : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
         {
-            m_miss_count = (missing != MISSING_SCORE::SET_ZERO);
+            m_ploidy = 2;
+            m_miss_count = m_ploidy * (missing != MISSING_SCORE::SET_ZERO);
             // to account for the missingness, we need to calculate the mean of
             // the PRS before we can assign the missing value to the sample. As
             // a result of that, we need a vector to store the index of the
             // missing sample. The maximum possible number of missing sample is
             // the number of sample, thus we can reserve the required size
             m_sample_missing_index.reserve(m_sample_prs->size());
-
             m_setzero = (missing == MISSING_SCORE::SET_ZERO);
             m_centre = (missing == MISSING_SCORE::CENTER);
         }
@@ -398,6 +400,7 @@ private:
             m_prs_sample_i = 0;
             // we clear the number of missingness from the data
             m_sample_missing_index.clear();
+            m_total_exp = 0.0;
             // every new SNP is start of as a valid SNP
             m_valid = true;
         }
@@ -454,12 +457,11 @@ private:
             // the double sum and only add it to the sample if it is not missing
             switch (geno)
             {
-            default: m_sum += m_homcom_weight * value * m_stat; break;
-            case 1: m_sum += m_het_weight * value * m_stat; break;
-            case 2: m_sum += m_homrar_weight * value * m_stat; break;
+            default: m_sum += m_homcom_weight * value; break;
+            case 1: m_sum += m_het_weight * value; break;
+            case 2: m_sum += m_homrar_weight * value; break;
             }
             m_sum_prob += value;
-            m_total_prob += value * geno;
         }
         /*!
          * \brief For bgen v1.2 or later, when there is a missing sample, a
@@ -482,9 +484,9 @@ private:
                     // imputation to account for missing data. This will require
                     // us to add  / assign 1 to the number of SNP
                     if (m_not_first)
-                        ++sample_prs.num_snp;
+                        sample_prs.num_snp += m_ploidy;
                     else
-                        sample_prs.num_snp = 1;
+                        sample_prs.num_snp = m_ploidy;
                 }
             }
             // this is not a missing sample and we can either add the prs or
@@ -492,13 +494,15 @@ private:
             else if (m_not_first)
             {
                 // this is not the first SNP in the region, we will add
-                ++sample_prs.num_snp;
-                sample_prs.prs += m_sum;
+                sample_prs.num_snp += m_ploidy;
+                sample_prs.prs += m_sum * m_stat;
+                m_total_exp += m_sum;
             }
             else
             {
-                sample_prs.num_snp = 1;
-                sample_prs.prs = m_sum;
+                sample_prs.num_snp = m_ploidy;
+                sample_prs.prs = m_sum * m_stat;
+                m_total_exp += m_sum;
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -510,8 +514,8 @@ private:
          */
         void finalise()
         {
-            size_t num_miss = m_sample_missing_index.size();
-            size_t num_prs = m_sample_prs->size();
+            const size_t num_miss = m_sample_missing_index.size();
+            const size_t num_prs = m_sample_prs->size();
             if (num_prs == num_miss) {
                 // all samples are missing. This should in theory invalidate the
                 // SNP
@@ -522,11 +526,14 @@ private:
             // just avoid doing any missingness handling
             if (m_setzero) return;
             // here, we multiply the denominator by 2 to ensure the
-            // expected_value is ranging from 0 -1
-            double expected_value = m_total_prob
-                                    / ((static_cast<double>(num_prs)
-                                        - static_cast<double>(num_miss))
-                                       * 2);
+            // expected_value is ranging from 0 - 2
+            // which has already accounted for ploidy (ploidy is a constant
+            // anyway)
+            // m_total_exp is equivelant to Allele Frequency * Ploidy
+            double expected_value = m_stat
+                                    * (m_total_exp
+                                       / ((static_cast<double>(num_prs)
+                                           - static_cast<double>(num_miss))));
             // worth separating centre score out
             if (m_centre) {
                 // we want to minus the expected value from all samples
@@ -546,7 +553,7 @@ private:
                     }
                     // otherwise, we will simply remove the expected value from
                     // the score
-                    (*m_sample_prs)[m_prs_sample_i].prs -= expected_value;
+                    (*m_sample_prs)[i].prs -= expected_value;
                 }
             }
             else
@@ -569,14 +576,15 @@ private:
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<uint32_t> m_sample_missing_index;
         double m_stat = 0.0;
-        double m_total_prob = 0.0;
         double m_sum = 0.0;
+        double m_total_exp = 0.0;
         double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
         uint32_t m_prs_sample_i = 0;
-        uint32_t m_miss_count = 0;
+        int m_miss_count = 0;
+        int m_ploidy = 2;
         bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
@@ -664,10 +672,10 @@ private:
             if (value > m_hard_prob && value >= m_hard_threshold) {
                 /*
                  * Representation of each geno to their binary code:
-                 *   geno    desired binary  loading
+                 *   geno    desired binary  decimal representation
                  *   0           00              0
-                 *   1           01              0
-                 *   2           11              1
+                 *   1           01              1
+                 *   2           11              3
                  *   the binary code 10 is reserved for missing sample
                  */
                 m_geno = (geno == 2) ? 3 : geno;
