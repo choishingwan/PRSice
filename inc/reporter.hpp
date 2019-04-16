@@ -20,7 +20,10 @@
 class Reporter
 {
 public:
-    Reporter(){}
+    Reporter(){
+        m_error_prefix_size = m_error_prefix.size();
+        m_warning_prefix_size = m_warning_prefix.size();
+    }
     Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
     {
         m_log_file.open(log_name.c_str());

@@ -42,6 +42,7 @@ void Reporter::report(const std::string& input, bool wrap)
     std::string list_prefix;
     size_t space_pad = 0;
     for (auto&& message : paragraph) {
+        check_list.clear();
         // go through each paragraph
         // red for error, yellow for warnings
         space_pad = 0;
@@ -72,8 +73,8 @@ void Reporter::report(const std::string& input, bool wrap)
             space_pad = m_warning_prefix_size+1;
         }
         if (!wrap) {
-            std::cerr << message << '\n';
-            m_log_file << message << '\n';
+            std::cerr << message ;
+            m_log_file << message;
         }
         else
         {
@@ -97,9 +98,10 @@ void Reporter::report(const std::string& input, bool wrap)
             }
         }
         if (is_error || is_warning) std::cerr << m_color_end;
+        line.clear();
         std::cerr << '\n';
         m_log_file << '\n';
     }
-    std::cerr << '\n' << std::flush;
+    std::cerr << '\n'  << std::flush;
     m_log_file << '\n' << std::flush;
 }
