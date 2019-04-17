@@ -543,17 +543,12 @@ public:
      * \return MSigDB file name
      */
     std::string msigdb() const { return m_msigdb; }
-    // TODO: Maybe allow multiple single SNP set input?
     /*!
-     * \brief Return file name containing the single SNP Set
-     * \return File name containing the single SNP set
+     * \brief snp_set return file name containing SNP set(s)
+     * \return File name containing the SNP set(s)
      */
-    std::string single_snp_set() const { return m_single_snp_set; }
-    /*!
-     * \brief Return file name containing the multiple SNP Sets
-     * \return File name containing the multiple SNP sets
-     */
-    std::string multi_snp_sets() const { return m_multi_snp_sets; }
+    std::string snp_set() const { return m_snp_set;  }
+
     /*!
      * \brief Return file name containing background regions
      * \return File name containing backgroudn regions
