@@ -580,12 +580,6 @@ public:
      * \return True if we want the whole genome to be used as the background
      */
     bool genome_wide_background() const { return m_full_background; }
-    // prslice
-    bool perform_prslice() const { return m_perform_prslice; }
-    /*!
-     * \brief Return the 5' extension of regions in \b bp
-     * \return The length of extension to 5' regions
-     */
     int window_5() const
     {
         if (m_window_5 < 0) {
@@ -696,11 +690,6 @@ public:
      */
     bool nonfounders() const { return m_include_nonfounders; }
     /*!
-     * \brief Check if we want to perform shrinkage analysis
-     * \return True if shrinkage is to be performed
-     */
-    bool perform_shrinkage() const { return m_perform_shrinkage; }
-    /*!
      * \brief Indicate if Base input is binary trait and therefore require
      * adjustment
      * \return True if base input is binary
@@ -710,12 +699,6 @@ public:
         return m_provided_num_case && m_provided_num_control
                && m_provided_base_prevalence;
     }
-    double maf_bin() const { return m_maf_bin; }
-    double base_prevalence() const { return m_base_prevalence; }
-    uint32_t num_sample() const { return m_num_sample; }
-    uint32_t num_case() const { return m_num_case; }
-    uint32_t num_control() const { return m_num_control; }
-    int num_shrinkage_perm() const { return m_shrink_perm; }
 
 protected:
 private:
@@ -726,23 +709,21 @@ private:
     std::vector<std::string> m_feature;
     std::vector<std::string> m_pheno_col;
     std::vector<double> m_barlevel;
-    // should equal to number of binary target
     std::vector<double> m_prevalence;
     std::vector<uint32_t> m_col_index_of_cov;
     std::vector<uint32_t> m_col_index_of_factor_cov;
     std::vector<int> m_base_col_index;
     std::vector<bool> m_is_binary;
     std::string m_target_file = "";
-    std::string m_target_keep = "";
     std::string m_target_file_list = "";
-    std::string m_pheno_file = "";
+    std::string m_target_keep = "";
     std::string m_target_remove = "";
     std::string m_target_type = "bed";
+    std::string m_pheno_file = "";
     std::string m_gtf = "";
     std::string m_msigdb = "";
     std::string m_background = "";
-    std::string m_single_snp_set = "";
-    std::string m_multi_snp_sets = "";
+    std::string m_snp_set = "";
     std::string m_cov_file;
     std::string m_base_file = "";
     std::string m_chr = "CHR";
@@ -785,30 +766,25 @@ private:
     double m_target_hard_threshold = 0.9;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
-    double m_maf_bin = 0.01;
-    double m_base_prevalence = 0.01;
     size_t m_memory = 0;
-    uint32_t m_num_sample = 0;
-    uint32_t m_num_case = 0;
-    uint32_t m_num_control = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
-    int m_set_perm = 0;
-    int m_window_5 = 0;
-    int m_window_3 = 0;
+
     int m_clump_distance = 250000;
     int m_permutation = 0;
+    int m_set_perm = 0;
     int m_thread = 1;
-    int m_shrink_perm = 1000;
-    int m_target_is_hard_coded = false;
+    int m_window_5 = 0;
+    int m_window_3 = 0;
     int m_keep_ambig = false;
     int m_no_regress = false;
     int m_fastscore = false;
     int m_no_full = false;
     int m_stat_is_beta = false;
     int m_stat_is_or = false;
+    int m_target_is_hard_coded = false;
     int m_input_is_index = false;
     int m_user_no_default = false;
     int m_no_clump = false;
@@ -821,9 +797,6 @@ private:
     int m_include_nonfounders = false;
     int m_allow_inter = false;
     int m_full_background = false;
-    int m_perform_shrinkage = false;
-    // TODO: Most likely not going to use this
-    int m_prslice_size = 0;
     bool m_use_reference = false;
     bool m_ref_list_provided = false;
     bool m_provided_seed = false;
@@ -837,12 +810,9 @@ private:
     bool m_provided_bp = false;
     bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
-    bool m_provided_maf_bin = false;
-    bool m_provided_num_sample = false;
     bool m_provided_num_case = false;
     bool m_provided_num_control = false;
     bool m_provided_base_prevalence = false;
-    bool m_provided_shrink_perm_num = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
     bool m_perform_base_maf_case_filter = false;
@@ -859,7 +829,6 @@ private:
     bool m_target_info_filter = false;
     bool m_perform_prset = false;
     bool m_perform_set_perm = false;
-    bool m_perform_prslice = false;
     bool m_use_target_list = false;
 
     ////////////////////////////////////////////
@@ -896,8 +865,7 @@ private:
     bool base_check(std::map<std::string, std::string>& message,
                     std::string& error_message);
     /*!
-     * \brief Function to check if parameters for clumping and reference
-     * panel are correct
+     * \brief Function to check if parameters for clumping
      * \param message is the parameter storage
      * \param
      * error_message is the storage for error messages
@@ -905,6 +873,16 @@ private:
      * clumping parameters are alright
      */
     bool clump_check(std::map<std::string, std::string>& message,
+                     std::string& error_message);
+    /*!
+     * \brief Function to check if parameters for reference panel are correct
+     * \param message is the parameter storage
+     * \param
+     * error_message is the storage for error messages
+     * \return  return true if
+     * reference panel parameters are alright
+     */
+    bool ref_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
     /*!
      * \brief Function to check if parameters for covariate are correct
@@ -932,12 +910,6 @@ private:
      */
     bool prset_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
-    /*!
-     * \brief Function to check if parameters for prslice are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
-    bool prslice_check(std::string& error_message);
     /*!
      * \brief Function to check if parameters for prsice thresholding are
      * correct \param error_message is the storage for error messages \return
@@ -1411,6 +1383,7 @@ private:
         target_boolean = true;
     }
 
+    // currently, we don't anticipate anything more than TB
     /*!
      * \brief Convert user input into valid memory format
      * \param input the input string
@@ -1503,41 +1476,97 @@ private:
         }
         return -1;
     }
-    /*!
-     * \brief Check if the column index is out of bound
-     * \param target the column index
-     * \param max is the number of column observed in base file
-     * \param error indicate if the input is valid (T = invalid)
-     * \param error_message contain the error messages
-     * \param name contain the name of the column
-     * \return return -1 if invalid, otherwise return the index as numberic
-     */
-    inline int index_check(const std::string& target, const int max,
-                           bool& error, std::string& error_message,
-                           const std::string& name)
-    {
+
+    // return true if ok
+    inline bool set_base_info_threshold(const std::vector<std::string>& ref,
+                                        std::string &error_message){
+        std::vector<std::string> info = misc::split(m_info_col, ",");
+        m_base_col_index[+BASE_INDEX::INFO] = index_check(info[0], ref);
+        if(m_base_col_index[+BASE_INDEX::INFO] == -1){
+            error_message.append("Error: INFO field not found in base file\n");
+            return false;
+        }
+        if (info.size() != 2) {
+            error_message.append("Error: Invalid format of "
+                                 "--info-base. Should be "
+                                 "ColName,Threshold.\n");
+            return false;
+        }
         try
         {
-            int index = misc::convert<int>(target);
-            if (index >= max) {
-                error = true;
-                error_message.append("Error: " + name
-                                     + " index out of bound!\n");
-                return -1;
+            m_base_info_threshold = misc::convert<double>(info[1]);
+            if (m_base_info_threshold < 0 || m_base_info_threshold > 1)
+            {
+                error_message.append("Error: Base INFO threshold "
+                                     "must be within 0 and 1!\n");
+                return false;
             }
-            if (index < 0) {
-                error = true;
-                error_message.append("Error: Negative " + name + " index!\n");
-                return -1;
-            }
-            return index;
         }
         catch (...)
         {
-            error = true;
-            error_message.append("Error: " + name + " index is not numeric!\n");
-            return -1;
+            error_message.append(
+                "Error: Invalid argument passed to --info-base: "
+                + m_info_col + "! Second argument must be numeric\n");
+            return false;
         }
+        return true;
+    }
+    // return true if valid
+    inline bool set_base_maf_filter(const std::vector<std::string>& ref,
+                                    std::string &error_message){
+        std::string maf_error =
+            "Error: Invalid format of --maf-base. "
+            "Should be ColName,Threshold."
+            "or ColName,Threshold:ColName,Threshold.\n";
+        std::vector<std::string> case_control = misc::split(m_maf_col, ":");
+        if(case_control.size()>2){
+            error_message.append(maf_error);
+            return false;
+        }
+        bool control = true;
+        for(auto && maf : case_control){
+            std::vector<std::string> detail = misc::split(maf, ",");
+            if(control){
+                m_base_col_index[+BASE_INDEX::MAF] = index_check(detail[0], ref);
+                if(m_base_col_index[+BASE_INDEX::INFO] == -1){
+                    error_message.append("Error: MAF field not found in base file\n");
+                    return false;
+                }
+            }else{
+                m_base_col_index[+BASE_INDEX::MAF_CASE] = index_check(detail[0], ref);
+                if(m_base_col_index[+BASE_INDEX::MAF_CASE] == -1){
+                    error_message.append("Error: Case MAF field not found in base file\n");
+                    return false;
+                }
+            }
+            double cur_maf;
+            try
+            {
+                cur_maf = misc::convert<double>(detail[1]);
+                if (cur_maf < 0 || cur_maf > 1)
+                {
+                    error_message.append(
+                        "Error: Base MAF threshold must "
+                        "be within 0 and 1!\n");
+                    return false;
+                }
+            }
+            catch (...)
+            {
+                error_message.append(
+                    "Error: Invalid argument passed to --maf-base: "
+                    + m_maf_col + "! Threshold must be numeric\n");
+                return false;
+            }
+            if(control){
+                m_control_maf_threshold = cur_maf;
+            }
+            else{
+                m_case_maf_threshold = cur_maf;
+            }
+            control = false;
+        }
+        return true;
     }
 };
 

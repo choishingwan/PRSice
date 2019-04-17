@@ -132,8 +132,7 @@ int main(int argc, char* argv[])
                                commander.is_binary(), reporter);
             // set the clumping information to the target file
             target_file->set_info(commander);
-            if ((!commander.no_clump() || commander.perform_shrinkage())
-                && commander.use_ref())
+            if (!commander.no_clump() && commander.use_ref())
             {
                 // load the reference file if we require it
                 reporter.report("Loading reference "
@@ -170,7 +169,7 @@ int main(int argc, char* argv[])
                 commander.perform_maf_base_case_filter(),
                 commander.perform_base_info_score_filter(),
                 commander.fastscore(), commander.no_full(), commander.beta(),
-                commander.is_index(), commander.perform_shrinkage(), region,
+                commander.is_index(), false, region,
                 reporter);
             // remove all boundaries from the region object to free up memory
             region.clean();
@@ -191,23 +190,6 @@ int main(int argc, char* argv[])
                     reporter, commander.pearson());
                 // immediately free the memory
             }
-
-            if (commander.perform_shrinkage()) {
-                // Perform order statistic shrinkage using the reference panel
-                double max_p_value =
-                    (commander.no_full())
-                        ? (commander.fastscore() ? commander.bar_upper()
-                                                 : commander.upper())
-                        : 1;
-                target_file->perform_shrinkage(
-                    commander.use_ref() ? *reference_file : *target_file,
-                    commander.maf_bin(), commander.base_prevalence(),
-                    max_p_value, commander.num_shrinkage_perm(),
-                    commander.num_sample(), commander.num_case(),
-                    commander.num_control(), commander.base_is_binary(),
-                    reporter);
-            }
-
             if (commander.use_ref()) delete reference_file;
 
             // Prepare the SNP vector in target for PRS calculation

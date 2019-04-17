@@ -73,7 +73,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"or", no_argument, &m_stat_is_or, 1},
         {"pearson", no_argument, &m_pearson, 1},
         {"print-snp", no_argument, &m_print_snp, 1},
-        {"shrinkage", no_argument, &m_perform_shrinkage, 1},
         {"full-back", required_argument, &m_full_background, 1},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
@@ -207,7 +206,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 error |= !set_numeric<double>(optarg, message_store,
                                                 error_messages, m_clump_r2,
                                                 dummy, command);
-
             else if (command == "cov-factor")
                 load_string_vector(optarg, message_store, m_factor_cov, command,
                                    error_messages);
@@ -229,7 +227,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                optarg, message_store, error_messages,
                                m_target_hard_threshold,
                                m_target_hard_thresholding, command);
-
             else if (command == "id-delim")
                 set_string(optarg, message_store, m_id_delim, m_set_delim, command,
                            error_messages, true);
@@ -280,33 +277,38 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 error |= !set_missing(optarg, message_store, error_messages);
             else if (command == "model")
                 error |= !set_model(optarg, message_store, error_messages);
-            else if (command == "perm")
+            else if (command == "perm"){
                 // use double to account for scientific?
                 error |= !set_numeric<double>(optarg, message_store,
                                                 error_messages, dummy_double,
                                                 dummy, command);
+                m_permutation = static_cast<int>(dummy_double);
+
+            }
             else if (command == "proxy")
                 error |= !set_numeric<double>(
                                optarg, message_store, error_messages,
                                m_proxy_threshold, m_use_proxy_clump, command);
-
             else if (command == "remove")
                 set_string(optarg, message_store, m_target_remove, dummy,
                            command, error_messages);
-            else if (command.compare("score") == 0)
+            else if (command == "score")
                 error |= !set_score(optarg, message_store, error_messages);
             else if (command == "se")
                 set_string(optarg, message_store, m_standard_error,
                            m_provided_standard_error, command, error_messages);
-            else if (command == "set-perm")
+            else if (command == "set-perm"){
                 error |= !set_numeric<double>(optarg, message_store,
                                                 error_messages, dummy_double,
                                                 dummy, command);
+                m_perform_set_perm = true;
+                m_set_perm = static_cast<int>(dummy_double);
+            }
             else if (command == "snp")
                 set_string(optarg, message_store, m_snp, m_provided_snp_id,
                            command, error_messages);
             else if (command == "snp-set")
-                set_string(optarg, message_store, m_single_snp_set, dummy,
+                set_string(optarg, message_store, m_snp_set, dummy,
                            command, error_messages);
             else if (command == "stat")
                 set_string(optarg, message_store, m_statistic,
@@ -438,22 +440,10 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     error |= !covariate_check(error_messages);
     error |= !filter_check(error_messages);
     error |= !misc_check(message_store, error_messages);
+    error |= !ref_check(message_store, error_messages);
     error |= !prset_check(message_store, error_messages);
     error |= !prsice_check(message_store, error_messages);
-    error |= !prslice_check(error_messages);
     error |= !target_check(message_store, error_messages);
-    if (m_perform_prset && m_perform_prslice) {
-        error = true;
-        error_messages.append(
-            "Error: PRSet and PRSlice cannot be performed together!\n");
-    }
-    if (m_perform_prslice) {
-        error = true;
-        error_messages.append(
-            "Error: We currently have not implemented PRSlice. We will "
-            "implement PRSlice once the implementation of PRSice is "
-            "stabalized");
-    }
     // check all flags
     std::string log_name = m_out_prefix + ".log";
     reporter.initiailize(log_name);
@@ -476,7 +466,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) message_store["nonfounders"] = "";
     if (m_pearson) message_store["pearson"] = "";
     if (m_print_snp) message_store["print-snp"] = "";
-    if (m_perform_shrinkage) message_store["shrinkage"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -919,21 +908,6 @@ void Commander::set_help_message()
           "feature(s) \n"
           "    --wind-5                Add N base(s) to the 5' region of each "
           "feature(s) \n"
-          // PRSlice
-          "\nPRSlice:\n"
-          "    --prslice               Perform PRSlice where the whole genome "
-          "is first cut\n"
-          "                            into bin size specified by this option. "
-          "PRSice will\n"
-          "                            then be performed on each bin. Bins are "
-          "then sorted\n"
-          "                            according to the their R2. PRSice is "
-          "then performed\n"
-          "                            again to find the best bin "
-          "combination.\n"
-          "                            This cannot be performed together with "
-          "PRSet\n"
-          "                            (Currently not implemented)\n"
           // Misc
           "\nMisc:\n"
           "    --all-score             Output PRS for ALL threshold. WARNING: "
@@ -1016,568 +990,255 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: You must provide a base file\n");
         return false;
     }
+    // get input header
+    std::string header;
+    if (m_base_file.substr(m_base_file.find_last_of(".") + 1).compare("gz")
+        == 0)
+    {
+        GZSTREAM_NAMESPACE::igzstream in(m_base_file.c_str());
+        if (!in.good()) {
+            error_message.append(
+                "Error: Cannot open base file (gz) to read!\n");
+            return false;
+        }
+        std::getline(in, header);
+        in.close();
+    }
     else
     {
-        // check the base file and get the corresponding index
-
-        if (m_stat_is_beta && m_stat_is_or) {
-            error_message.append(
-                "Error: Statistic cannot be both OR and beta\n");
-            error = true;
+        std::ifstream base_test;
+        base_test.open(m_base_file.c_str());
+        if (!base_test.is_open()) {
+            error_message.append("Error: Cannot open base file to read!\n");
+            return false;
         }
-        std::string line;
-        // read in the header line of the base file and check if the
-        // corresponding columns are there
-        if (m_base_file.substr(m_base_file.find_last_of(".") + 1).compare("gz")
-            == 0)
-        {
-            GZSTREAM_NAMESPACE::igzstream in(m_base_file.c_str());
-            if (!in.good()) {
-                error_message.append(
-                    "Error: Cannot open base file (gz) to read!\n");
-                return false;
-            }
-            std::getline(in, line);
-            in.close();
+        std::getline(base_test, header);
+        base_test.close();
+    }
+    misc::trim(header);
+    std::vector<std::string> column_names = misc::split(header);
+    if (m_user_no_default) {
+        // remove all the default
+        if (!m_provided_chr_col) m_chr = "";
+        if (!m_provided_effect_allele) m_effect_allele = "";
+        if (!m_provided_non_effect_allele) m_non_effect_allele = "";
+        if (!m_provided_statistic) m_statistic = "";
+        if (!m_provided_snp_id) m_snp = "";
+        if (!m_provided_bp) m_bp = "";
+        if (!m_provided_standard_error) m_standard_error = "";
+        if (!m_provided_p_value) m_p_value = "";
+        if (!m_provided_info_threshold) m_info_col = "";
+    }
+    if(m_input_is_index){
+        // can't do much but to check the boundary
+        for(size_t i = 0; i < column_names.size(); ++i){
+            column_names[i] = std::to_string(i);
         }
-        else
-        {
-            std::ifstream base_test;
-            base_test.open(m_base_file.c_str());
-            if (!base_test.is_open()) {
-                error_message.append("Error: Cannot open base file to read!\n");
-                return false;
-            }
-            std::getline(base_test, line);
-            base_test.close();
-        }
-        // check the base file header is correct
-        std::vector<std::string> token = misc::split(line);
-        int max_size = static_cast<int>(token.size());
-        // remove default values if --no-default is used
-        // avoid over-writing user input by checking if those column are
-        // provided
-        if (m_user_no_default) {
-            // remove all the default
-            if (!m_provided_chr_col) m_chr = "";
-            if (!m_provided_effect_allele) m_effect_allele = "";
-            if (!m_provided_non_effect_allele) m_non_effect_allele = "";
-            if (!m_provided_statistic) m_statistic = "";
-            if (!m_provided_snp_id) m_snp = "";
-            if (!m_provided_bp) m_bp = "";
-            if (!m_provided_standard_error) m_standard_error = "";
-            if (!m_provided_p_value) m_p_value = "";
-            if (!m_provided_info_threshold) m_info_col = "";
-            // now check if the required fields are empty
-            if (m_statistic.empty()) {
-                error = true;
-                error_message.append(
-                    "Error: Column name of statistic is not provided!\n");
-            }
-            if (m_p_value.empty()) {
-                error = true;
-                error_message.append(
-                    "Error: Column name of p-value is not provided!\n");
-            }
-
-            if (m_snp.empty()) {
-                error = true;
-                error_message.append(
-                    "Error: Column name of SNP ID is not provided!\n");
-            }
-            if (m_effect_allele.empty()) {
-                error = true;
-                error_message.append("Error: Column name of the effective "
-                                     "allele is not provided!\n");
-            }
-        }
-        if (!m_input_is_index) {
-            // if the inputs are column names, we will check the values
-            if (!m_user_no_default) {
-
-                if (!m_statistic.empty() && (m_stat_is_beta && m_stat_is_or)) {
-                    // if statistics is provided, and --beta and --or are
-                    // not provided, we can guess if it is BETA or OR
-                    std::string stat_temp = m_statistic;
-                    std::transform(stat_temp.begin(), stat_temp.end(),
-                                   stat_temp.begin(), ::toupper);
-                    if (stat_temp == "OR") {
-                        m_stat_is_beta = false;
-                    }
-                    else if (stat_temp == "BETA")
-                    {
-                        // although user cannot do --no-beta, it is a crazy
-                        // use case where BETA != beta, right?
-                        // TODO: add no-beta flag...
-                        m_stat_is_beta = true;
-                        message["beta"] = "";
-                    }
-                }
-                // the problem with this kind of default is that we don't
-                // have a method for users to opt out of --beta
-                else if (m_statistic.empty() && m_stat_is_beta)
-                {
-                    m_statistic = "BETA";
-                    message["stat"] = "BETA";
-                }
-                else if (m_statistic.empty() && m_stat_is_or)
-                {
-                    m_statistic = "OR";
-                    message["stat"] = "OR";
-                }
-                else if (m_statistic.empty())
-                {
-                    // none of the flags are provided
-                    bool found_or = false, found_beta = false;
-                    for (size_t i = 0; i < token.size(); ++i) {
-                        std::string temp = token[i];
-                        std::transform(temp.begin(), temp.end(), temp.begin(),
-                                       ::toupper);
-                        if (temp == "OR") {
-                            m_stat_is_beta = false;
-                            m_statistic = token[i];
-                            message["stat"] = token[i];
-                            found_or = true;
-                        }
-                        else if (temp == "BETA")
-                        {
-                            m_stat_is_beta = true;
-                            m_statistic = token[i];
-                            // Again, this will be problematic if the BETA
-                            // is actually OR...
-                            message["stat"] = token[i];
-                            message["beta"] = "";
-                            found_beta = true;
-                        }
-                        if (found_beta && found_or) {
-                            error_message.append(
-                                "Error: Both OR and BETA "
-                                "found in base file! We cannot determine "
-                                "which statistic to use, please provide it "
-                                "through --stat\n");
-                            error = true;
-                        }
-                    }
-                }
-            }
-            m_base_col_index[+BASE_INDEX::CHR] = index_check(m_chr, token);
-            if (m_base_col_index[+BASE_INDEX::CHR] != -1)
-                message["chr"] = m_chr;
-            else if (m_provided_chr_col)
-            {
-                error_message.append("Warning: " + m_chr
-                                     + " not found in base file\n");
-                message.erase("chr");
-            }
-            m_base_col_index[+BASE_INDEX::REF] =
-                index_check(m_effect_allele, token);
-            if (m_base_col_index[+BASE_INDEX::REF] != -1)
-                message["A1"] = m_effect_allele;
-            else if (m_provided_effect_allele)
-            {
-                error_message.append("Error: " + m_effect_allele
-                                     + " not found in base file\n");
-                message.erase("A1");
-            }
-            m_base_col_index[+BASE_INDEX::ALT] =
-                index_check(m_non_effect_allele, token);
-            if (m_base_col_index[+BASE_INDEX::ALT] != -1)
-                message["A2"] = m_non_effect_allele;
-            else if (m_provided_non_effect_allele)
-            {
-                error_message.append("Warning: " + m_non_effect_allele
-                                     + " not found in base file\n");
-                message.erase("A2");
-            }
-            m_base_col_index[+BASE_INDEX::STAT] =
-                index_check(m_statistic, token);
-            if (m_base_col_index[+BASE_INDEX::STAT] != -1)
-                message["stat"] = m_statistic;
-            else if (m_provided_statistic)
-            {
-                error_message.append("Error: " + m_statistic
-                                     + " not found in base file\n");
-                message.erase("stat");
-            }
-            m_base_col_index[+BASE_INDEX::RS] = index_check(m_snp, token);
-            if (m_base_col_index[+BASE_INDEX::RS] != -1)
-                message["snp"] = m_snp;
-            else if (m_provided_snp_id)
-            {
-                error_message.append("Error: " + m_snp
-                                     + " not found in base file\n");
-                message.erase("snp");
-            }
-            m_base_col_index[+BASE_INDEX::BP] = index_check(m_bp, token);
-            if (m_base_col_index[+BASE_INDEX::BP] != -1)
-                message["bp"] = m_bp;
-            else if (m_provided_bp)
-            {
-                error_message.append("Warning: " + m_bp
-                                     + " not found in base file\n");
-                message.erase("bp");
-            }
-            m_base_col_index[+BASE_INDEX::SE] =
-                index_check(m_standard_error, token);
-            if (m_base_col_index[+BASE_INDEX::SE] != -1)
-                message["se"] = m_standard_error;
-            else if (m_provided_standard_error)
-            {
-                error_message.append("Warning: " + m_standard_error
-                                     + " not found in base file\n");
-                message.erase("se");
-            }
-            m_base_col_index[+BASE_INDEX::P] = index_check(m_p_value, token);
-            if (m_base_col_index[+BASE_INDEX::P] != -1)
-                message["pvalue"] = m_p_value;
-            else if (m_provided_p_value)
-            {
-                error_message.append("Error: " + m_p_value
-                                     + " not found in base file\n");
-                message.erase("pvalue");
-            }
-            // parse the info filtering parameters
-            if (!m_info_col.empty()) {
-                std::vector<std::string> info = misc::split(m_info_col, ",");
-                m_base_col_index[+BASE_INDEX::INFO] =
-                    index_check(info[0], token);
-                if (info.size() != 2) {
-                    error_message.append("Error: Invalid format of "
-                                         "--info-base. Should be "
-                                         "ColName,Threshold.\n");
-                    error = true;
-                }
-                else if (m_provided_info_threshold
-                         && m_base_col_index[+BASE_INDEX::INFO] == -1)
-                {
-                    error_message.append("Error: " + info[0]
-                                         + " not found in base file\n");
-                    message.erase("info-base");
-                    m_provided_info_threshold = false;
-                }
-                else if (m_base_col_index[+BASE_INDEX::INFO] != -1)
-                {
-                    // Only do the info score filtering if the info column is
-                    // found
-                    try
-                    {
-                        m_base_info_threshold = misc::convert<double>(info[1]);
-                        if (m_base_info_threshold < 0
-                            || m_base_info_threshold > 1)
-                        {
-                            // TODO: It is possible for some INFO score to
-                            // have range beyond 1, but that's not
-                            // considered for now
-                            error_message.append(
-                                "Error: Base INFO threshold must "
-                                "be within 0 and 1!\n");
-                            error = true;
-                        }
-                        else
-                        {
-                            message["info-base"] = m_info_col;
-                        }
-                    }
-                    catch (...)
-                    {
-                        error_message.append(
-                            "Error: Invalid argument "
-                            "passed to --info-base: "
-                            + m_info_col
-                            + "! Second argument must be numeric\n");
-                        error = true;
-                    }
-                }
-            }
-            // comma separate
-            // start parsing maf info
-            if (!m_maf_col.empty()) {
-                // we can reuse this same error, so initialize it here first
-                std::string maf_error =
-                    "Error: Invalid format of --maf-base. "
-                    "Should be ColName,Threshold."
-                    "or ColName,Threshold:ColName,Threshold.\n";
-                std::vector<std::string> maf_type = misc::split(m_maf_col, ":");
-                if (maf_type.size() == 0 || maf_type.size() > 2) {
-                    error_message.append("Error: Currently only support at "
-                                         "most 2 MAF filtering for base");
-                    error = true;
-                }
-                else
-                {
-                    // valid format (either 1 or 2 maf filtering threshold
-                    // provided)
-                    std::vector<std::string> maf =
-                        misc::split(maf_type[0], ",");
-                    if (maf.size() != 2) {
-                        error_message.append(maf_error);
-                        error = true;
-                    }
-                    else
-                    {
-                        m_base_col_index[+BASE_INDEX::MAF] =
-                            index_check(maf[0], token);
-                        if (m_perform_base_maf_control_filter
-                            && m_base_col_index[+BASE_INDEX::MAF] == -1)
-                        {
-                            error_message.append("Error: " + maf[0]
-                                                 + " not found in base file\n");
-                            m_perform_base_maf_control_filter = false;
-                            message.erase("maf-base");
-                        }
-                        else
-                        {
-                            // only bother parsing this if we have found the MAF
-                            // column
-                            try
-                            {
-                                m_control_maf_threshold =
-                                    misc::convert<double>(maf[1]);
-                                if (m_control_maf_threshold < 0
-                                    || m_control_maf_threshold > 1)
-                                {
-                                    error_message.append(
-                                        "Error: Base MAF threshold must "
-                                        "be within 0 and 1!\n");
-                                    error = true;
-                                }
-                                message["maf-base"] = m_maf_col;
-                            }
-                            catch (...)
-                            {
-                                error_message.append(
-                                    "Error: Invalid argument passed to "
-                                    "--maf-base: "
-                                    + m_maf_col
-                                    + "! Threshold must be numeric\n");
-                                error = true;
-                            }
-                        }
-                    }
-                    // only process the case maf filtering if control is
-                    // provided
-                    if (maf_type.size() > 1
-                        && !m_perform_base_maf_control_filter)
-                    {
-                        maf = misc::split(maf_type[1], ",");
-                        if (maf.size() != 2) {
-                            error_message.append(maf_error);
-                            error = true;
-                        }
-                        else
-                        {
-                            m_base_col_index[+BASE_INDEX::MAF_CASE] =
-                                index_check(maf[0], token);
-                            if (m_base_col_index[+BASE_INDEX::MAF_CASE] != -1) {
-                                try
-                                {
-                                    m_case_maf_threshold =
-                                        misc::convert<double>(maf[1]);
-                                    if (m_case_maf_threshold < 0
-                                        || m_case_maf_threshold > 1)
-                                    {
-                                        error_message.append(
-                                            "Error: Base MAF threshold must "
-                                            "be within 0 and 1!\n");
-                                        error = true;
-                                    }
-                                    message["maf-base"] = m_maf_col;
-                                    m_perform_base_maf_control_filter = true;
-                                }
-                                catch (...)
-                                {
-                                    error_message.append(
-                                        "Error: Invalid argument "
-                                        "passed to --maf-base: "
-                                        + m_maf_col
-                                        + "! Threshold must be numeric\n");
-                                    error = true;
-                                }
-                            }
-                            else
-                            {
-                                // column not found
-                                // also remove the maf filtering altogether?
-                                // much easier that way tbh
-                                message.erase("maf-base");
-                                m_perform_base_maf_case_filter = false;
-                                m_perform_base_maf_control_filter = false;
-                                error_message.append(
-                                    "Error: " + maf[0]
-                                    + " not found in base file\n");
-                            }
-                        }
-                    }
-                }
-            }
-            // no default for MAF as there can be many different MAF
-            // headers
-        }
-        else
-        { // only required for index, as the defaults are in string
-            // this is indexing instead of colname
-            if (m_provided_chr_col) {
-                m_base_col_index[+BASE_INDEX::CHR] =
-                    index_check(m_chr, max_size, error, error_message, "CHR");
-            }
-            if (m_provided_effect_allele) {
-                m_base_col_index[+BASE_INDEX::REF] = index_check(
-                    m_effect_allele, max_size, error, error_message, "REF");
-            }
-            if (m_provided_non_effect_allele) {
-                m_base_col_index[+BASE_INDEX::ALT] = index_check(
-                    m_non_effect_allele, max_size, error, error_message, "ALT");
-            }
-            if (m_provided_bp) {
-                m_base_col_index[+BASE_INDEX::BP] =
-                    index_check(m_bp, max_size, error, error_message, "BP");
-            }
-            if (m_provided_standard_error) {
-                m_base_col_index[+BASE_INDEX::SE] = index_check(
-                    m_standard_error, max_size, error, error_message, "SE");
-            }
-            if (m_provided_info_threshold) {
-                std::vector<std::string> info = misc::split(m_info_col, ",");
-                m_base_col_index[+BASE_INDEX::INFO] = index_check(
-                    info[0], max_size, error, error_message, "INFO");
-                if (info.size() != 2) {
-                    error_message.append("Error: Invalid format of "
-                                         "--info-base. Should be "
-                                         "ColName,Threshold.\n");
-                    error = true;
-                }
-                try
-                {
-                    m_base_info_threshold = misc::convert<double>(info[1]);
-                    if (m_base_info_threshold < 0 || m_base_info_threshold > 1)
-                    {
-                        error_message.append("Error: Base INFO threshold "
-                                             "must be within 0 and 1!\n");
-                        error = true;
-                    }
-                }
-                catch (...)
-                {
-                    error_message.append(
-                        "Error: Invalid argument passed to --info-base: "
-                        + m_info_col + "! Second argument must be numeric\n");
-                    error = true;
-                }
-            }
-            if (!m_maf_col.empty()) {
-                std::vector<std::string> maf = misc::split(m_maf_col, ",");
-                m_base_col_index[+BASE_INDEX::MAF] =
-                    index_check(maf[0], max_size, error, error_message, "MAF");
-                std::string maf_error =
-                    "Error: Invalid format of --maf-base. "
-                    "Should be ColName,Threshold."
-                    "or ColName,Threshold:ColName,Threshold.\n";
-                std::vector<std::string> maf_type = misc::split(m_maf_col, ":");
-                if (maf_type.size() == 0 || maf_type.size() > 2) {
-                    error_message.append("Error: Currently only support at "
-                                         "most 2 MAF filtering for base");
-                    error = true;
-                }
-                else
-                {
-                    std::vector<std::string> maf =
-                        misc::split(maf_type[0], ",");
-                    if (maf.size() != 2) {
-                        error_message.append(maf_error);
-                        error = true;
-                    }
-                    m_base_col_index[+BASE_INDEX::MAF] =
-                        index_check(maf[0], token);
-                    try
-                    {
-                        m_control_maf_threshold = misc::convert<double>(maf[1]);
-                        if (m_control_maf_threshold < 0
-                            || m_control_maf_threshold > 1)
-                        {
-                            error_message.append(
-                                "Error: Base MAF threshold must "
-                                "be within 0 and 1!\n");
-                            error = true;
-                        }
-                        message["maf-base"] = m_maf_col;
-                    }
-                    catch (...)
-                    {
-                        error_message.append(
-                            "Error: Invalid argument passed to --maf-base: "
-                            + m_maf_col + "! Threshold must be numeric\n");
-                        error = true;
-                    }
-                    if (maf_type.size() > 1) {
-                        maf = misc::split(maf_type[1], ",");
-                        if (maf.size() != 2) {
-                            error_message.append(maf_error);
-                            error = true;
-                        }
-                        m_base_col_index[+BASE_INDEX::MAF_CASE] =
-                            index_check(maf[0], token);
-                        try
-                        {
-                            m_case_maf_threshold =
-                                misc::convert<double>(maf[1]);
-                            if (m_case_maf_threshold < 0
-                                || m_case_maf_threshold > 1)
-                            {
-                                error = true;
-                                error_message.append(
-                                    "Error: Base MAF threshold must "
-                                    "be within 0 and 1!\n");
-                            }
-                            message["maf-base"] = m_maf_col;
-                        }
-                        catch (...)
-                        {
-                            error_message.append(
-                                "Error: Invalid argument "
-                                "passed to --maf-base: "
-                                + m_maf_col + "! Threshold must be numeric\n");
-                            error = true;
-                        }
-                    }
-                }
-            }
-            m_base_col_index[+BASE_INDEX::P] =
-                index_check(m_p_value, max_size, error, error_message, "P");
-            m_base_col_index[+BASE_INDEX::STAT] = index_check(
-                m_statistic, max_size, error, error_message, "STAT");
-            m_base_col_index[+BASE_INDEX::RS] =
-                index_check(m_snp, max_size, error, error_message, "RS");
-        }
-
-        // now check all required columns are here
-        if (m_base_col_index[+BASE_INDEX::P] == -1) {
-            // we can actually losen this requirement if user doesn't
-            // perform clumping
-            error = true;
-            error_message.append("Error: No p-value column (" + m_p_value
-                                 + ") in file!\n");
-        }
-        if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
-            error = true;
-            error_message.append("Error: No statistic column (" + m_statistic
-                                 + ") in file!\n");
-        }
-        if (m_base_col_index[+BASE_INDEX::RS] == -1) {
-            error = true;
-            error_message.append("Error: No SNP name column (" + m_snp
-                                 + ") in file!\n");
-        }
-        if (m_base_col_index[+BASE_INDEX::REF] == -1) {
-            error = true;
-            error_message.append("Error: No Reference allele column ("
-                                 + m_effect_allele + ") in file!\n");
-        }
-
-        int max_index =
-            *max_element(m_base_col_index.begin(), m_base_col_index.end());
-        m_base_col_index[+BASE_INDEX::MAX] = max_index;
+    }
+    m_base_col_index[+BASE_INDEX::CHR] = index_check(m_chr, column_names);
+    if (m_base_col_index[+BASE_INDEX::CHR] != -1)
+        message["chr"] = m_chr;
+    else if (m_provided_chr_col)
+    {
+        error_message.append("Warning: " + m_chr
+                             + " not found in base file\n");
+        message.erase("chr");
     }
 
+    m_base_col_index[+BASE_INDEX::REF] =
+        index_check(m_effect_allele, column_names);
+    if (m_base_col_index[+BASE_INDEX::REF] != -1)
+        message["A1"] = m_effect_allele;
+    else if (m_provided_effect_allele)
+    {
+        error = true;
+        error_message.append("Error: " + m_effect_allele
+                             + " not found in base file\n");
+    }
+    m_base_col_index[+BASE_INDEX::ALT] =
+        index_check(m_non_effect_allele, column_names);
+    if (m_base_col_index[+BASE_INDEX::ALT] != -1)
+        message["A2"] = m_non_effect_allele;
+    else if (m_provided_non_effect_allele)
+    {
+        error_message.append("Warning: " + m_non_effect_allele
+                             + " not found in base file\n");
+        message.erase("A2");
+    }
+    m_base_col_index[+BASE_INDEX::RS] = index_check(m_snp, column_names);
+    if (m_base_col_index[+BASE_INDEX::RS] != -1)
+        message["snp"] = m_snp;
+    else if (m_provided_snp_id)
+    {
+        error = true;
+        error_message.append("Error: " + m_snp
+                             + " not found in base file\n");
+    }
+    m_base_col_index[+BASE_INDEX::BP] = index_check(m_bp, column_names);
+    if (m_base_col_index[+BASE_INDEX::BP] != -1)
+        message["bp"] = m_bp;
+    else if (m_provided_bp)
+    {
+        error_message.append("Warning: " + m_bp
+                             + " not found in base file\n");
+        message.erase("bp");
+    }
+    m_base_col_index[+BASE_INDEX::SE] =
+        index_check(m_standard_error, column_names);
+    if (m_base_col_index[+BASE_INDEX::SE] != -1)
+        message["se"] = m_standard_error;
+    else if (m_provided_standard_error)
+    {
+        error_message.append("Warning: " + m_standard_error
+                             + " not found in base file\n");
+        message.erase("se");
+    }
+    m_base_col_index[+BASE_INDEX::P] = index_check(m_p_value, column_names);
+    if (m_base_col_index[+BASE_INDEX::P] != -1)
+        message["pvalue"] = m_p_value;
+    else if (m_provided_p_value)
+    {
+        error = true;
+        error_message.append("Error: " + m_p_value
+                             + " not found in base file\n");
+    }
+    std::string tmp_error_message;
+    bool tmp_error;
+    tmp_error = !set_base_info_threshold(column_names, tmp_error_message);
+    if(m_provided_info_threshold){
+        // only need to provide the error message when user wants the filtering
+        error |= tmp_error;
+        error_message.append(tmp_error_message);
+    }
+    tmp_error_message.clear();
+    tmp_error = !set_base_maf_filter(column_names, tmp_error_message);
+    if(!m_maf_col.empty()){
+        error |= tmp_error;
+        error_message.append(tmp_error_message);
+    }
+    // now process the statistic column
+    if(m_stat_is_or && m_stat_is_beta){
+        error_message.append(
+            "Error: Statistic cannot be both OR and beta\n");
+        error = true;
+    }
+    m_base_col_index[+BASE_INDEX::STAT] =
+        index_check(m_statistic, column_names);
+    if (m_base_col_index[+BASE_INDEX::STAT] != -1)
+        message["stat"] = m_statistic;
+    else if (m_provided_statistic)
+    {
+        error_message.append("Error: " + m_statistic
+                             + " not found in base file\n");
+    }else if(!m_user_no_default){
+        // we can't find the default statistic column (BETA)
+        // and user allow default option
+        if(m_stat_is_or){
+            // search for OR
+            m_base_col_index[+BASE_INDEX::STAT] =
+                index_check("OR", column_names);
+            if(m_base_col_index[+BASE_INDEX::STAT] == -1){
+                error = true;
+                error_message.append("Error: Cannot find appropriate "
+                                     "statistic column in base file!\n" );
+            }else{
+                message["stat"] = "OR";
+            }
+        }else if(m_stat_is_beta){
+            // search for BETA
+            m_base_col_index[+BASE_INDEX::STAT] =
+                index_check("BETA", column_names);
+            if(m_base_col_index[+BASE_INDEX::STAT] == -1){
+                error = true;
+                error_message.append("Error: Cannot find appropriate "
+                                     "statistic column in base file!\n" );
+            }else{
+                message["stat"] = "BETA";
+            }
+        }else{
+            // go through file and look for either OR or BETA
+            bool or_found = false, beta_found= false;
+            for (size_t i = 0; i < column_names.size(); ++i) {
+                std::string temp = column_names[i];
+                std::transform(temp.begin(), temp.end(), temp.begin(),
+                               ::toupper);
+                if (temp == "OR") {
+                    m_stat_is_beta = false;
+                    m_stat_is_or = true;
+                    m_statistic = column_names[i];
+                    message["stat"] = column_names[i];
+                    or_found = true;
+                    message["or"] = "";
+                    message.erase("beta");
+                    m_base_col_index[+BASE_INDEX::STAT] = static_cast<int>(i);
+                }
+                else if (temp == "BETA")
+                {
+                    m_stat_is_beta = true;
+                    m_stat_is_or = false;
+                    m_statistic = column_names[i];
+                    message["stat"] = column_names[i];
+                    message["beta"] = "";
+                    beta_found = true;
+                    message.erase("or");
+                    m_base_col_index[+BASE_INDEX::STAT] = static_cast<int>(i);
+                }
+                if (beta_found && or_found) {
+                    error_message.append(
+                        "Error: Both OR and BETA "
+                        "found in base file! We cannot determine "
+                        "which statistic to use, please provide it "
+                        "through --stat\n");
+                    error = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Statistic is ok, but beta or or not provided
+    if(m_base_col_index[+BASE_INDEX::STAT]!=-1){
+        if(!m_stat_is_or && !m_stat_is_beta){
+            std::string stat_temp = m_statistic;
+            std::transform(stat_temp.begin(), stat_temp.end(),
+                           stat_temp.begin(), ::toupper);
+            if(stat_temp == "OR"){
+                m_stat_is_or = true;
+                message["or"] = "";
+            }
+            else if(stat_temp=="BETA"){
+                m_stat_is_beta = true;
+                message["beta"] = "";
+            }
+        }
+    }
+    // now check all required columns are here
+    if (m_base_col_index[+BASE_INDEX::P] == -1) {
+        // we can actually losen this requirement if user doesn't
+        // perform clumping and p-value thresholding
+        error = true;
+        error_message.append("Error: No p-value column (" + m_p_value
+                             + ") in file!\n");
+    }
+    if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
+        error = true;
+        error_message.append("Error: No statistic column (" + m_statistic
+                             + ") in file!\n");
+    }
+    if (m_base_col_index[+BASE_INDEX::RS] == -1) {
+        error = true;
+        error_message.append("Error: No SNP name column (" + m_snp
+                             + ") in file!\n");
+    }
+    if (m_base_col_index[+BASE_INDEX::REF] == -1) {
+        error = true;
+        error_message.append("Error: No Reference allele column ("
+                             + m_effect_allele + ") in file!\n");
+    }
+    // we don't need bp and chr as we can always get those from the bim file
+    int max_index =
+            *max_element(m_base_col_index.begin(), m_base_col_index.end());
+    m_base_col_index[+BASE_INDEX::MAX] = max_index;
     return !error;
 }
 
@@ -1586,12 +1247,6 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
 {
     bool error = false;
     if (!m_no_clump) {
-        if (!m_ref_keep.empty() && !m_ref_remove.empty()) {
-            error = true;
-            error_message.append("Error: Can only use either --keep or "
-                                 "--remove but not both\n");
-        }
-        // require clumping
         if (m_use_proxy_clump
             && (m_proxy_threshold < 0 || m_proxy_threshold > 1))
         {
@@ -1629,60 +1284,74 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
         // we divided by 1000 here to make sure it is in KB (our preferred
         // format)
         message["clump-kb"] = std::to_string(m_clump_distance / 1000);
-        // now check the snp filtering
-
-
-        // only check the range is correct when it is needed
-        if (m_perform_ref_geno_filter && (m_ref_geno < 0 || m_ref_geno > 1)) {
-            error = true;
-            error_message.append("Error: LD genotype missingness threshold "
-                                 "must be larger than 0 and smaller than 1!\n");
-        }
-        // if the reference panel is bgen, or reference panel not provided
-        // but the target is bgen then we will like to enforce hard
-        // thresholding to the files for LD calculation
-        if (m_ref_type == "bgen"
-            || (m_ref_file.empty() && !m_ref_list_provided
-                && m_target_type == "bgen"))
-        {
-            if (m_ref_hard_threshold > 1 || m_ref_hard_threshold < 0) {
-                error = true;
-                error_message.append("Error: LD hard threshold must be larger "
-                                     "than 0 and smaller than 1!\n");
-            }
-            else if (!m_ref_file.empty() || m_ref_list_provided)
-            {
-                // reference file is provided, so hard thresholding is added
-                // to ld-hard-thres (doens't matter if user has provided
-                // this parameter or not)
-                message["ld-hard-thres"] = std::to_string(m_ref_hard_threshold);
-            }
-            else
-            {
-                // reference file is not provided, so hard thresholding is
-                // added to hard-thres as it is to be applied to the
-                // target-ish (doens't matter if user has provided this
-                // parameter or not)
-                message["hard-thres"] = std::to_string(m_target_hard_threshold);
-            }
-        }
-        if (m_perform_ref_maf_filter && (m_ref_maf > 1 || m_ref_maf < 0)) {
-            error = true;
-            error_message.append("Error: LD MAF threshold must be larger than "
-                                 "0 and smaller than 1!\n");
-        }
-        if (m_perform_ref_info_filter
-            && (m_ref_info_score < 0 || m_ref_info_score > 1))
-        {
-            error = true;
-            error_message.append("Error: LD INFO score threshold must be "
-                                 "larger than 0 and smaller than 1!\n");
-        }
     }
     return !error;
 }
 
 
+bool Commander::ref_check(std::map<std::string, std::string>& message,
+                            std::string& error_message)
+{
+    bool error = false;
+    if (!m_ref_keep.empty() && !m_ref_remove.empty()) {
+        error = true;
+        error_message.append("Error: Can only use either --keep or "
+                             "--remove but not both\n");
+
+    }
+    // only check the range is correct when it is needed
+    if (m_perform_ref_geno_filter && (m_ref_geno < 0 || m_ref_geno > 1)) {
+        error = true;
+        error_message.append("Error: LD genotype missingness threshold "
+                             "must be larger than 0 and smaller than 1!\n");
+    }
+    // if the reference panel is bgen, or reference panel not provided
+    // but the target is bgen then we will like to enforce hard
+    // thresholding to the files for LD calculation
+    if(!m_ref_file.empty() && m_ref_list_provided){
+        error = true;
+        error_message.append("Error: You can only use --target or --target-list "
+                             "but not both\n");
+    }
+    if (m_ref_type == "bgen"
+        || (m_ref_file.empty() && !m_ref_list_provided
+            && m_target_type == "bgen"))
+    {
+        if (m_ref_hard_threshold > 1 || m_ref_hard_threshold < 0) {
+            error = true;
+            error_message.append("Error: LD hard threshold must be larger "
+                                 "than 0 and smaller than 1!\n");
+        }
+        else if (!m_ref_file.empty() || m_ref_list_provided)
+        {
+            // reference file is provided, so hard thresholding is added
+            // to ld-hard-thres (doens't matter if user has provided
+            // this parameter or not)
+            message["ld-hard-thres"] = std::to_string(m_ref_hard_threshold);
+        }
+        else
+        {
+            // reference file is not provided, so hard thresholding is
+            // added to hard-thres as it is to be applied to the
+            // target-ish (doens't matter if user has provided this
+            // parameter or not)
+            message["hard-thres"] = std::to_string(m_target_hard_threshold);
+        }
+    }
+    if (m_perform_ref_maf_filter && (m_ref_maf > 1 || m_ref_maf < 0)) {
+        error = true;
+        error_message.append("Error: LD MAF threshold must be larger than "
+                             "0 and smaller than 1!\n");
+    }
+    if (m_perform_ref_info_filter
+        && (m_ref_info_score < 0 || m_ref_info_score > 1))
+    {
+        error = true;
+        error_message.append("Error: LD INFO score threshold must be "
+                             "larger than 0 and smaller than 1!\n");
+    }
+    return !error;
+}
 std::vector<std::string> Commander::transform_covariate(std::string& cov)
 {
     std::vector<std::string> final_covariates;
@@ -1938,6 +1607,14 @@ bool Commander::covariate_check(std::string& error_message)
 bool Commander::filter_check(std::string& error_message)
 {
     bool error = false;
+    if(m_target_type != "bgen" && m_target_hard_thresholding){
+        error_message.append(
+            "Warning: Hard thresholding will only be performed for imputation input.\n");
+    }
+    if(m_target_type != "bgen" && m_target_info_filter){
+        error_message.append(
+            "Warning: INFO score can only be calculated for imputation input.\n");
+    }
     if (m_target_type == "bgen" && m_target_hard_thresholding
         && (m_target_hard_threshold <= 0 || m_target_hard_threshold >= 1))
     {
@@ -1992,45 +1669,13 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
         error_message.append("Warning: Permutation not required, "
                              "--logit-perm has no effect\n");
     }
+    // for no regress, we will alway print the scores (otherwise no point
+    // running PRSice)
     if (m_no_regress) m_print_all_scores = true;
+    // Just in case thread wasn't provided, we will print the default number
+    // of thread used
     if (m_thread == 1) message["thread"] = "1";
     message["out"] = m_out_prefix;
-    // now check the shrinkage parameters
-    if (m_perform_shrinkage) {
-        if (!m_provided_num_sample && !m_provided_num_case
-            && !m_provided_num_control)
-        {
-            error = true;
-            error_message.append("Error: Number of sample in base data must be "
-                                 "provided for shrinkage to be performed!\n");
-        }
-        if (m_shrink_perm <= 0) {
-            error = true;
-            error_message.append("Error: Number of shrinkage permutation must "
-                                 "be higher than 0\n");
-        }
-        if (m_provided_num_case && m_provided_num_control
-            && !m_provided_base_prevalence)
-        {
-            error = true;
-            error_message.append("Error: Prevalence of base data is required "
-                                 "for case control data\n");
-        }
-        if (!error) {
-            message["maf-bin"] = misc::to_string(m_maf_bin);
-            message["shrink-perm"] = misc::to_string(m_shrink_perm);
-        }
-    }
-    else
-    {
-        // remove all shrinkage related parameter from list
-        message.erase("nsample");
-        message.erase("ncase");
-        message.erase("ncontrol");
-        message.erase("maf-bin");
-        message.erase("shrink-perm");
-        message.erase("prev-base");
-    }
     return !error;
 }
 
@@ -2044,6 +1689,10 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
         error_message.append(
             "Error: Must provide a gtf file if msigdb is specified\n");
     }
+    if(m_window_3 <0 || m_window_5 < 0){
+        error = true;
+        error_message.append("Error: 5' and 3' extension must be larger than 0\n");
+    }
     if (m_feature.empty()) {
         m_feature.push_back("exon");
         m_feature.push_back("gene");
@@ -2051,7 +1700,6 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
         m_feature.push_back("CDS");
         message["feature"] = "exon,gene,protein_coding,CDS";
     }
-    // don't check file exist here?
     if (m_perform_set_perm && m_set_perm < 0) {
         error = true;
         error_message.append(
@@ -2084,6 +1732,7 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
     bool error = false;
     // we should use assert, as there is no way the m_genetic_model is not
     // within the one we implemented here unless there're programming errors
+    // add the message for model
     assert(m_genetic_model == MODEL::ADDITIVE
            || m_genetic_model == MODEL::DOMINANT
            || m_genetic_model == MODEL::RECESSIVE
@@ -2095,32 +1744,50 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
     case MODEL::RECESSIVE: message["model"] = "rec"; break;
     case MODEL::HETEROZYGOUS: message["model"] = "het"; break;
     }
-    if (m_barlevel.size() == 0 && !m_perform_prset) {
-        // always output the bar_message so that we can tell R what to do
-        // next
-        m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
-        if (!m_no_full) m_barlevel.push_back(1);
-    }
-    else if (m_perform_prset)
+    assert(m_missing_score == MISSING_SCORE::CENTER
+           || m_missing_score == MISSING_SCORE::SET_ZERO
+           || m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
+    switch (m_missing_score)
     {
-        if (!m_set_use_thresholds && !m_fastscore) {
-            // if user use fastscore or provided any threshold, then we will
-            // not kick in this default behaviour
-            message["bar-levels"] = 1;
-            m_fastscore = true;
-            m_barlevel = {1};
+    case MISSING_SCORE::CENTER: message["missing"] = "CENTER"; break;
+    case MISSING_SCORE::SET_ZERO: message["missing"] = "SET_ZERO"; break;
+    case MISSING_SCORE::MEAN_IMPUTE: message["missing"] = "MEAN_IMPUTE"; break;
+    }
+    assert(m_scoring_method == SCORING::SUM
+           || m_scoring_method == SCORING::AVERAGE
+           || m_scoring_method == SCORING::STANDARDIZE);
+    switch (m_scoring_method)
+    {
+    case SCORING::SUM: message["score"] = "sum"; break;
+    case SCORING::AVERAGE: message["score"] = "avg"; break;
+    case SCORING::STANDARDIZE: message["score"] = "std"; break;
+    }
+    // First pass cleaning of barlevel
+    std::sort(m_barlevel.begin(), m_barlevel.end());
+    m_barlevel.erase(std::unique(m_barlevel.begin(), m_barlevel.end()),
+                     m_barlevel.end());
+    if(m_perform_prset){
+        // if prset is performed
+        if(m_barlevel.empty()){
+            // two different default. If any thresholding related parameter
+            // were used, use the default PRSice threshold. Otherwise, only use
+            // 1
+            if (!m_set_use_thresholds && !m_fastscore) {
+                message["bar-levels"] = 1;
+                m_fastscore = true;
+                m_barlevel = {1};
+            }
+            else
+            {
+                m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+            }
         }
-        else if (m_barlevel.size() == 0)
-        {
+    }else if(m_barlevel.empty()){
+        // if PRSice is used
             m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
-            if (!m_no_full) m_barlevel.push_back(1);
-        }
     }
-    else if (!m_no_full)
-    {
-        m_barlevel.push_back(1);
-    }
-    // Remove duplicated bar levels
+    if (!m_no_full) m_barlevel.push_back(1);
+    // Second pass (mainly aiming for 1)
     std::sort(m_barlevel.begin(), m_barlevel.end());
     m_barlevel.erase(std::unique(m_barlevel.begin(), m_barlevel.end()),
                      m_barlevel.end());
@@ -2155,24 +1822,6 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
     return !error;
 }
 
-bool Commander::prslice_check(std::string& error_message)
-{
-    bool error = false;
-    if (m_perform_prslice) {
-        if (m_print_all_scores) {
-            error = true;
-            error_message.append("Error: Cannot output PRS for all threshold "
-                                 "when using PRSlice!\n");
-        }
-        if (m_prslice_size <= 0) {
-            error = true;
-            error_message.append(
-                "Error: PRSlice size cannot be less than 1!\n");
-        }
-    }
-    return !error;
-}
-
 bool Commander::target_check(std::map<std::string, std::string>& message,
                              std::string& error_message)
 {
@@ -2182,10 +1831,15 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         error_message.append("Error: You must provide a target file or a file "
                              "containing all target prefixs!\n");
     }
+    if (!m_target_file.empty() && m_use_target_list){
+        error = true;
+        error_message.append("Error: You can only use --target or --target-list "
+                             "but not both\n");
+    }
     if (!m_target_keep.empty() && !m_target_remove.empty()) {
         error = true;
         error_message.append(
-            "Error: Can only use either --keep or --remove but not both\n");
+            "Error: Can use either --keep or --remove but not both\n");
     }
     if (std::find(supported_types.begin(), supported_types.end(), m_target_type)
         == supported_types.end())
@@ -2194,7 +1848,7 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         error_message.append(
             "Error: Unsupported target format: " + m_target_type + "\n");
     }
-
+    // if use target hard coding, make sure we do hard thresholding
     if (m_target_type.compare("bgen") == 0 && m_target_is_hard_coded) {
         message["hard-thres"] = std::to_string(m_target_hard_threshold);
     }
@@ -2205,49 +1859,24 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         error_message.append("Error: You must provide a phenotype file for "
                              "multiple phenotype analysis");
     }
-    if (m_pheno_file.empty() && m_is_binary.empty()) {
-        if (m_stat_is_beta) {
-            message["binary-target"] = "F";
+    if(m_is_binary.empty()){
+        // add the default
+        if(m_stat_is_beta){
+            message["binary-target"]="F";
             m_is_binary.push_back(false);
-        }
-        else
-        {
-            message["binary-target"] = "T";
+        }else{
+            message["binary-target"]="T";
             m_is_binary.push_back(true);
         }
     }
-    else
-    {
-        if (m_pheno_col.empty() && m_is_binary.size() == 1) {
+    // now check if the bar-level is sensible
+    if(m_pheno_col.size() != m_is_binary.size()){
+        if(m_pheno_col.empty() && m_is_binary.size()==1){
             // this is ok
-        }
-        else if (m_pheno_col.empty() && m_is_binary.empty())
-        {
-            // use only the first phenotype
-            if (m_stat_is_beta) {
-                message["binary-target"] = "F";
-                m_is_binary.push_back(false);
-            }
-            else
-            {
-                message["binary-target"] = "T";
-                m_is_binary.push_back(true);
-            }
-        }
-        else if (m_pheno_col.size() <= 1 && m_is_binary.empty())
-        {
-            if (m_stat_is_beta) {
-                message["binary-target"] = "F";
-                m_is_binary.push_back(false);
-            }
-            else
-            {
-                message["binary-target"] = "T";
-                m_is_binary.push_back(true);
-            }
-        }
-        else if (m_pheno_col.size() != m_is_binary.size())
-        {
+            // now that we have always initialized m_is_binary
+            // before the check, there shouldn't be a case where
+            // m_is_binary < 1
+        }else{
             error = true;
             error_message.append("Error: Number of target phenotypes doesn't "
                                  "match information of binary target! You must "
@@ -2255,28 +1884,29 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
                                  "using --binary-target\n");
         }
     }
-
-    size_t num_bin = 0;
-    for (auto binary : m_is_binary) {
-        if (binary) num_bin++;
-    }
-    if (!m_prevalence.empty()
-        && num_bin > m_prevalence.size()) // need to be all or nothing
-    {
-        error = true;
-        error_message.append(
-            "Error: Number of target prevalence doesn't match "
-            "number of binary traits. You must provide a prevalence for "
-            "all "
-            "binary trait(s) or not provide any prevalence (all or "
-            "nothing)\n");
-    }
-    for (auto&& prev : m_prevalence) {
-        if (prev > 1.0 || prev < 0.0) {
+    // check if we have sufficient amount of prevalence info
+    if(!m_prevalence.empty()){
+        size_t num_bin = 0;
+        for (auto binary : m_is_binary) {
+            if (binary) num_bin++;
+        }
+        if (num_bin != m_prevalence.size()) // need to be all or nothing
+        {
             error = true;
-            error_message.append("Error: Prevalence cannot be bigger than 1.0 "
-                                 "or smaller than 0.0\n");
-            break;
+            error_message.append(
+                        "Error: Number of target prevalence doesn't match "
+                        "number of binary traits. You must provide a prevalence for "
+                        "all "
+                        "binary trait(s) or not provide any prevalence (all or "
+                        "nothing)\n");
+        }
+        for (auto&& prev : m_prevalence) {
+            if (prev > 1.0 || prev < 0.0) {
+                error = true;
+                error_message.append("Error: Prevalence cannot be bigger than 1.0 "
+                                     "or smaller than 0.0\n");
+                break;
+            }
         }
     }
     return !error;
