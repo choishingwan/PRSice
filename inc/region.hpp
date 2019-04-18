@@ -17,6 +17,7 @@
 #ifndef REGION_H
 #define REGION_H
 
+#include "cgranges.h"
 #include "gzstream.h"
 #include "misc.hpp"
 #include "plink_common.hpp"
@@ -42,13 +43,6 @@ class Genotype;
 class Region
 {
 public:
-    /*!
-     * \brief Contructor for the exclusion region. Use for excluding SNPs
-     * \param exclusion_range is the user input string containing either a file
-     *        or a string indicating the region to be excluded
-     * \param reporter is the logger
-     */
-    Region(const std::string& exclusion_range, Reporter& reporter);
     /*!
      * \brief The constructor for the region object. Use for defining gene sets
      * \param feature is the vector string containing features to be included
@@ -114,14 +108,6 @@ public:
         m_snp_check_index = std::vector<size_t>();
     }
     /*!
-     * \brief This function will take the coordinate of a SNP and check if it
-     * falls within the exclusion region using binary search function
-     * \param chr is the chromosome string
-     * \param loc is the coordinate
-     * \return true if the snp falls within an exclusion region
-     */
-    bool check_exclusion(const intptr_t chr, const intptr_t loc);
-    /*!
      * \brief Store information fo the number of SNP in each region
      * \param count is the input containing the count for each region
      */
@@ -186,7 +172,8 @@ public:
      */
     std::vector<std::string> names() const { return m_region_name; }
 
-
+    static void generate_exclusion(cgranges_t *cr,
+                                   const std::string& exclusion_range);
 private:
     // IMPORTANT: The end is non-inclusive
     struct region_bound
