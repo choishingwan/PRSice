@@ -132,8 +132,7 @@ int main(int argc, char* argv[])
                                commander.is_binary(), reporter);
             // set the clumping information to the target file
             target_file->set_info(commander);
-            if (!commander.no_clump() && commander.use_ref())
-            {
+            if (!commander.no_clump() && commander.use_ref()) {
                 // load the reference file if we require it
                 reporter.report("Loading reference "
                                 "panel\n==============================\n");
@@ -169,8 +168,7 @@ int main(int argc, char* argv[])
                 commander.perform_maf_base_case_filter(),
                 commander.perform_base_info_score_filter(),
                 commander.fastscore(), commander.no_full(), commander.beta(),
-                commander.is_index(), false, region,
-                reporter);
+                commander.is_index(), false, region, reporter);
             // remove all boundaries from the region object to free up memory
             region.clean();
             // skip clumping if not required

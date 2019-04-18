@@ -20,7 +20,8 @@
 class Reporter
 {
 public:
-    Reporter(){
+    Reporter()
+    {
         m_error_prefix_size = m_error_prefix.size();
         m_warning_prefix_size = m_warning_prefix.size();
     }
@@ -46,7 +47,7 @@ public:
             throw std::runtime_error(error_message);
         }
     }
-    virtual ~Reporter(){}
+    virtual ~Reporter() {}
     void report(const std::string& input, bool wrap = true);
 
 private:
@@ -54,7 +55,8 @@ private:
     std::ofstream m_log_file;
     std::string m_error_prefix = "Error:";
     std::string m_warning_prefix = "Warning:";
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if defined(WIN32) || defined(_WIN32) \
+    || defined(__WIN32) && !defined(__CYGWIN__)
     std::string m_error_color_start = "";
     std::string m_warning_color_start = "";
     std::string m_color_end = "";

@@ -547,7 +547,7 @@ public:
      * \brief snp_set return file name containing SNP set(s)
      * \return File name containing the SNP set(s)
      */
-    std::string snp_set() const { return m_snp_set;  }
+    std::string snp_set() const { return m_snp_set; }
 
     /*!
      * \brief Return file name containing background regions
@@ -878,7 +878,7 @@ private:
      * reference panel parameters are alright
      */
     bool ref_check(std::map<std::string, std::string>& message,
-                     std::string& error_message);
+                   std::string& error_message);
     /*!
      * \brief Function to check if parameters for covariate are correct
      * \param error_message is the storage for error messages
@@ -1363,15 +1363,18 @@ private:
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
-                           const std::string& c, std::string& error_message, bool add_quote=false)
+                           const std::string& c, std::string& error_message,
+                           bool add_quote = false)
     {
 
         if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
-        if(add_quote){
-            message[c] = "\""+input+"\"";
-        }else{
+        if (add_quote) {
+            message[c] = "\"" + input + "\"";
+        }
+        else
+        {
             message[c] = input;
         }
         target = input;
@@ -1474,10 +1477,11 @@ private:
 
     // return true if ok
     inline bool set_base_info_threshold(const std::vector<std::string>& ref,
-                                        std::string &error_message){
+                                        std::string& error_message)
+    {
         std::vector<std::string> info = misc::split(m_info_col, ",");
         m_base_col_index[+BASE_INDEX::INFO] = index_check(info[0], ref);
-        if(m_base_col_index[+BASE_INDEX::INFO] == -1){
+        if (m_base_col_index[+BASE_INDEX::INFO] == -1) {
             error_message.append("Error: INFO field not found in base file\n");
             return false;
         }
@@ -1490,8 +1494,7 @@ private:
         try
         {
             m_base_info_threshold = misc::convert<double>(info[1]);
-            if (m_base_info_threshold < 0 || m_base_info_threshold > 1)
-            {
+            if (m_base_info_threshold < 0 || m_base_info_threshold > 1) {
                 error_message.append("Error: Base INFO threshold "
                                      "must be within 0 and 1!\n");
                 return false;
@@ -1500,37 +1503,43 @@ private:
         catch (...)
         {
             error_message.append(
-                "Error: Invalid argument passed to --info-base: "
-                + m_info_col + "! Second argument must be numeric\n");
+                "Error: Invalid argument passed to --info-base: " + m_info_col
+                + "! Second argument must be numeric\n");
             return false;
         }
         return true;
     }
     // return true if valid
     inline bool set_base_maf_filter(const std::vector<std::string>& ref,
-                                    std::string &error_message){
-        std::string maf_error =
-            "Error: Invalid format of --maf-base. "
-            "Should be ColName,Threshold."
-            "or ColName,Threshold:ColName,Threshold.\n";
+                                    std::string& error_message)
+    {
+        std::string maf_error = "Error: Invalid format of --maf-base. "
+                                "Should be ColName,Threshold."
+                                "or ColName,Threshold:ColName,Threshold.\n";
         std::vector<std::string> case_control = misc::split(m_maf_col, ":");
-        if(case_control.size()>2){
+        if (case_control.size() > 2) {
             error_message.append(maf_error);
             return false;
         }
         bool control = true;
-        for(auto && maf : case_control){
+        for (auto&& maf : case_control) {
             std::vector<std::string> detail = misc::split(maf, ",");
-            if(control){
-                m_base_col_index[+BASE_INDEX::MAF] = index_check(detail[0], ref);
-                if(m_base_col_index[+BASE_INDEX::INFO] == -1){
-                    error_message.append("Error: MAF field not found in base file\n");
+            if (control) {
+                m_base_col_index[+BASE_INDEX::MAF] =
+                    index_check(detail[0], ref);
+                if (m_base_col_index[+BASE_INDEX::INFO] == -1) {
+                    error_message.append(
+                        "Error: MAF field not found in base file\n");
                     return false;
                 }
-            }else{
-                m_base_col_index[+BASE_INDEX::MAF_CASE] = index_check(detail[0], ref);
-                if(m_base_col_index[+BASE_INDEX::MAF_CASE] == -1){
-                    error_message.append("Error: Case MAF field not found in base file\n");
+            }
+            else
+            {
+                m_base_col_index[+BASE_INDEX::MAF_CASE] =
+                    index_check(detail[0], ref);
+                if (m_base_col_index[+BASE_INDEX::MAF_CASE] == -1) {
+                    error_message.append(
+                        "Error: Case MAF field not found in base file\n");
                     return false;
                 }
             }
@@ -1538,25 +1547,24 @@ private:
             try
             {
                 cur_maf = misc::convert<double>(detail[1]);
-                if (cur_maf < 0 || cur_maf > 1)
-                {
-                    error_message.append(
-                        "Error: Base MAF threshold must "
-                        "be within 0 and 1!\n");
+                if (cur_maf < 0 || cur_maf > 1) {
+                    error_message.append("Error: Base MAF threshold must "
+                                         "be within 0 and 1!\n");
                     return false;
                 }
             }
             catch (...)
             {
                 error_message.append(
-                    "Error: Invalid argument passed to --maf-base: "
-                    + m_maf_col + "! Threshold must be numeric\n");
+                    "Error: Invalid argument passed to --maf-base: " + m_maf_col
+                    + "! Threshold must be numeric\n");
                 return false;
             }
-            if(control){
+            if (control) {
                 m_control_maf_threshold = cur_maf;
             }
-            else{
+            else
+            {
                 m_case_maf_threshold = cur_maf;
             }
             control = false;

@@ -46,7 +46,8 @@ void Reporter::report(const std::string& input, bool wrap)
         // go through each paragraph
         // red for error, yellow for warnings
         space_pad = 0;
-        bool is_error = !message.compare(0, m_error_prefix_size, m_error_prefix);
+        bool is_error =
+            !message.compare(0, m_error_prefix_size, m_error_prefix);
         bool is_warning =
             !message.compare(0, m_warning_prefix_size, m_warning_prefix);
         bool is_list = false;
@@ -60,20 +61,21 @@ void Reporter::report(const std::string& input, bool wrap)
                 if (isNumeric(check_list.front())) {
                     is_list = true;
                     list_prefix = check_list.front() + ")";
-                    space_pad = list_prefix.size()+1;
+                    space_pad = list_prefix.size() + 1;
                 }
             }
         }
-        if (is_error){
+        if (is_error) {
             std::cerr << m_error_color_start;
-            space_pad = m_error_prefix_size+1;
+            space_pad = m_error_prefix_size + 1;
         }
-        else if (is_warning){
+        else if (is_warning)
+        {
             std::cerr << m_warning_color_start;
-            space_pad = m_warning_prefix_size+1;
+            space_pad = m_warning_prefix_size + 1;
         }
         if (!wrap) {
-            std::cerr << message ;
+            std::cerr << message;
             m_log_file << message;
         }
         else
@@ -85,14 +87,15 @@ void Reporter::report(const std::string& input, bool wrap)
             for (auto&& word : line) {
                 if (word.length() + cur_length >= m_width) {
                     // word is too long, so display on the next line
-                    cur_length = word.length() + 1+space_pad;
+                    cur_length = word.length() + 1 + space_pad;
                     std::cerr << '\n';
                     m_log_file << '\n';
                     std::cerr << std::string(space_pad, ' ');
                     m_log_file << std::string(space_pad, ' ');
                 }
                 // line still have space. Add the word directly
-                else cur_length += word.length() + 1;
+                else
+                    cur_length += word.length() + 1;
                 std::cerr << word << " ";
                 m_log_file << word << " ";
             }
@@ -102,6 +105,6 @@ void Reporter::report(const std::string& input, bool wrap)
         std::cerr << '\n';
         m_log_file << '\n';
     }
-    std::cerr << '\n'  << std::flush;
+    std::cerr << '\n' << std::flush;
     m_log_file << '\n' << std::flush;
 }

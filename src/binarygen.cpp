@@ -492,22 +492,27 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 // Need to double check. BGEN format might differ depends
                 // if FID is provided. When FID is provided, then the ID
                 // should be FID + delimitor + IID; otherwise it'd be IID
-                if (m_sample_id[i].IID != identifier &&
-                        (m_sample_id[i].FID+m_id_delim+m_sample_id[i].IID) != identifier) {
+                if (m_sample_id[i].IID != identifier
+                    && (m_sample_id[i].FID + m_id_delim + m_sample_id[i].IID)
+                           != identifier)
+                {
                     std::string error_message =
                         "Error: Sample mismatch "
                         "between bgen and phenotype file! Name in BGEN "
                         "file is "
                         ":"
-                        + identifier
-                        + " and in phentoype file is: ";
-                    if(has_fid) error_message.append(m_sample_id[i].FID+m_id_delim+m_sample_id[i].IID);
-                            else error_message.append(m_sample_id[i].IID);
-                    error_message.append(". Please note that PRSice require the bgen file and "
-                          "the .sample (or phenotype file if sample file is "
-                          "not provided) to have sample in the same order. (We "
-                          "might be able to losen this requirement in future "
-                          "when we have more time)");
+                        + identifier + " and in phentoype file is: ";
+                    if (has_fid)
+                        error_message.append(m_sample_id[i].FID + m_id_delim
+                                             + m_sample_id[i].IID);
+                    else
+                        error_message.append(m_sample_id[i].IID);
+                    error_message.append(
+                        ". Please note that PRSice require the bgen file and "
+                        "the .sample (or phenotype file if sample file is "
+                        "not provided) to have sample in the same order. (We "
+                        "might be able to losen this requirement in future "
+                        "when we have more time)");
                     throw std::runtime_error(error_message);
                 }
             }
@@ -1208,7 +1213,7 @@ void BinaryGen::hard_code_score(const size_t start_index,
         // only set these value to the imputed value if we require them
         adj_score = 0;
         if (is_centre) {
-            adj_score = ploidy*stat * maf;
+            adj_score = ploidy * stat * maf;
         }
         miss_score = 0;
         if (mean_impute) {
@@ -1449,7 +1454,7 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
             // as is_centre will never change, branch prediction might be rather
             // accurate, therefore we don't need to do the complex
             // stat*maf*is_centre
-            adj_score = ploidy*stat * maf;
+            adj_score = ploidy * stat * maf;
         }
 
         miss_score = 0;

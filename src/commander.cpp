@@ -35,10 +35,10 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"bed", required_argument, nullptr, 'B'},
         {"cov-col", required_argument, nullptr, 'c'},
         // Add short form (because I am lazy)
-    {"cov", required_argument, nullptr, 'C'},
-    {"cov-file", required_argument, nullptr, 'C'},
-    {"pheno", required_argument, nullptr, 'f'},
-    {"pheno-file", required_argument, nullptr, 'f'},
+        {"cov", required_argument, nullptr, 'C'},
+        {"cov-file", required_argument, nullptr, 'C'},
+        {"pheno", required_argument, nullptr, 'f'},
+        {"pheno-file", required_argument, nullptr, 'f'},
         {"pheno-col", required_argument, nullptr, 'F'},
         {"gtf", required_argument, nullptr, 'g'},
         {"help", no_argument, nullptr, 'h'},
@@ -80,7 +80,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"background", required_argument, nullptr, 0},
         {"bar-levels", required_argument, nullptr, 0},
         {"base-info", required_argument, nullptr, 0},
-    {"base-maf", required_argument, nullptr, 0},
+        {"base-maf", required_argument, nullptr, 0},
         {"binary-target", required_argument, nullptr, 0},
         {"bp", required_argument, nullptr, 0},
         {"chr", required_argument, nullptr, 0},
@@ -132,7 +132,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
 {
 
     int32_t max_threads = 1;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if defined(WIN32) || defined(_WIN32) \
+    || defined(__WIN32) && !defined(__CYGWIN__)
     // max thread estimation using windows
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
@@ -173,9 +174,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            error_messages);
             else if (command == "bar-levels")
             {
-                error |= !load_numeric_vector<double>(optarg, message_store,
-                                                        error_messages,
-                                                        m_barlevel, command);
+                error |= !load_numeric_vector<double>(
+                    optarg, message_store, error_messages, m_barlevel, command);
                 m_set_use_thresholds = true;
             }
             else if (command == "base-info")
@@ -186,9 +186,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            m_perform_base_maf_control_filter, command,
                            error_messages);
             else if (command == "binary-target")
-                error |= !parse_binary_vector(optarg, message_store,
-                                                error_messages, m_is_binary,
-                                                command);
+                error |=
+                    !parse_binary_vector(optarg, message_store, error_messages,
+                                         m_is_binary, command);
             else if (command == "bp")
                 set_string(optarg, message_store, m_bp, m_provided_bp, command,
                            error_messages);
@@ -197,15 +197,15 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            command, error_messages);
             else if (command == "clump-kb")
                 error |= !parse_distance(optarg, message_store, error_messages,
-                                       m_clump_distance, command);
+                                         m_clump_distance, command);
             else if (command == "clump-p")
-                error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_clump_p,
-                                                dummy, command);
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         m_clump_p, dummy, command);
             else if (command == "clump-r2")
-                error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_clump_r2,
-                                                dummy, command);
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         m_clump_r2, dummy, command);
             else if (command == "cov-factor")
                 load_string_vector(optarg, message_store, m_factor_cov, command,
                                    error_messages);
@@ -220,37 +220,36 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                    error_messages);
             else if (command.compare("geno") == 0)
                 error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_target_geno,
-                                                m_target_geno_filter, command);
+                                              error_messages, m_target_geno,
+                                              m_target_geno_filter, command);
             else if (command == "hard-thres")
-                error |= !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_target_hard_threshold,
-                               m_target_hard_thresholding, command);
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         m_target_hard_threshold,
+                                         m_target_hard_thresholding, command);
             else if (command == "id-delim")
-                set_string(optarg, message_store, m_id_delim, m_set_delim, command,
-                           error_messages, true);
+                set_string(optarg, message_store, m_id_delim, m_set_delim,
+                           command, error_messages, true);
             else if (command == "info")
-                error |= !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_target_info_score,
-                                            m_target_info_filter, command);
+                error |= !set_numeric<double>(
+                    optarg, message_store, error_messages, m_target_info_score,
+                    m_target_info_filter, command);
             else if (command == "keep")
                 set_string(optarg, message_store, m_target_keep, dummy, command,
                            error_messages);
 
             else if (command == "ld-geno")
                 error |= !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_ref_geno, m_perform_ref_geno_filter, command);
+                    optarg, message_store, error_messages, m_ref_geno,
+                    m_perform_ref_geno_filter, command);
             else if (command == "ld-hard-thres")
                 error |= !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_ref_hard_threshold,
-                               m_perform_ref_hard_thresholding, command);
+                    optarg, message_store, error_messages, m_ref_hard_threshold,
+                    m_perform_ref_hard_thresholding, command);
             else if (command == "ld-info")
-                error |= !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_ref_info_score,
-                                            m_perform_ref_info_filter, command);
+                error |= !set_numeric<double>(
+                    optarg, message_store, error_messages, m_ref_info_score,
+                    m_perform_ref_info_filter, command);
             else if (command == "ld-keep")
                 set_string(optarg, message_store, m_ref_keep, dummy, command,
                            error_messages);
@@ -259,8 +258,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            m_ref_list_provided, command, error_messages);
             else if (command == "ld-maf")
                 error |= !set_numeric<double>(
-                               optarg, message_store, error_messages, m_ref_maf,
-                               m_perform_ref_maf_filter, command);
+                    optarg, message_store, error_messages, m_ref_maf,
+                    m_perform_ref_maf_filter, command);
             else if (command == "ld-remove")
                 set_string(optarg, message_store, m_ref_remove, dummy, command,
                            error_messages);
@@ -269,26 +268,26 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            error_messages);
             else if (command == "maf")
                 error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, m_target_maf,
-                                                m_target_maf_filter, command);
+                                              error_messages, m_target_maf,
+                                              m_target_maf_filter, command);
             else if (command == "memory")
                 error |= !set_memory(optarg, message_store, error_messages);
             else if (command == "missing")
                 error |= !set_missing(optarg, message_store, error_messages);
             else if (command == "model")
                 error |= !set_model(optarg, message_store, error_messages);
-            else if (command == "perm"){
+            else if (command == "perm")
+            {
                 // use double to account for scientific?
-                error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, dummy_double,
-                                                dummy, command);
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         dummy_double, dummy, command);
                 m_permutation = static_cast<int>(dummy_double);
-
             }
             else if (command == "proxy")
-                error |= !set_numeric<double>(
-                               optarg, message_store, error_messages,
-                               m_proxy_threshold, m_use_proxy_clump, command);
+                error |= !set_numeric<double>(optarg, message_store,
+                                              error_messages, m_proxy_threshold,
+                                              m_use_proxy_clump, command);
             else if (command == "remove")
                 set_string(optarg, message_store, m_target_remove, dummy,
                            command, error_messages);
@@ -297,10 +296,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "se")
                 set_string(optarg, message_store, m_standard_error,
                            m_provided_standard_error, command, error_messages);
-            else if (command == "set-perm"){
-                error |= !set_numeric<double>(optarg, message_store,
-                                                error_messages, dummy_double,
-                                                dummy, command);
+            else if (command == "set-perm")
+            {
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         dummy_double, dummy, command);
                 m_perform_set_perm = true;
                 m_set_perm = static_cast<int>(dummy_double);
             }
@@ -308,8 +308,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_snp, m_provided_snp_id,
                            command, error_messages);
             else if (command == "snp-set")
-                set_string(optarg, message_store, m_snp_set, dummy,
-                           command, error_messages);
+                set_string(optarg, message_store, m_snp_set, dummy, command,
+                           error_messages);
             else if (command == "stat")
                 set_string(optarg, message_store, m_statistic,
                            m_provided_statistic, command, error_messages);
@@ -320,11 +320,13 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_target_type, dummy, command,
                            error_messages);
             else if (command == "wind-3")
-                error |= !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_window_3, dummy, command);
+                error |=
+                    !set_numeric<int>(optarg, message_store, error_messages,
+                                      m_window_3, dummy, command);
             else if (command == "wind-5")
-                error |= !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_window_5, dummy, command);
+                error |=
+                    !set_numeric<int>(optarg, message_store, error_messages,
+                                      m_window_5, dummy, command);
             else if (command.compare("x-range") == 0)
                 set_string(optarg, message_store, m_exclusion_range, dummy,
                            command, error_messages);
@@ -365,19 +367,19 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        error_messages);
             break;
         case 'i':
-            error |= !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_inter_threshold,
-                                            m_set_use_thresholds, "interval");
+            error |= !set_numeric<double>(optarg, message_store, error_messages,
+                                          m_inter_threshold,
+                                          m_set_use_thresholds, "interval");
             break;
         case 'k':
             error |= !load_numeric_vector<double>(optarg, message_store,
-                                                    error_messages,
-                                                    m_prevalence, "prevalence");
+                                                  error_messages, m_prevalence,
+                                                  "prevalence");
             break;
         case 'l':
-            error |= !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_lower_threshold,
-                                            m_set_use_thresholds, "lower");
+            error |= !set_numeric<double>(optarg, message_store, error_messages,
+                                          m_lower_threshold,
+                                          m_set_use_thresholds, "lower");
             break;
         case 'L':
             set_string(optarg, message_store, m_ref_file, m_use_reference, "ld",
@@ -394,8 +396,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             }
             else
             {
-                error |= !set_numeric<int>(optarg, message_store, error_messages,
-                                         m_thread, dummy, "thread");
+                error |=
+                    !set_numeric<int>(optarg, message_store, error_messages,
+                                      m_thread, dummy, "thread");
                 if (m_thread > max_threads) {
                     m_thread = max_threads;
                     message_store["thread"] = std::to_string(m_thread);
@@ -412,17 +415,17 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             break;
         case 's':
             error |= !set_numeric<std::random_device::result_type>(
-                           optarg, message_store, error_messages, m_seed,
-                           m_provided_seed, "seed");
+                optarg, message_store, error_messages, m_seed, m_provided_seed,
+                "seed");
             break;
         case 't':
             set_string(optarg, message_store, m_target_file, dummy, "target",
                        error_messages);
             break;
         case 'u':
-            error |= !set_numeric<double>(optarg, message_store,
-                                            error_messages, m_upper_threshold,
-                                            m_set_use_thresholds, "upper");
+            error |= !set_numeric<double>(optarg, message_store, error_messages,
+                                          m_upper_threshold,
+                                          m_set_use_thresholds, "upper");
             break;
         case 'h':
         case '?': usage(); return false;
@@ -924,7 +927,8 @@ void Commander::set_help_message()
           "    --extract               File contains SNPs to be included in "
           "the \n"
           "                            analysis\n"
-          "    --id-delim              Delimiter used to concatinate FID and IID in bgen\n"
+          "    --id-delim              Delimiter used to concatinate FID and "
+          "IID in bgen\n"
           "    --ignore-fid            Ignore FID for all input. When this is "
           "set,\n"
           "                            first column of all file will be assume "
@@ -940,7 +944,8 @@ void Commander::set_help_message()
           "                            if you are certain that the base and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
-          "    --memory                Maximum memory usage allowed. PRSice will try\n"
+          "    --memory                Maximum memory usage allowed. PRSice "
+          "will try\n"
           "                            its best to honor this setting\n"
           "    --out           | -o    Prefix for all file output\n"
           "    --pearson               Use Pearson Correlation for LD "
@@ -1029,9 +1034,9 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         if (!m_provided_p_value) m_p_value = "";
         if (!m_provided_info_threshold) m_info_col = "";
     }
-    if(m_input_is_index){
+    if (m_input_is_index) {
         // can't do much but to check the boundary
-        for(size_t i = 0; i < column_names.size(); ++i){
+        for (size_t i = 0; i < column_names.size(); ++i) {
             column_names[i] = std::to_string(i);
         }
     }
@@ -1040,8 +1045,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         message["chr"] = m_chr;
     else if (m_provided_chr_col)
     {
-        error_message.append("Warning: " + m_chr
-                             + " not found in base file\n");
+        error_message.append("Warning: " + m_chr + " not found in base file\n");
         message.erase("chr");
     }
 
@@ -1071,16 +1075,14 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     else if (m_provided_snp_id)
     {
         error = true;
-        error_message.append("Error: " + m_snp
-                             + " not found in base file\n");
+        error_message.append("Error: " + m_snp + " not found in base file\n");
     }
     m_base_col_index[+BASE_INDEX::BP] = index_check(m_bp, column_names);
     if (m_base_col_index[+BASE_INDEX::BP] != -1)
         message["bp"] = m_bp;
     else if (m_provided_bp)
     {
-        error_message.append("Warning: " + m_bp
-                             + " not found in base file\n");
+        error_message.append("Warning: " + m_bp + " not found in base file\n");
         message.erase("bp");
     }
     m_base_col_index[+BASE_INDEX::SE] =
@@ -1105,21 +1107,20 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     std::string tmp_error_message;
     bool tmp_error;
     tmp_error = !set_base_info_threshold(column_names, tmp_error_message);
-    if(m_provided_info_threshold){
+    if (m_provided_info_threshold) {
         // only need to provide the error message when user wants the filtering
         error |= tmp_error;
         error_message.append(tmp_error_message);
     }
     tmp_error_message.clear();
     tmp_error = !set_base_maf_filter(column_names, tmp_error_message);
-    if(!m_maf_col.empty()){
+    if (!m_maf_col.empty()) {
         error |= tmp_error;
         error_message.append(tmp_error_message);
     }
     // now process the statistic column
-    if(m_stat_is_or && m_stat_is_beta){
-        error_message.append(
-            "Error: Statistic cannot be both OR and beta\n");
+    if (m_stat_is_or && m_stat_is_beta) {
+        error_message.append("Error: Statistic cannot be both OR and beta\n");
         error = true;
     }
     m_base_col_index[+BASE_INDEX::STAT] =
@@ -1130,34 +1131,44 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     {
         error_message.append("Error: " + m_statistic
                              + " not found in base file\n");
-    }else if(!m_user_no_default){
+    }
+    else if (!m_user_no_default)
+    {
         // we can't find the default statistic column (BETA)
         // and user allow default option
-        if(m_stat_is_or){
+        if (m_stat_is_or) {
             // search for OR
             m_base_col_index[+BASE_INDEX::STAT] =
                 index_check("OR", column_names);
-            if(m_base_col_index[+BASE_INDEX::STAT] == -1){
+            if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
                 error = true;
                 error_message.append("Error: Cannot find appropriate "
-                                     "statistic column in base file!\n" );
-            }else{
+                                     "statistic column in base file!\n");
+            }
+            else
+            {
                 message["stat"] = "OR";
             }
-        }else if(m_stat_is_beta){
+        }
+        else if (m_stat_is_beta)
+        {
             // search for BETA
             m_base_col_index[+BASE_INDEX::STAT] =
                 index_check("BETA", column_names);
-            if(m_base_col_index[+BASE_INDEX::STAT] == -1){
+            if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
                 error = true;
                 error_message.append("Error: Cannot find appropriate "
-                                     "statistic column in base file!\n" );
-            }else{
+                                     "statistic column in base file!\n");
+            }
+            else
+            {
                 message["stat"] = "BETA";
             }
-        }else{
+        }
+        else
+        {
             // go through file and look for either OR or BETA
-            bool or_found = false, beta_found= false;
+            bool or_found = false, beta_found = false;
             for (size_t i = 0; i < column_names.size(); ++i) {
                 std::string temp = column_names[i];
                 std::transform(temp.begin(), temp.end(), temp.begin(),
@@ -1197,16 +1208,17 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     }
 
     // Statistic is ok, but beta or or not provided
-    if(m_base_col_index[+BASE_INDEX::STAT]!=-1){
-        if(!m_stat_is_or && !m_stat_is_beta){
+    if (m_base_col_index[+BASE_INDEX::STAT] != -1) {
+        if (!m_stat_is_or && !m_stat_is_beta) {
             std::string stat_temp = m_statistic;
             std::transform(stat_temp.begin(), stat_temp.end(),
                            stat_temp.begin(), ::toupper);
-            if(stat_temp == "OR"){
+            if (stat_temp == "OR") {
                 m_stat_is_or = true;
                 message["or"] = "";
             }
-            else if(stat_temp=="BETA"){
+            else if (stat_temp == "BETA")
+            {
                 m_stat_is_beta = true;
                 message["beta"] = "";
             }
@@ -1237,7 +1249,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     }
     // we don't need bp and chr as we can always get those from the bim file
     int max_index =
-            *max_element(m_base_col_index.begin(), m_base_col_index.end());
+        *max_element(m_base_col_index.begin(), m_base_col_index.end());
     m_base_col_index[+BASE_INDEX::MAX] = max_index;
     return !error;
 }
@@ -1290,14 +1302,13 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
 
 
 bool Commander::ref_check(std::map<std::string, std::string>& message,
-                            std::string& error_message)
+                          std::string& error_message)
 {
     bool error = false;
     if (!m_ref_keep.empty() && !m_ref_remove.empty()) {
         error = true;
         error_message.append("Error: Can only use either --keep or "
                              "--remove but not both\n");
-
     }
     // only check the range is correct when it is needed
     if (m_perform_ref_geno_filter && (m_ref_geno < 0 || m_ref_geno > 1)) {
@@ -1308,10 +1319,11 @@ bool Commander::ref_check(std::map<std::string, std::string>& message,
     // if the reference panel is bgen, or reference panel not provided
     // but the target is bgen then we will like to enforce hard
     // thresholding to the files for LD calculation
-    if(!m_ref_file.empty() && m_ref_list_provided){
+    if (!m_ref_file.empty() && m_ref_list_provided) {
         error = true;
-        error_message.append("Error: You can only use --target or --target-list "
-                             "but not both\n");
+        error_message.append(
+            "Error: You can only use --target or --target-list "
+            "but not both\n");
     }
     if (m_ref_type == "bgen"
         || (m_ref_file.empty() && !m_ref_list_provided
@@ -1607,13 +1619,13 @@ bool Commander::covariate_check(std::string& error_message)
 bool Commander::filter_check(std::string& error_message)
 {
     bool error = false;
-    if(m_target_type != "bgen" && m_target_hard_thresholding){
-        error_message.append(
-            "Warning: Hard thresholding will only be performed for imputation input.\n");
+    if (m_target_type != "bgen" && m_target_hard_thresholding) {
+        error_message.append("Warning: Hard thresholding will only be "
+                             "performed for imputation input.\n");
     }
-    if(m_target_type != "bgen" && m_target_info_filter){
-        error_message.append(
-            "Warning: INFO score can only be calculated for imputation input.\n");
+    if (m_target_type != "bgen" && m_target_info_filter) {
+        error_message.append("Warning: INFO score can only be calculated for "
+                             "imputation input.\n");
     }
     if (m_target_type == "bgen" && m_target_hard_thresholding
         && (m_target_hard_threshold <= 0 || m_target_hard_threshold >= 1))
@@ -1689,9 +1701,10 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
         error_message.append(
             "Error: Must provide a gtf file if msigdb is specified\n");
     }
-    if(m_window_3 <0 || m_window_5 < 0){
+    if (m_window_3 < 0 || m_window_5 < 0) {
         error = true;
-        error_message.append("Error: 5' and 3' extension must be larger than 0\n");
+        error_message.append(
+            "Error: 5' and 3' extension must be larger than 0\n");
     }
     if (m_feature.empty()) {
         m_feature.push_back("exon");
@@ -1766,9 +1779,9 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
     std::sort(m_barlevel.begin(), m_barlevel.end());
     m_barlevel.erase(std::unique(m_barlevel.begin(), m_barlevel.end()),
                      m_barlevel.end());
-    if(m_perform_prset){
+    if (m_perform_prset) {
         // if prset is performed
-        if(m_barlevel.empty()){
+        if (m_barlevel.empty()) {
             // two different default. If any thresholding related parameter
             // were used, use the default PRSice threshold. Otherwise, only use
             // 1
@@ -1782,9 +1795,11 @@ bool Commander::prsice_check(std::map<std::string, std::string>& message,
                 m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
             }
         }
-    }else if(m_barlevel.empty()){
+    }
+    else if (m_barlevel.empty())
+    {
         // if PRSice is used
-            m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+        m_barlevel = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
     }
     if (!m_no_full) m_barlevel.push_back(1);
     // Second pass (mainly aiming for 1)
@@ -1831,10 +1846,11 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         error_message.append("Error: You must provide a target file or a file "
                              "containing all target prefixs!\n");
     }
-    if (!m_target_file.empty() && m_use_target_list){
+    if (!m_target_file.empty() && m_use_target_list) {
         error = true;
-        error_message.append("Error: You can only use --target or --target-list "
-                             "but not both\n");
+        error_message.append(
+            "Error: You can only use --target or --target-list "
+            "but not both\n");
     }
     if (!m_target_keep.empty() && !m_target_remove.empty()) {
         error = true;
@@ -1859,24 +1875,28 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         error_message.append("Error: You must provide a phenotype file for "
                              "multiple phenotype analysis");
     }
-    if(m_is_binary.empty()){
+    if (m_is_binary.empty()) {
         // add the default
-        if(m_stat_is_beta){
-            message["binary-target"]="F";
+        if (m_stat_is_beta) {
+            message["binary-target"] = "F";
             m_is_binary.push_back(false);
-        }else{
-            message["binary-target"]="T";
+        }
+        else
+        {
+            message["binary-target"] = "T";
             m_is_binary.push_back(true);
         }
     }
     // now check if the bar-level is sensible
-    if(m_pheno_col.size() != m_is_binary.size()){
-        if(m_pheno_col.empty() && m_is_binary.size()==1){
+    if (m_pheno_col.size() != m_is_binary.size()) {
+        if (m_pheno_col.empty() && m_is_binary.size() == 1) {
             // this is ok
             // now that we have always initialized m_is_binary
             // before the check, there shouldn't be a case where
             // m_is_binary < 1
-        }else{
+        }
+        else
+        {
             error = true;
             error_message.append("Error: Number of target phenotypes doesn't "
                                  "match information of binary target! You must "
@@ -1885,7 +1905,7 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         }
     }
     // check if we have sufficient amount of prevalence info
-    if(!m_prevalence.empty()){
+    if (!m_prevalence.empty()) {
         size_t num_bin = 0;
         for (auto binary : m_is_binary) {
             if (binary) num_bin++;
@@ -1894,17 +1914,18 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         {
             error = true;
             error_message.append(
-                        "Error: Number of target prevalence doesn't match "
-                        "number of binary traits. You must provide a prevalence for "
-                        "all "
-                        "binary trait(s) or not provide any prevalence (all or "
-                        "nothing)\n");
+                "Error: Number of target prevalence doesn't match "
+                "number of binary traits. You must provide a prevalence for "
+                "all "
+                "binary trait(s) or not provide any prevalence (all or "
+                "nothing)\n");
         }
         for (auto&& prev : m_prevalence) {
             if (prev > 1.0 || prev < 0.0) {
                 error = true;
-                error_message.append("Error: Prevalence cannot be bigger than 1.0 "
-                                     "or smaller than 0.0\n");
+                error_message.append(
+                    "Error: Prevalence cannot be bigger than 1.0 "
+                    "or smaller than 0.0\n");
                 break;
             }
         }

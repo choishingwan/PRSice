@@ -1800,7 +1800,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     // we don't run competitive testing on the base region
     // therefore we skip region_index == 0 (base is always
     // the first region)
-    prs_sum.has_competitive = (region_index==0);
+    prs_sum.has_competitive = (region_index == 0);
     m_prs_summary.push_back(prs_sum);
 
     if (best_info.p > 0.1)
