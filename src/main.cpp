@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "cgranges.h"
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "genotypefactory.hpp"
@@ -50,6 +51,11 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         Region exclusion_region(commander.exclusion_range(), reporter);
+        // Generate the exclusion region
+        cgranges_t *cr = cr_init();
+        Region::generate_exclusion(cr, commander.exclusion_range());
+        // now we have indexed cr
+        cr_index(cr);
 
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
@@ -61,7 +67,6 @@ int main(int argc, char* argv[])
         info_filter = commander.target_info(info);
         commander.target_hard_threshold(hard_threshold);
         hard_coded = commander.hard_coded();
-
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
         try
