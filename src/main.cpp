@@ -50,12 +50,11 @@ int main(int argc, char* argv[])
         }
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
-        Region exclusion_region(commander.exclusion_range(), reporter);
         // Generate the exclusion region
-        cgranges_t *cr = cr_init();
-        Region::generate_exclusion(cr, commander.exclusion_range());
-        // now we have indexed cr
-        cr_index(cr);
+        cgranges_t *exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region, commander.exclusion_range());
+        // now we index cr
+        cr_index(exclusion_region);
 
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
@@ -82,6 +81,13 @@ int main(int argc, char* argv[])
             // decide if we are going to generate the target intermediate or the
             // reference intermediate
             if (commander.use_ref()) target_file->expect_reference();
+            // read in SNPs included in the GWAS summary statistic
+            // don't store or do anything, but just check which SNPs are
+            // included so that we can ignore SNPs not found in GWAS
+            // when we do geno and maf
+            target_file->cache_base_snps(commander.base_name(),
+                                         commander.index().at(+BASE_INDEX::RS),
+                                         reporter);
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), commander.exclude_file(),
                                    commander.extract_file(), maf, geno, info,

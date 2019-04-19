@@ -47,11 +47,9 @@ private:
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
-    std::string m_base_file;
     std::string m_cur_file;
     std::string m_id_delim;
     std::string m_intermediate_file;
-    size_t m_rs_id_index;
     std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
@@ -93,7 +91,7 @@ private:
                    const bool maf_filter, const double& geno_threshold,
                    const bool geno_filter, const double& hard_threshold,
                    const bool hard_coded, const double& info_threshold,
-                   const bool info_filter, Region& exclusion,
+                   const bool info_filter, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
 
     /*!

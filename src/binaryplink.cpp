@@ -245,18 +245,21 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 }
 
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(
-    const std::string& out_prefix, const double& maf_threshold,
+std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
     const bool maf_filter, const double& geno_threshold, const bool geno_filter,
-    const double&, const bool, const double&, const bool, Region& exclusion,
+    const double&, const bool, const double&, const bool, cgranges_t *exclusion_regions,
     Genotype* target)
 {
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t final_mask =
         get_final_mask(static_cast<uint32_t>(m_sample_ct));
+    const uintptr_t founder_final_mask =
+        get_final_mask(static_cast<uint32_t>(m_founder_ct));
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
+    // we need two copy as MAF should be calculated from
+    // founder only, whereas geno is calculated for all samples
+    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
     std::unordered_set<std::string> duplicated_snp;
     std::vector<SNP> snp_info;
     std::vector<std::string> bim_token;
@@ -271,17 +274,23 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
     double cur_maf;
     std::streampos byte_pos;
 
+    int64_t *b = nullptr, max_b = 0;
+    // variables for calculating the MAF
     intptr_t nanal = 0;
     uint32_t homrar_ct = 0, missing_ct = 0, het_ct = 0, homcom_ct = 0,
              num_ref_target_match = 0;
     int chr_code = 0;
     int prev_snp_processed = 0, num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, has_count = false, dummy;
+         prev_chr_error = false, has_count = false, dummy, to_remove=false;
     // initialize the sample inclusion mask
-    m_sample_mask.resize(pheno_nm_ctv2);
+    std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
+    std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
     // fill it with the required mask (copy from PLINK2)
-    fill_quatervec_55(static_cast<uint32_t>(m_sample_ct), m_sample_mask.data());
+    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
+                               sample_include2.data());
+    fill_quatervec_55(static_cast<uint32_t>(m_sample_ct), sample_include2.data());
+    fill_quatervec_55(static_cast<uint32_t>(m_founder_ct), founder_include2.data());
     uintptr_t bed_offset;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file
@@ -323,9 +332,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
         }
 
         // now go through the bim & bed file and perform filtering
-        // reset # SNP read to -1 such that we can avoid troublesome -1 lateron
+        // reset # SNP read to -1 such that we can avoid troublesome -1 later on
         num_snp_read = -1;
-
         // ensure prev_snp_processed = -2 so that we will always perform
         // seek for the first SNP (which will account for the bed offset)
         prev_snp_processed = -2;
@@ -373,6 +381,10 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                          && m_snp_selection_list.find(bim_token[+BIM::RS])
                                 != m_snp_selection_list.end())
                 {
+                    continue;
+                }
+                // ignore any SNPs not found in base file
+                if(m_snp_in_base.find(bim_token[+BIM::RS])==m_snp_in_base.end()){
                     continue;
                 }
             }
@@ -433,9 +445,15 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
             }
             // check if we want to exclude this SNP because this fall within the
             // exclusion region(s)
-            if (exclusion.check_exclusion(chr_code, loc)) {
-                continue;
-            }
+            to_remove = cr_overlap(exclusion_regions,
+                                   std::to_string(chr_code).c_str(),
+                                   loc-1,
+                                   loc+1,
+                                   &b,
+                                   &max_b);
+            free(b);
+            // this is included in one of the exclusion region
+            if(to_remove) continue;
             // check if this is a duplicated SNP
             if (m_existed_snps_index.find(bim_token[+BIM::RS])
                 != m_existed_snps_index.end())
@@ -468,6 +486,12 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                     }
                     prev_snp_processed = num_snp_read;
                     // read in the genotype information to the genotype vector
+                    if (load_raw(unfiltered_sample_ct4, bed, m_tmp_genotype.data())){
+                        std::string error_message =
+                            "Error: Cannot read the bed file(read): "
+                            + bed_name;
+                        throw std::runtime_error(error_message);
+                    }
                     if (load_and_collapse_incl(
                             static_cast<uint32_t>(m_unfiltered_sample_ct),
                             static_cast<uint32_t>(m_sample_ct),
@@ -535,7 +559,6 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                 }
                 else
                 {
-
                     auto&& target_index =
                         target->m_existed_snps_index[bim_token[+BIM::RS]];
                     if (!target->m_existed_snps[target_index].matching(

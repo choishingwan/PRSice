@@ -17,6 +17,7 @@
 #ifndef GENOTYPE_H
 #define GENOTYPE_H
 
+#include "cgranges.h"
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
@@ -123,7 +124,7 @@ public:
                    const double& geno_threshold, const double& info_threshold,
                    const double& hard_threshold, const bool maf_filter,
                    const bool geno_filter, const bool info_filter,
-                   const bool hard_coded, Region& exclusion, bool verbose,
+                   const bool hard_coded, cgranges_t *exclusion_region, bool verbose,
                    Reporter& reporter, Genotype* target = nullptr);
 
     /*!
@@ -479,26 +480,19 @@ public:
      * \return the ith SNP object
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
-    void perform_shrinkage(Genotype& reference, double maf_bin,
-                           double prevalence, const double max_p_value,
-                           int num_perm, size_t num_sample, size_t num_case,
-                           size_t num_control, bool is_case_control,
-                           Reporter& reporter);
-
+    void cache_base_snps(const std::string& base_name, const int snp_index, Reporter& reporter);
 protected:
     // friend with all child class so that they can also access the
     // protected elements
     friend class BinaryPlink;
     friend class BinaryGen;
-    // need to consider cacheline efficiency, so we need to organize the member
-    // variable in most efficient way
-
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
+    std::unordered_set<std::string> m_snp_in_base;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_files;
@@ -507,7 +501,6 @@ protected:
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
     std::vector<uintptr_t> m_sample_include;
-    std::vector<uintptr_t> m_sample_mask;
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
@@ -699,7 +692,7 @@ protected:
                    const double& /*geno_threshold*/, const bool /*geno_filter*/,
                    const double& /*hard_threshold*/, const bool /*hard_coded*/,
                    const double& /*info_threshold*/, const bool /*info_filter*/,
-                   Region& /*exclusion*/, Genotype* /*target*/)
+                   cgranges_t* /*exclusion*/, Genotype* /*target*/)
     {
         return std::vector<SNP>(0);
     }

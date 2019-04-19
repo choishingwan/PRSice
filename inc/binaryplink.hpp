@@ -75,7 +75,7 @@ protected:
                    const bool maf_filter, const double& geno_threshold,
                    const bool geno_filter, const double& /*hard_threshold*/,
                    const bool /*hard_coded*/, const double& /*info_threshold*/,
-                   const bool /*info_filter*/, Region& exclusion,
+                   const bool /*info_filter*/, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
 
     /*!
@@ -222,6 +222,129 @@ protected:
         }
         return 0;
     }
+
+    inline uint32_t load_raw(uintptr_t unfiltered_sample_ct4, std::ifstream& bedfile,
+                                    uintptr_t* rawbuf)
+    {
+        // only use this if all accesses to the data involve
+        // 1. some sort of mask, or
+        // 2. explicit iteration from 0..(unfiltered_sample_ct-1).
+        // otherwise improper trailing bits might cause a segfault, when we should
+        // be ignoring them or just issuing a warning.
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
+            return RET_READ_FAIL;
+        }
+    }
+
+    // modified version of the
+    // single_marker_freqs_and_hwe function from PLINK (plink_filter.c)
+    // we remove the HWE calculation (we don't want to include that yet,
+    // as that'd require us to implement a version for bgen)
+    inline void single_marker_freqs_and_hwe(
+        uintptr_t unfiltered_sample_ctl2, uintptr_t *lptr,
+        uintptr_t *sample_include2, uintptr_t *founder_include2,
+        uintptr_t *founder_ctrl_include2, uintptr_t *founder_case_include2,
+        uintptr_t sample_ct, uint32_t *ll_ctp, uint32_t *lh_ctp, uint32_t *hh_ctp,
+        uint32_t sample_f_ct, uint32_t *ll_ctfp, uint32_t *lh_ctfp,
+        uint32_t *hh_ctfp) {
+      uint32_t tot_a = 0;
+      uint32_t tot_b = 0;
+      uint32_t tot_c = 0;
+      uint32_t tot_a_f = 0;
+      uint32_t tot_b_f = 0;
+      uint32_t tot_c_f = 0;
+      uintptr_t *lptr_end = &(lptr[unfiltered_sample_ctl2]);
+      uintptr_t loader;
+      uintptr_t loader2;
+      uintptr_t loader3;
+    #ifdef __LP64__
+      uintptr_t cur_decr = 120;
+      uintptr_t *lptr_12x_end;
+      unfiltered_sample_ctl2 -= unfiltered_sample_ctl2 % 12;
+      while (unfiltered_sample_ctl2 >= 120) {
+      single_marker_freqs_and_hwe_loop:
+        lptr_12x_end = &(lptr[cur_decr]);
+        count_3freq_1920b((__m128i *)lptr, (__m128i *)lptr_12x_end,
+                          (__m128i *)sample_include2, &tot_a, &tot_b, &tot_c);
+        count_3freq_1920b((__m128i *)lptr, (__m128i *)lptr_12x_end,
+                          (__m128i *)founder_include2, &tot_a_f, &tot_b_f,
+                          &tot_c_f);
+        lptr = lptr_12x_end;
+        sample_include2 = &(sample_include2[cur_decr]);
+        founder_include2 = &(founder_include2[cur_decr]);
+        unfiltered_sample_ctl2 -= cur_decr;
+      }
+      if (unfiltered_sample_ctl2) {
+        cur_decr = unfiltered_sample_ctl2;
+        goto single_marker_freqs_and_hwe_loop;
+      }
+    #else
+      uintptr_t *lptr_twelve_end =
+          &(lptr[unfiltered_sample_ctl2 - unfiltered_sample_ctl2 % 12]);
+      while (lptr < lptr_twelve_end) {
+        count_3freq_48b(lptr, sample_include2, &tot_a, &tot_b, &tot_c);
+        count_3freq_48b(lptr, founder_include2, &tot_a_f, &tot_b_f, &tot_c_f);
+        lptr = &(lptr[12]);
+        sample_include2 = &(sample_include2[12]);
+        founder_include2 = &(founder_include2[12]);
+      }
+    #endif
+      while (lptr < lptr_end) {
+        loader = *lptr++;
+        loader2 = *sample_include2++;
+        loader3 = (loader >> 1) & loader2;
+        loader2 &= loader;
+        // N.B. because of the construction of sample_include2, only even-numbered
+        // bits can be present here.  So popcount2_long is safe.
+        tot_a += popcount2_long(loader2);
+        tot_b += popcount2_long(loader3);
+        tot_c += popcount2_long(loader & loader3);
+        loader2 = *founder_include2++;
+        loader3 = (loader >> 1) & loader2;
+        loader2 &= loader;
+        tot_a_f += popcount2_long(loader2);
+        tot_b_f += popcount2_long(loader3);
+        tot_c_f += popcount2_long(loader & loader3);
+      }
+      *hh_ctp = tot_c;
+      *lh_ctp = tot_b - tot_c;
+      *ll_ctp = sample_ct - tot_a - *lh_ctp;
+      *hh_ctfp = tot_c_f;
+      *lh_ctfp = tot_b_f - tot_c_f;
+      *ll_ctfp = sample_f_ct - tot_a_f - *lh_ctfp;
+    }
+
+
+    // now the function to calculate the MAF
+    // it also calculate HWE, but we will not provide such filtering
+    // for now (don't want to write this function for bgen)
+    void cal_maf_geno(){
+        single_marker_freqs_and_hwe(
+        unfiltered_sample_ctv2, loadbuf, sample_include2, founder_include2,
+        founder_ctrl_include2, founder_case_include2, sample_ct, &ll_ct,
+        &lh_ct, &hh_ct, sample_f_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+    uii = ll_ct + lh_ct + hh_ct;
+    if (!cur_oblig_missing) {
+      cur_genotyping_rate = ((int32_t)uii) * sample_ct_recip;
+    } else {
+      if (sample_ct - cur_oblig_missing) {
+        cur_genotyping_rate =
+            ((int32_t)uii) /
+            ((double)((int32_t)(sample_ct - cur_oblig_missing)));
+      } else {
+        cur_genotyping_rate = 0;
+        nonmissing_rate_tot_max -= 1;
+      }
+    }
+    uii = 2 * (ll_ctf + lh_ctf + hh_ctf + maf_succ);
+    if (!uii) {
+      // avoid 0/0 division
+      set_allele_freqs[marker_uidx] = 0.5;
+    } else {
+      set_allele_freqs[marker_uidx] =
+          ((double)(2 * hh_ctf + lh_ctf + maf_succ)) / ((double)uii);
+    }
+      }
 };
 
 #endif
