@@ -124,8 +124,9 @@ public:
                    const double& geno_threshold, const double& info_threshold,
                    const double& hard_threshold, const bool maf_filter,
                    const bool geno_filter, const bool info_filter,
-                   const bool hard_coded, cgranges_t *exclusion_region, bool verbose,
-                   Reporter& reporter, Genotype* target = nullptr);
+                   const bool hard_coded, cgranges_t* exclusion_region,
+                   bool verbose, Reporter& reporter,
+                   Genotype* target = nullptr);
 
     /*!
      * \brief Return the number of SNPs, use for unit test
@@ -480,7 +481,9 @@ public:
      * \return the ith SNP object
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
-    void cache_base_snps(const std::string& base_name, const int snp_index, Reporter& reporter);
+    void cache_base_snps(const std::string& base_name, const int snp_index,
+                         Reporter& reporter);
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements

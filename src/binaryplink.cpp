@@ -245,10 +245,11 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 }
 
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
+std::vector<SNP> BinaryPlink::gen_snp_vector(
+    const std::string& out_prefix, const double& maf_threshold,
     const bool maf_filter, const double& geno_threshold, const bool geno_filter,
-    const double&, const bool, const double&, const bool, cgranges_t *exclusion_regions,
-    Genotype* target)
+    const double&, const bool, const double&, const bool,
+    cgranges_t* exclusion_regions, Genotype* target)
 {
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -282,15 +283,17 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, cons
     int chr_code = 0;
     int prev_snp_processed = 0, num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, has_count = false, dummy, to_remove=false;
+         prev_chr_error = false, has_count = false, dummy, to_remove = false;
     // initialize the sample inclusion mask
     std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
     std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
     // fill it with the required mask (copy from PLINK2)
     init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
                                sample_include2.data());
-    fill_quatervec_55(static_cast<uint32_t>(m_sample_ct), sample_include2.data());
-    fill_quatervec_55(static_cast<uint32_t>(m_founder_ct), founder_include2.data());
+    fill_quatervec_55(static_cast<uint32_t>(m_sample_ct),
+                      sample_include2.data());
+    fill_quatervec_55(static_cast<uint32_t>(m_founder_ct),
+                      founder_include2.data());
     uintptr_t bed_offset;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file
@@ -384,7 +387,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, cons
                     continue;
                 }
                 // ignore any SNPs not found in base file
-                if(m_snp_in_base.find(bim_token[+BIM::RS])==m_snp_in_base.end()){
+                if (m_snp_in_base.find(bim_token[+BIM::RS])
+                    == m_snp_in_base.end())
+                {
                     continue;
                 }
             }
@@ -445,15 +450,12 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, cons
             }
             // check if we want to exclude this SNP because this fall within the
             // exclusion region(s)
-            to_remove = cr_overlap(exclusion_regions,
-                                   std::to_string(chr_code).c_str(),
-                                   loc-1,
-                                   loc+1,
-                                   &b,
-                                   &max_b);
+            to_remove =
+                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
+                           loc - 1, loc + 1, &b, &max_b);
             free(b);
             // this is included in one of the exclusion region
-            if(to_remove) continue;
+            if (to_remove) continue;
             // check if this is a duplicated SNP
             if (m_existed_snps_index.find(bim_token[+BIM::RS])
                 != m_existed_snps_index.end())
@@ -486,7 +488,9 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, cons
                     }
                     prev_snp_processed = num_snp_read;
                     // read in the genotype information to the genotype vector
-                    if (load_raw(unfiltered_sample_ct4, bed, m_tmp_genotype.data())){
+                    if (load_raw(unfiltered_sample_ct4, bed,
+                                 m_tmp_genotype.data()))
+                    {
                         std::string error_message =
                             "Error: Cannot read the bed file(read): "
                             + bed_name;

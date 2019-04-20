@@ -172,8 +172,9 @@ public:
      */
     std::vector<std::string> names() const { return m_region_name; }
 
-    static void generate_exclusion(cgranges_t *cr,
+    static void generate_exclusion(cgranges_t* cr,
                                    const std::string& exclusion_range);
+
 private:
     // IMPORTANT: The end is non-inclusive
     struct region_bound

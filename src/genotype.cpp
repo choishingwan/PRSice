@@ -35,7 +35,9 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::cache_base_snps(const std::string& base_name, const int snp_index, Reporter& reporter){
+void Genotype::cache_base_snps(const std::string& base_name,
+                               const int snp_index, Reporter& reporter)
+{
     assert(snp_index >= 0);
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
@@ -50,11 +52,13 @@ void Genotype::cache_base_snps(const std::string& base_name, const int snp_index
             throw std::runtime_error(error_message);
         }
         gz_input = true;
-    }else{
+    }
+    else
+    {
         snp_file.open(base_name.c_str());
-        if(!snp_file.is_open()){
-            std::string error_message = "Error: Cannot open base file: "+base_name+
-                    "to read!\n";
+        if (!snp_file.is_open()) {
+            std::string error_message =
+                "Error: Cannot open base file: " + base_name + "to read!\n";
             throw std::runtime_error(error_message);
         }
     }
@@ -65,22 +69,28 @@ void Genotype::cache_base_snps(const std::string& base_name, const int snp_index
     {
         misc::trim(line);
         token = misc::split(line);
-        if(static_cast<int>(token.size()) > snp_index){
+        if (static_cast<int>(token.size()) > snp_index) {
             // do no check. Don't even bother with duplicated SNPs.
             // If they were not found on the bim file, then it is
             // ok
             m_snp_in_base.insert(token[static_cast<size_t>(snp_index)]);
-        }else{
+        }
+        else
+        {
             std::string error_message = "Error: Not enough column in base file!"
-                                        "Minimum "+std::to_string(snp_index+1)+" column(s) required!\n";
+                                        "Minimum "
+                                        + std::to_string(snp_index + 1)
+                                        + " column(s) required!\n";
             throw std::runtime_error(error_message);
         }
     }
-    if(gz_input) gz_snp_file.close();
-    else(snp_file.close());
-    std::string message= "A total of "+std::to_string(m_snp_in_base.size())+" unique SNP(s) found in base\n";
+    if (gz_input)
+        gz_snp_file.close();
+    else
+        (snp_file.close());
+    std::string message = "A total of " + std::to_string(m_snp_in_base.size())
+                          + " unique SNP(s) found in base\n";
     reporter.report(message);
-
 }
 
 
@@ -366,8 +376,8 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
                          const double& geno, const double& info,
                          const double& hard_threshold, const bool maf_filter,
                          const bool geno_filter, const bool info_filter,
-                         const bool hard_coded, cgranges_t *exclusion_region, bool verbose,
-                         Reporter& reporter, Genotype* target)
+                         const bool hard_coded, cgranges_t* exclusion_region,
+                         bool verbose, Reporter& reporter, Genotype* target)
 {
 
     if (!m_is_ref) {

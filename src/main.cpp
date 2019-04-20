@@ -51,8 +51,9 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
-        cgranges_t *exclusion_region = cr_init();
-        Region::generate_exclusion(exclusion_region, commander.exclusion_range());
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,
+                                   commander.exclusion_range());
         // now we index cr
         cr_index(exclusion_region);
 

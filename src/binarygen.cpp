@@ -525,7 +525,7 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                           const double& geno_threshold, const bool geno_filter,
                           const double& hard_threshold, const bool hard_coded,
                           const double& info_threshold, const bool info_filter,
-                          cgranges_t *exclusion_regions, Genotype* target)
+                          cgranges_t* exclusion_regions, Genotype* target)
 {
     // before we do anything, do a super quick pre-filtering of SNPs
     bool to_remove = false;
@@ -739,13 +739,11 @@ BinaryGen::gen_snp_vector(const std::string& out_prefix,
                 exclude_snp = true;
             }
 
-            to_remove = cr_overlap(exclusion_regions,
-                                   std::to_string(chr_code).c_str(),
-                                   static_cast<int>(SNP_position)-1,
-                                   static_cast<int>(SNP_position)+1,
-                                   &b,
-                                   &max_b);
-            if(to_remove) exclude_snp = true;
+            to_remove =
+                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
+                           static_cast<int>(SNP_position) - 1,
+                           static_cast<int>(SNP_position) + 1, &b, &max_b);
+            if (to_remove) exclude_snp = true;
             // only do this if it is not reference panel
             if (!m_is_ref && m_snp_in_base.find(RSID) == m_snp_in_base.end()) {
                 exclude_snp = true;

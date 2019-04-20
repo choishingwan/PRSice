@@ -22,53 +22,59 @@
 // end boundary is inclusive
 // e.g. bound with chr1:1-10 will remove any SNPs on chr1 with coordinate
 // from 1 to 10
-void Region::generate_exclusion(cgranges_t *cr,
-                                const std::string& exclusion_range){
+void Region::generate_exclusion(cgranges_t* cr,
+                                const std::string& exclusion_range)
+{
     // do nothing when no exclusion is required.
     if (exclusion_range.empty()) return;
-    std::vector<std::string> exclude_regions = misc::split(exclusion_range, ",");
+    std::vector<std::string> exclude_regions =
+        misc::split(exclusion_range, ",");
     // file input is represented by the lack of :
     std::vector<std::string> range, boundary;
-    for(auto &&region : exclude_regions){
+    for (auto&& region : exclude_regions) {
         range = misc::split(region, ":");
-        if(range.size()==1){
+        if (range.size() == 1) {
             // file input
             std::ifstream input_file;
             input_file.open(range.front());
-            if(!input_file.is_open()){
-            std::string message =
-                "Error: " + range.front()
-                + " cannot be open. Please check you have the correct input";
-            throw std::runtime_error(message);
+            if (!input_file.is_open()) {
+                std::string message = "Error: " + range.front()
+                                      + " cannot be open. Please check you "
+                                        "have the correct input";
+                throw std::runtime_error(message);
             }
             // BED starts from 0 and end is exclusive
             std::string line;
-            while(std::getline(input_file, line)){
+            while (std::getline(input_file, line)) {
                 misc::trim(line);
                 boundary = misc::split(line);
-                if(boundary.size() < 3){
-                    std::string message = "Error: Malformed BED file. BED file should contain at least 3 column for all rows!\n";
+                if (boundary.size() < 3) {
+                    std::string message = "Error: Malformed BED file. BED file "
+                                          "should contain at least 3 column "
+                                          "for all rows!\n";
                     throw std::runtime_error(message);
                 }
-
             }
             input_file.close();
 
             int chr = get_chrom_code_raw(boundary[0].c_str());
-            int low_bound = misc::convert<int>(boundary[1])+1;
+            int low_bound = misc::convert<int>(boundary[1]) + 1;
             // +1 because start at 0
-            int upper_bound = misc::convert<int>(boundary[2])-1;
+            int upper_bound = misc::convert<int>(boundary[2]) - 1;
             // -1 because BED end is exclusive
-            if(low_bound < upper_bound ||
-                    low_bound < 1 || upper_bound < 1){
-                std::string message = "Error: Invalid exclusion coordinate. "
-                                      "Coordinate must be larger than 1 and the end coordinate must be larger than or equal to the start coordinate\n";
+            if (low_bound < upper_bound || low_bound < 1 || upper_bound < 1) {
+                std::string message =
+                    "Error: Invalid exclusion coordinate. "
+                    "Coordinate must be larger than 1 and the end coordinate "
+                    "must be larger than or equal to the start coordinate\n";
                 throw std::runtime_error(message);
             }
             // to string is kinda stupid here, but rather not touching the core
             // algorithm when I am exhausted.
             cr_add(cr, std::to_string(chr).c_str(), low_bound, upper_bound, 0);
-        }else if(range.size()==2){
+        }
+        else if (range.size() == 2)
+        {
             int chr = get_chrom_code_raw(range[0].c_str());
             boundary = misc::split(range[1], "-");
             // we take this as absolute position.
@@ -81,18 +87,22 @@ void Region::generate_exclusion(cgranges_t *cr,
             // the library find overlap, which for SNP at 10
             // the boundary should be defined as 9-11 when we read in the SNP
             // here we do nothing but sainity check of the input
-            if(low_bound < upper_bound ||
-                    low_bound < 1 || upper_bound < 1){
-                std::string message = "Error: Invalid exclusion coordinate. "
-                                      "Coordinate must be larger than 1 and the end coordinate must be larger than or equal to the start coordinate\n";
+            if (low_bound < upper_bound || low_bound < 1 || upper_bound < 1) {
+                std::string message =
+                    "Error: Invalid exclusion coordinate. "
+                    "Coordinate must be larger than 1 and the end coordinate "
+                    "must be larger than or equal to the start coordinate\n";
                 throw std::runtime_error(message);
             }
             // to string is kinda stupid here, but rather not touching the core
             // algorithm when I am exhausted.
             cr_add(cr, std::to_string(chr).c_str(), low_bound, upper_bound, 0);
-        }else{
-            std::string message = "Error: Invalid exclusion range format. "
-                                  "Should be chr:start, chr:start-end or a bed file\n";
+        }
+        else
+        {
+            std::string message =
+                "Error: Invalid exclusion range format. "
+                "Should be chr:start, chr:start-end or a bed file\n";
             throw std::runtime_error(message);
         }
     }
