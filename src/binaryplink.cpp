@@ -253,13 +253,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
 {
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t final_mask =
-        get_final_mask(static_cast<uint32_t>(m_sample_ct));
-    const uintptr_t founder_final_mask =
-        get_final_mask(static_cast<uint32_t>(m_founder_ct));
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    // we need two copy as MAF should be calculated from
-    // founder only, whereas geno is calculated for all samples
     const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
     std::unordered_set<std::string> duplicated_snp;
     std::vector<SNP> snp_info;
@@ -272,14 +266,21 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
     std::string bim_name, bed_name, chr, line;
     std::string prev_chr = "", error_message = "";
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
-    double cur_maf;
+    double cur_maf, cur_geno;
+    double sample_ct_recip = 1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
     std::streampos byte_pos;
-
+    // temp holder for region match
     int64_t *b = nullptr, max_b = 0;
     // variables for calculating the MAF
-    intptr_t nanal = 0;
-    uint32_t homrar_ct = 0, missing_ct = 0, het_ct = 0, homcom_ct = 0,
-             num_ref_target_match = 0;
+    uint32_t num_ref_target_match = 0;
+    uint32_t ll_ct = 0;
+    uint32_t lh_ct = 0;
+    uint32_t hh_ct = 0;
+    uint32_t ll_ctf = 0;
+    uint32_t lh_ctf = 0;
+    uint32_t hh_ctf = 0;
+    uint32_t uii = 0;
+
     int chr_code = 0;
     int prev_snp_processed = 0, num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
@@ -290,10 +291,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
     // fill it with the required mask (copy from PLINK2)
     init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
                                sample_include2.data());
-    fill_quatervec_55(static_cast<uint32_t>(m_sample_ct),
-                      sample_include2.data());
-    fill_quatervec_55(static_cast<uint32_t>(m_founder_ct),
-                      founder_include2.data());
+    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
+                               founder_include2.data());
     uintptr_t bed_offset;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file
@@ -496,27 +495,25 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                             + bed_name;
                         throw std::runtime_error(error_message);
                     }
-                    if (load_and_collapse_incl(
-                            static_cast<uint32_t>(m_unfiltered_sample_ct),
-                            static_cast<uint32_t>(m_sample_ct),
-                            m_sample_include.data(), final_mask, false, bed,
-                            m_tmp_genotype.data(), genotype.data()))
-                    {
-                        std::string error_message =
-                            "Error: Cannot read the bed file(read): "
-                            + bed_name;
-                        throw std::runtime_error(error_message);
-                    }
                     // calculate the MAF using PLINK2 function
-                    genovec_3freq(genotype.data(), m_sample_mask.data(),
-                                  pheno_nm_ctv2, &missing_ct, &het_ct,
-                                  &homcom_ct);
-                    // calculate the remaining samples
-                    nanal = static_cast<uint32_t>(m_sample_ct) - missing_ct;
-                    // calculate the hom rare count
-                    homrar_ct =
-                        static_cast<uint32_t>(nanal) - het_ct - homcom_ct;
-                    if (nanal == 0) {
+                    single_marker_freqs_and_hwe(
+                        unfiltered_sample_ctv2, m_tmp_genotype.data(),
+                                sample_include2.data(), founder_include2.data(),
+                                m_sample_ct, &ll_ct, &lh_ct, &hh_ct,
+                                m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+                    uii = ll_ct + lh_ct + hh_ct;
+                    cur_geno = (static_cast<int32_t>(uii)) * sample_ct_recip;
+                    uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
+                    if (!uii) {
+                        cur_maf = 0.5;
+                    }
+                    else
+                    {
+                        cur_maf = (static_cast<double> (2 * hh_ctf + lh_ctf)) /
+                                (static_cast<double>( uii));
+                    }
+                    if (misc::logically_equal(cur_maf, 0.0) ||
+                            misc::logically_equal(cur_maf, 1.0)) {
                         // none of the sample contain this SNP
                         // still count as MAF filtering (for now)
                         m_num_maf_filter++;
@@ -525,16 +522,14 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                     // filter by genotype missingness
                     if (geno_filter
                         && geno_threshold
-                               < static_cast<double>(missing_ct)
-                                     / static_cast<double>(m_sample_ct))
+                               < cur_geno)
                     {
                         m_num_geno_filter++;
                         continue;
                     }
                     // filter by MAF
-                    cur_maf = (static_cast<double>(het_ct + homrar_ct * 2)
-                               / (static_cast<double>(nanal) * 2.0));
-                    if (cur_maf > 0.5) cur_maf = 1.0 - cur_maf;
+                    // do not flip the MAF for now, so that we
+                    // are not confuse later on
                     // remove SNP if maf lower than threshold
                     if (maf_filter && cur_maf < maf_threshold) {
                         m_num_maf_filter++;
@@ -553,8 +548,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                         snp_info.emplace_back(SNP(bim_token[+BIM::RS], chr_code,
                                                   loc, bim_token[+BIM::A1],
                                                   bim_token[+BIM::A2], prefix,
-                                                  byte_pos, homcom_ct, het_ct,
-                                                  homrar_ct, missing_ct));
+                                                  byte_pos, cur_maf));
                     else
                         snp_info.emplace_back(SNP(bim_token[+BIM::RS], chr_code,
                                                   loc, bim_token[+BIM::A1],
@@ -620,8 +614,12 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                     {
                         // this is not a mismatch, we can add it to the
                         // target
+                        if(has_count)
                         target->m_existed_snps[target_index].add_reference(
-                            prefix, byte_pos);
+                            prefix, byte_pos, cur_maf);
+                        else
+                            target->m_existed_snps[target_index].add_reference(
+                                prefix, byte_pos);
                         ref_retain[target_index] = true;
                         num_ref_target_match++;
                     }
@@ -707,7 +705,8 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
     bed.seekg(0, bed.end);
     llxx = bed.tellg();
     if (!llxx) {
-        throw std::runtime_error("Error: Empty .bed file.");
+        std::string error_message = "Error: Empty .bed file: " + bed_name;
+        throw std::runtime_error(error_message);
     }
     bed.seekg(0, bed.beg);
     char version_check[3];
@@ -749,8 +748,9 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
         if (llxx != llzz) {
             // probably not PLINK-format at all, so give this error instead
             // of "invalid file size"
-            throw std::runtime_error(
-                "Error: Invalid header bytes in .bed file.");
+
+            std::string error_message = "Error: Invalid header bytes in .bed file: "+bed_name;
+            throw std::runtime_error(error_message);
         }
         llyy = llzz;
         bed_offset = 2;
@@ -759,13 +759,15 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
         if ((*version_check == '#')
             || ((uii == 3) && (!memcmp(version_check, "chr", 3))))
         {
-            throw std::runtime_error("Error: Invalid header bytes in PLINK "
-                                     "1 .bed file.  (Is this a UCSC "
-                                     "Genome\nBrowser BED file instead?)");
+            std::string error_message = "Error: Invalid header bytes in PLINK "
+                                        "1 .bed file: "+bed_name+"  (Is this a UCSC "
+                                        "Genome\nBrowser BED file instead?)";
+            throw std::runtime_error(error_message);
         }
         else
         {
-            throw std::runtime_error("Error: Invalid .bed file size.");
+            std::string error_message = "Error: Invalid .bed file size for "+bed_name;
+            throw std::runtime_error(error_message);
         }
     }
     if (sample_major) {

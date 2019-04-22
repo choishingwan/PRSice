@@ -36,8 +36,7 @@ public:
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
-        const uint32_t homcom_ct, const uint32_t het_ct,
-        const uint32_t homrar_ct, const uint32_t missing)
+        const double& maf)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -45,14 +44,11 @@ public:
         , m_ref_file(file_name)
         , m_target_byte_pos(byte_pos)
         , m_ref_byte_pos(byte_pos)
+        , m_maf(maf)
         , m_chr(chr)
         , m_loc(loc)
-        , m_homcom(homcom_ct)
-        , m_het(het_ct)
-        , m_homrar(homrar_ct)
-        , m_missing(missing)
     {
-        m_has_count = true;
+        m_has_maf = true;
     }
     SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
@@ -67,19 +63,17 @@ public:
         , m_chr(chr)
         , m_loc(loc)
     {
-        m_has_count = false;
+        m_has_maf = false;
     }
     virtual ~SNP();
     /*!
      * \brief Add the statistic information for this SNP
      * \param stat is the effect size
-     * \param se is the standard error of the effect size
      * \param p_value is the p-value
      * \param category is the category of this SNP
      * \param p_threshold is the p-value threshold this SNP fall into
      */
-    void set_statistic(const double& stat, const double& p_value,
-                       const double& se, const double& maf,
+    void set_statistic(const double& stat, const double& p_value,const double& maf,
                        const intptr_t category, const double p_threshold)
     {
         m_stat = stat;
@@ -89,7 +83,6 @@ public:
         assert(category < 0);
         m_category = category;
         m_p_threshold = p_threshold;
-        m_standard_error = se;
         m_maf = maf;
     }
     /*!
@@ -106,6 +99,15 @@ public:
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
+    }
+    void add_reference(const std::string& ref_file,
+                       const std::streampos ref_byte_pos,
+                       const double &maf)
+    {
+        m_ref_file = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
+        m_ref_maf = maf;
+        m_has_ref_maf = true;
     }
 
 
@@ -184,11 +186,6 @@ public:
      * \return the effect size of the SNP
      */
     double stat() const { return m_stat; }
-    /*!
-     * \brief Get the SE of the SNP
-     * \return the standard error of the SNP
-     */
-    double get_se() const { return m_standard_error; }
     /*!
      * \brief Return the MAF of the SNP
      * \return the MAF of the SNP based on Base data
@@ -328,44 +325,6 @@ public:
      */
     void set_up_bound(intptr_t up) { m_up_bound = up; }
     /*!
-     * \brief get_counts will return the current genotype count for this SNP.
-     * Return true if this was previously calculated (and indicate the need of
-     * calculation)
-     *
-     * \param homcom is the count of homozygous common allele
-     * \param het is the count of heterozygous
-     * \param homrar is the count of homozygous rare allele
-     * \param missing is the number of missing genotypes
-     * \return true if calculation is already done
-     */
-    bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing) const
-    {
-        homcom = m_homcom;
-        het = m_het;
-        homrar = m_homrar;
-        missing = m_missing;
-        return m_has_count;
-    }
-    /*!
-     * \brief This function will set the genotype count for the current SNP, and
-     * will set the has_count to true
-     *
-     * \param homcom is the count of homozygous common allele
-     * \param het is the count of heterozygous
-     * \param homrar is the count of homozygous rare allele
-     * \param missing is the number of missing genotypes
-     */
-    void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing)
-    {
-        m_homcom = homcom;
-        m_het = het;
-        m_homrar = homrar;
-        m_missing = missing;
-        m_has_count = true;
-    }
-    /*!
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
@@ -393,25 +352,17 @@ private:
     double m_p_value = 2.0;
     double m_p_threshold = 0;
     double m_maf = 0.0;
-    double m_standard_error = 0.0;
+    double m_ref_maf = 0.0;
     intptr_t m_chr = -1;
     intptr_t m_category = -1;
     intptr_t m_loc = -1;
     intptr_t m_low_bound = 0;
     intptr_t m_up_bound = 0;
-    uint32_t m_homcom = 0;
-    uint32_t m_het = 0;
-    uint32_t m_homrar = 0;
-    uint32_t m_missing = 0;
-    bool m_has_count = false;
+    bool m_has_maf = false;
+    bool m_has_ref_maf = false;
     bool m_clumped = false;
     bool m_valid = true;
     bool m_flipped = false;
-    // This indicate where this SNP's bound is at
-    // useful for PRSlice and also clumping
-    // thinking about it. Even if the location isn't given for
-    // PRSet or PRSlice, we can still use the coordinates from
-    // the target / reference file
     // the bound is [ )
     // prset related
     size_t m_max_flag_index = 0;

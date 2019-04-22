@@ -243,9 +243,8 @@ protected:
     inline void single_marker_freqs_and_hwe(
         uintptr_t unfiltered_sample_ctl2, uintptr_t* lptr,
         uintptr_t* sample_include2, uintptr_t* founder_include2,
-        uintptr_t* founder_ctrl_include2, uintptr_t* founder_case_include2,
         uintptr_t sample_ct, uint32_t* ll_ctp, uint32_t* lh_ctp,
-        uint32_t* hh_ctp, uint32_t sample_f_ct, uint32_t* ll_ctfp,
+        uint32_t* hh_ctp, uintptr_t sample_f_ct, uint32_t* ll_ctfp,
         uint32_t* lh_ctfp, uint32_t* hh_ctfp)
     {
         uint32_t tot_a = 0;
@@ -318,44 +317,6 @@ protected:
         *ll_ctfp = sample_f_ct - tot_a_f - *lh_ctfp;
     }
 
-
-    // now the function to calculate the MAF
-    // it also calculate HWE, but we will not provide such filtering
-    // for now (don't want to write this function for bgen)
-    void cal_maf_geno()
-    {
-        single_marker_freqs_and_hwe(
-            unfiltered_sample_ctv2, loadbuf, sample_include2, founder_include2,
-            founder_ctrl_include2, founder_case_include2, sample_ct, &ll_ct,
-            &lh_ct, &hh_ct, sample_f_ct, &ll_ctf, &lh_ctf, &hh_ctf);
-        uii = ll_ct + lh_ct + hh_ct;
-        if (!cur_oblig_missing) {
-            cur_genotyping_rate = ((int32_t) uii) * sample_ct_recip;
-        }
-        else
-        {
-            if (sample_ct - cur_oblig_missing) {
-                cur_genotyping_rate =
-                    ((int32_t) uii)
-                    / ((double) ((int32_t)(sample_ct - cur_oblig_missing)));
-            }
-            else
-            {
-                cur_genotyping_rate = 0;
-                nonmissing_rate_tot_max -= 1;
-            }
-        }
-        uii = 2 * (ll_ctf + lh_ctf + hh_ctf + maf_succ);
-        if (!uii) {
-            // avoid 0/0 division
-            set_allele_freqs[marker_uidx] = 0.5;
-        }
-        else
-        {
-            set_allele_freqs[marker_uidx] =
-                ((double) (2 * hh_ctf + lh_ctf + maf_succ)) / ((double) uii);
-        }
-    }
 };
 
 #endif
