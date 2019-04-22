@@ -59,6 +59,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_stat_is_beta, 1},
         {"fastscore", no_argument, &m_fastscore, 1},
+    {"full-back", required_argument, &m_full_background, 1},
         {"hard", no_argument, &m_target_is_hard_coded, 1},
         {"ignore-fid", no_argument, &m_ignore_fid, 1},
         {"index", no_argument, &m_input_is_index, 1},
@@ -73,7 +74,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"or", no_argument, &m_stat_is_or, 1},
         {"pearson", no_argument, &m_pearson, 1},
         {"print-snp", no_argument, &m_print_snp, 1},
-        {"full-back", required_argument, &m_full_background, 1},
+    {"use-ref-maf", no_argument, &m_use_ref_maf, 1},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
         {"A2", required_argument, nullptr, 0},
@@ -469,6 +470,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) message_store["nonfounders"] = "";
     if (m_pearson) message_store["pearson"] = "";
     if (m_print_snp) message_store["print-snp"] = "";
+    if(m_use_ref_maf) message_store["use-ref-maf"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -991,6 +993,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                            std::string& error_message)
 {
     bool error = false;
+    bool has_col = false;
+    size_t col_index;
     if (m_base_file.empty()) {
         error_message.append("Error: You must provide a base file\n");
         return false;
@@ -1040,8 +1044,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
             column_names[i] = std::to_string(i);
         }
     }
-    m_base_col_index[+BASE_INDEX::CHR] = index_check(m_chr, column_names);
-    if (m_base_col_index[+BASE_INDEX::CHR] != -1)
+    has_col = index_check(m_chr, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::CHR] = col_index;
+    m_base_has_col[+BASE_INDEX::CHR] = has_col;
+    if (has_col)
         message["chr"] = m_chr;
     else if (m_provided_chr_col)
     {
@@ -1049,9 +1055,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         message.erase("chr");
     }
 
-    m_base_col_index[+BASE_INDEX::REF] =
-        index_check(m_effect_allele, column_names);
-    if (m_base_col_index[+BASE_INDEX::REF] != -1)
+    has_col = index_check(m_effect_allele, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::REF] = col_index;
+    m_base_has_col[+BASE_INDEX::REF] =has_col;
+    if (has_col)
         message["A1"] = m_effect_allele;
     else if (m_provided_effect_allele)
     {
@@ -1059,9 +1066,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: " + m_effect_allele
                              + " not found in base file\n");
     }
-    m_base_col_index[+BASE_INDEX::ALT] =
-        index_check(m_non_effect_allele, column_names);
-    if (m_base_col_index[+BASE_INDEX::ALT] != -1)
+    has_col = index_check(m_non_effect_allele, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::ALT] = col_index;
+    m_base_has_col[+BASE_INDEX::ALT] = has_col;
+    if (has_col)
         message["A2"] = m_non_effect_allele;
     else if (m_provided_non_effect_allele)
     {
@@ -1069,25 +1077,30 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                              + " not found in base file\n");
         message.erase("A2");
     }
-    m_base_col_index[+BASE_INDEX::RS] = index_check(m_snp, column_names);
-    if (m_base_col_index[+BASE_INDEX::RS] != -1)
+    has_col = index_check(m_snp, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::RS] = col_index;
+    m_base_has_col[+BASE_INDEX::RS] = has_col;
+    if (has_col)
         message["snp"] = m_snp;
     else if (m_provided_snp_id)
     {
         error = true;
         error_message.append("Error: " + m_snp + " not found in base file\n");
     }
-    m_base_col_index[+BASE_INDEX::BP] = index_check(m_bp, column_names);
-    if (m_base_col_index[+BASE_INDEX::BP] != -1)
+    has_col = index_check(m_bp, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::BP] = col_index;
+    m_base_has_col[+BASE_INDEX::BP] = has_col;
+    if (has_col)
         message["bp"] = m_bp;
     else if (m_provided_bp)
     {
         error_message.append("Warning: " + m_bp + " not found in base file\n");
         message.erase("bp");
     }
-    m_base_col_index[+BASE_INDEX::SE] =
-        index_check(m_standard_error, column_names);
-    if (m_base_col_index[+BASE_INDEX::SE] != -1)
+    has_col = index_check(m_standard_error, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::SE] = col_index;
+    m_base_has_col[+BASE_INDEX::SE] = has_col;
+    if (has_col)
         message["se"] = m_standard_error;
     else if (m_provided_standard_error)
     {
@@ -1095,8 +1108,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                              + " not found in base file\n");
         message.erase("se");
     }
-    m_base_col_index[+BASE_INDEX::P] = index_check(m_p_value, column_names);
-    if (m_base_col_index[+BASE_INDEX::P] != -1)
+    has_col = index_check(m_p_value, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::P] =  col_index;
+    m_base_has_col[+BASE_INDEX::P] = has_col;
+    if (has_col)
         message["pvalue"] = m_p_value;
     else if (m_provided_p_value)
     {
@@ -1123,9 +1138,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: Statistic cannot be both OR and beta\n");
         error = true;
     }
-    m_base_col_index[+BASE_INDEX::STAT] =
-        index_check(m_statistic, column_names);
-    if (m_base_col_index[+BASE_INDEX::STAT] != -1)
+    has_col = index_check(m_statistic, column_names, col_index);
+    if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+    m_base_has_col[+BASE_INDEX::STAT] = has_col;
+    if (has_col)
         message["stat"] = m_statistic;
     else if (m_provided_statistic)
     {
@@ -1138,9 +1154,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         // and user allow default option
         if (m_stat_is_or) {
             // search for OR
-            m_base_col_index[+BASE_INDEX::STAT] =
-                index_check("OR", column_names);
-            if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
+            has_col = index_check("OR", column_names, col_index);
+            if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+            m_base_has_col[+BASE_INDEX::STAT] = has_col;
+            if (!has_col) {
                 error = true;
                 error_message.append("Error: Cannot find appropriate "
                                      "statistic column in base file!\n");
@@ -1153,9 +1170,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         else if (m_stat_is_beta)
         {
             // search for BETA
-            m_base_col_index[+BASE_INDEX::STAT] =
-                index_check("BETA", column_names);
-            if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
+            has_col = index_check("BETA", column_names, col_index);
+            if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+            m_base_has_col[+BASE_INDEX::STAT] = has_col;
+            if (!has_col) {
                 error = true;
                 error_message.append("Error: Cannot find appropriate "
                                      "statistic column in base file!\n");
@@ -1181,7 +1199,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                     or_found = true;
                     message["or"] = "";
                     message.erase("beta");
-                    m_base_col_index[+BASE_INDEX::STAT] = static_cast<int>(i);
+                    m_base_col_index[+BASE_INDEX::STAT] = i;
+                    m_base_has_col[+BASE_INDEX::STAT] = true;
                 }
                 else if (temp == "BETA")
                 {
@@ -1192,7 +1211,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                     message["beta"] = "";
                     beta_found = true;
                     message.erase("or");
-                    m_base_col_index[+BASE_INDEX::STAT] = static_cast<int>(i);
+                    m_base_col_index[+BASE_INDEX::STAT] = i;
+                    m_base_has_col[+BASE_INDEX::STAT] = true;
                 }
                 if (beta_found && or_found) {
                     error_message.append(
@@ -1208,7 +1228,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     }
 
     // Statistic is ok, but beta or or not provided
-    if (m_base_col_index[+BASE_INDEX::STAT] != -1) {
+    if (m_base_has_col[+BASE_INDEX::STAT]) {
         if (!m_stat_is_or && !m_stat_is_beta) {
             std::string stat_temp = m_statistic;
             std::transform(stat_temp.begin(), stat_temp.end(),
@@ -1225,30 +1245,30 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         }
     }
     // now check all required columns are here
-    if (m_base_col_index[+BASE_INDEX::P] == -1) {
+    if (!m_base_has_col[+BASE_INDEX::P]) {
         // we can actually losen this requirement if user doesn't
         // perform clumping and p-value thresholding
         error = true;
         error_message.append("Error: No p-value column (" + m_p_value
                              + ") in file!\n");
     }
-    if (m_base_col_index[+BASE_INDEX::STAT] == -1) {
+    if (!m_base_has_col[+BASE_INDEX::STAT]) {
         error = true;
         error_message.append("Error: No statistic column (" + m_statistic
                              + ") in file!\n");
     }
-    if (m_base_col_index[+BASE_INDEX::RS] == -1) {
+    if (!m_base_has_col[+BASE_INDEX::RS]) {
         error = true;
         error_message.append("Error: No SNP name column (" + m_snp
                              + ") in file!\n");
     }
-    if (m_base_col_index[+BASE_INDEX::REF] == -1) {
+    if (!m_base_has_col[+BASE_INDEX::REF]) {
         error = true;
         error_message.append("Error: No Reference allele column ("
                              + m_effect_allele + ") in file!\n");
     }
     // we don't need bp and chr as we can always get those from the bim file
-    int max_index =
+    size_t max_index =
         *max_element(m_base_col_index.begin(), m_base_col_index.end());
     m_base_col_index[+BASE_INDEX::MAX] = max_index;
     return !error;
@@ -1688,6 +1708,12 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
     // of thread used
     if (m_thread == 1) message["thread"] = "1";
     message["out"] = m_out_prefix;
+    if(m_use_ref_maf && !m_use_reference){
+        error= true;
+        // for now, force use_ref_maf to be used together with --ld.
+        // might be able to do otherwise, but that will be too troublesome
+        error_message.append("Error: Cannot use reference MAF for missingness imputation if reference file isn't used\n");
+    }
     return !error;
 }
 

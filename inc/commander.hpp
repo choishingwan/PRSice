@@ -54,7 +54,8 @@ public:
      * \brief Return the column index of the base file
      * \return The column index of the base
      */
-    std::vector<int> index() const { return m_base_col_index; }
+    std::vector<size_t> index() const { return m_base_col_index; }
+    std::vector<bool> has_col() const { return m_base_has_col; }
     /*!
      * \brief Get the base file name
      * \return Base file name
@@ -695,6 +696,7 @@ public:
                && m_provided_base_prevalence;
     }
 
+    bool use_ref_maf() const { return m_use_ref_maf; }
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -707,7 +709,8 @@ private:
     std::vector<double> m_prevalence;
     std::vector<uint32_t> m_col_index_of_cov;
     std::vector<uint32_t> m_col_index_of_factor_cov;
-    std::vector<int> m_base_col_index;
+    std::vector<size_t> m_base_col_index;
+    std::vector<bool> m_base_has_col;
     std::vector<bool> m_is_binary;
     std::string m_target_file = "";
     std::string m_target_file_list = "";
@@ -773,25 +776,26 @@ private:
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
-    int m_keep_ambig = false;
-    int m_no_regress = false;
+    int m_allow_inter = false;
     int m_fastscore = false;
+    int m_full_background = false;
+    int m_ignore_fid = false;
+    int m_include_nonfounders = false;
+    int m_input_is_index = false;
+    int m_keep_ambig = false;
+    int m_logit_perm = false;
+    int m_no_clump = false;
     int m_no_full = false;
+    int m_no_regress = false;
+    int m_non_cumulate_prs = false;
+    int m_pearson = false;
+    int m_print_all_scores = false;
+    int m_print_snp = false;
     int m_stat_is_beta = false;
     int m_stat_is_or = false;
     int m_target_is_hard_coded = false;
-    int m_input_is_index = false;
     int m_user_no_default = false;
-    int m_no_clump = false;
-    int m_non_cumulate_prs = false;
-    int m_print_all_scores = false;
-    int m_ignore_fid = false;
-    int m_logit_perm = false;
-    int m_pearson = false;
-    int m_print_snp = false;
-    int m_include_nonfounders = false;
-    int m_allow_inter = false;
-    int m_full_background = false;
+    int m_use_ref_maf = false;
     bool m_use_reference = false;
     bool m_ref_list_provided = false;
     bool m_provided_seed = false;
@@ -1464,15 +1468,16 @@ private:
      * \return the index to the column containing the column name. -1 if it is
      * not found
      */
-    inline int index_check(const std::string& target,
-                           const std::vector<std::string>& ref) const
+    inline bool index_check(const std::string& target,
+                           const std::vector<std::string>& ref,
+                           size_t& index) const
     {
-        for (std::vector<int>::size_type i = 0; i < ref.size(); ++i) {
+        for (size_t i = 0; i < ref.size(); ++i) {
             if (target == ref[i]) {
-                return static_cast<int>(i);
+                return index = i;
             }
         }
-        return -1;
+        return false;
     }
 
     // return true if ok
@@ -1480,8 +1485,11 @@ private:
                                         std::string& error_message)
     {
         std::vector<std::string> info = misc::split(m_info_col, ",");
-        m_base_col_index[+BASE_INDEX::INFO] = index_check(info[0], ref);
-        if (m_base_col_index[+BASE_INDEX::INFO] == -1) {
+        size_t index;
+        bool contain =  index_check(info[0], ref, index);
+        m_base_has_col[+BASE_INDEX::INFO] = contain;
+        if(contain) m_base_col_index[+BASE_INDEX::INFO] = index;
+        if (!contain) {
             error_message.append("Error: INFO field not found in base file\n");
             return false;
         }
@@ -1522,12 +1530,15 @@ private:
             return false;
         }
         bool control = true;
+        size_t index =0;
+        bool contain = false;
         for (auto&& maf : case_control) {
             std::vector<std::string> detail = misc::split(maf, ",");
             if (control) {
-                m_base_col_index[+BASE_INDEX::MAF] =
-                    index_check(detail[0], ref);
-                if (m_base_col_index[+BASE_INDEX::INFO] == -1) {
+                contain = index_check(detail[0], ref, index);
+                m_base_has_col[+BASE_INDEX::MAF] = contain;
+                if(contain) m_base_col_index[+BASE_INDEX::MAF] = index;
+                if (!contain) {
                     error_message.append(
                         "Error: MAF field not found in base file\n");
                     return false;
@@ -1535,9 +1546,10 @@ private:
             }
             else
             {
-                m_base_col_index[+BASE_INDEX::MAF_CASE] =
-                    index_check(detail[0], ref);
-                if (m_base_col_index[+BASE_INDEX::MAF_CASE] == -1) {
+                contain =  index_check(detail[0], ref, index);
+                if(contain)m_base_col_index[+BASE_INDEX::MAF_CASE] = index;
+                m_base_has_col[+BASE_INDEX::MAF_CASE] = contain;
+                if (!contain) {
                     error_message.append(
                         "Error: Case MAF field not found in base file\n");
                     return false;
