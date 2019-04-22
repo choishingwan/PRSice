@@ -1905,11 +1905,12 @@ bool Commander::target_check(std::map<std::string, std::string>& message,
         }
     }
     // check if we have sufficient amount of prevalence info
+    size_t num_bin = 0;
+    for (auto binary : m_is_binary) {
+        if (binary) num_bin++;
+    }
+
     if (!m_prevalence.empty()) {
-        size_t num_bin = 0;
-        for (auto binary : m_is_binary) {
-            if (binary) num_bin++;
-        }
         if (num_bin != m_prevalence.size()) // need to be all or nothing
         {
             error = true;
