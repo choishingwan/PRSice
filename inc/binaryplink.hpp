@@ -79,7 +79,8 @@ protected:
                    const bool /*info_filter*/, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
     void gen_snp_vector(const std::string& out_prefix,
-                   cgranges_t* exclusion_regions, Genotype* target = nullptr);
+                        cgranges_t* exclusion_regions,
+                        Genotype* target = nullptr);
     /*!
      * \brief This function is use to check the bed version. Most importantly,
      *        this should give the correct bed_offset for file reading
@@ -318,7 +319,6 @@ protected:
         *lh_ctfp = tot_b_f - tot_c_f;
         *ll_ctfp = sample_f_ct - tot_a_f - *lh_ctfp;
     }
-
 };
 
 #endif

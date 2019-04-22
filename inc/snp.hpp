@@ -36,8 +36,8 @@ public:
     SNP(const std::string& rs_id, const int chr, const int loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
-        const int homcom_ct, const int het_ct,
-        const int homrar_ct, const int missing)
+        const int homcom_ct, const int het_ct, const int homrar_ct,
+        const int missing)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -72,8 +72,8 @@ public:
 
     SNP(const std::string& rs_id, const int chr, const int loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const double& stat, const double& p_value,
-        const int category, const double p_threshold)
+        const double& stat, const double& p_value, const int category,
+        const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -98,8 +98,8 @@ public:
      * \param p_threshold is the p-value threshold this SNP fall into
      */
     void set_statistic(const double& stat, const double& p_value,
-                       const double& se, const double& maf,
-                       const int category, const double p_threshold)
+                       const double& se, const double& maf, const int category,
+                       const double p_threshold)
     {
         m_stat = stat;
         m_p_value = p_value;
@@ -127,15 +127,15 @@ public:
         m_ref_byte_pos = ref_byte_pos;
     }
     void add_target(const std::string& target_file,
-                       const std::streampos target_byte_pos)
+                    const std::streampos target_byte_pos)
     {
         m_target_file = target_file;
         m_target_byte_pos = target_byte_pos;
     }
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos,
-                       const int32_t homcom, const int32_t het,
-                       const int32_t homrar, const int32_t missing)
+                       const std::streampos ref_byte_pos, const int32_t homcom,
+                       const int32_t het, const int32_t homrar,
+                       const int32_t missing)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
@@ -391,7 +391,7 @@ public:
         m_has_count = true;
     }
     void set_ref_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing)
+                        uint32_t& missing)
     {
         m_ref_homcom = homcom;
         m_ref_het = het;
@@ -454,7 +454,8 @@ private:
         if (allele == "A") return "T";
         if (allele == "T") return "A";
         if (allele == "G") return "C";
-        if (allele == "C") return "G";
+        if (allele == "C")
+            return "G";
         else
             return allele; // Cannot flip, so will just return it as is
     }

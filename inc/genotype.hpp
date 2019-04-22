@@ -486,18 +486,17 @@ public:
      * \return the ith SNP object
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
-    void read_base(const std::string &base_file,
-                   const std::vector<size_t> &col_index,
-                   const std::vector<bool> &has_col,
-                   const std::vector<double> &barlevels,
-                   const double& bound_start, const double &bound_inter,
+    void read_base(const std::string& base_file,
+                   const std::vector<size_t>& col_index,
+                   const std::vector<bool>& has_col,
+                   const std::vector<double>& barlevels,
+                   const double& bound_start, const double& bound_inter,
                    const double& bound_end, const double& maf_control,
                    const double& maf_case, const double& info_threshold,
                    const bool maf_control_filter, const bool maf_case_filter,
                    const bool info_filter, const bool fastscore,
-                   const bool no_full, const bool is_beta,
-                   const bool is_index, const bool keep_ambig,
-                   Reporter& reporter);
+                   const bool no_full, const bool is_beta, const bool is_index,
+                   const bool keep_ambig, Reporter& reporter);
 
 protected:
     // friend with all child class so that they can also access the
@@ -693,10 +692,10 @@ protected:
         return std::vector<SNP>(0);
     }
 
-    virtual void
-    gen_snp_vector(const std::string& /*out_prefix*/,
-                   cgranges_t* /*exclusion*/, Genotype* /*target*/)
-    {}
+    virtual void gen_snp_vector(const std::string& /*out_prefix*/,
+                                cgranges_t* /*exclusion*/, Genotype* /*target*/)
+    {
+    }
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
      * subclass must implement this function to assist the processing of their

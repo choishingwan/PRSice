@@ -35,18 +35,15 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::read_base(const std::string &base_file,
-                         const std::vector<size_t> &col_index,
-                         const std::vector<bool> &has_col,
-                         const std::vector<double> &barlevels,
-                         const double& bound_start, const double &bound_inter,
-                         const double& bound_end, const double& maf_control,
-                         const double& maf_case, const double& info_threshold,
-                         const bool maf_control_filter, const bool maf_case_filter,
-                         const bool info_filter, const bool fastscore,
-                         const bool no_full, const bool is_beta,
-                         const bool is_index, const bool keep_ambig,
-                         Reporter& reporter)
+void Genotype::read_base(
+    const std::string& base_file, const std::vector<size_t>& col_index,
+    const std::vector<bool>& has_col, const std::vector<double>& barlevels,
+    const double& bound_start, const double& bound_inter,
+    const double& bound_end, const double& maf_control, const double& maf_case,
+    const double& info_threshold, const bool maf_control_filter,
+    const bool maf_case_filter, const bool info_filter, const bool fastscore,
+    const bool no_full, const bool is_beta, const bool is_index,
+    const bool keep_ambig, Reporter& reporter)
 {
     // can assume region is of the same order as m_existed_snp
     // because they use the same chr encoding and similar sorting algorithm
@@ -74,7 +71,9 @@ void Genotype::read_base(const std::string &base_file,
             throw std::runtime_error(error_message);
         }
         gz_input = true;
-    }else{
+    }
+    else
+    {
         snp_file.open(base_file.c_str());
         if (!snp_file.is_open()) {
             std::string error_message =
@@ -169,8 +168,7 @@ void Genotype::read_base(const std::string &base_file,
         }
 
         rs_id = token[col_index[+BASE_INDEX::RS]];
-        if ( dup_index.find(rs_id) == dup_index.end())
-        {
+        if (dup_index.find(rs_id) == dup_index.end()) {
             // if this is not a duplicated SNP
             dup_index.insert(rs_id);
             chr_code = -1;
@@ -330,8 +328,8 @@ void Genotype::read_base(const std::string &base_file,
             stat = 0.0;
             try
             {
-                stat = misc::convert<double>(
-                    token[col_index[+BASE_INDEX::STAT]]);
+                stat =
+                    misc::convert<double>(token[col_index[+BASE_INDEX::STAT]]);
                 if (stat < 0 && !is_beta) {
                     num_negative_stat++;
                     exclude = true;
@@ -385,10 +383,9 @@ void Genotype::read_base(const std::string &base_file,
                 }
                 // now add SNP
                 m_existed_snps.emplace_back(SNP(rs_id, chr_code, loc,
-                                                ref_allele, alt_allele,
-                                                stat, pvalue, category,
-                                                pthres));
-                m_existed_snps_index[rs_id] = m_existed_snps.size()-1;
+                                                ref_allele, alt_allele, stat,
+                                                pvalue, category, pthres));
+                m_existed_snps_index[rs_id] = m_existed_snps.size() - 1;
             }
         }
         else
@@ -455,7 +452,6 @@ void Genotype::read_base(const std::string &base_file,
         throw std::runtime_error("Error: No valid variant remaining");
     }
     m_num_threshold = static_cast<uint32_t>(unique_thresholds.size());
-
 }
 
 
@@ -737,8 +733,9 @@ void Genotype::load_samples(const std::string& keep_file,
 
 
 void Genotype::load_snps(const std::string& out, const std::string& exclude,
-                         const std::string& extract, cgranges_t* exclusion_region,
-                         bool verbose, Reporter& reporter, Genotype* target)
+                         const std::string& extract,
+                         cgranges_t* exclusion_region, bool verbose,
+                         Reporter& reporter, Genotype* target)
 {
 
     if (!m_is_ref) {

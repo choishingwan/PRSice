@@ -59,7 +59,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_stat_is_beta, 1},
         {"fastscore", no_argument, &m_fastscore, 1},
-    {"full-back", required_argument, &m_full_background, 1},
+        {"full-back", required_argument, &m_full_background, 1},
         {"hard", no_argument, &m_target_is_hard_coded, 1},
         {"ignore-fid", no_argument, &m_ignore_fid, 1},
         {"index", no_argument, &m_input_is_index, 1},
@@ -74,7 +74,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"or", no_argument, &m_stat_is_or, 1},
         {"pearson", no_argument, &m_pearson, 1},
         {"print-snp", no_argument, &m_print_snp, 1},
-    {"use-ref-maf", no_argument, &m_use_ref_maf, 1},
+        {"use-ref-maf", no_argument, &m_use_ref_maf, 1},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
         {"A2", required_argument, nullptr, 0},
@@ -470,7 +470,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) message_store["nonfounders"] = "";
     if (m_pearson) message_store["pearson"] = "";
     if (m_print_snp) message_store["print-snp"] = "";
-    if(m_use_ref_maf) message_store["use-ref-maf"] = "";
+    if (m_use_ref_maf) message_store["use-ref-maf"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -1045,7 +1045,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         }
     }
     has_col = index_check(m_chr, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::CHR] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::CHR] = col_index;
     m_base_has_col[+BASE_INDEX::CHR] = has_col;
     if (has_col)
         message["chr"] = m_chr;
@@ -1056,8 +1056,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     }
 
     has_col = index_check(m_effect_allele, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::REF] = col_index;
-    m_base_has_col[+BASE_INDEX::REF] =has_col;
+    if (has_col) m_base_col_index[+BASE_INDEX::REF] = col_index;
+    m_base_has_col[+BASE_INDEX::REF] = has_col;
     if (has_col)
         message["A1"] = m_effect_allele;
     else if (m_provided_effect_allele)
@@ -1067,7 +1067,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                              + " not found in base file\n");
     }
     has_col = index_check(m_non_effect_allele, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::ALT] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::ALT] = col_index;
     m_base_has_col[+BASE_INDEX::ALT] = has_col;
     if (has_col)
         message["A2"] = m_non_effect_allele;
@@ -1078,7 +1078,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         message.erase("A2");
     }
     has_col = index_check(m_snp, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::RS] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::RS] = col_index;
     m_base_has_col[+BASE_INDEX::RS] = has_col;
     if (has_col)
         message["snp"] = m_snp;
@@ -1088,7 +1088,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: " + m_snp + " not found in base file\n");
     }
     has_col = index_check(m_bp, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::BP] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::BP] = col_index;
     m_base_has_col[+BASE_INDEX::BP] = has_col;
     if (has_col)
         message["bp"] = m_bp;
@@ -1098,7 +1098,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         message.erase("bp");
     }
     has_col = index_check(m_standard_error, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::SE] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::SE] = col_index;
     m_base_has_col[+BASE_INDEX::SE] = has_col;
     if (has_col)
         message["se"] = m_standard_error;
@@ -1109,7 +1109,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         message.erase("se");
     }
     has_col = index_check(m_p_value, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::P] =  col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::P] = col_index;
     m_base_has_col[+BASE_INDEX::P] = has_col;
     if (has_col)
         message["pvalue"] = m_p_value;
@@ -1139,7 +1139,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error = true;
     }
     has_col = index_check(m_statistic, column_names, col_index);
-    if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+    if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
     m_base_has_col[+BASE_INDEX::STAT] = has_col;
     if (has_col)
         message["stat"] = m_statistic;
@@ -1155,7 +1155,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         if (m_stat_is_or) {
             // search for OR
             has_col = index_check("OR", column_names, col_index);
-            if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+            if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
             m_base_has_col[+BASE_INDEX::STAT] = has_col;
             if (!has_col) {
                 error = true;
@@ -1171,7 +1171,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         {
             // search for BETA
             has_col = index_check("BETA", column_names, col_index);
-            if(has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
+            if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
             m_base_has_col[+BASE_INDEX::STAT] = has_col;
             if (!has_col) {
                 error = true;
@@ -1708,11 +1708,12 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
     // of thread used
     if (m_thread == 1) message["thread"] = "1";
     message["out"] = m_out_prefix;
-    if(m_use_ref_maf && !m_use_reference){
-        error= true;
+    if (m_use_ref_maf && !m_use_reference) {
+        error = true;
         // for now, force use_ref_maf to be used together with --ld.
         // might be able to do otherwise, but that will be too troublesome
-        error_message.append("Error: Cannot use reference MAF for missingness imputation if reference file isn't used\n");
+        error_message.append("Error: Cannot use reference MAF for missingness "
+                             "imputation if reference file isn't used\n");
     }
     return !error;
 }

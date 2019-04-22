@@ -75,17 +75,15 @@ int main(int argc, char* argv[])
             target_file = factory.createGenotype(commander, reporter);
             // load base file into memory
             target_file->read_base(
-                        commander.base_name(),commander.index(),
-                        commander.has_col(),
-                        commander.bar_levels(), commander.lower(), commander.inter(),
-                        commander.upper(), commander.maf_base_control(),
-                        commander.maf_base_case(), commander.base_info_score(),
-                        commander.perform_maf_base_control_filter(),
-                        commander.perform_maf_base_case_filter(),
-                        commander.perform_base_info_score_filter(),
-                        commander.fastscore(), commander.no_full(), commander.beta(),
-                        commander.is_index(), commander.keep_ambig(),
-                        reporter);
+                commander.base_name(), commander.index(), commander.has_col(),
+                commander.bar_levels(), commander.lower(), commander.inter(),
+                commander.upper(), commander.maf_base_control(),
+                commander.maf_base_case(), commander.base_info_score(),
+                commander.perform_maf_base_control_filter(),
+                commander.perform_maf_base_case_filter(),
+                commander.perform_base_info_score_filter(),
+                commander.fastscore(), commander.no_full(), commander.beta(),
+                commander.is_index(), commander.keep_ambig(), reporter);
             // then we will read in the sample information
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,

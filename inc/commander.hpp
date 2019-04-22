@@ -697,6 +697,7 @@ public:
     }
 
     bool use_ref_maf() const { return m_use_ref_maf; }
+
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -1469,8 +1470,8 @@ private:
      * not found
      */
     inline bool index_check(const std::string& target,
-                           const std::vector<std::string>& ref,
-                           size_t& index) const
+                            const std::vector<std::string>& ref,
+                            size_t& index) const
     {
         for (size_t i = 0; i < ref.size(); ++i) {
             if (target == ref[i]) {
@@ -1486,9 +1487,9 @@ private:
     {
         std::vector<std::string> info = misc::split(m_info_col, ",");
         size_t index;
-        bool contain =  index_check(info[0], ref, index);
+        bool contain = index_check(info[0], ref, index);
         m_base_has_col[+BASE_INDEX::INFO] = contain;
-        if(contain) m_base_col_index[+BASE_INDEX::INFO] = index;
+        if (contain) m_base_col_index[+BASE_INDEX::INFO] = index;
         if (!contain) {
             error_message.append("Error: INFO field not found in base file\n");
             return false;
@@ -1530,14 +1531,14 @@ private:
             return false;
         }
         bool control = true;
-        size_t index =0;
+        size_t index = 0;
         bool contain = false;
         for (auto&& maf : case_control) {
             std::vector<std::string> detail = misc::split(maf, ",");
             if (control) {
                 contain = index_check(detail[0], ref, index);
                 m_base_has_col[+BASE_INDEX::MAF] = contain;
-                if(contain) m_base_col_index[+BASE_INDEX::MAF] = index;
+                if (contain) m_base_col_index[+BASE_INDEX::MAF] = index;
                 if (!contain) {
                     error_message.append(
                         "Error: MAF field not found in base file\n");
@@ -1546,8 +1547,8 @@ private:
             }
             else
             {
-                contain =  index_check(detail[0], ref, index);
-                if(contain)m_base_col_index[+BASE_INDEX::MAF_CASE] = index;
+                contain = index_check(detail[0], ref, index);
+                if (contain) m_base_col_index[+BASE_INDEX::MAF_CASE] = index;
                 m_base_has_col[+BASE_INDEX::MAF_CASE] = contain;
                 if (!contain) {
                     error_message.append(
