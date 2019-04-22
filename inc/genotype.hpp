@@ -128,6 +128,11 @@ public:
                    bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
+    // do a quick filtering before we actually read in and process the genotypes
+    void load_snps(const std::string& out, const std::string& exclude,
+                   const std::string& extract, cgranges_t* exclusion_region,
+                   bool verbose, Reporter& reporter, Genotype* target);
+
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -481,8 +486,18 @@ public:
      * \return the ith SNP object
      */
     SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
-    void cache_base_snps(const std::string& base_name, const int snp_index,
-                         Reporter& reporter);
+    void read_base(const std::string &base_file,
+                   const std::vector<size_t> &col_index,
+                   const std::vector<bool> &has_col,
+                   const std::vector<double> &barlevels,
+                   const double& bound_start, const double &bound_inter,
+                   const double& bound_end, const double& maf_control,
+                   const double& maf_case, const double& info_threshold,
+                   const bool maf_control_filter, const bool maf_case_filter,
+                   const bool info_filter, const bool fastscore,
+                   const bool no_full, const bool is_beta,
+                   const bool is_index, const bool keep_ambig,
+                   Reporter& reporter);
 
 protected:
     // friend with all child class so that they can also access the
@@ -493,6 +508,7 @@ protected:
     // std::vector<Sample> m_sample_names;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
+    std::unordered_map<std::string, std::streampos> m_valid_snp_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
     std::unordered_set<std::string> m_snp_in_base;
@@ -559,33 +575,10 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
-    bool m_has_se = false;
-    bool m_has_maf = false;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
-    /*!
-     * \brief This function is responsible for calculating the null beta and
-     * remove it from the observed betas
-     * \param maf is a vector containing the MAF_Store object.
-     * \param cur_index is the current index on the vector
-     * \param seed_store is a seed storage. Different seed is use for different
-     * maf bin
-     * \param prevalence is the prevalence of the trait. Has no use for now
-     * \param num_perm is the number of permutation to perform
-     * \param num_sample is the number of sample in the base sample
-     * \param num_case is the number of cases in the base data
-     * \param num_control is the number of control in the base data
-     * \param is_case_control is a boolean indicate if base is case control
-     */
-    void
-    adjust_beta(std::vector<MAF_Store>& maf,
-                std::vector<MAF_Store>::size_type& cur_index,
-                const std::unordered_map<int, std::random_device::result_type>&
-                    seed_store,
-                const double& prevalence, const size_t& num_perm,
-                const size_t& num_sample, const size_t& num_case,
-                const size_t& num_control, bool is_case_control);
+
     /*!
      * \brief Calculate the threshold bin based on the p-value and bound
      * info \param pvalue the input p-value \param bound_start is the start
@@ -699,6 +692,11 @@ protected:
     {
         return std::vector<SNP>(0);
     }
+
+    virtual void
+    gen_snp_vector(const std::string& /*out_prefix*/,
+                   cgranges_t* /*exclusion*/, Genotype* /*target*/)
+    {}
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
      * subclass must implement this function to assist the processing of their

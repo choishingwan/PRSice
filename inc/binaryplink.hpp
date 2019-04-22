@@ -48,6 +48,7 @@ public:
     ~BinaryPlink();
 
 protected:
+    std::vector<uintptr_t> m_sample_mask;
     std::string m_cur_file;
     std::ifstream m_bed_file;
     std::streampos m_prev_loc = 0;
@@ -77,7 +78,8 @@ protected:
                    const bool /*hard_coded*/, const double& /*info_threshold*/,
                    const bool /*info_filter*/, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
-
+    void gen_snp_vector(const std::string& out_prefix,
+                   cgranges_t* exclusion_regions, Genotype* target = nullptr);
     /*!
      * \brief This function is use to check the bed version. Most importantly,
      *        this should give the correct bed_offset for file reading

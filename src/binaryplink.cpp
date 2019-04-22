@@ -232,7 +232,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 
     famfile.close();
     // initialize the m_tmp_genotype vector
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
+    m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
     // m_prs_info.reserve(m_sample_ct);
     // now we add the prs information. For some reason, we can't do a simple
     // reserve
@@ -245,11 +246,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 }
 
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(
-    const std::string& out_prefix, const double& maf_threshold,
-    const bool maf_filter, const double& geno_threshold, const bool geno_filter,
-    const double&, const bool, const double&, const bool,
-    cgranges_t* exclusion_regions, Genotype* target)
+std::vector<SNP> BinaryPlink::gen_snp_vector(const std::string& out_prefix, const double& maf_threshold, const bool maf_filter, const double& geno_threshold, const bool geno_filter, const double &, const bool, const double &, const bool, cgranges_t* exclusion_regions,  Genotype* target)
 {
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -280,14 +277,16 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
     uint32_t lh_ctf = 0;
     uint32_t hh_ctf = 0;
     uint32_t uii = 0;
+    int missing = 0;
 
     int chr_code = 0;
     int prev_snp_processed = 0, num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
          prev_chr_error = false, has_count = false, dummy, to_remove = false;
+
     // initialize the sample inclusion mask
-    std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
-    std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
+    std::vector<uintptr_t>sample_include2(unfiltered_sample_ctv2);
+    std::vector<uintptr_t>founder_include2(unfiltered_sample_ctv2);
     // fill it with the required mask (copy from PLINK2)
     init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
                                sample_include2.data());
@@ -504,6 +503,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                     uii = ll_ct + lh_ct + hh_ct;
                     cur_geno = (static_cast<int32_t>(uii)) * sample_ct_recip;
                     uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
+                    missing = m_founder_ct -(ll_ctf + lh_ctf + hh_ctf);
                     if (!uii) {
                         cur_maf = 0.5;
                     }
@@ -548,7 +548,8 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                         snp_info.emplace_back(SNP(bim_token[+BIM::RS], chr_code,
                                                   loc, bim_token[+BIM::A1],
                                                   bim_token[+BIM::A2], prefix,
-                                                  byte_pos, cur_maf));
+                                                  byte_pos, ll_ctf, lh_ctf, hh_ctf,
+                                missing));
                     else
                         snp_info.emplace_back(SNP(bim_token[+BIM::RS], chr_code,
                                                   loc, bim_token[+BIM::A1],
@@ -616,7 +617,7 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
                         // target
                         if(has_count)
                         target->m_existed_snps[target_index].add_reference(
-                            prefix, byte_pos, cur_maf);
+                            prefix, byte_pos, ll_ctf, lh_ctf, hh_ctf, missing);
                         else
                             target->m_existed_snps[target_index].add_reference(
                                 prefix, byte_pos);
@@ -687,6 +688,331 @@ std::vector<SNP> BinaryPlink::gen_snp_vector(
     // mismatch_snp_record will close itself when it goes out of scope
     return snp_info;
 }
+
+
+void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
+                                             cgranges_t* exclusion_regions,Genotype* target)
+{
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    std::unordered_set<std::string> duplicated_snp;
+    std::vector<std::string> bim_token;
+    std::vector<bool> retain_snp;
+    if (m_is_ref) retain_snp.resize(target->m_existed_snps.size(), false);
+    else retain_snp.resize(m_existed_snps.size(), false);
+    std::ifstream bim;
+    std::ofstream mismatch_snp_record;
+    std::string bim_name, bed_name, chr, line;
+    std::string prev_chr = "", error_message = "";
+    std::string mismatch_snp_record_name = out_prefix + ".mismatch";
+    std::streampos byte_pos;
+    // temp holder for region match
+    int64_t *b = nullptr, max_b = 0;
+    size_t num_retained = 0;
+    size_t num_match = 0;
+    int chr_code = 0;
+    int num_snp_read = -1;
+    bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
+         prev_chr_error = false, flipping = false, to_remove = false;
+    uintptr_t bed_offset;
+    for (auto prefix : m_genotype_files) {
+        // go through each genotype file
+        bim_name = prefix + ".bim";
+        bed_name = prefix + ".bed";
+        // make sure we reset the flag of the ifstream by closing it before use
+        if (bim.is_open()) bim.close();
+        bim.clear();
+        bim.open(bim_name.c_str());
+        if (!bim.is_open()) {
+            std::string error_message =
+                "Error: Cannot open bim file: " + bim_name;
+            throw std::runtime_error(error_message);
+        }
+        // First pass, get the number of marker in bed & bim
+        // as we want the number, num_snp_read will start at 0
+        num_snp_read = 0;
+        prev_chr = "";
+        while (std::getline(bim, line)) {
+            misc::trim(line);
+            if (line.empty()) continue;
+            // don't bother to check, if the
+            // bim file is malformed i.e. with less than 6
+            // column. It will likely be captured when we do
+            // size check and when we do the reading later on
+            ++num_snp_read;
+        }
+        bim.clear();
+        bim.seekg(0, bim.beg);
+        // check if the bed file is valid
+        check_bed(bed_name, static_cast<size_t>(num_snp_read), bed_offset);
+        // now go through the bim file and perform filtering
+        num_snp_read = 0;
+        while (std::getline(bim, line)) {
+            misc::trim(line);
+            if (line.empty()) continue;
+            // we need to remember the actual number read is num_snp_read+1
+            ++num_snp_read;
+            bim_token = misc::split(line);
+            if (bim_token.size() < 6) {
+                std::string error_message =
+                    "Error: Malformed bim file. Less than 6 column on "
+                    "line: "
+                    + misc::to_string(num_snp_read) + "\n";
+                throw std::runtime_error(error_message);
+            }
+            if (m_is_ref) {
+                // for the reference panel
+                if (target->m_existed_snps_index.find(bim_token[+BIM::RS])
+                    == target->m_existed_snps_index.end())
+                {
+                    // Skip SNPs not found in the target file
+                    continue;
+                }
+            }
+            // ensure all alleles are capitalized for easy matching
+            std::transform(bim_token[+BIM::A1].begin(),
+                           bim_token[+BIM::A1].end(),
+                           bim_token[+BIM::A1].begin(), ::toupper);
+            std::transform(bim_token[+BIM::A2].begin(),
+                           bim_token[+BIM::A2].end(),
+                           bim_token[+BIM::A2].begin(), ::toupper);
+
+            // exclude SNPs that are not required
+            if (!m_is_ref) {
+                // don't bother doing it when reading reference genome
+                // as all SNPs should have been removed in target
+                if (!m_exclude_snp
+                    && m_snp_selection_list.find(bim_token[+BIM::RS])
+                           == m_snp_selection_list.end())
+                {
+                    continue;
+                }
+                else if (m_exclude_snp
+                         && m_snp_selection_list.find(bim_token[+BIM::RS])
+                                != m_snp_selection_list.end())
+                {
+                    continue;
+                }
+                // ignore any SNPs not found in base file
+                if (m_existed_snps_index.find(bim_token[+BIM::RS])
+                    == m_existed_snps_index.end())
+                {
+                    continue;
+                }
+            }
+
+            // read in the chromosome string
+            chr = bim_token[+BIM::CHR];
+            // check if this is a new chromosome. If this is a new chromosome,
+            // check if we want to remove it
+            if (chr != prev_chr) {
+                // get the chromosome code using PLINK 2 function
+                chr_code = get_chrom_code_raw(chr.c_str());
+                // check if we want to skip this chromosome
+                if (chr_code_check(chr_code, chr_sex_error, chr_error,
+                                   error_message))
+                {
+                    // only print chr error message if we haven't already
+                    if (chr_error && !prev_chr_error) {
+                        std::cerr << error_message << "\n";
+                        prev_chr_sex_error = chr_error;
+                    }
+                    // only print sex chr error message if we haven't already
+                    else if (chr_sex_error && !prev_chr_sex_error)
+                    {
+                        std::cerr << error_message << "\n";
+                        prev_chr_sex_error = chr_sex_error;
+                    }
+                    continue;
+                }
+                // only update the prev_chr after we have done the checking
+                // this will help us to continue to skip all SNPs that are
+                // supposed to be removed instead of the first entry
+                prev_chr = chr;
+            }
+
+            // now read in the coordinate
+            int loc = -1;
+            try
+            {
+                loc = misc::convert<int>(bim_token[+BIM::BP]);
+                if (loc < 0) {
+                    // coordinate must >= 0
+                    std::string error_message =
+                        "Error: SNP with negative corrdinate: "
+                        + bim_token[+BIM::RS] + ":" + bim_token[+BIM::BP]
+                        + "\n";
+                    error_message.append(
+                        "Please check you have the correct input");
+                    throw std::runtime_error(error_message);
+                }
+            }
+            catch (...)
+            {
+                std::string error_message =
+                    "Error: SNP with non-numeric corrdinate: "
+                    + bim_token[+BIM::RS] + ":" + bim_token[+BIM::BP] + "\n";
+                error_message.append("Please check you have the correct input");
+                throw std::runtime_error(error_message);
+            }
+            // check if we want to exclude this SNP because this fall within the
+            // exclusion region(s)
+            to_remove =
+                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
+                           loc - 1, loc + 1, &b, &max_b);
+            free(b);
+            // this is included in one of the exclusion region
+            if (to_remove) continue;
+            // check if this is a duplicated SNP
+            if (m_existed_snps_index.find(bim_token[+BIM::RS])
+                != m_existed_snps_index.end())
+            {
+                duplicated_snp.insert(bim_token[+BIM::RS]);
+            }
+            else if (!ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2])
+                     || m_keep_ambig)
+            {
+                // if the SNP is not ambiguous (or if we want to keep ambiguous
+                // SNPs), we will start processing the bed file (if required)
+
+                // now read in the binary information and determine if we
+                // want to keep this SNP only do the filtering if we need to
+                // as my current implementation isn't as efficient as PLINK
+                m_num_ambig +=
+                    ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
+                auto && compare_to= (m_is_ref)? target : this;
+                auto&& ref_index = compare_to->m_existed_snps_index[bim_token[+BIM::RS]];
+                    if (!compare_to->m_existed_snps[ref_index].matching(
+                            chr_code, loc, bim_token[+BIM::A1],
+                            bim_token[+BIM::A2], flipping))
+                    {
+                        // mismatch found between base target and reference
+                        if (!mismatch_snp_record.is_open()) {
+                            // open the file accordingly
+                            if (m_mismatch_file_output) {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str(),
+                                    std::ofstream::app);
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to "
+                                        "write: "
+                                        + mismatch_snp_record_name));
+                                }
+                            }
+                            else
+                            {
+                                mismatch_snp_record.open(
+                                    mismatch_snp_record_name.c_str());
+                                if (!mismatch_snp_record.is_open()) {
+                                    throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to "
+                                        "write: "
+                                        + mismatch_snp_record_name));
+                                }
+                                mismatch_snp_record
+                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                       "File\tBP_Target\tBP_File\tA1_"
+                                       "Target\tA1_File\tA2_Target\tA2_"
+                                       "File\n";
+                            }
+                        }
+                        m_mismatch_file_output = true;
+                        if(m_is_ref){
+                        mismatch_snp_record
+                            << "Reference\t" << bim_token[+BIM::RS] << "\t"
+                            << target->m_existed_snps[ref_index].chr()
+                            << "\t" << chr_code << "\t"
+                            << target->m_existed_snps[ref_index].loc()
+                            << "\t" << loc << "\t"
+                            << target->m_existed_snps[ref_index].ref()
+                            << "\t" << bim_token[+BIM::A1] << "\t"
+                            << target->m_existed_snps[ref_index].alt()
+                            << "\t" << bim_token[+BIM::A2] << "\n";
+                        m_num_ref_target_mismatch++;
+                        }else{
+                            mismatch_snp_record
+                                << "Reference\t" << bim_token[+BIM::RS] << "\t"
+                                << chr_code
+                                << "\t" << m_existed_snps[ref_index].chr()<< "\t"
+                                << loc
+                                << "\t" << m_existed_snps[ref_index].loc() << "\t"
+                                << bim_token[+BIM::A1]
+                                << "\t" << m_existed_snps[ref_index].ref()<< "\t"
+                                << bim_token[+BIM::A2]
+                                << "\t" << m_existed_snps[ref_index].alt() << "\n";
+                            m_num_ref_target_mismatch++;
+                         }
+                    }
+                    else
+                    {
+                        byte_pos = bed_offset + ((num_snp_read-1) *
+                                                 (static_cast<uint64_t>(unfiltered_sample_ct4)));
+                        if(m_is_ref)
+                            target->m_existed_snps[ref_index].add_reference(prefix, byte_pos);
+                        else
+                            m_existed_snps[ref_index].add_reference(
+                                prefix, byte_pos);
+
+                        retain_snp[ref_index] = true;
+                        num_match++;
+                    }
+                }
+            }
+        bim.close();
+    }
+    // try to release memory
+    m_existed_snps.shrink_to_fit();
+    auto && compare_to= (m_is_ref)? target : this;
+    if (num_match != compare_to->m_existed_snps.size()) {
+        // remove any SNP that is not retained, the ref_retain vector should
+        // have the same ID as the target->m_existed_snps so we can use it
+        // directly for SNP removal
+        compare_to->m_existed_snps.erase(
+            std::remove_if(
+                compare_to->m_existed_snps.begin(), compare_to->m_existed_snps.end(),
+                [&retain_snp, &compare_to](const SNP& s) {
+                    return !retain_snp[(&s - &*begin(compare_to->m_existed_snps))];
+                }),
+            compare_to->m_existed_snps.end());
+        compare_to->m_existed_snps.shrink_to_fit();
+
+        // When reading the reference file, we actually update the
+        // SNP list in target file. This lead to the index search in
+        // target to have the wrong index. To avoid that, we need to
+        // update the SNP index accordingly
+        compare_to->update_snp_index();
+    }
+    if (duplicated_snp.size() != 0) {
+        // there are duplicated SNPs, we will need to terminate with the
+        // information
+        std::ofstream log_file_stream;
+        std::string dup_name = out_prefix + ".valid";
+        log_file_stream.open(dup_name.c_str());
+        if (!log_file_stream.is_open()) {
+            std::string error_message = "Error: Cannot open file: " + dup_name;
+            throw std::runtime_error(error_message);
+        }
+        // we should not use m_existed_snps unless it is for reference
+        for (auto&& snp : (m_is_ref ? target->m_existed_snps : m_existed_snps)) {
+            // we only output the valid SNPs.
+            if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
+                log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
+                                << snp.loc() << "\t" << snp.ref() << "\t"
+                                << snp.alt() << "\n";
+        }
+        log_file_stream.close();
+        std::string error_message =
+            "Error: A total of " + std::to_string(duplicated_snp.size())
+            + " duplicated SNP ID detected out of "
+            + misc::to_string(m_existed_snps.size())
+            + " input SNPs! Valid SNP ID (post --extract / "
+              "--exclude, non-duplicated SNPs) stored at "
+            + dup_name + ". You can avoid this error by using --extract "
+            + dup_name;
+        throw std::runtime_error(error_message);
+    }
+}
+
 
 void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
                             uintptr_t& bed_offset)
@@ -831,6 +1157,11 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
         m_bed_file.close();
+    }
+    if(m_sample_mask.size() != pheno_nm_ctv2){
+        m_sample_mask.resize(pheno_nm_ctv2);
+        // fill it with the required mask (copy from PLINK2)
+        fill_quatervec_55(static_cast<uint32_t>(m_sample_ct), m_sample_mask.data());
     }
     // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);

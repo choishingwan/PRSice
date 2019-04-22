@@ -73,6 +73,19 @@ int main(int argc, char* argv[])
         {
             // initialize the target object using the factory
             target_file = factory.createGenotype(commander, reporter);
+            // load base file into memory
+            target_file->read_base(
+                        commander.base_name(),commander.index(),
+                        commander.has_col(),
+                        commander.bar_levels(), commander.lower(), commander.inter(),
+                        commander.upper(), commander.maf_base_control(),
+                        commander.maf_base_case(), commander.base_info_score(),
+                        commander.perform_maf_base_control_filter(),
+                        commander.perform_maf_base_case_filter(),
+                        commander.perform_base_info_score_filter(),
+                        commander.fastscore(), commander.no_full(), commander.beta(),
+                        commander.is_index(), commander.keep_ambig(),
+                        reporter);
             // then we will read in the sample information
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
@@ -86,9 +99,6 @@ int main(int argc, char* argv[])
             // don't store or do anything, but just check which SNPs are
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
-            target_file->cache_base_snps(commander.base_name(),
-                                         commander.index().at(+BASE_INDEX::RS),
-                                         reporter);
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), commander.exclude_file(),
                                    commander.extract_file(), maf, geno, info,
