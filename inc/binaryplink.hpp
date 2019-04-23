@@ -81,6 +81,10 @@ protected:
     void gen_snp_vector(const std::string& out_prefix,
                         cgranges_t* exclusion_regions,
                         Genotype* target = nullptr);
+    void calc_freq_gen_inter(const double& maf_threshold,
+                             const double& geno_threshold, const double &, const double& /*info_threshold*/, const bool maf_filter,
+                             const bool geno_filter, const bool, const bool /*info_filter*/,
+                             Genotype* target=nullptr);
     /*!
      * \brief This function is use to check the bed version. Most importantly,
      *        this should give the correct bed_offset for file reading

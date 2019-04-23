@@ -121,19 +121,25 @@ public:
      * file
      */
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos)
+                       const std::streampos ref_byte_pos,
+                       const bool flip)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
+        m_ref_flipped = flip;
     }
     void add_target(const std::string& target_file,
                     const std::streampos target_byte_pos,
-                    const int chr, const int loc)
+                    const int chr, const int loc, const std::string & ref,
+                    const std::string &alt, const bool flipping)
     {
         m_target_file = target_file;
         m_target_byte_pos = target_byte_pos;
         m_chr = chr;
         m_loc = loc;
+        m_flipped = flipping;
+        m_ref = ref;
+        m_alt = alt;
     }
     void add_reference(const std::string& ref_file,
                        const std::streampos ref_byte_pos, const int32_t homcom,
@@ -385,7 +391,7 @@ public:
      * \param homrar is the count of homozygous rare allele
      * \param missing is the number of missing genotypes
      */
-    void set_counts(int& homcom, int& het, int& homrar, int& missing)
+    void set_counts(size_t homcom, size_t het, size_t homrar, size_t missing)
     {
         m_homcom = homcom;
         m_het = het;
@@ -393,13 +399,24 @@ public:
         m_missing = missing;
         m_has_count = true;
     }
-    void set_ref_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                        uint32_t& missing)
+    void set_ref_counts(size_t homcom, size_t het, size_t homrar, size_t missing)
     {
+        if(m_ref_flipped){
+            // we flip the count here so that the count will be
+            // identical to the allele identity in target
+            // we process the score, we only need to consider
+            // flipping w.r.t target and base
+            m_ref_homcom = homrar;
+            m_ref_het = het;
+            m_ref_homrar = homcom;
+            m_ref_missing = missing;
+
+        }else{
         m_ref_homcom = homcom;
         m_ref_het = het;
         m_ref_homrar = homrar;
         m_ref_missing = missing;
+        }
         m_has_ref_count = true;
     }
     /*!
@@ -436,18 +453,19 @@ private:
     int m_loc = -1;
     int m_low_bound = 0;
     int m_up_bound = 0;
-    int m_homcom = 0;
-    int m_het = 0;
-    int m_homrar = 0;
-    int m_missing = 0;
-    int m_ref_homcom = 0;
-    int m_ref_het = 0;
-    int m_ref_homrar = 0;
-    int m_ref_missing = 0;
+    size_t m_homcom = 0;
+    size_t m_het = 0;
+    size_t m_homrar = 0;
+    size_t m_missing = 0;
+    size_t m_ref_homcom = 0;
+    size_t m_ref_het = 0;
+    size_t m_ref_homrar = 0;
+    size_t m_ref_missing = 0;
     bool m_has_count = false;
     bool m_has_ref_count = false;
     bool m_clumped = false;
     bool m_flipped = false;
+    bool m_ref_flipped = false;
     // prset related
     size_t m_max_flag_index = 0;
 

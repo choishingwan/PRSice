@@ -800,6 +800,20 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
     }
 }
 
+
+void BinaryGen::calc_freq_gen_inter(const double& maf_threshold,
+                         const double& geno_threshold, const double& info_threshold,
+                         const double& hard_threshold, const bool maf_filter,
+                         const bool geno_filter, const bool info_filter,
+                         const bool hard_coded,
+                                    Genotype* target)
+{
+    std::vector<bool> retain_snp;
+    auto&& reference = (m_is_ref)? target : this;
+    retain_snp.resize(reference->m_existed_snps.size(), false);
+    size_t total_snp = reference->m_existed_snps.size();
+
+}
 std::vector<SNP>
 BinaryGen::gen_snp_vector(const std::string& out_prefix,
                           const double& maf_threshold, const bool maf_filter,

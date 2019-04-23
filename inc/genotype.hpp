@@ -133,6 +133,12 @@ public:
                    const std::string& extract, cgranges_t* exclusion_region,
                    bool verbose, Reporter& reporter, Genotype* target=nullptr);
 
+    void calc_freqs_and_intermediate(const std::string& out, const double& maf_threshold,
+                   const double& geno_threshold, const double& info_threshold,
+                   const double& hard_threshold, const bool maf_filter,
+                   const bool geno_filter, const bool info_filter,
+                   const bool hard_coded, bool verbose, Reporter& reporter,
+                   Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -694,6 +700,14 @@ protected:
     virtual void gen_snp_vector(const std::string& /*out_prefix*/,
                                 cgranges_t* /*exclusion*/, Genotype* /*target*/)
     {
+    }
+    virtual void calc_freq_gen_inter(const double& /*maf_threshold*/,
+                                     const double& /*geno_threshold*/, const double& /*info_threshold*/,
+                                     const double& /*hard_threshold*/, const bool /*maf_filter*/,
+                                     const bool /*geno_filter*/, const bool /*info_filter*/,
+                                     const bool /*hard_coded*/,
+                                      Genotype* /*target=nullptr*/){
+
     }
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
