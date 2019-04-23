@@ -699,12 +699,11 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
 {
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     std::unordered_set<std::string> duplicated_snp;
+    std::unordered_set<std::string> processed_snps;
     std::vector<std::string> bim_token;
     std::vector<bool> retain_snp;
-    if (m_is_ref)
-        retain_snp.resize(target->m_existed_snps.size(), false);
-    else
-        retain_snp.resize(m_existed_snps.size(), false);
+    auto&& reference = (m_is_ref)? target : this;
+    retain_snp.resize(reference->m_existed_snps.size(), false);
     std::ifstream bim;
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
@@ -714,7 +713,6 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
     // temp holder for region match
     int64_t *b = nullptr, max_b = 0;
     size_t num_retained = 0;
-    size_t num_match = 0;
     int chr_code = 0;
     int num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
@@ -765,14 +763,10 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                     + misc::to_string(num_snp_read) + "\n";
                 throw std::runtime_error(error_message);
             }
-            if (m_is_ref) {
-                // for the reference panel
-                if (target->m_existed_snps_index.find(bim_token[+BIM::RS])
-                    == target->m_existed_snps_index.end())
-                {
-                    // Skip SNPs not found in the target file
-                    continue;
-                }
+            if (reference->m_existed_snps_index.find(bim_token[+BIM::RS])
+                    == reference->m_existed_snps_index.end())
+            {
+                continue;
             }
             // ensure all alleles are capitalized for easy matching
             std::transform(bim_token[+BIM::A1].begin(),
@@ -795,12 +789,6 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                 else if (m_exclude_snp
                          && m_snp_selection_list.find(bim_token[+BIM::RS])
                                 != m_snp_selection_list.end())
-                {
-                    continue;
-                }
-                // ignore any SNPs not found in base file
-                if (m_existed_snps_index.find(bim_token[+BIM::RS])
-                    == m_existed_snps_index.end())
                 {
                     continue;
                 }
@@ -869,8 +857,8 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
             // this is included in one of the exclusion region
             if (to_remove) continue;
             // check if this is a duplicated SNP
-            if (m_existed_snps_index.find(bim_token[+BIM::RS])
-                != m_existed_snps_index.end())
+            if (processed_snps.find(bim_token[+BIM::RS])
+                != processed_snps.end())
             {
                 duplicated_snp.insert(bim_token[+BIM::RS]);
             }
@@ -885,10 +873,9 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                 // as my current implementation isn't as efficient as PLINK
                 m_num_ambig +=
                     ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
-                auto&& compare_to = (m_is_ref) ? target : this;
                 auto&& ref_index =
-                    compare_to->m_existed_snps_index[bim_token[+BIM::RS]];
-                if (!compare_to->m_existed_snps[ref_index].matching(
+                    reference->m_existed_snps_index[bim_token[+BIM::RS]];
+                if (!reference->m_existed_snps[ref_index].matching(
                         chr_code, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
                 {
@@ -961,11 +948,12 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                         target->m_existed_snps[ref_index].add_reference(
                             prefix, byte_pos);
                     else
-                        m_existed_snps[ref_index].add_reference(prefix,
-                                                                byte_pos);
-
+                        m_existed_snps[ref_index].add_target(prefix,
+                                                                byte_pos,
+                                                             chr_code, loc);
+                    processed_snps.insert(bim_token[+BIM::RS]);
                     retain_snp[ref_index] = true;
-                    num_match++;
+                    num_retained++;
                 }
             }
         }
@@ -973,26 +961,21 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
     }
     // try to release memory
     m_existed_snps.shrink_to_fit();
-    auto&& compare_to = (m_is_ref) ? target : this;
-    if (num_match != compare_to->m_existed_snps.size()) {
+    if (num_retained != reference->m_existed_snps.size()) {
         // remove any SNP that is not retained, the ref_retain vector should
         // have the same ID as the target->m_existed_snps so we can use it
         // directly for SNP removal
-        compare_to->m_existed_snps.erase(
-            std::remove_if(compare_to->m_existed_snps.begin(),
-                           compare_to->m_existed_snps.end(),
-                           [&retain_snp, &compare_to](const SNP& s) {
+        reference->m_existed_snps.erase(
+            std::remove_if(reference->m_existed_snps.begin(),
+                           reference->m_existed_snps.end(),
+                           [&retain_snp, &reference](const SNP& s) {
                                return !retain_snp[(
-                                   &s - &*begin(compare_to->m_existed_snps))];
+                                   &s - &*begin(reference->m_existed_snps))];
                            }),
-            compare_to->m_existed_snps.end());
-        compare_to->m_existed_snps.shrink_to_fit();
-
-        // When reading the reference file, we actually update the
-        // SNP list in target file. This lead to the index search in
-        // target to have the wrong index. To avoid that, we need to
-        // update the SNP index accordingly
-        compare_to->update_snp_index();
+            reference->m_existed_snps.end());
+        reference->m_existed_snps.shrink_to_fit();
+        // need to update index search after we updated the vector
+        reference->update_snp_index();
     }
     if (duplicated_snp.size() != 0) {
         // there are duplicated SNPs, we will need to terminate with the
@@ -1005,7 +988,7 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
             throw std::runtime_error(error_message);
         }
         // we should not use m_existed_snps unless it is for reference
-        for (auto&& snp : (m_is_ref ? target->m_existed_snps : m_existed_snps))
+        for (auto&& snp : reference->m_existed_snps)
         {
             // we only output the valid SNPs.
             if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())

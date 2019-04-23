@@ -519,6 +519,287 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     }
     return true;
 }
+
+void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusion_regions, Genotype* target)
+{
+    bool to_remove=false;
+    int64_t *b=nullptr, max_b =0;
+    std::unordered_set<std::string> duplicated_snps;
+    // should only apply to SNPs that are not removed due to extract/exclude
+    std::unordered_set<std::string> processed_snps;
+    std::vector<std::string> alleles;
+    std::vector<bool> retain_snp;
+    auto && reference = (m_is_ref)? target : this;
+    retain_snp.resize(reference->m_existed_snps.size(), false);
+    std::ifstream bgen_file;
+    std::ofstream mismatch_snp_record;
+    std::string bgen_name;
+    std::string allele;
+    std::string SNPID;
+    std::string RSID;
+    std::string chromosome;
+    std::string prev_chr = "";
+    std::string file_name;
+    std::string mismatch_snp_record_name = out_prefix + ".mismatch";
+    std::string error_message = "";
+    std::streampos byte_pos;
+    size_t total_unfiltered_snps = 0;
+    size_t ref_target_match = 0;
+    uint32_t SNP_position=0;
+    uint32_t offset;
+    uint32_t num_snp;
+    int chr_code = 0;
+    bool exclude_snp = false;
+    bool chr_sex_error = false;
+    bool chr_error = false;
+    bool prev_chr_sex_error = false;
+    bool prev_chr_error = false;
+    bool flipping = false;
+    for (auto prefix : m_genotype_files) {
+        // go through each genotype file and get the context information
+        get_context(prefix);
+        // get the total unfiltered snp size so that we can initalize the vector
+        total_unfiltered_snps += m_context_map[prefix].number_of_variants;
+    }
+    check_sample_consistent(std::string(m_genotype_files.front()+".bgen"),
+                            m_context_map[m_genotype_files.front()]);
+    // we don't need to reserve the vector now, as we have already
+    // read in the base file
+    // it does however mean that we can get into trouble if the base
+    // is rather big
+    for (auto prefix : m_genotype_files) {
+        // now start reading each bgen file
+        bgen_name = prefix + ".bgen";
+        if (bgen_file.is_open()) bgen_file.close();
+        bgen_file.clear();
+        bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
+        if (!bgen_file.is_open()) {
+            std::string error_message =
+                "Error: Cannot open bgen file " + bgen_name;
+            throw std::runtime_error(error_message);
+        }
+        // read in the offset
+        offset = m_context_map[prefix].offset;
+        // skip the offest
+        bgen_file.seekg(offset + 4);
+        num_snp = m_context_map[prefix].number_of_variants;
+        // obtain the context information. We don't check out of bound as that
+        // is unlikely to happen
+        auto&& context = m_context_map[prefix];
+        for (size_t i_snp = 0; i_snp < num_snp; ++i_snp) {
+            // go through each SNP in the file
+            if (i_snp % 1000 == 0) {
+                fprintf(stderr, "\r%zuK SNPs processed in %s\r", i_snp / 1000,
+                        bgen_name.c_str());
+            }
+            m_unfiltered_marker_ct++;
+            // directly use the library without decompressing the genotype
+            read_snp_identifying_data(
+                bgen_file, context, &SNPID, &RSID, &chromosome, &SNP_position,
+                [&alleles](std::size_t n) { alleles.resize(n); },
+                [&alleles](std::size_t i, std::string& allele) {
+                    std::transform(allele.begin(), allele.end(), allele.begin(),
+                                   ::toupper);
+                    alleles.at(i) = allele;
+                });
+            exclude_snp = false;
+            if (chromosome != prev_chr) {
+                chr_code = get_chrom_code_raw(chromosome.c_str());
+                if (chr_code_check(chr_code, chr_sex_error, chr_error,
+                                   error_message))
+                {
+                    if (chr_error && !prev_chr_error) {
+                        std::cerr << error_message << "\n";
+                        prev_chr_error = chr_error;
+                    }
+                    if (chr_sex_error && !prev_chr_sex_error) {
+                        std::cerr << error_message << "\n";
+                        prev_chr_sex_error = chr_sex_error;
+                    }
+                    exclude_snp = true;
+                }
+                if (!exclude_snp) {
+                    // only update prev_chr if we want to include this SNP
+                    prev_chr = chromosome;
+                }
+            }
+
+            if (RSID == ".") {
+                // when the rs id isn't available,
+                // change it to chr:loc coding. Though I highly doubt the
+                // usefulness of this feature as it will also require the
+                // reference and base to have the same encoding
+                RSID = std::to_string(chr_code) + ":"
+                       + std::to_string(SNP_position);
+            }
+            // user exclude indicate this SNP is discard by user, not because of
+            // QC matric
+            if (!m_is_ref) {
+                if ((!m_exclude_snp
+                     && m_snp_selection_list.find(RSID)
+                            == m_snp_selection_list.end())
+                    || (m_exclude_snp
+                        && m_snp_selection_list.find(RSID)
+                               != m_snp_selection_list.end()))
+                {
+                    exclude_snp = true;
+                }
+            }
+
+            if (reference->m_existed_snps_index.find(RSID)
+                     == reference->m_existed_snps_index.end())
+            {
+                // this is the reference panel, and the SNP wasn't found in the
+                // target
+                exclude_snp = true;
+            }
+
+            to_remove =
+                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
+                           static_cast<int>(SNP_position) - 1,
+                           static_cast<int>(SNP_position) + 1, &b, &max_b);
+            if (to_remove) exclude_snp = true;
+            if (processed_snps.find(RSID) != processed_snps.end()) {
+                duplicated_snps.insert(RSID);
+                exclude_snp = true;
+            }
+            // perform check on ambiguousity
+            else if (ambiguous(alleles.back(), alleles.front()))
+            {
+                m_num_ambig++;
+                if (!m_keep_ambig) exclude_snp = true;
+            }
+            // get the current location of bgen file, this will be used to skip
+            // to current location later on
+            byte_pos = bgen_file.tellg();
+            // read in the genotype data block so that we advance the ifstream
+            // pointer to the next SNP entry
+            read_genotype_data_block(bgen_file, context, &m_buffer1);
+            // if we want to exclude this SNP, we will not perform
+            // decompression
+            if (!exclude_snp) {
+                auto&& target_index = reference->m_existed_snps_index[RSID];
+                if (!reference->m_existed_snps[target_index].matching(
+                            chr_code, SNP_position, alleles.back(),
+                            alleles.front(), flipping))
+                {
+                    // SNP not matched
+                    if (!mismatch_snp_record.is_open()) {
+                        // open the file accordingly
+                        if (m_mismatch_file_output) {
+                            mismatch_snp_record.open(
+                                        mismatch_snp_record_name.c_str(),
+                                        std::ofstream::app);
+                            if (!mismatch_snp_record.is_open()) {
+                                throw std::runtime_error(std::string(
+                                                             "Cannot open mismatch file to "
+                                                             "write: "
+                                                             + mismatch_snp_record_name));
+                            }
+                        }
+                        else
+                        {
+                            mismatch_snp_record.open(
+                                        mismatch_snp_record_name.c_str());
+                            if (!mismatch_snp_record.is_open()) {
+                                throw std::runtime_error(std::string(
+                                        "Cannot open mismatch file to "
+                                        "write: "
+                                        + mismatch_snp_record_name));
+                            }
+                            mismatch_snp_record
+                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                       "File\tBP_Target\tBP_File\tA1_"
+                                       "Target\tA1_File\tA2_Target\tA2_"
+                                       "File\n";
+                        }
+                    }
+                    m_mismatch_file_output = true;
+                    if(m_is_ref){
+                    mismatch_snp_record
+                            << "Reference\t" << RSID << "\t"
+                            << target->m_existed_snps[target_index].chr()
+                            << "\t" << chr_code << "\t"
+                            << target->m_existed_snps[target_index].loc()
+                            << "\t" << SNP_position << "\t"
+                            << target->m_existed_snps[target_index].ref()
+                            << "\t" << alleles.front() << "\t"
+                            << target->m_existed_snps[target_index].alt()
+                            << "\t" << alleles.back() << "\n";
+                    }
+                    else {
+                        mismatch_snp_record
+                                << "Base\t" << RSID << "\t"
+                                << chr_code
+                                << "\t" << m_existed_snps[target_index].chr() << "\t"
+                                << SNP_position
+                                << "\t" << m_existed_snps[target_index].loc() << "\t"
+                                << alleles.front()
+                                << "\t" << m_existed_snps[target_index].ref() << "\t"
+                                << alleles.back()
+                                << "\t" << m_existed_snps[target_index].alt() << "\n";
+                    }
+                    m_num_ref_target_mismatch++;
+                }
+                else{
+                    processed_snps.insert(RSID);
+                    if(m_is_ref){
+                        target->m_existed_snps[target_index].add_reference(
+                            prefix, byte_pos);
+                    }else{
+                        m_existed_snps[target_index].add_target(prefix,
+                                                                byte_pos, chr_code,
+                                                                SNP_position);
+                    }
+                    retain_snp[target_index] = true;
+                    ref_target_match++;
+                }
+            }
+        }
+        bgen_file.close();
+        fprintf(stderr, "\n");
+    }
+    if ( ref_target_match != reference->m_existed_snps.size()) {
+        // there are mismatch, so we need to update the snp vector
+        reference->m_existed_snps.erase(
+            std::remove_if(
+                reference->m_existed_snps.begin(), reference->m_existed_snps.end(),
+                [&retain_snp, &reference](const SNP& s) {
+                    return !retain_snp[&s - &*begin(reference->m_existed_snps)];
+                }),
+            reference->m_existed_snps.end());
+        reference->m_existed_snps.shrink_to_fit();
+        // now update the SNP vector index
+        reference->update_snp_index();
+    }
+    if (duplicated_snps.size() != 0) {
+        // there are duplicated SNPs
+        std::ofstream log_file_stream;
+        std::string dup_name = out_prefix + ".valid";
+        log_file_stream.open(dup_name.c_str());
+        if (!log_file_stream.is_open()) {
+            std::string error_message = "Error: Cannot open file: " + dup_name;
+            throw std::runtime_error(error_message);
+        }
+        for (auto&& snp : reference->m_existed_snps) {
+            if (duplicated_snps.find(snp.rs()) != duplicated_snps.end())
+                continue;
+            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
+                            << snp.loc() << "\t" << snp.ref() << "\t"
+                            << snp.alt() << "\n";
+        }
+
+        log_file_stream.close();
+        std::string error_message =
+            "Error: A total of " + std::to_string(duplicated_snps.size())
+            + " duplicated SNP ID detected out of "
+            + std::to_string(reference->m_existed_snps.size())
+            + " input SNPs!. Valid SNP ID stored at " + dup_name
+            + ". You can avoid this error by using --extract " + dup_name;
+        throw std::runtime_error(error_message);
+    }
+}
+
 std::vector<SNP>
 BinaryGen::gen_snp_vector(const std::string& out_prefix,
                           const double& maf_threshold, const bool maf_filter,

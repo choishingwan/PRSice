@@ -131,7 +131,7 @@ public:
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
                    const std::string& extract, cgranges_t* exclusion_region,
-                   bool verbose, Reporter& reporter, Genotype* target);
+                   bool verbose, Reporter& reporter, Genotype* target=nullptr);
 
     /*!
      * \brief Return the number of SNPs, use for unit test
@@ -510,7 +510,6 @@ protected:
     std::unordered_map<std::string, std::streampos> m_valid_snp_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
-    std::unordered_set<std::string> m_snp_in_base;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_files;

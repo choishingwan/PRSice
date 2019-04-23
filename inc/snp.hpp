@@ -127,10 +127,13 @@ public:
         m_ref_byte_pos = ref_byte_pos;
     }
     void add_target(const std::string& target_file,
-                    const std::streampos target_byte_pos)
+                    const std::streampos target_byte_pos,
+                    const int chr, const int loc)
     {
         m_target_file = target_file;
         m_target_byte_pos = target_byte_pos;
+        m_chr = chr;
+        m_loc = loc;
     }
     void add_reference(const std::string& ref_file,
                        const std::streampos ref_byte_pos, const int32_t homcom,

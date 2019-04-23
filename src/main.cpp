@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
         double maf, geno, info, hard_threshold;
-        bool maf_filter, geno_filter, hard_coded, info_filter;
+        bool maf_filter, geno_filter, hard_coded, info_filter, init_ref=false;
         // load the filtering parameters for the target file
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
@@ -98,6 +98,25 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
+
+            target_file->load_snps(commander.out(), commander.exclude_file(),
+                                   commander.extract_file(), exclusion_region,
+                                   verbose, reporter);
+            // now load the reference file
+            if ((!commander.no_clump() && commander.use_ref()) || commander.use_ref_maf()) {
+                reference_file =
+                    factory.createGenotype(commander, reporter, true);
+                init_ref = true;
+                reference_file->load_samples(commander.ref_keep_file(),
+                                             commander.ref_remove_file(),
+                                             verbose, reporter);
+                // load the reference file
+                reference_file->load_snps(commander.out(), commander.exclude_file(),
+                                       commander.extract_file(), exclusion_region,
+                                       verbose, reporter, target_file);
+            }
+            // with the reference file read, we can start doing filtering
+
             target_file->load_snps(commander.out(), commander.exclude_file(),
                                    commander.extract_file(), maf, geno, info,
                                    hard_threshold, maf_filter, geno_filter,
@@ -208,7 +227,7 @@ int main(int argc, char* argv[])
                     reporter, commander.pearson());
                 // immediately free the memory
             }
-            if (commander.use_ref()) delete reference_file;
+            if (init_ref) delete reference_file;
 
             // Prepare the SNP vector in target for PRS calculation
             if (!target_file->prepare_prsice()) {

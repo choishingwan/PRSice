@@ -94,6 +94,10 @@ private:
                    const bool info_filter, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
 
+    void
+    gen_snp_vector(const std::string& out_prefix, cgranges_t* exclusion_regions,
+                   Genotype* target = nullptr);
+
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map
