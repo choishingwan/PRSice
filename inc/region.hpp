@@ -174,8 +174,52 @@ public:
 
     static void generate_exclusion(cgranges_t* cr,
                                    const std::string& exclusion_range);
+    static void add_flags(const std::vector<std::string> &feature, const int window_5,
+                          const int window_3, const bool genome_wide_background,
+                          const std::string& gtf, const std::string& msigdb,
+                          const std::vector<std::string>& bed,
+                          const std::string& snp_set,
+                          const std::string& background,
+                          Genotype& target, Reporter& reporter);
 
 private:
+    static void load_msigdb(const std::string &msig,
+                            std::unordered_map<std::string, std::vector<size_t>>
+                            &msigdb_list, std::vector<std::string> &region_names, std::unordered_set<std::string> duplicated_sets, int &set_idx, Reporter &reporter);
+    static bool load_bed_regions(const std::string &bed_file,
+                                 cgranges_t* gene_sets,
+                                 const int window_5,
+                                 const int window_3,
+                                 bool& print_warning, const int set_idx,
+                                 std::vector<std::string> &region_names,
+                                 std::unordered_set<std::string> duplicated_sets, Reporter &reporter);
+    static void load_snp_sets(std::string snp_file,
+                         std::unordered_map<std::string, std::vector<size_t>>
+                         &snp_in_sets,
+                         std::vector<std::string> &region_names,
+                         std::unordered_set<std::string>&duplicated_sets,
+                         size_t &set_idx,
+                         Reporter &reporter);
+    static size_t num_snp_set(const std::string &name){
+        std::ifstream input;
+        std::vector<std::string> file_name = misc::split(name, ":");
+        input.open(file_name[0].c_str());
+        if(!input.is_open()){
+            std::string error = "Error: Cannot open file: "+file_name[0]+"\n";
+            throw std::runtime_error(error);
+        }
+        std::string line;
+        std::vector<std::string> token;
+        size_t num_set = 0;
+        while(std::getline(input, line)){
+            misc::trim(line);
+            if(line.empty()) continue;
+            token = misc::split(line);
+            if(token.size()==1) return 1;
+            num_set++;
+        }
+        return num_set;
+    }
     // IMPORTANT: The end is non-inclusive
     struct region_bound
     {

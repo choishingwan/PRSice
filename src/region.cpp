@@ -60,8 +60,10 @@ void Region::generate_exclusion(cgranges_t* cr,
             int chr = get_chrom_code_raw(boundary[0].c_str());
             int low_bound = misc::convert<int>(boundary[1]) + 1;
             // +1 because start at 0
-            int upper_bound = misc::convert<int>(boundary[2]) - 1;
-            // -1 because BED end is exclusive
+            int upper_bound = misc::convert<int>(boundary[2]);
+            // Do nothing because while BED end is exclusive, it is 0 base.
+            // For an inclusive end bound, we will need to do -1 (make it
+            // inclusive) and +1 (transform to 1 base)
             if (low_bound < upper_bound || low_bound < 1 || upper_bound < 1) {
                 std::string message =
                     "Error: Invalid exclusion coordinate. "
@@ -94,8 +96,7 @@ void Region::generate_exclusion(cgranges_t* cr,
                     "must be larger than or equal to the start coordinate\n";
                 throw std::runtime_error(message);
             }
-            // to string is kinda stupid here, but rather not touching the core
-            // algorithm when I am exhausted.
+            // the range is completely inclusive []
             cr_add(cr, std::to_string(chr).c_str(), low_bound, upper_bound, 0);
         }
         else
@@ -108,6 +109,381 @@ void Region::generate_exclusion(cgranges_t* cr,
     }
 }
 
+void Region::add_flags(const std::vector<std::string> &feature, const int window_5,
+                          const int window_3,const bool genome_wide_background,
+                          const std::string& gtf, const std::string& msigdb,
+                          const std::vector<std::string>& bed,
+                          const std::string& snp_set,
+                          const std::string& background,
+                       Genotype& target, Reporter& reporter){
+    // first calculate the total number of gene sets included
+    // plus 2 because of base and background set
+    size_t num_sets = bed.size()+2;
+    std::ifstream msigdb_file;
+    std::vector<std::string> msigdb_name = misc::split(msigdb, ",");
+    for(auto &&name : msigdb_name){
+        msigdb_file.open(name.c_str());
+        if(!msigdb_file.is_open()){
+            std::string error_message  ="Error: Cannot open MSigDB file: " +name+"\n";
+            throw std::runtime_error(error_message);
+        }
+        std::string line;
+        std::vector<std::string> token;
+        while(std::getline(msigdb_file, line)){
+            misc::trim(line);
+            token = misc::split(line);
+            if(token.size()< 2){
+                std::string message =
+                        "Error: Each line of MSigDB require at least 2 information: "+name+"\n";
+                message.append(line);
+                throw std::runtime_error(message);
+            }
+            // each valid line will be considered as a set
+            num_sets++;
+        }
+        msigdb_file.close();
+    }
+    // we allow ambiguous snp set input
+    // It all depends on the file content
+    // (only one column = SNP list, mutliple column = SNP sets)
+    std::vector<std::string> snp_sets = misc::split(snp_set, ",");
+    for(auto &&s : snp_sets){
+        num_sets+=num_snp_set(s);
+    }
+    // we now know number of sets we have, therefore know the required size
+    // for the SNP flag
+
+
+    cgranges_t* gene_sets = cr_init();
+    // we can now utilize the last field of cgranges as the index of gene
+    // set of interest
+    std::vector<std::string> region_names;
+    region_names.push_back("Base");
+    region_names.push_back("Background");
+    std::unordered_set<std::string> duplicated_sets;
+    if(!background.empty() || (!genome_wide_background && !gtf.empty())){
+        // we need to read in a background file, either in form of gtf or
+        // other supported background format
+    }
+    // 0 reserved for base
+    // 1 reserved for background
+    int set_idx = 2;
+    bool printed_warning = false;
+    for(auto &&bed_file : bed){
+        set_idx+=load_bed_regions(bed_file, gene_sets, window_5, window_3, printed_warning,
+                                  set_idx, region_names,
+                                  duplicated_sets, reporter);
+    }
+    // SNP sets
+    std::unordered_map<std::string, std::vector<size_t> > snp_in_sets;
+    for(auto &&s : snp_sets){
+        load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx, reporter);
+    }
+    for(auto &&msig : msigdb_name){
+        std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
+        load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx, reporter);
+    }
+    // now process the gtf file and add the regions
+
+}
+
+void Region::load_snp_sets(std::string snp_file,
+                           std::unordered_map<std::string, std::vector<size_t>>
+                           &snp_in_sets,
+                           std::vector<std::string> &region_names,
+                           std::unordered_set<std::string>&duplicated_sets,
+                           size_t &set_idx,
+                           Reporter &reporter){
+    std::string file_name, set_name, line, message;
+    std::vector<std::string> token = misc::split(snp_file, ":");
+    if (token.size() == 2) {
+        file_name = token[0];
+        set_name = token[1];
+    }
+    else if (token.size() == 1)
+    {
+        set_name = file_name = snp_file;
+    }
+    else
+    {
+        std::string error_message =
+            "Error: Undefine bed file input format: " + snp_file;
+        throw std::runtime_error(error_message);
+    }
+    // first check if it is a set file
+    std::ifstream input;
+    input.open(file_name.c_str());
+    if(!input.is_open()){
+        std::string error = "Error: Cannot open SNP set file: "+file_name+"\n";
+        throw std::runtime_error(error);
+    }
+    bool is_set_file=false;
+    while(std::getline(input, line)){
+        misc::trim(line);
+        token = misc::split(line);
+        is_set_file = (token.size() > 1);
+        break;
+    }
+    if(!is_set_file){
+        if(duplicated_sets.find(set_name) != duplicated_sets.end()){
+            std::string message = "Warning: Set name of " + set_name
+                    + " is duplicated, it will be ignored";
+            reporter.report(message);
+            return;
+        }
+        duplicated_sets.insert(set_name);
+        region_names.push_back(set_name);
+    }
+    input.clear();
+    input.seekg(0, input.beg);
+    while(std::getline(input, line)){
+        misc::trim(line);
+        if(line.empty()) continue;
+        token = misc::split(line);
+        if(is_set_file){
+            for(size_t i = 1; i < token.size(); ++i){
+                snp_in_sets[token[i]].push_back(set_idx);
+            }
+            set_idx++;
+        }else{
+            snp_in_sets[token[0]].push_back(set_idx);
+        }
+    }
+    input.close();
+
+    if(is_set_file){
+        set_idx++;
+    }
+}
+bool Region::load_bed_regions(const std::string &bed_file,
+                             cgranges_t* gene_sets,
+                             const int window_5,
+                             const int window_3,
+                              bool& printed_warning,
+                              const int set_idx,
+    std::vector<std::string>& region_names,
+                              std::unordered_set<std::string> duplicated_sets, Reporter &reporter){
+    /* If we have
+     *
+     *  chr1   | T | A | C | C | G |
+     *         | | | | | | | | | | |
+     * 1-base  | 1 | 2 | 3 | 4 | 5 |
+     * 0-base  0   1   2   3   4   5
+     *
+     * For bed file with input of
+     * chr1 1 5
+     * we will want the region_bound variable to be
+     * 1 2 6
+     * Such that any SNP with coordinate of chr1:2-5 on the 1
+     * base coordinate system will be included in the analysis
+     */
+
+
+    // check if we have the name
+    std::string file_name, set_name, line, message;
+    std::vector<std::string> token = misc::split(bed_file, ":");
+    int chr_code;
+    if (token.size() == 2) {
+        file_name = token[0];
+        set_name = token[1];
+    }
+    else if (token.size() == 1)
+    {
+        set_name = file_name = bed_file;
+    }
+    else
+    {
+        std::string error_message =
+            "Error: Undefine bed file input format: " + bed_file;
+        throw std::runtime_error(error_message);
+    }
+    if(duplicated_sets.find(set_name) != duplicated_sets.end()){
+        std::string message = "Warning: Set name of " + set_name
+                  + " is duplicated, it will be ignored";
+        reporter.report(message);
+        return false;
+    }
+    duplicated_sets.insert(set_name);
+    region_names.push_back(set_name);
+    std::ifstream input;
+    input.open(file_name.c_str());
+    if(!input.is_open()){
+        std::string error = "Error: Cannot open bed file: "+file_name+"\n";
+        throw std::runtime_error(error);
+    }
+
+    // now read in the file
+    bool has_strand = false, first_read = true, error = false;
+    size_t num_line = 0;
+    while(std::getline(input, line)){
+        misc::trim(line);
+        if(line.empty()) continue;
+        token = misc::split(line);
+        if (token.size() < 3) {
+            message = "Error: " + file_name
+                      + " contain less than 3 columns, please check your "
+                        "bed files in the correct format";
+            throw std::runtime_error(message);
+        }
+        if (first_read) {
+            first_read = false;
+            if (token.size() > +BED::STRAND) has_strand = true;
+        }
+        if (has_strand && token.size() <= +BED::STRAND) {
+            message = "Error: line " + misc::to_string(num_line)
+                      + " of the bed file: " + file_name
+                      + " contain less than than "
+                      + misc::to_string(+BED::STRAND)
+                      + " columns. BED file should have the same number of "
+                        "column for each row. Please check if you have the "
+                        "correct input format!";
+            throw std::runtime_error(message);
+        }
+        if (token.size() <= +BED::STRAND && (window_5 > 0 || window_3 > 0)
+            && (window_5 != window_3) && !printed_warning)
+        {
+            // as bed file does not necessarily contain the strand
+            // information, we will issue a warning and assume positive
+            // strand. Though for this situation, it might be better for
+            // user to use the same padding for 3' and 5'
+            std::string message = "Warning: You bed file does not contain "
+                                  "strand information, we will assume all "
+                                  "regions are on the positive strand, "
+                                  "e.g. start coordinates always on the 5' "
+                                  "end";
+            reporter.report(message);
+            printed_warning = true;
+        }
+        int start = 0, end = 0;
+        message = "";
+        try
+        {
+            start = misc::convert<int>(token[+BED::START]);
+            if (start >= 0)
+                ++start; // That's because bed is 0 based
+            else
+            {
+                message.append("Error: Negative Start Coordinate at line "
+                               + misc::to_string(num_line) + "!");
+                error = true;
+            }
+        }
+        catch (...)
+        {
+            message.append("Error: Cannot convert start coordinate! (line: "
+                           + misc::to_string(num_line) + ")!");
+            error = true;
+        }
+
+        try
+        {
+            end = misc::convert<int>(token[+BED::END]);
+            if (end < 0) {
+                message.append("Error: Negative End Coordinate at line "
+                               + misc::to_string(num_line) + "!");
+                error = true;
+            }
+        }
+        catch (...)
+        {
+            message.append("Error: Cannot convert end coordinate! (line: "
+                           + misc::to_string(num_line) + ")!");
+            error = true;
+        }
+        if (!error && start > end) {
+            // only do this check if there isn't an error before
+            error = true;
+            message.append("Error: Start coordinate should be smaller than "
+                           "end coordinate!\n");
+            message.append("start: " + misc::to_string(start) + "\n");
+            message.append("end: " + misc::to_string(end) + "\n");
+        }
+        if (error) {
+            message.append("Please check your input is correct");
+            throw std::runtime_error(message);
+        }
+        // only include regions that falls into the chromosome of interest
+        if (token.size() > +BED::STRAND) {
+            // we haev the strand information, therefore can add the padding
+            // accordingly
+            if (token[+BED::STRAND] == "-") {
+                // negative strand, so add 3' to start and 5' to end
+                start -= window_3;
+                if (start < 1) start = 1;
+                end += window_5;
+            }
+            else if (token[+BED::STRAND] == "+"
+                     || token[+BED::STRAND] == ".")
+            {
+                // positive or unknown strand, add 5' to start and 3' to end
+                start -= window_5;
+                if (start < 1) start = 1;
+                end += window_3;
+            }
+            else
+            {
+                std::string error = "Error: Undefined strand "
+                                    "information. Possibly a malform "
+                                    "BED file: "
+                                    + token[+BED::STRAND];
+                throw std::runtime_error(error);
+            }
+        }
+        else
+        {
+            start -= window_5;
+            if (start < 1) start = 1;
+            end += window_3;
+        }
+        // now add the boundary to the region
+        chr_code = get_chrom_code_raw(token[0].c_str());
+        // will screw up if the number of set is higher than int32_t.
+        // But PRSice should crash before that, right?
+        cr_add(gene_sets, std::to_string(chr_code).c_str(), start,
+                end, set_idx);
+    }
+    return true;
+}
+
+void Region::load_msigdb(const std::string &msig,
+                 std::unordered_map<std::string, std::vector<size_t>>
+                 &msigdb_list, std::vector<std::string> & region_names,
+                         std::unordered_set<std::string> duplicated_sets, int &set_idx,
+                         Reporter &reporter){
+    std::ifstream input;
+    input.open(msig.c_str());
+    if(!input.is_open()){
+        std::string error = "Error: Cannot open MSigDB file: "+msig+"\n";
+        throw std::runtime_error(error);
+    }
+    std::string line;
+    std::vector<std::string> token;
+    while(std::getline(input, line)){
+        misc::trim(line);
+        if(line.empty())continue;
+        token = misc::split(line);
+        if(token.size()< 2){
+            std::string message =
+                    "Error: Each line of MSigDB require at least 2 information: "+msig+"\n";
+            message.append(line);
+            throw std::runtime_error(message);
+        }
+        if(duplicated_sets.find(token[0])!=duplicated_sets.end()){
+            std::string message = "Warning: Set name of " + token[0]
+                      + " is duplicated, it will be ignored";
+            reporter.report(message);
+        }
+        else{
+            duplicated_sets.insert(token[0]);
+            region_names.push_back(token[0]);
+            for(size_t i=1; i < token.size(); ++i){
+                msigdb_list[token[i]].push_back(set_idx);
+            }
+            set_idx++;
+        }
+    }
+    input.close();
+}
 
 // constructor
 Region::Region(std::vector<std::string> feature, const int window_5,
