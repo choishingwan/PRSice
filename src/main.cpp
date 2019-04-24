@@ -130,6 +130,8 @@ int main(int argc, char* argv[])
                     commander.extract_file(), exclusion_region, verbose,
                     reporter, target_file);
             }
+            // no longer need the exclusion region object
+            cr_destroy(exclusion_region);
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
 
