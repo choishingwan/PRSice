@@ -18,8 +18,8 @@
 
 Commander::Commander()
 {
-    m_base_col_index.resize(+BASE_INDEX::MAX + 1, -1);
-    m_base_has_col.resize(+BASE_INDEX::MAX + 1, -1);
+    m_base_col_index.resize(+BASE_INDEX::MAX + 1, 0);
+    m_base_has_col.resize(+BASE_INDEX::MAX + 1, false);
     set_help_message();
 }
 
@@ -1269,8 +1269,14 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                              + m_effect_allele + ") in file!\n");
     }
     // we don't need bp and chr as we can always get those from the bim file
-    size_t max_index =
-        *max_element(m_base_col_index.begin(), m_base_col_index.end());
+    // use a for loop as it is short enough and we only bother with those
+    // we have index for
+    size_t max_index = 0;
+    for(size_t i=0; i < m_base_col_index.size(); ++i){
+        if(m_base_has_col[i] && max_index < m_base_col_index[i]){
+            max_index = m_base_col_index[i];
+        }
+    }
     m_base_col_index[+BASE_INDEX::MAX] = max_index;
     return !error;
 }
