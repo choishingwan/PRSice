@@ -1475,7 +1475,8 @@ private:
     {
         for (size_t i = 0; i < ref.size(); ++i) {
             if (target == ref[i]) {
-                return index = i;
+                index = i;
+                return true;
             }
         }
         return false;

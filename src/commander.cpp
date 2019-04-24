@@ -19,6 +19,7 @@
 Commander::Commander()
 {
     m_base_col_index.resize(+BASE_INDEX::MAX + 1, -1);
+    m_base_has_col.resize(+BASE_INDEX::MAX + 1, -1);
     set_help_message();
 }
 
@@ -1018,7 +1019,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         std::ifstream base_test;
         base_test.open(m_base_file.c_str());
         if (!base_test.is_open()) {
-            error_message.append("Error: Cannot open base file to read!\n");
+            error_message.append("Error: Cannot open base file: "+m_base_file+" to read!\n");
+            error_message.append("       "+std::string(strerror(errno))+"\n");
             return false;
         }
         std::getline(base_test, header);
@@ -1054,7 +1056,6 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Warning: " + m_chr + " not found in base file\n");
         message.erase("chr");
     }
-
     has_col = index_check(m_effect_allele, column_names, col_index);
     if (has_col) m_base_col_index[+BASE_INDEX::REF] = col_index;
     m_base_has_col[+BASE_INDEX::REF] = has_col;
