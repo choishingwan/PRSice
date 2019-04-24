@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
             const std::string base_name = misc::remove_extension<std::string>(
                 misc::base_name<std::string>(commander.base_name()));
             std::string message = "Start processing " + base_name + "\n";
-            message.append("==============================\n");
+            message.append("====================================");
             reporter.report(message);
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
@@ -90,8 +90,8 @@ int main(int argc, char* argv[])
                 commander.fastscore(), commander.no_full(), commander.beta(),
                 commander.is_index(), commander.keep_ambig(), reporter);
             // then we will read in the sample information
-            message = "Loading sample info from target\n";
-            message.append("==============================\n");
+            message = "Loading Genotype info from target\n";
+            message.append("====================================");
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
@@ -106,9 +106,6 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-            message = "Loading SNP info from target\n";
-            message.append("==============================\n");
-            reporter.report(message);
             target_file->load_snps(commander.out(), commander.exclude_file(),
                                    commander.extract_file(), exclusion_region,
                                    verbose, reporter);
@@ -116,19 +113,18 @@ int main(int argc, char* argv[])
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
             {
+                message =("====================================");
+                reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
-                message = "Loading sample info from reference\n";
-                message.append("==============================\n");
+                message="Loading Genotype info from reference\n";
+                message.append("====================================");
                 reporter.report(message);
                 reference_file->load_samples(commander.ref_keep_file(),
                                              commander.ref_remove_file(),
                                              verbose, reporter);
                 // load the reference file
-                message = "Loading SNP info from reference\n";
-                message.append("==============================\n");
-                reporter.report(message);
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
                     commander.extract_file(), exclusion_region, verbose,

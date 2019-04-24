@@ -34,7 +34,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     // main use of following function is to set the max code
     init_chr();
-    std::string message = "Loading Genotype ";
+    std::string message = "Initializing Genotype ";
     std::string listed_input = file_list;
     std::string input = file;
     if (!listed_input.empty()) {
