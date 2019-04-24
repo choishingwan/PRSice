@@ -94,15 +94,16 @@ private:
                    const bool info_filter, cgranges_t* exclusion_regions,
                    Genotype* target = nullptr);
 
-    void
-    gen_snp_vector(const std::string& out_prefix, cgranges_t* exclusion_regions,
-                   Genotype* target = nullptr);
+    void gen_snp_vector(const std::string& out_prefix,
+                        cgranges_t* exclusion_regions,
+                        Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
-                             const double& geno_threshold, const double& info_threshold,
-                             const double& hard_threshold, const bool maf_filter,
-                             const bool geno_filter, const bool info_filter,
-                             const bool hard_coded,
-                             Genotype* target=nullptr);
+                             const double& geno_threshold,
+                             const double& info_threshold,
+                             const double& hard_threshold,
+                             const bool maf_filter, const bool geno_filter,
+                             const bool info_filter, const bool hard_coded,
+                             Genotype* target = nullptr);
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map

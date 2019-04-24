@@ -520,16 +520,17 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     return true;
 }
 
-void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusion_regions, Genotype* target)
+void BinaryGen::gen_snp_vector(const std::string& out_prefix,
+                               cgranges_t* exclusion_regions, Genotype* target)
 {
-    bool to_remove=false;
-    int64_t *b=nullptr, max_b =0;
+    bool to_remove = false;
+    int64_t *b = nullptr, max_b = 0;
     std::unordered_set<std::string> duplicated_snps;
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> processed_snps;
     std::vector<std::string> alleles;
     std::vector<bool> retain_snp;
-    auto && reference = (m_is_ref)? target : this;
+    auto&& reference = (m_is_ref) ? target : this;
     retain_snp.resize(reference->m_existed_snps.size(), false);
     std::ifstream bgen_file;
     std::ofstream mismatch_snp_record;
@@ -545,7 +546,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
     std::streampos byte_pos;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
-    uint32_t SNP_position=0;
+    uint32_t SNP_position = 0;
     uint32_t offset;
     uint32_t num_snp;
     int chr_code = 0;
@@ -561,7 +562,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
         // get the total unfiltered snp size so that we can initalize the vector
         total_unfiltered_snps += m_context_map[prefix].number_of_variants;
     }
-    check_sample_consistent(std::string(m_genotype_files.front()+".bgen"),
+    check_sample_consistent(std::string(m_genotype_files.front() + ".bgen"),
                             m_context_map[m_genotype_files.front()]);
     // we don't need to reserve the vector now, as we have already
     // read in the base file
@@ -647,7 +648,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
             }
 
             if (reference->m_existed_snps_index.find(RSID)
-                     == reference->m_existed_snps_index.end())
+                == reference->m_existed_snps_index.end())
             {
                 // this is the reference panel, and the SNP wasn't found in the
                 // target
@@ -680,43 +681,43 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
             if (!exclude_snp) {
                 auto&& target_index = reference->m_existed_snps_index[RSID];
                 if (!reference->m_existed_snps[target_index].matching(
-                            chr_code, SNP_position, alleles.back(),
-                            alleles.front(), flipping))
+                        chr_code, SNP_position, alleles.back(), alleles.front(),
+                        flipping))
                 {
                     // SNP not matched
                     if (!mismatch_snp_record.is_open()) {
                         // open the file accordingly
                         if (m_mismatch_file_output) {
                             mismatch_snp_record.open(
-                                        mismatch_snp_record_name.c_str(),
-                                        std::ofstream::app);
+                                mismatch_snp_record_name.c_str(),
+                                std::ofstream::app);
                             if (!mismatch_snp_record.is_open()) {
-                                throw std::runtime_error(std::string(
-                                                             "Cannot open mismatch file to "
-                                                             "write: "
-                                                             + mismatch_snp_record_name));
+                                throw std::runtime_error(
+                                    std::string("Cannot open mismatch file to "
+                                                "write: "
+                                                + mismatch_snp_record_name));
                             }
                         }
                         else
                         {
                             mismatch_snp_record.open(
-                                        mismatch_snp_record_name.c_str());
+                                mismatch_snp_record_name.c_str());
                             if (!mismatch_snp_record.is_open()) {
-                                throw std::runtime_error(std::string(
-                                        "Cannot open mismatch file to "
-                                        "write: "
-                                        + mismatch_snp_record_name));
+                                throw std::runtime_error(
+                                    std::string("Cannot open mismatch file to "
+                                                "write: "
+                                                + mismatch_snp_record_name));
                             }
                             mismatch_snp_record
-                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
-                                       "File\tBP_Target\tBP_File\tA1_"
-                                       "Target\tA1_File\tA2_Target\tA2_"
-                                       "File\n";
+                                << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                   "File\tBP_Target\tBP_File\tA1_"
+                                   "Target\tA1_File\tA2_Target\tA2_"
+                                   "File\n";
                         }
                     }
                     m_mismatch_file_output = true;
-                    if(m_is_ref){
-                    mismatch_snp_record
+                    if (m_is_ref) {
+                        mismatch_snp_record
                             << "Reference\t" << RSID << "\t"
                             << target->m_existed_snps[target_index].chr()
                             << "\t" << chr_code << "\t"
@@ -727,29 +728,31 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
                             << target->m_existed_snps[target_index].alt()
                             << "\t" << alleles.back() << "\n";
                     }
-                    else {
+                    else
+                    {
                         mismatch_snp_record
-                                << "Base\t" << RSID << "\t"
-                                << chr_code
-                                << "\t" << m_existed_snps[target_index].chr() << "\t"
-                                << SNP_position
-                                << "\t" << m_existed_snps[target_index].loc() << "\t"
-                                << alleles.front()
-                                << "\t" << m_existed_snps[target_index].ref() << "\t"
-                                << alleles.back()
-                                << "\t" << m_existed_snps[target_index].alt() << "\n";
+                            << "Base\t" << RSID << "\t" << chr_code << "\t"
+                            << m_existed_snps[target_index].chr() << "\t"
+                            << SNP_position << "\t"
+                            << m_existed_snps[target_index].loc() << "\t"
+                            << alleles.front() << "\t"
+                            << m_existed_snps[target_index].ref() << "\t"
+                            << alleles.back() << "\t"
+                            << m_existed_snps[target_index].alt() << "\n";
                     }
                     m_num_ref_target_mismatch++;
                 }
-                else{
+                else
+                {
                     processed_snps.insert(RSID);
-                    if(m_is_ref){
+                    if (m_is_ref) {
                         target->m_existed_snps[target_index].add_reference(
                             prefix, byte_pos);
-                    }else{
-                        m_existed_snps[target_index].add_target(prefix,
-                                                                byte_pos, chr_code,
-                                                                SNP_position);
+                    }
+                    else
+                    {
+                        m_existed_snps[target_index].add_target(
+                            prefix, byte_pos, chr_code, SNP_position);
                     }
                     retain_snp[target_index] = true;
                     ref_target_match++;
@@ -759,11 +762,12 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
         bgen_file.close();
         fprintf(stderr, "\n");
     }
-    if ( ref_target_match != reference->m_existed_snps.size()) {
+    if (ref_target_match != reference->m_existed_snps.size()) {
         // there are mismatch, so we need to update the snp vector
         reference->m_existed_snps.erase(
             std::remove_if(
-                reference->m_existed_snps.begin(), reference->m_existed_snps.end(),
+                reference->m_existed_snps.begin(),
+                reference->m_existed_snps.end(),
                 [&retain_snp, &reference](const SNP& s) {
                     return !retain_snp[&s - &*begin(reference->m_existed_snps)];
                 }),
@@ -801,18 +805,16 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,cgranges_t* exclusi
 }
 
 
-void BinaryGen::calc_freq_gen_inter(const double& maf_threshold,
-                         const double& geno_threshold, const double& info_threshold,
-                         const double& hard_threshold, const bool maf_filter,
-                         const bool geno_filter, const bool info_filter,
-                         const bool hard_coded,
-                                    Genotype* target)
+void BinaryGen::calc_freq_gen_inter(
+    const double& maf_threshold, const double& geno_threshold,
+    const double& info_threshold, const double& hard_threshold,
+    const bool maf_filter, const bool geno_filter, const bool info_filter,
+    const bool hard_coded, Genotype* target)
 {
     std::vector<bool> retain_snp;
-    auto&& reference = (m_is_ref)? target : this;
+    auto&& reference = (m_is_ref) ? target : this;
     retain_snp.resize(reference->m_existed_snps.size(), false);
     size_t total_snp = reference->m_existed_snps.size();
-
 }
 std::vector<SNP>
 BinaryGen::gen_snp_vector(const std::string& out_prefix,

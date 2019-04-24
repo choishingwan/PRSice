@@ -121,17 +121,16 @@ public:
      * file
      */
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos,
-                       const bool flip)
+                       const std::streampos ref_byte_pos, const bool flip)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
     void add_target(const std::string& target_file,
-                    const std::streampos target_byte_pos,
-                    const int chr, const int loc, const std::string & ref,
-                    const std::string &alt, const bool flipping)
+                    const std::streampos target_byte_pos, const int chr,
+                    const int loc, const std::string& ref,
+                    const std::string& alt, const bool flipping)
     {
         m_target_file = target_file;
         m_target_byte_pos = target_byte_pos;
@@ -399,9 +398,10 @@ public:
         m_missing = missing;
         m_has_count = true;
     }
-    void set_ref_counts(size_t homcom, size_t het, size_t homrar, size_t missing)
+    void set_ref_counts(size_t homcom, size_t het, size_t homrar,
+                        size_t missing)
     {
-        if(m_ref_flipped){
+        if (m_ref_flipped) {
             // we flip the count here so that the count will be
             // identical to the allele identity in target
             // we process the score, we only need to consider
@@ -410,12 +410,13 @@ public:
             m_ref_het = het;
             m_ref_homrar = homcom;
             m_ref_missing = missing;
-
-        }else{
-        m_ref_homcom = homcom;
-        m_ref_het = het;
-        m_ref_homrar = homrar;
-        m_ref_missing = missing;
+        }
+        else
+        {
+            m_ref_homcom = homcom;
+            m_ref_het = het;
+            m_ref_homrar = homrar;
+            m_ref_missing = missing;
         }
         m_has_ref_count = true;
     }

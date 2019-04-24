@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
         double maf, geno, info, hard_threshold;
-        bool maf_filter, geno_filter, hard_coded, info_filter, init_ref=false;
+        bool maf_filter, geno_filter, hard_coded, info_filter, init_ref = false;
         // load the filtering parameters for the target file
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
@@ -103,7 +103,9 @@ int main(int argc, char* argv[])
                                    commander.extract_file(), exclusion_region,
                                    verbose, reporter);
             // now load the reference file
-            if ((!commander.no_clump() && commander.use_ref()) || commander.use_ref_maf()) {
+            if ((!commander.no_clump() && commander.use_ref())
+                || commander.use_ref_maf())
+            {
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
@@ -111,40 +113,32 @@ int main(int argc, char* argv[])
                                              commander.ref_remove_file(),
                                              verbose, reporter);
                 // load the reference file
-                reference_file->load_snps(commander.out(), commander.exclude_file(),
-                                       commander.extract_file(), exclusion_region,
-                                       verbose, reporter, target_file);
+                reference_file->load_snps(
+                    commander.out(), commander.exclude_file(),
+                    commander.extract_file(), exclusion_region, verbose,
+                    reporter, target_file);
             }
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
-            target_file->calc_freqs_and_intermediate(commander.out(),
-                                                     maf, geno, info,
-                                                     hard_threshold,
-                                                     maf_filter,
-                                                     geno_filter,
-                                                     info_filter,
-                                                     hard_coded, true,
-                                                     reporter);
+            target_file->calc_freqs_and_intermediate(
+                commander.out(), maf, geno, info, hard_threshold, maf_filter,
+                geno_filter, info_filter, hard_coded, true, reporter);
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
             hard_coded = commander.ref_hard_threshold(hard_threshold);
-            if(init_ref && (commander.use_ref_maf()|| maf_filter ||
-                            geno_filter || info_filter ||
-                            commander.use_inter())){
+            if (init_ref
+                && (commander.use_ref_maf() || maf_filter || geno_filter
+                    || info_filter || commander.use_inter()))
+            {
                 // we only go through the reference file if we are
                 // 1. Need the reference MAF
                 // 2. Need to filter the reference file (need hard code info)
                 // 3. Need to generate an intermediate file for clumping
-                reference_file->calc_freqs_and_intermediate(commander.out(),
-                                                         maf, geno, info,
-                                                         hard_threshold,
-                                                         maf_filter,
-                                                         geno_filter,
-                                                         info_filter,
-                                                         hard_coded, true,
-                                                         reporter,
-                                                            target_file);
+                reference_file->calc_freqs_and_intermediate(
+                    commander.out(), maf, geno, info, hard_threshold,
+                    maf_filter, geno_filter, info_filter, hard_coded, true,
+                    reporter, target_file);
             }
         }
         catch (const std::invalid_argument& ia)
