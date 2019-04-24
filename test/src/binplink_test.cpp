@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include <fstream>
 #include <math.h>
-
+/*
 class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:
@@ -701,5 +701,5 @@ TEST_F(BPLINK_BASE_READ, WRONG_COORDINATE)
     }
 }
 // Test LD Reference sample read and SNP read.
-
+*/
 #endif // BIN_PLINK_TEST_H
