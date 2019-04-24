@@ -765,6 +765,7 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
         throw std::runtime_error(error_message);
     }
     bed.seekg(0, bed.beg);
+    bed.clear();
     char version_check[3];
     bed.read(version_check, 3);
     uii = static_cast<uint32_t>(bed.gcount());
