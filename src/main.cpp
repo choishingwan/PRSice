@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
             message.append("==============================\n");
             reporter.report(message);
             target_file->calc_freqs_and_intermediate(
-                commander.out(), maf, geno, info, hard_threshold, maf_filter,
+                        maf, geno, info, hard_threshold, maf_filter,
                 geno_filter, info_filter, hard_coded, true, reporter);
 
             maf_filter = commander.ref_maf(maf);
@@ -156,16 +156,14 @@ int main(int argc, char* argv[])
                     "Calculate MAF and perform filtering on reference SNPs\n";
                 message.append("==============================\n");
                 reporter.report(message);
-                reference_file->calc_freqs_and_intermediate(
-                    commander.out(), maf, geno, info, hard_threshold,
+                reference_file->calc_freqs_and_intermediate(maf, geno, info, hard_threshold,
                     maf_filter, geno_filter, info_filter, hard_coded, true,
                     reporter, target_file);
             }
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
-
-
             // Generate Region flag information
+
         }
         catch (const std::invalid_argument& ia)
         {
