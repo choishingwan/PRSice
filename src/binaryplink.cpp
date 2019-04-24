@@ -424,453 +424,6 @@ void BinaryPlink::calc_freq_gen_inter(
     }
 }
 
-std::vector<SNP> BinaryPlink::gen_snp_vector(
-    const std::string& out_prefix, const double& maf_threshold,
-    const bool maf_filter, const double& geno_threshold, const bool geno_filter,
-    const double&, const bool, const double&, const bool,
-    cgranges_t* exclusion_regions, Genotype* target)
-{
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
-    std::unordered_set<std::string> duplicated_snp;
-    std::vector<SNP> snp_info;
-    std::vector<std::string> bim_token;
-    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-    std::vector<bool> ref_retain;
-    if (m_is_ref) ref_retain.resize(target->m_existed_snps.size(), false);
-    std::ifstream bim, bed;
-    std::ofstream mismatch_snp_record;
-    std::string bim_name, bed_name, chr, line;
-    std::string prev_chr = "", error_message = "";
-    std::string mismatch_snp_record_name = out_prefix + ".mismatch";
-    double cur_maf, cur_geno;
-    double sample_ct_recip =
-        1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
-    std::streampos byte_pos;
-    // temp holder for region match
-    int64_t *b = nullptr, max_b = 0;
-    // variables for calculating the MAF
-    uint32_t num_ref_target_match = 0;
-    uint32_t ll_ct = 0;
-    uint32_t lh_ct = 0;
-    uint32_t hh_ct = 0;
-    uint32_t ll_ctf = 0;
-    uint32_t lh_ctf = 0;
-    uint32_t hh_ctf = 0;
-    uint32_t uii = 0;
-    int missing = 0;
-
-    int chr_code = 0;
-    int prev_snp_processed = 0, num_snp_read = -1;
-    bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, has_count = false, dummy, to_remove = false;
-
-    // initialize the sample inclusion mask
-    std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
-    std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
-    // fill it with the required mask (copy from PLINK2)
-    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
-                               sample_include2.data());
-    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
-                               founder_include2.data());
-    uintptr_t bed_offset;
-    for (auto prefix : m_genotype_files) {
-        // go through each genotype file
-        bim_name = prefix + ".bim";
-        bed_name = prefix + ".bed";
-        // make sure we reset the flag of the ifstream by closing it before use
-        if (bim.is_open()) bim.close();
-        if (bed.is_open()) bed.close();
-        bim.clear();
-        bed.clear();
-        bim.open(bim_name.c_str());
-        if (!bim.is_open()) {
-            std::string error_message =
-                "Error: Cannot open bim file: " + bim_name;
-            throw std::runtime_error(error_message);
-        }
-        // First pass, get the number of marker in bed & bim
-        // as we want the number, num_snp_read will start at 0
-        num_snp_read = 0;
-        prev_chr = "";
-        while (std::getline(bim, line)) {
-            misc::trim(line);
-            if (line.empty()) continue;
-            // don't bother to check, if the
-            // bim file is malformed i.e. with less than 6
-            // column. It will likely be captured when we do
-            // size check and when we do the reading later on
-            ++num_snp_read;
-        }
-        bim.clear();
-        bim.seekg(0, bim.beg);
-        // check if the bed file is valid
-        check_bed(bed_name, static_cast<size_t>(num_snp_read), bed_offset);
-        bed.open(bed_name.c_str());
-        if (!bed.is_open()) {
-            std::string error_message =
-                "Error: Cannot open bed file: " + bed_name;
-            throw std::runtime_error(error_message);
-        }
-
-        // now go through the bim & bed file and perform filtering
-        // reset # SNP read to -1 such that we can avoid troublesome -1 later on
-        num_snp_read = -1;
-        // ensure prev_snp_processed = -2 so that we will always perform
-        // seek for the first SNP (which will account for the bed offset)
-        prev_snp_processed = -2;
-        while (std::getline(bim, line)) {
-            misc::trim(line);
-            if (line.empty()) continue;
-            // we need to remember the actual number read is num_snp_read+1
-            ++num_snp_read;
-            bim_token = misc::split(line);
-            if (bim_token.size() < 6) {
-                std::string error_message =
-                    "Error: Malformed bim file. Less than 6 column on "
-                    "line: "
-                    + misc::to_string(num_snp_read + 1) + "\n";
-                throw std::runtime_error(error_message);
-            }
-            if (m_is_ref) {
-                // for the reference panel
-                if (target->m_existed_snps_index.find(bim_token[+BIM::RS])
-                    == target->m_existed_snps_index.end())
-                {
-                    // Skip SNPs not found in the target file
-                    continue;
-                }
-            }
-            // ensure all alleles are capitalized for easy matching
-            std::transform(bim_token[+BIM::A1].begin(),
-                           bim_token[+BIM::A1].end(),
-                           bim_token[+BIM::A1].begin(), ::toupper);
-            std::transform(bim_token[+BIM::A2].begin(),
-                           bim_token[+BIM::A2].end(),
-                           bim_token[+BIM::A2].begin(), ::toupper);
-
-            // exclude SNPs that are not required
-            if (!m_is_ref) {
-                // don't bother doing it when reading reference genome
-                // as all SNPs should have been removed in target
-                if (!m_exclude_snp
-                    && m_snp_selection_list.find(bim_token[+BIM::RS])
-                           == m_snp_selection_list.end())
-                {
-                    continue;
-                }
-                else if (m_exclude_snp
-                         && m_snp_selection_list.find(bim_token[+BIM::RS])
-                                != m_snp_selection_list.end())
-                {
-                    continue;
-                }
-                // ignore any SNPs not found in base file
-                if (m_snp_in_base.find(bim_token[+BIM::RS])
-                    == m_snp_in_base.end())
-                {
-                    continue;
-                }
-            }
-
-            // read in the chromosome string
-            chr = bim_token[+BIM::CHR];
-            // check if this is a new chromosome. If this is a new chromosome,
-            // check if we want to remove it
-            if (chr != prev_chr) {
-                // get the chromosome code using PLINK 2 function
-                chr_code = get_chrom_code_raw(chr.c_str());
-                // check if we want to skip this chromosome
-                if (chr_code_check(chr_code, chr_sex_error, chr_error,
-                                   error_message))
-                {
-                    // only print chr error message if we haven't already
-                    if (chr_error && !prev_chr_error) {
-                        std::cerr << error_message << "\n";
-                        prev_chr_sex_error = chr_error;
-                    }
-                    // only print sex chr error message if we haven't already
-                    else if (chr_sex_error && !prev_chr_sex_error)
-                    {
-                        std::cerr << error_message << "\n";
-                        prev_chr_sex_error = chr_sex_error;
-                    }
-                    continue;
-                }
-                // only update the prev_chr after we have done the checking
-                // this will help us to continue to skip all SNPs that are
-                // supposed to be removed instead of the first entry
-                prev_chr = chr;
-            }
-
-            // now read in the coordinate
-            int loc = -1;
-            try
-            {
-                loc = misc::convert<int>(bim_token[+BIM::BP]);
-                if (loc < 0) {
-                    // coordinate must >= 0
-                    std::string error_message =
-                        "Error: SNP with negative corrdinate: "
-                        + bim_token[+BIM::RS] + ":" + bim_token[+BIM::BP]
-                        + "\n";
-                    error_message.append(
-                        "Please check you have the correct input");
-                    throw std::runtime_error(error_message);
-                }
-            }
-            catch (...)
-            {
-                std::string error_message =
-                    "Error: SNP with non-numeric corrdinate: "
-                    + bim_token[+BIM::RS] + ":" + bim_token[+BIM::BP] + "\n";
-                error_message.append("Please check you have the correct input");
-                throw std::runtime_error(error_message);
-            }
-            // check if we want to exclude this SNP because this fall within the
-            // exclusion region(s)
-            to_remove =
-                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
-                           loc - 1, loc + 1, &b, &max_b);
-            free(b);
-            // this is included in one of the exclusion region
-            if (to_remove) continue;
-            // check if this is a duplicated SNP
-            if (m_existed_snps_index.find(bim_token[+BIM::RS])
-                != m_existed_snps_index.end())
-            {
-                duplicated_snp.insert(bim_token[+BIM::RS]);
-            }
-            else if (!ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2])
-                     || m_keep_ambig)
-            {
-                // if the SNP is not ambiguous (or if we want to keep ambiguous
-                // SNPs), we will start processing the bed file (if required)
-
-                // now read in the binary information and determine if we
-                // want to keep this SNP only do the filtering if we need to
-                // as my current implementation isn't as efficient as PLINK
-                byte_pos = bed_offset
-                           + (num_snp_read
-                              * (static_cast<uint64_t>(unfiltered_sample_ct4)));
-                if (geno_filter || maf_filter) {
-                    // indicate we've already read the maf count
-                    has_count = true;
-                    if (num_snp_read - prev_snp_processed > 1) {
-                        // only skip line if we are not reading sequentially
-                        if (!bed.seekg(byte_pos, std::ios_base::beg)) {
-                            std::string error_message =
-                                "Error: Cannot read the bed file(seek): "
-                                + bed_name;
-                            throw std::runtime_error(error_message);
-                        }
-                    }
-                    prev_snp_processed = num_snp_read;
-                    // read in the genotype information to the genotype vector
-                    if (load_raw(unfiltered_sample_ct4, bed,
-                                 m_tmp_genotype.data()))
-                    {
-                        std::string error_message =
-                            "Error: Cannot read the bed file(read): "
-                            + bed_name;
-                        throw std::runtime_error(error_message);
-                    }
-                    // calculate the MAF using PLINK2 function
-                    single_marker_freqs_and_hwe(
-                        unfiltered_sample_ctv2, m_tmp_genotype.data(),
-                        sample_include2.data(), founder_include2.data(),
-                        m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct,
-                        &ll_ctf, &lh_ctf, &hh_ctf);
-                    uii = ll_ct + lh_ct + hh_ct;
-                    cur_geno = (static_cast<int32_t>(uii)) * sample_ct_recip;
-                    uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
-                    missing = m_founder_ct - (ll_ctf + lh_ctf + hh_ctf);
-                    if (!uii) {
-                        cur_maf = 0.5;
-                    }
-                    else
-                    {
-                        cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
-                                  / (static_cast<double>(uii));
-                    }
-                    if (misc::logically_equal(cur_maf, 0.0)
-                        || misc::logically_equal(cur_maf, 1.0))
-                    {
-                        // none of the sample contain this SNP
-                        // still count as MAF filtering (for now)
-                        m_num_maf_filter++;
-                        continue;
-                    }
-                    // filter by genotype missingness
-                    if (geno_filter && geno_threshold < cur_geno) {
-                        m_num_geno_filter++;
-                        continue;
-                    }
-                    // filter by MAF
-                    // do not flip the MAF for now, so that we
-                    // are not confuse later on
-                    // remove SNP if maf lower than threshold
-                    if (maf_filter && cur_maf < maf_threshold) {
-                        m_num_maf_filter++;
-                        continue;
-                    }
-                }
-                // we have now completed the geno / maf filtering
-                m_num_ambig +=
-                    ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
-                if (!m_is_ref) {
-                    // only push in the SNP if this is not the reference panel.
-                    // For reference panel, we just add the coordinate to the
-                    // target to save memory usage
-                    m_existed_snps_index[bim_token[+BIM::RS]] = snp_info.size();
-                    if (has_count)
-                        snp_info.emplace_back(SNP(
-                            bim_token[+BIM::RS], chr_code, loc,
-                            bim_token[+BIM::A1], bim_token[+BIM::A2], prefix,
-                            byte_pos, ll_ctf, lh_ctf, hh_ctf, missing));
-                    else
-                        snp_info.emplace_back(SNP(bim_token[+BIM::RS], chr_code,
-                                                  loc, bim_token[+BIM::A1],
-                                                  bim_token[+BIM::A2], prefix,
-                                                  byte_pos));
-                }
-                else
-                {
-                    auto&& target_index =
-                        target->m_existed_snps_index[bim_token[+BIM::RS]];
-                    if (!target->m_existed_snps[target_index].matching(
-                            chr_code, loc, bim_token[+BIM::A1],
-                            bim_token[+BIM::A2], dummy))
-                    {
-                        // For reference panel, check if the reference and
-                        // target matches.
-                        // here, this is a mismatch, so we will output the
-                        // information to .mismatch file
-                        if (!mismatch_snp_record.is_open()) {
-                            // open the file accordingly
-                            if (m_mismatch_file_output) {
-                                mismatch_snp_record.open(
-                                    mismatch_snp_record_name.c_str(),
-                                    std::ofstream::app);
-                                if (!mismatch_snp_record.is_open()) {
-                                    throw std::runtime_error(std::string(
-                                        "Cannot open mismatch file to "
-                                        "write: "
-                                        + mismatch_snp_record_name));
-                                }
-                            }
-                            else
-                            {
-                                mismatch_snp_record.open(
-                                    mismatch_snp_record_name.c_str());
-                                if (!mismatch_snp_record.is_open()) {
-                                    throw std::runtime_error(std::string(
-                                        "Cannot open mismatch file to "
-                                        "write: "
-                                        + mismatch_snp_record_name));
-                                }
-                                mismatch_snp_record
-                                    << "File_Type\tRS_ID\tCHR_Target\tCHR_"
-                                       "File\tBP_Target\tBP_File\tA1_"
-                                       "Target\tA1_File\tA2_Target\tA2_"
-                                       "File\n";
-                            }
-                        }
-                        m_mismatch_file_output = true;
-                        mismatch_snp_record
-                            << "Reference\t" << bim_token[+BIM::RS] << "\t"
-                            << target->m_existed_snps[target_index].chr()
-                            << "\t" << chr_code << "\t"
-                            << target->m_existed_snps[target_index].loc()
-                            << "\t" << loc << "\t"
-                            << target->m_existed_snps[target_index].ref()
-                            << "\t" << bim_token[+BIM::A1] << "\t"
-                            << target->m_existed_snps[target_index].alt()
-                            << "\t" << bim_token[+BIM::A2] << "\n";
-                        m_num_ref_target_mismatch++;
-                    }
-                    else
-                    {
-                        // this is not a mismatch, we can add it to the
-                        // target
-                        if (has_count)
-                            target->m_existed_snps[target_index].add_reference(
-                                prefix, byte_pos, ll_ctf, lh_ctf, hh_ctf,
-                                missing);
-                        else
-                            target->m_existed_snps[target_index].add_reference(
-                                prefix, byte_pos);
-                        ref_retain[target_index] = true;
-                        num_ref_target_match++;
-                    }
-                }
-            }
-            else if (!m_keep_ambig)
-            {
-                // directly skip the ambiguous SNP if we don't want to keep it
-                m_num_ambig++;
-            }
-        }
-        bim.close();
-        if (bed.is_open()) bed.close();
-    }
-    // try to release memory
-    snp_info.shrink_to_fit();
-    if (m_is_ref && num_ref_target_match != target->m_existed_snps.size()) {
-        // remove any SNP that is not retained, the ref_retain vector should
-        // have the same ID as the target->m_existed_snps so we can use it
-        // directly for SNP removal
-        target->m_existed_snps.erase(
-            std::remove_if(
-                target->m_existed_snps.begin(), target->m_existed_snps.end(),
-                [&ref_retain, &target](const SNP& s) {
-                    return !ref_retain[(&s - &*begin(target->m_existed_snps))];
-                }),
-            target->m_existed_snps.end());
-        target->m_existed_snps.shrink_to_fit();
-
-        // When reading the reference file, we actually update the
-        // SNP list in target file. This lead to the index search in
-        // target to have the wrong index. To avoid that, we need to
-        // update the SNP index accordingly
-        target->update_snp_index();
-    }
-    if (duplicated_snp.size() != 0) {
-        // there are duplicated SNPs, we will need to terminate with the
-        // information
-        std::ofstream log_file_stream;
-        std::string dup_name = out_prefix + ".valid";
-        log_file_stream.open(dup_name.c_str());
-        if (!log_file_stream.is_open()) {
-            std::string error_message = "Error: Cannot open file: " + dup_name;
-            throw std::runtime_error(error_message);
-        }
-        // we should not use m_existed_snps unless it is for reference
-        for (auto&& snp : (m_is_ref ? target->m_existed_snps : snp_info)) {
-            // we only output the valid SNPs.
-            if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
-                log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
-                                << snp.loc() << "\t" << snp.ref() << "\t"
-                                << snp.alt() << "\n";
-        }
-        log_file_stream.close();
-        std::string error_message =
-            "Error: A total of " + std::to_string(duplicated_snp.size())
-            + " duplicated SNP ID detected out of "
-            + misc::to_string(snp_info.size())
-            + " input SNPs! Valid SNP ID (post --extract / "
-              "--exclude, non-duplicated SNPs) stored at "
-            + dup_name + ". You can avoid this error by using --extract "
-            + dup_name;
-        throw std::runtime_error(error_message);
-    }
-    // mismatch_snp_record will close itself when it goes out of scope
-    return snp_info;
-}
-
-
 void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                                  cgranges_t* exclusion_regions,
                                  Genotype* target)
@@ -1300,10 +853,10 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
     uint32_t ujj;
     uint32_t ukk;
     // for storing the count of each observation
-    uint32_t homrar_ct = 0;
-    uint32_t missing_ct = 0;
-    uint32_t het_ct = 0;
-    uint32_t homcom_ct = 0;
+    size_t homrar_ct = 0;
+    size_t missing_ct = 0;
+    size_t het_ct = 0;
+    size_t homcom_ct = 0;
     // for now, hard code this
     int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
@@ -1329,8 +882,6 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
     // check if it is not the frist run, if it is the first run, we will reset
     // the PRS to zero instead of addint it up
     bool not_first = !reset_zero;
-    // for storing the missing counts
-    intptr_t nanal;
     double stat, maf, adj_score, miss_score;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -1354,7 +905,6 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         // cause bias here? (i.e we don't get the number we ask for)
         // actually, in general, invalid SNP will cause a problem even for
         // normal PRS calculation, we need someway to account for that
-        if (!cur_snp.valid()) continue;
         if (m_cur_file != cur_snp.file_name()) {
             // If we are processing a new file we will need to read it
             if (m_bed_file.is_open()) {
@@ -1406,24 +956,8 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
 
         // if we haven't previously calculated the counts, we will need to count
         // it using PLINK's function
-        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct)) {
-            // plink functions
-            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
-                          &missing_ct, &het_ct, &homcom_ct);
-            // now set this piece of information, might become useful if we are
-            // processing the second phenotype / second region
-            nanal = static_cast<uint32_t>(m_sample_ct) - missing_ct;
-            // calculate the hom rare count
-            homrar_ct = static_cast<uint32_t>(nanal) - het_ct - homcom_ct;
-            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-        }
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         // number of sample with valid genotypes
-        nanal = static_cast<intptr_t>(m_sample_ct) - missing_ct;
-        if (nanal == 0) {
-            // if all samples have a missing genotype, we will remove this SNP
-            cur_snp.invalidate();
-            continue;
-        }
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
@@ -1431,7 +965,8 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * max_weight);
+            / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
+               * max_weight);
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;
@@ -1595,10 +1130,10 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     uint32_t ujj;
     uint32_t ukk;
     // for storing the count of each observation
-    uint32_t homrar_ct = 0;
-    uint32_t missing_ct = 0;
-    uint32_t het_ct = 0;
-    uint32_t homcom_ct = 0;
+    size_t homrar_ct = 0;
+    size_t missing_ct = 0;
+    size_t het_ct = 0;
+    size_t homcom_ct = 0;
     int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
@@ -1606,7 +1141,6 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     double homrar_weight = m_homrar_weight;
     // this is required if we want to calculate the MAF from the genotype (for
     // imputation of missing genotype)
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     // if we want to set the missing score to zero, miss_count will equal to 0,
     // 1 otherwise
     const int miss_count =
@@ -1620,8 +1154,6 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     // check if it is not the frist run, if it is the first run, we will reset
     // the PRS to zero instead of addint it up
     bool not_first = !set_zero;
-    // for storing the missing counts
-    intptr_t nanal;
     double stat, maf, adj_score, miss_score;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -1634,7 +1166,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         auto&& cur_snp = m_existed_snps[i_snp];
         // only read this SNP if it falls within our region of interest or if
         // this SNP is invalid
-        if (!cur_snp.in(region_index) || !cur_snp.valid()) continue;
+        if (!cur_snp.in(region_index)) continue;
         if (m_cur_file != cur_snp.file_name()) {
             // If we are processing a new file we will need to read it
             if (m_bed_file.is_open()) {
@@ -1686,23 +1218,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
 
         // if we haven't previously calculated the counts, we will need to count
         // it using PLINK's function
-        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct)) {
-            // plink functions
-            genovec_3freq(genotype.data(), m_sample_mask.data(), pheno_nm_ctv2,
-                          &missing_ct, &het_ct, &homcom_ct);
-            homrar_ct = static_cast<uint32_t>(m_sample_ct) - missing_ct
-                        - homcom_ct - het_ct;
-            // now set this piece of information, might become useful if we are
-            // processing the second phenotype / second region
-            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-        }
-        // number of sample with valid genotypes
-        nanal = static_cast<intptr_t>(m_sample_ct) - missing_ct;
-        if (nanal == 0) {
-            // if all samples have a missing genotype, we will remove this SNP
-            cur_snp.invalidate();
-            continue;
-        }
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
@@ -1711,7 +1227,8 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / static_cast<double>(nanal * ploidy);
+            / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
+               * static_cast<double>(ploidy));
         if (cur_snp.is_flipped()) {
             // change the mean to reflect flipping
             maf = 1.0 - maf;

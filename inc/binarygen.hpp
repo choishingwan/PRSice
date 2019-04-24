@@ -67,33 +67,6 @@ private:
      * \return
      */
     bool check_is_sample_format();
-    /*!
-     * \brief Function to generate the SNP vector
-     * \param out_prefix is the output prefix
-     * \param maf_threshold is the maf threshold
-     * \param maf_filter is the boolean indicate if we want to perform maf
-     * filtering
-     * \param geno_threshold is the geno threshold
-     * \param geno_filter is the boolean indicate if we want to perform geno
-     * filtering
-     * \param hard_threshold is the hard coding threshold
-     * \param hard_coded is the boolean indicate if hard coding should be
-     * performed
-     * \param info_threshold is the INFO score threshold
-     * \param info_filter is the boolean indicate if we want to perform INFO
-     * score filtering
-     * \param exclusion is the exclusion region
-     * \param target  contain the target genotype information (if is reference)
-     * \return a vector of SNP
-     */
-    std::vector<SNP>
-    gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
-                   const bool maf_filter, const double& geno_threshold,
-                   const bool geno_filter, const double& hard_threshold,
-                   const bool hard_coded, const double& info_threshold,
-                   const bool info_filter, cgranges_t* exclusion_regions,
-                   Genotype* target = nullptr);
-
     void gen_snp_vector(const std::string& out_prefix,
                         cgranges_t* exclusion_regions,
                         Genotype* target = nullptr);
@@ -611,10 +584,11 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold)
+                        double hard_threshold, bool filtering = false)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
+            , m_filtering(filtering)
         {
         }
         void initialise(std::size_t, std::size_t)
@@ -654,7 +628,8 @@ private:
             m_exp_value = 0.0;
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
-            return IS_SET(m_sample->data(), m_sample_i);
+            // if this is for filtering, we will always include all samples
+            return m_filtering || IS_SET(m_sample->data(), m_sample_i);
         }
         /*!
          * \brief set_number_of_entries is yet another function required by
@@ -729,7 +704,8 @@ private:
             }
             // we can now push in the expected value for this sample. This
             // can then use for the calculation of the info score
-            rs.push(m_exp_value);
+            // always calculate for any inclusion
+            if (IS_SET(m_sample->data(), m_sample_i)) rs.push(m_exp_value);
         }
         /*!
          * \brief info_score is the function use to calculate the info score
@@ -755,6 +731,7 @@ private:
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
+        bool m_filtering;
     };
 };
 

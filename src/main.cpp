@@ -74,6 +74,11 @@ int main(int argc, char* argv[])
             // initialize the target object using the factory
             target_file = factory.createGenotype(commander, reporter);
             // load base file into memory
+            const std::string base_name = misc::remove_extension<std::string>(
+                misc::base_name<std::string>(commander.base_name()));
+            std::string message = "Start processing " + base_name + "\n";
+            message.append("==============================\n");
+            reporter.report(message);
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
@@ -85,6 +90,9 @@ int main(int argc, char* argv[])
                 commander.fastscore(), commander.no_full(), commander.beta(),
                 commander.is_index(), commander.keep_ambig(), reporter);
             // then we will read in the sample information
+            message = "Loading sample info from target\n";
+            message.append("==============================\n");
+            reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
                                       reporter);
@@ -98,7 +106,9 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-
+            message = "Loading SNP info from target\n";
+            message.append("==============================\n");
+            reporter.report(message);
             target_file->load_snps(commander.out(), commander.exclude_file(),
                                    commander.extract_file(), exclusion_region,
                                    verbose, reporter);
@@ -109,10 +119,16 @@ int main(int argc, char* argv[])
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
+                message = "Loading sample info from reference\n";
+                message.append("==============================\n");
+                reporter.report(message);
                 reference_file->load_samples(commander.ref_keep_file(),
                                              commander.ref_remove_file(),
                                              verbose, reporter);
                 // load the reference file
+                message = "Loading SNP info from reference\n";
+                message.append("==============================\n");
+                reporter.report(message);
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
                     commander.extract_file(), exclusion_region, verbose,
@@ -120,9 +136,14 @@ int main(int argc, char* argv[])
             }
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
+
+            message = "Calculate MAF and perform filtering on target SNPs\n";
+            message.append("==============================\n");
+            reporter.report(message);
             target_file->calc_freqs_and_intermediate(
                 commander.out(), maf, geno, info, hard_threshold, maf_filter,
                 geno_filter, info_filter, hard_coded, true, reporter);
+
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
@@ -135,11 +156,20 @@ int main(int argc, char* argv[])
                 // 1. Need the reference MAF
                 // 2. Need to filter the reference file (need hard code info)
                 // 3. Need to generate an intermediate file for clumping
+                message =
+                    "Calculate MAF and perform filtering on reference SNPs\n";
+                message.append("==============================\n");
+                reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
                     commander.out(), maf, geno, info, hard_threshold,
                     maf_filter, geno_filter, info_filter, hard_coded, true,
                     reporter, target_file);
             }
+            // now should get the correct MAF and should have filtered the SNPs
+            // accordingly
+
+
+            // Generate Region flag information
         }
         catch (const std::invalid_argument& ia)
         {
@@ -176,8 +206,7 @@ int main(int argc, char* argv[])
         region.print_region_number(reporter);
 
         // Need to handle paths in the name
-        const std::string base_name = misc::remove_extension<std::string>(
-            misc::base_name<std::string>(commander.base_name()));
+
         try
         {
             // initialize PRSice class

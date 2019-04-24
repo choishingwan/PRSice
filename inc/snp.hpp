@@ -36,8 +36,8 @@ public:
     SNP(const std::string& rs_id, const int chr, const int loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const std::string& file_name, const std::streampos byte_pos,
-        const int homcom_ct, const int het_ct, const int homrar_ct,
-        const int missing)
+        const size_t homcom_ct, const size_t het_ct, const size_t homrar_ct,
+        const size_t missing)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -127,6 +127,18 @@ public:
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
+    void update_reference(const std::string& ref_file,
+                          const std::streampos ref_byte_pos)
+    {
+        m_ref_file = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
+    }
+    void update_target(const std::string& target_file,
+                       const std::streampos byte_pos)
+    {
+        m_target_file = target_file;
+        m_target_byte_pos = byte_pos;
+    }
     void add_target(const std::string& target_file,
                     const std::streampos target_byte_pos, const int chr,
                     const int loc, const std::string& ref,
@@ -141,9 +153,9 @@ public:
         m_alt = alt;
     }
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos, const int32_t homcom,
-                       const int32_t het, const int32_t homrar,
-                       const int32_t missing)
+                       const std::streampos ref_byte_pos, const size_t homcom,
+                       const size_t het, const size_t homrar,
+                       const size_t missing)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
@@ -373,7 +385,8 @@ public:
      * \param missing is the number of missing genotypes
      * \return true if calculation is already done
      */
-    bool get_counts(int& homcom, int& het, int& homrar, int& missing) const
+    bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
+                    size_t& missing) const
     {
         homcom = m_homcom;
         het = m_het;
