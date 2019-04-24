@@ -893,7 +893,15 @@ void BinaryGen::calc_freq_gen_inter(
         }
     }
     // now start processing the bgen file
+    double progress = 0, prev_progress = -1.0;
+    const size_t total_snp = reference->m_existed_snps.size();
     for (auto&& snp : reference->m_existed_snps) {
+        progress = static_cast<double>(processed_count)
+                   / static_cast<double>(total_snp) * 100;
+        if (progress - prev_progress > 0.01) {
+            fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%", progress);
+            prev_progress = progress;
+        }
         if (m_is_ref) {
             cur_file_name = snp.ref_file_name();
             byte_pos = snp.ref_byte_pos();
@@ -936,7 +944,7 @@ void BinaryGen::calc_freq_gen_inter(
             sample_include2.data(), founder_include2.data(), m_sample_ct,
             &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
         uii = ll_ct + lh_ct + hh_ct;
-        cur_geno = (static_cast<int32_t>(uii)) * sample_ct_recip;
+        cur_geno = 1.0-((static_cast<int32_t>(uii)) * sample_ct_recip);
         uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
         tmp_total = (ll_ctf + lh_ctf + hh_ctf);
         assert(m_founder_ct >= tmp_total);
@@ -1020,6 +1028,8 @@ void BinaryGen::calc_freq_gen_inter(
             }
         }
     }
+
+    fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
     // now update the vector
     if (retained != reference->m_existed_snps.size()) {
         reference->m_existed_snps.erase(

@@ -223,6 +223,7 @@ protected:
         if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
             return RET_READ_FAIL;
         }
+        return 0;
     }
 };
 
