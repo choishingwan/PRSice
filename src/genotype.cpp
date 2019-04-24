@@ -56,10 +56,9 @@ void Genotype::read_base(
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
     // Read in threshold information
-    double max_threshold =
-        fastscore ? *std::max_element(barlevels.begin(), barlevels.end())
-                  : bound_end;
-    if (!no_full) max_threshold = 1.0;
+    const double max_threshold = no_full?
+        (fastscore ? *std::max_element(barlevels.begin(), barlevels.end())
+                  : bound_end) : 1.0;
     // Start reading the base file. If the base file contain gz as its suffix,
     // we will read it as a gz file
     bool gz_input = false;
@@ -95,7 +94,6 @@ void Genotype::read_base(
     double pvalue = 2.0;
     double stat = 0.0;
     double pthres = 0.0;
-    double se = 0.0;
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
     size_t num_ambiguous = 0;
@@ -142,6 +140,262 @@ void Genotype::read_base(
     }
 
     std::unordered_set<int> unique_thresholds;
+    double prev_progress = 0.0;
+    while ((!gz_input && std::getline(snp_file, line))
+           || (gz_input && std::getline(gz_snp_file, line)))
+    {
+        if (!gz_input) {
+            double progress = static_cast<double>(snp_file.tellg())
+                              / static_cast<double>(file_length) * 100;
+            if (progress - prev_progress > 0.01) {
+                fprintf(stderr, "\rReading %03.2f%%", progress);
+                prev_progress = progress;
+            }
+        }
+        misc::trim(line);
+        if (line.empty()) continue;
+        num_line_in_base++;
+        exclude = false;
+        token = misc::split(line);
+        has_chr = false;
+        has_bp = false;
+        if (token.size() <= max_index) {
+            std::string error_message = line;
+            error_message.append("\nMore index than column in data\n");
+            throw std::runtime_error(error_message);
+        }
+
+        rs_id = token[col_index[+BASE_INDEX::RS]];
+        if (dup_index.find(rs_id) == dup_index.end()) {
+            // if this is not a duplicated SNP
+            dup_index.insert(rs_id);
+            chr_code = -1;
+            if (has_col[+BASE_INDEX::CHR]) {
+                chr_code = get_chrom_code_raw(
+                    token[col_index[+BASE_INDEX::CHR]].c_str());
+                if (static_cast<uint32_t>(chr_code) > m_max_code) {
+                    if (chr_code != -1) {
+                        if (chr_code >= MAX_POSSIBLE_CHROM) {
+                            // it is ok as chr_code - MAX_POSSIBLE_CHROM >=0
+                            chr_code =
+                                m_xymt_codes[static_cast<size_t>(chr_code)
+                                             - MAX_POSSIBLE_CHROM];
+                            // this is the sex chromosomes
+                            // we don't need to output the error as they will be
+                            // filtered out before by the genotype read anyway
+                            exclude = true;
+                            num_haploid++;
+                        }
+                        else
+                        {
+                            exclude = true;
+                            chr_code = -1;
+                            num_chr_filter++;
+                        }
+                    }
+                }
+                else if (is_set(m_haploid_mask.data(),
+                                static_cast<uint32_t>(chr_code))
+                         || chr_code == m_xymt_codes[X_OFFSET]
+                         || chr_code == m_xymt_codes[Y_OFFSET])
+                {
+                    exclude = true;
+                    num_haploid++;
+                }
+            }
+            has_chr = (chr_code != -1);
+            ref_allele = (has_col[+BASE_INDEX::REF])
+                             ? token[col_index[+BASE_INDEX::REF]]
+                             : "";
+            alt_allele = (has_col[+BASE_INDEX::ALT])
+                             ? token[col_index[+BASE_INDEX::ALT]]
+                             : "";
+            std::transform(ref_allele.begin(), ref_allele.end(),
+                           ref_allele.begin(), ::toupper);
+            std::transform(alt_allele.begin(), alt_allele.end(),
+                           alt_allele.begin(), ::toupper);
+            int loc = -1;
+            if (has_col[+BASE_INDEX::BP]) {
+                // obtain the SNP coordinate
+                try
+                {
+                    loc = misc::convert<int>(
+                        token[col_index[+BASE_INDEX::BP]].c_str());
+                    if (loc < 0) {
+                        std::string error_message =
+                            "Error: " + rs_id + " has negative loci!\n";
+                        throw std::runtime_error(error_message);
+                    }
+                    has_bp = true;
+                }
+                catch (...)
+                {
+                    std::string error_message =
+                        "Error: Non-numeric loci for " + rs_id + "!\n";
+                    throw std::runtime_error(error_message);
+                }
+            }
+            maf = 1;
+            // note, this is for reference
+            maf_filtered = false;
+            if (maf_control_filter && has_col[+BASE_INDEX::MAF]) {
+                // only read in if we want to perform MAF filtering
+                try
+                {
+                    maf = misc::convert<double>(
+                        token[col_index[+BASE_INDEX::MAF]].c_str());
+                }
+                catch (...)
+                {
+                    // exclude because we can't read the MAF, therefore assume
+                    // this is problematic
+                    num_maf_filter++;
+                    exclude = true;
+                    maf_filtered = true;
+                }
+                if (maf < maf_control) {
+                    num_maf_filter++;
+                    exclude = true;
+                    maf_filtered = true;
+                }
+            }
+            maf_case_temp = 1;
+            if (maf_case_filter && has_col[+BASE_INDEX::MAF_CASE]) {
+                // only read in the case MAf if we want to perform filtering on
+                // it
+                try
+                {
+                    maf_case_temp = misc::convert<double>(
+                        token[col_index[+BASE_INDEX::MAF_CASE]].c_str());
+                }
+                catch (...)
+                {
+                    // again, any problem in parsing the MAF will lead to SNP
+                    // being deleted
+                    // we don't want to double count the MAF filtering, thus we
+                    // only add one to the maf filter count if we haven't
+                    // already filtered this SNP based on the control MAf
+                    num_maf_filter += !maf_filtered;
+                    exclude = true;
+                }
+                if (maf_case_temp < maf_case) {
+                    num_maf_filter += !maf_filtered;
+                    exclude = true;
+                }
+            }
+            info_score = 1;
+            if (info_filter && has_col[+BASE_INDEX::INFO]) {
+                // obtain the INFO score
+                try
+                {
+                    info_score = misc::convert<double>(
+                        token[col_index[+BASE_INDEX::INFO]].c_str());
+                }
+                catch (...)
+                {
+                    // if no info score, just assume it doesn't pass the QC
+                    num_info_filter++;
+                    exclude = true;
+                }
+                if (info_score < info_threshold) {
+                    num_info_filter++;
+                    exclude = true;
+                }
+            }
+            pvalue = 2.0;
+            try
+            {
+                pvalue =
+                    misc::convert<double>(token[col_index[+BASE_INDEX::P]]);
+                if (pvalue < 0.0 || pvalue > 1.0) {
+                    std::string error_message =
+                        "Error: Invalid p-value for " + rs_id + "!\n";
+                    throw std::runtime_error(error_message);
+                }
+                else if (pvalue > max_threshold)
+                {
+                    exclude = true;
+                    num_excluded++;
+                }
+            }
+            catch (...)
+            {
+                exclude = true;
+                num_not_converted++;
+            }
+            stat = 0.0;
+            try
+            {
+                stat =
+                    misc::convert<double>(token[col_index[+BASE_INDEX::STAT]]);
+                if (stat < 0 && !is_beta) {
+                    num_negative_stat++;
+                    exclude = true;
+                }
+                else if (misc::logically_equal(stat, 0.0) && !is_beta)
+                {
+                    // we can't calculate log(0), so we will say we can't
+                    // convert it
+                    num_not_converted++;
+                    exclude = true;
+                }
+                else if (!is_beta)
+                    // if it is OR, we will perform natural log to convert it to
+                    // beta
+                    stat = log(stat);
+            }
+            catch (...)
+            {
+                // non-numeric statistic
+                num_not_converted++;
+                exclude = true;
+            }
+            if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele)) {
+                num_ambiguous++;
+                exclude = !keep_ambig;
+            }
+            if (!exclude) {
+                category = -1;
+                pthres = 0.0;
+                if (fastscore) {
+                    category = calculate_category(pvalue, barlevels, pthres);
+                }
+                else
+                {
+                    // calculate the threshold instead
+                    category =
+                        calculate_category(pvalue, bound_start, bound_inter,
+                                           bound_end, pthres, no_full);
+                }
+
+                if (unique_thresholds.find(category) == unique_thresholds.end())
+                {
+                    unique_thresholds.insert(category);
+                    m_thresholds.push_back(pthres);
+                    // m_categories.push_back(category);
+                }
+                // by definition (how we calculate), category cannot be
+                // negative, so this comparison should be ok
+                if (m_max_category < static_cast<uint32_t>(category)) {
+                    m_max_category = static_cast<uint32_t>(category);
+                }
+                // now add SNP
+                m_existed_snps.emplace_back(SNP(rs_id, chr_code, loc,
+                                                ref_allele, alt_allele, stat,
+                                                pvalue, category, pthres));
+                m_existed_snps_index[rs_id] = m_existed_snps.size() - 1;
+            }
+        }
+        else
+        {
+            num_duplicated++;
+        }
+    }
+    if (gz_input)
+        gz_snp_file.close();
+    else
+        snp_file.close();
+
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
                    + " variant(s) observed in base file, with:\n");
@@ -470,13 +724,12 @@ void Genotype::load_samples(const std::string& keep_file,
                           + misc::to_string(m_num_male) + " male(s), "
                           + misc::to_string(m_num_female)
                           + " female(s)) observed\n";
-    message.append(misc::to_string(m_founder_ct) + " founder(s) included\n");
+    message.append(misc::to_string(m_founder_ct) + " founder(s) included");
     if (verbose) reporter.report(message);
     m_sample_selection_list.clear();
 }
 
-void Genotype::calc_freqs_and_intermediate(
-    const std::string& out, const double& maf_threshold,
+void Genotype::calc_freqs_and_intermediate( const double& maf_threshold,
     const double& geno_threshold, const double& info_threshold,
     const double& hard_threshold, const bool maf_filter, const bool geno_filter,
     const bool info_filter, const bool hard_coded, bool verbose,
@@ -501,12 +754,12 @@ void Genotype::calc_freqs_and_intermediate(
             + " variant(s) excluded based on INFO score threshold\n");
     }
     if (!m_is_ref) {
-        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
+        message.append(std::to_string(m_marker_ct) + " variant(s) included");
     }
     else
     {
         message.append(std::to_string(target->m_existed_snps.size())
-                       + " variant(s) remained\n");
+                       + " variant(s) remained");
     }
 
     if (verbose) reporter.report(message);
@@ -699,7 +952,6 @@ void Genotype::read_base(
     size_t num_not_found = 0;
     size_t num_mismatched = 0;
     size_t num_not_converted = 0; // this is for NA
-    size_t num_prob_se = 0;
     size_t num_negative_stat = 0;
     size_t num_line_in_base = 0;
     size_t num_info_filter = 0;
