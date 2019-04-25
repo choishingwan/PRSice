@@ -377,8 +377,6 @@ void BinaryPlink::calc_freq_gen_inter(
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
         }
-        std::cout << "SNP Info: " << snp.rs() << "\t" << cur_geno << "\t"
-                  << cur_maf << std::endl;
         if (misc::logically_equal(cur_maf, 0.0)
             || misc::logically_equal(cur_maf, 1.0))
         {
