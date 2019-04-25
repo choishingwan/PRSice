@@ -20,7 +20,6 @@
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "region.hpp"
 #include "storage.hpp"
 #include <algorithm>
 #include <limits.h>
@@ -286,15 +285,10 @@ public:
             throw std::out_of_range("Out of range for flag");
         return (IS_SET(m_flags.data(), i));
     }
-    /*!
-     * \brief Set the gene set flag for this SNP
-     * \param region is the region object that will construct the gene set flag
-     */
-    void set_flag(Region& region)
-    {
-        m_max_flag_index = BITCT_TO_WORDCT(region.size());
-        m_flags.resize(m_max_flag_index);
-        region.update_flag(m_chr, m_rs, m_loc, m_flags);
+
+    void set_flag( const size_t num_region, const std::vector<uintptr_t>& flags){
+        m_max_flag_index = BITCT_TO_WORDCT(num_region);
+        m_flags = flags;
     }
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be
