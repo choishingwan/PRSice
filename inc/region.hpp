@@ -44,42 +44,11 @@ class Region
 {
 public:
     /*!
-     * \brief The constructor for the region object. Use for defining gene sets
-     * \param feature is the vector string containing features to be included
-     *        from the gtf file
-     * \param window_5 is the length to be extended to the 5' end
-     * \param window_3 is the length to be extended to the 3' end
-     * \param genome_wide_background indicate if we want the whole genome to act
-     * as background
-     */
-    Region(std::vector<std::string> feature, const int window_5,
-           const int window_3, const bool run_perm,
-           const bool genome_wide_background);
-    /*!
      * \brief Default constructor that do nothing
      */
     Region() {}
     virtual ~Region();
-    /*!
-     * \brief To generate the region boundaries
-     * \param gtf is the gtf file input
-     * \param msigdb is the GMT file from msigdb
-     * \param bed is a list of bed file
-     * \param snp_set is a file containing a single snp set
-     * \param multi_snp_sets is a filt contain multiple gene set similar to GMT
-     * \param out is the output prefix
-     * \param background is the file containing the background information
-     * \param genome_wide_background is a boolean indicate if we want to use
-     *        whole genome as background
-     * \param target is the target genotype
-     * \param reporter is the logger
-     */
-    void generate_regions(const std::string& gtf, const std::string& msigdb,
-                          const std::vector<std::string>& bed,
-                          const std::string& snp_set,
-                          const std::string& multi_snp_sets,
-                          const std::string& background, const Genotype& target,
-                          Reporter& reporter);
+
     /*!
      * \brief Function to construct the flag for SNP membership. This is rather
      * fragile as it require the SNP being sorted in the same order as the
@@ -184,15 +153,27 @@ public:
                           Reporter& reporter);
 
 private:
+    static void load_background(const std::string &background,
+                                const int window_5, const int window_3,
+                                const uint32_t max_chr, std::unordered_map<std::string, std::vector<int> > &msigdb_list, bool printed_warning,
+                                cgranges_t* gene_sets,
+                                Reporter& reporter);
     static void
     load_msigdb(const std::string& msig,
                 std::unordered_map<std::string, std::vector<int>>& msigdb_list,
                 std::vector<std::string>& region_names,
                 std::unordered_set<std::string> duplicated_sets, int& set_idx,
                 Reporter& reporter);
+    static void load_gtf(const std::string &gtf,
+                         const std::unordered_map<std::string, std::vector<int>> &msigdb_list,
+                         const std::vector<std::string>& features,
+                         const uint32_t max_chr, const int window_5, const int window_3,
+                         cgranges_t* gene_sets,
+                         const bool genome_wide_background, Reporter &reporter);
     static bool load_bed_regions(
         const std::string& bed_file, cgranges_t* gene_sets, const int window_5,
         const int window_3, bool& print_warning, const int set_idx,
+            const uint32_t max_chr,
         std::vector<std::string>& region_names,
         std::unordered_set<std::string> duplicated_sets, Reporter& reporter);
     static void load_snp_sets(
@@ -223,108 +204,21 @@ private:
         }
         return num_set;
     }
-    // IMPORTANT: The end is non-inclusive
-    struct region_bound
-    {
-        intptr_t chr;
-        intptr_t start;
-        intptr_t end;
-    };
+
+
     std::string m_out_prefix; // for log file
     // for checking duplicated region
     // use member variable because both bed and msigdb needs this
     // and don't want to pass this around
-    std::unordered_set<std::string> m_duplicated_names;
-    std::vector<std::unordered_set<std::string>> m_snp_sets;
-    // the name of the regions
-    std::vector<std::string> m_region_name;
-    // features that we'd like to capture
-    std::vector<std::string> m_gtf_feature;
-    // the actual region boundary
-    // can't use vec2d because we don't know the size in advance
-    std::vector<std::vector<region_bound>> m_region_list;
-    // This is to indicate the current location of each region
-    // This work because we assume all SNPs are sorted by their coordinates
-    // in the same way as the region files.
-    std::vector<size_t> m_snp_check_index;
-    // the number of SNPs from the base+target that falls into the region
-    std::vector<int> m_region_snp_count;
-    std::vector<int> m_region_post_clump_count;
 
-    intptr_t m_5prime = 0;
-    intptr_t m_3prime = 0;
-    bool m_has_background = false;
-    bool m_run_perm = false;
-    bool m_genome_wide_background = false;
 
-    std::vector<Region::region_bound>::size_type
-    binary_search_region(const intptr_t chr, const intptr_t loc,
-                         std::vector<region_bound>::size_type left,
-                         std::vector<region_bound>::size_type right) const;
-    /*!
-     * \brief A simple function to check if the string equals to one of the
-     * feature
-     * \param in is the input string
-     * \return true if the input string equals to one of the feature
-     */
-    bool in_feature(std::string in) const
-    {
-        return std::find(m_gtf_feature.begin(), m_gtf_feature.end(), in)
-               != m_gtf_feature.end();
+    static bool in_feature(const std::string& in, const std::vector<std::string>& feature){
+        return std::find(feature.begin(), feature.end(), in)
+               != feature.end();
     }
-    /*!
-     * \brief Function to process SNP set input (both single and multiple),
-     * might want to separate that out for clarity
-     * \param single_snp_set file contain a single snp set, contain one column
-     * \param multi_snp_set file containing multiple snp sets. Similar to GMT
-     * \param target is the target genotype. Use to get SNP coordinate
-     * \param reporter is the logger
-     */
-    void process_snp_sets(const std::string& single_snp_set,
-                          const std::string& multi_snp_set,
-                          const Genotype& target, Reporter& reporter);
-    /*!
-     * \brief This function will read in a list of bed file names and construct
-     * the region for each bed file
-     * \param bed is the vector containing all bed file name
-     * \param reporter is the logger
-     */
-    void process_bed(const std::vector<std::string>& bed, Reporter& reporter);
-    /*!
-     * \brief This function will process the gtf file and return a multimap
-     *        containing all regions related to the gene id
-     * \param gtf is the file name
-     * \param id_to_name is the gene id to gene name translator
-     * \param max_chr is the maximum possible chromosome code. Allow us to skip
-     * some chromosomes
-     * \param reporter is the logger
-     * \return the multimap containing all regions of a gene
-     */
-    std::unordered_multimap<std::string, region_bound> process_gtf(
-        const std::string& gtf,
-        std::unordered_map<std::string, std::set<std::string>>& id_to_name,
-        const uint32_t max_chr, Reporter& reporter);
-    /*!
-     * \brief Remove overlapped region within a list of region
-     * \param current_region is the region input
-     * \return a region vector contain non-overlapping regions
-     */
-    std::vector<Region::region_bound>
-    solve_overlap(std::vector<Region::region_bound>& current_region);
-    /*!
-     * \brief Given the gtf information, this funciton will read in the GMT file
-     *        from msigdb and transform all gene sets into regions
-     * \param msigdb a string containing comma separated list of msigdb file
-     * \param gtf_info is the gtf multimap generated by process_gtf
-     * \param id_to_name is the gene id to gene name translator
-     * \param reporter is the reporter
-     */
-    void process_msigdb(
-        const std::string& msigdb,
-        const std::unordered_multimap<std::string, region_bound>& gtf_info,
-        const std::unordered_map<std::string, std::set<std::string>>&
-            id_to_name,
-        Reporter& reporter);
+
+
+
     /*!
      * \brief This function will take in the gtf information and generate the
      *        background region containing all the feature
