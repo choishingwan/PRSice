@@ -184,8 +184,7 @@ public:
 
 private:
     static void load_msigdb(const std::string &msig,
-                            std::unordered_map<std::string, std::vector<size_t>>
-                            &msigdb_list, std::vector<std::string> &region_names, std::unordered_set<std::string> duplicated_sets, int &set_idx, Reporter &reporter);
+                            std::unordered_map<std::string, std::vector<int> > &msigdb_list, std::vector<std::string> &region_names, std::unordered_set<std::string> duplicated_sets, int &set_idx, Reporter &reporter);
     static bool load_bed_regions(const std::string &bed_file,
                                  cgranges_t* gene_sets,
                                  const int window_5,
@@ -194,11 +193,10 @@ private:
                                  std::vector<std::string> &region_names,
                                  std::unordered_set<std::string> duplicated_sets, Reporter &reporter);
     static void load_snp_sets(std::string snp_file,
-                         std::unordered_map<std::string, std::vector<size_t>>
-                         &snp_in_sets,
+                         std::unordered_map<std::string, std::vector<int> > &snp_in_sets,
                          std::vector<std::string> &region_names,
                          std::unordered_set<std::string>&duplicated_sets,
-                         size_t &set_idx,
+                         int &set_idx,
                          Reporter &reporter);
     static size_t num_snp_set(const std::string &name){
         std::ifstream input;

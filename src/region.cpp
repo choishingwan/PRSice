@@ -175,12 +175,12 @@ void Region::add_flags(const std::vector<std::string> &feature, const int window
                                   duplicated_sets, reporter);
     }
     // SNP sets
-    std::unordered_map<std::string, std::vector<size_t> > snp_in_sets;
+    std::unordered_map<std::string, std::vector<int> > snp_in_sets;
     for(auto &&s : snp_sets){
         load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx, reporter);
     }
     for(auto &&msig : msigdb_name){
-        std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
+        std::unordered_map<std::string, std::vector<int>> msigdb_list;
         load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx, reporter);
     }
     // now process the gtf file and add the regions
@@ -188,11 +188,11 @@ void Region::add_flags(const std::vector<std::string> &feature, const int window
 }
 
 void Region::load_snp_sets(std::string snp_file,
-                           std::unordered_map<std::string, std::vector<size_t>>
+                           std::unordered_map<std::string, std::vector<int>>
                            &snp_in_sets,
                            std::vector<std::string> &region_names,
                            std::unordered_set<std::string>&duplicated_sets,
-                           size_t &set_idx,
+                           int &set_idx,
                            Reporter &reporter){
     std::string file_name, set_name, line, message;
     std::vector<std::string> token = misc::split(snp_file, ":");
@@ -255,6 +255,7 @@ void Region::load_snp_sets(std::string snp_file,
         set_idx++;
     }
 }
+
 bool Region::load_bed_regions(const std::string &bed_file,
                              cgranges_t* gene_sets,
                              const int window_5,
@@ -446,7 +447,7 @@ bool Region::load_bed_regions(const std::string &bed_file,
 }
 
 void Region::load_msigdb(const std::string &msig,
-                 std::unordered_map<std::string, std::vector<size_t>>
+                 std::unordered_map<std::string, std::vector<int>>
                  &msigdb_list, std::vector<std::string> & region_names,
                          std::unordered_set<std::string> duplicated_sets, int &set_idx,
                          Reporter &reporter){
