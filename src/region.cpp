@@ -109,32 +109,36 @@ void Region::generate_exclusion(cgranges_t* cr,
     }
 }
 
-void Region::add_flags(const std::vector<std::string> &feature, const int window_5,
-                          const int window_3,const bool genome_wide_background,
-                          const std::string& gtf, const std::string& msigdb,
-                          const std::vector<std::string>& bed,
-                          const std::string& snp_set,
-                          const std::string& background,
-                       Genotype& target, Reporter& reporter){
+void Region::add_flags(const std::vector<std::string>& feature,
+                       const int window_5, const int window_3,
+                       const bool genome_wide_background,
+                       const std::string& gtf, const std::string& msigdb,
+                       const std::vector<std::string>& bed,
+                       const std::string& snp_set,
+                       const std::string& background, Genotype& target,
+                       Reporter& reporter)
+{
     // first calculate the total number of gene sets included
     // plus 2 because of base and background set
-    size_t num_sets = bed.size()+2;
+    size_t num_sets = bed.size() + 2;
     std::ifstream msigdb_file;
     std::vector<std::string> msigdb_name = misc::split(msigdb, ",");
-    for(auto &&name : msigdb_name){
+    for (auto&& name : msigdb_name) {
         msigdb_file.open(name.c_str());
-        if(!msigdb_file.is_open()){
-            std::string error_message  ="Error: Cannot open MSigDB file: " +name+"\n";
+        if (!msigdb_file.is_open()) {
+            std::string error_message =
+                "Error: Cannot open MSigDB file: " + name + "\n";
             throw std::runtime_error(error_message);
         }
         std::string line;
         std::vector<std::string> token;
-        while(std::getline(msigdb_file, line)){
+        while (std::getline(msigdb_file, line)) {
             misc::trim(line);
             token = misc::split(line);
-            if(token.size()< 2){
-                std::string message =
-                        "Error: Each line of MSigDB require at least 2 information: "+name+"\n";
+            if (token.size() < 2) {
+                std::string message = "Error: Each line of MSigDB require at "
+                                      "least 2 information: "
+                                      + name + "\n";
                 message.append(line);
                 throw std::runtime_error(message);
             }
@@ -147,8 +151,8 @@ void Region::add_flags(const std::vector<std::string> &feature, const int window
     // It all depends on the file content
     // (only one column = SNP list, mutliple column = SNP sets)
     std::vector<std::string> snp_sets = misc::split(snp_set, ",");
-    for(auto &&s : snp_sets){
-        num_sets+=num_snp_set(s);
+    for (auto&& s : snp_sets) {
+        num_sets += num_snp_set(s);
     }
     // we now know number of sets we have, therefore know the required size
     // for the SNP flag
@@ -161,7 +165,7 @@ void Region::add_flags(const std::vector<std::string> &feature, const int window
     region_names.push_back("Base");
     region_names.push_back("Background");
     std::unordered_set<std::string> duplicated_sets;
-    if(!background.empty() || (!genome_wide_background && !gtf.empty())){
+    if (!background.empty() || (!genome_wide_background && !gtf.empty())) {
         // we need to read in a background file, either in form of gtf or
         // other supported background format
     }
@@ -169,31 +173,32 @@ void Region::add_flags(const std::vector<std::string> &feature, const int window
     // 1 reserved for background
     int set_idx = 2;
     bool printed_warning = false;
-    for(auto &&bed_file : bed){
-        set_idx+=load_bed_regions(bed_file, gene_sets, window_5, window_3, printed_warning,
-                                  set_idx, region_names,
-                                  duplicated_sets, reporter);
+    for (auto&& bed_file : bed) {
+        set_idx += load_bed_regions(bed_file, gene_sets, window_5, window_3,
+                                    printed_warning, set_idx, region_names,
+                                    duplicated_sets, reporter);
     }
     // SNP sets
-    std::unordered_map<std::string, std::vector<int> > snp_in_sets;
-    for(auto &&s : snp_sets){
-        load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx, reporter);
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    for (auto&& s : snp_sets) {
+        load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx,
+                      reporter);
     }
-    for(auto &&msig : msigdb_name){
+    for (auto&& msig : msigdb_name) {
         std::unordered_map<std::string, std::vector<int>> msigdb_list;
-        load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx, reporter);
+        load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx,
+                    reporter);
     }
     // now process the gtf file and add the regions
-
 }
 
-void Region::load_snp_sets(std::string snp_file,
-                           std::unordered_map<std::string, std::vector<int>>
-                           &snp_in_sets,
-                           std::vector<std::string> &region_names,
-                           std::unordered_set<std::string>&duplicated_sets,
-                           int &set_idx,
-                           Reporter &reporter){
+void Region::load_snp_sets(
+    std::string snp_file,
+    std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+    std::vector<std::string>& region_names,
+    std::unordered_set<std::string>& duplicated_sets, int& set_idx,
+    Reporter& reporter)
+{
     std::string file_name, set_name, line, message;
     std::vector<std::string> token = misc::split(snp_file, ":");
     if (token.size() == 2) {
@@ -213,21 +218,22 @@ void Region::load_snp_sets(std::string snp_file,
     // first check if it is a set file
     std::ifstream input;
     input.open(file_name.c_str());
-    if(!input.is_open()){
-        std::string error = "Error: Cannot open SNP set file: "+file_name+"\n";
+    if (!input.is_open()) {
+        std::string error =
+            "Error: Cannot open SNP set file: " + file_name + "\n";
         throw std::runtime_error(error);
     }
-    bool is_set_file=false;
-    while(std::getline(input, line)){
+    bool is_set_file = false;
+    while (std::getline(input, line)) {
         misc::trim(line);
         token = misc::split(line);
         is_set_file = (token.size() > 1);
         break;
     }
-    if(!is_set_file){
-        if(duplicated_sets.find(set_name) != duplicated_sets.end()){
+    if (!is_set_file) {
+        if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
             std::string message = "Warning: Set name of " + set_name
-                    + " is duplicated, it will be ignored";
+                                  + " is duplicated, it will be ignored";
             reporter.report(message);
             return;
         }
@@ -236,34 +242,36 @@ void Region::load_snp_sets(std::string snp_file,
     }
     input.clear();
     input.seekg(0, input.beg);
-    while(std::getline(input, line)){
+    while (std::getline(input, line)) {
         misc::trim(line);
-        if(line.empty()) continue;
+        if (line.empty()) continue;
         token = misc::split(line);
-        if(is_set_file){
-            for(size_t i = 1; i < token.size(); ++i){
+        if (is_set_file) {
+            for (size_t i = 1; i < token.size(); ++i) {
                 snp_in_sets[token[i]].push_back(set_idx);
             }
             set_idx++;
-        }else{
+        }
+        else
+        {
             snp_in_sets[token[0]].push_back(set_idx);
         }
     }
     input.close();
 
-    if(is_set_file){
+    if (is_set_file) {
         set_idx++;
     }
 }
 
-bool Region::load_bed_regions(const std::string &bed_file,
-                             cgranges_t* gene_sets,
-                             const int window_5,
-                             const int window_3,
-                              bool& printed_warning,
+bool Region::load_bed_regions(const std::string& bed_file,
+                              cgranges_t* gene_sets, const int window_5,
+                              const int window_3, bool& printed_warning,
                               const int set_idx,
-    std::vector<std::string>& region_names,
-                              std::unordered_set<std::string> duplicated_sets, Reporter &reporter){
+                              std::vector<std::string>& region_names,
+                              std::unordered_set<std::string> duplicated_sets,
+                              Reporter& reporter)
+{
     /* If we have
      *
      *  chr1   | T | A | C | C | G |
@@ -298,9 +306,9 @@ bool Region::load_bed_regions(const std::string &bed_file,
             "Error: Undefine bed file input format: " + bed_file;
         throw std::runtime_error(error_message);
     }
-    if(duplicated_sets.find(set_name) != duplicated_sets.end()){
+    if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
         std::string message = "Warning: Set name of " + set_name
-                  + " is duplicated, it will be ignored";
+                              + " is duplicated, it will be ignored";
         reporter.report(message);
         return false;
     }
@@ -308,17 +316,17 @@ bool Region::load_bed_regions(const std::string &bed_file,
     region_names.push_back(set_name);
     std::ifstream input;
     input.open(file_name.c_str());
-    if(!input.is_open()){
-        std::string error = "Error: Cannot open bed file: "+file_name+"\n";
+    if (!input.is_open()) {
+        std::string error = "Error: Cannot open bed file: " + file_name + "\n";
         throw std::runtime_error(error);
     }
 
     // now read in the file
     bool has_strand = false, first_read = true, error = false;
     size_t num_line = 0;
-    while(std::getline(input, line)){
+    while (std::getline(input, line)) {
         misc::trim(line);
-        if(line.empty()) continue;
+        if (line.empty()) continue;
         token = misc::split(line);
         if (token.size() < 3) {
             message = "Error: " + file_name
@@ -413,8 +421,7 @@ bool Region::load_bed_regions(const std::string &bed_file,
                 if (start < 1) start = 1;
                 end += window_5;
             }
-            else if (token[+BED::STRAND] == "+"
-                     || token[+BED::STRAND] == ".")
+            else if (token[+BED::STRAND] == "+" || token[+BED::STRAND] == ".")
             {
                 // positive or unknown strand, add 5' to start and 3' to end
                 start -= window_5;
@@ -440,44 +447,48 @@ bool Region::load_bed_regions(const std::string &bed_file,
         chr_code = get_chrom_code_raw(token[0].c_str());
         // will screw up if the number of set is higher than int32_t.
         // But PRSice should crash before that, right?
-        cr_add(gene_sets, std::to_string(chr_code).c_str(), start,
-                end, set_idx);
+        cr_add(gene_sets, std::to_string(chr_code).c_str(), start, end,
+               set_idx);
     }
     return true;
 }
 
-void Region::load_msigdb(const std::string &msig,
-                 std::unordered_map<std::string, std::vector<int>>
-                 &msigdb_list, std::vector<std::string> & region_names,
-                         std::unordered_set<std::string> duplicated_sets, int &set_idx,
-                         Reporter &reporter){
+void Region::load_msigdb(
+    const std::string& msig,
+    std::unordered_map<std::string, std::vector<int>>& msigdb_list,
+    std::vector<std::string>& region_names,
+    std::unordered_set<std::string> duplicated_sets, int& set_idx,
+    Reporter& reporter)
+{
     std::ifstream input;
     input.open(msig.c_str());
-    if(!input.is_open()){
-        std::string error = "Error: Cannot open MSigDB file: "+msig+"\n";
+    if (!input.is_open()) {
+        std::string error = "Error: Cannot open MSigDB file: " + msig + "\n";
         throw std::runtime_error(error);
     }
     std::string line;
     std::vector<std::string> token;
-    while(std::getline(input, line)){
+    while (std::getline(input, line)) {
         misc::trim(line);
-        if(line.empty())continue;
+        if (line.empty()) continue;
         token = misc::split(line);
-        if(token.size()< 2){
+        if (token.size() < 2) {
             std::string message =
-                    "Error: Each line of MSigDB require at least 2 information: "+msig+"\n";
+                "Error: Each line of MSigDB require at least 2 information: "
+                + msig + "\n";
             message.append(line);
             throw std::runtime_error(message);
         }
-        if(duplicated_sets.find(token[0])!=duplicated_sets.end()){
+        if (duplicated_sets.find(token[0]) != duplicated_sets.end()) {
             std::string message = "Warning: Set name of " + token[0]
-                      + " is duplicated, it will be ignored";
+                                  + " is duplicated, it will be ignored";
             reporter.report(message);
         }
-        else{
+        else
+        {
             duplicated_sets.insert(token[0]);
             region_names.push_back(token[0]);
-            for(size_t i=1; i < token.size(); ++i){
+            for (size_t i = 1; i < token.size(); ++i) {
                 msigdb_list[token[i]].push_back(set_idx);
             }
             set_idx++;

@@ -1019,8 +1019,10 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         std::ifstream base_test;
         base_test.open(m_base_file.c_str());
         if (!base_test.is_open()) {
-            error_message.append("Error: Cannot open base file: "+m_base_file+" to read!\n");
-            error_message.append("       "+std::string(strerror(errno))+"\n");
+            error_message.append("Error: Cannot open base file: " + m_base_file
+                                 + " to read!\n");
+            error_message.append("       " + std::string(strerror(errno))
+                                 + "\n");
             return false;
         }
         std::getline(base_test, header);
@@ -1272,8 +1274,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     // use a for loop as it is short enough and we only bother with those
     // we have index for
     size_t max_index = 0;
-    for(size_t i=0; i < m_base_col_index.size(); ++i){
-        if(m_base_has_col[i] && max_index < m_base_col_index[i]){
+    for (size_t i = 0; i < m_base_col_index.size(); ++i) {
+        if (m_base_has_col[i] && max_index < m_base_col_index[i]) {
             max_index = m_base_col_index[i];
         }
     }

@@ -113,12 +113,12 @@ int main(int argc, char* argv[])
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
             {
-                message =("====================================");
+                message = ("====================================");
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
-                message="Loading Genotype info from reference\n";
+                message = "Loading Genotype info from reference\n";
                 message.append("====================================");
                 reporter.report(message);
                 reference_file->load_samples(commander.ref_keep_file(),
@@ -139,8 +139,8 @@ int main(int argc, char* argv[])
             message.append("==============================\n");
             reporter.report(message);
             target_file->calc_freqs_and_intermediate(
-                        maf, geno, info, hard_threshold, maf_filter,
-                geno_filter, info_filter, hard_coded, true, reporter);
+                maf, geno, info, hard_threshold, maf_filter, geno_filter,
+                info_filter, hard_coded, true, reporter);
 
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
@@ -158,14 +158,13 @@ int main(int argc, char* argv[])
                     "Calculate MAF and perform filtering on reference SNPs\n";
                 message.append("==============================\n");
                 reporter.report(message);
-                reference_file->calc_freqs_and_intermediate(maf, geno, info, hard_threshold,
-                    maf_filter, geno_filter, info_filter, hard_coded, true,
-                    reporter, target_file);
+                reference_file->calc_freqs_and_intermediate(
+                    maf, geno, info, hard_threshold, maf_filter, geno_filter,
+                    info_filter, hard_coded, true, reporter, target_file);
             }
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
             // Generate Region flag information
-
         }
         catch (const std::invalid_argument& ia)
         {

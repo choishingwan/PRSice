@@ -56,9 +56,11 @@ void Genotype::read_base(
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
     // Read in threshold information
-    const double max_threshold = no_full?
-        (fastscore ? *std::max_element(barlevels.begin(), barlevels.end())
-                  : bound_end) : 1.0;
+    const double max_threshold =
+        no_full
+            ? (fastscore ? *std::max_element(barlevels.begin(), barlevels.end())
+                         : bound_end)
+            : 1.0;
     // Start reading the base file. If the base file contain gz as its suffix,
     // we will read it as a gz file
     bool gz_input = false;
@@ -729,11 +731,11 @@ void Genotype::load_samples(const std::string& keep_file,
     m_sample_selection_list.clear();
 }
 
-void Genotype::calc_freqs_and_intermediate( const double& maf_threshold,
-    const double& geno_threshold, const double& info_threshold,
-    const double& hard_threshold, const bool maf_filter, const bool geno_filter,
-    const bool info_filter, const bool hard_coded, bool verbose,
-    Reporter& reporter, Genotype* target)
+void Genotype::calc_freqs_and_intermediate(
+    const double& maf_threshold, const double& geno_threshold,
+    const double& info_threshold, const double& hard_threshold,
+    const bool maf_filter, const bool geno_filter, const bool info_filter,
+    const bool hard_coded, bool verbose, Reporter& reporter, Genotype* target)
 {
     std::string message = "";
     calc_freq_gen_inter(maf_threshold, geno_threshold, info_threshold,

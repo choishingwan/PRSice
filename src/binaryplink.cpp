@@ -319,7 +319,8 @@ void BinaryPlink::calc_freq_gen_inter(
         progress = static_cast<double>(processed_count)
                    / static_cast<double>(total_snp) * 100;
         if (progress - prev_progress > 0.01) {
-            fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%", progress);
+            fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%",
+                    progress);
             prev_progress = progress;
         }
         processed_count++;
@@ -363,7 +364,7 @@ void BinaryPlink::calc_freq_gen_inter(
             sample_include2.data(), founder_include2.data(), m_sample_ct,
             &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
         uii = ll_ct + lh_ct + hh_ct;
-        cur_geno = 1.0-(static_cast<int32_t>(uii)) * sample_ct_recip;
+        cur_geno = 1.0 - (static_cast<int32_t>(uii)) * sample_ct_recip;
         uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
         tmp_total = (ll_ctf + lh_ctf + hh_ctf);
         assert(m_founder_ct >= tmp_total);
@@ -376,7 +377,8 @@ void BinaryPlink::calc_freq_gen_inter(
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
         }
-        std::cout << "SNP Info: " <<snp.rs() << "\t" << cur_geno << "\t" << cur_maf << std::endl;
+        std::cout << "SNP Info: " << snp.rs() << "\t" << cur_geno << "\t"
+                  << cur_maf << std::endl;
         if (misc::logically_equal(cur_maf, 0.0)
             || misc::logically_equal(cur_maf, 1.0))
         {
