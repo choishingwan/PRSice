@@ -1130,8 +1130,6 @@ void BinaryGen::hard_code_score(const size_t start_index,
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
     // this is needed if we want to calculate the MAF of the sample
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
-
     int ploidy = 2;
     const int miss_count =
         static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy);
@@ -1357,7 +1355,6 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
     // this is needed if we want to calculate the MAF of the sample
-    const uintptr_t pheno_nm_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(m_sample_ct);
     int ploidy = 2;
     const int miss_count =
         static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy);
@@ -1365,7 +1362,6 @@ void BinaryGen::hard_code_score(const std::vector<size_t>& index, bool set_zero)
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
     bool not_first = !set_zero;
-    intptr_t nanal;
     double stat, maf, adj_score, miss_score;
 
     m_cur_file = "";

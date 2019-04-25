@@ -172,6 +172,32 @@ int main(int argc, char* argv[])
                 commander.genome_wide_background(), commander.gtf(),
                 commander.msigdb(), commander.bed(), commander.snp_set(),
                 commander.background(), *target_file, reporter);
+            // start processing other files before doing clumping
+            PRSice prsice(commander, num_regions > 2, reporter);
+            prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),
+                               commander.is_binary(), reporter);
+            // Store relevant parameters to the target object
+            target_file->set_info(commander);
+            if (!commander.no_clump()) {
+                // now go through the snp vector an define the
+                // windows so that we can jump directly to the
+                // relevant SNPs immediately when doing clumping
+                target_file->build_clump_windows();
+                // get the sort by p index vector for target
+                // so that we can still find out the relative coordinates of
+                // each SNPs This is only required for clumping
+                if (!target_file->sort_by_p()) {
+                    std::string error_message =
+                        "No SNPs left for PRSice processing";
+                    reporter.report(error_message);
+                    return -1;
+                }
+                // now perform clumping
+                target_file->efficient_clumping(
+                    commander.use_ref() ? *reference_file : *target_file,
+                    reporter, commander.pearson());
+                // immediately free the memory
+            }
             exit(0);
         }
         catch (const std::invalid_argument& ia)
@@ -198,7 +224,6 @@ int main(int argc, char* argv[])
             // set the clumping information to the target file
             target_file->set_info(commander);
             // remove all boundaries from the region object to free up memory
-            region.clean();
             // skip clumping if not required
             if (!commander.no_clump()) {
                 // get the sort by p index vector for target

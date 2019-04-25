@@ -158,14 +158,6 @@ public:
             m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
         }
     }
-    /*!
-     * \brief Return all p-value threshold in used in the analysis. Mainly for
-     * constructing the all score file
-     *
-     * \return all p-value threshold used in the analysis, exclude any threshold
-     * that doesn't contain any SNP
-     */
-    std::vector<double> get_thresholds() const { return m_thresholds; }
 
     size_t max_category() const { return m_max_category; }
     /*!
@@ -173,11 +165,6 @@ public:
      * \return the number of sample
      */
     size_t num_sample() const { return m_sample_id.size(); }
-    /*!
-     * \brief Return the number of p-value threshold that contain at least 1 SNP
-     * \return  the number of p-value threshold included in the analysis
-     */
-    uint32_t num_threshold() const { return m_num_threshold; }
     /*!
      * \brief Function to obtain PRS score from the genotype file. Will assign
      * the result information to our PRS vector
@@ -235,7 +222,40 @@ public:
      *
      * \param c_commander the container containing the required information
      */
-    void set_info(const Commander& c_commander);
+    void set_info(const Commander& c_commander)
+    {
+        m_clump_p = c_commander.clump_p();
+        m_clump_r2 = c_commander.clump_r2();
+        m_use_proxy = c_commander.proxy(m_clump_proxy);
+        m_clump_distance = static_cast<uintptr_t>(c_commander.clump_dist());
+        m_model = c_commander.model();
+        m_missing_score = c_commander.get_missing_score();
+        m_scoring = c_commander.get_score();
+        m_seed = c_commander.seed();
+        switch (m_model)
+        {
+        case MODEL::HETEROZYGOUS:
+            m_homcom_weight = 0;
+            m_het_weight = 1;
+            m_homrar_weight = 0;
+            break;
+        case MODEL::DOMINANT:
+            m_homcom_weight = 0;
+            m_het_weight = 1;
+            m_homrar_weight = 1;
+            break;
+        case MODEL::RECESSIVE:
+            m_homcom_weight = 0;
+            m_het_weight = 0;
+            m_homrar_weight = 1;
+            break;
+        default:
+            m_homcom_weight = 0;
+            m_het_weight = 1;
+            m_homrar_weight = 2;
+            break;
+        }
+    }
     /*!
      * \brief This function will provide the snp coordinate of a single snp,
      * return true when the SNP is found and false when it is not
@@ -419,7 +439,7 @@ public:
                    const bool info_filter, const bool fastscore,
                    const bool no_full, const bool is_beta, const bool is_index,
                    const bool keep_ambig, Reporter& reporter);
-
+    void build_clump_windows();
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -429,13 +449,11 @@ protected:
     // std::vector<Sample> m_sample_names;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
-    std::unordered_map<std::string, std::streampos> m_valid_snp_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_files;
-    std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
@@ -468,7 +486,6 @@ protected:
     uintptr_t m_marker_ct = 0;
     intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
-    uint32_t m_num_threshold = 0;
     uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;

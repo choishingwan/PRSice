@@ -16,6 +16,87 @@
 
 #include "genotype.hpp"
 
+void Genotype::build_clump_windows(){
+    std::sort(begin(m_existed_snps), end(m_existed_snps),
+              [](SNP const& t1, SNP const& t2) {
+        if (t1.chr() == t2.chr()) {
+            if (t1.loc() <t2.loc()) {
+                if(t1.file_name() == t2.file_name()){
+                    return t1.byte_pos() <  t2.byte_pos();
+                }
+                return t1.file_name() < t2.file_name();
+            }
+            else
+                return (t1.loc() <t2.loc());
+        }
+        else
+            return (t1.chr() < t2.chr());
+    });
+    int vector_index = 0;
+    // we do it here such that the m_existed_snps is sorted correctly
+    // low_bound is where the current snp should read from and last_snp is where
+    // the last_snp in the vector which doesn't have the up_bound set
+    int low_bound = 0, last_snp = 0;
+    int prev_chr = -1, prev_loc = 0;
+    int diff = 0;
+    m_max_window_size = 0;
+    // now we iterate thorugh all the SNPs to define the clumping window
+    for (auto&& cur_snp : m_existed_snps) {
+        if (prev_chr != cur_snp.chr()) {
+            // if prev_chr not equal to  current chromosome, we update the
+            // previous information to the current SNP (reset)
+            prev_chr = cur_snp.chr();
+            prev_loc = cur_snp.loc();
+            low_bound = vector_index;
+        }
+        else if (cur_snp.loc() - prev_loc > static_cast<int>(m_clump_distance))
+        {
+            // now the chromosome didn't change, and the distance of our current
+            // SNP is further away from the previous SNP than our required
+            // threshold
+            while (cur_snp.loc() - prev_loc  > static_cast<int>(m_clump_distance)
+                   && low_bound < vector_index)
+            {
+                ++low_bound;
+                prev_loc =
+                        m_existed_snps[static_cast<size_t>(low_bound)].loc();
+            }
+        }
+        // now low_bound should be the first SNP where the core index SNP need
+        // to read from
+        cur_snp.set_low_bound(low_bound);
+        // set the end of the vector as the default up bound
+        cur_snp.set_up_bound(static_cast<int>(m_existed_snps.size()));
+        // update all previous SNPs that are out bounud
+        while (
+               m_existed_snps[static_cast<size_t>(last_snp)].chr()  != cur_snp.chr()
+               || cur_snp.loc() - m_existed_snps [static_cast<size_t>(last_snp)].loc()
+               > static_cast<intptr_t>(m_clump_distance))
+        {
+            // if the last SNP is on a differenet chromosome or it is to far
+            // from the current SNP
+
+            diff = vector_index
+                    - m_existed_snps[static_cast<size_t>(last_snp)].low_bound();
+            // we will set the up bound of that SNP to the current SNP
+            m_existed_snps[static_cast<size_t>(last_snp)].set_up_bound(vector_index);
+            ++last_snp;
+            if (m_max_window_size < diff) {
+                m_max_window_size = diff;
+            }
+        }
+        // assign the index
+        ++vector_index;
+    }
+    for (int i = static_cast<int>(m_existed_snps.size()) - 1; i >= 0; i--) {
+        auto&& cur_snp =m_existed_snps[static_cast<size_t>(i)];
+        if (cur_snp.up_bound() != static_cast<intptr_t>(m_existed_snps.size()))
+            break;
+        if (m_max_window_size < cur_snp.up_bound() - cur_snp.low_bound()) {
+            m_max_window_size = cur_snp.up_bound() - cur_snp.low_bound();
+        }
+    }
+}
 // std::mutex Genotype::m_mutex;
 std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
 {
@@ -140,8 +221,6 @@ void Genotype::read_base(
         // will remove the header
         if (!is_index) std::getline(snp_file, line);
     }
-
-    std::unordered_set<int> unique_thresholds;
     double prev_progress = 0.0;
     while ((!gz_input && std::getline(snp_file, line))
            || (gz_input && std::getline(gz_snp_file, line)))
@@ -369,18 +448,6 @@ void Genotype::read_base(
                         calculate_category(pvalue, bound_start, bound_inter,
                                            bound_end, pthres, no_full);
                 }
-
-                if (unique_thresholds.find(category) == unique_thresholds.end())
-                {
-                    unique_thresholds.insert(category);
-                    m_thresholds.push_back(pthres);
-                    // m_categories.push_back(category);
-                }
-                // by definition (how we calculate), category cannot be
-                // negative, so this comparison should be ok
-                if (m_max_category < static_cast<uint32_t>(category)) {
-                    m_max_category = static_cast<uint32_t>(category);
-                }
                 // now add SNP
                 m_existed_snps.emplace_back(SNP(rs_id, chr_code, loc,
                                                 ref_allele, alt_allele, stat,
@@ -451,7 +518,6 @@ void Genotype::read_base(
     if (m_existed_snps.size() == 0) {
         throw std::runtime_error("Error: No valid variant remaining");
     }
-    m_num_threshold = static_cast<uint32_t>(unique_thresholds.size());
 }
 
 
@@ -877,36 +943,6 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
 
 Genotype::~Genotype() {}
 
-void Genotype::set_info(const Commander& c_commander)
-{
-    m_clump_p = c_commander.clump_p();
-    m_clump_r2 = c_commander.clump_r2();
-    m_use_proxy = c_commander.proxy(m_clump_proxy);
-    m_clump_distance = static_cast<uintptr_t>(c_commander.clump_dist());
-    m_model = c_commander.model();
-    m_missing_score = c_commander.get_missing_score();
-    m_scoring = c_commander.get_score();
-    m_seed = c_commander.seed();
-    switch (m_model)
-    {
-    case MODEL::HETEROZYGOUS:
-        m_homcom_weight = 0;
-        m_het_weight = 1;
-        m_homrar_weight = 0;
-        break;
-    case MODEL::DOMINANT:
-        m_homcom_weight = 0;
-        m_het_weight = 1;
-        m_homrar_weight = 1;
-        break;
-    case MODEL::RECESSIVE:
-        m_homcom_weight = 0;
-        m_het_weight = 0;
-        m_homrar_weight = 1;
-        break;
-    default: break;
-    }
-}
 
 void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
 {
@@ -956,7 +992,6 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     std::vector<uint32_t> ld_missing_count(
         static_cast<std::vector<uint32_t>::size_type>(m_max_window_size));
     uint32_t* ld_missing_ct_ptr = nullptr;
-    std::unordered_set<double> used_thresholds;
     double dxx;
     double dyy;
     double cov12;
@@ -969,7 +1004,6 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
                       founder_include2.data());
-    m_thresholds.clear();
 
 // reference must have sorted
 
@@ -1298,14 +1332,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
         // indicate we are keeping this SNP
         remain_core[cur_snp_index] = true;
         num_core_snps++;
-        double thres = cur_target_snp.get_threshold();
-        // store the p-value threshold information of this SNP so that we can
-        // know which threshold contain SNPs, therefore use this information for
-        // all-score output
-        if (used_thresholds.find(thres) == used_thresholds.end()) {
-            used_thresholds.insert(thres);
-            m_thresholds.push_back(thres);
-        }
+
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // release the memory
@@ -1381,7 +1408,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     // chromsome, as PRSice ignore any sex chromosome, we can set it as a
     // constant false
     const bool is_x = false;
-
     // when we read in the genotype, the genotype is stored in byte represented
     // by uintptr_t. Then we will use the PLINK 2 functions to obtain the R2
     // As this vector can be big, we will only initialize it once (memory
@@ -1414,11 +1440,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
                       founder_include2.data());
-    // information
-    std::unordered_set<double> used_thresholds;
-    // we clean out the m_thresholds information as this might change after
-    // clumping (some threshold might have no more SNP in it)
-    m_thresholds.clear();
+
 
 // one way to speed things up as in PLINK 2 is to pre-allocate the memory space
 // for what we need to do next. The following code did precisely that (borrow
@@ -1780,11 +1802,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
         // we also get the p-value threshold of the SNP so that we know what
         // thresholds are included in our analysis. This information is vital
         // for the generation of all score file
-        double thres = cur_target_snp.get_threshold();
-        if (used_thresholds.find(thres) == used_thresholds.end()) {
-            used_thresholds.insert(thres);
-            m_thresholds.push_back(thres);
-        }
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // now we release the memory stack
@@ -1793,7 +1810,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     free(bigstack_ua);
     bigstack_ua = nullptr;
     bigstack_initial_base = nullptr;
-    m_num_threshold = static_cast<uint32_t>(m_thresholds.size());
     if (num_core_snps != m_existed_snps.size()) {
         //  if there are clumped SNPs, we would like to remove them from the
         //  vector
@@ -1830,8 +1846,6 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 bool Genotype::prepare_prsice()
 {
     if (m_existed_snps.size() == 0) return false;
-    // first, sort the threshold
-    std::sort(m_thresholds.begin(), m_thresholds.end());
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category()) {

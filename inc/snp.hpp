@@ -227,9 +227,9 @@ public:
             return false; // cannot flip nor match
     }
 
-    intptr_t chr() const { return m_chr; }
-    intptr_t loc() const { return m_loc; }
-    intptr_t category() const { return m_category; }
+    int chr() const { return m_chr; }
+    int loc() const { return m_loc; }
+    int category() const { return m_category; }
     /*!
      * \brief Get the p-value of the SNP
      * \return the p-value of the SNP
@@ -431,12 +431,12 @@ public:
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
-    intptr_t up_bound() const { return m_up_bound; }
+    int up_bound() const { return m_up_bound; }
     /*!
      * \brief Obtain the lower bound of the clump region correspond to this SNP
      * \return the lower bound of the region
      */
-    intptr_t low_bound() const { return m_low_bound; }
+    int low_bound() const { return m_low_bound; }
 
 private:
     // basic info
