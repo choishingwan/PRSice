@@ -153,28 +153,27 @@ public:
                           Reporter& reporter);
 
 private:
-    static void load_background(const std::string &background,
-                                const int window_5, const int window_3,
-                                const uint32_t max_chr, std::unordered_map<std::string, std::vector<int> > &msigdb_list, bool printed_warning,
-                                cgranges_t* gene_sets,
-                                Reporter& reporter);
+    static void load_background(
+        const std::string& background, const int window_5, const int window_3,
+        const uint32_t max_chr,
+        std::unordered_map<std::string, std::vector<int>>& msigdb_list,
+        bool printed_warning, cgranges_t* gene_sets, Reporter& reporter);
     static void
     load_msigdb(const std::string& msig,
                 std::unordered_map<std::string, std::vector<int>>& msigdb_list,
                 std::vector<std::string>& region_names,
                 std::unordered_set<std::string> duplicated_sets, int& set_idx,
                 Reporter& reporter);
-    static void load_gtf(const std::string &gtf,
-                         const std::unordered_map<std::string, std::vector<int>> &msigdb_list,
-                         const std::vector<std::string>& features,
-                         const uint32_t max_chr, const int window_5, const int window_3,
-                         cgranges_t* gene_sets,
-                         const bool genome_wide_background, Reporter &reporter);
+    static void load_gtf(
+        const std::string& gtf,
+        const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
+        const std::vector<std::string>& features, const uint32_t max_chr,
+        const int window_5, const int window_3, cgranges_t* gene_sets,
+        const bool genome_wide_background, Reporter& reporter);
     static bool load_bed_regions(
         const std::string& bed_file, cgranges_t* gene_sets, const int window_5,
         const int window_3, bool& print_warning, const int set_idx,
-            const uint32_t max_chr,
-        std::vector<std::string>& region_names,
+        const uint32_t max_chr, std::vector<std::string>& region_names,
         std::unordered_set<std::string> duplicated_sets, Reporter& reporter);
     static void load_snp_sets(
         std::string snp_file,
@@ -212,11 +211,11 @@ private:
     // and don't want to pass this around
 
 
-    static bool in_feature(const std::string& in, const std::vector<std::string>& feature){
-        return std::find(feature.begin(), feature.end(), in)
-               != feature.end();
+    static bool in_feature(const std::string& in,
+                           const std::vector<std::string>& feature)
+    {
+        return std::find(feature.begin(), feature.end(), in) != feature.end();
     }
-
 
 
     /*!

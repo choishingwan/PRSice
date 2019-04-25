@@ -173,8 +173,8 @@ void Region::add_flags(const std::vector<std::string>& feature,
     bool printed_warning = false;
     for (auto&& bed_file : bed) {
         set_idx += load_bed_regions(bed_file, gene_sets, window_5, window_3,
-                                    printed_warning, set_idx,max_chr, region_names,
-                                    duplicated_sets, reporter);
+                                    printed_warning, set_idx, max_chr,
+                                    region_names, duplicated_sets, reporter);
     }
     // SNP sets
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
@@ -183,9 +183,10 @@ void Region::add_flags(const std::vector<std::string>& feature,
                       reporter);
     }
     // the SNP sets information are stored within snp_in_sets
-    if(!msigdb.empty() && gtf.empty()){
-        std::string error_message = "Error: MSigDB input requires a complementary"
-                                    "GTF file!\n";
+    if (!msigdb.empty() && gtf.empty()) {
+        std::string error_message =
+            "Error: MSigDB input requires a complementary"
+            "GTF file!\n";
         throw std::runtime_error(error_message);
     }
     std::unordered_map<std::string, std::vector<int>> msigdb_list;
@@ -200,23 +201,24 @@ void Region::add_flags(const std::vector<std::string>& feature,
         // we need to read in a background file, but ignore the
         // case where we use the gtf as background as we should've
         // already done that
-        load_background(background, window_5, window_3, max_chr, msigdb_list,  printed_warning   , gene_sets, reporter);
+        load_background(background, window_5, window_3, max_chr, msigdb_list,
+                        printed_warning, gene_sets, reporter);
     }
-    if(!gtf.empty() && (!msigdb.empty() || !genome_wide_background)){
+    if (!gtf.empty() && (!msigdb.empty() || !genome_wide_background)) {
         // generate the region information based on the msigdb info
         // or generate for the background
-        load_gtf(gtf, msigdb_list, feature,max_chr,window_5, window_3, gene_sets, genome_wide_background, reporter);
+        load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
+                 gene_sets, genome_wide_background, reporter);
     }
     cr_index(gene_sets);
 }
 
-void Region::load_background(const std::string &background,
-                                   const int window_5, const int window_3,
-                                   const uint32_t max_chr,
-                             std::unordered_map<std::string, std::vector<int>>& msigdb_list,
-bool printed_warning,
-                                   cgranges_t* gene_sets,
-                             Reporter& reporter){
+void Region::load_background(
+    const std::string& background, const int window_5, const int window_3,
+    const uint32_t max_chr,
+    std::unordered_map<std::string, std::vector<int>>& msigdb_list,
+    bool printed_warning, cgranges_t* gene_sets, Reporter& reporter)
+{
     const std::unordered_map<std::string, int> file_type{
         {"bed", 1}, {"range", 0}, {"gene", 2}};
     // format of the background string should be name:format
@@ -236,14 +238,14 @@ bool printed_warning,
 }
 
 
-void Region::load_gtf(const std::string &gtf,
-                     const std::unordered_map<std::string, std::vector<int>> &msigdb_list,
-              const std::vector<std::string>& feature,
-              const uint32_t max_chr,
-                      const int window_5, const int window_3,
-                     cgranges_t* gene_sets,
-              const bool genome_wide_background, Reporter &reporter){
-    if(msigdb_list.empty()) return;
+void Region::load_gtf(
+    const std::string& gtf,
+    const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
+    const std::vector<std::string>& feature, const uint32_t max_chr,
+    const int window_5, const int window_3, cgranges_t* gene_sets,
+    const bool genome_wide_background, Reporter& reporter)
+{
+    if (msigdb_list.empty()) return;
     bool gz_input = false;
     // we want to allow gz file input (as GTF file can be big)
     GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
@@ -267,7 +269,7 @@ void Region::load_gtf(const std::string &gtf,
     std::vector<std::string> token, attribute, extract;
     std::string chr, name, id, line;
     int chr_code, start, end;
-    size_t num_line =0;
+    size_t num_line = 0;
     size_t exclude_feature = 0;
     // this should ensure we will be reading either from the gz stream or
     // ifstream
@@ -281,7 +283,9 @@ void Region::load_gtf(const std::string &gtf,
         token = misc::split(line, "\t");
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
-        if (in_feature(token[+GTF::FEATURE], feature) && chr_code >= 0 && chr_code <= static_cast<int>(max_chr)) {
+        if (in_feature(token[+GTF::FEATURE], feature) && chr_code >= 0
+            && chr_code <= static_cast<int>(max_chr))
+        {
             start = 0;
             end = 0;
             try
@@ -355,7 +359,7 @@ void Region::load_gtf(const std::string &gtf,
                         name = extract[1];
                     }
                 }
-                if(!name.empty() && !id.empty()) break;
+                if (!name.empty() && !id.empty()) break;
             }
             if (name.empty() && id.empty()) {
                 // lack both
@@ -408,22 +412,25 @@ void Region::load_gtf(const std::string &gtf,
                 throw std::runtime_error(error);
             }
             // now check if we can find it in the MSigDB entry
-            auto &&id_search = msigdb_list.find(id);
-            auto &&name_search = msigdb_list.find(name);
-            if(id_search != msigdb_list.end()){
-                for(auto && idx : id_search->second){
-                    cr_add(gene_sets, std::to_string(chr_code).c_str(), start, end, idx);
+            auto&& id_search = msigdb_list.find(id);
+            auto&& name_search = msigdb_list.find(name);
+            if (id_search != msigdb_list.end()) {
+                for (auto&& idx : id_search->second) {
+                    cr_add(gene_sets, std::to_string(chr_code).c_str(), start,
+                           end, idx);
                 }
             }
-            if( name_search != msigdb_list.end()){
-                for(auto &&idx : name_search->second){
-                    cr_add(gene_sets, std::to_string(chr_code).c_str(), start, end, idx);
+            if (name_search != msigdb_list.end()) {
+                for (auto&& idx : name_search->second) {
+                    cr_add(gene_sets, std::to_string(chr_code).c_str(), start,
+                           end, idx);
                 }
             }
-            if(!genome_wide_background){
+            if (!genome_wide_background) {
                 // we want to generate the background from GTF
                 // background index is 1
-                cr_add(gene_sets, std::to_string(chr_code).c_str(), start, end, 1);
+                cr_add(gene_sets, std::to_string(chr_code).c_str(), start, end,
+                       1);
             }
         }
         else
@@ -442,7 +449,6 @@ void Region::load_gtf(const std::string &gtf,
                        + " entries removed due to feature selection");
         reporter.report(message);
     }
-
 }
 void Region::load_snp_sets(
     std::string snp_file,
@@ -503,7 +509,9 @@ void Region::load_snp_sets(
                 std::string message = "Warning: Set name of " + token[0]
                                       + " is duplicated, it will be ignored";
                 reporter.report(message);
-            }else{
+            }
+            else
+            {
                 duplicated_sets.insert(token[0]);
                 region_names.push_back(token[0]);
                 for (size_t i = 1; i < token.size(); ++i) {
@@ -595,7 +603,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
         }
         // skip all check later
         chr_code = get_chrom_code_raw(token[0].c_str());
-        if(chr_code > max_chr) continue;
+        if (chr_code > max_chr) continue;
 
         if (first_read) {
             first_read = false;
@@ -757,7 +765,6 @@ void Region::load_msigdb(
     }
     input.close();
 }
-
 
 
 void Region::read_background(
@@ -962,7 +969,6 @@ void Region::read_background(
     m_region_list.push_back(solve_overlap(current_bound));
     m_region_name.push_back("Background");
 }
-
 
 
 Region::~Region() {}

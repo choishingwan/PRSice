@@ -165,16 +165,12 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
             // Generate Region flag information
-            Region::add_flags(commander.feature(),
-                              commander.window_5(), commander.window_3(),
-                              commander.genome_wide_background(),
-                              commander.gtf(), commander.msigdb(),
-                              commander.bed(),
-                              commander.snp_set(),
-                              commander.background(), *target_file,
-                              reporter);
+            Region::add_flags(
+                commander.feature(), commander.window_5(), commander.window_3(),
+                commander.genome_wide_background(), commander.gtf(),
+                commander.msigdb(), commander.bed(), commander.snp_set(),
+                commander.background(), *target_file, reporter);
             exit(0);
-
         }
         catch (const std::invalid_argument& ia)
         {
