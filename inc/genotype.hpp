@@ -440,6 +440,7 @@ public:
                    const bool no_full, const bool is_beta, const bool is_index,
                    const bool keep_ambig, Reporter& reporter);
     void build_clump_windows();
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements

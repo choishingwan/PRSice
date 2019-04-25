@@ -167,11 +167,12 @@ int main(int argc, char* argv[])
             // Generate Region flag information
             std::vector<std::string> region_names;
             size_t num_regions;
-            num_regions = Region::add_flags(region_names,
-                commander.feature(), commander.window_5(), commander.window_3(),
-                commander.genome_wide_background(), commander.gtf(),
-                commander.msigdb(), commander.bed(), commander.snp_set(),
-                commander.background(), *target_file, reporter);
+            num_regions = Region::add_flags(
+                region_names, commander.feature(), commander.window_5(),
+                commander.window_3(), commander.genome_wide_background(),
+                commander.gtf(), commander.msigdb(), commander.bed(),
+                commander.snp_set(), commander.background(), *target_file,
+                reporter);
             // start processing other files before doing clumping
             PRSice prsice(commander, num_regions > 2, reporter);
             prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),

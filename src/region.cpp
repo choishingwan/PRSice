@@ -109,15 +109,15 @@ void Region::generate_exclusion(cgranges_t* cr,
     }
 }
 
-size_t Region::add_flags(std::vector<std::string> &region_names,
-                      const std::vector<std::string>& feature,
-                       const int window_5, const int window_3,
-                       const bool genome_wide_background,
-                       const std::string& gtf, const std::string& msigdb,
-                       const std::vector<std::string>& bed,
-                       const std::string& snp_set,
-                       const std::string& background, Genotype& target,
-                       Reporter& reporter)
+size_t Region::add_flags(std::vector<std::string>& region_names,
+                         const std::vector<std::string>& feature,
+                         const int window_5, const int window_3,
+                         const bool genome_wide_background,
+                         const std::string& gtf, const std::string& msigdb,
+                         const std::vector<std::string>& bed,
+                         const std::string& snp_set,
+                         const std::string& background, Genotype& target,
+                         Reporter& reporter)
 {
     const uint32_t max_chr = target.max_chr();
     cgranges_t* gene_sets = cr_init();
@@ -182,17 +182,18 @@ size_t Region::add_flags(std::vector<std::string> &region_names,
     size_t required_size = BITCT_TO_WORDCT(num_sets);
     intptr_t chr, bp;
     int64_t *b = nullptr, max_b = 0, n, idx;
-    for(size_t i = 0; i < num_snps; ++i){
-        std::vector<uintptr_t> flag(required_size,0);
+    for (size_t i = 0; i < num_snps; ++i) {
+        std::vector<uintptr_t> flag(required_size, 0);
         SET_BIT(0, flag.data());
-        if(genome_wide_background){
+        if (genome_wide_background) {
             SET_BIT(1, flag.data());
         }
-        auto &&snp = target.get_snp(i);
+        auto&& snp = target.get_snp(i);
         chr = snp.chr();
-        bp =snp.loc();
-        n=cr_overlap(gene_sets, std::to_string(chr).c_str(), bp-1, bp+1, &b, &max_b);
-        for(int64_t j = 0; j < n; ++j){
+        bp = snp.loc();
+        n = cr_overlap(gene_sets, std::to_string(chr).c_str(), bp - 1, bp + 1,
+                       &b, &max_b);
+        for (int64_t j = 0; j < n; ++j) {
             idx = cr_label(gene_sets, b[j]);
             assert(tmp >= 0);
             SET_BIT(static_cast<size_t>(idx), flag.data());
@@ -203,17 +204,17 @@ size_t Region::add_flags(std::vector<std::string> &region_names,
     cr_destroy(gene_sets);
 
     std::string message = "";
-        if (num_sets == 2) {
-            // because we will always have base and background
-            message = "1 region included";
-        }
-        else
-        {
-            // -1 to remove the background count, as we are not going to print
-            // the background anyway
-            message = "A total of " + misc::to_string(num_sets - 2)
-                      + " regions plus the base region are included";
-        }
+    if (num_sets == 2) {
+        // because we will always have base and background
+        message = "1 region included";
+    }
+    else
+    {
+        // -1 to remove the background count, as we are not going to print
+        // the background anyway
+        message = "A total of " + misc::to_string(num_sets - 2)
+                  + " regions plus the base region are included";
+    }
     reporter.report(message);
     return num_sets;
 }
@@ -227,7 +228,8 @@ void Region::load_background(
     const std::unordered_map<std::string, int> file_type{
         {"bed", 1}, {"range", 0}, {"gene", 2}};
     // format of the background string should be name:format
-    const std::vector<std::string> background_info = misc::split(background, ":");
+    const std::vector<std::string> background_info =
+        misc::split(background, ":");
     if (background_info.size() != 2) {
         std::string error =
             "Error: Format of --background should be <File Name>:<File Type>";
@@ -243,8 +245,9 @@ void Region::load_background(
     // open the file
     std::ifstream input;
     input.open(background_info[0].c_str());
-    if(!input.is_open()){
-        std::string error_message = "Error: Cannot open background file: "+background_info[0]+" to read\n";
+    if (!input.is_open()) {
+        std::string error_message = "Error: Cannot open background file: "
+                                    + background_info[0] + " to read\n";
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -267,7 +270,8 @@ void Region::load_background(
             }
 
             int32_t chr_code = get_chrom_code_raw(token[0].c_str());
-            if(chr_code > static_cast<int32_t>(max_chr) || chr_code < 0) continue;
+            if (chr_code > static_cast<int32_t>(max_chr) || chr_code < 0)
+                continue;
 
             if (token.size() <= +BED::STRAND && (window_5 > 0 || window_3 > 0)
                 && (window_5 != window_3) && !printed_warning)
@@ -380,7 +384,7 @@ void Region::load_background(
             // this allow flexibility for both Gene Gene Gene and
             // Gene\nGene\n format
             token = misc::split(line);
-            for(auto && g : token){
+            for (auto&& g : token) {
                 msigdb_list[g].push_back(1);
             }
         }
@@ -754,8 +758,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
         }
         // skip all check later
         chr_code = get_chrom_code_raw(token[0].c_str());
-        if (chr_code > static_cast<int32_t>(max_chr) ||
-                chr_code < 0) continue;
+        if (chr_code > static_cast<int32_t>(max_chr) || chr_code < 0) continue;
 
         if (first_read) {
             first_read = false;

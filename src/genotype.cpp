@@ -16,22 +16,23 @@
 
 #include "genotype.hpp"
 
-void Genotype::build_clump_windows(){
+void Genotype::build_clump_windows()
+{
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
-        if (t1.chr() == t2.chr()) {
-            if (t1.loc() <t2.loc()) {
-                if(t1.file_name() == t2.file_name()){
-                    return t1.byte_pos() <  t2.byte_pos();
-                }
-                return t1.file_name() < t2.file_name();
-            }
-            else
-                return (t1.loc() <t2.loc());
-        }
-        else
-            return (t1.chr() < t2.chr());
-    });
+                  if (t1.chr() == t2.chr()) {
+                      if (t1.loc() < t2.loc()) {
+                          if (t1.file_name() == t2.file_name()) {
+                              return t1.byte_pos() < t2.byte_pos();
+                          }
+                          return t1.file_name() < t2.file_name();
+                      }
+                      else
+                          return (t1.loc() < t2.loc());
+                  }
+                  else
+                      return (t1.chr() < t2.chr());
+              });
     int vector_index = 0;
     // we do it here such that the m_existed_snps is sorted correctly
     // low_bound is where the current snp should read from and last_snp is where
@@ -54,12 +55,11 @@ void Genotype::build_clump_windows(){
             // now the chromosome didn't change, and the distance of our current
             // SNP is further away from the previous SNP than our required
             // threshold
-            while (cur_snp.loc() - prev_loc  > static_cast<int>(m_clump_distance)
+            while (cur_snp.loc() - prev_loc > static_cast<int>(m_clump_distance)
                    && low_bound < vector_index)
             {
                 ++low_bound;
-                prev_loc =
-                        m_existed_snps[static_cast<size_t>(low_bound)].loc();
+                prev_loc = m_existed_snps[static_cast<size_t>(low_bound)].loc();
             }
         }
         // now low_bound should be the first SNP where the core index SNP need
@@ -68,18 +68,20 @@ void Genotype::build_clump_windows(){
         // set the end of the vector as the default up bound
         cur_snp.set_up_bound(static_cast<int>(m_existed_snps.size()));
         // update all previous SNPs that are out bounud
-        while (
-               m_existed_snps[static_cast<size_t>(last_snp)].chr()  != cur_snp.chr()
-               || cur_snp.loc() - m_existed_snps [static_cast<size_t>(last_snp)].loc()
-               > static_cast<intptr_t>(m_clump_distance))
+        while (m_existed_snps[static_cast<size_t>(last_snp)].chr()
+                   != cur_snp.chr()
+               || cur_snp.loc()
+                          - m_existed_snps[static_cast<size_t>(last_snp)].loc()
+                      > static_cast<intptr_t>(m_clump_distance))
         {
             // if the last SNP is on a differenet chromosome or it is to far
             // from the current SNP
 
             diff = vector_index
-                    - m_existed_snps[static_cast<size_t>(last_snp)].low_bound();
+                   - m_existed_snps[static_cast<size_t>(last_snp)].low_bound();
             // we will set the up bound of that SNP to the current SNP
-            m_existed_snps[static_cast<size_t>(last_snp)].set_up_bound(vector_index);
+            m_existed_snps[static_cast<size_t>(last_snp)].set_up_bound(
+                vector_index);
             ++last_snp;
             if (m_max_window_size < diff) {
                 m_max_window_size = diff;
@@ -89,7 +91,7 @@ void Genotype::build_clump_windows(){
         ++vector_index;
     }
     for (int i = static_cast<int>(m_existed_snps.size()) - 1; i >= 0; i--) {
-        auto&& cur_snp =m_existed_snps[static_cast<size_t>(i)];
+        auto&& cur_snp = m_existed_snps[static_cast<size_t>(i)];
         if (cur_snp.up_bound() != static_cast<intptr_t>(m_existed_snps.size()))
             break;
         if (m_max_window_size < cur_snp.up_bound() - cur_snp.low_bound()) {
@@ -1332,7 +1334,6 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
         // indicate we are keeping this SNP
         remain_core[cur_snp_index] = true;
         num_core_snps++;
-
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // release the memory

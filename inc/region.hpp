@@ -22,8 +22,8 @@
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "reporter.hpp"
-#include "storage.hpp"
 #include "snp.hpp"
+#include "storage.hpp"
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -63,15 +63,15 @@ public:
                      std::vector<uintptr_t>& flag);
     static void generate_exclusion(cgranges_t* cr,
                                    const std::string& exclusion_range);
-    static size_t add_flags(std::vector<std::string> &region_names,
-                         const std::vector<std::string>& feature,
-                          const int window_5, const int window_3,
-                          const bool genome_wide_background,
-                          const std::string& gtf, const std::string& msigdb,
-                          const std::vector<std::string>& bed,
-                          const std::string& snp_set,
-                          const std::string& background, Genotype& target,
-                          Reporter& reporter);
+    static size_t add_flags(std::vector<std::string>& region_names,
+                            const std::vector<std::string>& feature,
+                            const int window_5, const int window_3,
+                            const bool genome_wide_background,
+                            const std::string& gtf, const std::string& msigdb,
+                            const std::vector<std::string>& bed,
+                            const std::string& snp_set,
+                            const std::string& background, Genotype& target,
+                            Reporter& reporter);
 
 private:
     static void load_background(
@@ -108,7 +108,6 @@ private:
     {
         return std::find(feature.begin(), feature.end(), in) != feature.end();
     }
-
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */
