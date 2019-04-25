@@ -165,7 +165,9 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
             // Generate Region flag information
-            Region::add_flags(
+            std::vector<std::string> region_names;
+            size_t num_regions;
+            num_regions = Region::add_flags(region_names,
                 commander.feature(), commander.window_5(), commander.window_3(),
                 commander.genome_wide_background(), commander.gtf(),
                 commander.msigdb(), commander.bed(), commander.snp_set(),
@@ -182,29 +184,7 @@ int main(int argc, char* argv[])
             reporter.report(error.what());
             return -1;
         }
-        // Initialized the region object. This object is responsible for
-        // checking if a SNP falls within a genic region
-        Region region(commander.feature(), commander.window_5(),
-                      commander.window_3(), commander.perform_set_perm(),
-                      commander.genome_wide_background());
-        try
-        {
-            // read in all the region inputs and generate the cooresponding
-            // boundaries
-            /*
-            region.generate_regions(
-                commander.gtf(), commander.msigdb(), commander.bed(),
-                commander.single_snp_set(), commander.multi_snp_sets(),
-                commander.background(), *target_file, reporter);*/
-        }
-        catch (const std::runtime_error& error)
-        {
-            reporter.report(error.what());
-            return -1;
-        }
 
-        // Print out the log about the number of region included
-        region.print_region_number(reporter);
 
         // Need to handle paths in the name
 

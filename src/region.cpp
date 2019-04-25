@@ -185,6 +185,9 @@ size_t Region::add_flags(std::vector<std::string> &region_names,
     for(size_t i = 0; i < num_snps; ++i){
         std::vector<uintptr_t> flag(required_size,0);
         SET_BIT(0, flag.data());
+        if(genome_wide_background){
+            SET_BIT(1, flag.data());
+        }
         auto &&snp = target.get_snp(i);
         chr = snp.chr();
         bp =snp.loc();
@@ -194,8 +197,24 @@ size_t Region::add_flags(std::vector<std::string> &region_names,
             assert(tmp >= 0);
             SET_BIT(static_cast<size_t>(idx), flag.data());
         }
+        free(b);
         snp.set_flag(num_sets, flag);
     }
+    cr_destroy(gene_sets);
+
+    std::string message = "";
+        if (num_sets == 2) {
+            // because we will always have base and background
+            message = "1 region included";
+        }
+        else
+        {
+            // -1 to remove the background count, as we are not going to print
+            // the background anyway
+            message = "A total of " + misc::to_string(num_sets - 2)
+                      + " regions plus the base region are included";
+        }
+    reporter.report(message);
     return num_sets;
 }
 

@@ -21,7 +21,6 @@
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "region.hpp"
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
@@ -215,25 +214,6 @@ public:
         m_sort_by_p_index = SNP::sort_by_p_chr(m_existed_snps);
         return true;
     }
-
-
-    /*!
-     * \brief Read in the base file and add the required information to SNP
-     * \param c_commander contain all user input
-     * \param region contain the region information. Use for defining the flag
-     * \param reporter is the logger
-     */
-    void read_base(const std::string& base_file, const std::string& out,
-                   const std::vector<int>& col_index,
-                   const std::vector<double>& bar_levels,
-                   const double& bound_start, const double& bound_inter,
-                   const double& bound_end, const double& maf_control,
-                   const double& maf_case, const double& info_threshold,
-                   const bool maf_control_filter, const bool maf_case_filter,
-                   const bool info_filter, const bool fastscore,
-                   const bool no_full, const bool is_beta, const bool is_index,
-                   const bool run_shrinkage, Region& region,
-                   Reporter& reporter);
     /*!
      * \brief Function to carry out clumping. One of the most complicated
      * function.
@@ -386,71 +366,6 @@ public:
         }
     }
     /*!
-     * \brief Function to count the number of SNP in each region, thus allow us
-     * to completely ignore any region that does not contain any SNP
-     *
-     * \param region is the region information
-     * \param name is the prefix of the output file
-     * \param print_snp is a boolean to indicate if we want to print the SNP
-     */
-    void count_snp_in_region(Region& region, const std::string& name,
-                             const bool print_snp)
-    {
-        // this function must be performed after prepare prsice or the index
-        // will be all wrong
-        std::string snp_file_name = name + ".snp";
-        std::ofstream print_file;
-        // TODO: try to store the index of all region instead of just background
-        // so that we can skip them faster (e.g. finding 200 SNP from 500K is
-        // going to be slow)
-        m_background_snp_index.clear();
-        // indicate if prset is invovled
-        const bool prset = region.size() > 1;
-        // don't do anything if we don't need to print SNP or to perform PRSet
-        if (!prset && !print_snp) return;
-        // if we want to print SNP, we will first write the header of the
-        // file
-        if (print_snp) {
-            print_file.open(snp_file_name.c_str());
-            if (!print_file.is_open()) {
-                throw std::runtime_error(
-                    "Error: Cannot open snp file to write: " + snp_file_name);
-            }
-            print_file << "CHR\tSNP\tBP\tP";
-            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
-                print_file << "\t" << region.get_name(i_region);
-            }
-            print_file << "\n";
-        }
-        // we than start iterate through all the SNPs and count their
-        // membership.
-        std::vector<int> result(region.size(), 0);
-        size_t snp_index = 0;
-        for (auto&& snp : m_existed_snps) {
-            if (print_snp)
-                print_file << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                           << "\t" << snp.p_value();
-            for (size_t i_region = 0; i_region < region.size(); ++i_region) {
-                result[i_region] += snp.in(i_region);
-                if (print_snp)
-                    print_file << "\t" << (snp.in(i_region) ? "Y" : "N");
-            }
-            if (prset && snp.in(region.size() - 1)) {
-                // we will assume the last set is the background. Doesn't matter
-                // if background isn't use
-                m_background_snp_index.push_back(snp_index);
-            }
-            if (print_snp) print_file << "\n";
-            snp_index++;
-        }
-        // by setting the index of the background region, we can avoid spending
-        // time in it again (kinda useless)
-        m_background_region_index = static_cast<intptr_t>(region.size() - 1);
-        // we will store the count in region so that region will be responsible
-        // for the region stuff
-        region.post_clump_count(result);
-    }
-    /*!
      * \brief Function for calculating the PRS from the null set
      * \param set_size is the size of the set
      * \param prev_size is the amount of SNPs we have already processed
@@ -551,10 +466,8 @@ protected:
     uintptr_t m_sample_ct = 0;
     uintptr_t m_founder_ct = 0;
     uintptr_t m_marker_ct = 0;
-    intptr_t m_background_region_index = -1;
     intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
-    uint32_t m_region_size = 1;
     uint32_t m_num_threshold = 0;
     uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
