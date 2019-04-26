@@ -1910,9 +1910,11 @@ void Genotype::build_membership_matrix(std::vector<size_t> &region_membership,
     size_t cur_idx = 0;
     for(size_t i = 0; i < num_sets; ++i){
         region_start_idx.push_back(cur_idx);
-        region_membership.insert(region_membership.end(), temporary_storage[i].begin(),
+        if(!temporary_storage[i].empty()){
+            region_membership.insert(region_membership.end(), temporary_storage[i].begin(),
                                  temporary_storage[i].end());
-        cur_idx = region_membership.size();
+            cur_idx = region_membership.size();
+        }
     }
 }
 

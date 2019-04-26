@@ -153,7 +153,8 @@ public:
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
     void run_prsice(const Commander& c_commander, const size_t pheno_index,
-                    const size_t region_index, Genotype& target);
+                    const size_t region_index, const std::vector<size_t> &region_membership,
+    const std::vector<size_t> &region_start_idx, Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
      * PRS. Then this function will fill in the m_independent_variable matrix
@@ -166,7 +167,7 @@ public:
      * \param iter_threshold is the index of the current threshold
      */
     void regress_score(Genotype& target, const double threshold, int thread,
-                       const intptr_t pheno_index, const size_t iter_threshold);
+                       const size_t pheno_index, const size_t prs_result_idx);
 
     /*!
      * \brief Function responsible for generating the .prsice file
@@ -423,7 +424,7 @@ private:
      * \param pheno_index  the index of the current phenotype
      * \param  commander is the container of all user inputs
      */
-    void print_best(Genotype& target, const intptr_t pheno_index,
+    void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
 
     /*!

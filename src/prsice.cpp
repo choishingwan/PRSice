@@ -952,9 +952,9 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     reporter.report(message);
 }
 
-void PRSice::run_prsice(const Commander& c_commander,
-                        const size_t pheno_index, const size_t region_index,
-                        Genotype& target)
+void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
+                        const size_t region_index, const std::vector<size_t> &region_membership,
+        const std::vector<size_t> &region_start_idx, Genotype& target)
 {
     const bool no_regress = c_commander.no_regress();
     // only print out all scores if this is the first phenotype
@@ -962,6 +962,13 @@ void PRSice::run_prsice(const Commander& c_commander,
     const int num_thread = c_commander.thread();
     const bool non_cumulate = c_commander.non_cumulate();
     const size_t num_samples_included = target.num_sample();
+
+    size_t cur_start_idx = region_start_idx[region_index];
+    const size_t cur_end_idx =(region_index+1 >= region_start_idx.size())?
+                region_start_idx.size(): region_start_idx[region_index+1];
+
+    // if cur_start_idx == cur_end_idx, this is an empty region
+    if(cur_start_idx == cur_end_idx) return;
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
@@ -971,11 +978,8 @@ void PRSice::run_prsice(const Commander& c_commander,
     m_num_snp_included = 0;
     // m_perm_result stores the result (T-value) from each permutation and is
     // then used for calculation of empirical p value
-    m_perm_result.resize(
-        static_cast<std::vector<double>::size_type>(m_num_perm), 0);
+    m_perm_result.resize(static_cast<size_t>(m_num_perm), 0);
     m_best_sample_score.clear();
-    // if m_prs_results is small (or 0), initialize by resize
-    // otherwise, resize do nothing, but then we can change reset the contents
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
     for (auto&& p : m_prs_results) {
@@ -990,12 +994,9 @@ void PRSice::run_prsice(const Commander& c_commander,
     if (region_index == 0) m_best_sample_score.resize(target.num_sample());
 
     // now prepare all score
-    // in theory, we only need to calulate it once for every phenotype + sets
-    // but it is easier to do it this way
     std::fstream all_out;
-    if (print_all_scores) {
-        std::string all_out_name = c_commander.out();
-        all_out_name.append(".all.score");
+    if (print_all_scores && pheno_index==0) {
+        const std::string all_out_name = c_commander.out()+".all.score";
         all_out.open(all_out_name.c_str(),
                      std::fstream::out | std::fstream::in | std::fstream::ate);
         if (!all_out.is_open()) {
@@ -1008,8 +1009,8 @@ void PRSice::run_prsice(const Commander& c_commander,
 
     // current threshold iteration
     // must iterate after each threshold even if no-regress is called
-    size_t iter_threshold = 0;
-    int cur_index = -1;
+    size_t prs_result_idx = 0;
+    int cur_index = 0;
     double cur_threshold = 0.0;
     // we want to know if user want to obtain the standardized PRS
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
@@ -1028,9 +1029,7 @@ void PRSice::run_prsice(const Commander& c_commander,
     {
         m_analysis_done++;
         print_progress();
-
         if (print_all_scores) {
-
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 // we will calculate the the number of white space we need to
                 // skip to reach the current sample + threshold's output
@@ -1055,17 +1054,14 @@ void PRSice::run_prsice(const Commander& c_commander,
             // We only perform the regression analysis if we would like to
             // perform the regresswion
             regress_score(target, cur_threshold, num_thread, pheno_index,
-                          iter_threshold);
+                          prs_result_idx);
 
             if (m_perform_perm) {
                 // and perform regression if that is required
-                permutation(
-                    num_thread,
-                    m_target_binary[static_cast<std::vector<bool>::size_type>(
-                        pheno_index)]);
+                permutation( num_thread, m_target_binary[ pheno_index]);
             }
         }
-        iter_threshold++;
+        prs_result_idx++;
         first_run = false;
     }
 
@@ -1078,7 +1074,7 @@ void PRSice::run_prsice(const Commander& c_commander,
     }
 }
 
-void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
+void PRSice::print_best(Genotype& target, const size_t pheno_index,
                         const Commander& commander)
 {
 
@@ -1086,22 +1082,18 @@ void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
     // we'll do assign an empty string to phenotyp name
     std::string pheno_name = "";
     if (pheno_info.name.size() > 1)
-        pheno_name =
-            pheno_info.name[static_cast<std::vector<std::string>::size_type>(
-                pheno_index)];
+        pheno_name = pheno_info.name[ pheno_index];
     std::string output_prefix = commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     // we generate one best score file per phenotype. The reason for this is to
     // not make the best score file too big, and because each phenotype might
     // have different set of sample included in the regression due to
     // missingness
-    std::string out_best = output_prefix + ".best";
+    const std::string out_best = output_prefix + ".best";
     // we have to overwrite the white spaces with the desired values
     std::fstream best_out(out_best.c_str(), std::fstream::out | std::fstream::in
                                                 | std::fstream::ate);
-    auto&& best_info =
-        m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
-            m_best_index)];
+    auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
     int best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
         fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
@@ -1126,8 +1118,7 @@ void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
 
             best_out.seekp(loc);
             best_out << std::setprecision(m_precision)
-                     << m_best_sample_score[static_cast<
-                            std::vector<double>::size_type>(sample)];
+                     << m_best_sample_score[static_cast<size_t>(sample)];
         }
     }
     best_out.close();
@@ -1139,8 +1130,8 @@ void PRSice::print_best(Genotype& target, const intptr_t pheno_index,
 }
 
 void PRSice::regress_score(Genotype& target, const double threshold, int thread,
-                           const intptr_t pheno_index,
-                           const size_t iter_threshold)
+                           const size_t pheno_index,
+                           const size_t prs_result_idx)
 {
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
            se = 0.0;
@@ -1148,7 +1139,7 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
         static_cast<Eigen::Index>(m_matrix_index.size());
     if (m_num_snp_included == 0
         || (m_num_snp_included
-            == static_cast<uint32_t>(m_prs_results[iter_threshold].num_snp)))
+            == static_cast<uint32_t>(m_prs_results[prs_result_idx].num_snp)))
     {
         // if we haven't read in any SNP, or that we have the same number of SNP
         // as the previous threshold, we will skip (normally this should not
@@ -1206,13 +1197,10 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
 
     // If this is the best r2, then we will add it
     int best_index = m_best_index;
-    if (iter_threshold == 0 || best_index < 0
-        || m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
-                             best_index)]
-                   .r2
-               < r2)
+    if (prs_result_idx == 0 || best_index < 0
+        || m_prs_results[static_cast<size_t>(best_index)].r2 < r2)
     {
-        m_best_index = static_cast<int>(iter_threshold);
+        m_best_index = static_cast<int>(prs_result_idx);
         size_t num_include_samples = target.num_sample();
         for (size_t s = 0; s < num_include_samples; ++s) {
             // we will have to store the best scores. we cannot directly copy
@@ -1232,7 +1220,7 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
     cur_result.num_snp = static_cast<int>(m_num_snp_included);
     cur_result.se = se;
     cur_result.competitive_p = -1.0;
-    m_prs_results[iter_threshold] = cur_result;
+    m_prs_results[prs_result_idx] = cur_result;
 }
 
 
