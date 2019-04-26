@@ -411,6 +411,7 @@ public:
         std::vector<uintptr_t> flags = m_flags;
         uintptr_t bitset;
         std::vector<size_t> out;
+        out.reserve(num_sets);
         for (size_t k = 0; k < m_max_flag_index; ++k) {
           bitset = m_flags[k];
           while (bitset != 0) {

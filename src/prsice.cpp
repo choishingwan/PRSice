@@ -160,7 +160,7 @@ void PRSice::pheno_check(const std::string& pheno_file,
 }
 
 void PRSice::init_matrix(const Commander& c_commander,
-                         const intptr_t pheno_index, Genotype& target,
+                         const size_t pheno_index, Genotype& target,
                          Reporter& reporter)
 {
     // reset the null R2 to 0 (different phenotype might lead to different
@@ -951,7 +951,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
 }
 
 void PRSice::run_prsice(const Commander& c_commander,
-                        const intptr_t pheno_index, const size_t region_index,
+                        const size_t pheno_index, const size_t region_index,
                         Genotype& target)
 {
     const bool no_regress = c_commander.no_regress();
@@ -1531,15 +1531,14 @@ void PRSice::consume_null_pheno(
 void PRSice::prep_output(const std::string& out, const bool all_score,
                          const bool has_prev, const Genotype& target,
                          const std::vector<std::string>& region_name,
-                         const intptr_t pheno_index, const bool has_background)
+                         const size_t pheno_index)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
     std::string pheno_name = "";
     if (pheno_info.name.size() > 1)
         pheno_name =
-            pheno_info.name[static_cast<std::vector<std::string>::size_type>(
-                pheno_index)];
+            pheno_info.name[static_cast<size_t>(pheno_index)];
     std::string output_prefix = out;
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     const std::string output_name = output_prefix;
@@ -1581,7 +1580,9 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         header_line.append(" PRS");
     else
     {
-        for (size_t i = 0; i < region_name.size() - has_background; ++i) {
+        for (size_t i = 0; i < region_name.size(); ++i) {
+            // the second item is always the background, which we will not output
+            if(i==1) continue;
             header_line.append(" " + region_name[i]);
         }
     }
@@ -1690,8 +1691,8 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // we move out of the function
 }
 
-void PRSice::output(const Commander& c_commander, const Region& region,
-                    const intptr_t pheno_index, const size_t region_index)
+void PRSice::output(const Commander& c_commander, const std::vector<std::string>& region_names,
+                    const size_t pheno_index, const size_t region_index)
 {
     // if prevalence is provided, we'd like to generate calculate the adjusted
     // R2
@@ -1740,7 +1741,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         // when m_best_index == -1, we don't have any valid PRS output
         fprintf(stderr, "Error: No valid PRS ");
         if (m_perform_prset)
-            fprintf(stderr, "for %s", region.get_name(region_index).c_str());
+            fprintf(stderr, "for %s", region_names[region_index].c_str());
         fprintf(stderr, "!\n");
         return;
     }
@@ -1766,7 +1767,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
         }
 
         double r2 = full - null;
-        prsice_out << region.get_name(region_index) << "\t"
+        prsice_out << region_names[region_index] << "\t"
                    << m_prs_results[i].threshold << "\t" << r2 << "\t";
         if (has_prevalence) {
             if (is_binary)
@@ -1791,7 +1792,7 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     // in theory though, I should be able to start generating the summary file
     prsice_summary prs_sum;
     prs_sum.pheno = pheno_name;
-    prs_sum.set = region.get_name(region_index);
+    prs_sum.set = region_names[region_index];
     prs_sum.result = best_info;
     prs_sum.r2_null = m_null_r2;
     prs_sum.top = top;
@@ -1802,7 +1803,6 @@ void PRSice::output(const Commander& c_commander, const Region& region,
     // the first region)
     prs_sum.has_competitive = (region_index == 0);
     m_prs_summary.push_back(prs_sum);
-
     if (best_info.p > 0.1)
         m_significant_store[0]++;
     else if (best_info.p > 1e-5)
@@ -2157,7 +2157,7 @@ void PRSice::consume_prs(
 }
 
 void PRSice::run_competitive(Genotype& target, const Commander& commander,
-                             const intptr_t pheno_index)
+                             const size_t pheno_index)
 {
     m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");

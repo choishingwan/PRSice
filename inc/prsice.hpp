@@ -142,7 +142,7 @@ public:
      * \param target is the target genotype. Provide the sample ID information
      * \param reporter is the logger
      */
-    void init_matrix(const Commander& c_commander, const intptr_t pheno_index,
+    void init_matrix(const Commander& c_commander, const size_t pheno_index,
                      Genotype& target, Reporter& reporter);
     /*!
      * \brief Return the total number of phenotype involved
@@ -152,7 +152,7 @@ public:
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
-    void run_prsice(const Commander& c_commander, const intptr_t pheno_index,
+    void run_prsice(const Commander& c_commander, const size_t pheno_index,
                     const size_t region_index, Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
@@ -175,8 +175,8 @@ public:
      * \param pheno_index is the index of the current phenotype
      * \param region_index is teh index of the current region
      */
-    void output(const Commander& c_commander, const Region& region,
-                const intptr_t pheno_index, const size_t region_index);
+    void output(const Commander& c_commander, const std::vector<std::string> &region_names,
+                const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
      * spaces, this allow us to generate a nice vertical file
@@ -191,7 +191,7 @@ public:
     void prep_output(const std::string& out, const bool all_score,
                      const bool has_prev, const Genotype& target,
                      const std::vector<std::string>& region_name,
-                     const intptr_t pheno_index, const bool has_background);
+                     const size_t pheno_index);
     /*!
      * \brief This function will summarize all PRSice / PRSet results and
      * generate the .summary file
@@ -206,8 +206,8 @@ public:
      * \param num_region the number of region to process
      * \param num_thresholds the number of thresholds to process
      */
-    void init_process_count(const Commander& commander, intptr_t num_region,
-                            intptr_t num_thresholds)
+    void init_process_count(const Commander& commander, size_t num_region,
+                            size_t num_thresholds)
     {
         int num_perm;
         const bool perm = commander.num_perm(num_perm);
@@ -215,15 +215,15 @@ public:
         const bool set_perm = commander.set_perm(num_set_perm);
         // the number of raw PRSice run
         m_total_process = num_thresholds * num_phenotype()
-                          * ((num_region > 1) ? num_region - 1 : 1);
+                          * ((num_region > 2) ? num_region - 1 : 1);
         if (perm) {
-            m_total_process *= (num_perm + 1);
+            m_total_process *= (static_cast<size_t>(num_perm) + 1);
         }
         if (set_perm) {
             // the additional permutation we've got to run, num_region -2 as we
             // don't perform permutation on the background set nor the base set
             m_total_process +=
-                num_phenotype() * (num_region - 2) * num_set_perm;
+                num_phenotype() * (static_cast<size_t>(num_region) - 2) * num_set_perm;
         }
     }
     PRSice(const PRSice&) = delete;            // disable copying
@@ -255,7 +255,7 @@ public:
      * \param pheno_index is the index of the current phenotype
      */
     void run_competitive(Genotype& target, const Commander& commander,
-                         const intptr_t pheno_index);
+                         const size_t pheno_index);
 
 
 protected:
@@ -323,7 +323,7 @@ private:
     double m_null_se = 0.0;
     double m_null_coeff = 0.0;
     std::random_device::result_type m_seed = 0;
-    intptr_t m_total_process = 0;
+    size_t m_total_process = 0;
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit

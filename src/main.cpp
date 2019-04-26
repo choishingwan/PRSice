@@ -212,9 +212,41 @@ int main(int argc, char* argv[])
             if(num_regions > 2)
                 target_file->build_membership_matrix(region_membership ,region_start_idx, num_regions);
             const size_t num_pheno = prsice.num_phenotype();
-            for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno){
 
+            // Initialize the progress bar
+            prsice.init_process_count(commander,num_regions,
+                                      target_file->num_threshold());
+            for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno){
+                fprintf(stderr, "\nProcessing the %zu th phenotype\n",
+                        i_pheno + 1);
+                prsice.init_matrix(commander, i_pheno, *target_file,
+                                   reporter);
+                prsice.prep_output(commander.out(), commander.all_scores(),
+                                   commander.has_prevalence(), *target_file,
+                                   region_names, i_pheno);
+                // go through each region
+                for (size_t i_region = 0; i_region < num_regions; ++i_region){
+                    // always skip background region
+                    if(i_region==1) continue;
+                    prsice.run_prsice(commander, i_pheno, i_region,*target_file);
+                    if (!commander.no_regress())
+                        // if we performed regression, we'd like to generate
+                        // the output file (.prsice)
+                        prsice.output(commander, region, i_pheno, i_region);
+                }
+                if (!commander.no_regress() && commander.perform_set_perm())
+                {
+                    // only perform permutation if regression is performed
+                    // and user request it
+                    prsice.run_competitive(*target_file, commander,
+                                           i_pheno);
+                }
             }
+            prsice.print_progress(true);
+            fprintf(stderr, "\n");
+            if (!commander.no_regress())
+                // now generate the summary file
+                prsice.summarize(commander, reporter);
             exit(0);
         }
         catch (const std::invalid_argument& ia)
@@ -226,109 +258,21 @@ int main(int argc, char* argv[])
         {
             reporter.report(error.what());
             return -1;
-        }
-
-
-        // Need to handle paths in the name
-
-        try
-        {
-            // initialize PRSice class
-            PRSice prsice(commander, region.size() > 1, reporter);
-
-            // Prepare the SNP vector in target for PRS calculation
-            if (!target_file->prepare_prsice()) {
-                std::string error_message =
-                    "No SNPs left for PRSice processing";
-                reporter.report(error_message);
-                return -1;
-            }
-            // count the number of SNPs in each region so that we can skip
-            // regions that does not contain any SNP
-            // Also, print out the SNP matrix if required
-            // TODO: Maybe consider having an index storage for all set so that
-            // we can jump around quicker
-            // NOTE: When PRSet isn't performed, this has no effect
-            target_file->count_snp_in_region(region, commander.out(),
-                                             commander.print_snp());
-            // we should never sort the ordering of m_existed_snp from now on or
-            // it will distord the background index and cause problem
-
-            // check which region are removed
-            std::ofstream removed_regions;
-            size_t region_size = region.size();
-
-            if (removed_regions.is_open()) removed_regions.close();
-            // now we start processing each phenotype
-            const intptr_t num_pheno = prsice.num_phenotype();
-            if (true) {
-                // Initialize the progress bar
-                prsice.init_process_count(commander,
-                                          static_cast<intptr_t>(region.size()),
-                                          target_file->num_threshold());
-                // remove background from the region process
-                // background is only there if permutation is to be performed
-                // (It must be there if permutation is to be performed)
-                const bool has_background =
-                    ((region.size() > 1) && commander.perform_set_perm());
-                const size_t num_region_process =
-                    region.size() - has_background;
-                // go through each phenotype
-                for (intptr_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-                    // initialize the phenotype & independent variable matrix
-                    fprintf(stderr, "\nProcessing the %zu th phenotype\n",
-                            i_pheno + 1);
-                    // we now initialize the phenotype and covariance matrix
-                    prsice.init_matrix(commander, i_pheno, *target_file,
-                                       reporter);
-                    // we then prepare the output files. Main complication is
-                    // for all score and best score. Others are easier
-                    prsice.prep_output(commander.out(), commander.all_scores(),
-                                       commander.has_prevalence(), *target_file,
-                                       region.names(), i_pheno, has_background);
-                    // go through each region separately
-                    // this should reduce the memory usage
-                    for (size_t i_region = 0; i_region < num_region_process;
-                         ++i_region)
-                    {
-                        // we will skip any region without SNPs in it but never
-                        // skip the first set (Base  set)
-                        if (i_region != 0
-                            && region.num_post_clump_snp(i_region) == 0)
-                            continue;
-                        // now we start running PRSice
-                        prsice.run_prsice(commander, i_pheno, i_region,
-                                          *target_file);
-                        if (!commander.no_regress())
-                            // if we performed regression, we'd like to generate
-                            // the output file (.prsice)
-                            prsice.output(commander, region, i_pheno, i_region);
-                    }
-                    if (!commander.no_regress() && commander.perform_set_perm())
-                    {
-                        // only perform permutation if regression is performed
-                        // and user request it
-                        prsice.run_competitive(*target_file, commander,
-                                               i_pheno);
-                    }
-                }
-                // finish the progres bar
-                prsice.print_progress(true);
-                fprintf(stderr, "\n");
-                if (!commander.no_regress())
-                    // now generate the summary file
-                    prsice.summarize(commander, reporter);
-            }
-        }
-        catch (const std::out_of_range& error)
+        }catch (const std::out_of_range& error)
         {
             reporter.report(error.what());
             return -1;
-        }
-        catch (const std::runtime_error& error)
+        }catch (const std::exception& ex)
         {
-            reporter.report(error.what());
-            return -1;
+            reporter.report(ex.what());
+        }
+        catch (...)
+        {
+            std::string error_message = "Error: Bad Allocation exception detected. "
+                                        "This is likely due to insufficient memory "
+                                        "for PRSice. You can try re-running PRSice "
+                                        "with more memory.";
+            reporter.report(error_message);
         }
         delete target_file;
     }
