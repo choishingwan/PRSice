@@ -182,16 +182,15 @@ void PRSice::init_matrix(const Commander& c_commander,
 
     // this reset the in_regression flag of all samples
     target.reset_in_regression_flag();
-    if (!no_regress) {
-        // if we don't want to perform regression, we can start reading in the
-        // phenotype
-        gen_pheno_vec(target, pheno_file, pheno_index, reporter);
+    // don't need to do anything if we don't need to do regression
+    if(no_regress) return;
+    // read in phenotype vector
+    gen_pheno_vec(target, pheno_file, pheno_index, reporter);
         // now that we've got the phenotype, we can start processing the more
         // complicated covariate
-        gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_name(),
-                       c_commander.get_cov_index(),
-                       c_commander.get_factor_cov_index(), reporter);
-    }
+    gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_name(),
+                   c_commander.get_cov_index(),
+                   c_commander.get_factor_cov_index(), reporter);
     // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no
     // longer correct as we have not updated that to account for invalid
     // covariates.
@@ -269,16 +268,13 @@ void PRSice::update_sample_included(Genotype& target)
 
 
 void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                           const intptr_t pheno_index, Reporter& reporter)
+                           const size_t pheno_index, Reporter& reporter)
 {
-    // we will first store the phenotype into the double vector and then later
-    // use this to construct the matrix
-    std::vector<double> pheno_store;
+
     // reserve the maximum size (All samples)
     // check if the phenotype is binary or not
-    const bool binary =
-        pheno_info
-            .binary[static_cast<std::vector<bool>::size_type>(pheno_index)];
+    const bool binary = pheno_info.binary[pheno_index];
+    const size_t sample_ct = target.num_sample();
     std::string line;
     int max_pheno_code = 0;
     int num_case = 0;
@@ -286,7 +282,9 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     size_t sample_index_ct = 0;
-    size_t sample_ct = target.num_sample();
+    // we will first store the phenotype into the double vector and then later
+    // use this to construct the matrix
+    std::vector<double> pheno_store;
     pheno_store.reserve(sample_ct);
     std::string pheno_name = "Phenotype";
     std::string id;
@@ -298,14 +296,9 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     if (pheno_info.use_pheno) // use phenotype file
     {
         // read in the phenotype index
-        std::vector<std::string>::size_type pheno_col_index =
-            static_cast<std::vector<std::string>::size_type>(
-                pheno_info.col[static_cast<std::vector<bool>::size_type>(
-                    pheno_index)]);
+        const size_t pheno_col_index = static_cast<size_t>(pheno_info.col[pheno_index]);
         // and get the phenotype name
-        pheno_name =
-            pheno_info
-                .name[static_cast<std::vector<bool>::size_type>(pheno_index)];
+        pheno_name =pheno_info.name[pheno_index];
         // now read in the phenotype file
         std::ifstream pheno_file;
         // check if the file is open
@@ -327,7 +320,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             if (line.empty()) continue;
             token = misc::split(line);
             // Check if we have the minimal required column number
-            if (token.size() < static_cast<size_t>(pheno_col_index + 1)) {
+            if (token.size() < pheno_col_index + 1) {
                 std::string error_message =
                     "Malformed pheno file, should contain at least "
                     + misc::to_string(pheno_col_index + 1)
@@ -336,8 +329,16 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 throw std::runtime_error(error_message);
             }
             // read in the sample ID
+            // TODO: potential problem with BGEN. Might want to allow for
+            //       delim here
             id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
             // and store the information into the map
+            if(phenotype_info.find(id)!=phenotype_info.end()){
+                std::string error_message = "Error: Duplicated sample ID in "
+                                            "phenotype file: "+id+". Please "
+                                                                  "check if your input is correct!";
+                throw std::runtime_error(error_message);
+            }
             phenotype_info[id] = token[pheno_col_index];
         }
         pheno_file.close();
@@ -420,6 +421,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // No phenotype file is provided
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
+
             if (target.pheno_is_na(i_sample) || !target.is_founder(i_sample)) {
                 // it is ok to skip NA as default = sample.has_pheno = false
                 continue;
@@ -574,13 +576,13 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
 
 
 void PRSice::process_cov_file(
-    const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
-    std::vector<uint32_t>& cov_start_index, std::vector<uint32_t>& cov_index,
-    std::vector<std::string>& cov_name,
-    std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
-    uint32_t& num_column, Reporter& reporter)
+    const std::string& cov_file, const std::vector<uint32_t>& factor_cov_index,
+    std::vector<size_t>& cov_start_index, const std::vector<uint32_t>& cov_index,
+    const std::vector<std::string>& cov_name,
+    std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
+    size_t& num_column, Reporter& reporter)
 {
-    // first, go through the covariate and generate the factor level vector for
+    // first, go through the covariate and generate the factor level vector
     std::ifstream cov;
     // we will generate a vector containing the information of all samples with
     // valid covariate. The pair contain Sample Name and the index before
@@ -590,16 +592,16 @@ void PRSice::process_cov_file(
     std::vector<std::string> token;
     // contain the current level of factor
     // at the end, this = number of levels in each factor covariate -1
-    std::vector<uint32_t> current_factor_level(factor_cov_index.size(), 0);
+    std::vector<size_t> current_factor_level(factor_cov_index.size(), 0);
     // is the number of missingness in each covariate
-    std::vector<uint32_t> missing_count(cov_index.back() + 1, 0);
+    std::vector<size_t> missing_count(cov_index.back() + 1, 0);
     std::string line, id;
     std::unordered_set<std::string> dup_id_check;
     // is the maximum column index required
     const size_t max_index = cov_index.back() + 1;
     // This is the index for iterating the current_vector_level (reset after
     // each line)
-    std::vector<uint32_t>::size_type factor_level_index = 0;
+    size_t factor_level_index = 0;
     int num_valid = 0, index = 0, dup_id_count = 0;
     bool valid = true;
     // we initialize the storage facility for the factor levels
@@ -611,7 +613,7 @@ void PRSice::process_cov_file(
                                  + cov_file);
     }
     // the number of factor is used to guard against array out of bound
-    size_t num_factors = factor_cov_index.size();
+    const size_t num_factors = factor_cov_index.size();
 
     while (std::getline(cov, line)) {
         misc::trim(line);
@@ -629,16 +631,14 @@ void PRSice::process_cov_file(
         id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
-
-            // only samples with a valid phenotype will get into this if case.
-            // Ignore all other samples
             valid = true;
             factor_level_index = 0;
             for (auto&& header : cov_index) {
-                if (token[header] == "NA" || token[header] == "Na"
-                    || token[header] == "nA" || token[header] == "na")
+                std::transform(token[header].begin(), token[header].end(),
+                               token[header].begin(), ::toupper);
+                if (token[header] == "NA" )
                 {
-                    // check if the covariate of this sample is NA
+                    // this sample has a missing covariate
                     valid = false;
                     ++missing_count[header];
                 }
@@ -646,13 +646,11 @@ void PRSice::process_cov_file(
                 // number of factor. If that is the case, this must not be a
                 // factor covaraite.
                 // If not, then we check if the current index corresponds to a
-                // factor index. Only go into this if case if this is not a
-                // factor
+                // factor index.
                 else if (factor_level_index >= num_factors
                          || header != factor_cov_index[factor_level_index])
                 {
-                    // This if case will check if the input can be convert to a
-                    // value. Doesn't apply to factor
+                    // not a factor. Check if this is a valid covariate
                     try
                     {
                         misc::convert<double>(token[header]);
@@ -705,7 +703,7 @@ void PRSice::process_cov_file(
 
     if (dup_id_count != 0) {
         std::string message =
-            "Error: " + std::to_string(dup_id_count) + " duplicated IDs\n";
+            "Error: " + std::to_string(dup_id_count) + " duplicated IDs in covariate file!\n";
         throw std::runtime_error(message);
     }
     // Here, we should know the identity of the valid sample and also
@@ -717,16 +715,15 @@ void PRSice::process_cov_file(
     std::string message =
         "Include Covariates:\nName\tMissing\tNumber of levels\n";
     uint32_t total_column = 2;
-    std::unordered_map<std::string, size_t>::size_type num_sample =
-        m_sample_with_phenotypes.size();
+    size_t num_sample = m_sample_with_phenotypes.size();
     // reset the factor index
     factor_level_index = 0;
-    uint32_t cur_cov_index = 0;
-    uint32_t num_level = 0;
+    size_t cur_cov_index = 0;
+    size_t num_level = 0;
     // iterate through each covariate
     for (auto&& cov : cov_index) {
         cov_start_index.push_back(total_column);
-        if (factor_level_index == factor_cov_index.size()
+        if (factor_level_index >= factor_cov_index.size()
             || cov != factor_cov_index[factor_level_index])
         {
             // if this is not a factor we will just output the number of
@@ -738,8 +735,7 @@ void PRSice::process_cov_file(
         else
         {
             // this is a factor
-            num_level = static_cast<uint32_t>(
-                factor_levels[factor_level_index++].size());
+            num_level = factor_levels[factor_level_index++].size();
             // need to add number of level - 1 (as reference level doesn't
             // require additional column) to the total column required
             total_column += num_level - 1;
@@ -793,6 +789,8 @@ void PRSice::process_cov_file(
         // Also, this does means that the base factor will be the
         // first factor observed within the covariate file, not
         // the one observed in the first sample in the genotype
+        // TODO: If I have time, maybe allow users to select the
+        //       base factor? (Would be a pain though)
         std::sort(begin(valid_sample_index), end(valid_sample_index),
                   [](std::pair<std::string, size_t> const& t1,
                      std::pair<std::string, size_t> const& t2) {
@@ -826,12 +824,13 @@ void PRSice::process_cov_file(
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
-                            std::vector<std::string> cov_header_name,
-                            std::vector<uint32_t> cov_header_index,
-                            std::vector<uint32_t> factor_cov_index,
+                            const std::vector<std::string> cov_header_name,
+                            const std::vector<uint32_t> cov_header_index,
+                            const std::vector<uint32_t> factor_cov_index,
                             Reporter& reporter)
 {
     // The size of the map should be informative of the number of sample
+    // currently included in the data
     size_t num_sample = m_sample_with_phenotypes.size();
     if (c_cov_file.empty()) {
         // if no covariates, just return a matrix of 1 with two column, one for
@@ -844,20 +843,23 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     }
     // obtain the index of each covariate
     // the key is the variable name and the value is the index on the matrix
+
     // need to account for the situation where the same variable name can
     // occur in different covariates
     // As the index are sorted, we can use vector
+
     // the index of the factor_list is the index of the covariate
-    // the key of the nested order map is the factor and the value is the factor
+    // the key of the nested unorder map is the factor and the value is the factor
     // level (similar to column index)
-    std::vector<std::unordered_map<std::string, uint32_t>> factor_list;
+    std::vector<std::unordered_map<std::string, size_t>> factor_list;
+
     // an indexor to indicate whcih column should each covariate start from (as
     // there're factor covariates, the some covariates might take up more than
     // one column
-    std::vector<uint32_t> cov_start_index;
+    std::vector<size_t> cov_start_index;
     // by default the required number of column for the matrix is
     // intercept+PRS+number of covariate (when there're no factor input)
-    uint32_t num_column = 2 + static_cast<uint32_t>(cov_header_index.size());
+    size_t num_column = 2 + cov_header_index.size();
     // we will perform the first pass to the covariate file which will remove
     // all samples with missing covariate and will also generate the factor
     // level
@@ -871,7 +873,8 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     num_sample = m_sample_with_phenotypes.size();
     // initalize the matrix to the desired size
     m_independent_variables = Eigen::MatrixXd::Zero(
-        static_cast<Eigen::Index>(num_sample), num_column);
+        static_cast<Eigen::Index>(num_sample),
+                static_cast<Eigen::Index>(num_column));
     m_independent_variables.col(0).setOnes();
     m_independent_variables.col(1).setOnes();
     // now we only need to fill in the independent matrix without worry
@@ -886,9 +889,8 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     std::vector<std::string> token;
     std::string line, id;
     size_t max_index = cov_header_index.back() + 1, index, cur_index, f_level;
-    uint32_t cur_factor_index = 0,
-             num_factor = static_cast<uint32_t>(factor_cov_index.size()),
-             num_cov = static_cast<uint32_t>(cov_header_index.size());
+    uint32_t cur_factor_index = 0;
+    size_t num_factor = factor_cov_index.size(), num_cov = cov_header_index.size();
     while (std::getline(cov, line)) {
         misc::trim(line);
         if (line.empty()) continue;
@@ -918,7 +920,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                     // as those should be taken cared of by the process_cov_file
                     // function
                     m_independent_variables(static_cast<Eigen::Index>(index),
-                                            cov_start_index[i_cov]) =
+                                            static_cast<Eigen::Index>(cov_start_index[i_cov])) =
                         misc::convert<double>(token[cov_header_index[i_cov]]);
                 }
                 else

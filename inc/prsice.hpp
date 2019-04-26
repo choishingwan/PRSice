@@ -372,7 +372,7 @@ private:
      * \param reporter is the logger
      */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const intptr_t pheno_index, Reporter& reporter);
+                       const size_t pheno_index, Reporter& reporter);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -385,9 +385,9 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string> cov_header_name,
-                        std::vector<uint32_t> cov_header_index,
-                        std::vector<uint32_t> factor_cov_index,
+                        const std::vector<std::string> cov_header_name,
+                        const std::vector<uint32_t> cov_header_index,
+                        const std::vector<uint32_t> factor_cov_index,
                         Reporter& reporter);
     /*!
      * \brief Function use to process the covariate file, should be able to
@@ -403,12 +403,11 @@ private:
      * \param num_column is the number of column required (return)
      * \param reporter is the logger
      */
-    void process_cov_file(
-        const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
-        std::vector<uint32_t>& cov_start_index,
-        std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
-        std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
-        uint32_t& num_column, Reporter& reporter);
+    void process_cov_file(const std::string& cov_file, const std::vector<uint32_t> &factor_cov_index,
+        std::vector<size_t> &cov_start_index,
+        const std::vector<uint32_t> &cov_index, const std::vector<std::string> &cov_name,
+        std::vector<std::unordered_map<std::string, size_t> > &factor_levels,
+        size_t &num_column, Reporter& reporter);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
