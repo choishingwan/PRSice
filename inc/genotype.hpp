@@ -442,7 +442,7 @@ public:
     void build_clump_windows();
     void build_membership_matrix(std::vector<size_t> &region_membership,
                                  std::vector<size_t> &region_start_idx,
-                                 const size_t num_sets);
+                                 const size_t num_sets, const std::string &out, const std::vector<std::string> &region_name, const bool print_snps);
     size_t num_threshold() const { return m_num_thresholds; }
     std::vector<double> get_thresholds() const { return m_thresholds; }
 protected:

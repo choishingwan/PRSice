@@ -210,7 +210,9 @@ int main(int argc, char* argv[])
             // don't build the membership matrix when we are not running
             // PRSet as the membership should be all 1 anyway
             if(num_regions > 2)
-                target_file->build_membership_matrix(region_membership ,region_start_idx, num_regions);
+                target_file->build_membership_matrix(region_membership ,region_start_idx, num_regions,
+                                                     commander.out(),
+                                                     region_names, commander.print_snp());
             const size_t num_pheno = prsice.num_phenotype();
 
             // Initialize the progress bar
@@ -232,7 +234,7 @@ int main(int argc, char* argv[])
                     if (!commander.no_regress())
                         // if we performed regression, we'd like to generate
                         // the output file (.prsice)
-                        prsice.output(commander, region, i_pheno, i_region);
+                        prsice.output(commander, region_names, i_pheno, i_region);
                 }
                 if (!commander.no_regress() && commander.perform_set_perm())
                 {
