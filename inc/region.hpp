@@ -49,18 +49,6 @@ public:
      */
     Region() {}
     virtual ~Region();
-
-    /*!
-     * \brief Function to construct the flag for SNP membership. This is rather
-     * fragile as it require the SNP being sorted in the same order as the
-     * region. This is achieved by using the same chromosome code.
-     * \param chr the chromosome code for the SNP
-     * \param rs the RS ID of the SNP, useful for debugging
-     * \param loc the coordinate of the SNP
-     * \param flag the binary flag of the SNP regional membership
-     */
-    void update_flag(const intptr_t chr, const std::string& rs, intptr_t loc,
-                     std::vector<uintptr_t>& flag);
     static void generate_exclusion(cgranges_t* cr,
                                    const std::string& exclusion_range);
     static size_t add_flags(std::vector<std::string>& region_names,
