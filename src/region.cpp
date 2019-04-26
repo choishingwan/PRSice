@@ -177,9 +177,9 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
     // index gene list
     cr_index(gene_sets);
     // now we can go through each SNP and update their flag
-    size_t num_sets = region_names.size();
-    size_t num_snps = target.num_snps();
-    size_t required_size = BITCT_TO_WORDCT(num_sets);
+    const size_t num_sets = region_names.size();
+    const size_t num_snps = target.num_snps();
+    const size_t required_size = BITCT_TO_WORDCT(num_sets);
     intptr_t chr, bp;
     int64_t *b = nullptr, max_b = 0, n, idx;
     for (size_t i = 0; i < num_snps; ++i) {

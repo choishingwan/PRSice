@@ -440,7 +440,9 @@ public:
                    const bool no_full, const bool is_beta, const bool is_index,
                    const bool keep_ambig, Reporter& reporter);
     void build_clump_windows();
-
+    void build_membership_matrix(std::vector<size_t> &region_membership,
+                                 std::vector<size_t> &region_start_idx,
+                                 const size_t num_sets);
 protected:
     // friend with all child class so that they can also access the
     // protected elements

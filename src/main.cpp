@@ -199,6 +199,22 @@ int main(int argc, char* argv[])
                     reporter, commander.pearson());
                 // immediately free the memory
             }
+            if (init_ref) delete reference_file;
+            // can do the update structure here
+            // Use sparse matrix for space and speed
+            // Column = set, row = SNPs (because EIGEN is column major)
+            // need to also know the number of threshold included
+            std::vector<size_t> region_membership;
+            std::vector<size_t> region_start_idx;
+            target_file->prepare_prsice();
+            // don't build the membership matrix when we are not running
+            // PRSet as the membership should be all 1 anyway
+            if(num_regions > 2)
+                target_file->build_membership_matrix(region_membership ,region_start_idx, num_regions);
+            const size_t num_pheno = prsice.num_phenotype();
+            for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno){
+
+            }
             exit(0);
         }
         catch (const std::invalid_argument& ia)
@@ -219,30 +235,6 @@ int main(int argc, char* argv[])
         {
             // initialize PRSice class
             PRSice prsice(commander, region.size() > 1, reporter);
-            // check the phenotype input columns
-            prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),
-                               commander.is_binary(), reporter);
-            // set the clumping information to the target file
-            target_file->set_info(commander);
-            // remove all boundaries from the region object to free up memory
-            // skip clumping if not required
-            if (!commander.no_clump()) {
-                // get the sort by p index vector for target
-                // so that we can still find out the relative coordinates of
-                // each SNPs This is only required for clumping
-                if (!target_file->sort_by_p()) {
-                    std::string error_message =
-                        "No SNPs left for PRSice processing";
-                    reporter.report(error_message);
-                    return -1;
-                }
-                // now perforrm clumping
-                target_file->efficient_clumping(
-                    commander.use_ref() ? *reference_file : *target_file,
-                    reporter, commander.pearson());
-                // immediately free the memory
-            }
-            if (init_ref) delete reference_file;
 
             // Prepare the SNP vector in target for PRS calculation
             if (!target_file->prepare_prsice()) {
@@ -265,31 +257,7 @@ int main(int argc, char* argv[])
             // check which region are removed
             std::ofstream removed_regions;
             size_t region_size = region.size();
-            // We do not initialize the num_post_clump_snp index if we don't
-            // perform PRSet
-            for (size_t i = 0; i < region_size && commander.perform_set_perm();
-                 ++i)
-            {
-                if (region.num_post_clump_snp(i) == 0) {
-                    // this is not included in the analysis
-                    if (!removed_regions.is_open()) {
-                        // only generate this file if there are region that are
-                        // excluded from the analysis
-                        removed_regions.open(
-                            std::string(commander.out() + ".excluded_regions")
-                                .c_str());
-                        if (!removed_regions.is_open()) {
-                            fprintf(stderr,
-                                    "Error: Cannot open file to write: %s\n",
-                                    std::string(commander.out()
-                                                + ".excluded_regions")
-                                        .c_str());
-                            return -1;
-                        }
-                    }
-                    removed_regions << region.get_name(i) << std::endl;
-                }
-            }
+
             if (removed_regions.is_open()) removed_regions.close();
             // now we start processing each phenotype
             const intptr_t num_pheno = prsice.num_phenotype();

@@ -148,11 +148,9 @@ public:
      * \brief Return the total number of phenotype involved
      * \return the total number of phenotype to process
      */
-    intptr_t num_phenotype() const
+    size_t num_phenotype() const
     {
-        return (pheno_info.use_pheno)
-                   ? static_cast<intptr_t>(pheno_info.name.size())
-                   : 1;
+        return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
     void run_prsice(const Commander& c_commander, const intptr_t pheno_index,
                     const size_t region_index, Genotype& target);

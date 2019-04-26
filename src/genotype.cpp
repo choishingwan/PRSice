@@ -1861,6 +1861,25 @@ bool Genotype::prepare_prsice()
               });
     return true;
 }
+void Genotype::build_membership_matrix(std::vector<size_t> &region_membership,
+                                       std::vector<size_t> &region_start_idx,
+                                       const size_t num_sets){
+    std::vector<std::vector<size_t>> temporary_storage(num_sets);
+    std::vector<size_t> idx;
+    for(size_t i_snp=0; i_snp < m_existed_snps.size(); ++i_snp){
+        idx = m_existed_snps[i_snp].get_set_idx(num_sets);
+        for(auto && index : idx){
+            temporary_storage[index].push_back(i_snp);
+        }
+    }
+    size_t cur_idx = 0;
+    for(size_t i = 0; i < num_sets; ++i){
+        region_start_idx.push_back(cur_idx);
+        region_membership.insert(region_membership.end(), temporary_storage[i].begin(),
+                                 temporary_storage[i].end());
+        cur_idx = region_membership.size();
+    }
+}
 
 void Genotype::get_null_score(const int& set_size, const int& prev_size,
                               const std::vector<size_t>& background_list,
