@@ -2240,6 +2240,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     if (valid_memory <= used_memory) {
         // if we have used up all memory, we will exit
         fprintf(stderr, "\n");
+        std::cerr << "There are " << valid_memory << "Mb of available memory, yet PRSice has already used "
+                  << used_memory << "Mb of memory." << std::endl;
         throw std::runtime_error("Error: Not enough memory for permutation");
     }
     // artificially reduce available memory to avoid memory overflow
@@ -2250,6 +2252,9 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
 
     if (available_memory < basic_memory_required_per_thread) {
         fprintf(stderr, "\n");
+        std::cerr << "Required a minimum of " <<
+                     basic_memory_required_per_thread/1048576 << "Mb memory but only "
+                  << available_memory/1048576 << "Mb available." << std::endl;
         throw std::runtime_error("Error: Not enough memory for permutation");
     }
     // reduce number of threads to account for memory available
