@@ -1931,6 +1931,10 @@ void Genotype::build_membership_matrix(
         if(print_snps){
             for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp){
                 auto&& snp = m_existed_snps[i_snp];
+                if (threshold.find(snp.get_threshold()) == threshold.end()) {
+                    m_num_thresholds++;
+                    m_thresholds.push_back(snp.get_threshold());
+                }
                 snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
                         << "\t" << snp.p_value() << "\tY";
                 region_membership.push_back(i_snp);
@@ -1939,7 +1943,14 @@ void Genotype::build_membership_matrix(
         }else{
             // directly initialize the vector
             region_membership.resize(m_existed_snps.size());
-            std::iota (std::begin(region_membership), std::end(region_membership), 0);
+            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp){
+                auto&& snp = m_existed_snps[i_snp];
+                if (threshold.find(snp.get_threshold()) == threshold.end()) {
+                    m_num_thresholds++;
+                    m_thresholds.push_back(snp.get_threshold());
+                }
+                region_membership[i_snp] = i_snp;
+            }
         }
     }
 
@@ -1991,7 +2002,8 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const bool first_run, const bool use_ref_maf){
     // if there are no SNPs or we are at the end
     if (m_existed_snps.size() == 0
-            || (*start_index) == m_existed_snps.size())
+            || (*start_index) == m_existed_snps.size()||
+            start_index == end_index)
             return false;
     // reset number of SNPs if we don't need cumulative PRS
     if(non_cumulate) num_snp_included = 0;
@@ -2008,6 +2020,7 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
     read_score(start_index, region_end, (non_cumulate||first_run), use_ref_maf);
      // update the current index
     start_index = region_end;
+    if((*start_index)==0) return-1;
      if (require_statistic) {
          misc::RunningStat rs;
          size_t num_prs = m_prs_info.size();

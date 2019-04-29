@@ -168,7 +168,7 @@ public:
      * \param pheno_index is the index of the current phenotype
      * \param iter_threshold is the index of the current threshold
      */
-    void regress_score(Genotype& target, const double threshold, int thread,
+    void regress_score(Genotype& target, const double threshold, size_t thread,
                        const size_t pheno_index, const size_t prs_result_idx);
 
     /*!
@@ -361,7 +361,7 @@ private:
      * \param n_thread indicate the number of threads allowed
      * \param is_binary indicate if the current phenotype is binary
      */
-    void permutation(const int n_thread, bool is_binary);
+    void permutation(const size_t n_thread, bool is_binary);
     /*!
      * \brief This function will calculate the maximum length of the FID and
      * IID, generate the matrix index for quicker search and also set the in

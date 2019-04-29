@@ -145,6 +145,9 @@ public:
     {
         m_target_file = target_file;
         m_target_byte_pos = target_byte_pos;
+        // set reference to target by default
+        m_ref_file = target_file;
+        m_ref_byte_pos = target_byte_pos;
         m_chr = chr;
         m_loc = loc;
         m_flipped = flipping;

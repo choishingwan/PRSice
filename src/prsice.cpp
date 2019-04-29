@@ -965,7 +965,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     const bool no_regress = c_commander.no_regress();
     // only print out all scores if this is the first phenotype
     const bool print_all_scores = c_commander.all_scores() && pheno_index == 0;
-    const int num_thread = c_commander.thread();
+    const size_t num_thread = c_commander.thread();
     const bool non_cumulate = c_commander.non_cumulate();
     const bool use_ref_maf = c_commander.use_ref_maf();
     const size_t num_samples_included = target.num_sample();
@@ -984,7 +984,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
         return;
     }
     Eigen::initParallel();
-    Eigen::setNbThreads(num_thread);
+    Eigen::setNbThreads(static_cast<int>(num_thread));
     m_best_index = -1;
     // m_num_snp_included will store the current number of SNP included. This is
     // the global number and the true number per sample might differ due to
@@ -1143,7 +1143,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     m_best_file.processed_threshold++;
 }
 
-void PRSice::regress_score(Genotype& target, const double threshold, int thread,
+void PRSice::regress_score(Genotype& target, const double threshold, size_t thread,
                            const size_t pheno_index,
                            const size_t prs_result_idx)
 {
@@ -1248,12 +1248,12 @@ void PRSice::process_permutations()
     m_prs_results[best_index].emp_p = (num_better + 1.0)  / (m_num_perm + 1.0);
 }
 
-void PRSice::permutation(const int n_thread, bool is_binary)
+void PRSice::permutation(const size_t n_thread, bool is_binary)
 {
 
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
-    Eigen::setNbThreads(n_thread);
+    Eigen::setNbThreads(static_cast<int>(n_thread));
     Eigen::Index rank = 0;
     // logit_perm can only be true if it is binary trait and user used the
     // --logit-perm flag

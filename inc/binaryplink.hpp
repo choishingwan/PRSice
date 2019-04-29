@@ -132,7 +132,8 @@ protected:
                 static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
                 final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("Error: Cannot read the bed file!");
+            std::string error_message = "Error: Failed to read the bed file: "+m_cur_file;
+            throw std::runtime_error(error_message);
         }
         // directly read in the current location to avoid possible calculation
         // error
