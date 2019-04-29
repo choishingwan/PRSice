@@ -1886,38 +1886,63 @@ void Genotype::build_membership_matrix(
         snp_out << "\n";
     }
     size_t prev_idx;
-    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
-        auto&& snp = m_existed_snps[i_snp];
-        idx = snp.get_set_idx(num_sets);
-        prev_idx = 0;
-        if (threshold.find(snp.get_threshold()) == threshold.end()) {
-            m_num_thresholds++;
-            m_thresholds.push_back(snp.get_threshold());
-        }
-        if (print_snps) {
-            snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                    << "\t" << snp.p_value();
-        }
-        for (auto&& index : idx) {
-            assert(index >= prev_idx);
-            for (; prev_idx < index; ++prev_idx) {
-                snp_out << "\tN";
+    if(num_sets>2){
+        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
+            auto&& snp = m_existed_snps[i_snp];
+            prev_idx = 0;
+            if (threshold.find(snp.get_threshold()) == threshold.end()) {
+                m_num_thresholds++;
+                m_thresholds.push_back(snp.get_threshold());
             }
-            snp_out << "\tY";
-            temporary_storage[index].push_back(i_snp);
+            if (print_snps) {
+                snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
+                        << "\t" << snp.p_value();
+                idx = snp.get_set_idx(num_sets);
+                for (auto&& index : idx) {
+                    assert(index >= prev_idx);
+                    for (; prev_idx < index; ++prev_idx) {
+                        snp_out << "\tN";
+                    }
+                    snp_out << "\tY";
+                    temporary_storage[index].push_back(i_snp);
+                }
+                snp_out << "\n";
+            }else{
+                idx = snp.get_set_idx(num_sets);
+                for (auto&& index : idx) {
+                    assert(index >= prev_idx);
+                    temporary_storage[index].push_back(i_snp);
+                }
+            }
         }
-        snp_out << "\n";
-    }
-    size_t cur_idx = 0;
-    for (size_t i = 0; i < num_sets; ++i) {
-        region_start_idx.push_back(cur_idx);
-        if (!temporary_storage[i].empty()) {
-            region_membership.insert(region_membership.end(),
-                                     temporary_storage[i].begin(),
-                                     temporary_storage[i].end());
-            cur_idx = region_membership.size();
+        size_t cur_idx = 0;
+        for (size_t i = 0; i < num_sets; ++i) {
+            region_start_idx.push_back(cur_idx);
+            if (!temporary_storage[i].empty()) {
+                region_membership.insert(region_membership.end(),
+                                         temporary_storage[i].begin(),
+                                         temporary_storage[i].end());
+                cur_idx = region_membership.size();
+            }
+        }
+    }else{
+        // not PRSet. We know the membership is 1:num_snp
+        region_start_idx.push_back(0);
+        if(print_snps){
+            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp){
+                auto&& snp = m_existed_snps[i_snp];
+                snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
+                        << "\t" << snp.p_value() << "\tY";
+                region_membership.push_back(i_snp);
+            }
+            snp_out << "\n";
+        }else{
+            // directly initialize the vector
+            region_membership.resize(m_existed_snps.size());
+            std::iota (std::begin(region_membership), std::end(region_membership), 0);
         }
     }
+
 }
 
 void Genotype::get_null_score(const int& set_size, const int& prev_size,
