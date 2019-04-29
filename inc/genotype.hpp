@@ -447,7 +447,11 @@ public:
                                  const bool print_snps);
     size_t num_threshold() const { return m_num_thresholds; }
     std::vector<double> get_thresholds() const { return m_thresholds; }
-
+    bool get_score(const std::vector<size_t>& region_membership,
+                   size_t & start_index, const size_t &end_index,  double& cur_threshold,
+                   uint32_t& num_snp_included,
+                   const bool non_cumulate, const bool require_statistic,
+                   const bool first_run);
 protected:
     // friend with all child class so that they can also access the
     // protected elements

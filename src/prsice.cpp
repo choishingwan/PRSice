@@ -1030,9 +1030,12 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     // then proceed to read in and calculate the PRS for the given category
     // (defined by the cur_index, which points to the first SNP of the p-value
     // threshold)
-    while (target.get_score(cur_index, cur_threshold, m_num_snp_included,
-                            region_index, non_cumulate, require_standardize,
-                            first_run))
+    while(target.get_score(region_membership, cur_start_idx, cur_end_idx,
+                           cur_threshold, m_num_snp_included,
+                           non_cumulate, require_standardize, first_run))
+    //while (target.get_score(cur_index, cur_threshold, m_num_snp_included,
+    //                        region_index, non_cumulate, require_standardize,
+    //                        first_run))
     {
         m_analysis_done++;
         print_progress();

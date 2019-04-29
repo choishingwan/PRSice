@@ -1988,6 +1988,54 @@ void Genotype::get_null_score(const int& set_size, const int& prev_size,
     }
 }
 
+bool Genotype::get_score(const std::vector<size_t>& region_membership,
+               size_t & start_index, const size_t &end_index,  double& cur_threshold,
+               uint32_t& num_snp_included,
+               const bool non_cumulate, const bool require_statistic,
+               const bool first_run){
+    // if there are no SNPs or we are at the end
+    if (m_existed_snps.size() == 0
+            || start_index == m_existed_snps.size())
+            return false;
+    // reset number of SNPs if we don't need cumulative PRS
+    if(non_cumulate) num_snp_included = 0;
+    int cur_category = m_existed_snps[start_index].category();
+    cur_threshold = m_existed_snps[start_index].get_threshold();
+    size_t region_end = start_index;
+    size_t cur_index = 0;
+    for(; region_end< end_index; ++region_end){
+        cur_index = region_membership[region_end];
+        if (m_existed_snps[cur_index].category() != cur_category) {
+            cur_category = m_existed_snps[cur_index].category();
+            break;
+        }
+        num_snp_included++;
+    }
+    /*
+     read_score(start_index, region_end, region_index,
+                (non_cumulate || first_run));
+    */
+     // update the current index
+    start_index = region_end;
+     if (require_statistic) {
+         misc::RunningStat rs;
+         size_t num_prs = m_prs_info.size();
+         for (size_t i = 0; i < num_prs; ++i) {
+             if (!IS_SET(m_sample_include, i)) continue;
+             if (m_prs_info[i].num_snp == 0) {
+                 rs.push(0.0);
+             }
+             else
+             {
+                 rs.push(m_prs_info[i].prs
+                         / static_cast<double>(m_prs_info[i].num_snp));
+             }
+         }
+         m_mean_score = rs.mean();
+         m_score_sd = rs.sd();
+     }
+     return true;
+}
 
 bool Genotype::get_score(int& cur_index, double& cur_threshold,
                          uint32_t& num_snp_included, const size_t region_index,
