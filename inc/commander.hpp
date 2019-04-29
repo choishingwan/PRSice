@@ -339,7 +339,7 @@ public:
      * \param perm stores the number of permutation to be performed
      * \return true if we want to perform permutation
      */
-    bool num_perm(int& perm) const
+    bool num_perm(size_t& perm) const
     {
         perm = m_permutation;
         return m_perform_permutation;
@@ -353,7 +353,7 @@ public:
      * \brief Return the number of thread to be used
      * \return the number of thread
      */
-    int thread() const { return m_thread; }
+    size_t thread() const { return static_cast<size_t>(m_thread); }
     /*!
      * \brief Return the maximum memory allowed to use
      * \param detected should be the available memory
@@ -561,7 +561,7 @@ public:
      * \param perm stores the number of permutation
      * \return Return true if we want to perform set based permutation
      */
-    bool set_perm(int& perm) const
+    bool set_perm(size_t& perm) const
     {
         perm = m_set_perm;
         return m_perform_set_perm;
@@ -766,14 +766,14 @@ private:
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
     size_t m_memory = 0;
+    size_t m_permutation = 0;
+    size_t m_set_perm = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
     int m_clump_distance = 250000;
-    int m_permutation = 0;
-    int m_set_perm = 0;
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;

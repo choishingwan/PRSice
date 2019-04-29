@@ -259,8 +259,10 @@ public:
      * \param commander contains all user inputs
      * \param pheno_index is the index of the current phenotype
      */
-    void run_competitive(Genotype& target, const Commander& commander,
-                         const size_t pheno_index);
+    void run_competitive(Genotype& target,
+                         const std::vector<size_t>::const_iterator & bk_start_idx,
+                         const std::vector<size_t>::const_iterator& bk_end_idx, const Commander& commander,
+                         const size_t pheno_index, Reporter &reporter);
 
 
 protected:
@@ -343,7 +345,7 @@ private:
     int32_t m_max_fid_length = 3;
     int32_t m_max_iid_length = 3;
     int m_best_index = -1;
-    int m_num_perm = 0;
+    size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     bool m_ignore_fid = false;
@@ -448,10 +450,12 @@ private:
      * standardized PRS
      */
     void
-    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
-                     Genotype& target, size_t num_consumer,
-                     std::map<int, std::vector<size_t>>& set_index,
-                     const int num_perm, const bool require_standardize);
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t> > &q,
+                     Genotype& target,
+                     const std::vector<size_t>::const_iterator &bk_start_idx,
+                     const std::vector<size_t>::const_iterator &bk_end_idx, size_t num_consumer,
+                     std::map<size_t, std::vector<size_t> > &set_index,
+                     const size_t num_perm, const bool require_standardize, const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -465,10 +469,10 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
-                     std::map<int, std::vector<size_t>>& set_index,
-                     std::vector<double>& ori_t_value,
-                     std::vector<uint32_t>& set_perm_res, const bool is_binary);
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t> > &q,
+                     std::map<size_t, std::vector<size_t> > &set_index,
+                     std::vector<double>& obs_t_value,
+                     std::vector<size_t> &set_perm_res, const bool is_binary);
     /*!
      * \brief Function responsible for running the permutation required for
      * computing the competitive p-value
@@ -484,11 +488,13 @@ private:
      * the genotype
      */
     void null_set_no_thread(Genotype& target,
-                            std::map<int, std::vector<size_t>>& set_index,
-                            std::vector<double>& ori_t_value,
-                            std::vector<uint32_t>& set_perm_res,
-                            const int num_perm, const bool is_binary,
-                            const bool require_standardize);
+                            const std::vector<size_t>::const_iterator &bk_start_idx,
+                            const std::vector<size_t>::const_iterator &bk_end_idx,
+                            const std::map<size_t, std::vector<size_t>>& set_index,
+                            std::vector<double>& obs_t_value,
+                            std::vector<size_t>& set_perm_res,
+                            const size_t num_perm, const bool is_binary,
+                            const bool require_standardize, const bool use_ref_maf);
 
     /*!
      * \brief The "producer" for generating the permuted phenotypes

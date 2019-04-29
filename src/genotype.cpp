@@ -1945,30 +1945,25 @@ void Genotype::build_membership_matrix(
 
 }
 
-void Genotype::get_null_score(const int& set_size, const int& prev_size,
+void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               const std::vector<size_t>& background_list,
                               const bool first_run,
-                              const bool require_statistic)
+                              const bool require_statistic,
+                              const bool use_ref_maf)
 {
 
-    if (m_existed_snps.empty()
-        || static_cast<std::vector<SNP>::size_type>(set_size)
-               >= m_existed_snps.size())
+    if (m_existed_snps.empty() || set_size >= m_existed_snps.size())
         return;
     // we will initailize a selected_snp_index containing the index of SNPs that
     // we'd like to add / assign to our PRS in the current round.
     // we will get anything from (prev_size , set_size]
-    std::vector<size_t> selected_snp_index(background_list.begin() + prev_size,
-                                           background_list.begin() + set_size);
-    // background_list contain the index stored in the m_background_snp_index.
-    // This index is related to the order of m_existed_snp. If user used our
-    // default input (e.g. bar-levels  =1 and fastscore), this should be the
-    // most optimum sorting order. Thus we shouldn't do anything (if user use
-    // other threshold, then that will cause an array of other problem)
-    // TODO: provide an error if user use p-value thresholding together with
-    // PRSet?
-    std::sort(selected_snp_index.begin(), selected_snp_index.end());
-    read_score(selected_snp_index, first_run);
+    assert(prev_size < set_size);
+    std::vector<size_t>::const_iterator select_start = background_list.begin();
+    std::advance(select_start, prev_size);
+    std::vector<size_t>::const_iterator select_end = background_list.begin();
+    std::advance(select_end, set_size);
+    std::sort(select_start, select_end);
+    read_score(select_start, select_end, first_run, use_ref_maf);
     if (require_statistic) {
         misc::RunningStat rs;
         size_t num_prs = m_prs_info.size();

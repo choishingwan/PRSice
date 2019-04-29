@@ -372,9 +372,9 @@ public:
      * \param require_standardize is a boolean representing if we need to
      * calculate the mean and SD
      */
-    void get_null_score(const int& set_size, const int& prev_size,
+    void get_null_score(const size_t& set_size, const size_t& prev_size,
                         const std::vector<size_t>& background_list,
-                        const bool first_run, const bool require_standardize);
+                        const bool first_run, const bool require_standardize, const bool use_ref_maf);
     /*!
      * \brief Return the number of SNPs included in the background
      * \return  the number of background SNPs
@@ -641,24 +641,6 @@ protected:
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
                                       const std::streampos /*byte_pos*/,
                                       const std::string& /*file_name*/)
-    {
-    }
-    /*!
-     * \brief read_score is the master function for performing the score
-     * reading. All subclass must implement this function to assist the
-     * calculation of PRS in the corresponding file format
-     */
-    virtual void read_score(const size_t /*start_index*/,
-                            const size_t /*end_bound*/,
-                            const size_t /*region_index*/, bool /*reset_zero*/)
-    {
-    }
-    /*!
-     * \brief similar to read_score function, but instead of using the index as
-     * an input, we use a vector containing the required index as an input
-     */
-    virtual void read_score(const std::vector<size_t>& /*index*/,
-                            bool /*reset_zero*/)
     {
     }
     virtual void read_score(const std::vector<size_t>::const_iterator& /*start*/,

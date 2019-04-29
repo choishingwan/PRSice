@@ -980,7 +980,9 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
         std::advance(cur_end_idx, region_start_idx[region_index+1]);
     }
     // if cur_start_idx == cur_end_idx, this is an empty region
-    if (cur_start_idx == cur_end_idx) return;
+    if (cur_start_idx == cur_end_idx){
+        return;
+    }
     Eigen::initParallel();
     Eigen::setNbThreads(num_thread);
     m_best_index = -1;
@@ -990,7 +992,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     m_num_snp_included = 0;
     // m_perm_result stores the result (T-value) from each permutation and is
     // then used for calculation of empirical p value
-    m_perm_result.resize(static_cast<size_t>(m_num_perm), 0);
+    m_perm_result.resize(m_num_perm, 0);
     m_best_sample_score.clear();
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
@@ -1332,7 +1334,7 @@ void PRSice::run_null_perm_no_thread(
 
     if (run_glm) {
         // we we want to use the logistic regression
-        while (processed < static_cast<size_t>(m_num_perm)) {
+        while (processed < m_num_perm) {
             // reassign the phenotype matrix. This is to ensure single threading
             // will produce the same result as multithreading given the same
             // seed
@@ -1369,7 +1371,7 @@ void PRSice::run_null_perm_no_thread(
         Eigen::Index rdf;
         double rss, resvar;
         int se_index;
-        while (processed < static_cast<size_t>(m_num_perm)) {
+        while (processed < m_num_perm) {
             // for quantitative trait, we can directly compute the results
             // without re-computing the decomposition
             perm_pheno = m_phenotype;
@@ -1407,7 +1409,7 @@ void PRSice::run_null_perm_no_thread(
 void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                             size_t num_consumer)
 {
-    Eigen::Index processed = 0;
+    size_t processed = 0;
     // we need to reset the seed for each threshold so that the phenotype
     // generated should always be the same for each threshold. This help us
     // avoid needing to repeat reading in the PRS for each permutation
@@ -1918,25 +1920,28 @@ PRSice::~PRSice()
 }
 
 void PRSice::null_set_no_thread(Genotype& target,
-                                std::map<int, std::vector<size_t>>& set_index,
-                                std::vector<double>& ori_t_value,
-                                std::vector<uint32_t>& set_perm_res,
-                                const int num_perm, const bool is_binary,
-                                const bool require_standardize)
+                                const std::vector<size_t>::const_iterator&  bk_start_idx,
+                                const std::vector<size_t>::const_iterator& bk_end_idx,
+                                const std::map<size_t, std::vector<size_t> > &set_index,
+                                std::vector<double>& obs_t_value,
+                                std::vector<size_t> &set_perm_res,
+                                const size_t num_perm, const bool is_binary,
+                                const bool require_standardize,
+                                const bool use_ref_maf)
 {
     // we need to know the size of the largest gene set (excluding the base and
     // background)
-    const int max_size = set_index.rbegin()->first;
+    // it's a map, last element should be the largest
+    const size_t max_size = set_index.rbegin()->first;
     // need to count the number of permutation done
-    int processed = 0;
-
+    size_t processed = 0;
     const Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     double coefficient, se, r2, r2_adjust, obs_p, t_value;
     std::mt19937 g(m_seed);
     // we need to know how many background SNPs are there
-    const int num_background = static_cast<int>(target.num_background());
-    std::vector<size_t> background = target.background_index();
+    const size_t num_background = static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
+    std::vector<size_t> background(bk_start_idx, bk_end_idx);
     // a boolean to tell the genotype class whether the PRS should be reset
     bool first_run = true;
     while (processed < num_perm) {
@@ -1944,7 +1949,7 @@ void PRSice::null_set_no_thread(Genotype& target,
         // we will shuffle n where n is the set with the largest size
         // this is the Fisher-Yates shuffle algorithm for random selection
         // without replacement
-        int num_snp = max_size;
+        size_t num_snp = max_size;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             int advance_index = dist(g);
@@ -1957,7 +1962,7 @@ void PRSice::null_set_no_thread(Genotype& target,
         //  we have now selected N SNPs from the background. We can then
         //  construct the PRS based on these index
         first_run = true;
-        int prev_size = 0;
+        size_t prev_size = 0;
         for (auto&& set_size : set_index) {
             // now we iterate through each set size
             // in theory this will reduce our I/O. If the set sizes
@@ -1967,7 +1972,7 @@ void PRSice::null_set_no_thread(Genotype& target,
 
             // read in genotype here
             target.get_null_score(set_size.first, prev_size, background,
-                                  first_run, require_standardize);
+                                  first_run, require_standardize, use_ref_maf);
 
             // now that we've constructed the PRS, for any subsequent set sizes,
             // we should not reset the PRS calculation until the next
@@ -1981,8 +1986,7 @@ void PRSice::null_set_no_thread(Genotype& target,
             {
                 m_independent_variables(sample_id, 1) = target.calculate_score(
                     m_score,
-                    m_matrix_index[static_cast<std::vector<size_t>::size_type>(
-                        sample_id)]);
+                    m_matrix_index[static_cast<size_t>(sample_id)]);
             }
             m_analysis_done++;
             print_progress();
@@ -2005,38 +2009,40 @@ void PRSice::null_set_no_thread(Genotype& target,
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second) {
-                set_perm_res[set_index] += (ori_t_value[set_index] < t_value);
+                set_perm_res[set_index] += (obs_t_value[set_index] < t_value);
             }
         }
         processed++;
     }
 }
 
-void PRSice::produce_null_prs(
-    Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q, Genotype& target,
-    size_t num_consumer, std::map<int, std::vector<size_t>>& set_index,
-    const int num_perm, const bool require_standardize)
+void PRSice::produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                              Genotype& target,
+                              const std::vector<size_t>::const_iterator &bk_start_idx,
+                              const std::vector<size_t>::const_iterator &bk_end_idx,
+                              size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index,
+    const size_t num_perm, const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
-    const int max_size = set_index.rbegin()->first;
+    const size_t max_size = set_index.rbegin()->first;
     const size_t num_sample = m_matrix_index.size();
     const size_t num_regress_sample =
         static_cast<size_t>(m_independent_variables.rows());
-    const int num_background = static_cast<int>(target.num_background());
-    int processed = 0;
-    int prev_size = 0;
+    const size_t num_background =static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
+    size_t processed = 0;
+    size_t prev_size = 0;
     size_t r;
     // we seed the random number generator
     std::mt19937 g(m_seed);
     // get the SNP index for background
-    std::vector<size_t> background = target.background_index();
+    std::vector<size_t> background(bk_start_idx, bk_end_idx);
     bool first_run = true;
     std::vector<size_t>::size_type advance_index, begin;
     while (processed < num_perm) {
         // here we perform random sampling without replacement using the
         // Fisher-Yates shuffle algorithm
         begin = 0;
-        int num_snp = max_size;
+        size_t num_snp = max_size;
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(static_cast<int>(begin),
                                                     num_background - 1);
@@ -2051,9 +2057,7 @@ void PRSice::produce_null_prs(
         for (auto&& set_size : set_index) {
             // for each gene sets size, we calculate the PRS
             target.get_null_score(set_size.first, prev_size, background,
-                                  first_run, require_standardize);
-            // when we have read the PRS, we no longer want to reset our PRS
-            // until the next permutation
+                                  first_run, require_standardize, use_ref_maf);
             first_run = false;
             // we need to know how many SNPs we have already read, such that we
             // can skip reading this number of SNPs for the next set
@@ -2083,9 +2087,9 @@ void PRSice::produce_null_prs(
 
 
 void PRSice::consume_prs(
-    Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
-    std::map<int, std::vector<size_t>>& set_index,
-    std::vector<double>& ori_t_value, std::vector<uint32_t>& set_perm_res,
+    Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    std::map<size_t, std::vector<size_t>>& set_index,
+    std::vector<double>& obs_t_value, std::vector<size_t>& set_perm_res,
     const bool is_binary)
 {
     // we first make a local copy of the independent matrix to ensure thread
@@ -2099,8 +2103,8 @@ void PRSice::consume_prs(
     double coefficient, se, r2, r2_adjust;
     double obs_p = 2.0; // for safety reason, make sure it is out bound
     // results from queue will be stored in the prs_info
-    std::pair<std::vector<double>, uint32_t> prs_info;
-
+    std::pair<std::vector<double>, size_t> prs_info;
+    // now listen for producer
     while (true) {
         q.pop(prs_info);
         if (std::get<0>(prs_info).empty()) {
@@ -2112,8 +2116,7 @@ void PRSice::consume_prs(
              ++i_sample)
         {
             independent(i_sample, 1) = std::get<0>(
-                prs_info)[static_cast<std::vector<double>::size_type>(
-                i_sample)];
+                prs_info)[static_cast<size_t>(i_sample)];
         }
         // then perform regression analysis to obtain the t-value
         if (is_binary) {
@@ -2126,11 +2129,11 @@ void PRSice::consume_prs(
                                           r2_adjust, coefficient, se, 1, true);
         }
         double t_value = std::abs(coefficient / se);
-        auto&& index = set_index[static_cast<int>(std::get<1>(prs_info))];
+        auto&& index = set_index[std::get<1>(prs_info)];
         // we register the number of time a more significant / bigger t-value is
         // obtained when compared to the observed t-value
         for (auto&& ref : index) {
-            temp_perm_res[ref] += (ori_t_value[ref] < t_value);
+            temp_perm_res[ref] += (obs_t_value[ref] < t_value);
         }
     }
 
@@ -2146,41 +2149,35 @@ void PRSice::consume_prs(
     }
 }
 
-void PRSice::run_competitive(Genotype& target, const Commander& commander,
-                             const size_t pheno_index)
+void PRSice::run_competitive(Genotype& target,
+                             const std::vector<size_t>::const_iterator &bk_start_idx,
+                             const std::vector<size_t>::const_iterator &bk_end_idx, const Commander& commander,
+                             const size_t pheno_index, Reporter &reporter)
 {
     m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
-    int num_perm;
+    size_t num_perm;
     if (!commander.set_perm(num_perm)) {
         // false when we don't want to perform the competitive analysis
         return;
     }
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
-    const bool is_binary =
-        m_target_binary[static_cast<std::vector<bool>::size_type>(pheno_index)];
-    std::vector<double> ori_t_value;
-    std::vector<uint32_t> set_perm_res;
-    // reserve the size of required
-    // when there are multiple phenotypes, this will reserve more memory than
-    // required but should not be that much of a problem
-    ori_t_value.reserve(m_prs_summary.size());
-    // set_perm_res should containt the number of times the obs T-value is less
-    // than the permuted T-value
-    set_perm_res.reserve(m_prs_summary.size());
-    // multiple sets can have the same number of SNP. To speed things up, we
-    // will group them together. The set index can then be used to identify
-    // their location
-    // the key of set_index is the number of SNP and the value is a vector
-    // containing the index of all sets on the observed t-value vector
-    // At the end, we will have to loop through the summary set to assign the
-    // competitive p-value to them based on the number of SNPs
-    std::map<int, std::vector<size_t>> set_index;
-    size_t num_prs_res = m_prs_summary.size();
-    size_t start_index = 1;
+    const bool is_binary =m_target_binary[pheno_index];
+    const bool use_ref_maf = commander.use_ref_maf();
+    const size_t num_bk_snps = static_cast<size_t>(std::distance(bk_start_idx,bk_end_idx));
+    // the number of items to skip from the front of prs_summary
+    size_t pheno_start_idx=0;
+    // obs_t_value stores the observed t-value
+    std::vector<double> obs_t_value;
+    // set_perm_res stores number of perm where a more sig result is obtained
+    std::vector<size_t> set_perm_res;
+    // set_index stores the index of sets with "key" size
+    std::map<size_t, std::vector<size_t>> set_index;
+    const size_t num_prs_res = m_prs_summary.size();
     bool started = false;
     // start at 1 to avoid the base set
     size_t cur_set_index = 0;
+    size_t max_set_size = 0;
     for (size_t i = 0; i < num_prs_res; ++i) {
         // if we have already calculated the competitive p-value for the set, we
         // will just skip them. This help us to handle multiple-phenotype
@@ -2190,20 +2187,34 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
             // remembering the index of the first set that need to perform the
             // competitive p-value calculation. This allow us to later reassign
             // results to the sets
-            start_index = i;
+            pheno_start_idx = i;
             started = true;
         }
         auto&& res = m_prs_summary[i].result;
         // store the location of this set w.r.t number of SNPs in set
         set_index[res.num_snp].push_back(cur_set_index++);
+        if(res.num_snp > max_set_size) max_set_size = res.num_snp;
         // ori_t_value will contain the obesrved t-value
-        ori_t_value.push_back(std::abs(res.coefficient / res.se));
+        obs_t_value.push_back(std::abs(res.coefficient / res.se));
         set_perm_res.push_back(0);
     }
+    if(max_set_size > num_bk_snps){
+        std::string error_messgae = "Error: Insufficient background SNPs for "
+                                    "competitive analysis. Please ensure you have "
+                                    "use the correct background. Will now generate skip "
+                                    "the competitive analysis\n";
+        for (size_t i = pheno_start_idx; i < num_prs_res; ++i) {
+            // set them to true so that we will skip them for the next
+            // phenotype (though in reality, they will all encounter the
+            // same error. Need a better structure here)
+            m_prs_summary[i].has_competitive = true;
+        }
+        reporter.report(error_messgae);
+        return;
+    }
     // now we can run the competitive testing
-
     // know how many thread we are allowed to use
-    intptr_t num_thread = commander.thread();
+    size_t num_thread = commander.thread();
     // find out the number of samples involved so that we can estimate the
     // required memory
     // The reason we need to go through the next set of calculation is that we
@@ -2211,6 +2222,7 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     // which will generate one new indepenendet variable matrix for each thread.
     // To avoid crashing due to insufficient memory, we will need to limit the
     // number of thread used
+    const size_t mb = 1048576;
     const size_t num_regress_sample =
         static_cast<size_t>(m_independent_variables.rows());
     // the required memory is roughly number of Sample * number of covaraite.
@@ -2229,8 +2241,11 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     const size_t used_memory = misc::current_ram_usage();
     if (valid_memory <= used_memory) {
         // if we have used up all memory, we will exit
+        std::string error_message = "Error: Not enough memory left for permutation. "
+                                    "User allowed "+std::to_string(valid_memory/mb)+
+                " Mb of memory but already used "+std::to_string(used_memory)+" Mb";
         fprintf(stderr, "\n");
-        throw std::runtime_error("Error: Not enough memory for permutation");
+        throw std::runtime_error(error_message);
     }
     // artificially reduce available memory to avoid memory overflow
     // ideally, if whole PRSice is within the same memory pool, we will
@@ -2239,15 +2254,18 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         static_cast<size_t>((valid_memory - used_memory) * 0.5);
 
     if (available_memory < basic_memory_required_per_thread) {
+        std::string error_message = "Error: Not enough memory left for permutation. "
+                                    "System allowed "+std::to_string(available_memory/mb)+
+                " Mb of memory but required at least "+
+                std::to_string(basic_memory_required_per_thread)+" Mb";
         fprintf(stderr, "\n");
-        throw std::runtime_error("Error: Not enough memory for permutation");
+        throw std::runtime_error(error_message);
     }
     // reduce number of threads to account for memory available
     if (available_memory / basic_memory_required_per_thread
-        < static_cast<size_t>(num_thread))
+        < num_thread)
     {
-        num_thread = static_cast<int>(available_memory
-                                      / basic_memory_required_per_thread);
+        num_thread =available_memory/ basic_memory_required_per_thread;
     }
     // now, we should be safe to run the competitive p-value analysis wiht
     // num_thread without worry about insufficient memory
@@ -2257,19 +2275,19 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
         //  the producer consumer pattern where one thread is responsible for
         //  reading in the PRS and construct the required independent variable
         //  and other threads are responsible for the calculation
-        Thread_Queue<std::pair<std::vector<double>, uint32_t>> set_perm_queue;
+        Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
+                             std::cref(bk_start_idx),
+                             std::cref(bk_end_idx),
                              num_thread - 1, std::ref(set_index), num_perm,
-                             require_standardize);
-
+                             require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
-
-        for (int i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
+        for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
-                std::ref(set_index), std::ref(ori_t_value),
-                std::ref(set_perm_res), is_binary));
+                std::ref(set_index), std::ref(obs_t_value),
+                std::ref(set_perm_res), is_binary, use_ref_maf));
         }
 
         producer.join();
@@ -2279,8 +2297,8 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     {
         // alternatively, if we only got one thread, we will use the no thread
         // function to reduce threading overhead
-        null_set_no_thread(target, set_index, ori_t_value, set_perm_res,
-                           num_perm, is_binary, require_standardize);
+        null_set_no_thread(target, bk_start_idx, bk_end_idx, set_index, obs_t_value, set_perm_res,
+                           num_perm, is_binary, require_standardize, use_ref_maf);
     }
     // start_index is the index of m_prs_summary[i], not the actual index
     // on set_perm_res.
@@ -2290,12 +2308,12 @@ void PRSice::run_competitive(Genotype& target, const Commander& commander,
     // the results for each set should be sequentially presented in
     // set_perm_res. Index for set_perm_res results are therefore
     // i - start_index
-    for (size_t i = start_index; i < num_prs_res; ++i) {
+    for (size_t i = pheno_start_idx; i < num_prs_res; ++i) {
         auto&& res = m_prs_summary[i].result;
         // we need to minus out the start index from i such that our index start
         // at 0, which is the assumption of set_perm_res
         res.competitive_p =
-            (static_cast<double>(set_perm_res[(i - start_index)]) + 1.0)
+            (static_cast<double>(set_perm_res[(i - pheno_start_idx)]) + 1.0)
             / (static_cast<double>(num_perm) + 1.0);
         m_prs_summary[i].has_competitive = true;
     }
