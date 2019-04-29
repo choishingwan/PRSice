@@ -209,39 +209,39 @@ int main(int argc, char* argv[])
             target_file->prepare_prsice();
             // don't build the membership matrix when we are not running
             // PRSet as the membership should be all 1 anyway
-            if(num_regions > 2)
-                target_file->build_membership_matrix(region_membership ,region_start_idx, num_regions,
-                                                     commander.out(),
-                                                     region_names, commander.print_snp());
+            if (num_regions > 2)
+                target_file->build_membership_matrix(
+                    region_membership, region_start_idx, num_regions,
+                    commander.out(), region_names, commander.print_snp());
             const size_t num_pheno = prsice.num_phenotype();
 
             // Initialize the progress bar
-            prsice.init_process_count(commander,num_regions,
+            prsice.init_process_count(commander, num_regions,
                                       target_file->num_threshold());
-            for(size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno){
+            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 fprintf(stderr, "\nProcessing the %zu th phenotype\n",
                         i_pheno + 1);
-                prsice.init_matrix(commander, i_pheno, *target_file,
-                                   reporter);
+                prsice.init_matrix(commander, i_pheno, *target_file, reporter);
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
                                    region_names, i_pheno);
                 // go through each region
-                for (size_t i_region = 0; i_region < num_regions; ++i_region){
+                for (size_t i_region = 0; i_region < num_regions; ++i_region) {
                     // always skip background region
-                    if(i_region==1) continue;
-                    prsice.run_prsice(commander, i_pheno, i_region, region_membership ,region_start_idx, *target_file);
+                    if (i_region == 1) continue;
+                    prsice.run_prsice(commander, i_pheno, i_region,
+                                      region_membership, region_start_idx,
+                                      *target_file);
                     if (!commander.no_regress())
                         // if we performed regression, we'd like to generate
                         // the output file (.prsice)
-                        prsice.output(commander, region_names, i_pheno, i_region);
+                        prsice.output(commander, region_names, i_pheno,
+                                      i_region);
                 }
-                if (!commander.no_regress() && commander.perform_set_perm())
-                {
+                if (!commander.no_regress() && commander.perform_set_perm()) {
                     // only perform permutation if regression is performed
                     // and user request it
-                    prsice.run_competitive(*target_file, commander,
-                                           i_pheno);
+                    prsice.run_competitive(*target_file, commander, i_pheno);
                 }
             }
             prsice.print_progress(true);
@@ -260,20 +260,23 @@ int main(int argc, char* argv[])
         {
             reporter.report(error.what());
             return -1;
-        }catch (const std::out_of_range& error)
+        }
+        catch (const std::out_of_range& error)
         {
             reporter.report(error.what());
             return -1;
-        }catch (const std::exception& ex)
+        }
+        catch (const std::exception& ex)
         {
             reporter.report(ex.what());
         }
         catch (...)
         {
-            std::string error_message = "Error: Bad Allocation exception detected. "
-                                        "This is likely due to insufficient memory "
-                                        "for PRSice. You can try re-running PRSice "
-                                        "with more memory.";
+            std::string error_message =
+                "Error: Bad Allocation exception detected. "
+                "This is likely due to insufficient memory "
+                "for PRSice. You can try re-running PRSice "
+                "with more memory.";
             reporter.report(error_message);
         }
         delete target_file;

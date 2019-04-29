@@ -153,8 +153,10 @@ public:
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
     void run_prsice(const Commander& c_commander, const size_t pheno_index,
-                    const size_t region_index, const std::vector<size_t> &region_membership,
-    const std::vector<size_t> &region_start_idx, Genotype& target);
+                    const size_t region_index,
+                    const std::vector<size_t>& region_membership,
+                    const std::vector<size_t>& region_start_idx,
+                    Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
      * PRS. Then this function will fill in the m_independent_variable matrix
@@ -176,7 +178,8 @@ public:
      * \param pheno_index is the index of the current phenotype
      * \param region_index is teh index of the current region
      */
-    void output(const Commander& c_commander, const std::vector<std::string> &region_names,
+    void output(const Commander& c_commander,
+                const std::vector<std::string>& region_names,
                 const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
@@ -223,8 +226,9 @@ public:
         if (set_perm) {
             // the additional permutation we've got to run, num_region -2 as we
             // don't perform permutation on the background set nor the base set
-            m_total_process +=
-                num_phenotype() * (static_cast<size_t>(num_region) - 2) * num_set_perm;
+            m_total_process += num_phenotype()
+                               * (static_cast<size_t>(num_region) - 2)
+                               * num_set_perm;
         }
     }
     PRSice(const PRSice&) = delete;            // disable copying
@@ -404,11 +408,14 @@ private:
      * \param num_column is the number of column required (return)
      * \param reporter is the logger
      */
-    void process_cov_file(const std::string& cov_file, const std::vector<uint32_t> &factor_cov_index,
-        std::vector<size_t> &cov_start_index,
-        const std::vector<uint32_t> &cov_index, const std::vector<std::string> &cov_name,
-        std::vector<std::unordered_map<std::string, size_t> > &factor_levels,
-        size_t &num_column, Reporter& reporter);
+    void process_cov_file(
+        const std::string& cov_file,
+        const std::vector<uint32_t>& factor_cov_index,
+        std::vector<size_t>& cov_start_index,
+        const std::vector<uint32_t>& cov_index,
+        const std::vector<std::string>& cov_name,
+        std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
+        size_t& num_column, Reporter& reporter);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all

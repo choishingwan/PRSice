@@ -1861,45 +1861,46 @@ bool Genotype::prepare_prsice()
               });
     return true;
 }
-void Genotype::build_membership_matrix(std::vector<size_t> &region_membership,
-                                       std::vector<size_t> &region_start_idx,
-                                       const size_t num_sets,
-                                       const std::string& out,
-                                       const std::vector<std::string> &region_name,
-                                       const bool print_snps){
+void Genotype::build_membership_matrix(
+    std::vector<size_t>& region_membership,
+    std::vector<size_t>& region_start_idx, const size_t num_sets,
+    const std::string& out, const std::vector<std::string>& region_name,
+    const bool print_snps)
+{
     std::vector<std::vector<size_t>> temporary_storage(num_sets);
     std::vector<size_t> idx;
     std::unordered_set<double> threshold;
     std::ofstream snp_out;
-    const std::string snp_name = out+".snp";
-    if(print_snps){
+    const std::string snp_name = out + ".snp";
+    if (print_snps) {
         snp_out.open(snp_name.c_str());
-        if(!snp_out.is_open()){
-            std::string error_message = "Error: Cannot open file: "+snp_name+" to write!\n";
+        if (!snp_out.is_open()) {
+            std::string error_message =
+                "Error: Cannot open file: " + snp_name + " to write!\n";
             throw std::runtime_error(error_message);
         }
         snp_out << "CHR\tSNP\tBP\tP";
-        for(auto&&name : region_name){
+        for (auto&& name : region_name) {
             snp_out << "\t" << name;
         }
         snp_out << "\n";
     }
     size_t prev_idx;
-    for(size_t i_snp=0; i_snp < m_existed_snps.size(); ++i_snp){
-        auto &&snp = m_existed_snps[i_snp];
-        idx =snp.get_set_idx(num_sets);
-        prev_idx=0;
-        if(threshold.find(snp.get_threshold())==threshold.end()){
+    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
+        auto&& snp = m_existed_snps[i_snp];
+        idx = snp.get_set_idx(num_sets);
+        prev_idx = 0;
+        if (threshold.find(snp.get_threshold()) == threshold.end()) {
             m_num_thresholds++;
             m_thresholds.push_back(snp.get_threshold());
         }
-        if(print_snps){
+        if (print_snps) {
             snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
                     << "\t" << snp.p_value();
         }
-        for(auto && index : idx){
+        for (auto&& index : idx) {
             assert(index >= prev_idx);
-            for(; prev_idx < index; ++prev_idx){
+            for (; prev_idx < index; ++prev_idx) {
                 snp_out << "\tN";
             }
             snp_out << "\tY";
@@ -1908,11 +1909,12 @@ void Genotype::build_membership_matrix(std::vector<size_t> &region_membership,
         snp_out << "\n";
     }
     size_t cur_idx = 0;
-    for(size_t i = 0; i < num_sets; ++i){
+    for (size_t i = 0; i < num_sets; ++i) {
         region_start_idx.push_back(cur_idx);
-        if(!temporary_storage[i].empty()){
-            region_membership.insert(region_membership.end(), temporary_storage[i].begin(),
-                                 temporary_storage[i].end());
+        if (!temporary_storage[i].empty()) {
+            region_membership.insert(region_membership.end(),
+                                     temporary_storage[i].begin(),
+                                     temporary_storage[i].end());
             cur_idx = region_membership.size();
         }
     }

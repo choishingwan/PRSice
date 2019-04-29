@@ -407,19 +407,20 @@ public:
         m_has_count = true;
     }
 
-    std::vector<size_t> get_set_idx(const size_t num_sets) const {
+    std::vector<size_t> get_set_idx(const size_t num_sets) const
+    {
         std::vector<uintptr_t> flags = m_flags;
         uintptr_t bitset;
         std::vector<size_t> out;
         out.reserve(num_sets);
         for (size_t k = 0; k < m_max_flag_index; ++k) {
-          bitset = m_flags[k];
-          while (bitset != 0) {
-            uint64_t t = bitset & -bitset;
-            size_t r = CTZLU(bitset);
-            out.push_back(k * BITCT + r);
-            bitset ^= t;
-          }
+            bitset = m_flags[k];
+            while (bitset != 0) {
+                uint64_t t = bitset & -bitset;
+                size_t r = CTZLU(bitset);
+                out.push_back(k * BITCT + r);
+                bitset ^= t;
+            }
         }
         return out;
     }
