@@ -1892,6 +1892,7 @@ void Genotype::build_membership_matrix(
             prev_idx = 0;
             if (threshold.find(snp.get_threshold()) == threshold.end()) {
                 m_num_thresholds++;
+                threshold.insert(snp.get_threshold());
                 m_thresholds.push_back(snp.get_threshold());
             }
             if (print_snps) {
@@ -1936,6 +1937,7 @@ void Genotype::build_membership_matrix(
             for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
                 auto&& snp = m_existed_snps[i_snp];
                 if (threshold.find(snp.get_threshold()) == threshold.end()) {
+                    threshold.insert(snp.get_threshold());
                     m_num_thresholds++;
                     m_thresholds.push_back(snp.get_threshold());
                 }
@@ -1952,6 +1954,7 @@ void Genotype::build_membership_matrix(
             for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
                 auto&& snp = m_existed_snps[i_snp];
                 if (threshold.find(snp.get_threshold()) == threshold.end()) {
+                    threshold.insert(snp.get_threshold());
                     m_num_thresholds++;
                     m_thresholds.push_back(snp.get_threshold());
                 }
