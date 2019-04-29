@@ -381,13 +381,22 @@ public:
      * \return true if calculation is already done
      */
     bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
-                    size_t& missing) const
+                    size_t& missing, const bool use_ref_maf) const
     {
-        homcom = m_homcom;
-        het = m_het;
-        homrar = m_homrar;
-        missing = m_missing;
-        return m_has_count;
+        if(use_ref_maf){
+            homcom = m_ref_homcom;
+            het = m_ref_het;
+            homrar = m_ref_homrar;
+            missing = m_ref_missing;
+            return m_has_ref_count;
+        }
+        else{
+            homcom = m_homcom;
+            het = m_het;
+            homrar = m_homrar;
+            missing = m_missing;
+            return m_has_count;
+        }
     }
     /*!
      * \brief This function will set the genotype count for the current SNP, and
@@ -458,7 +467,12 @@ public:
      * \return the lower bound of the region
      */
     int low_bound() const { return m_low_bound; }
-
+    void set_expected(double expected) { m_expected_value = expected;}
+    void set_ref_expected(double expected) { m_ref_expected_value = expected; }
+    double get_expected(bool use_ref_maf) const {
+        if(use_ref_maf) return m_ref_expected_value;
+        return m_expected_value;
+    }
 private:
     // basic info
     // actually, the packing of the data is problematic and to enhance
@@ -477,6 +491,8 @@ private:
     double m_p_threshold = 0;
     double m_maf = 0.0;
     double m_standard_error = 0.0;
+    double m_expected_value = 0.0;
+    double m_ref_expected_value = 0.0;
     int m_chr = -1;
     int m_category = -1;
     int m_loc = -1;
