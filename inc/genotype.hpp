@@ -165,31 +165,7 @@ public:
      * \return the number of sample
      */
     size_t num_sample() const { return m_sample_id.size(); }
-    /*!
-     * \brief Function to obtain PRS score from the genotype file. Will assign
-     * the result information to our PRS vector
-     *
-     * \param cur_index is the index of the starting SNP that we want to read
-     * from
-     *
-     * \param cur_threshold return the p-value threshold of the current
-     * processing chunck. This information is use for generating the output
-     *
-     * \param num_snp_included return the total number of SNP included in this
-     * chunck
-     *
-     * \param region_index is the index of the region of interest
-     * \param non_cumulate indicate if we want to perform cumulated PRS
-     * calculation or not
-     *
-     * \param require_statistic if we want to standardize the PRS
-     * \param first_run if we want to add or reset the PRS input
-     * \return true if we can run, false otherwise
-     */
-    bool get_score(int& cur_index, double& cur_threshold,
-                   uint32_t& num_snp_included, const size_t region_index,
-                   const bool non_cumulate, const bool require_statistic,
-                   const bool first_run);
+
     /*!
      * \brief Function to prepare clumping. Should sort all the SNPs by their
      * chromosome number and then by their p-value
@@ -447,8 +423,8 @@ public:
                                  const bool print_snps);
     size_t num_threshold() const { return m_num_thresholds; }
     std::vector<double> get_thresholds() const { return m_thresholds; }
-    bool get_score(const std::vector<size_t>& region_membership,
-                   size_t & start_index, const size_t &end_index,  double& cur_threshold,
+    bool get_score(std::vector<size_t>::const_iterator& start_index,
+                   const std::vector<size_t>::const_iterator& end_index, double& cur_threshold,
                    uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run);
@@ -685,7 +661,11 @@ protected:
                             bool /*reset_zero*/)
     {
     }
-
+    virtual void read_score(const std::vector<size_t>::const_iterator& /*start*/,
+                            const std::vector<size_t>::const_iterator& /*end*/,
+                            bool /*reset_zero*/)
+    {
+    }
 
     // for loading the sample inclusion / exclusion set
     /*!

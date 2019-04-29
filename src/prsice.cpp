@@ -969,11 +969,15 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     const bool non_cumulate = c_commander.non_cumulate();
     const size_t num_samples_included = target.num_sample();
 
-    size_t cur_start_idx = region_start_idx[region_index];
-    const size_t cur_end_idx = (region_index + 1 >= region_start_idx.size())
-                                   ? region_start_idx.size()
-                                   : region_start_idx[region_index + 1];
-
+    std::vector<size_t>::const_iterator cur_start_idx = region_membership.cbegin();
+    std::advance(cur_start_idx, region_start_idx[region_index]);
+    std::vector<size_t>::const_iterator cur_end_idx = region_membership.cbegin();
+    if(region_index+1 >= region_start_idx.size()){
+        cur_end_idx = region_membership.cend();
+    }
+    else{
+        std::advance(cur_end_idx, region_start_idx[region_index+1]);
+    }
     // if cur_start_idx == cur_end_idx, this is an empty region
     if (cur_start_idx == cur_end_idx) return;
     Eigen::initParallel();
@@ -1017,7 +1021,6 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     // current threshold iteration
     // must iterate after each threshold even if no-regress is called
     size_t prs_result_idx = 0;
-    int cur_index = 0;
     double cur_threshold = 0.0;
     // we want to know if user want to obtain the standardized PRS
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
@@ -1030,12 +1033,11 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     // then proceed to read in and calculate the PRS for the given category
     // (defined by the cur_index, which points to the first SNP of the p-value
     // threshold)
-    while(target.get_score(region_membership, cur_start_idx, cur_end_idx,
+
+
+    while(target.get_score(cur_start_idx, cur_end_idx,
                            cur_threshold, m_num_snp_included,
                            non_cumulate, require_standardize, first_run))
-    //while (target.get_score(cur_index, cur_threshold, m_num_snp_included,
-    //                        region_index, non_cumulate, require_standardize,
-    //                        first_run))
     {
         m_analysis_done++;
         print_progress();

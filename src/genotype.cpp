@@ -1988,33 +1988,29 @@ void Genotype::get_null_score(const int& set_size, const int& prev_size,
     }
 }
 
-bool Genotype::get_score(const std::vector<size_t>& region_membership,
-               size_t & start_index, const size_t &end_index,  double& cur_threshold,
-               uint32_t& num_snp_included,
-               const bool non_cumulate, const bool require_statistic,
-               const bool first_run){
+bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
+                         const std::vector<size_t>::const_iterator& end_index,
+                         double& cur_threshold,
+                         uint32_t& num_snp_included,
+                         const bool non_cumulate, const bool require_statistic,
+                         const bool first_run){
     // if there are no SNPs or we are at the end
     if (m_existed_snps.size() == 0
-            || start_index == m_existed_snps.size())
+            || (*start_index) == m_existed_snps.size())
             return false;
     // reset number of SNPs if we don't need cumulative PRS
     if(non_cumulate) num_snp_included = 0;
-    int cur_category = m_existed_snps[start_index].category();
-    cur_threshold = m_existed_snps[start_index].get_threshold();
-    size_t region_end = start_index;
-    size_t cur_index = 0;
-    for(; region_end< end_index; ++region_end){
-        cur_index = region_membership[region_end];
-        if (m_existed_snps[cur_index].category() != cur_category) {
-            cur_category = m_existed_snps[cur_index].category();
+    int cur_category = m_existed_snps[(*start_index)].category();
+    cur_threshold = m_existed_snps[(*start_index)].get_threshold();
+    std::vector<size_t>::const_iterator region_end = start_index;
+    for(; region_end != end_index; ++region_end){
+        if (m_existed_snps[(*region_end)].category() != cur_category) {
+            cur_category = m_existed_snps[(*region_end)].category();
             break;
         }
         num_snp_included++;
     }
-    /*
-     read_score(start_index, region_end, region_index,
-                (non_cumulate || first_run));
-    */
+    read_score(start_index, region_end, (non_cumulate||first_run));
      // update the current index
     start_index = region_end;
      if (require_statistic) {
@@ -2035,87 +2031,6 @@ bool Genotype::get_score(const std::vector<size_t>& region_membership,
          m_score_sd = rs.sd();
      }
      return true;
-}
-
-bool Genotype::get_score(int& cur_index, double& cur_threshold,
-                         uint32_t& num_snp_included, const size_t region_index,
-                         const bool non_cumulate, const bool require_statistic,
-                         const bool first_run)
-{
-    if (m_existed_snps.size() == 0
-        || cur_index == static_cast<int>(m_existed_snps.size()))
-        return false;
-    // we will reset the number of SNP count if we are not running cumulative
-    // PRS
-    if (non_cumulate) num_snp_included = 0;
-    // we will capture the current category and find out all SNPs that fall
-    // within this category
-
-    if (cur_index == -1) // first run
-    {
-        cur_index = 0;
-    }
-    intptr_t cur_category =
-        m_existed_snps[static_cast<std::vector<SNP>::size_type>(cur_index)]
-            .category();
-    bool ended = false;
-    // obtain the current p-value threshold
-    cur_threshold =
-        m_existed_snps[static_cast<std::vector<SNP>::size_type>(cur_index)]
-            .get_threshold();
-    // existed snp should be sorted such that the SNPs should be
-    // access sequentially
-
-    std::vector<SNP>::size_type end_index =
-        static_cast<std::vector<SNP>::size_type>(cur_index);
-    for (; end_index < m_existed_snps.size(); ++end_index) {
-        // go through each SNP
-        if (m_existed_snps[end_index].category() != cur_category) {
-            cur_category = m_existed_snps[end_index].category();
-            // if we are no longer within the same category, we will end our
-            // current iteration
-            ended = true;
-            break;
-        }
-        // we want to count the number of SNPs included in the current analysis
-        if (m_existed_snps[end_index].in(region_index)) num_snp_included++;
-    }
-    if (!ended) {
-        // if ended isn't set to true, we have reached the end of the
-        // m_existed_snp (might want to avoid using ended as the flag name as
-        // that is confusing)
-        end_index = m_existed_snps.size();
-        // we don't update teh cur_category as that will be the same as the one
-        // before
-    }
-    // we now run the read_score function which will construct PRS based on the
-    // range specified by cur_index and end_inde for the i th region and will
-    // reset the PRS to 0 if  it is none cumulative PRS calculation or if this
-    // is the first run
-    read_score(static_cast<size_t>(cur_index), end_index, region_index,
-               (non_cumulate || first_run));
-    // update the current index
-    cur_index = static_cast<int>(end_index);
-    // if we want to perform standardization, we will need to calculate the
-    // mean and SD
-    if (require_statistic) {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i) {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) {
-                rs.push(0.0);
-            }
-            else
-            {
-                rs.push(m_prs_info[i].prs
-                        / static_cast<double>(m_prs_info[i].num_snp));
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
-    return true;
 }
 
 /**
