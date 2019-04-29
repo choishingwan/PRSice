@@ -970,17 +970,20 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     const bool use_ref_maf = c_commander.use_ref_maf();
     const size_t num_samples_included = target.num_sample();
 
-    std::vector<size_t>::const_iterator cur_start_idx = region_membership.cbegin();
+    std::vector<size_t>::const_iterator cur_start_idx =
+        region_membership.cbegin();
     std::advance(cur_start_idx, region_start_idx[region_index]);
-    std::vector<size_t>::const_iterator cur_end_idx = region_membership.cbegin();
-    if(region_index+1 >= region_start_idx.size()){
+    std::vector<size_t>::const_iterator cur_end_idx =
+        region_membership.cbegin();
+    if (region_index + 1 >= region_start_idx.size()) {
         cur_end_idx = region_membership.cend();
     }
-    else{
-        std::advance(cur_end_idx, region_start_idx[region_index+1]);
+    else
+    {
+        std::advance(cur_end_idx, region_start_idx[region_index + 1]);
     }
     // if cur_start_idx == cur_end_idx, this is an empty region
-    if (cur_start_idx == cur_end_idx){
+    if (cur_start_idx == cur_end_idx) {
         return;
     }
     Eigen::initParallel();
@@ -1038,9 +1041,9 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     // threshold)
 
 
-    while(target.get_score(cur_start_idx, cur_end_idx,
-                           cur_threshold, m_num_snp_included,
-                           non_cumulate, require_standardize, first_run,use_ref_maf))
+    while (target.get_score(cur_start_idx, cur_end_idx, cur_threshold,
+                            m_num_snp_included, non_cumulate,
+                            require_standardize, first_run, use_ref_maf))
     {
         m_analysis_done++;
         print_progress();
@@ -1143,8 +1146,8 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     m_best_file.processed_threshold++;
 }
 
-void PRSice::regress_score(Genotype& target, const double threshold, size_t thread,
-                           const size_t pheno_index,
+void PRSice::regress_score(Genotype& target, const double threshold,
+                           size_t thread, const size_t pheno_index,
                            const size_t prs_result_idx)
 {
     double r2 = 0.0, r2_adjust = 0.0, p_value = 0.0, coefficient = 0.0,
@@ -1152,7 +1155,7 @@ void PRSice::regress_score(Genotype& target, const double threshold, size_t thre
     const Eigen::Index num_regress_samples =
         static_cast<Eigen::Index>(m_matrix_index.size());
     if (m_num_snp_included == 0
-        || (m_num_snp_included  == m_prs_results[prs_result_idx].num_snp))
+        || (m_num_snp_included == m_prs_results[prs_result_idx].num_snp))
     {
         // if we haven't read in any SNP, or that we have the same number of SNP
         // as the previous threshold, we will skip (normally this should not
@@ -1167,11 +1170,10 @@ void PRSice::regress_score(Genotype& target, const double threshold, size_t thre
         // we can directly read in the matrix index from m_matrix_index vector
         // and assign the PRS directly to the indep variable matrix
         m_independent_variables(sample_id, 1) = target.calculate_score(
-            m_score, m_matrix_index[static_cast<size_t>( sample_id)]);
+            m_score, m_matrix_index[static_cast<size_t>(sample_id)]);
     }
 
-    if (m_target_binary[pheno_index])
-    {
+    if (m_target_binary[pheno_index]) {
         // if this is a binary phenotype, we will perform the GLM model
         try
         {
@@ -1242,10 +1244,11 @@ void PRSice::process_permutations()
     if (m_best_index == -1) return;
     size_t best_index = static_cast<size_t>(m_best_index);
     const double best_t = std::abs(m_prs_results[best_index].coefficient
-                             / m_prs_results[best_index].se);
-    const auto num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(),
-                                    [&best_t](double t) { return t > best_t; });
-    m_prs_results[best_index].emp_p = (num_better + 1.0)  / (m_num_perm + 1.0);
+                                   / m_prs_results[best_index].se);
+    const auto num_better =
+        std::count_if(m_perm_result.begin(), m_perm_result.end(),
+                      [&best_t](double t) { return t > best_t; });
+    m_prs_results[best_index].emp_p = (num_better + 1.0) / (m_num_perm + 1.0);
 }
 
 void PRSice::permutation(const size_t n_thread, bool is_binary)
@@ -1359,7 +1362,7 @@ void PRSice::run_null_perm_no_thread(
             //  obs_t *= obs_t;
             // we then store the best t-value in our permutation results
             m_perm_result[processed] =
-                std::max(  obs_t,  m_perm_result[processed]);
+                std::max(obs_t, m_perm_result[processed]);
             // we have finished the current analysis.
             processed++;
         }
@@ -1400,7 +1403,7 @@ void PRSice::run_null_perm_no_thread(
             obs_t = std::abs(beta(intercept) / se(se_index));
             // for T-value, we need the maximum T, not the smallest
             m_perm_result[processed] =
-                std::max(obs_t,m_perm_result[processed]);
+                std::max(obs_t, m_perm_result[processed]);
             processed++;
         }
     }
@@ -1919,15 +1922,13 @@ PRSice::~PRSice()
     // dtor
 }
 
-void PRSice::null_set_no_thread(Genotype& target,
-                                const std::vector<size_t>::const_iterator&  bk_start_idx,
-                                const std::vector<size_t>::const_iterator& bk_end_idx,
-                                const std::map<size_t, std::vector<size_t> > &set_index,
-                                std::vector<double>& obs_t_value,
-                                std::vector<size_t> &set_perm_res,
-                                const size_t num_perm, const bool is_binary,
-                                const bool require_standardize,
-                                const bool use_ref_maf)
+void PRSice::null_set_no_thread(
+    Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
+    const std::vector<size_t>::const_iterator& bk_end_idx,
+    const std::map<size_t, std::vector<size_t>>& set_index,
+    std::vector<double>& obs_t_value, std::vector<size_t>& set_perm_res,
+    const size_t num_perm, const bool is_binary, const bool require_standardize,
+    const bool use_ref_maf)
 {
     // we need to know the size of the largest gene set (excluding the base and
     // background)
@@ -1940,7 +1941,8 @@ void PRSice::null_set_no_thread(Genotype& target,
     double coefficient, se, r2, r2_adjust, obs_p, t_value;
     std::mt19937 g(m_seed);
     // we need to know how many background SNPs are there
-    const size_t num_background = static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
+    const size_t num_background =
+        static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
     std::vector<size_t> background(bk_start_idx, bk_end_idx);
     // a boolean to tell the genotype class whether the PRS should be reset
     bool first_run = true;
@@ -1953,9 +1955,8 @@ void PRSice::null_set_no_thread(Genotype& target,
         while (num_snp--) {
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             int advance_index = dist(g);
-            std::swap(
-                background[static_cast<size_t>(begin)],
-                background[static_cast<size_t>(advance_index)]);
+            std::swap(background[static_cast<size_t>(begin)],
+                      background[static_cast<size_t>(advance_index)]);
             ++begin;
         }
         //  we have now selected N SNPs from the background. We can then
@@ -1984,8 +1985,7 @@ void PRSice::null_set_no_thread(Genotype& target,
                  ++sample_id)
             {
                 m_independent_variables(sample_id, 1) = target.calculate_score(
-                    m_score,
-                    m_matrix_index[static_cast<size_t>(sample_id)]);
+                    m_score, m_matrix_index[static_cast<size_t>(sample_id)]);
             }
             m_analysis_done++;
             print_progress();
@@ -2015,19 +2015,20 @@ void PRSice::null_set_no_thread(Genotype& target,
     }
 }
 
-void PRSice::produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                              Genotype& target,
-                              const std::vector<size_t>::const_iterator &bk_start_idx,
-                              const std::vector<size_t>::const_iterator &bk_end_idx,
-                              size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index,
-    const size_t num_perm, const bool require_standardize, const bool use_ref_maf)
+void PRSice::produce_null_prs(
+    Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
+    const std::vector<size_t>::const_iterator& bk_start_idx,
+    const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
+    std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
+    const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
     const size_t max_size = set_index.rbegin()->first;
     const size_t num_sample = m_matrix_index.size();
     const size_t num_regress_sample =
         static_cast<size_t>(m_independent_variables.rows());
-    const size_t num_background =static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
+    const size_t num_background =
+        static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
     size_t processed = 0;
     size_t prev_size = 0;
     size_t r;
@@ -2114,8 +2115,8 @@ void PRSice::consume_prs(
         for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
              ++i_sample)
         {
-            independent(i_sample, 1) = std::get<0>(
-                prs_info)[static_cast<size_t>(i_sample)];
+            independent(i_sample, 1) =
+                std::get<0>(prs_info)[static_cast<size_t>(i_sample)];
         }
         // then perform regression analysis to obtain the t-value
         if (is_binary) {
@@ -2148,10 +2149,10 @@ void PRSice::consume_prs(
     }
 }
 
-void PRSice::run_competitive(Genotype& target,
-                             const std::vector<size_t>::const_iterator &bk_start_idx,
-                             const std::vector<size_t>::const_iterator &bk_end_idx, const Commander& commander,
-                             const size_t pheno_index, Reporter &reporter)
+void PRSice::run_competitive(
+    Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
+    const std::vector<size_t>::const_iterator& bk_end_idx,
+    const Commander& commander, const size_t pheno_index, Reporter& reporter)
 {
     m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
@@ -2161,11 +2162,12 @@ void PRSice::run_competitive(Genotype& target,
         return;
     }
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
-    const bool is_binary =m_target_binary[pheno_index];
+    const bool is_binary = m_target_binary[pheno_index];
     const bool use_ref_maf = commander.use_ref_maf();
-    const size_t num_bk_snps = static_cast<size_t>(std::distance(bk_start_idx,bk_end_idx));
+    const size_t num_bk_snps =
+        static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
     // the number of items to skip from the front of prs_summary
-    size_t pheno_start_idx=0;
+    size_t pheno_start_idx = 0;
     // obs_t_value stores the observed t-value
     std::vector<double> obs_t_value;
     // set_perm_res stores number of perm where a more sig result is obtained
@@ -2192,16 +2194,17 @@ void PRSice::run_competitive(Genotype& target,
         auto&& res = m_prs_summary[i].result;
         // store the location of this set w.r.t number of SNPs in set
         set_index[res.num_snp].push_back(cur_set_index++);
-        if(res.num_snp > max_set_size) max_set_size = res.num_snp;
+        if (res.num_snp > max_set_size) max_set_size = res.num_snp;
         // ori_t_value will contain the obesrved t-value
         obs_t_value.push_back(std::abs(res.coefficient / res.se));
         set_perm_res.push_back(0);
     }
-    if(max_set_size > num_bk_snps){
-        std::string error_messgae = "Error: Insufficient background SNPs for "
-                                    "competitive analysis. Please ensure you have "
-                                    "use the correct background. Will now generate skip "
-                                    "the competitive analysis\n";
+    if (max_set_size > num_bk_snps) {
+        std::string error_messgae =
+            "Error: Insufficient background SNPs for "
+            "competitive analysis. Please ensure you have "
+            "use the correct background. Will now generate skip "
+            "the competitive analysis\n";
         for (size_t i = pheno_start_idx; i < num_prs_res; ++i) {
             // set them to true so that we will skip them for the next
             // phenotype (though in reality, they will all encounter the
@@ -2240,9 +2243,12 @@ void PRSice::run_competitive(Genotype& target,
     const size_t used_memory = misc::current_ram_usage();
     if (valid_memory <= used_memory) {
         // if we have used up all memory, we will exit
-        std::string error_message = "Error: Not enough memory left for permutation. "
-                                    "User allowed "+std::to_string(valid_memory/mb)+
-                " Mb of memory but already used "+std::to_string(used_memory)+" Mb";
+        std::string error_message =
+            "Error: Not enough memory left for permutation. "
+            "User allowed "
+            + std::to_string(valid_memory / mb)
+            + " Mb of memory but already used " + std::to_string(used_memory)
+            + " Mb";
         fprintf(stderr, "\n");
         throw std::runtime_error(error_message);
     }
@@ -2253,18 +2259,18 @@ void PRSice::run_competitive(Genotype& target,
         static_cast<size_t>((valid_memory - used_memory) * 0.5);
 
     if (available_memory < basic_memory_required_per_thread) {
-        std::string error_message = "Error: Not enough memory left for permutation. "
-                                    "System allowed "+std::to_string(available_memory/mb)+
-                " Mb of memory but required at least "+
-                std::to_string(basic_memory_required_per_thread)+" Mb";
+        std::string error_message =
+            "Error: Not enough memory left for permutation. "
+            "System allowed "
+            + std::to_string(available_memory / mb)
+            + " Mb of memory but required at least "
+            + std::to_string(basic_memory_required_per_thread) + " Mb";
         fprintf(stderr, "\n");
         throw std::runtime_error(error_message);
     }
     // reduce number of threads to account for memory available
-    if (available_memory / basic_memory_required_per_thread
-        < num_thread)
-    {
-        num_thread =available_memory/ basic_memory_required_per_thread;
+    if (available_memory / basic_memory_required_per_thread < num_thread) {
+        num_thread = available_memory / basic_memory_required_per_thread;
     }
     // now, we should be safe to run the competitive p-value analysis wiht
     // num_thread without worry about insufficient memory
@@ -2277,8 +2283,7 @@ void PRSice::run_competitive(Genotype& target,
         Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
-                             std::cref(bk_start_idx),
-                             std::cref(bk_end_idx),
+                             std::cref(bk_start_idx), std::cref(bk_end_idx),
                              num_thread - 1, std::ref(set_index), num_perm,
                              require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
@@ -2296,8 +2301,9 @@ void PRSice::run_competitive(Genotype& target,
     {
         // alternatively, if we only got one thread, we will use the no thread
         // function to reduce threading overhead
-        null_set_no_thread(target, bk_start_idx, bk_end_idx, set_index, obs_t_value, set_perm_res,
-                           num_perm, is_binary, require_standardize, use_ref_maf);
+        null_set_no_thread(target, bk_start_idx, bk_end_idx, set_index,
+                           obs_t_value, set_perm_res, num_perm, is_binary,
+                           require_standardize, use_ref_maf);
     }
     // start_index is the index of m_prs_summary[i], not the actual index
     // on set_perm_res.

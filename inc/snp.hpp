@@ -386,14 +386,15 @@ public:
     bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
                     size_t& missing, const bool use_ref_maf) const
     {
-        if(use_ref_maf){
+        if (use_ref_maf) {
             homcom = m_ref_homcom;
             het = m_ref_het;
             homrar = m_ref_homrar;
             missing = m_ref_missing;
             return m_has_ref_count;
         }
-        else{
+        else
+        {
             homcom = m_homcom;
             het = m_het;
             homrar = m_homrar;
@@ -470,12 +471,14 @@ public:
      * \return the lower bound of the region
      */
     int low_bound() const { return m_low_bound; }
-    void set_expected(double expected) { m_expected_value = expected;}
+    void set_expected(double expected) { m_expected_value = expected; }
     void set_ref_expected(double expected) { m_ref_expected_value = expected; }
-    double get_expected(bool use_ref_maf) const {
-        if(use_ref_maf) return m_ref_expected_value;
+    double get_expected(bool use_ref_maf) const
+    {
+        if (use_ref_maf) return m_ref_expected_value;
         return m_expected_value;
     }
+
 private:
     // basic info
     // actually, the packing of the data is problematic and to enhance

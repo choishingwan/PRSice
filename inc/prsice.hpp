@@ -226,9 +226,8 @@ public:
         if (set_perm) {
             // the additional permutation we've got to run, num_region -2 as we
             // don't perform permutation on the background set nor the base set
-            m_total_process += num_phenotype()
-                               * (num_region - 2)
-                               * num_set_perm;
+            m_total_process +=
+                num_phenotype() * (num_region - 2) * num_set_perm;
         }
     }
     PRSice(const PRSice&) = delete;            // disable copying
@@ -259,10 +258,12 @@ public:
      * \param commander contains all user inputs
      * \param pheno_index is the index of the current phenotype
      */
-    void run_competitive(Genotype& target,
-                         const std::vector<size_t>::const_iterator & bk_start_idx,
-                         const std::vector<size_t>::const_iterator& bk_end_idx, const Commander& commander,
-                         const size_t pheno_index, Reporter &reporter);
+    void
+    run_competitive(Genotype& target,
+                    const std::vector<size_t>::const_iterator& bk_start_idx,
+                    const std::vector<size_t>::const_iterator& bk_end_idx,
+                    const Commander& commander, const size_t pheno_index,
+                    Reporter& reporter);
 
 
 protected:
@@ -450,12 +451,14 @@ private:
      * standardized PRS
      */
     void
-    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t> > &q,
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
                      Genotype& target,
-                     const std::vector<size_t>::const_iterator &bk_start_idx,
-                     const std::vector<size_t>::const_iterator &bk_end_idx, size_t num_consumer,
-                     std::map<size_t, std::vector<size_t> > &set_index,
-                     const size_t num_perm, const bool require_standardize, const bool use_ref_maf);
+                     const std::vector<size_t>::const_iterator& bk_start_idx,
+                     const std::vector<size_t>::const_iterator& bk_end_idx,
+                     size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     const size_t num_perm, const bool require_standardize,
+                     const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -469,10 +472,10 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t> > &q,
-                     std::map<size_t, std::vector<size_t> > &set_index,
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     std::map<size_t, std::vector<size_t>>& set_index,
                      std::vector<double>& obs_t_value,
-                     std::vector<size_t> &set_perm_res, const bool is_binary);
+                     std::vector<size_t>& set_perm_res, const bool is_binary);
     /*!
      * \brief Function responsible for running the permutation required for
      * computing the competitive p-value
@@ -487,14 +490,15 @@ private:
      * \param require_standardize indicate if we require the standardization of
      * the genotype
      */
-    void null_set_no_thread(Genotype& target,
-                            const std::vector<size_t>::const_iterator &bk_start_idx,
-                            const std::vector<size_t>::const_iterator &bk_end_idx,
-                            const std::map<size_t, std::vector<size_t>>& set_index,
-                            std::vector<double>& obs_t_value,
-                            std::vector<size_t>& set_perm_res,
-                            const size_t num_perm, const bool is_binary,
-                            const bool require_standardize, const bool use_ref_maf);
+    void
+    null_set_no_thread(Genotype& target,
+                       const std::vector<size_t>::const_iterator& bk_start_idx,
+                       const std::vector<size_t>::const_iterator& bk_end_idx,
+                       const std::map<size_t, std::vector<size_t>>& set_index,
+                       std::vector<double>& obs_t_value,
+                       std::vector<size_t>& set_perm_res, const size_t num_perm,
+                       const bool is_binary, const bool require_standardize,
+                       const bool use_ref_maf);
 
     /*!
      * \brief The "producer" for generating the permuted phenotypes
@@ -512,10 +516,10 @@ private:
      * \param run_glm is a boolean indicate if we want to run logistic
      * regression
      */
-    void
-    consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-                       const Eigen::ColPivHouseholderQR<Eigen::MatrixXd> &decomposed,
-                       int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void consume_null_pheno(
+        Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+        const Eigen::VectorXd& pre_se, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is

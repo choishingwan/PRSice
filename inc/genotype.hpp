@@ -374,7 +374,8 @@ public:
      */
     void get_null_score(const size_t& set_size, const size_t& prev_size,
                         std::vector<size_t>& background_list,
-                        const bool first_run, const bool require_standardize, const bool use_ref_maf);
+                        const bool first_run, const bool require_standardize,
+                        const bool use_ref_maf);
     /*!
      * \brief Return the number of SNPs included in the background
      * \return  the number of background SNPs
@@ -424,10 +425,11 @@ public:
     size_t num_threshold() const { return m_num_thresholds; }
     std::vector<double> get_thresholds() const { return m_thresholds; }
     bool get_score(std::vector<size_t>::const_iterator& start_index,
-                   const std::vector<size_t>::const_iterator& end_index, double& cur_threshold,
-                   uint32_t& num_snp_included,
+                   const std::vector<size_t>::const_iterator& end_index,
+                   double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -643,10 +645,10 @@ protected:
                                       const std::string& /*file_name*/)
     {
     }
-    virtual void read_score(const std::vector<size_t>::const_iterator& /*start*/,
-                            const std::vector<size_t>::const_iterator& /*end*/,
-                            bool /*reset_zero*/,
-                            const bool /*use_ref_maf*/)
+    virtual void
+    read_score(const std::vector<size_t>::const_iterator& /*start*/,
+               const std::vector<size_t>::const_iterator& /*end*/,
+               bool /*reset_zero*/, const bool /*use_ref_maf*/)
     {
     }
 

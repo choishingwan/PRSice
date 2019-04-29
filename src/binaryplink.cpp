@@ -840,9 +840,10 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
 
 BinaryPlink::~BinaryPlink() {}
 
-void BinaryPlink::read_score(const std::vector<size_t>::const_iterator& start_idx,
-                             const std::vector<size_t>::const_iterator& end_idx,
-                             bool reset_zero, const bool use_ref_maf)
+void BinaryPlink::read_score(
+    const std::vector<size_t>::const_iterator& start_idx,
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
+    const bool use_ref_maf)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -889,8 +890,8 @@ void BinaryPlink::read_score(const std::vector<size_t>::const_iterator& start_id
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     std::streampos cur_line;
-    for(; cur_idx != end_idx; ++cur_idx){
-        auto && cur_snp = m_existed_snps[(*cur_idx)];
+    for (; cur_idx != end_idx; ++cur_idx) {
+        auto&& cur_snp = m_existed_snps[(*cur_idx)];
         if (m_cur_file != cur_snp.file_name()) {
             // If we are processing a new file we will need to read it
             if (m_bed_file.is_open()) {
@@ -938,7 +939,8 @@ void BinaryPlink::read_score(const std::vector<size_t>::const_iterator& start_id
         // directly read in the current location
         m_prev_loc = m_bed_file.tellg();
 
-        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct, use_ref_maf);
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                           use_ref_maf);
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
@@ -1004,21 +1006,28 @@ void BinaryPlink::read_score(const std::vector<size_t>::const_iterator& start_id
                 {
                 default:
                     // true = 1, false = 0
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +homcom_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat - adj_score;
                     break;
                 case 1:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +het_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat - adj_score;
                     break;
                 case 3:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +homrar_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat - adj_score;
                     break;
                 case 2:
                     // handle missing sample
-                    sample_prs.num_snp = sample_prs.num_snp*not_first + miss_count;
-                    sample_prs.prs = sample_prs.prs*not_first +miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
                     break;
                 }
                 // ulii &= ~((3 * ONELU) << ujj);

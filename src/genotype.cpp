@@ -1886,7 +1886,7 @@ void Genotype::build_membership_matrix(
         snp_out << "\n";
     }
     size_t prev_idx;
-    if(num_sets>2){
+    if (num_sets > 2) {
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
             auto&& snp = m_existed_snps[i_snp];
             prev_idx = 0;
@@ -1907,7 +1907,9 @@ void Genotype::build_membership_matrix(
                     temporary_storage[index].push_back(i_snp);
                 }
                 snp_out << "\n";
-            }else{
+            }
+            else
+            {
                 idx = snp.get_set_idx(num_sets);
                 for (auto&& index : idx) {
                     assert(index >= prev_idx);
@@ -1925,11 +1927,13 @@ void Genotype::build_membership_matrix(
                 cur_idx = region_membership.size();
             }
         }
-    }else{
+    }
+    else
+    {
         // not PRSet. We know the membership is 1:num_snp
         region_start_idx.push_back(0);
-        if(print_snps){
-            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp){
+        if (print_snps) {
+            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
                 auto&& snp = m_existed_snps[i_snp];
                 if (threshold.find(snp.get_threshold()) == threshold.end()) {
                     m_num_thresholds++;
@@ -1940,10 +1944,12 @@ void Genotype::build_membership_matrix(
                 region_membership.push_back(i_snp);
             }
             snp_out << "\n";
-        }else{
+        }
+        else
+        {
             // directly initialize the vector
             region_membership.resize(m_existed_snps.size());
-            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp){
+            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
                 auto&& snp = m_existed_snps[i_snp];
                 if (threshold.find(snp.get_threshold()) == threshold.end()) {
                     m_num_thresholds++;
@@ -1953,7 +1959,6 @@ void Genotype::build_membership_matrix(
             }
         }
     }
-
 }
 
 void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
@@ -1963,8 +1968,7 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               const bool use_ref_maf)
 {
 
-    if (m_existed_snps.empty() || set_size >= m_existed_snps.size())
-        return;
+    if (m_existed_snps.empty() || set_size >= m_existed_snps.size()) return;
     // we will initailize a selected_snp_index containing the index of SNPs that
     // we'd like to add / assign to our PRS in the current round.
     // we will get anything from (prev_size , set_size]
@@ -1996,49 +2000,49 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
 
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const std::vector<size_t>::const_iterator& end_index,
-                         double& cur_threshold,
-                         uint32_t& num_snp_included,
+                         double& cur_threshold, uint32_t& num_snp_included,
                          const bool non_cumulate, const bool require_statistic,
-                         const bool first_run, const bool use_ref_maf){
+                         const bool first_run, const bool use_ref_maf)
+{
     // if there are no SNPs or we are at the end
-    if (m_existed_snps.size() == 0
-            || (*start_index) == m_existed_snps.size()||
-            start_index == end_index)
-            return false;
+    if (m_existed_snps.size() == 0 || (*start_index) == m_existed_snps.size()
+        || start_index == end_index)
+        return false;
     // reset number of SNPs if we don't need cumulative PRS
-    if(non_cumulate) num_snp_included = 0;
+    if (non_cumulate) num_snp_included = 0;
     int cur_category = m_existed_snps[(*start_index)].category();
     cur_threshold = m_existed_snps[(*start_index)].get_threshold();
     std::vector<size_t>::const_iterator region_end = start_index;
-    for(; region_end != end_index; ++region_end){
+    for (; region_end != end_index; ++region_end) {
         if (m_existed_snps[(*region_end)].category() != cur_category) {
             cur_category = m_existed_snps[(*region_end)].category();
             break;
         }
         num_snp_included++;
     }
-    read_score(start_index, region_end, (non_cumulate||first_run), use_ref_maf);
-     // update the current index
+    read_score(start_index, region_end, (non_cumulate || first_run),
+               use_ref_maf);
+    // update the current index
     start_index = region_end;
-    if((*start_index)==0) return-1;
-     if (require_statistic) {
-         misc::RunningStat rs;
-         size_t num_prs = m_prs_info.size();
-         for (size_t i = 0; i < num_prs; ++i) {
-             if (!IS_SET(m_sample_include, i)) continue;
-             if (m_prs_info[i].num_snp == 0) {
-                 rs.push(0.0);
-             }
-             else
-             {
-                 rs.push(m_prs_info[i].prs
-                         / static_cast<double>(m_prs_info[i].num_snp));
-             }
-         }
-         m_mean_score = rs.mean();
-         m_score_sd = rs.sd();
-     }
-     return true;
+    if ((*start_index) == 0) return -1;
+    if (require_statistic) {
+        misc::RunningStat rs;
+        size_t num_prs = m_prs_info.size();
+        for (size_t i = 0; i < num_prs; ++i) {
+            if (!IS_SET(m_sample_include, i)) continue;
+            if (m_prs_info[i].num_snp == 0) {
+                rs.push(0.0);
+            }
+            else
+            {
+                rs.push(m_prs_info[i].prs
+                        / static_cast<double>(m_prs_info[i].num_snp));
+            }
+        }
+        m_mean_score = rs.mean();
+        m_score_sd = rs.sd();
+    }
+    return true;
 }
 
 /**

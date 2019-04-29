@@ -207,52 +207,58 @@ int main(int argc, char* argv[])
             std::vector<size_t> region_membership;
             std::vector<size_t> region_start_idx;
             std::vector<size_t>::const_iterator background_start_idx,
-                    background_end_idx;
+                background_end_idx;
             target_file->prepare_prsice();
             target_file->build_membership_matrix(
-                        region_membership, region_start_idx, num_regions,
-                        commander.out(), region_names, commander.print_snp());
+                region_membership, region_start_idx, num_regions,
+                commander.out(), region_names, commander.print_snp());
             background_start_idx = region_membership.cbegin();
             std::advance(background_start_idx, region_start_idx[1]);
             background_end_idx = region_membership.cbegin();
-            if(num_regions > 2){
+            if (num_regions > 2) {
                 std::advance(background_end_idx, region_start_idx[2]);
             }
             // we can now quickly check if any of the region are empty
-            bool has_empty_region= false;
+            bool has_empty_region = false;
             std::ofstream empty_region;
-            std::string empty_region_name = commander.out()+".xregion";
-            //region_start_idx size always = num_regions
-            for(size_t i = 2; i< region_start_idx.size(); ++i){
+            std::string empty_region_name = commander.out() + ".xregion";
+            // region_start_idx size always = num_regions
+            for (size_t i = 2; i < region_start_idx.size(); ++i) {
                 size_t cur_idx = region_start_idx[i];
-                if(i+1 >= region_start_idx[i]){
-                    if(cur_idx == region_membership.size()){
+                if (i + 1 >= region_start_idx[i]) {
+                    if (cur_idx == region_membership.size()) {
                         // this is empty
-                        if(!has_empty_region){
+                        if (!has_empty_region) {
                             empty_region.open(empty_region_name.c_str());
-                            if(!empty_region.is_open()){
-                                std::string error_message = "Error: Cannot open file: "+empty_region_name+" to write!";
+                            if (!empty_region.is_open()) {
+                                std::string error_message =
+                                    "Error: Cannot open file: "
+                                    + empty_region_name + " to write!";
                                 reporter.report(error_message);
                                 return -1;
                             }
-                            has_empty_region= true;
+                            has_empty_region = true;
                         }
                         empty_region << region_names[i] << std::endl;
                     }
-                }else if(cur_idx == region_start_idx[i+1]){
-                    if(!has_empty_region){
+                }
+                else if (cur_idx == region_start_idx[i + 1])
+                {
+                    if (!has_empty_region) {
                         empty_region.open(empty_region_name.c_str());
-                        if(!empty_region.is_open()){
-                            std::string error_message = "Error: Cannot open file: "+empty_region_name+" to write!";
+                        if (!empty_region.is_open()) {
+                            std::string error_message =
+                                "Error: Cannot open file: " + empty_region_name
+                                + " to write!";
                             reporter.report(error_message);
                             return -1;
                         }
-                        has_empty_region= true;
+                        has_empty_region = true;
                     }
                     empty_region << region_names[i] << std::endl;
                 }
             }
-            if(has_empty_region) empty_region.close();
+            if (has_empty_region) empty_region.close();
             const size_t num_pheno = prsice.num_phenotype();
 
             // Initialize the progress bar
@@ -282,7 +288,8 @@ int main(int argc, char* argv[])
                     // only perform permutation if regression is performed
                     // and user request it
                     prsice.run_competitive(*target_file, background_start_idx,
-                                           background_end_idx, commander, i_pheno, reporter);
+                                           background_end_idx, commander,
+                                           i_pheno, reporter);
                 }
             }
             prsice.print_progress(true);

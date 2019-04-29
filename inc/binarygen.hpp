@@ -253,9 +253,10 @@ private:
         return 0;
     }
 
-    virtual void read_score(const std::vector<size_t>::const_iterator& start_idx,
-                            const std::vector<size_t>::const_iterator& end_idx,
-                            bool reset_zero, const bool use_ref_maf);
+    virtual void
+    read_score(const std::vector<size_t>::const_iterator& start_idx,
+               const std::vector<size_t>::const_iterator& end_idx,
+               bool reset_zero, const bool use_ref_maf);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
                          bool reset_zero, const bool use_ref_maf);
@@ -324,8 +325,8 @@ private:
             }
             m_adj_score = 0;
             if (m_centre) {
-                // as is_centre will never change, branch prediction might be rather
-                // accurate, therefore we don't need to do the complex
+                // as is_centre will never change, branch prediction might be
+                // rather accurate, therefore we don't need to do the complex
                 // stat*maf*is_centre
                 m_adj_score = m_ploidy * m_stat * m_expected;
             }
@@ -333,7 +334,7 @@ private:
             m_miss_score = 0;
             m_miss_count = 0;
             if (!m_setzero) {
-                m_miss_count=1;
+                m_miss_count = 1;
                 // again, mean_impute is stable, branch prediction should be ok
                 m_miss_score = m_ploidy * m_stat * m_expected;
             }
@@ -422,16 +423,19 @@ private:
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
             if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
-                sample_prs.num_snp = sample_prs.num_snp*m_not_first+m_miss_count;
-                sample_prs.prs = sample_prs.prs*m_not_first + m_miss_score;
+                sample_prs.num_snp =
+                    sample_prs.num_snp * m_not_first + m_miss_count;
+                sample_prs.prs = sample_prs.prs * m_not_first + m_miss_score;
             }
             // this is not a missing sample and we can either add the prs or
             // assign the PRS
             else
             {
                 // this is not the first SNP in the region, we will add
-                sample_prs.num_snp = sample_prs.num_snp*m_not_first+m_ploidy;
-                sample_prs.prs = sample_prs.prs*m_not_first+m_sum * m_stat-m_adj_score;
+                sample_prs.num_snp =
+                    sample_prs.num_snp * m_not_first + m_ploidy;
+                sample_prs.prs =
+                    sample_prs.prs * m_not_first + m_sum * m_stat - m_adj_score;
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -441,9 +445,7 @@ private:
          * processing samples with missing data. This requires us to calculate
          * the expected value and use that as the PRS of the samples
          */
-        void finalise()
-        {
-        }
+        void finalise() {}
 
     private:
         std::vector<PRS>* m_sample_prs;
@@ -454,7 +456,7 @@ private:
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
-        double m_expected=0.0;
+        double m_expected = 0.0;
         double m_miss_score = 0.0;
         double m_adj_score = 0.0;
         uint32_t m_prs_sample_i = 0;
@@ -610,9 +612,8 @@ private:
             double p_all = 2.0 * p * (1.0 - p);
             return (rs.var() / p_all);
         }
-        double expected() const {
-            return rs.mean();
-        }
+        double expected() const { return rs.mean(); }
+
     private:
         // is the sample inclusion vector, if bit is set, sample is required
         std::vector<uintptr_t>* m_sample;

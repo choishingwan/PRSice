@@ -132,16 +132,18 @@ protected:
                 static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
                 final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            std::string error_message = "Error: Failed to read the bed file: "+m_cur_file;
+            std::string error_message =
+                "Error: Failed to read the bed file: " + m_cur_file;
             throw std::runtime_error(error_message);
         }
         // directly read in the current location to avoid possible calculation
         // error
         m_prev_loc = m_bed_file.tellg();
     }
-    virtual void read_score(const std::vector<size_t>::const_iterator& start_idx,
-                            const std::vector<size_t>::const_iterator& end_idx,
-                            bool reset_zero, const bool use_ref_maf);
+    virtual void
+    read_score(const std::vector<size_t>::const_iterator& start_idx,
+               const std::vector<size_t>::const_iterator& end_idx,
+               bool reset_zero, const bool use_ref_maf);
     /*!
      * \brief This is a slightly modified version of load_and_collapse_incl copy
      * from PLINK2, main difference is the use of ifstream

@@ -1058,9 +1058,10 @@ BinaryGen::~BinaryGen()
     }
 }
 
-void BinaryGen::dosage_score(const std::vector<size_t>::const_iterator& start_idx,
-                             const std::vector<size_t>::const_iterator& end_idx,
-                             bool reset_zero, const bool use_ref_maf)
+void BinaryGen::dosage_score(
+    const std::vector<size_t>::const_iterator& start_idx,
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
+    const bool use_ref_maf)
 {
     // currently, use_ref_maf doesn't work on bgen dosage file
     // main reason is we need expected value instead of
@@ -1076,7 +1077,7 @@ void BinaryGen::dosage_score(const std::vector<size_t>::const_iterator& start_id
     // m_missing_score will inform us as to how to handle the missingness
     PRS_Interpreter setter(&m_prs_info, &m_sample_include, m_missing_score);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    for(; cur_idx!= end_idx; ++cur_idx){
+    for (; cur_idx != end_idx; ++cur_idx) {
         auto&& snp = m_existed_snps[(*cur_idx)];
         // if the file name differ, or the file isn't open, we will open it
         if (snp.file_name() != m_cur_file || !m_bgen_file.is_open()) {
@@ -1094,8 +1095,9 @@ void BinaryGen::dosage_score(const std::vector<size_t>::const_iterator& start_id
         // For bgen file, we will always perform seek as there are always
         // bunch of information between the genotype dosages
         if (!m_bgen_file.seekg(snp.byte_pos(), std::ios_base::beg)) {
-            std::string error_message = "Error: Cannot seek within the bgen file: "+
-                    m_cur_file+"!\n";
+            std::string error_message =
+                "Error: Cannot seek within the bgen file: " + m_cur_file
+                + "!\n";
             throw std::runtime_error(error_message);
         }
         auto&& context = m_context_map[m_cur_file];
@@ -1104,7 +1106,7 @@ void BinaryGen::dosage_score(const std::vector<size_t>::const_iterator& start_id
                         snp.is_flipped(), not_first);
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
-            m_bgen_file, context, setter, &m_buffer1, &m_buffer2,  false);
+            m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
         // check if this SNP has some non-missing sample, if not, invalidate
         // it
         // after reading in this SNP, we no longer need to reset the PRS
@@ -1113,9 +1115,10 @@ void BinaryGen::dosage_score(const std::vector<size_t>::const_iterator& start_id
 }
 
 
-void BinaryGen::hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
-                                const std::vector<size_t>::const_iterator& end_idx,
-                                bool reset_zero, const bool use_ref_maf)
+void BinaryGen::hard_code_score(
+    const std::vector<size_t>::const_iterator& start_idx,
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
+    const bool use_ref_maf)
 {
 
     // we need to calculate the size of possible vectors
@@ -1149,7 +1152,7 @@ void BinaryGen::hard_code_score(const std::vector<size_t>::const_iterator& start
     // initialize the data structure for storing the genotype
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    for(; cur_idx != end_idx; ++cur_idx){
+    for (; cur_idx != end_idx; ++cur_idx) {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
         // read in the genotype using the modified load_and_collapse_incl
         // function. m_target_plink will inform the function wheter there's
@@ -1163,7 +1166,8 @@ void BinaryGen::hard_code_score(const std::vector<size_t>::const_iterator& start
         // need to calculate that in theory, we might not need to do the
         // counting as that is already done when we convert the dosages into
         // the binary genotypes (TODO)
-        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct, use_ref_maf);
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                           use_ref_maf);
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
@@ -1220,20 +1224,27 @@ void BinaryGen::hard_code_score(const std::vector<size_t>::const_iterator& start
                 switch (ukk)
                 {
                 default:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first+ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +homcom_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homcom_weight * stat - adj_score;
                     break;
                 case 1:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first+ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +het_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + het_weight * stat - adj_score;
                     break;
                 case 3:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first+ploidy;
-                    sample_prs.prs = sample_prs.prs*not_first +homrar_weight * stat - adj_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs * not_first
+                                     + homrar_weight * stat - adj_score;
                     break;
                 case 2:
-                    sample_prs.num_snp = sample_prs.num_snp*not_first+miss_count;
-                    sample_prs.prs = sample_prs.prs*not_first +miss_score;
+                    sample_prs.num_snp =
+                        sample_prs.num_snp * not_first + miss_count;
+                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
                     break;
                 }
                 ujj += 2;
@@ -1264,5 +1275,3 @@ void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
         dosage_score(start_idx, end_idx, reset_zero, use_ref_maf);
     }
 }
-
-
