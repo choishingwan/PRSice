@@ -967,6 +967,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     const bool print_all_scores = c_commander.all_scores() && pheno_index == 0;
     const int num_thread = c_commander.thread();
     const bool non_cumulate = c_commander.non_cumulate();
+    const bool use_ref_maf = c_commander.use_ref_maf();
     const size_t num_samples_included = target.num_sample();
 
     std::vector<size_t>::const_iterator cur_start_idx = region_membership.cbegin();
@@ -1037,7 +1038,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
 
     while(target.get_score(cur_start_idx, cur_end_idx,
                            cur_threshold, m_num_snp_included,
-                           non_cumulate, require_standardize, first_run))
+                           non_cumulate, require_standardize, first_run,use_ref_maf))
     {
         m_analysis_done++;
         print_progress();
@@ -1069,7 +1070,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                           prs_result_idx);
 
             if (m_perform_perm) {
-                // and perform regression if that is required
+                // perform permutation if required
                 permutation(num_thread, m_target_binary[pheno_index]);
             }
         }
@@ -1105,7 +1106,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     std::fstream best_out(out_best.c_str(), std::fstream::out | std::fstream::in
                                                 | std::fstream::ate);
     auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
-    int best_snp_size = best_info.num_snp;
+    size_t best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
         fprintf(stderr, "Error: Best R2 obtained when no SNPs were included\n");
         fprintf(stderr, "       Cannot output the best PRS score\n");
@@ -1149,8 +1150,7 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
     const Eigen::Index num_regress_samples =
         static_cast<Eigen::Index>(m_matrix_index.size());
     if (m_num_snp_included == 0
-        || (m_num_snp_included
-            == static_cast<uint32_t>(m_prs_results[prs_result_idx].num_snp)))
+        || (m_num_snp_included  == m_prs_results[prs_result_idx].num_snp))
     {
         // if we haven't read in any SNP, or that we have the same number of SNP
         // as the previous threshold, we will skip (normally this should not
@@ -1165,11 +1165,10 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
         // we can directly read in the matrix index from m_matrix_index vector
         // and assign the PRS directly to the indep variable matrix
         m_independent_variables(sample_id, 1) = target.calculate_score(
-            m_score, m_matrix_index[static_cast<std::vector<size_t>::size_type>(
-                         sample_id)]);
+            m_score, m_matrix_index[static_cast<size_t>( sample_id)]);
     }
 
-    if (m_target_binary[static_cast<std::vector<bool>::size_type>(pheno_index)])
+    if (m_target_binary[pheno_index])
     {
         // if this is a binary phenotype, we will perform the GLM model
         try
@@ -1228,7 +1227,7 @@ void PRSice::regress_score(Genotype& target, const double threshold, int thread,
     cur_result.coefficient = coefficient;
     cur_result.p = p_value;
     cur_result.emp_p = -1.0;
-    cur_result.num_snp = static_cast<int>(m_num_snp_included);
+    cur_result.num_snp = m_num_snp_included;
     cur_result.se = se;
     cur_result.competitive_p = -1.0;
     m_prs_results[prs_result_idx] = cur_result;
@@ -1239,15 +1238,12 @@ void PRSice::process_permutations()
 {
     // can't generate an empirical p-value if there is no observed p-value
     if (m_best_index == -1) return;
-    std::vector<prsice_result>::size_type best_index =
-        static_cast<std::vector<prsice_result>::size_type>(m_best_index);
-    double best_t = std::abs(m_prs_results[best_index].coefficient
+    size_t best_index = static_cast<size_t>(m_best_index);
+    const double best_t = std::abs(m_prs_results[best_index].coefficient
                              / m_prs_results[best_index].se);
-    auto num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(),
+    const auto num_better = std::count_if(m_perm_result.begin(), m_perm_result.end(),
                                     [&best_t](double t) { return t > best_t; });
-    // for (auto&& p : m_perm_result) num_better += (p <= best_p);
-    m_prs_results[best_index].emp_p = (static_cast<double>(num_better) + 1.0)
-                                      / (static_cast<double>(m_num_perm) + 1.0);
+    m_prs_results[best_index].emp_p = (num_better + 1.0)  / (m_num_perm + 1.0);
 }
 
 void PRSice::permutation(const int n_thread, bool is_binary)
@@ -1329,14 +1325,14 @@ void PRSice::run_null_perm_no_thread(
     // better safe than sorry)
     Eigen::VectorXd perm_pheno = m_phenotype;
     // count the number of loop we've finished so far
-    int processed = 0;
+    size_t processed = 0;
     // pre-initialize these parameters
     double coefficient, se, r2, obs_p;
     double obs_t = -1;
 
     if (run_glm) {
         // we we want to use the logistic regression
-        while (processed < m_num_perm) {
+        while (processed < static_cast<size_t>(m_num_perm)) {
             // reassign the phenotype matrix. This is to ensure single threading
             // will produce the same result as multithreading given the same
             // seed
@@ -1360,12 +1356,8 @@ void PRSice::run_null_perm_no_thread(
             // than p-value
             //  obs_t *= obs_t;
             // we then store the best t-value in our permutation results
-            m_perm_result[static_cast<std::vector<double>::size_type>(
-                processed)] =
-                std::max(
-                    obs_t,
-                    m_perm_result[static_cast<std::vector<double>::size_type>(
-                        processed)]);
+            m_perm_result[processed] =
+                std::max(  obs_t,  m_perm_result[processed]);
             // we have finished the current analysis.
             processed++;
         }
@@ -1377,7 +1369,7 @@ void PRSice::run_null_perm_no_thread(
         Eigen::Index rdf;
         double rss, resvar;
         int se_index;
-        while (processed < m_num_perm) {
+        while (processed < static_cast<size_t>(m_num_perm)) {
             // for quantitative trait, we can directly compute the results
             // without re-computing the decomposition
             perm_pheno = m_phenotype;
@@ -1405,12 +1397,8 @@ void PRSice::run_null_perm_no_thread(
             // magnitude
             obs_t = std::abs(beta(intercept) / se(se_index));
             // for T-value, we need the maximum T, not the smallest
-            m_perm_result[static_cast<std::vector<double>::size_type>(
-                processed)] =
-                std::max(
-                    obs_t,
-                    m_perm_result[static_cast<std::vector<double>::size_type>(
-                        processed)]);
+            m_perm_result[processed] =
+                std::max(obs_t,m_perm_result[processed]);
             processed++;
         }
     }
@@ -1455,7 +1443,7 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
 
 void PRSice::consume_null_pheno(
     Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
     const Eigen::VectorXd& pre_se, bool run_glm)
 {
     const Eigen::Index n = m_phenotype.rows();

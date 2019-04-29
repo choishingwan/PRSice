@@ -275,7 +275,7 @@ private:
         double emp_p;
         double se;
         double competitive_p;
-        int num_snp;
+        size_t num_snp; // num snp should always be positive
     };
     struct prsice_summary
     {
@@ -508,7 +508,7 @@ private:
      */
     void
     consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-                       Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
+                       const Eigen::ColPivHouseholderQR<Eigen::MatrixXd> &decomposed,
                        int rank, const Eigen::VectorXd& pre_se, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation

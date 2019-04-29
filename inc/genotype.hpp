@@ -337,7 +337,7 @@ public:
      * \param i is the sample index
      * \return the PRS
      */
-    double calculate_score(SCORING score_type, size_t i) const
+    inline double calculate_score(SCORING score_type, size_t i) const
     {
         if (i >= m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
