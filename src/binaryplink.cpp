@@ -1119,8 +1119,9 @@ void BinaryPlink::read_score(const std::vector<size_t>& index_bound,
 }
 
 
-void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
-                             const size_t region_index, bool set_zero)
+void BinaryPlink::read_score(const std::vector<size_t>::const_iterator& start_idx,
+                             const std::vector<size_t>::const_iterator& end_idx,
+                             bool reset_zero, const bool use_ref_maf)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -1157,7 +1158,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if it is not the frist run, if it is the first run, we will reset
     // the PRS to zero instead of addint it up
-    bool not_first = !set_zero;
+    bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
     m_cur_file = ""; // just close it
     if (m_bed_file.is_open()) {
@@ -1165,12 +1166,10 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
     }
     // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
-    for (size_t i_snp = start_index; i_snp < end_bound; ++i_snp) {
-        // for each SNP
-        auto&& cur_snp = m_existed_snps[i_snp];
-        // only read this SNP if it falls within our region of interest or if
-        // this SNP is invalid
-        if (!cur_snp.in(region_index)) continue;
+    std::vector<size_t>::const_iterator cur_idx = start_idx;
+    std::streampos cur_line;
+    for(; cur_idx != end_idx; ++cur_idx){
+        auto && cur_snp = m_existed_snps[(*cur_idx)];
         if (m_cur_file != cur_snp.file_name()) {
             // If we are processing a new file we will need to read it
             if (m_bed_file.is_open()) {
@@ -1191,7 +1190,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         // allow for quick jumping
         // very useful for read score as most SNPs might not
         // be next to each other
-        std::streampos cur_line = cur_snp.byte_pos();
+        cur_line = cur_snp.byte_pos();
         if (m_prev_loc != cur_line
             && !m_bed_file.seekg(cur_line, std::ios_base::beg))
         {
@@ -1203,7 +1202,6 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
 
         // we now read the genotype from the file by calling
         // load_and_collapse_incl
-
         // important point to note here is the use of m_sample_include and
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
@@ -1218,11 +1216,8 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
         }
         // directly read in the current location
         m_prev_loc = m_bed_file.tellg();
-        // try to calculate MAF here
 
-        // if we haven't previously calculated the counts, we will need to count
-        // it using PLINK's function
-        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct, use_ref_maf);
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
@@ -1259,9 +1254,7 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
             miss_score = ploidy * stat * maf;
         }
 
-
         // now we go through the SNP vector
-
         lbptr = genotype.data();
         uii = 0;
         ulii = 0;
@@ -1289,78 +1282,22 @@ void BinaryPlink::read_score(const size_t start_index, const size_t end_bound,
                 switch (ukk)
                 {
                 default:
-                    if (not_first) {
-                        // not first should only be false for the first SNP.
-                        // add ploidy to the number of SNP
-                        sample_prs.num_snp += ploidy;
-                        // add the current genotype weight to the score
-                        sample_prs.prs += homcom_weight * stat - adj_score;
-                    }
-                    else
-                    {
-                        // reset the number of SNP to 1
-                        sample_prs.num_snp = ploidy;
-                        // directly assign the new PRS to the storage
-                        sample_prs.prs = homcom_weight * stat - adj_score;
-                    }
-
+                    // true = 1, false = 0
+                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs*not_first +homcom_weight * stat - adj_score;
                     break;
                 case 1:
-                    if (not_first) {
-                        // not first should only be false for the first SNP
-                        // add ploidy to the number of SNP
-                        sample_prs.num_snp += ploidy;
-                        // add the current genotype weight to the score
-                        sample_prs.prs += het_weight * stat - adj_score;
-                    }
-                    else
-                    {
-                        // reset the number of SNP to ploidy
-                        sample_prs.num_snp = ploidy;
-                        // directly assign the new PRS to the storage
-                        sample_prs.prs = het_weight * stat - adj_score;
-                    }
+                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs*not_first +het_weight * stat - adj_score;
                     break;
                 case 3:
-                    if (not_first) {
-                        // not first should only be false for the first SNP.
-                        // Again, we might have a faster run time using if case
-                        // here due to its simplicity + consistency in the
-                        // true/false
-                        // add ploidy to the number of SNP
-                        sample_prs.num_snp += ploidy;
-                        // add the current genotype weight to the score
-                        sample_prs.prs += homrar_weight * stat - adj_score;
-                    }
-                    else
-                    {
-                        // reset the number of SNP to ploidy
-                        sample_prs.num_snp = ploidy;
-                        // directly assign the new PRS to the storage
-                        sample_prs.prs = homrar_weight * stat - adj_score;
-                    }
+                    sample_prs.num_snp = sample_prs.num_snp*not_first + ploidy;
+                    sample_prs.prs = sample_prs.prs*not_first +homrar_weight * stat - adj_score;
                     break;
                 case 2:
                     // handle missing sample
-                    if (not_first) {
-                        // not first should only be false for the first SNP.
-                        // Again, we might have a faster run time using if case
-                        // here due to its simplicity + consistency in the
-                        // true/false
-                        // add 1 to the number of SNP if we are not setting
-                        // missing samples to 0
-                        sample_prs.num_snp += miss_count;
-                        // add the current genotype weight to the score
-                        sample_prs.prs += miss_score;
-                    }
-                    else
-                    {
-                        // add 1 to the number of SNP if we are not setting
-                        // missing samples to 0
-                        sample_prs.num_snp = miss_count;
-                        // directly assign the new PRS to the storage
-                        sample_prs.prs = miss_score;
-                    }
+                    sample_prs.num_snp = sample_prs.num_snp*not_first + miss_count;
+                    sample_prs.prs = sample_prs.prs*not_first +miss_score;
                     break;
                 }
                 // ulii &= ~((3 * ONELU) << ujj);

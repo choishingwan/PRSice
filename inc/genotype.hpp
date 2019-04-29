@@ -427,7 +427,7 @@ public:
                    const std::vector<size_t>::const_iterator& end_index, double& cur_threshold,
                    uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
-                   const bool first_run);
+                   const bool first_run, const bool use_ref_maf);
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -663,7 +663,8 @@ protected:
     }
     virtual void read_score(const std::vector<size_t>::const_iterator& /*start*/,
                             const std::vector<size_t>::const_iterator& /*end*/,
-                            bool /*reset_zero*/)
+                            bool /*reset_zero*/,
+                            const bool /*use_ref_maf*/)
     {
     }
 

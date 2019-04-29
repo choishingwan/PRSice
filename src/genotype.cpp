@@ -1993,7 +1993,7 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          double& cur_threshold,
                          uint32_t& num_snp_included,
                          const bool non_cumulate, const bool require_statistic,
-                         const bool first_run){
+                         const bool first_run, const bool use_ref_maf){
     // if there are no SNPs or we are at the end
     if (m_existed_snps.size() == 0
             || (*start_index) == m_existed_snps.size())
@@ -2010,7 +2010,7 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
         }
         num_snp_included++;
     }
-    read_score(start_index, region_end, (non_cumulate||first_run));
+    read_score(start_index, region_end, (non_cumulate||first_run), use_ref_maf);
      // update the current index
     start_index = region_end;
      if (require_statistic) {

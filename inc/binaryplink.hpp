@@ -145,16 +145,9 @@ protected:
      * 0
      */
     void read_score(const std::vector<size_t>& index, bool reset_zero);
-    /*!
-     * \brief read_score is the master function for performing the score reading
-     * \param start_index is the index of SNP that we should start reading from
-     * \param end_bound is the index of the first SNP for us to ignore
-     * \param region_index is the index of the region of interest
-     * \param reset_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void read_score(const size_t start_index, const size_t end_bound,
-                    const size_t region_index, bool reset_zero);
+    virtual void read_score(const std::vector<size_t>::const_iterator& start_idx,
+                            const std::vector<size_t>::const_iterator& end_idx,
+                            bool reset_zero, const bool use_ref_maf);
     /*!
      * \brief This is a slightly modified version of load_and_collapse_incl copy
      * from PLINK2, main difference is the use of ifstream
