@@ -1946,7 +1946,7 @@ void Genotype::build_membership_matrix(
 }
 
 void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
-                              const std::vector<size_t>& background_list,
+                              std::vector<size_t>& background_list,
                               const bool first_run,
                               const bool require_statistic,
                               const bool use_ref_maf)
@@ -1958,9 +1958,9 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     // we'd like to add / assign to our PRS in the current round.
     // we will get anything from (prev_size , set_size]
     assert(prev_size < set_size);
-    std::vector<size_t>::const_iterator select_start = background_list.begin();
+    std::vector<size_t>::iterator select_start = background_list.begin();
     std::advance(select_start, prev_size);
-    std::vector<size_t>::const_iterator select_end = background_list.begin();
+    std::vector<size_t>::iterator select_end = background_list.begin();
     std::advance(select_end, set_size);
     std::sort(select_start, select_end);
     read_score(select_start, select_end, first_run, use_ref_maf);

@@ -1954,9 +1954,8 @@ void PRSice::null_set_no_thread(Genotype& target,
             std::uniform_int_distribution<int> dist(begin, num_background - 1);
             int advance_index = dist(g);
             std::swap(
-                background[static_cast<std::vector<size_t>::size_type>(begin)],
-                background[static_cast<std::vector<size_t>::size_type>(
-                    advance_index)]);
+                background[static_cast<size_t>(begin)],
+                background[static_cast<size_t>(advance_index)]);
             ++begin;
         }
         //  we have now selected N SNPs from the background. We can then
@@ -2287,7 +2286,7 @@ void PRSice::run_competitive(Genotype& target,
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
                 std::ref(set_index), std::ref(obs_t_value),
-                std::ref(set_perm_res), is_binary, use_ref_maf));
+                std::ref(set_perm_res), is_binary));
         }
 
         producer.join();

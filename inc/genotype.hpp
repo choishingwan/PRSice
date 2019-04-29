@@ -373,7 +373,7 @@ public:
      * calculate the mean and SD
      */
     void get_null_score(const size_t& set_size, const size_t& prev_size,
-                        const std::vector<size_t>& background_list,
+                        std::vector<size_t>& background_list,
                         const bool first_run, const bool require_standardize, const bool use_ref_maf);
     /*!
      * \brief Return the number of SNPs included in the background

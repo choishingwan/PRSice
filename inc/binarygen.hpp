@@ -291,7 +291,6 @@ private:
             // a result of that, we need a vector to store the index of the
             // missing sample. The maximum possible number of missing sample is
             // the number of sample, thus we can reserve the required size
-            m_sample_missing_index.reserve(m_sample_prs->size());
             m_setzero = (missing == MISSING_SCORE::SET_ZERO);
             m_centre = (missing == MISSING_SCORE::CENTER);
         }

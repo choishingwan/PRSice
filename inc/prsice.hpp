@@ -213,21 +213,21 @@ public:
     void init_process_count(const Commander& commander, size_t num_region,
                             size_t num_thresholds)
     {
-        int num_perm;
+        size_t num_perm;
         const bool perm = commander.num_perm(num_perm);
-        int num_set_perm;
+        size_t num_set_perm;
         const bool set_perm = commander.set_perm(num_set_perm);
         // the number of raw PRSice run
         m_total_process = num_thresholds * num_phenotype()
                           * ((num_region > 2) ? num_region - 1 : 1);
         if (perm) {
-            m_total_process *= (static_cast<size_t>(num_perm) + 1);
+            m_total_process *= (num_perm + 1);
         }
         if (set_perm) {
             // the additional permutation we've got to run, num_region -2 as we
             // don't perform permutation on the background set nor the base set
             m_total_process += num_phenotype()
-                               * (static_cast<size_t>(num_region) - 2)
+                               * (num_region - 2)
                                * num_set_perm;
         }
     }
