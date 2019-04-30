@@ -1771,7 +1771,7 @@ plot.bar <- function(argv, output, prefix, device){
             parse = T
         )  +
         theme_sam +
-        scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
+        scale_y_continuous(expand = expand_scale(mult = c(0, .15))) +
         xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
         ylab(expression(paste("PRS model fit:  ", R ^ 2)))
   if (argv$bar_col_p) {
