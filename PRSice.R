@@ -19,6 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
+r.version <- "2.2.0"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -723,6 +724,9 @@ if (!provided("plot", argv)) {
     }
 }
 
+
+writeLines("Begin plotting");
+writeLines(paste0("Current Rscript version = ",r.version))
 # Helper functions --------------------------------------------------------
 max_length <- function(x) {
     info <- strsplit(as.character(x), split = "\n")[[1]]
