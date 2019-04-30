@@ -1942,10 +1942,9 @@ void Genotype::build_membership_matrix(
                     m_thresholds.push_back(snp.get_threshold());
                 }
                 snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                        << "\t" << snp.p_value() << "\tY";
+                        << "\t" << snp.p_value() << "\tY\n";
                 region_membership.push_back(i_snp);
             }
-            snp_out << "\n";
         }
         else
         {
