@@ -64,7 +64,7 @@ void Region::generate_exclusion(cgranges_t* cr,
             // Do nothing because while BED end is exclusive, it is 0 base.
             // For an inclusive end bound, we will need to do -1 (make it
             // inclusive) and +1 (transform to 1 base)
-            if (low_bound < upper_bound || low_bound < 1 || upper_bound < 1) {
+            if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1) {
                 std::string message =
                     "Error: Invalid exclusion coordinate. "
                     "Coordinate must be larger than 1 and the end coordinate "
