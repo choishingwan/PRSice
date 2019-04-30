@@ -96,40 +96,10 @@ public:
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, bool verbose,
                       Reporter& reporter);
-    /*!
-     * \brief Function to load SNPs into the genotype class object. Will call
-     *        gen_snp_vector function. Will only generate the vector if this is
-     *        the target
-     * * \param maf_threshold is the maf threshold
-     * \param maf_filter is the boolean indicate if we want to perform maf
-     * filtering
-     * \param geno_threshold is the geno threshold
-     * \param geno_filter is the boolean indicate if we want to perform geno
-     * filtering
-     * \param hard_threshold is the hard coding threshold
-     * \param hard_coded is the boolean indicate if hard coding should be
-     * performed
-     * \param info_threshold is the INFO score threshold
-     * \param info_filter is the boolean indicate if we want to perform INFO
-     * score filtering
-     * \param exclusion is the region of exclusion
-     * \param verbose is the boolean indicate if we want to print the message
-     * \param reporter is the logger
-     * \param target is the target genotype. Equal to nullptr if this is the
-     * target
-     */
-    void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract, const double& maf_threshold,
-                   const double& geno_threshold, const double& info_threshold,
-                   const double& hard_threshold, const bool maf_filter,
-                   const bool geno_filter, const bool info_filter,
-                   const bool hard_coded, cgranges_t* exclusion_region,
-                   bool verbose, Reporter& reporter,
-                   Genotype* target = nullptr);
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract, cgranges_t* exclusion_region,
+                   const std::string& extract,
                    bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
@@ -191,7 +161,9 @@ public:
      */
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
-
+    void set_flag(size_t i, const size_t num_region, const std::vector<uintptr_t>& flags){
+        m_existed_snps[i].set_flag(num_region, flags);
+    }
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more
@@ -410,7 +382,8 @@ public:
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, const double& maf_control,
+                   const double& bound_end, cgranges_t* exclusion_region,
+                   const double& maf_control,
                    const double& maf_case, const double& info_threshold,
                    const bool maf_control_filter, const bool maf_case_filter,
                    const bool info_filter, const bool fastscore,
@@ -605,23 +578,9 @@ protected:
     {
         return std::vector<Sample_ID>(0);
     }
-    /*!
-     * \brief Function to read in the SNP information. Any subclass must
-     * implement this function \return a vector containing the SNP information
-     */
-    virtual std::vector<SNP>
-    gen_snp_vector(const std::string& /*out_prefix*/,
-                   const double& /*maf_threshold*/, const bool /*maf_filter*/,
-                   const double& /*geno_threshold*/, const bool /*geno_filter*/,
-                   const double& /*hard_threshold*/, const bool /*hard_coded*/,
-                   const double& /*info_threshold*/, const bool /*info_filter*/,
-                   cgranges_t* /*exclusion*/, Genotype* /*target*/)
-    {
-        return std::vector<SNP>(0);
-    }
 
     virtual void gen_snp_vector(const std::string& /*out_prefix*/,
-                                cgranges_t* /*exclusion*/, Genotype* /*target*/)
+                                Genotype* /*target*/)
     {
     }
     virtual void calc_freq_gen_inter(

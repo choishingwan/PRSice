@@ -59,7 +59,6 @@ protected:
      */
     std::vector<Sample_ID> gen_sample_vector();
     void gen_snp_vector(const std::string& out_prefix,
-                        cgranges_t* exclusion_regions,
                         Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold, const double&,

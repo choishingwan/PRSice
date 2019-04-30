@@ -428,7 +428,6 @@ void BinaryPlink::calc_freq_gen_inter(
 }
 
 void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
-                                 cgranges_t* exclusion_regions,
                                  Genotype* target)
 {
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
@@ -445,12 +444,11 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::streampos byte_pos;
     // temp holder for region match
-    int64_t *b = nullptr, max_b = 0;
     size_t num_retained = 0;
     int chr_code = 0;
     int num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, flipping = false, to_remove = false;
+         prev_chr_error = false, flipping = false;
     uintptr_t bed_offset;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file
@@ -582,14 +580,6 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                 error_message.append("Please check you have the correct input");
                 throw std::runtime_error(error_message);
             }
-            // check if we want to exclude this SNP because this fall within the
-            // exclusion region(s)
-            to_remove =
-                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
-                           loc - 1, loc + 1, &b, &max_b);
-            free(b);
-            // this is included in one of the exclusion region
-            if (to_remove) continue;
             // check if this is a duplicated SNP
             if (processed_snps.find(bim_token[+BIM::RS])
                 != processed_snps.end())

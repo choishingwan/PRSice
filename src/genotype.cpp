@@ -118,11 +118,10 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::read_base(
-    const std::string& base_file, const std::vector<size_t>& col_index,
+void Genotype::read_base(const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
-    const double& bound_end, const double& maf_control, const double& maf_case,
+    const double& bound_end, cgranges_t *exclusion_regions, const double& maf_control, const double& maf_case,
     const double& info_threshold, const bool maf_control_filter,
     const bool maf_case_filter, const bool info_filter, const bool fastscore,
     const bool no_full, const bool is_beta, const bool is_index,
@@ -138,6 +137,7 @@ void Genotype::read_base(
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
+    int64_t *b = nullptr, max_b = 0;
     // Read in threshold information
     const double max_threshold =
         no_full
@@ -181,6 +181,7 @@ void Genotype::read_base(
     double pthres = 0.0;
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
+    size_t num_region_exclude = 0;
     size_t num_ambiguous = 0;
     size_t num_haploid = 0;
     size_t num_not_converted = 0; // this is for NA
@@ -193,6 +194,7 @@ void Genotype::read_base(
     bool exclude = false;
     bool has_chr = false;
     bool has_bp = false;
+    bool to_remove = false;
     int category = -1;
     int32_t chr_code;
     std::unordered_set<std::string> dup_index;
@@ -317,6 +319,13 @@ void Genotype::read_base(
                         "Error: Non-numeric loci for " + rs_id + "!\n";
                     throw std::runtime_error(error_message);
                 }
+            }
+            to_remove =
+                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
+                           loc - 1, loc + 1, &b, &max_b);
+            if(to_remove){
+                num_region_exclude++;
+                exclude = true;
             }
             maf = 1;
             // note, this is for reference
@@ -467,6 +476,7 @@ void Genotype::read_base(
     else
         snp_file.close();
 
+    free(b);
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
                    + " variant(s) observed in base file, with:\n");
@@ -479,6 +489,10 @@ void Genotype::read_base(
     if (num_excluded) {
         message.append(std::to_string(num_excluded)
                        + " variant(s) excluded due to p-value threshold\n");
+    }
+    if(num_region_exclude){
+        message.append(std::to_string(num_region_exclude)
+                       + " variant(s) excluded as they fall within x-range region(s)\n");
     }
     if (num_chr_filter) {
         message.append(
@@ -836,8 +850,7 @@ void Genotype::calc_freqs_and_intermediate(
 }
 
 void Genotype::load_snps(const std::string& out, const std::string& exclude,
-                         const std::string& extract,
-                         cgranges_t* exclusion_region, bool verbose,
+                         const std::string& extract, bool verbose,
                          Reporter& reporter, Genotype* target)
 {
 
@@ -851,7 +864,7 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
             m_snp_selection_list = load_snp_list(exclude, reporter);
         }
     }
-    gen_snp_vector(out, exclusion_region, target);
+    gen_snp_vector(out, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
     if (m_num_ambig != 0 && !m_keep_ambig) {
@@ -876,71 +889,6 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
     m_snp_selection_list.clear();
 }
 
-
-void Genotype::load_snps(const std::string& out, const std::string& exclude,
-                         const std::string& extract, const double& maf,
-                         const double& geno, const double& info,
-                         const double& hard_threshold, const bool maf_filter,
-                         const bool geno_filter, const bool info_filter,
-                         const bool hard_coded, cgranges_t* exclusion_region,
-                         bool verbose, Reporter& reporter, Genotype* target)
-{
-
-    if (!m_is_ref) {
-        if (!extract.empty()) {
-            m_exclude_snp = false;
-            m_snp_selection_list = load_snp_list(extract, reporter);
-        }
-        else if (!exclude.empty())
-        {
-            m_snp_selection_list = load_snp_list(exclude, reporter);
-        }
-    }
-    m_existed_snps =
-        gen_snp_vector(out, maf, maf_filter, geno, geno_filter, hard_threshold,
-                       hard_coded, info, info_filter, exclusion_region, target);
-    m_marker_ct = m_existed_snps.size();
-    std::string message = "";
-    if (!m_is_ref && m_base_missed) {
-        message.append(misc::to_string(m_base_missed)
-                       + " variant(s) were pre-filtered as they did not "
-                         "appeared in base\n");
-    }
-    if (m_num_ambig != 0 && !m_keep_ambig) {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) excluded\n");
-    }
-    else if (m_num_ambig != 0)
-    {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) kept\n");
-    }
-    if (m_num_geno_filter != 0) {
-        message.append(
-            std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold\n");
-    }
-    if (m_num_maf_filter != 0) {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold\n");
-    }
-    if (m_num_info_filter != 0) {
-        message.append(
-            std::to_string(m_num_info_filter)
-            + " variant(s) excluded based on INFO score threshold\n");
-    }
-    if (!m_is_ref) {
-        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-    }
-    else
-    {
-        message.append(std::to_string(target->m_existed_snps.size())
-                       + " variant(s) remained\n");
-    }
-
-    if (verbose) reporter.report(message);
-    m_snp_selection_list.clear();
-}
 
 
 Genotype::~Genotype() {}
@@ -1906,6 +1854,10 @@ void Genotype::build_membership_matrix(
                     }
                     snp_out << "\tY";
                     temporary_storage[index].push_back(i_snp);
+                    prev_idx = index+1;
+                }
+                for(;prev_idx < num_sets; ++prev_idx){
+                    snp_out << "\tN";
                 }
                 snp_out << "\n";
             }
@@ -1913,7 +1865,6 @@ void Genotype::build_membership_matrix(
             {
                 idx = snp.get_set_idx(num_sets);
                 for (auto&& index : idx) {
-                    assert(index >= prev_idx);
                     temporary_storage[index].push_back(i_snp);
                 }
             }

@@ -68,7 +68,6 @@ private:
      */
     bool check_is_sample_format();
     void gen_snp_vector(const std::string& out_prefix,
-                        cgranges_t* exclusion_regions,
                         Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold,

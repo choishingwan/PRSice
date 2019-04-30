@@ -520,11 +520,8 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     return true;
 }
 
-void BinaryGen::gen_snp_vector(const std::string& out_prefix,
-                               cgranges_t* exclusion_regions, Genotype* target)
+void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
 {
-    bool to_remove = false;
-    int64_t *b = nullptr, max_b = 0;
     std::unordered_set<std::string> duplicated_snps;
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> processed_snps;
@@ -654,12 +651,6 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix,
                 // target
                 exclude_snp = true;
             }
-
-            to_remove =
-                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
-                           static_cast<int>(SNP_position) - 1,
-                           static_cast<int>(SNP_position) + 1, &b, &max_b);
-            if (to_remove) exclude_snp = true;
             if (processed_snps.find(RSID) != processed_snps.end()) {
                 duplicated_snps.insert(RSID);
                 exclude_snp = true;
