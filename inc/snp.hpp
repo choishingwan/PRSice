@@ -289,11 +289,12 @@ public:
         return (IS_SET(m_flags.data(), i));
     }
 
-    void set_flag(const size_t num_region, const std::vector<uintptr_t>& flags)
+    void set_flag(const size_t num_region, const std::vector<uintptr_t> flags)
     {
         m_max_flag_index = BITCT_TO_WORDCT(num_region);
         m_flags = flags;
     }
+
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be
      * considered in clumping

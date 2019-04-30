@@ -54,26 +54,25 @@ void Region::generate_exclusion(cgranges_t* cr,
                                           "for all rows!\n";
                     throw std::runtime_error(message);
                 }
+                int chr = get_chrom_code_raw(boundary[0].c_str());
+                int low_bound = misc::convert<int>(boundary[1]) + 1;
+                // +1 because start at 0
+                int upper_bound = misc::convert<int>(boundary[2]);
+                // Do nothing because while BED end is exclusive, it is 0 base.
+                // For an inclusive end bound, we will need to do -1 (make it
+                // inclusive) and +1 (transform to 1 base)
+                if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1) {
+                    std::string message =
+                        "Error: Invalid exclusion coordinate. "
+                        "Coordinate must be larger than 1 and the end coordinate "
+                        "must be larger than or equal to the start coordinate\n";
+                    throw std::runtime_error(message);
+                }
+                // to string is kinda stupid here, but rather not touching the core
+                // algorithm when I am exhausted.
+                cr_add(cr, std::to_string(chr).c_str(), low_bound, upper_bound, 0);
             }
             input_file.close();
-
-            int chr = get_chrom_code_raw(boundary[0].c_str());
-            int low_bound = misc::convert<int>(boundary[1]) + 1;
-            // +1 because start at 0
-            int upper_bound = misc::convert<int>(boundary[2]);
-            // Do nothing because while BED end is exclusive, it is 0 base.
-            // For an inclusive end bound, we will need to do -1 (make it
-            // inclusive) and +1 (transform to 1 base)
-            if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1) {
-                std::string message =
-                    "Error: Invalid exclusion coordinate. "
-                    "Coordinate must be larger than 1 and the end coordinate "
-                    "must be larger than or equal to the start coordinate\n";
-                throw std::runtime_error(message);
-            }
-            // to string is kinda stupid here, but rather not touching the core
-            // algorithm when I am exhausted.
-            cr_add(cr, std::to_string(chr).c_str(), low_bound, upper_bound, 0);
         }
         else if (range.size() == 2)
         {
@@ -89,7 +88,7 @@ void Region::generate_exclusion(cgranges_t* cr,
             // the library find overlap, which for SNP at 10
             // the boundary should be defined as 9-11 when we read in the SNP
             // here we do nothing but sainity check of the input
-            if (low_bound < upper_bound || low_bound < 1 || upper_bound < 1) {
+            if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1) {
                 std::string message =
                     "Error: Invalid exclusion coordinate. "
                     "Coordinate must be larger than 1 and the end coordinate "
@@ -119,6 +118,9 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
                          const std::string& background, Genotype& target,
                          Reporter& reporter)
 {
+    std::string message = "Start processing gene set information\n";
+    message.append("============================================================");
+    reporter.report(message);
     const uint32_t max_chr = target.max_chr();
     cgranges_t* gene_sets = cr_init();
     // we can now utilize the last field of cgranges as the index of gene
@@ -132,6 +134,8 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
     int set_idx = 2;
     bool printed_warning = false;
     for (auto&& bed_file : bed) {
+        message = "Loading "+bed_file+ " (BED)";
+        reporter.report(message);
         set_idx += load_bed_regions(bed_file, gene_sets, window_5, window_3,
                                     printed_warning, set_idx, max_chr,
                                     region_names, duplicated_sets, reporter);
@@ -143,6 +147,8 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
     std::vector<std::string> snp_sets = misc::split(snp_set, ",");
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     for (auto&& s : snp_sets) {
+        message = "Loading "+s+ " (SNP sets)";
+        reporter.report(message);
         load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx,
                       reporter);
     }
@@ -156,6 +162,8 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
     std::unordered_map<std::string, std::vector<int>> msigdb_list;
     std::vector<std::string> msigdb_name = misc::split(msigdb, ",");
     for (auto&& msig : msigdb_name) {
+        message = "Loading "+msig+ " (MSigDB)";
+        reporter.report(message);
         load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx,
                     reporter);
     }
@@ -165,12 +173,16 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
         // we need to read in a background file, but ignore the
         // case where we use the gtf as background as we should've
         // already done that
+        message = "Loading background set from "+background;
+        reporter.report(message);
         load_background(background, window_5, window_3, max_chr, msigdb_list,
                         printed_warning, gene_sets, reporter);
     }
     if (!gtf.empty() && (!msigdb.empty() || !genome_wide_background)) {
         // generate the region information based on the msigdb info
         // or generate for the background
+        message = "Loading GTF file: "+gtf;
+        reporter.report(message);
         load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
                  gene_sets, genome_wide_background, reporter);
     }
@@ -198,12 +210,10 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
             assert(tmp >= 0);
             SET_BIT(static_cast<size_t>(idx), flag.data());
         }
-        free(b);
-        snp.set_flag(num_sets, flag);
+        target.set_flag(i, num_sets, flag);
     }
-    cr_destroy(gene_sets);
 
-    std::string message = "";
+    cr_destroy(gene_sets);
     if (num_sets == 2) {
         // because we will always have base and background
         message = "1 region included";
@@ -216,6 +226,7 @@ size_t Region::add_flags(std::vector<std::string>& region_names,
                   + " regions plus the base region are included";
     }
     reporter.report(message);
+    free(b);
     return num_sets;
 }
 
