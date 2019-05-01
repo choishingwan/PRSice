@@ -281,10 +281,15 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "perm")
             {
                 // use double to account for scientific?
-                error |=
-                    !set_numeric<double>(optarg, message_store, error_messages,
-                                         dummy_double, dummy, command);
-                m_permutation = static_cast<int>(dummy_double);
+                if(std::string(optarg).at(0)=='-'){
+                    error = true;
+                    error_messages.append("Error: Negative permutation number detected!\n");
+                }else{
+                    error |=
+                        !set_numeric<size_t>(optarg, message_store, error_messages,
+                                             m_permutation, dummy, command);
+                    m_perform_permutation = true;
+                }
             }
             else if (command == "proxy")
                 error |= !set_numeric<double>(optarg, message_store,
@@ -300,11 +305,15 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            m_provided_standard_error, command, error_messages);
             else if (command == "set-perm")
             {
-                error |=
-                    !set_numeric<double>(optarg, message_store, error_messages,
-                                         dummy_double, dummy, command);
-                m_perform_set_perm = true;
-                m_set_perm = static_cast<int>(dummy_double);
+                if(std::string(optarg).at(0)=='-'){
+                    error = true;
+                    error_messages.append("Error: Negative set based permutation number detected!\n");
+                }else{
+                    error |=
+                            !set_numeric<size_t>(optarg, message_store, error_messages,
+                                                 m_set_perm, dummy, command);
+                    m_perform_set_perm = true;
+                }
             }
             else if (command == "snp")
                 set_string(optarg, message_store, m_snp, m_provided_snp_id,
@@ -1695,10 +1704,6 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
                            std::string& error_message)
 {
     bool error = false;
-    if (m_perform_permutation && m_permutation < 0) {
-        error = true;
-        error_message.append("Error: Negative number of permutation!\n");
-    }
     if (!m_provided_seed) {
         message["seed"] = misc::to_string(m_seed);
     }
@@ -1748,11 +1753,6 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
         m_feature.push_back("protein_coding");
         m_feature.push_back("CDS");
         message["feature"] = "exon,gene,protein_coding,CDS";
-    }
-    if (m_perform_set_perm && m_set_perm < 0) {
-        error = true;
-        error_message.append(
-            "Error: Negative number of set permutation provided!");
     }
     if (m_perform_permutation && m_perform_set_perm) {
         error = true;
