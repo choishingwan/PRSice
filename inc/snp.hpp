@@ -34,82 +34,23 @@ public:
     SNP() {}
     SNP(const std::string& rs_id, const int chr, const int loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const std::string& file_name, const std::streampos byte_pos,
-        const size_t homcom_ct, const size_t het_ct, const size_t homrar_ct,
-        const size_t missing)
-        : m_alt(alt_allele)
-        , m_ref(ref_allele)
-        , m_rs(rs_id)
-        , m_target_file(file_name)
-        , m_ref_file(file_name)
-        , m_target_byte_pos(byte_pos)
-        , m_ref_byte_pos(byte_pos)
-        , m_chr(chr)
-        , m_loc(loc)
-        , m_homcom(homcom_ct)
-        , m_het(het_ct)
-        , m_homrar(homrar_ct)
-        , m_missing(missing)
-    {
-        m_has_count = true;
-    }
-    SNP(const std::string& rs_id, const int chr, const int loc,
-        const std::string& ref_allele, const std::string& alt_allele,
-        const std::string& file_name, const std::streampos byte_pos)
-        : m_alt(alt_allele)
-        , m_ref(ref_allele)
-        , m_rs(rs_id)
-        , m_target_file(file_name)
-        , m_ref_file(file_name)
-        , m_target_byte_pos(byte_pos)
-        , m_ref_byte_pos(byte_pos)
-        , m_chr(chr)
-        , m_loc(loc)
-    {
-        m_has_count = false;
-    }
-
-    SNP(const std::string& rs_id, const int chr, const int loc,
-        const std::string& ref_allele, const std::string& alt_allele,
         const double& stat, const double& p_value, const int category,
         const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
+        , m_stat(stat)
+        , m_p_value(p_value)
         , m_chr(chr)
         , m_loc(loc)
     {
         m_has_count = false;
-        m_stat = stat;
-        m_p_value = p_value;
         assert(category < 0);
         m_category = category;
         m_p_threshold = p_threshold;
     }
 
     virtual ~SNP();
-    /*!
-     * \brief Add the statistic information for this SNP
-     * \param stat is the effect size
-     * \param se is the standard error of the effect size
-     * \param p_value is the p-value
-     * \param category is the category of this SNP
-     * \param p_threshold is the p-value threshold this SNP fall into
-     */
-    void set_statistic(const double& stat, const double& p_value,
-                       const double& se, const double& maf, const int category,
-                       const double p_threshold)
-    {
-        m_stat = stat;
-        m_p_value = p_value;
-        // by our algorithm, we should always have category bigger than or equal
-        // to 0
-        assert(category < 0);
-        m_category = category;
-        m_p_threshold = p_threshold;
-        m_standard_error = se;
-        m_maf = maf;
-    }
     /*!
      * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
      * reference panel. Without reference panel, ref_file and byte_pos equals to
@@ -126,6 +67,7 @@ public:
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
+    // use by bgen to redirect read to the intermediate file
     void update_reference(const std::string& ref_file,
                           const std::streampos ref_byte_pos)
     {
@@ -167,8 +109,6 @@ public:
         m_ref_missing = missing;
     }
 
-
-    inline void set_flipped() { m_flipped = true; }
     std::string get_rs() const { return m_rs; }
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
@@ -243,11 +183,6 @@ public:
      * \return the effect size of the SNP
      */
     double stat() const { return m_stat; }
-    /*!
-     * \brief Get the SE of the SNP
-     * \return the standard error of the SNP
-     */
-    double get_se() const { return m_standard_error; }
     /*!
      * \brief Return the MAF of the SNP
      * \return the MAF of the SNP based on Base data
@@ -384,6 +319,8 @@ public:
      * \param missing is the number of missing genotypes
      * \return true if calculation is already done
      */
+
+    // TODO: Potential slow down here
     bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
                     size_t& missing, const bool use_ref_maf) const
     {
@@ -497,7 +434,6 @@ private:
     double m_p_value = 2.0;
     double m_p_threshold = 0;
     double m_maf = 0.0;
-    double m_standard_error = 0.0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
     int m_chr = -1;
