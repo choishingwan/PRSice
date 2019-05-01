@@ -56,7 +56,7 @@ install:
     - echo ${CXX}
     - ${CXX} --version
     - ${CXX} -v
-    - sudo pip install --user cpp-coveralls
+    #- sudo pip install --user cpp-coveralls
 
 
 addons:
@@ -74,6 +74,3 @@ script:
   - make
   - cd ../bin
   - ./runUnitTests
-
-after_success:
-  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
