@@ -56,7 +56,8 @@ install:
     - echo ${CXX}
     - ${CXX} --version
     - ${CXX} -v
-    - sudo pip install codecov
+    #- sudo pip install --user cpp-coveralls
+
 
 addons:
   apt:
@@ -69,6 +70,7 @@ addons:
 script:
   - mkdir build
   - cd build
-  - cmake ${CMAKE_OPTIONS} -DCMAKE_CXX_FLAGS=${CXX_FLAGS} -DCMAKE_BUILD_TYPE=Coverage -DBUILD_TESTS=ON .. 
+  - cmake ${CMAKE_OPTIONS} -DCMAKE_CXX_FLAGS=${CXX_FLAGS} -DCMAKE_BUILD_TYPE=Coverage -DBUILD_TESTS=ON  -DCOVERAGE=1 .. 
   - make
-
+  - cd ../bin
+  - ./runUnitTests
