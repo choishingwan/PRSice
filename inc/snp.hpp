@@ -210,7 +210,8 @@ public:
     std::string rs() const { return m_rs; }
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
-    bool is_flipped() { return m_flipped; }
+    bool is_flipped() const { return m_flipped; }
+    bool is_ref_flipped() const {return m_ref_flipped; }
 
     /*!
      * \brief check if this SNP is within the i th region
