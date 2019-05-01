@@ -24,6 +24,7 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
+#include "genotype.hpp"
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -40,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-class Genotype;
 class Region
 {
 public:
@@ -60,6 +60,7 @@ public:
                             const std::string& snp_set,
                             const std::string& background, Genotype& target,
                             Reporter& reporter);
+
 
 private:
     static void load_background(

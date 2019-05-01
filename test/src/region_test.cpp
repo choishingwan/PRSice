@@ -9,14 +9,15 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
-/*
+
 TEST(REGION, SINGLE_INIT)
 {
-    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr2:1234";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
     }
     catch (...)
     {
@@ -24,13 +25,15 @@ TEST(REGION, SINGLE_INIT)
     }
     SUCCEED();
 }
+
 TEST(REGION, SINGLE_RANGE_INIT)
 {
-    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr2:1234-1357";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
     }
     catch (...)
     {
@@ -38,14 +41,16 @@ TEST(REGION, SINGLE_RANGE_INIT)
     }
     SUCCEED();
 }
+
 TEST(REGION, SINGLE_RANGE_WRONG)
 {
-    Reporter reporter(std::string(path + "LOG"));
     // start must be smaller than end
     std::string range = "chr2:12341-1357";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
         FAIL();
     }
     catch (...)
@@ -55,11 +60,12 @@ TEST(REGION, SINGLE_RANGE_WRONG)
 }
 TEST(REGION, MULTI_RANGE_INIT)
 {
-    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234-1357";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
     }
     catch (...)
     {
@@ -69,11 +75,12 @@ TEST(REGION, MULTI_RANGE_INIT)
 }
 TEST(REGION, MULTI_MIX_INIT)
 {
-    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
     }
     catch (...)
     {
@@ -83,11 +90,12 @@ TEST(REGION, MULTI_MIX_INIT)
 }
 TEST(REGION, MULTI_MORE_MIX_INIT)
 {
-    Reporter reporter(std::string(path + "LOG"));
     std::string range = "chr6:369-4321,chr2:1234,chr1:312345-9437690";
     try
     {
-        Region region(range, reporter);
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
     }
     catch (...)
     {
@@ -97,11 +105,12 @@ TEST(REGION, MULTI_MORE_MIX_INIT)
 }
 TEST(REGION, WRONG_INPUT)
 {
-
-    Reporter reporter(std::string(path + "LOG"));
     try
     {
-        Region region("chr1", reporter);
+        std::string range = "chr1";
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
         // in this case, we will assume this is a bed file, but we can't read
         // it, so we will have throw an error
         FAIL();
@@ -113,11 +122,12 @@ TEST(REGION, WRONG_INPUT)
 }
 TEST(REGION, WRONG_RANGE_FORMAT)
 {
-
-    Reporter reporter(std::string(path + "LOG"));
     try
     {
-        Region region("chr1:1-2-3", reporter);
+        std::string range = "chr1:1-2-3";
+        cgranges_t* exclusion_region = cr_init();
+        Region::generate_exclusion(exclusion_region,range);
+        cr_destroy(exclusion_region);
         FAIL();
     }
     catch (...)
@@ -127,98 +137,117 @@ TEST(REGION, WRONG_RANGE_FORMAT)
 }
 TEST(REGION, RANGE_PARSE_PROBLEM)
 {
-
-    Reporter reporter(std::string(path + "LOG"));
     try
     {
-        Region region("chr1:1-,2", reporter);
-        FAIL();
+       std::string range = "chr1:1-,2";
+       cgranges_t* exclusion_region = cr_init();
+       Region::generate_exclusion(exclusion_region,range);
+       cr_destroy(exclusion_region);
+       FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
 }
+
 class REGION_EX_STRING : public ::testing::Test
 {
 
 protected:
-    Region region;
+    cgranges_t* exclusion_region = cr_init();
     void SetUp() override
     {
         std::string range = "chr2:1234";
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(range, reporter);
+        Region::generate_exclusion(exclusion_region,range);
+        cr_index(exclusion_region);
+    }
+    void TearDown() override {
+       cr_destroy(exclusion_region);
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
+
 TEST_F(REGION_EX_STRING, FOUND)
 {
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
+    ASSERT_TRUE(in_region(2, 1234));
 }
 TEST_F(REGION_EX_STRING, WRONG_CHR)
 {
-    ASSERT_FALSE(region.check_exclusion(1, 1234));
+    ASSERT_FALSE(in_region(1, 1234));
 }
 TEST_F(REGION_EX_STRING, WRONG_BIGGER_CHR)
 {
-    ASSERT_FALSE(region.check_exclusion(3, 1234));
+    ASSERT_FALSE(in_region(3, 1234));
 }
 TEST_F(REGION_EX_STRING, BP_TOO_SMALL)
 {
-    ASSERT_FALSE(region.check_exclusion(2, 1233));
+    ASSERT_FALSE(in_region(2, 1233));
 }
 TEST_F(REGION_EX_STRING, BP_TOO_LARGE)
 {
-    // we expect the end to be non-inclusive, therefore chr1:11 should be
-    // excluded
-    ASSERT_FALSE(region.check_exclusion(2, 1235));
+    ASSERT_FALSE(in_region(2, 1235));
 }
 TEST_F(REGION_EX_STRING, SEQUENT_SEARCH)
 {
-    ASSERT_FALSE(region.check_exclusion(1, 1234));
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
-    ASSERT_FALSE(region.check_exclusion(2, 1235));
+    ASSERT_FALSE(in_region(1, 1234));
+    ASSERT_TRUE(in_region(2, 1234));
+    ASSERT_FALSE(in_region(2, 1235));
 }
 TEST_F(REGION_EX_STRING, FINE_SEQUENT_SEARCH)
 {
-    ASSERT_FALSE(region.check_exclusion(1, 1234));
-    ASSERT_FALSE(region.check_exclusion(2, 1233));
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
-    ASSERT_FALSE(region.check_exclusion(2, 1235));
+    // new implementation shouldn't be affected by sequence of check
+    ASSERT_FALSE(in_region(1, 1234));
+    ASSERT_FALSE(in_region(2, 1233));
+    ASSERT_TRUE(in_region(2, 1234));
+    ASSERT_FALSE(in_region(2, 1235));
+    ASSERT_TRUE(in_region(2, 1234));
 }
+
 class REGION_EX_STRING_REGION : public ::testing::Test
 {
 
 protected:
-    Region region;
+    cgranges_t* exclusion_region = cr_init();
     void SetUp() override
     {
+        // inclusion range
         std::string range = "chr2:1234-1357";
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(range, reporter);
+        Region::generate_exclusion(exclusion_region,range);
+        cr_index(exclusion_region);
+    }
+    void TearDown() override {
+       cr_destroy(exclusion_region);
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
 TEST_F(REGION_EX_STRING_REGION, SEQ_STRING_WITHIN_RANGE)
 {
     // the following should all work
-    for (intptr_t i = 1234; i < 1357; ++i)
-        ASSERT_TRUE(region.check_exclusion(2, i));
+    for (int i = 1234; i < 1357; ++i)
+        ASSERT_TRUE(in_region(2, i));
 }
 TEST_F(REGION_EX_STRING_REGION, SEQ_STRING_START)
 {
-    // the following should all work
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
+    ASSERT_TRUE(in_region(2, 1234));
 }
 TEST_F(REGION_EX_STRING_REGION, SEQ_STRING_END)
 {
-    // the following should all work
-    ASSERT_TRUE(region.check_exclusion(2, 1356));
+    ASSERT_TRUE(in_region(2, 1356));
 }
 TEST_F(REGION_EX_STRING_REGION, SEQ_UP_BOUND)
 {
-    // the following should all work
-    ASSERT_FALSE(region.check_exclusion(2, 1357));
+    ASSERT_FALSE(in_region(2, 1358));
 }
+TEST_F(REGION_EX_STRING_REGION, SEQ_LOW_BOUND)
+{
+    ASSERT_FALSE(in_region(2, 1233));
+}
+/*
 class REGION_STRING_MIX : public ::testing::Test
 {
 

@@ -137,7 +137,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
-    int64_t *b = nullptr, max_b = 0;
     // Read in threshold information
     const double max_threshold =
         no_full
@@ -320,9 +319,7 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
                     throw std::runtime_error(error_message);
                 }
             }
-            to_remove =
-                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
-                           loc - 1, loc + 1, &b, &max_b);
+            to_remove = Genotype::within_region(exclusion_regions, chr_code, loc);
             if(to_remove){
                 num_region_exclude++;
                 exclude = true;
@@ -476,7 +473,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     else
         snp_file.close();
 
-    free(b);
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
                    + " variant(s) observed in base file, with:\n");

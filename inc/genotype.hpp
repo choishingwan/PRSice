@@ -54,7 +54,6 @@
 // class BinaryGen;
 #define MULTIPLEX_LD 1920
 #define MULTIPLEX_2LD (MULTIPLEX_LD * 2)
-
 class Genotype
 {
 public:
@@ -402,7 +401,13 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
-
+    static bool within_region(cgranges_t* cr, const int chr, const int loc){
+        int64_t *b = nullptr, max_b = 0;
+        bool to_remove =
+            cr_overlap(cr, std::to_string(chr).c_str(), loc - 1, loc+1, &b, &max_b);
+        free(b);
+        return to_remove;
+    }
 protected:
     // friend with all child class so that they can also access the
     // protected elements

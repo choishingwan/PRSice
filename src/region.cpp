@@ -83,6 +83,12 @@ void Region::generate_exclusion(cgranges_t* cr,
             // boundary = 10-20
             // boundary = 1-10
             // boundary = 10
+            if(boundary.size() > 2){
+                std::string message =
+                    "Error: Invalid exclusion range format. "
+                    "Should be chr:start, chr:start-end or a bed file\n";
+                throw std::runtime_error(message);
+            }
             int low_bound = misc::convert<int>(boundary.front());
             int upper_bound = misc::convert<int>(boundary.back());
             // the library find overlap, which for SNP at 10
