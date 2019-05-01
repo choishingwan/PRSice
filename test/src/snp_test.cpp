@@ -6,211 +6,266 @@
 #include "snp.hpp"
 #include "gtest/gtest.h"
 #include <vector>
-TEST(SNP_TEST, INITIALIZE_NO_COUNT)
+class SNP_INIT_TEST : public ::testing::Test
+{
+protected:
+    SNP snp;
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "C";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    void SetUp() override
+    {
+        snp=SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    }
+    void TearDown() override {}
+
+
+};
+
+TEST_F(SNP_INIT_TEST, INIT_TEST)
 {
     // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    size_t homcom, het, homrar, missing;
+    ASSERT_STREQ(snp.rs().c_str(), rs.c_str());
+    ASSERT_STREQ(snp.ref().c_str(), ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), alt.c_str());
+    ASSERT_EQ(snp.chr(), chr);
+    ASSERT_EQ(snp.loc(), loc);
+    // The file information should be missing thus far
+    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
     // When initialize without count, has_count (return value of get_counts)
     // should be false
-    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing));
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, false));
+    // should be false for both using reference maf and not using it
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, true));
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
     // default of flipped should be false
     ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
+    ASSERT_DOUBLE_EQ(snp.stat(), stat);
+    ASSERT_DOUBLE_EQ(snp.p_value(), p);
+    ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
+    ASSERT_EQ(snp.category(), category);
     // default bounaries is always 0
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.up_bound(), 0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
     ASSERT_EQ(homcom, 0);
     ASSERT_EQ(het, 0);
     ASSERT_EQ(homrar, 0);
     ASSERT_EQ(missing, 0);
 }
-TEST(SNP_TEST, INITIALIZE_COUNT)
+
+TEST_F(SNP_INIT_TEST, ADD_REF)
 {
-    // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
-    // When initialize with count, has_count (return value of get_counts)
-    // should be true
-    ASSERT_TRUE(snp.get_counts(homcom, het, homrar, missing));
-    // default of clump should be false
-    ASSERT_FALSE(snp.clumped());
-    // default of flipped should be false
-    ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // default bounaries is always 0
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
-    ASSERT_EQ(homcom, 1);
-    ASSERT_EQ(het, 2);
-    ASSERT_EQ(homrar, 3);
-    ASSERT_EQ(missing, 4);
-}
-TEST(SNP_TEST, SET_STATISTIC)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // setting statistic
-    snp.set_statistic(0.23498, 0.05, 0.123, 0.06, 1, 0.05);
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.23498);
-    ASSERT_DOUBLE_EQ(snp.p_value(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_se(), 0.123);
-    ASSERT_DOUBLE_EQ(snp.get_maf(), 0.06);
-    ASSERT_EQ(snp.category(), 1);
-}
-// Might want a test to test if set_statistic throw the correct assertion error
-// when category == -1
-TEST(SNP_TEST, INVALIDATE)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default is valid
-    ASSERT_TRUE(snp.valid());
-    // we then invalidate it
-    snp.invalidate();
-    ASSERT_FALSE(snp.valid());
-}
-TEST(SNP_TEST, ADD_REF)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default, reference and the target are the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
-    snp.add_reference("Reference", 1);
+    // default, reference are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    snp.add_reference("Reference", 1, true);
     ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
     ASSERT_EQ(snp.ref_byte_pos(), 1);
-    snp.add_reference("Reference", 13789560123);
+    // should not touch target's flip flag
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_TRUE(snp.is_ref_flipped());
+    snp.add_reference("Reference", 1, false);
+    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    snp.add_reference("Reference", 13789560123, true);
     ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
 }
+
+
+TEST_F(SNP_INIT_TEST, ADD_TARGET)
+{
+    // default, target are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    int new_chr = 2;
+    int new_loc = 3;
+    std::string new_ref = "C";
+    std::string new_alt = "G";
+    std::string target_name = "Target";
+    std::streampos new_pos = 1;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    // check if the names are updated correctly
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.chr(), new_chr);
+    ASSERT_EQ(snp.loc(), new_loc);
+    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    // check none-flip
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, false);
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    new_loc = 189560123;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, false);
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+}
+
+TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
+{
+    // default, target are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    int new_chr = 2;
+    int new_loc = 3;
+    std::string new_ref = "C";
+    std::string new_alt = "G";
+    std::string target_name = "Target";
+    std::streampos new_pos = 1;
+    std::string ref_name = "reference";
+    std::streampos new_ref_pos = 19;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    // check if the names are updated correctly
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.chr(), new_chr);
+    ASSERT_EQ(snp.loc(), new_loc);
+    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    // check none-flip
+    snp.add_reference(ref_name, new_ref_pos, false);
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), ref_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_ref_pos);
+}
+
 TEST(SNP_MATCHING, FLIPPING_AC)
 {
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "C";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
     bool flipped = false;
-    std::string ref = "A", alt = "C";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
     flipped = false;
     // we should get the same result if we have complements
     ref = "T";
     alt = "G";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
 }
 TEST(SNP_MATCHING, FLIPPING_GT)
 {
     // Flipping occurrs
-    SNP snp("Test", 1, 1, "G", "T", "Input", 1, 1, 2, 3, 4);
     bool flipped = false;
     std::string ref = "G", alt = "T";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    std::string rs = "Test";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    // change referenace and alt using add_target function
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
     flipped = false;
     // we should get the same result if we have complements
     ref = "C";
     alt = "A";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
 }
+
 TEST(SNP_MATCHING, NO_ALT_AC)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    std::string ref = "A", alt = "";
+    alt = "C";
     // should still return true
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
-    // We won't do flipping if we don't have the information of the
-    // alternative allele and will assume this is a mismatch
-    ref = "C";
     flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // Same for the complement
-    ref = "G";
-    flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // but we will assume true if this is a complement
+    // as the original alt is "" and ref is A
+    // and the input is ref C alt A we will consider this mismatch
+    // as we are not comfortable in flipping it
+    ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
     ref = "T";
+    // now we have A"" and TC and we will allow this to match
     flipped = false;
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
+    // but again, we don't allow A"" and CT to match
+    flipped = false;
+    ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
+    ASSERT_FALSE(flipped);
+    // similarly, we don't allow A"" and GT to match
+    ref="G";
+    alt="T";
+    flipped = false;
+    ASSERT_FALSE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
+
 }
-TEST(SNP_MATCHING, NO_ALT_GT)
-{
-    SNP snp("Test", 1, 1, "G", "T", "Input", 1, 1, 2, 3, 4);
-    bool flipped = false;
-    std::string ref = "G", alt = "";
-    // should still return true
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // We won't do flipping if we don't have the information of the
-    // alternative allele and will consider it as mismatch
-    ref = "T";
-    flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // Same for the complement
-    ref = "A";
-    flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // but we will assume true if this is a complement
-    ref = "C";
-    flipped = false;
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-}
+
 TEST(SNP_MATCHING, CHR_POS_MATCHING)
 {
     // we assume we always got the chr and loc information when we
@@ -218,68 +273,128 @@ TEST(SNP_MATCHING, CHR_POS_MATCHING)
     // bgen which contain those information as part of the file
     // specification Matching has an assumption that the alleles should be
     // in the same case
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    std::string ref = "A", alt = "C";
     // chromosome mismatch
-    ASSERT_FALSE(snp.matching(2, 1, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr+1, loc, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
     // base pair mismatch
-    ASSERT_FALSE(snp.matching(1, 2, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr, loc+1, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
-    // No chromosome information mismatch
-    ASSERT_TRUE(snp.matching(-1, 1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
-    flipped = false;
-    // No BP information mismatch
-    ASSERT_TRUE(snp.matching(1, -1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
-    flipped = false;
-    // No BP & CHR information mismatch
-    ASSERT_TRUE(snp.matching(-1, -1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
 }
-TEST(SNP_MATCHING, SET_FLIPPED)
+
+TEST(SNP_MATCHING, NO_CHR_MATCHING)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    ASSERT_FALSE(snp.is_flipped());
-    snp.set_flipped();
-    ASSERT_TRUE(snp.is_flipped());
+    // we assume we always got the chr and loc information when we
+    // initialize our SNP object (as we are either reading from bim or from
+    // bgen which contain those information as part of the file
+    // specification Matching has an assumption that the alleles should be
+    // in the same case
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = -1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    bool flipped = false;
+    // When chr is -1, we don't care if it is different as we assume it is missing
+    ASSERT_TRUE(snp.matching(chr+10, loc, ref, alt, flipped));
+    // the flipped boolean should remain the same
+    ASSERT_FALSE(flipped);
+    flipped = false;
 }
+TEST(SNP_MATCHING, NO_BP_MATCHING)
+{
+    // we assume we always got the chr and loc information when we
+    // initialize our SNP object (as we are either reading from bim or from
+    // bgen which contain those information as part of the file
+    // specification Matching has an assumption that the alleles should be
+    // in the same case
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    bool flipped = false;
+    // When bp is -1, we don't care if it is different as we assume it is missing
+    ASSERT_TRUE(snp.matching(chr, loc+10, ref, alt, flipped));
+    // the flipped boolean should remain the same
+    ASSERT_FALSE(flipped);
+    flipped = false;
+}
+
 TEST(SNP_CLUMP, SET_CLUMP)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
     snp.set_clumped();
     // set clumped should set clump to true
     ASSERT_TRUE(snp.clumped());
 }
-TEST(SNP_TEST, SET_LOW_BOUND)
+
+TEST(SNP_BOUND, SET_LOW_BOUND)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.up_bound(), 0);
     snp.set_low_bound(10);
     ASSERT_EQ(snp.low_bound(), 10);
     ASSERT_EQ(snp.up_bound(), 0);
 }
-TEST(SNP_TEST, SET_UP_BOUND)
+TEST(SNP_BOUND, SET_UP_BOUND)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.low_bound(), 0);
     snp.set_up_bound(10);
     ASSERT_EQ(snp.up_bound(), 10);
     ASSERT_EQ(snp.low_bound(), 0);
 }
+
 TEST(SNP_TEST, SORT_BY_P_CHR)
 {
     std::vector<SNP> snps;
@@ -287,7 +402,6 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     // we need to test the following
     // 1. Same chromosome
     //    a. Different p-value    : SNP_A SNP_C
-    //       i. Same everything (except name)
     //    b. Same p-value
     //       i. different location : SNP_B SNP_D
     //      ii. same location:  SNP_C SNP_E
@@ -297,18 +411,11 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
 
     // by definition, we don't allow multiple SNPs with the same name. Using SNP
     // name as the last comparison condition should allow us to avoid troubles
-
-
-    snps.emplace_back(SNP("SNP_A", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_C", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.01, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_D", 2, 11, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_E", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.01, 0.123, 0.5, 1, 0.05);
+    snps.emplace_back(SNP("SNP_A", 1, 10, "A", "", 1, 0.05, 1, 0.05));
+    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", 1, 0.05,  1, 0.05));
+    snps.emplace_back(SNP("SNP_C", 1, 10, "A", "", 1, 0.01, 1, 0.05));
+    snps.emplace_back(SNP("SNP_D", 2, 11, "A", "", 1, 0.05, 1, 0.05));
+    snps.emplace_back(SNP("SNP_E", 1, 10, "A", "", 1, 0.01, 1, 0.05));
 
     // our desired order for the above input should be
     // 2,4,0,1,3
@@ -320,6 +427,7 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     ASSERT_EQ(result[3], 1);
     ASSERT_EQ(result[4], 3);
 }
+/*
 // clump will need a special test just for that (Need to take into account of
 // both region and SNP)
 class GenotypeSNPTest : public Genotype
@@ -583,4 +691,5 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
         ASSERT_FALSE(set_snp.in(i));
     }
 }
+*/
 #endif // SNP_TEST_HPP

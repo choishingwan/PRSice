@@ -142,20 +142,21 @@ public:
      * \param target is the target genotype. Provide the sample ID information
      * \param reporter is the logger
      */
-    void init_matrix(const Commander& c_commander, const intptr_t pheno_index,
+    void init_matrix(const Commander& c_commander, const size_t pheno_index,
                      Genotype& target, Reporter& reporter);
     /*!
      * \brief Return the total number of phenotype involved
      * \return the total number of phenotype to process
      */
-    intptr_t num_phenotype() const
+    size_t num_phenotype() const
     {
-        return (pheno_info.use_pheno)
-                   ? static_cast<intptr_t>(pheno_info.name.size())
-                   : 1;
+        return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
-    void run_prsice(const Commander& c_commander, const intptr_t pheno_index,
-                    const size_t region_index, Genotype& target);
+    void run_prsice(const Commander& c_commander, const size_t pheno_index,
+                    const size_t region_index,
+                    const std::vector<size_t>& region_membership,
+                    const std::vector<size_t>& region_start_idx,
+                    Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
      * PRS. Then this function will fill in the m_independent_variable matrix
@@ -167,8 +168,8 @@ public:
      * \param pheno_index is the index of the current phenotype
      * \param iter_threshold is the index of the current threshold
      */
-    void regress_score(Genotype& target, const double threshold, int thread,
-                       const intptr_t pheno_index, const size_t iter_threshold);
+    void regress_score(Genotype& target, const double threshold, size_t thread,
+                       const size_t pheno_index, const size_t prs_result_idx);
 
     /*!
      * \brief Function responsible for generating the .prsice file
@@ -177,8 +178,9 @@ public:
      * \param pheno_index is the index of the current phenotype
      * \param region_index is teh index of the current region
      */
-    void output(const Commander& c_commander, const Region& region,
-                const intptr_t pheno_index, const size_t region_index);
+    void output(const Commander& c_commander,
+                const std::vector<std::string>& region_names,
+                const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
      * spaces, this allow us to generate a nice vertical file
@@ -193,7 +195,7 @@ public:
     void prep_output(const std::string& out, const bool all_score,
                      const bool has_prev, const Genotype& target,
                      const std::vector<std::string>& region_name,
-                     const intptr_t pheno_index, const bool has_background);
+                     const size_t pheno_index);
     /*!
      * \brief This function will summarize all PRSice / PRSet results and
      * generate the .summary file
@@ -208,16 +210,16 @@ public:
      * \param num_region the number of region to process
      * \param num_thresholds the number of thresholds to process
      */
-    void init_process_count(const Commander& commander, intptr_t num_region,
-                            intptr_t num_thresholds)
+    void init_process_count(const Commander& commander, size_t num_region,
+                            size_t num_thresholds)
     {
-        int num_perm;
+        size_t num_perm;
         const bool perm = commander.num_perm(num_perm);
-        int num_set_perm;
+        size_t num_set_perm;
         const bool set_perm = commander.set_perm(num_set_perm);
         // the number of raw PRSice run
         m_total_process = num_thresholds * num_phenotype()
-                          * ((num_region > 1) ? num_region - 1 : 1);
+                          * ((num_region > 2) ? num_region - 1 : 1);
         if (perm) {
             m_total_process *= (num_perm + 1);
         }
@@ -256,8 +258,12 @@ public:
      * \param commander contains all user inputs
      * \param pheno_index is the index of the current phenotype
      */
-    void run_competitive(Genotype& target, const Commander& commander,
-                         const intptr_t pheno_index);
+    void
+    run_competitive(Genotype& target,
+                    const std::vector<size_t>::const_iterator& bk_start_idx,
+                    const std::vector<size_t>::const_iterator& bk_end_idx,
+                    const Commander& commander, const size_t pheno_index,
+                    Reporter& reporter);
 
 
 protected:
@@ -272,7 +278,7 @@ private:
         double emp_p;
         double se;
         double competitive_p;
-        int num_snp;
+        size_t num_snp; // num snp should always be positive
     };
     struct prsice_summary
     {
@@ -325,7 +331,7 @@ private:
     double m_null_se = 0.0;
     double m_null_coeff = 0.0;
     std::random_device::result_type m_seed = 0;
-    intptr_t m_total_process = 0;
+    size_t m_total_process = 0;
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit
@@ -340,7 +346,7 @@ private:
     int32_t m_max_fid_length = 3;
     int32_t m_max_iid_length = 3;
     int m_best_index = -1;
-    int m_num_perm = 0;
+    size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     bool m_ignore_fid = false;
@@ -356,7 +362,7 @@ private:
      * \param n_thread indicate the number of threads allowed
      * \param is_binary indicate if the current phenotype is binary
      */
-    void permutation(const int n_thread, bool is_binary);
+    void permutation(const size_t n_thread, bool is_binary);
     /*!
      * \brief This function will calculate the maximum length of the FID and
      * IID, generate the matrix index for quicker search and also set the in
@@ -374,7 +380,7 @@ private:
      * \param reporter is the logger
      */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const intptr_t pheno_index, Reporter& reporter);
+                       const size_t pheno_index, Reporter& reporter);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -387,9 +393,9 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& c_cov_file,
-                        std::vector<std::string> cov_header_name,
-                        std::vector<uint32_t> cov_header_index,
-                        std::vector<uint32_t> factor_cov_index,
+                        const std::vector<std::string> cov_header_name,
+                        const std::vector<uint32_t> cov_header_index,
+                        const std::vector<uint32_t> factor_cov_index,
                         Reporter& reporter);
     /*!
      * \brief Function use to process the covariate file, should be able to
@@ -406,11 +412,13 @@ private:
      * \param reporter is the logger
      */
     void process_cov_file(
-        const std::string& cov_file, std::vector<uint32_t>& factor_cov_index,
-        std::vector<uint32_t>& cov_start_index,
-        std::vector<uint32_t>& cov_index, std::vector<std::string>& cov_name,
-        std::vector<std::unordered_map<std::string, uint32_t>>& factor_levels,
-        uint32_t& num_column, Reporter& reporter);
+        const std::string& cov_file,
+        const std::vector<uint32_t>& factor_cov_index,
+        std::vector<size_t>& cov_start_index,
+        const std::vector<uint32_t>& cov_index,
+        const std::vector<std::string>& cov_name,
+        std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
+        size_t& num_column, Reporter& reporter);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
@@ -426,7 +434,7 @@ private:
      * \param pheno_index  the index of the current phenotype
      * \param  commander is the container of all user inputs
      */
-    void print_best(Genotype& target, const intptr_t pheno_index,
+    void print_best(Genotype& target, const size_t pheno_index,
                     const Commander& commander);
 
     /*!
@@ -443,10 +451,14 @@ private:
      * standardized PRS
      */
     void
-    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
-                     Genotype& target, size_t num_consumer,
-                     std::map<int, std::vector<size_t>>& set_index,
-                     const int num_perm, const bool require_standardize);
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     Genotype& target,
+                     const std::vector<size_t>::const_iterator& bk_start_idx,
+                     const std::vector<size_t>::const_iterator& bk_end_idx,
+                     size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     const size_t num_perm, const bool require_standardize,
+                     const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -460,10 +472,10 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(Thread_Queue<std::pair<std::vector<double>, uint32_t>>& q,
-                     std::map<int, std::vector<size_t>>& set_index,
-                     std::vector<double>& ori_t_value,
-                     std::vector<uint32_t>& set_perm_res, const bool is_binary);
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     std::vector<double>& obs_t_value,
+                     std::vector<size_t>& set_perm_res, const bool is_binary);
     /*!
      * \brief Function responsible for running the permutation required for
      * computing the competitive p-value
@@ -478,12 +490,15 @@ private:
      * \param require_standardize indicate if we require the standardization of
      * the genotype
      */
-    void null_set_no_thread(Genotype& target,
-                            std::map<int, std::vector<size_t>>& set_index,
-                            std::vector<double>& ori_t_value,
-                            std::vector<uint32_t>& set_perm_res,
-                            const int num_perm, const bool is_binary,
-                            const bool require_standardize);
+    void
+    null_set_no_thread(Genotype& target,
+                       const std::vector<size_t>::const_iterator& bk_start_idx,
+                       const std::vector<size_t>::const_iterator& bk_end_idx,
+                       const std::map<size_t, std::vector<size_t>>& set_index,
+                       std::vector<double>& obs_t_value,
+                       std::vector<size_t>& set_perm_res, const size_t num_perm,
+                       const bool is_binary, const bool require_standardize,
+                       const bool use_ref_maf);
 
     /*!
      * \brief The "producer" for generating the permuted phenotypes
@@ -501,10 +516,10 @@ private:
      * \param run_glm is a boolean indicate if we want to run logistic
      * regression
      */
-    void
-    consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-                       Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-                       int rank, const Eigen::VectorXd& pre_se, bool run_glm);
+    void consume_null_pheno(
+        Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
+        const Eigen::VectorXd& pre_se, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is
