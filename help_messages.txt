@@ -262,6 +262,8 @@ m_help_message =
        "    --keep-ambig            Keep ambiguous SNPs. Only use this option\n"
        "                            if you are certain that the base and target\n"
        "                            has the same A1 and A2 alleles\n"
+       "    --memory                Maximum memory usage allowed. PRSice will try\n"
+       "                            its best to honor this setting\n"
        "    --out           | -o    Prefix for all file output\n"
        "    --pearson               Use Pearson Correlation for LD calculation\n"
        "                            instead of the maximum likelihood haplotype\n"

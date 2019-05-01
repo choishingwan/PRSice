@@ -1,7 +1,7 @@
 #include "global.hpp"
 #include "gtest/gtest.h"
 std::string path;
-
+#include <iostream>
 int main(int argc, char* argv[])
 {
     assert(argc >= 2);

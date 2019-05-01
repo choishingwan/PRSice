@@ -19,6 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
+r.version <- "2.2.0"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -296,12 +297,15 @@ help_message <-
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
+    --id-delim              Delimiter used to concatinate FID and IID in bgen\n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
+    --memory                Maximum memory usage allowed. PRSice will try\n
+                           its best to honor this setting\n
     --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
@@ -463,7 +467,7 @@ option_list <- list(
   make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
   make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
   make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
-  make_option(c("-k", "--prevalence"), type = "numeric"),
+  make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
   make_option(c("--target-list"), type = "character", dest="target_list"),
@@ -523,8 +527,10 @@ option_list <- list(
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
+  make_option(c("--id-delim"), type="character"),
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
+  make_option(c("--memory"), type = "character", dest="memory"),
   make_option(c("-o", "--out"), type = "character", default = "PRSice"),
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
@@ -687,7 +693,11 @@ flags <-
 if (!provided("plot", argv)) {
     for (i in names(argv_c)) {
         # only need special processing for flags and specific inputs
-        if (i %in% flags) {
+        if(i=="id-delim") {
+            if(!is.na(i)){
+                command = paste(command, " --", i, " \"",argv_c[[i]],"\"", sep="" )
+            }
+        }else if (i %in% flags) {
             if (argv_c[[i]])
                 command = paste(command, " --", i, sep = "")
         } else if (i %in% not_cpp) {
@@ -714,6 +724,9 @@ if (!provided("plot", argv)) {
     }
 }
 
+
+writeLines("Begin plotting");
+writeLines(paste0("Current Rscript version = ",r.version))
 # Helper functions --------------------------------------------------------
 max_length <- function(x) {
     info <- strsplit(as.character(x), split = "\n")[[1]]
@@ -1762,7 +1775,7 @@ plot.bar <- function(argv, output, prefix, device){
             parse = T
         )  +
         theme_sam +
-        scale_y_continuous(limits = c(0, max(output$R2) * 1.25)) +
+        scale_y_continuous(expand = expand_scale(mult = c(0, .15))) +
         xlab(expression(italic(P) - value ~ threshold ~ (italic(P)[T]))) +
         ylab(expression(paste("PRS model fit:  ", R ^ 2)))
   if (argv$bar_col_p) {

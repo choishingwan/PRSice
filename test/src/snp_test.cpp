@@ -6,113 +6,55 @@
 #include "snp.hpp"
 #include "gtest/gtest.h"
 #include <vector>
-TEST(SNP_TEST, INITIALIZE_NO_COUNT)
+
+TEST(SNP_TEST, INITIALIZE)
 {
     // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    size_t homcom, het, homrar, missing;
+    int chr = 1, loc = 1;
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "C";
+    double stat = 0.0;
+    double p = 0.0;
+    int category = 1;
+    double p_threshold = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    ASSERT_STREQ(snp.rs().c_str(), rs.c_str());
+    ASSERT_STREQ(snp.ref().c_str(), ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), alt.c_str());
+    ASSERT_EQ(snp.chr(), chr);
+    ASSERT_EQ(snp.loc(), loc);
+    // The file information should be missing thus far
+    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
     // When initialize without count, has_count (return value of get_counts)
     // should be false
-    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing));
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, false));
+    // should be false for both using reference maf and not using it
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, true));
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
     // default of flipped should be false
     ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
+    ASSERT_DOUBLE_EQ(snp.stat(), stat);
+    ASSERT_DOUBLE_EQ(snp.p_value(), p);
+    ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
+    ASSERT_EQ(snp.category(), category);
     // default bounaries is always 0
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.up_bound(), 0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
     ASSERT_EQ(homcom, 0);
     ASSERT_EQ(het, 0);
     ASSERT_EQ(homrar, 0);
     ASSERT_EQ(missing, 0);
 }
-TEST(SNP_TEST, INITIALIZE_COUNT)
-{
-    // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
-    // When initialize with count, has_count (return value of get_counts)
-    // should be true
-    ASSERT_TRUE(snp.get_counts(homcom, het, homrar, missing));
-    // default of clump should be false
-    ASSERT_FALSE(snp.clumped());
-    // default of flipped should be false
-    ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // default bounaries is always 0
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
-    ASSERT_EQ(homcom, 1);
-    ASSERT_EQ(het, 2);
-    ASSERT_EQ(homrar, 3);
-    ASSERT_EQ(missing, 4);
-}
-TEST(SNP_TEST, SET_STATISTIC)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // setting statistic
-    snp.set_statistic(0.23498, 0.05, 0.123, 0.06, 1, 0.05);
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.23498);
-    ASSERT_DOUBLE_EQ(snp.p_value(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_se(), 0.123);
-    ASSERT_DOUBLE_EQ(snp.get_maf(), 0.06);
-    ASSERT_EQ(snp.category(), 1);
-}
+
+/*
 // Might want a test to test if set_statistic throw the correct assertion error
 // when category == -1
-TEST(SNP_TEST, INVALIDATE)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default is valid
-    ASSERT_TRUE(snp.valid());
-    // we then invalidate it
-    snp.invalidate();
-    ASSERT_FALSE(snp.valid());
-}
 TEST(SNP_TEST, ADD_REF)
 {
     SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
@@ -583,4 +525,5 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
         ASSERT_FALSE(set_snp.in(i));
     }
 }
+*/
 #endif // SNP_TEST_HPP

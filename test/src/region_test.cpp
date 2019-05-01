@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
-
+/*
 TEST(REGION, SINGLE_INIT)
 {
     Reporter reporter(std::string(path + "LOG"));
@@ -3280,5 +3280,6 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     region.update_flag(12, "", 119697839, index);
     ASSERT_EQ(index.front(), not_found.front());
 }
+*/
 // TODO  SNP Test (this will require information from Genotype)
 #endif // REGION_TEST_HPP
