@@ -152,9 +152,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     std::map<std::string, std::string> message_store;
     std::string command;
     std::string error_messages = "";
-    // the following two variables are used for scientific input
-    // e.g. 1e6
-    double dummy_double = 0.0;
     bool dummy = false;
     bool error = false;
     while (opt != -1) {
