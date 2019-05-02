@@ -118,10 +118,48 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
+void Genotype::add_flags(const std::vector<IITree<int, int>>& gene_sets, const size_t num_sets, const bool genome_wide_background){
+    const size_t num_snps = m_existed_snps.size();
+    const size_t required_size = BITCT_TO_WORDCT(num_sets);
+    int chr, bp;
+    std::vector<uintptr_t> flag(required_size, 0);
+    for (size_t i = 0; i < num_snps; ++i) {
+        auto&& snp = m_existed_snps[i];
+        chr = snp.chr();
+        bp = snp.loc();
+        // if we want more speed, we can move b and max_b from the construct flag
+        // function to avoid re-allocation of memory. Also for the flag structure
+        // as that can almost always be reused (we copy when we set flag)
+        m_existed_snps[i].set_flag(num_sets,
+                                   construct_flag(gene_sets,
+                                                  flag,
+                                                  required_size,
+                                                  chr, bp, genome_wide_background));
+    }
+}
+void Genotype::add_flags(cgranges_t *gene_sets, const size_t num_sets, const bool genome_wide_background){
+    const size_t num_snps = m_existed_snps.size();
+    const size_t required_size = BITCT_TO_WORDCT(num_sets);
+    int chr, bp;
+    std::vector<uintptr_t> flag(required_size, 0);
+    for (size_t i = 0; i < num_snps; ++i) {
+        auto&& snp = m_existed_snps[i];
+        chr = snp.chr();
+        bp = snp.loc();
+        // if we want more speed, we can move b and max_b from the construct flag
+        // function to avoid re-allocation of memory. Also for the flag structure
+        // as that can almost always be reused (we copy when we set flag)
+        m_existed_snps[i].set_flag(num_sets,
+                                   construct_flag(gene_sets,
+                                                  flag,
+                                                  required_size,
+                                                  chr, bp, genome_wide_background));
+    }
+}
 void Genotype::read_base(const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
-    const double& bound_end, cgranges_t *exclusion_regions, const double& maf_control, const double& maf_case,
+    const double& bound_end, const std::vector<IITree<int, int> > &exclusion_regions, const double& maf_control, const double& maf_case,
     const double& info_threshold, const bool maf_control_filter,
     const bool maf_case_filter, const bool info_filter, const bool fastscore,
     const bool no_full, const bool is_beta, const bool is_index,
@@ -197,7 +235,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     int category = -1;
     int32_t chr_code;
     std::unordered_set<std::string> dup_index;
-
     // Actual reading the file, will do a bunch of QC
     std::streampos file_length = 0;
     if (gz_input) {

@@ -21,7 +21,6 @@
 #include "genotype.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "region.hpp"
 #include "regression.hpp"
 #include "reporter.hpp"
 #include "snp.hpp"

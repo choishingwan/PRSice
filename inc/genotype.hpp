@@ -24,6 +24,7 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
+#include "IITree.h"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cctype>
@@ -160,9 +161,6 @@ public:
      */
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
-    void set_flag(size_t i, const size_t num_region, const std::vector<uintptr_t>& flags){
-        m_existed_snps[i].set_flag(num_region, flags);
-    }
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more
@@ -381,7 +379,7 @@ public:
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, cgranges_t* exclusion_region,
+                   const double& bound_end, const std::vector<IITree<int, int>> &exclusion_region,
                    const double& maf_control,
                    const double& maf_case, const double& info_threshold,
                    const bool maf_control_filter, const bool maf_case_filter,
@@ -408,6 +406,62 @@ public:
         free(b);
         return to_remove;
     }
+    static bool within_region(const std::vector<IITree<int, int>> & cr, const int chr, const int loc){
+        std::vector<size_t> output;
+        if(chr < 0) return false;
+        if(static_cast<size_t>(chr) >= cr.size()) return false;
+        cr[chr].overlap(loc-1, loc+1, output);
+        return output.empty();
+    }
+
+    static std::vector<uintptr_t> construct_flag(cgranges_t* gene_sets,
+                                                 std::vector<uintptr_t> &flag,
+                                                 const size_t required_size,
+                                                 const int chr, const int bp,
+                                                 const bool genome_wide_background){
+        int64_t *b=nullptr, max_b, idx, n;
+        assert(flag.size()==required_size);
+        std::fill(flag.begin(), flag.end(), 0);
+        SET_BIT(0, flag.data());
+        if (genome_wide_background) {
+            SET_BIT(1, flag.data());
+        }
+        n = cr_overlap(gene_sets, std::to_string(chr).c_str(), bp - 1, bp + 1,
+                       &b, &max_b);
+        for (int64_t j = 0; j < n; ++j) {
+            idx= cr_label(gene_sets, b[j]);
+            assert(tmp >= 0);
+            SET_BIT(static_cast<size_t>(idx), flag.data());
+        }
+        free(b);
+        return flag;
+    }
+    static std::vector<uintptr_t> construct_flag(const std::vector<IITree<int, int>> & gene_sets,
+                                                 std::vector<uintptr_t> &flag,
+                                                 const size_t required_size,
+                                                 const int chr, const int bp,
+                                                 const bool genome_wide_background){
+        assert(flag.size()==required_size);
+        std::fill(flag.begin(), flag.end(), 0);
+        SET_BIT(0, flag.data());
+        if (genome_wide_background) {
+            SET_BIT(1, flag.data());
+        }
+        // because the chromosome number is undefined. It will not be presented
+        // in any of the region (we filter out any region with undefined chr)
+        if(chr < 0) return flag;
+        std::vector<size_t> out;
+        gene_sets[static_cast<size_t>(chr)].overlap(bp-1, bp+1, out);
+        int idx;
+        for (auto &&j : out) {
+            idx = gene_sets[static_cast<size_t>(chr)].data(j);
+            //idx= cr_label(gene_sets, b[j]);
+            SET_BIT(static_cast<size_t>(idx), flag.data());
+        }
+        return flag;
+    }
+    void add_flags(cgranges_t* cr, const size_t num_sets, const bool genome_wide_background);
+    void add_flags(const std::vector<IITree<int, int>>& cr, const size_t num_sets, const bool genome_wide_background);
 protected:
     // friend with all child class so that they can also access the
     // protected elements
