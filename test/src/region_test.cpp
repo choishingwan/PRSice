@@ -15,9 +15,9 @@ TEST(REGION, SINGLE_INIT)
     std::string range = "chr2:1234";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -31,9 +31,9 @@ TEST(REGION, SINGLE_RANGE_INIT)
     std::string range = "chr2:1234-1357";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -48,9 +48,9 @@ TEST(REGION, SINGLE_RANGE_WRONG)
     std::string range = "chr2:12341-1357";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
         FAIL();
     }
     catch (...)
@@ -63,9 +63,9 @@ TEST(REGION, MULTI_RANGE_INIT)
     std::string range = "chr6:369-4321,chr2:1234-1357";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -78,9 +78,9 @@ TEST(REGION, MULTI_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -93,9 +93,9 @@ TEST(REGION, MULTI_MORE_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234,chr1:312345-9437690";
     try
     {
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -108,9 +108,9 @@ TEST(REGION, WRONG_INPUT)
     try
     {
         std::string range = "chr1";
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
         // in this case, we will assume this is a bed file, but we can't read
         // it, so we will have throw an error
         FAIL();
@@ -125,9 +125,9 @@ TEST(REGION, WRONG_RANGE_FORMAT)
     try
     {
         std::string range = "chr1:1-2-3";
-        cgranges_t* exclusion_region = cr_init();
+        std::vector<IITree<int, int> > exclusion_region;
         Region::generate_exclusion(exclusion_region,range);
-        cr_destroy(exclusion_region);
+        exclusion_region.clear();
         FAIL();
     }
     catch (...)
@@ -140,9 +140,9 @@ TEST(REGION, RANGE_PARSE_PROBLEM)
     try
     {
        std::string range = "chr1:1-,2";
-       cgranges_t* exclusion_region = cr_init();
+       std::vector<IITree<int, int> > exclusion_region;
        Region::generate_exclusion(exclusion_region,range);
-       cr_destroy(exclusion_region);
+       exclusion_region.clear();
        FAIL();
     }
     catch (...)
@@ -151,19 +151,51 @@ TEST(REGION, RANGE_PARSE_PROBLEM)
     }
 }
 
+TEST(REGION, MULTI_CHROMOSOME)
+{
+    try
+    {
+        // we want to test if the chromosome parsing work as expected
+       std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrX:10";
+       std::vector<IITree<int, int> > exclusion_region;
+       Region::generate_exclusion(exclusion_region,range);
+       ASSERT_EQ(exclusion_region.size(), CHROM_X+1);
+       exclusion_region.clear();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REGION, MULTI_CHROMOSOME_INVALID)
+{
+    try
+    {
+        // we want to test if the chromosome parsing work as expected
+       std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrA:10";
+       std::vector<IITree<int, int> > exclusion_region;
+       Region::generate_exclusion(exclusion_region,range);
+       ASSERT_EQ(exclusion_region.size(), 21);
+       exclusion_region.clear();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
 class REGION_EX_STRING : public ::testing::Test
 {
 
 protected:
-    cgranges_t* exclusion_region = cr_init();
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
         std::string range = "chr2:1234";
         Region::generate_exclusion(exclusion_region,range);
-        cr_index(exclusion_region);
     }
     void TearDown() override {
-       cr_destroy(exclusion_region);
+       exclusion_region.clear();
     }
     bool in_region(int chr, int loc){
         return Genotype::within_region(exclusion_region, chr, loc);
@@ -210,16 +242,15 @@ class REGION_EX_STRING_REGION : public ::testing::Test
 {
 
 protected:
-    cgranges_t* exclusion_region = cr_init();
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
         // inclusion range
         std::string range = "chr2:1234-1357";
         Region::generate_exclusion(exclusion_region,range);
-        cr_index(exclusion_region);
     }
     void TearDown() override {
-       cr_destroy(exclusion_region);
+        exclusion_region.clear();
     }
     bool in_region(int chr, int loc){
         return Genotype::within_region(exclusion_region, chr, loc);
@@ -247,12 +278,12 @@ TEST_F(REGION_EX_STRING_REGION, SEQ_LOW_BOUND)
 {
     ASSERT_FALSE(in_region(2, 1233));
 }
-/*
+
 class REGION_STRING_MIX : public ::testing::Test
 {
 
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
         // we need to account for both range and single base input
@@ -261,76 +292,74 @@ protected:
         // and make sure the input is not in sorted order
         std::string range =
             "chr2:1234-1357,chr1:4601-5678,chr12:314,chr6:98741-102380";
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(range, reporter);
+
+        Region::generate_exclusion(exclusion_region,range);
+    }
+    void TearDown() override {
+       exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
 TEST_F(REGION_STRING_MIX, SINGLE_CHECK_FIRST)
 {
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
+    ASSERT_TRUE(in_region(2, 1234));
 }
 TEST_F(REGION_STRING_MIX, SINGLE_CHECK_SECOND)
 {
-    ASSERT_TRUE(region.check_exclusion(1, 4890));
+    ASSERT_TRUE(in_region(1, 4890));
 }
 TEST_F(REGION_STRING_MIX, SINGLE_CHECK_THIRD)
 {
-    ASSERT_TRUE(region.check_exclusion(12, 314));
+    ASSERT_TRUE(in_region(12, 314));
 }
 TEST_F(REGION_STRING_MIX, SINGLE_CHECK_FORTH)
 {
-    ASSERT_TRUE(region.check_exclusion(6, 102379));
+    ASSERT_TRUE(in_region(6, 102379));
 }
 TEST_F(REGION_STRING_MIX, CHECK_SEQ)
 {
-    ASSERT_TRUE(region.check_exclusion(1, 4890));
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
-    ASSERT_TRUE(region.check_exclusion(6, 102379));
-    ASSERT_TRUE(region.check_exclusion(12, 314));
+    ASSERT_TRUE(in_region(1, 4890));
+    ASSERT_TRUE(in_region(2, 1234));
+    ASSERT_TRUE(in_region(6, 102379));
+    ASSERT_TRUE(in_region(12, 314));
 }
 TEST_F(REGION_STRING_MIX, CHECK_SEQ_UNSORTED)
 {
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
-    // we don't expect the input of the exclusion list is sorted as the listed
-    // input might have chromosome ordered in different sequence than we've
-    // anticipated
-    ASSERT_TRUE(region.check_exclusion(1, 4890));
-    ASSERT_TRUE(region.check_exclusion(12, 314));
-    ASSERT_TRUE(region.check_exclusion(6, 102379));
+    ASSERT_TRUE(in_region(2, 1234));
+    ASSERT_TRUE(in_region(1, 4890));
+    ASSERT_TRUE(in_region(12, 314));
+    ASSERT_TRUE(in_region(6, 102379));
 }
 TEST_F(REGION_STRING_MIX, MIXED_FOUND)
 {
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
+    ASSERT_TRUE(in_region(2, 1234));
     // we don't expect the input of the exclusion list is sorted as the listed
     // input might have chromosome ordered in different sequence than we've
     // anticipated
-    ASSERT_FALSE(region.check_exclusion(1, 1));
-    ASSERT_TRUE(region.check_exclusion(12, 314));
-    ASSERT_FALSE(region.check_exclusion(6, 12432145));
+    ASSERT_FALSE(in_region(1, 1));
+    ASSERT_TRUE(in_region(12, 314));
+    ASSERT_FALSE(in_region(6, 12432145));
 }
 TEST_F(REGION_STRING_MIX, RUN_OVER)
 {
-    // As check exclusion now uses binary search, running over shouldn't really
-    // be a problem
-    ASSERT_FALSE(region.check_exclusion(1, 5679));
-    ASSERT_TRUE(region.check_exclusion(2, 1234));
+    ASSERT_FALSE(in_region(1, 5679));
+    ASSERT_TRUE(in_region(2, 1234));
 }
+
 class REGION_BED_MIN_TAB_NO_OVER : public ::testing::Test
 {
 
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
-        // we need to account for both range and single base input
-        // also we want to check chromosome overrun (e.g.
-        // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
-        // and make sure the input is not in sorted order
         std::ofstream bed_file;
-        std::string bed_name = path + "Test.bed";
+        std::string bed_name = path + "/Test.bed";
         bed_file.open(bed_name.c_str());
         if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
+            throw std::runtime_error(std::string("Error: Cannot open bed file to write "+bed_name));
         }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
@@ -356,113 +385,93 @@ protected:
                  << "20\t64037\t98171\n"
                  << "21\t9363\t49431\n";
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
+    }
+    void TearDown() override {
+       exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
-TEST_F(REGION_BED_MIN_TAB_NO_OVER, CHECK_INPUT_PARSING)
-{
-    // for exclusion set, we will only have one set
-    try
-    {
-        ASSERT_EQ(region.num_bound(0), 22);
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        // and we will through error if we are out of bound
-        region.num_bound(1);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
 TEST_F(REGION_BED_MIN_TAB_NO_OVER, CHECK_INCLUSION)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
-    EXPECT_FALSE(region.check_exclusion(2, 19181 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 19182 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 19183 + 1));
+    EXPECT_FALSE(in_region(2, 19181 + 1));
+    EXPECT_TRUE(in_region(2, 19182 + 1));
+    EXPECT_TRUE(in_region(2, 19183 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(2, 32728 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 32729 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 94643 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 94644 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 94645 + 1));
+    EXPECT_TRUE(in_region(2, 32728 + 1));
+    EXPECT_FALSE(in_region(2, 32729 + 1));
+    EXPECT_FALSE(in_region(2, 94643 + 1));
+    EXPECT_TRUE(in_region(2, 94644 + 1));
+    EXPECT_TRUE(in_region(2, 94645 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(2, 98554 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 98555 + 1));
-    EXPECT_FALSE(region.check_exclusion(3, 3208 + 1));
-    EXPECT_TRUE(region.check_exclusion(3, 3209 + 1));
-    EXPECT_TRUE(region.check_exclusion(3, 3210 + 1));
+    EXPECT_TRUE(in_region(2, 98554 + 1));
+    EXPECT_FALSE(in_region(2, 98555 + 1));
+    EXPECT_FALSE(in_region(3, 3208 + 1));
+    EXPECT_TRUE(in_region(3, 3209 + 1));
+    EXPECT_TRUE(in_region(3, 3210 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(3, 18820 + 1));
-    EXPECT_FALSE(region.check_exclusion(3, 18821 + 1));
-    EXPECT_FALSE(region.check_exclusion(13, 56145 + 1));
-    EXPECT_TRUE(region.check_exclusion(13, 56146 + 1));
-    EXPECT_TRUE(region.check_exclusion(13, 56147 + 1));
+    EXPECT_TRUE(in_region(3, 18820 + 1));
+    EXPECT_FALSE(in_region(3, 18821 + 1));
+    EXPECT_FALSE(in_region(13, 56145 + 1));
+    EXPECT_TRUE(in_region(13, 56146 + 1));
+    EXPECT_TRUE(in_region(13, 56147 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(13, 67101 + 1));
-    EXPECT_FALSE(region.check_exclusion(13, 67102 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(in_region(13, 67101 + 1));
+    EXPECT_FALSE(in_region(13, 67102 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 49431 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
+    EXPECT_FALSE(in_region(21, 49431 + 1));
 }
 TEST_F(REGION_BED_MIN_TAB_NO_OVER, RANDOM_ORDER)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
-    EXPECT_FALSE(region.check_exclusion(13, 56145 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 19183 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 49431 + 1));
-    EXPECT_FALSE(region.check_exclusion(3, 3208 + 1));
+    EXPECT_FALSE(in_region(13, 56145 + 1));
+    EXPECT_TRUE(in_region(2, 19183 + 1));
+    EXPECT_FALSE(in_region(21, 49431 + 1));
+    EXPECT_FALSE(in_region(3, 3208 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(2, 32728 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 32729 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 94645 + 1));
+    EXPECT_TRUE(in_region(2, 32728 + 1));
+    EXPECT_FALSE(in_region(2, 32729 + 1));
+    EXPECT_TRUE(in_region(2, 94645 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(2, 19182 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 98554 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 98555 + 1));
-    EXPECT_TRUE(region.check_exclusion(3, 3209 + 1));
-    EXPECT_TRUE(region.check_exclusion(3, 3210 + 1));
+    EXPECT_TRUE(in_region(2, 19182 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(2, 98554 + 1));
+    EXPECT_FALSE(in_region(2, 98555 + 1));
+    EXPECT_TRUE(in_region(3, 3209 + 1));
+    EXPECT_TRUE(in_region(3, 3210 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(3, 18820 + 1));
-    EXPECT_FALSE(region.check_exclusion(3, 18821 + 1));
-    EXPECT_TRUE(region.check_exclusion(13, 56147 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 19181 + 1));
-    EXPECT_FALSE(region.check_exclusion(2, 94643 + 1));
-    EXPECT_TRUE(region.check_exclusion(2, 94644 + 1));
-    EXPECT_TRUE(region.check_exclusion(13, 56146 + 1));
+    EXPECT_TRUE(in_region(3, 18820 + 1));
+    EXPECT_FALSE(in_region(3, 18821 + 1));
+    EXPECT_TRUE(in_region(13, 56147 + 1));
+    EXPECT_FALSE(in_region(2, 19181 + 1));
+    EXPECT_FALSE(in_region(2, 94643 + 1));
+    EXPECT_TRUE(in_region(2, 94644 + 1));
+    EXPECT_TRUE(in_region(13, 56146 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(13, 67101 + 1));
-    EXPECT_FALSE(region.check_exclusion(13, 67102 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
+    EXPECT_TRUE(in_region(13, 67101 + 1));
+    EXPECT_FALSE(in_region(13, 67102 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
     // end of bed is non-inclusive
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
 }
+
 class REGION_BED_MIN_TAB : public ::testing::Test
 {
 
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
-        // we need to account for both range and single base input
-        // also we want to check chromosome overrun (e.g.
-        // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
-        // and make sure the input is not in sorted order
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
@@ -501,93 +510,74 @@ protected:
                  << "21\t9363\t49431\n"
                  << "21\t43440\t82120\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
+    }
+    void TearDown() override {
+       exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
-TEST_F(REGION_BED_MIN_TAB, CHECK_INPUT_PARSING)
-{
-    // for exclusion set, we will only have one set
-    try
-    {
-        ASSERT_EQ(region.num_bound(0), 22);
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        // and we will through error if we are out of bound
-        region.num_bound(1);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
+
 TEST_F(REGION_BED_MIN_TAB, CHECK_INCLUSION_OVERLAPPED)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
 
-    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+    EXPECT_FALSE(in_region(7, 7079 + 1));
+    EXPECT_TRUE(in_region(7, 7080 + 1));
+    EXPECT_TRUE(in_region(7, 7081 + 1));
+    EXPECT_TRUE(in_region(7, 45053 + 1));
+    EXPECT_TRUE(in_region(7, 45054 + 1));
+    EXPECT_TRUE(in_region(7, 45055 + 1));
+    EXPECT_TRUE(in_region(7, 30303 + 1));
+    EXPECT_TRUE(in_region(7, 30305 + 1));
+    EXPECT_TRUE(in_region(7, 30306 + 1));
+    EXPECT_TRUE(in_region(7, 45722 + 1));
+    EXPECT_FALSE(in_region(7, 45723 + 1));
+    EXPECT_FALSE(in_region(7, 45724 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+    EXPECT_FALSE(in_region(14, 1693 + 1));
+    EXPECT_TRUE(in_region(14, 1694 + 1));
+    EXPECT_TRUE(in_region(14, 1695 + 1));
+    EXPECT_TRUE(in_region(14, 47284 + 1));
+    EXPECT_TRUE(in_region(14, 47285 + 1));
+    EXPECT_TRUE(in_region(14, 47286 + 1));
+    EXPECT_TRUE(in_region(14, 5224 + 1));
+    EXPECT_TRUE(in_region(14, 5225 + 1));
+    EXPECT_TRUE(in_region(14, 5226 + 1));
+    EXPECT_TRUE(in_region(14, 13101 + 1));
+    EXPECT_TRUE(in_region(14, 13102 + 1));
+    EXPECT_TRUE(in_region(14, 13103 + 1));
+    EXPECT_TRUE(in_region(14, 45657 + 1));
+    EXPECT_TRUE(in_region(14, 45658 + 1));
+    EXPECT_TRUE(in_region(14, 45659 + 1));
+    EXPECT_TRUE(in_region(14, 78547 + 1));
+    EXPECT_FALSE(in_region(14, 78548 + 1));
+    EXPECT_FALSE(in_region(14, 78549 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
+    EXPECT_TRUE(in_region(21, 49431 + 1));
+    EXPECT_TRUE(in_region(21, 49432 + 1));
+    EXPECT_TRUE(in_region(21, 43439 + 1));
+    EXPECT_TRUE(in_region(21, 43440 + 1));
+    EXPECT_TRUE(in_region(21, 43441 + 1));
+    EXPECT_TRUE(in_region(21, 82119 + 1));
+    EXPECT_FALSE(in_region(21, 82120 + 1));
+    EXPECT_FALSE(in_region(21, 82121 + 1));
 }
+
 class REGION_BED_MIN_SPACE : public ::testing::Test
 {
 
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
-        // we need to account for both range and single base input
-        // also we want to check chromosome overrun (e.g.
-        // Range: chr1:4601-5678,chr2:1357-2468, SNP input 1:5679, 2:134,2:1357)
-        // and make sure the input is not in sorted order
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
@@ -626,87 +616,72 @@ protected:
                  << "21 9363 49431\n"
                  << "21 43440 82120\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
+    }
+    void TearDown() override {
+        exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
-TEST_F(REGION_BED_MIN_SPACE, CHECK_INPUT_PARSING)
-{
-    // for exclusion set, we will only have one set
-    try
-    {
-        ASSERT_EQ(region.num_bound(0), 22);
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        // and we will through error if we are out of bound
-        region.num_bound(1);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
+
 TEST_F(REGION_BED_MIN_SPACE, CHECK_INCLUSION_OVERLAPPED)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
 
-    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+    EXPECT_FALSE(in_region(7, 7079 + 1));
+    EXPECT_TRUE(in_region(7, 7080 + 1));
+    EXPECT_TRUE(in_region(7, 7081 + 1));
+    EXPECT_TRUE(in_region(7, 45053 + 1));
+    EXPECT_TRUE(in_region(7, 45054 + 1));
+    EXPECT_TRUE(in_region(7, 45055 + 1));
+    EXPECT_TRUE(in_region(7, 30303 + 1));
+    EXPECT_TRUE(in_region(7, 30305 + 1));
+    EXPECT_TRUE(in_region(7, 30306 + 1));
+    EXPECT_TRUE(in_region(7, 45722 + 1));
+    EXPECT_FALSE(in_region(7, 45723 + 1));
+    EXPECT_FALSE(in_region(7, 45724 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+    EXPECT_FALSE(in_region(14, 1693 + 1));
+    EXPECT_TRUE(in_region(14, 1694 + 1));
+    EXPECT_TRUE(in_region(14, 1695 + 1));
+    EXPECT_TRUE(in_region(14, 47284 + 1));
+    EXPECT_TRUE(in_region(14, 47285 + 1));
+    EXPECT_TRUE(in_region(14, 47286 + 1));
+    EXPECT_TRUE(in_region(14, 5224 + 1));
+    EXPECT_TRUE(in_region(14, 5225 + 1));
+    EXPECT_TRUE(in_region(14, 5226 + 1));
+    EXPECT_TRUE(in_region(14, 13101 + 1));
+    EXPECT_TRUE(in_region(14, 13102 + 1));
+    EXPECT_TRUE(in_region(14, 13103 + 1));
+    EXPECT_TRUE(in_region(14, 45657 + 1));
+    EXPECT_TRUE(in_region(14, 45658 + 1));
+    EXPECT_TRUE(in_region(14, 45659 + 1));
+    EXPECT_TRUE(in_region(14, 78547 + 1));
+    EXPECT_FALSE(in_region(14, 78548 + 1));
+    EXPECT_FALSE(in_region(14, 78549 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
+    EXPECT_TRUE(in_region(21, 49431 + 1));
+    EXPECT_TRUE(in_region(21, 49432 + 1));
+    EXPECT_TRUE(in_region(21, 43439 + 1));
+    EXPECT_TRUE(in_region(21, 43440 + 1));
+    EXPECT_TRUE(in_region(21, 43441 + 1));
+    EXPECT_TRUE(in_region(21, 82119 + 1));
+    EXPECT_FALSE(in_region(21, 82120 + 1));
+    EXPECT_FALSE(in_region(21, 82121 + 1));
 }
+
 class REGION_BED_5_COLUMN : public ::testing::Test
 {
 
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
         // not enough for stand yet
@@ -748,88 +723,72 @@ protected:
                  << "21 9363 49431 . .\n"
                  << "21 43440 82120 . .\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
+    }
+    void TearDown() override {
+        exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
-TEST_F(REGION_BED_5_COLUMN, CHECK_INPUT_PARSING)
-{
-    // for exclusion set, we will only have one set
-    try
-    {
-        ASSERT_EQ(region.num_bound(0), 22);
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        // and we will through error if we are out of bound
-        region.num_bound(1);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
+
 TEST_F(REGION_BED_5_COLUMN, CHECK_INCLUSION_OVERLAPPED)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
 
-    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+    EXPECT_FALSE(in_region(7, 7079 + 1));
+    EXPECT_TRUE(in_region(7, 7080 + 1));
+    EXPECT_TRUE(in_region(7, 7081 + 1));
+    EXPECT_TRUE(in_region(7, 45053 + 1));
+    EXPECT_TRUE(in_region(7, 45054 + 1));
+    EXPECT_TRUE(in_region(7, 45055 + 1));
+    EXPECT_TRUE(in_region(7, 30303 + 1));
+    EXPECT_TRUE(in_region(7, 30305 + 1));
+    EXPECT_TRUE(in_region(7, 30306 + 1));
+    EXPECT_TRUE(in_region(7, 45722 + 1));
+    EXPECT_FALSE(in_region(7, 45723 + 1));
+    EXPECT_FALSE(in_region(7, 45724 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+    EXPECT_FALSE(in_region(14, 1693 + 1));
+    EXPECT_TRUE(in_region(14, 1694 + 1));
+    EXPECT_TRUE(in_region(14, 1695 + 1));
+    EXPECT_TRUE(in_region(14, 47284 + 1));
+    EXPECT_TRUE(in_region(14, 47285 + 1));
+    EXPECT_TRUE(in_region(14, 47286 + 1));
+    EXPECT_TRUE(in_region(14, 5224 + 1));
+    EXPECT_TRUE(in_region(14, 5225 + 1));
+    EXPECT_TRUE(in_region(14, 5226 + 1));
+    EXPECT_TRUE(in_region(14, 13101 + 1));
+    EXPECT_TRUE(in_region(14, 13102 + 1));
+    EXPECT_TRUE(in_region(14, 13103 + 1));
+    EXPECT_TRUE(in_region(14, 45657 + 1));
+    EXPECT_TRUE(in_region(14, 45658 + 1));
+    EXPECT_TRUE(in_region(14, 45659 + 1));
+    EXPECT_TRUE(in_region(14, 78547 + 1));
+    EXPECT_FALSE(in_region(14, 78548 + 1));
+    EXPECT_FALSE(in_region(14, 78549 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
+    EXPECT_TRUE(in_region(21, 49431 + 1));
+    EXPECT_TRUE(in_region(21, 49432 + 1));
+    EXPECT_TRUE(in_region(21, 43439 + 1));
+    EXPECT_TRUE(in_region(21, 43440 + 1));
+    EXPECT_TRUE(in_region(21, 43441 + 1));
+    EXPECT_TRUE(in_region(21, 82119 + 1));
+    EXPECT_FALSE(in_region(21, 82120 + 1));
+    EXPECT_FALSE(in_region(21, 82121 + 1));
 }
-class REGION_BED_5_WITH_STRAND : public ::testing::Test
+class REGION_BED_WITH_STRAND : public ::testing::Test
 {
     // For exclusion, strand information should not alter result (window padding
     // should all be 0)
 protected:
-    Region region;
+    std::vector<IITree<int, int> > exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -870,82 +829,67 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
-        region = Region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
+    }
+    void TearDown() override {
+        exclusion_region.clear();
+    }
+    bool in_region(int chr, int loc){
+        return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
-TEST_F(REGION_BED_5_WITH_STRAND, CHECK_INPUT_PARSING)
-{
-    // for exclusion set, we will only have one set
-    try
-    {
-        ASSERT_EQ(region.num_bound(0), 22);
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        // and we will through error if we are out of bound
-        region.num_bound(1);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
-TEST_F(REGION_BED_5_WITH_STRAND, CHECK_INCLUSION_OVERLAPPED)
+
+TEST_F(REGION_BED_WITH_STRAND, CHECK_INCLUSION_OVERLAPPED)
 {
     // NOTE: +1 here because the number is w.r.t. the bed file, which has a 0
     // base, but check_exclusion expect a 1 based input
 
-    EXPECT_FALSE(region.check_exclusion(7, 7079 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7080 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 7081 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45053 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45054 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45055 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30303 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30305 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 30306 + 1));
-    EXPECT_TRUE(region.check_exclusion(7, 45722 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45723 + 1));
-    EXPECT_FALSE(region.check_exclusion(7, 45724 + 1));
+    EXPECT_FALSE(in_region(7, 7079 + 1));
+    EXPECT_TRUE(in_region(7, 7080 + 1));
+    EXPECT_TRUE(in_region(7, 7081 + 1));
+    EXPECT_TRUE(in_region(7, 45053 + 1));
+    EXPECT_TRUE(in_region(7, 45054 + 1));
+    EXPECT_TRUE(in_region(7, 45055 + 1));
+    EXPECT_TRUE(in_region(7, 30303 + 1));
+    EXPECT_TRUE(in_region(7, 30305 + 1));
+    EXPECT_TRUE(in_region(7, 30306 + 1));
+    EXPECT_TRUE(in_region(7, 45722 + 1));
+    EXPECT_FALSE(in_region(7, 45723 + 1));
+    EXPECT_FALSE(in_region(7, 45724 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(14, 1693 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1694 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 1695 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47284 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47285 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 47286 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5224 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5225 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 5226 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13101 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13102 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 13103 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45657 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45658 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 45659 + 1));
-    EXPECT_TRUE(region.check_exclusion(14, 78547 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78548 + 1));
-    EXPECT_FALSE(region.check_exclusion(14, 78549 + 1));
+    EXPECT_FALSE(in_region(14, 1693 + 1));
+    EXPECT_TRUE(in_region(14, 1694 + 1));
+    EXPECT_TRUE(in_region(14, 1695 + 1));
+    EXPECT_TRUE(in_region(14, 47284 + 1));
+    EXPECT_TRUE(in_region(14, 47285 + 1));
+    EXPECT_TRUE(in_region(14, 47286 + 1));
+    EXPECT_TRUE(in_region(14, 5224 + 1));
+    EXPECT_TRUE(in_region(14, 5225 + 1));
+    EXPECT_TRUE(in_region(14, 5226 + 1));
+    EXPECT_TRUE(in_region(14, 13101 + 1));
+    EXPECT_TRUE(in_region(14, 13102 + 1));
+    EXPECT_TRUE(in_region(14, 13103 + 1));
+    EXPECT_TRUE(in_region(14, 45657 + 1));
+    EXPECT_TRUE(in_region(14, 45658 + 1));
+    EXPECT_TRUE(in_region(14, 45659 + 1));
+    EXPECT_TRUE(in_region(14, 78547 + 1));
+    EXPECT_FALSE(in_region(14, 78548 + 1));
+    EXPECT_FALSE(in_region(14, 78549 + 1));
 
-    EXPECT_FALSE(region.check_exclusion(21, 9362 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9363 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 9364 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49430 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49431 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 49432 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43439 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43440 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 43441 + 1));
-    EXPECT_TRUE(region.check_exclusion(21, 82119 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82120 + 1));
-    EXPECT_FALSE(region.check_exclusion(21, 82121 + 1));
+    EXPECT_FALSE(in_region(21, 9362 + 1));
+    EXPECT_TRUE(in_region(21, 9363 + 1));
+    EXPECT_TRUE(in_region(21, 9364 + 1));
+    EXPECT_TRUE(in_region(21, 49430 + 1));
+    EXPECT_TRUE(in_region(21, 49431 + 1));
+    EXPECT_TRUE(in_region(21, 49432 + 1));
+    EXPECT_TRUE(in_region(21, 43439 + 1));
+    EXPECT_TRUE(in_region(21, 43440 + 1));
+    EXPECT_TRUE(in_region(21, 43441 + 1));
+    EXPECT_TRUE(in_region(21, 82119 + 1));
+    EXPECT_FALSE(in_region(21, 82120 + 1));
+    EXPECT_FALSE(in_region(21, 82121 + 1));
 }
+
 // now test different type of malform BED file
 TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
 {
@@ -961,17 +905,18 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
-    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int> > exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
         FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
+    exclusion_region.clear();
 }
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 {
@@ -987,32 +932,34 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int> > exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
         FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
+    exclusion_region.clear();
 }
 TEST(REGION_MALFORM_BED, NOT_FOUND)
 {
     std::string bed_name = path + "404.bed";
-    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int> > exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
         FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
+    exclusion_region.clear();
 }
 TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
 {
@@ -1028,17 +975,17 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int> > exclusion_region;
     try
     {
-        // we want to penalize any form of malformed input
-        Region region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
         FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
+    exclusion_region.clear();
 }
 TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
 {
@@ -1054,22 +1001,21 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int> > exclusion_region;
     try
     {
-        // we want to penalize any form of malformed input
-        Region region(bed_name, reporter);
+        Region::generate_exclusion(exclusion_region,bed_name);
         FAIL();
     }
     catch (...)
     {
         SUCCEED();
     }
+    exclusion_region.clear();
 }
+/*
 TEST(REGION_STD_BED_INPUT, NO_RUN)
 {
-    std::vector<uintptr_t> not_found = {0};
-    std::vector<uintptr_t> found = {0};
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
@@ -1108,9 +1054,31 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
              << "21 9363 49431 . . .\n"
              << "21 43440 82120 . . .\n"; // overlap
     bed_file.close();
-    Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf="";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed;
+    std::string backgroound="";
+    Reporter reporter(std::string(path + "LOG"));
+
+ size_t Region::add_flags(std::vector<std::string>& region_names,
+                            const std::vector<std::string>& feature,
+                            const int window_5, const int window_3,
+                            const bool genome_wide_background,
+                            const std::string& gtf, const std::string& msigdb,
+                            const std::vector<std::string>& bed,
+                            const std::string& snp_set,
+                            const std::string& background, Genotype& target,
+                            Reporter& reporter);
+
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
     Region region(feature, 0, 0, false, false);
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
