@@ -50,7 +50,7 @@ public:
      */
     Region() {}
     virtual ~Region();
-    static void generate_exlcusion(std::vector<IITree<int, int> >& cr,
+    static void generate_exclusion(std::vector<IITree<int, int> >& cr,
                                    const std::string &exclusion_range);
     static size_t generate_regions(std::vector<IITree<int, int> >& gene_sets, std::vector<std::string>& region_names,
                             const std::vector<std::string>& feature,

@@ -399,19 +399,12 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
-    static bool within_region(cgranges_t* cr, const int chr, const int loc){
-        int64_t *b = nullptr, max_b = 0;
-        bool to_remove =
-            cr_overlap(cr, std::to_string(chr).c_str(), loc - 1, loc+1, &b, &max_b);
-        free(b);
-        return to_remove;
-    }
     static bool within_region(const std::vector<IITree<int, int>> & cr, const int chr, const int loc){
         std::vector<size_t> output;
         if(chr < 0) return false;
         if(static_cast<size_t>(chr) >= cr.size()) return false;
         cr[chr].overlap(loc-1, loc+1, output);
-        return output.empty();
+        return !output.empty();
     }
 
     static std::vector<uintptr_t> construct_flag(cgranges_t* gene_sets,

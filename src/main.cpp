@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         // Generate the exclusion region
         //cgranges_t* exclusion_region = cr_init();
         std::vector<IITree<int, int>> exclusion_regions;
-        Region::generate_exlcusion(exclusion_regions,
+        Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
         // now we index cr
         //cr_index(exclusion_region);

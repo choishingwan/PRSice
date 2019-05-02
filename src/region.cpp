@@ -23,7 +23,7 @@
 // e.g. bound with chr1:1-10 will remove any SNPs on chr1 with coordinate
 // from 1 to 10
 
-void Region::generate_exlcusion(std::vector<IITree<int, int> > &cr,
+void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
                                const std::string &exclusion_range){
     // do nothing when no exclusion is required.
     if (exclusion_range.empty()) return;
