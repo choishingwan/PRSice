@@ -18,7 +18,6 @@
 #define GENOTYPE_H
 
 #include "IITree.h"
-#include "cgranges.h"
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
@@ -409,33 +408,11 @@ public:
         return !output.empty();
     }
 
-    static std::vector<uintptr_t>
-    construct_flag(cgranges_t* gene_sets, std::vector<uintptr_t>& flag,
-                   const size_t required_size, const int chr, const int bp,
-                   const bool genome_wide_background)
-    {
-        int64_t *b = nullptr, max_b, idx, n;
-        assert(flag.size() == required_size);
-        std::fill(flag.begin(), flag.end(), 0);
-        SET_BIT(0, flag.data());
-        if (genome_wide_background) {
-            SET_BIT(1, flag.data());
-        }
-        n = cr_overlap(gene_sets, std::to_string(chr).c_str(), bp - 1, bp + 1,
-                       &b, &max_b);
-        for (int64_t j = 0; j < n; ++j) {
-            idx = cr_label(gene_sets, b[j]);
-            assert(tmp >= 0);
-            SET_BIT(static_cast<size_t>(idx), flag.data());
-        }
-        free(b);
-        return flag;
-    }
-    static std::vector<uintptr_t>
-    construct_flag(const std::vector<IITree<int, int>>& gene_sets,
-                   std::vector<uintptr_t>& flag, const size_t required_size,
-                   const int chr, const int bp,
-                   const bool genome_wide_background)
+
+    static void construct_flag(const std::vector<IITree<int, int>>& gene_sets,
+                               std::vector<uintptr_t>& flag,
+                               const size_t required_size, const int chr,
+                               const int bp, const bool genome_wide_background)
     {
         assert(flag.size() == required_size);
         std::fill(flag.begin(), flag.end(), 0);
@@ -445,8 +422,9 @@ public:
         }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr < 0) return flag;
+        if (chr < 0) return;
         std::vector<size_t> out;
+        if (chr >= gene_sets.size()) return;
         gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
         int idx;
         for (auto&& j : out) {
@@ -454,10 +432,8 @@ public:
             // idx= cr_label(gene_sets, b[j]);
             SET_BIT(static_cast<size_t>(idx), flag.data());
         }
-        return flag;
+        return;
     }
-    void add_flags(cgranges_t* cr, const size_t num_sets,
-                   const bool genome_wide_background);
     void add_flags(const std::vector<IITree<int, int>>& cr,
                    const size_t num_sets, const bool genome_wide_background);
 

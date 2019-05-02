@@ -134,31 +134,12 @@ void Genotype::add_flags(const std::vector<IITree<int, int>>& gene_sets,
         // flag function to avoid re-allocation of memory. Also for the flag
         // structure as that can almost always be reused (we copy when we set
         // flag)
-        m_existed_snps[i].set_flag(
-            num_sets, construct_flag(gene_sets, flag, required_size, chr, bp,
-                                     genome_wide_background));
+        construct_flag(gene_sets, flag, required_size, chr, bp,
+                       genome_wide_background);
+        m_existed_snps[i].set_flag(num_sets, flag);
     }
 }
-void Genotype::add_flags(cgranges_t* gene_sets, const size_t num_sets,
-                         const bool genome_wide_background)
-{
-    const size_t num_snps = m_existed_snps.size();
-    const size_t required_size = BITCT_TO_WORDCT(num_sets);
-    int chr, bp;
-    std::vector<uintptr_t> flag(required_size, 0);
-    for (size_t i = 0; i < num_snps; ++i) {
-        auto&& snp = m_existed_snps[i];
-        chr = snp.chr();
-        bp = snp.loc();
-        // if we want more speed, we can move b and max_b from the construct
-        // flag function to avoid re-allocation of memory. Also for the flag
-        // structure as that can almost always be reused (we copy when we set
-        // flag)
-        m_existed_snps[i].set_flag(
-            num_sets, construct_flag(gene_sets, flag, required_size, chr, bp,
-                                     genome_wide_background));
-    }
-}
+
 void Genotype::read_base(
     const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,

@@ -990,7 +990,7 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
     }
     exclusion_region.clear();
 }
-/*
+
 TEST(REGION_STD_BED_INPUT, NO_RUN)
 {
     std::ofstream bed_file;
@@ -1037,37 +1037,36 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     int window_5 = 0;
     int window_3 = 0;
     bool genome_wide_background = false;
-    std::string gtf="";
+    std::string gtf = "";
     std::string msigdb = "";
     std::string snp_set = "";
     std::vector<std::string> bed;
-    std::string backgroound="";
+    std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-
- size_t Region::add_flags(std::vector<std::string>& region_names,
-                            const std::vector<std::string>& feature,
-                            const int window_5, const int window_3,
-                            const bool genome_wide_background,
-                            const std::string& gtf, const std::string& msigdb,
-                            const std::vector<std::string>& bed,
-                            const std::string& snp_set,
-                            const std::string& background, Genotype& target,
-                            Reporter& reporter);
-
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions =
+        Region::generate_regions(gene_sets, region_names, feature, window_5,
+                                 window_3, genome_wide_background, gtf, msigdb,
+                                 bed, snp_set, background, 22, reporter);
+    ASSERT_STREQ(region_names[0].c_str(), "Base");
+    ASSERT_STREQ(region_names[1].c_str(), "Background");
+    // there will always be 2 regions
+    ASSERT_EQ(num_regions, 2);
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
-    Region region(feature, 0, 0, false, false);
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    ASSERT_EQ(region.size(), 1);
-    std::vector<uintptr_t> index = {0};
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    std::vector<uintptr_t> index(required_size, 0);
     // this is a SNP found in the bed file, but as we have not generated the
     // region (we haven't use the bed file), this will always be considered as
     // not found
-    region.update_flag(5, "", 50533 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 5, 50533 + 1,
+                             genome_wide_background);
     ASSERT_EQ(index, not_found);
 }
+/*
 class REGION_STD_BED : public ::testing::Test
 {
     // For exclusion, strand information should not alter result (window
