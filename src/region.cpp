@@ -23,8 +23,9 @@
 // e.g. bound with chr1:1-10 will remove any SNPs on chr1 with coordinate
 // from 1 to 10
 
-void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
-                               const std::string &exclusion_range){
+void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
+                                const std::string& exclusion_range)
+{
     // do nothing when no exclusion is required.
     if (exclusion_range.empty()) return;
     std::vector<std::string> exclude_regions =
@@ -45,7 +46,7 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
             }
             // BED starts from 0 and end is exclusive
             std::string line;
-            size_t column_size=0;
+            size_t column_size = 0;
             bool is_header = false;
             while (std::getline(input_file, line)) {
                 misc::trim(line);
@@ -57,16 +58,17 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
                                           "for all rows!\n";
                     throw std::runtime_error(message);
                 }
-                try{
+                try
+                {
                     is_bed_line(boundary, column_size, is_header);
-                    }
-                catch(const std::exception& ex)
+                }
+                catch (const std::exception& ex)
                 {
                     std::string message = ex.what();
-                    message.append("Problematic line: "+line);
+                    message.append("Problematic line: " + line);
                     throw std::runtime_error(message);
                 }
-                if(is_header) continue; // skip header
+                if (is_header) continue; // skip header
                 int chr = get_chrom_code_raw(boundary[0].c_str());
                 int low_bound = misc::convert<int>(boundary[1]) + 1;
                 // +1 because start at 0
@@ -74,20 +76,23 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
                 // Do nothing because while BED end is exclusive, it is 0 base.
                 // For an inclusive end bound, we will need to do -1 (make it
                 // inclusive) and +1 (transform to 1 base)
-                if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1) {
+                if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1)
+                {
                     std::string message =
                         "Error: Invalid exclusion coordinate. "
-                        "Coordinate must be larger than 1 and the end coordinate "
-                        "must be larger than or equal to the start coordinate\n";
+                        "Coordinate must be larger than 1 and the end "
+                        "coordinate "
+                        "must be larger than or equal to the start "
+                        "coordinate\n";
                     throw std::runtime_error(message);
                 }
-                // to string is kinda stupid here, but rather not touching the core
-                // algorithm when I am exhausted.
-                if(chr >= 0){
+                // to string is kinda stupid here, but rather not touching the
+                // core algorithm when I am exhausted.
+                if (chr >= 0) {
                     // ignore any chromosome that we failed to parse, which
                     // will have chr < 0
-                    if(cr.size() < static_cast<size_t>(chr)+1){
-                        cr.resize(static_cast<size_t>(chr)+1);
+                    if (cr.size() < static_cast<size_t>(chr) + 1) {
+                        cr.resize(static_cast<size_t>(chr) + 1);
                     }
                     cr[static_cast<size_t>(chr)].add(low_bound, upper_bound, 0);
                 }
@@ -103,7 +108,7 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
             // boundary = 10-20
             // boundary = 1-10
             // boundary = 10
-            if(boundary.size() > 2){
+            if (boundary.size() > 2) {
                 std::string message =
                     "Error: Invalid exclusion range format. "
                     "Should be chr:start, chr:start-end or a bed file\n";
@@ -122,11 +127,11 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
                 throw std::runtime_error(message);
             }
             // the range is completely inclusive []
-            if(chr >= 0){
+            if (chr >= 0) {
                 // ignore any chromosome that we failed to parse, which
                 // will have chr < 0
-                if(cr.size() < static_cast<size_t>(chr)+1){
-                    cr.resize(static_cast<size_t>(chr)+1);
+                if (cr.size() < static_cast<size_t>(chr) + 1) {
+                    cr.resize(static_cast<size_t>(chr) + 1);
                 }
                 cr[static_cast<size_t>(chr)].add(low_bound, upper_bound, 0);
             }
@@ -140,25 +145,23 @@ void Region::generate_exclusion(std::vector<IITree<int, int> > &cr,
         }
     }
     // also index the tree
-    for(auto && tree: cr){
+    for (auto&& tree : cr) {
         tree.index();
     }
 }
 
-size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
-                                std::vector<std::string>& region_names,
-                         const std::vector<std::string>& feature,
-                         const int window_5, const int window_3,
-                         const bool genome_wide_background,
-                         const std::string& gtf, const std::string& msigdb,
-                         const std::vector<std::string>& bed,
-                         const std::string& snp_set,
-                         const std::string& background,
-                                const uint32_t max_chr,
-                         Reporter& reporter)
+size_t Region::generate_regions(
+    std::vector<IITree<int, int>>& gene_sets,
+    std::vector<std::string>& region_names,
+    const std::vector<std::string>& feature, const int window_5,
+    const int window_3, const bool genome_wide_background,
+    const std::string& gtf, const std::string& msigdb,
+    const std::vector<std::string>& bed, const std::string& snp_set,
+    const std::string& background, const uint32_t max_chr, Reporter& reporter)
 {
     std::string message = "Start processing gene set information\n";
-    message.append("============================================================");
+    message.append(
+        "============================================================");
     reporter.report(message);
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
@@ -171,7 +174,7 @@ size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
     int set_idx = 2;
     bool printed_warning = false;
     for (auto&& bed_file : bed) {
-        message = "Loading "+bed_file+ " (BED)";
+        message = "Loading " + bed_file + " (BED)";
         reporter.report(message);
         set_idx += load_bed_regions(bed_file, gene_sets, window_5, window_3,
                                     printed_warning, set_idx, max_chr,
@@ -184,7 +187,7 @@ size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
     std::vector<std::string> snp_sets = misc::split(snp_set, ",");
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     for (auto&& s : snp_sets) {
-        message = "Loading "+s+ " (SNP sets)";
+        message = "Loading " + s + " (SNP sets)";
         reporter.report(message);
         load_snp_sets(s, snp_in_sets, region_names, duplicated_sets, set_idx,
                       reporter);
@@ -199,7 +202,7 @@ size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
     std::unordered_map<std::string, std::vector<int>> msigdb_list;
     std::vector<std::string> msigdb_name = misc::split(msigdb, ",");
     for (auto&& msig : msigdb_name) {
-        message = "Loading "+msig+ " (MSigDB)";
+        message = "Loading " + msig + " (MSigDB)";
         reporter.report(message);
         load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx,
                     reporter);
@@ -210,7 +213,7 @@ size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
         // we need to read in a background file, but ignore the
         // case where we use the gtf as background as we should've
         // already done that
-        message = "Loading background set from "+background;
+        message = "Loading background set from " + background;
         reporter.report(message);
         load_background(background, window_5, window_3, max_chr, msigdb_list,
                         printed_warning, gene_sets, reporter);
@@ -218,13 +221,13 @@ size_t Region::generate_regions(std::vector<IITree<int, int> >& gene_sets,
     if (!gtf.empty() && (!msigdb.empty() || !genome_wide_background)) {
         // generate the region information based on the msigdb info
         // or generate for the background
-        message = "Loading GTF file: "+gtf;
+        message = "Loading GTF file: " + gtf;
         reporter.report(message);
         load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
                  gene_sets, genome_wide_background, reporter);
     }
     // index gene list
-    for(auto &&tree: gene_sets) tree.index();
+    for (auto&& tree : gene_sets) tree.index();
     // now we can go through each SNP and update their flag
     const size_t num_sets = region_names.size();
     if (num_sets == 2) {
@@ -246,7 +249,8 @@ void Region::load_background(
     const std::string& background, const int window_5, const int window_3,
     const uint32_t max_chr,
     std::unordered_map<std::string, std::vector<int>>& msigdb_list,
-    bool printed_warning, std::vector<IITree<int, int>>& gene_sets, Reporter& reporter)
+    bool printed_warning, std::vector<IITree<int, int>>& gene_sets,
+    Reporter& reporter)
 {
     const std::unordered_map<std::string, int> file_type{
         {"bed", 1}, {"range", 0}, {"gene", 2}};
@@ -393,9 +397,9 @@ void Region::load_background(
                 end += window_3;
             }
             // 1 because that is the index reserved for background
-            if(chr_code < 0) continue;
-            if(gene_sets.size() <= static_cast<size_t>(chr_code)+1){
-                gene_sets.resize(static_cast<size_t>(chr_code)+1);
+            if (chr_code < 0) continue;
+            if (gene_sets.size() <= static_cast<size_t>(chr_code) + 1) {
+                gene_sets.resize(static_cast<size_t>(chr_code) + 1);
             }
             gene_sets[static_cast<size_t>(chr_code)].add(start, end, 1);
         }
@@ -424,8 +428,9 @@ void Region::load_gtf(
     const std::string& gtf,
     const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
     const std::vector<std::string>& feature, const uint32_t max_chr,
-    const int window_5, const int window_3, std::vector<IITree<int, int> > & gene_sets,
-    const bool genome_wide_background, Reporter& reporter)
+    const int window_5, const int window_3,
+    std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
+    Reporter& reporter)
 {
     if (msigdb_list.empty()) return;
     bool gz_input = false;
@@ -452,7 +457,8 @@ void Region::load_gtf(
     std::string chr, name, id, line;
     int chr_code, start, end;
     size_t num_line = 0;
-    size_t exclude_feature = 0, chr_exclude = 0;;
+    size_t exclude_feature = 0, chr_exclude = 0;
+    ;
     // this should ensure we will be reading either from the gz stream or
     // ifstream
     while ((!gz_input && std::getline(gtf_file, line))
@@ -466,7 +472,7 @@ void Region::load_gtf(
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
         if (in_feature(token[+GTF::FEATURE], feature) && chr_code >= 0
-            && chr_code <= static_cast<int>(max_chr) && token.size()==9)
+            && chr_code <= static_cast<int>(max_chr) && token.size() == 9)
         {
             start = 0;
             end = 0;
@@ -596,18 +602,20 @@ void Region::load_gtf(
             // now check if we can find it in the MSigDB entry
             auto&& id_search = msigdb_list.find(id);
             auto&& name_search = msigdb_list.find(name);
-            if(chr_code < 0) continue;
-            if(gene_sets.size() <= static_cast<size_t>(chr_code)+1){
-                gene_sets.resize(static_cast<size_t>(chr_code)+1);
+            if (chr_code < 0) continue;
+            if (gene_sets.size() <= static_cast<size_t>(chr_code) + 1) {
+                gene_sets.resize(static_cast<size_t>(chr_code) + 1);
             }
             if (id_search != msigdb_list.end()) {
                 for (auto&& idx : id_search->second) {
-                    gene_sets[static_cast<size_t>(chr_code)].add(start, end, idx);
+                    gene_sets[static_cast<size_t>(chr_code)].add(start, end,
+                                                                 idx);
                 }
             }
             if (name_search != msigdb_list.end()) {
                 for (auto&& idx : name_search->second) {
-                    gene_sets[static_cast<size_t>(chr_code)].add(start, end, idx);
+                    gene_sets[static_cast<size_t>(chr_code)].add(start, end,
+                                                                 idx);
                 }
             }
             if (!genome_wide_background) {
@@ -616,16 +624,20 @@ void Region::load_gtf(
                 gene_sets[static_cast<size_t>(chr_code)].add(start, end, 1);
             }
         }
-        else if(chr_code >= 0
-                && chr_code <= static_cast<int>(max_chr) && token.size()==9)
+        else if (chr_code >= 0 && chr_code <= static_cast<int>(max_chr)
+                 && token.size() == 9)
         {
             exclude_feature++;
-        }else if(chr_code >= 0
-                 && chr_code <= static_cast<int>(max_chr) ){
+        }
+        else if (chr_code >= 0 && chr_code <= static_cast<int>(max_chr))
+        {
             // this is a malformed file
-            std::string error_message = "Error: Malformed GTF file! GTF should always contain 9 columns!\n";
+            std::string error_message = "Error: Malformed GTF file! GTF should "
+                                        "always contain 9 columns!\n";
             throw std::runtime_error(error_message);
-        }else{
+        }
+        else
+        {
             chr_exclude++;
         }
     }
@@ -639,8 +651,9 @@ void Region::load_gtf(
                        + " entries removed due to feature selection\n");
     }
     if (exclude_feature > 1) {
-        message.append("A total of " + std::to_string(chr_exclude)
-                       + " entries removed as they are not on autosomal chromosome\n");
+        message.append(
+            "A total of " + std::to_string(chr_exclude)
+            + " entries removed as they are not on autosomal chromosome\n");
     }
     reporter.report(message);
 }
@@ -726,9 +739,10 @@ void Region::load_snp_sets(
 }
 
 bool Region::load_bed_regions(const std::string& bed_file,
-                              std::vector<IITree<int, int>> & gene_sets, const int window_5,
-                              const int window_3, bool& printed_warning,
-                              const int set_idx, const uint32_t max_chr,
+                              std::vector<IITree<int, int>>& gene_sets,
+                              const int window_5, const int window_3,
+                              bool& printed_warning, const int set_idx,
+                              const uint32_t max_chr,
                               std::vector<std::string>& region_names,
                               std::unordered_set<std::string> duplicated_sets,
                               Reporter& reporter)
@@ -910,9 +924,9 @@ bool Region::load_bed_regions(const std::string& bed_file,
         // now add the boundary to the region
         // will screw up if the number of set is higher than int32_t.
         // But PRSice should crash before that, right?
-        if(chr_code < 0) continue;
-        if(gene_sets.size() <= static_cast<size_t>(chr_code)+1){
-            gene_sets.resize(static_cast<size_t>(chr_code)+1);
+        if (chr_code < 0) continue;
+        if (gene_sets.size() <= static_cast<size_t>(chr_code) + 1) {
+            gene_sets.resize(static_cast<size_t>(chr_code) + 1);
         }
         gene_sets[static_cast<size_t>(chr_code)].add(start, end, set_idx);
     }

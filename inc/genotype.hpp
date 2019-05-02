@@ -17,6 +17,7 @@
 #ifndef GENOTYPE_H
 #define GENOTYPE_H
 
+#include "IITree.h"
 #include "cgranges.h"
 #include "commander.hpp"
 #include "misc.hpp"
@@ -24,7 +25,6 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
-#include "IITree.h"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cctype>
@@ -99,8 +99,7 @@ public:
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract,
-                   bool verbose, Reporter& reporter,
+                   const std::string& extract, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
@@ -379,13 +378,14 @@ public:
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, const std::vector<IITree<int, int>> &exclusion_region,
-                   const double& maf_control,
-                   const double& maf_case, const double& info_threshold,
-                   const bool maf_control_filter, const bool maf_case_filter,
-                   const bool info_filter, const bool fastscore,
-                   const bool no_full, const bool is_beta, const bool is_index,
-                   const bool keep_ambig, Reporter& reporter);
+                   const double& bound_end,
+                   const std::vector<IITree<int, int>>& exclusion_region,
+                   const double& maf_control, const double& maf_case,
+                   const double& info_threshold, const bool maf_control_filter,
+                   const bool maf_case_filter, const bool info_filter,
+                   const bool fastscore, const bool no_full, const bool is_beta,
+                   const bool is_index, const bool keep_ambig,
+                   Reporter& reporter);
     void build_clump_windows();
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
@@ -399,21 +399,23 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
-    static bool within_region(const std::vector<IITree<int, int>> & cr, const int chr, const int loc){
+    static bool within_region(const std::vector<IITree<int, int>>& cr,
+                              const int chr, const int loc)
+    {
         std::vector<size_t> output;
-        if(chr < 0) return false;
-        if(static_cast<size_t>(chr) >= cr.size()) return false;
-        cr[chr].overlap(loc-1, loc+1, output);
+        if (chr < 0) return false;
+        if (static_cast<size_t>(chr) >= cr.size()) return false;
+        cr[chr].overlap(loc - 1, loc + 1, output);
         return !output.empty();
     }
 
-    static std::vector<uintptr_t> construct_flag(cgranges_t* gene_sets,
-                                                 std::vector<uintptr_t> &flag,
-                                                 const size_t required_size,
-                                                 const int chr, const int bp,
-                                                 const bool genome_wide_background){
-        int64_t *b=nullptr, max_b, idx, n;
-        assert(flag.size()==required_size);
+    static std::vector<uintptr_t>
+    construct_flag(cgranges_t* gene_sets, std::vector<uintptr_t>& flag,
+                   const size_t required_size, const int chr, const int bp,
+                   const bool genome_wide_background)
+    {
+        int64_t *b = nullptr, max_b, idx, n;
+        assert(flag.size() == required_size);
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
         if (genome_wide_background) {
@@ -422,19 +424,20 @@ public:
         n = cr_overlap(gene_sets, std::to_string(chr).c_str(), bp - 1, bp + 1,
                        &b, &max_b);
         for (int64_t j = 0; j < n; ++j) {
-            idx= cr_label(gene_sets, b[j]);
+            idx = cr_label(gene_sets, b[j]);
             assert(tmp >= 0);
             SET_BIT(static_cast<size_t>(idx), flag.data());
         }
         free(b);
         return flag;
     }
-    static std::vector<uintptr_t> construct_flag(const std::vector<IITree<int, int>> & gene_sets,
-                                                 std::vector<uintptr_t> &flag,
-                                                 const size_t required_size,
-                                                 const int chr, const int bp,
-                                                 const bool genome_wide_background){
-        assert(flag.size()==required_size);
+    static std::vector<uintptr_t>
+    construct_flag(const std::vector<IITree<int, int>>& gene_sets,
+                   std::vector<uintptr_t>& flag, const size_t required_size,
+                   const int chr, const int bp,
+                   const bool genome_wide_background)
+    {
+        assert(flag.size() == required_size);
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
         if (genome_wide_background) {
@@ -442,19 +445,22 @@ public:
         }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if(chr < 0) return flag;
+        if (chr < 0) return flag;
         std::vector<size_t> out;
-        gene_sets[static_cast<size_t>(chr)].overlap(bp-1, bp+1, out);
+        gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
         int idx;
-        for (auto &&j : out) {
+        for (auto&& j : out) {
             idx = gene_sets[static_cast<size_t>(chr)].data(j);
-            //idx= cr_label(gene_sets, b[j]);
+            // idx= cr_label(gene_sets, b[j]);
             SET_BIT(static_cast<size_t>(idx), flag.data());
         }
         return flag;
     }
-    void add_flags(cgranges_t* cr, const size_t num_sets, const bool genome_wide_background);
-    void add_flags(const std::vector<IITree<int, int>>& cr, const size_t num_sets, const bool genome_wide_background);
+    void add_flags(cgranges_t* cr, const size_t num_sets,
+                   const bool genome_wide_background);
+    void add_flags(const std::vector<IITree<int, int>>& cr,
+                   const size_t num_sets, const bool genome_wide_background);
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements

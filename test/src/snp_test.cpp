@@ -20,11 +20,9 @@ protected:
     int chr = 1, loc = 1;
     void SetUp() override
     {
-        snp=SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+        snp = SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     }
     void TearDown() override {}
-
-
 };
 
 TEST_F(SNP_INIT_TEST, INIT_TEST)
@@ -103,7 +101,8 @@ TEST_F(SNP_INIT_TEST, ADD_TARGET)
     std::string new_alt = "G";
     std::string target_name = "Target";
     std::streampos new_pos = 1;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   true);
     // check if the names are updated correctly
     ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
     ASSERT_EQ(snp.byte_pos(), new_pos);
@@ -117,11 +116,13 @@ TEST_F(SNP_INIT_TEST, ADD_TARGET)
     ASSERT_TRUE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     // check none-flip
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, false);
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   false);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     new_loc = 189560123;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, false);
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   false);
     ASSERT_EQ(snp.byte_pos(), new_pos);
 }
 
@@ -142,7 +143,8 @@ TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
     std::streampos new_pos = 1;
     std::string ref_name = "reference";
     std::streampos new_ref_pos = 19;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   true);
     // check if the names are updated correctly
     ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
     ASSERT_EQ(snp.byte_pos(), new_pos);
@@ -258,12 +260,11 @@ TEST(SNP_MATCHING, NO_ALT_AC)
     ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
     ASSERT_FALSE(flipped);
     // similarly, we don't allow A"" and GT to match
-    ref="G";
-    alt="T";
+    ref = "G";
+    alt = "T";
     flipped = false;
     ASSERT_FALSE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
-
 }
 
 TEST(SNP_MATCHING, CHR_POS_MATCHING)
@@ -284,12 +285,12 @@ TEST(SNP_MATCHING, CHR_POS_MATCHING)
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
     // chromosome mismatch
-    ASSERT_FALSE(snp.matching(chr+1, loc, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr + 1, loc, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
     // base pair mismatch
-    ASSERT_FALSE(snp.matching(chr, loc+1, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr, loc + 1, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
@@ -312,8 +313,9 @@ TEST(SNP_MATCHING, NO_CHR_MATCHING)
     int chr = -1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    // When chr is -1, we don't care if it is different as we assume it is missing
-    ASSERT_TRUE(snp.matching(chr+10, loc, ref, alt, flipped));
+    // When chr is -1, we don't care if it is different as we assume it is
+    // missing
+    ASSERT_TRUE(snp.matching(chr + 10, loc, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
@@ -335,8 +337,9 @@ TEST(SNP_MATCHING, NO_BP_MATCHING)
     int chr = 1, loc = -1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    // When bp is -1, we don't care if it is different as we assume it is missing
-    ASSERT_TRUE(snp.matching(chr, loc+10, ref, alt, flipped));
+    // When bp is -1, we don't care if it is different as we assume it is
+    // missing
+    ASSERT_TRUE(snp.matching(chr, loc + 10, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
@@ -412,7 +415,7 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     // by definition, we don't allow multiple SNPs with the same name. Using SNP
     // name as the last comparison condition should allow us to avoid troubles
     snps.emplace_back(SNP("SNP_A", 1, 10, "A", "", 1, 0.05, 1, 0.05));
-    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", 1, 0.05,  1, 0.05));
+    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", 1, 0.05, 1, 0.05));
     snps.emplace_back(SNP("SNP_C", 1, 10, "A", "", 1, 0.01, 1, 0.05));
     snps.emplace_back(SNP("SNP_D", 2, 11, "A", "", 1, 0.05, 1, 0.05));
     snps.emplace_back(SNP("SNP_E", 1, 10, "A", "", 1, 0.01, 1, 0.05));

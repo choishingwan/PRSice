@@ -15,8 +15,8 @@ TEST(REGION, SINGLE_INIT)
     std::string range = "chr2:1234";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
     catch (...)
@@ -31,8 +31,8 @@ TEST(REGION, SINGLE_RANGE_INIT)
     std::string range = "chr2:1234-1357";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
     catch (...)
@@ -48,8 +48,8 @@ TEST(REGION, SINGLE_RANGE_WRONG)
     std::string range = "chr2:12341-1357";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
     }
@@ -63,8 +63,8 @@ TEST(REGION, MULTI_RANGE_INIT)
     std::string range = "chr6:369-4321,chr2:1234-1357";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
     catch (...)
@@ -78,8 +78,8 @@ TEST(REGION, MULTI_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
     catch (...)
@@ -93,8 +93,8 @@ TEST(REGION, MULTI_MORE_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234,chr1:312345-9437690";
     try
     {
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
     catch (...)
@@ -108,8 +108,8 @@ TEST(REGION, WRONG_INPUT)
     try
     {
         std::string range = "chr1";
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         // in this case, we will assume this is a bed file, but we can't read
         // it, so we will have throw an error
@@ -125,8 +125,8 @@ TEST(REGION, WRONG_RANGE_FORMAT)
     try
     {
         std::string range = "chr1:1-2-3";
-        std::vector<IITree<int, int> > exclusion_region;
-        Region::generate_exclusion(exclusion_region,range);
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
     }
@@ -139,11 +139,11 @@ TEST(REGION, RANGE_PARSE_PROBLEM)
 {
     try
     {
-       std::string range = "chr1:1-,2";
-       std::vector<IITree<int, int> > exclusion_region;
-       Region::generate_exclusion(exclusion_region,range);
-       exclusion_region.clear();
-       FAIL();
+        std::string range = "chr1:1-,2";
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
+        exclusion_region.clear();
+        FAIL();
     }
     catch (...)
     {
@@ -156,11 +156,11 @@ TEST(REGION, MULTI_CHROMOSOME)
     try
     {
         // we want to test if the chromosome parsing work as expected
-       std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrX:10";
-       std::vector<IITree<int, int> > exclusion_region;
-       Region::generate_exclusion(exclusion_region,range);
-       ASSERT_EQ(exclusion_region.size(), CHROM_X+1);
-       exclusion_region.clear();
+        std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrX:10";
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
+        ASSERT_EQ(exclusion_region.size(), CHROM_X + 1);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -173,11 +173,11 @@ TEST(REGION, MULTI_CHROMOSOME_INVALID)
     try
     {
         // we want to test if the chromosome parsing work as expected
-       std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrA:10";
-       std::vector<IITree<int, int> > exclusion_region;
-       Region::generate_exclusion(exclusion_region,range);
-       ASSERT_EQ(exclusion_region.size(), 21);
-       exclusion_region.clear();
+        std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrA:10";
+        std::vector<IITree<int, int>> exclusion_region;
+        Region::generate_exclusion(exclusion_region, range);
+        ASSERT_EQ(exclusion_region.size(), 21);
+        exclusion_region.clear();
     }
     catch (...)
     {
@@ -188,40 +188,24 @@ class REGION_EX_STRING : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         std::string range = "chr2:1234";
-        Region::generate_exclusion(exclusion_region,range);
+        Region::generate_exclusion(exclusion_region, range);
     }
-    void TearDown() override {
-       exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
 
-TEST_F(REGION_EX_STRING, FOUND)
-{
-    ASSERT_TRUE(in_region(2, 1234));
-}
-TEST_F(REGION_EX_STRING, WRONG_CHR)
-{
-    ASSERT_FALSE(in_region(1, 1234));
-}
-TEST_F(REGION_EX_STRING, WRONG_BIGGER_CHR)
-{
-    ASSERT_FALSE(in_region(3, 1234));
-}
-TEST_F(REGION_EX_STRING, BP_TOO_SMALL)
-{
-    ASSERT_FALSE(in_region(2, 1233));
-}
-TEST_F(REGION_EX_STRING, BP_TOO_LARGE)
-{
-    ASSERT_FALSE(in_region(2, 1235));
-}
+TEST_F(REGION_EX_STRING, FOUND) { ASSERT_TRUE(in_region(2, 1234)); }
+TEST_F(REGION_EX_STRING, WRONG_CHR) { ASSERT_FALSE(in_region(1, 1234)); }
+TEST_F(REGION_EX_STRING, WRONG_BIGGER_CHR) { ASSERT_FALSE(in_region(3, 1234)); }
+TEST_F(REGION_EX_STRING, BP_TOO_SMALL) { ASSERT_FALSE(in_region(2, 1233)); }
+TEST_F(REGION_EX_STRING, BP_TOO_LARGE) { ASSERT_FALSE(in_region(2, 1235)); }
 TEST_F(REGION_EX_STRING, SEQUENT_SEARCH)
 {
     ASSERT_FALSE(in_region(1, 1234));
@@ -242,25 +226,23 @@ class REGION_EX_STRING_REGION : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         // inclusion range
         std::string range = "chr2:1234-1357";
-        Region::generate_exclusion(exclusion_region,range);
+        Region::generate_exclusion(exclusion_region, range);
     }
-    void TearDown() override {
-        exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
 TEST_F(REGION_EX_STRING_REGION, SEQ_STRING_WITHIN_RANGE)
 {
     // the following should all work
-    for (int i = 1234; i < 1357; ++i)
-        ASSERT_TRUE(in_region(2, i));
+    for (int i = 1234; i < 1357; ++i) ASSERT_TRUE(in_region(2, i));
 }
 TEST_F(REGION_EX_STRING_REGION, SEQ_STRING_START)
 {
@@ -283,7 +265,7 @@ class REGION_STRING_MIX : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         // we need to account for both range and single base input
@@ -293,12 +275,11 @@ protected:
         std::string range =
             "chr2:1234-1357,chr1:4601-5678,chr12:314,chr6:98741-102380";
 
-        Region::generate_exclusion(exclusion_region,range);
+        Region::generate_exclusion(exclusion_region, range);
     }
-    void TearDown() override {
-       exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -352,14 +333,15 @@ class REGION_BED_MIN_TAB_NO_OVER : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
         std::string bed_name = path + "/Test.bed";
         bed_file.open(bed_name.c_str());
         if (!bed_file.is_open()) {
-            throw std::runtime_error(std::string("Error: Cannot open bed file to write "+bed_name));
+            throw std::runtime_error(std::string(
+                "Error: Cannot open bed file to write " + bed_name));
         }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
@@ -385,12 +367,11 @@ protected:
                  << "20\t64037\t98171\n"
                  << "21\t9363\t49431\n";
         bed_file.close();
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
     }
-    void TearDown() override {
-       exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -469,7 +450,7 @@ class REGION_BED_MIN_TAB : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -510,12 +491,11 @@ protected:
                  << "21\t9363\t49431\n"
                  << "21\t43440\t82120\n"; // overlap
         bed_file.close();
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
     }
-    void TearDown() override {
-       exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -575,7 +555,7 @@ class REGION_BED_MIN_SPACE : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -616,12 +596,11 @@ protected:
                  << "21 9363 49431\n"
                  << "21 43440 82120\n"; // overlap
         bed_file.close();
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
     }
-    void TearDown() override {
-        exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -681,7 +660,7 @@ class REGION_BED_5_COLUMN : public ::testing::Test
 {
 
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         // not enough for stand yet
@@ -723,12 +702,11 @@ protected:
                  << "21 9363 49431 . .\n"
                  << "21 43440 82120 . .\n"; // overlap
         bed_file.close();
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
     }
-    void TearDown() override {
-        exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -788,7 +766,7 @@ class REGION_BED_WITH_STRAND : public ::testing::Test
     // For exclusion, strand information should not alter result (window padding
     // should all be 0)
 protected:
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -829,12 +807,11 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
     }
-    void TearDown() override {
-        exclusion_region.clear();
-    }
-    bool in_region(int chr, int loc){
+    void TearDown() override { exclusion_region.clear(); }
+    bool in_region(int chr, int loc)
+    {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
 };
@@ -905,11 +882,11 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
         FAIL();
     }
     catch (...)
@@ -932,11 +909,11 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
         FAIL();
     }
     catch (...)
@@ -948,11 +925,11 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 TEST(REGION_MALFORM_BED, NOT_FOUND)
 {
     std::string bed_name = path + "404.bed";
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
         FAIL();
     }
     catch (...)
@@ -975,10 +952,10 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     try
     {
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
         FAIL();
     }
     catch (...)
@@ -1001,10 +978,10 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int> > exclusion_region;
+    std::vector<IITree<int, int>> exclusion_region;
     try
     {
-        Region::generate_exclusion(exclusion_region,bed_name);
+        Region::generate_exclusion(exclusion_region, bed_name);
         FAIL();
     }
     catch (...)

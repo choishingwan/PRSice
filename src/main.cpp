@@ -52,12 +52,12 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
-        //cgranges_t* exclusion_region = cr_init();
+        // cgranges_t* exclusion_region = cr_init();
         std::vector<IITree<int, int>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
         // now we index cr
-        //cr_index(exclusion_region);
+        // cr_index(exclusion_region);
 
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
@@ -79,24 +79,27 @@ int main(int argc, char* argv[])
             const std::string base_name = misc::remove_extension<std::string>(
                 misc::base_name<std::string>(commander.base_name()));
             std::string message = "Start processing " + base_name + "\n";
-            message.append("============================================================");
+            message.append(
+                "============================================================");
             reporter.report(message);
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
-                commander.upper(), exclusion_regions, commander.maf_base_control(),
-                commander.maf_base_case(), commander.base_info_score(),
+                commander.upper(), exclusion_regions,
+                commander.maf_base_control(), commander.maf_base_case(),
+                commander.base_info_score(),
                 commander.perform_maf_base_control_filter(),
                 commander.perform_maf_base_case_filter(),
                 commander.perform_base_info_score_filter(),
                 commander.fastscore(), commander.no_full(), commander.beta(),
                 commander.is_index(), commander.keep_ambig(), reporter);
             // no longer need the exclusion region object
-            //cr_destroy(exclusion_region);
+            // cr_destroy(exclusion_region);
             exclusion_regions.clear();
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
-            message.append("============================================================");
+            message.append(
+                "============================================================");
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(), verbose,
@@ -112,19 +115,20 @@ int main(int argc, char* argv[])
             // when we do geno and maf
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), commander.exclude_file(),
-                                   commander.extract_file(),
-                                   verbose, reporter);
+                                   commander.extract_file(), verbose, reporter);
             // now load the reference file
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
             {
-                message = ("============================================================");
+                message = ("==================================================="
+                           "=========");
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
-                message.append("============================================================");
+                message.append("==============================================="
+                               "=============");
                 reporter.report(message);
                 reference_file->load_samples(commander.ref_keep_file(),
                                              commander.ref_remove_file(),
@@ -132,14 +136,14 @@ int main(int argc, char* argv[])
                 // load the reference file
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
-                    commander.extract_file(),  verbose,
-                    reporter, target_file);
+                    commander.extract_file(), verbose, reporter, target_file);
             }
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
 
             message = "Calculate MAF and perform filtering on target SNPs\n";
-            message.append("============================================================");
+            message.append(
+                "============================================================");
             reporter.report(message);
             target_file->calc_freqs_and_intermediate(
                 maf, geno, info, hard_threshold, maf_filter, geno_filter,
@@ -159,7 +163,8 @@ int main(int argc, char* argv[])
                 // 3. Need to generate an intermediate file for clumping
                 message =
                     "Calculate MAF and perform filtering on reference SNPs\n";
-                message.append("============================================================");
+                message.append("==============================================="
+                               "=============");
                 reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
                     maf, geno, info, hard_threshold, maf_filter, geno_filter,
@@ -170,16 +175,17 @@ int main(int argc, char* argv[])
             // Generate Region flag information
             std::vector<std::string> region_names;
             size_t num_regions;
-            //cgranges_t* gene_sets = cr_init();
+            // cgranges_t* gene_sets = cr_init();
             std::vector<IITree<int, int>> gene_sets;
-            num_regions = Region::generate_regions(gene_sets,
-                region_names, commander.feature(), commander.window_5(),
-                commander.window_3(), commander.genome_wide_background(),
-                commander.gtf(), commander.msigdb(), commander.bed(),
-                commander.snp_set(), commander.background(), target_file->max_chr(),
-                reporter);
-            target_file->add_flags(gene_sets, num_regions, commander.genome_wide_background());
-            //cr_destroy(gene_sets);
+            num_regions = Region::generate_regions(
+                gene_sets, region_names, commander.feature(),
+                commander.window_5(), commander.window_3(),
+                commander.genome_wide_background(), commander.gtf(),
+                commander.msigdb(), commander.bed(), commander.snp_set(),
+                commander.background(), target_file->max_chr(), reporter);
+            target_file->add_flags(gene_sets, num_regions,
+                                   commander.genome_wide_background());
+            // cr_destroy(gene_sets);
             gene_sets.clear();
             // start processing other files before doing clumping
             PRSice prsice(commander, num_regions > 2, reporter);
