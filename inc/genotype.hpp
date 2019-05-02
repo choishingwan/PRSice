@@ -404,7 +404,7 @@ public:
         std::vector<size_t> output;
         if (chr < 0) return false;
         if (static_cast<size_t>(chr) >= cr.size()) return false;
-        cr[chr].overlap(loc - 1, loc + 1, output);
+        cr[static_cast<size_t>(chr)].overlap(loc-1, loc+1, output);
         return !output.empty();
     }
 
