@@ -424,7 +424,7 @@ public:
         // in any of the region (we filter out any region with undefined chr)
         if (chr < 0) return;
         std::vector<size_t> out;
-        if (chr >= gene_sets.size()) return;
+        if (static_cast<size_t>(chr) >= gene_sets.size()) return;
         gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
         int idx;
         for (auto&& j : out) {

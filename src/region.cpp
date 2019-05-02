@@ -432,7 +432,9 @@ void Region::load_gtf(
     std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
     Reporter& reporter)
 {
-    if (msigdb_list.empty()) return;
+    // don't bother if there's no msigdb genes and we are using genome wide background
+
+    if (msigdb_list.empty() && genome_wide_background) return;
     bool gz_input = false;
     // we want to allow gz file input (as GTF file can be big)
     GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
@@ -458,16 +460,17 @@ void Region::load_gtf(
     int chr_code, start, end;
     size_t num_line = 0;
     size_t exclude_feature = 0, chr_exclude = 0;
-    ;
+
     // this should ensure we will be reading either from the gz stream or
     // ifstream
     while ((!gz_input && std::getline(gtf_file, line))
            || (gz_input && std::getline(gz_gtf_file, line)))
     {
-        num_line++;
         misc::trim(line);
         // skip headers
         if (line.empty() || line[0] == '#') continue;
+        // we don't count the header lines
+        num_line++;
         token = misc::split(line, "\t");
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
@@ -642,6 +645,12 @@ void Region::load_gtf(
         }
     }
     std::string message = "";
+    if(!num_line){
+        throw std::runtime_error("Error: Empty GTF file detected!\n");
+    }
+    if(exclude_feature + chr_exclude >= num_line){
+        throw std::runtime_error("Error: No GTF entry remain after filter by feature and chromosome!\n");
+    }
     if (exclude_feature == 1) {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entry removed due to feature selection\n");
@@ -650,7 +659,7 @@ void Region::load_gtf(
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entries removed due to feature selection\n");
     }
-    if (exclude_feature > 1) {
+    if (chr_exclude > 1) {
         message.append(
             "A total of " + std::to_string(chr_exclude)
             + " entries removed as they are not on autosomal chromosome\n");
