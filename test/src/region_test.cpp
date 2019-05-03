@@ -1044,10 +1044,11 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions =
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-                                 window_3, genome_wide_background, gtf, msigdb,
-                                 bed, snp_set, background, 22, reporter);
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    size_t num_regions = Region::generate_regions(
+        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+        genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+        reporter);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
     // there will always be 2 regions
