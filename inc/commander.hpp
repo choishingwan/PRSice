@@ -777,9 +777,6 @@ private:
     bool m_provided_bp = false;
     bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
-    bool m_provided_num_case = false;
-    bool m_provided_num_control = false;
-    bool m_provided_base_prevalence = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
     bool m_perform_base_maf_case_filter = false;

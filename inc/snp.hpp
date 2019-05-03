@@ -419,7 +419,6 @@ private:
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
-    double m_maf = 0.0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
     int m_chr = -1;
