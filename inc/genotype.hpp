@@ -409,7 +409,9 @@ public:
     }
 
 
-    static void construct_flag(const std::vector<IITree<int, int>>& gene_sets,
+    static void construct_flag(const std::string &rs,
+                               const std::vector<IITree<int, int>>& gene_sets,
+                               const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
                                std::vector<uintptr_t>& flag,
                                const size_t required_size, const int chr,
                                const int bp, const bool genome_wide_background)
@@ -422,15 +424,23 @@ public:
         }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr < 0) return;
-        std::vector<size_t> out;
-        if (static_cast<size_t>(chr) >= gene_sets.size()) return;
-        gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
-        int idx;
-        for (auto&& j : out) {
-            idx = gene_sets[static_cast<size_t>(chr)].data(j);
-            // idx= cr_label(gene_sets, b[j]);
-            SET_BIT(static_cast<size_t>(idx), flag.data());
+        if (chr >= 0 && !gene_sets.empty()){
+            std::vector<size_t> out;
+            if (static_cast<size_t>(chr) >= gene_sets.size()) return;
+            gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
+            int idx;
+            for (auto&& j : out) {
+                idx = gene_sets[static_cast<size_t>(chr)].data(j);
+                // idx= cr_label(gene_sets, b[j]);
+                SET_BIT(static_cast<size_t>(idx), flag.data());
+            }
+        }
+        if(snp_in_sets.empty() || rs.empty()) return;
+        auto &&snp_idx = snp_in_sets.find(rs);
+        if (snp_idx != snp_in_sets.end()) {
+            for (auto&& i : snp_idx->second) {
+                SET_BIT(i, flag.data());
+            }
         }
         return;
     }

@@ -136,14 +136,8 @@ void Genotype::add_flags(
         // flag function to avoid re-allocation of memory. Also for the flag
         // structure as that can almost always be reused (we copy when we set
         // flag)
-        construct_flag(gene_sets, flag, required_size, chr, bp,
+        construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size, chr, bp,
                        genome_wide_background);
-        snp_idx = snp_in_sets.find(snp.rs());
-        if (snp_idx != snp_in_sets.end()) {
-            for (auto&& i : snp_idx->second) {
-                SET_BIT(i, flag.data());
-            }
-        }
         m_existed_snps[i].set_flag(num_sets, flag);
     }
 }

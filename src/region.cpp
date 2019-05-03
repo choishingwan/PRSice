@@ -153,13 +153,17 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
 size_t Region::generate_regions(
     std::vector<IITree<int, int>>& gene_sets,
     std::vector<std::string>& region_names,
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets,
+    std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
     const std::vector<std::string>& feature, const int window_5,
     const int window_3, const bool genome_wide_background,
     const std::string& gtf, const std::string& msigdb,
     const std::vector<std::string>& bed, const std::string& snp_set,
     const std::string& background, const uint32_t max_chr, Reporter& reporter)
 {
+    // should be a fresh start each time
+    gene_sets.clear();
+    region_names.clear();
+    snp_in_sets.clear();
     std::string message = "Start processing gene set information\n";
     message.append(
         "============================================================");
@@ -710,12 +714,15 @@ void Region::load_snp_sets(
     if (!is_set_file) {
         if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
             std::string message = "Warning: Set name of " + set_name
-                                  + " is duplicated, it will be ignored";
+                                  + " is duplicated, this set will be ignored\n";
             reporter.report(message);
             return;
         }
         duplicated_sets.insert(set_name);
         region_names.push_back(set_name);
+    }else{
+        std::string message = "Warning: Set name provided for multi-SNP set input, the set name will be ignored\n";
+        reporter.report(message);
     }
     input.clear();
     input.seekg(0, input.beg);

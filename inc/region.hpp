@@ -52,10 +52,9 @@ public:
     virtual ~Region();
     static void generate_exclusion(std::vector<IITree<int, int>>& cr,
                                    const std::string& exclusion_range);
-    static size_t generate_regions(
-        std::vector<IITree<int, int>>& gene_sets,
+    static size_t generate_regions(std::vector<IITree<int, int>>& gene_sets,
         std::vector<std::string>& region_names,
-        std::unordered_map<std::string, std::vector<int>> snp_in_sets,
+        std::unordered_map<std::string, std::vector<int> > &snp_in_sets,
         const std::vector<std::string>& feature, const int window_5,
         const int window_3, const bool genome_wide_background,
         const std::string& gtf, const std::string& msigdb,
