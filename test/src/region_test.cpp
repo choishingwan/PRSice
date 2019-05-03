@@ -1124,7 +1124,6 @@ protected:
                                             "CDS"};
         int window_5 = 0;
         int window_3 = 0;
-        bool genome_wide_background = false;
         std::string gtf = "";
         std::string msigdb = "";
         std::string snp_set = "";
@@ -1246,7 +1245,6 @@ protected:
                                             "CDS"};
         int window_5 = 10;
         int window_3 = 20;
-        bool genome_wide_background = false;
         std::string gtf = "";
         std::string msigdb = "";
         std::string snp_set = "";
@@ -1842,7 +1840,6 @@ protected:
                                             "CDS"};
         int window_5 = 0;
         int window_3 = 0;
-        bool genome_wide_background = false;
         std::string msigdb = "";
         std::string snp_set = "";
         std::string background = "";
@@ -2016,7 +2013,6 @@ protected:
                                             "CDS"};
         int window_5 = 10;
         int window_3 = 20;
-        bool genome_wide_background = false;
         std::string msigdb = "";
         std::string snp_set = "";
         std::string background = "";
@@ -2182,7 +2178,6 @@ protected:
                                             "CDS"};
         int window_5 = 0;
         int window_3 = 0;
-        bool genome_wide_background = false;
         std::string msigdb = "";
         std::string snp_set = "";
         std::string background = "";
