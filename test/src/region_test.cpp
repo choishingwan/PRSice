@@ -3229,4 +3229,77 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
     ASSERT_EQ(index.front(), found.front());
 
 }
+
+
+TEST(REGION, UNINIT_INDEX)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
+    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
+    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
+    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
+    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name="", gmt_name="", background="";
+    size_t num_regions;
+    try{
+        // we don't want multi-set
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                             window_5, window_3, genome_wide_background,
+                             gtf_name, gmt_name, bed_names, snp_set_name+":SNP_SET",
+                             background, 22, reporter);
+        SUCCEED();
+    }catch(...){
+        FAIL();
+    }
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+    try
+    {
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set_name,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 7 sets, the base, the SNP_SET and the background
+    ASSERT_EQ(num_regions, 7);
+    // For multi-set, we always use the first row as their name
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+
+    // now check inclusion
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    // we can simply check if the target SNPs are located in snp_in_sets
+    // we have 1245
+    // should still work without initializing the index
+    std::vector<uintptr_t> found(required_size,0), not_found(required_size,0), index;
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    SET_BIT(4, found.data());
+    SET_BIT(0, not_found.data());
+}
 #endif // REGION_TEST_HPP
