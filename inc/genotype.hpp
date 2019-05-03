@@ -416,7 +416,9 @@ public:
                                const size_t required_size, const int chr,
                                const int bp, const bool genome_wide_background)
     {
-        assert(flag.size() == required_size);
+        if(flag.size() != required_size){
+            flag.resize(required_size);
+        }
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
         if (genome_wide_background) {
