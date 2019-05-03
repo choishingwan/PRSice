@@ -1128,18 +1128,20 @@ protected:
         std::string snp_set = "";
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions =
-                Region::generate_regions(gene_sets, region_names, feature, window_5,
-                                         window_3, genome_wide_background, gtf, msigdb,
-                                         bed_names, snp_set, background, 22, reporter);
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
+            22, reporter);
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp){
-        std::vector<uintptr_t> index(required_size,0);
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
                                  genome_wide_background);
         return index;
@@ -1151,40 +1153,40 @@ TEST_F(REGION_STD_BED, CHECK_INCLUSION_OVERLAPPED)
     // that always uses the base region, which doesn't contain any boundary
     // instead, we must use the update flag function
 
-    EXPECT_EQ(get_flag(7, 7079+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(7, 7080+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 7081+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 45053+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 45054+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 45055+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 30303+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 30305+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 30306+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 45722+1).front(), found.front());
-    EXPECT_EQ(get_flag(7, 45723+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(7, 45724+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(14, 1693+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(14, 1695+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 47284+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 47285+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 47286+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 5224+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 5225+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 5226+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 13101+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 13102+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 13103+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 45657+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 45658+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 45659+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 78547+1).front(), found.front());
-    EXPECT_EQ(get_flag(14, 78548+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(14, 78549+1).front(), not_found.front());
+    EXPECT_EQ(get_flag(7, 7079 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(7, 7080 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 7081 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45053 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45054 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45055 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30303 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30305 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30306 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45722 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45723 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(7, 45724 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 1693 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 1695 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47284 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47285 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47286 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5224 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5225 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5226 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13101 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13102 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13103 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45657 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45658 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45659 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 78547 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 78548 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 78549 + 1).front(), not_found.front());
 }
 TEST_F(REGION_STD_BED, MID_NOT_FOUND)
 {
-    EXPECT_EQ(get_flag(19, 39329+1).front(), not_found.front());
-    EXPECT_EQ(get_flag(20, 64037+1).front(), found.front());
+    EXPECT_EQ(get_flag(19, 39329 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(20, 64037 + 1).front(), found.front());
 }
 class REGION_STD_BED_PAD : public ::testing::Test
 {
@@ -1248,18 +1250,20 @@ protected:
         std::string snp_set = "";
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions =
-                Region::generate_regions(gene_sets, region_names, feature, window_5,
-                                         window_3, genome_wide_background, gtf, msigdb,
-                                         bed_names, snp_set, background, 22, reporter);
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
+            22, reporter);
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp){
-        std::vector<uintptr_t> index(required_size,0);
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
                                  genome_wide_background);
         return index;
@@ -1271,25 +1275,25 @@ TEST_F(REGION_STD_BED_PAD, CHECK_PAD)
     // this SNP doesn't contain the strand info, we should assume the start
     // is the 5' end
     // we have pad 10 bp to the 5' and 20 to the 3'
-    EXPECT_EQ(get_flag(3, 29863+1-11).front(), not_found.front());
-    EXPECT_EQ(get_flag(3, 29863+1-10).front(), found.front());
-    EXPECT_EQ(get_flag(3, 29863+1).front(), found.front());
-    EXPECT_EQ(get_flag(3, 38285+1).front(), found.front());
-    EXPECT_EQ(get_flag(3, 38285+1+19).front(), found.front());
-    EXPECT_EQ(get_flag(3, 38285+1+20).front(), not_found.front());
-    EXPECT_EQ(get_flag(4, 20139+1-11).front(), not_found.front());
-    EXPECT_EQ(get_flag(4, 20139+1-10).front(), found.front());
-    EXPECT_EQ(get_flag(4, 20139+1).front(), found.front());
-    EXPECT_EQ(get_flag(4, 97433+1).front(), found.front());
-    EXPECT_EQ(get_flag(4, 97433+1+19).front(), found.front());
-    EXPECT_EQ(get_flag(4, 97433+1+20).front(), not_found.front());
+    EXPECT_EQ(get_flag(3, 29863 + 1 - 11).front(), not_found.front());
+    EXPECT_EQ(get_flag(3, 29863 + 1 - 10).front(), found.front());
+    EXPECT_EQ(get_flag(3, 29863 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1 + 19).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1 + 20).front(), not_found.front());
+    EXPECT_EQ(get_flag(4, 20139 + 1 - 11).front(), not_found.front());
+    EXPECT_EQ(get_flag(4, 20139 + 1 - 10).front(), found.front());
+    EXPECT_EQ(get_flag(4, 20139 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(4, 97433 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(4, 97433 + 1 + 19).front(), found.front());
+    EXPECT_EQ(get_flag(4, 97433 + 1 + 20).front(), not_found.front());
     // 6 34611 45099 . . -
-    EXPECT_EQ(get_flag(6, 34611+1-21).front(), not_found.front());
-    EXPECT_EQ(get_flag(6, 34611+1-20).front(), found.front());
-    EXPECT_EQ(get_flag(6, 34611+1).front(), found.front());
-    EXPECT_EQ(get_flag(6, 45099+1).front(), found.front());
-    EXPECT_EQ(get_flag(6, 45099+1+9).front(), found.front());
-    EXPECT_EQ(get_flag(6, 45099+1+10).front(), not_found.front());
+    EXPECT_EQ(get_flag(6, 34611 + 1 - 21).front(), not_found.front());
+    EXPECT_EQ(get_flag(6, 34611 + 1 - 20).front(), found.front());
+    EXPECT_EQ(get_flag(6, 34611 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1 + 9).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1 + 10).front(), not_found.front());
 }
 
 TEST(REGION_MULTI_BED, CHECK_NAME)
@@ -1323,11 +1327,12 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
     std::vector<std::string> bed_names = {std::string(bed_name + ":Name"),
                                           second_bed_name};
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions =
-            Region::generate_regions(gene_sets, region_names, feature, window_5,
-                                     window_3, genome_wide_background, gtf, msigdb,
-                                     bed_names, snp_set, background, 22, reporter);
+    size_t num_regions = Region::generate_regions(
+        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+        genome_wide_background, gtf, msigdb, bed_names, snp_set, background, 22,
+        reporter);
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
@@ -1369,10 +1374,11 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
     std::string background = "";
     std::vector<std::string> region_names;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions =
-    Region::generate_regions(gene_sets, region_names, feature, window_5,
-     window_3, genome_wide_background, gtf, msigdb,
-     bed_names, snp_set, background, 22, reporter);
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    size_t num_regions = Region::generate_regions(
+        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+        genome_wide_background, gtf, msigdb, bed_names, snp_set, background, 22,
+        reporter);
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
@@ -1401,11 +1407,13 @@ TEST(REGION_GTF_BASIC, NOT_EXIST)
     std::vector<std::string> region_names;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1430,13 +1438,15 @@ TEST(REGION_GTF_BASIC, EMPTY)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1472,13 +1482,15 @@ TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1511,11 +1523,13 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
     std::vector<std::string> region_names;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1550,13 +1564,15 @@ TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1592,12 +1608,14 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
     std::string background = "";
     std::vector<std::string> region_names;
     std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1633,13 +1651,15 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1676,13 +1696,15 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1717,13 +1739,15 @@ TEST(REGION_GTF_BASIC, NO_GENE_ID)
     std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
     {
-        Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, msigdb,
-         bed_names, snp_set, background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -1815,34 +1839,34 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::vector<std::string> bed_names = {};
-        num_regions=Region::generate_regions(gene_sets, region_names, feature, window_5,
-         window_3, genome_wide_background, gtf_name, gmt_name,
-         bed_names, snp_set, background, 22, reporter);
+        int window_5 = 0;
+        int window_3 = 0;
+        bool genome_wide_background = false;
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> region_names;
+        std::vector<std::string> bed_names = {};
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
         SET_BIT(0, not_found.data());
         // because we use genome_wide_background, which should have same bit set
         // as base
         SET_BIT(1, not_found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp){
-        std::vector<uintptr_t> index(required_size,0);
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
                                  genome_wide_background);
         return index;
     }
 };
-TEST_F(REGION_GTF_FEATURE, FEATURE_FILTER)
-{
-    ASSERT_EQ(num_regions, 8);
-}
+TEST_F(REGION_GTF_FEATURE, FEATURE_FILTER) { ASSERT_EQ(num_regions, 8); }
 
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
 {
@@ -1855,9 +1879,9 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
     // 1 havana gene 11869 14409
     ASSERT_EQ(get_flag(1, 11868).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 11869).front(), found.front());
-    ASSERT_EQ(get_flag(1,11870).front(), found.front());
+    ASSERT_EQ(get_flag(1, 11870).front(), found.front());
     ASSERT_EQ(get_flag(1, 14408).front(), found.front());
-    ASSERT_EQ(get_flag(1,14409).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14409).front(), found.front());
     ASSERT_EQ(get_flag(1, 14410).front(), not_found.front());
 }
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET2)
@@ -1865,7 +1889,7 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET2)
     // should all be failed as filtered by feature
     ASSERT_EQ(get_flag(1, 15868).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 15869).front(), not_found.front());
-    ASSERT_EQ(get_flag(1,15870).front(), not_found.front());
+    ASSERT_EQ(get_flag(1, 15870).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 16408).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 16409).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 16410).front(), not_found.front());
@@ -1874,7 +1898,7 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET2)
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET3)
 {
     // should all be failed as filtered by feature
-    ASSERT_EQ(get_flag(12,11399380 ).front(), not_found.front());
+    ASSERT_EQ(get_flag(12, 11399380).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11399381).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11399382).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11486677).front(), not_found.front());
@@ -1886,13 +1910,14 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET4)
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    // + 1 because 0 base, otherwise, we need to +2 to set number as base and background
-    SET_BIT(4+1, found.data());
-    SET_BIT(6+1, found.data());
+    // + 1 because 0 base, otherwise, we need to +2 to set number as base and
+    // background
+    SET_BIT(4 + 1, found.data());
+    SET_BIT(6 + 1, found.data());
     ASSERT_EQ(get_flag(12, 119697658).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 119697659).front(), found.front());
     ASSERT_EQ(get_flag(12, 119697660).front(), found.front());
-    ASSERT_EQ(get_flag(12,119697837).front(), found.front());
+    ASSERT_EQ(get_flag(12, 119697837).front(), found.front());
     ASSERT_EQ(get_flag(12, 119697838).front(), found.front());
     ASSERT_EQ(get_flag(12, 119697839).front(), not_found.front());
 }
@@ -1901,10 +1926,10 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET5)
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(5+1, found.data());
+    SET_BIT(5 + 1, found.data());
     ASSERT_EQ(get_flag(15, 55320274).front(), not_found.front());
     ASSERT_EQ(get_flag(15, 55320275).front(), found.front());
-    ASSERT_EQ(get_flag(15,55320276).front(), found.front());
+    ASSERT_EQ(get_flag(15, 55320276).front(), found.front());
     ASSERT_EQ(get_flag(15, 55320409).front(), found.front());
     ASSERT_EQ(get_flag(15, 55320410).front(), found.front());
     ASSERT_EQ(get_flag(15, 55320411).front(), not_found.front());
@@ -1998,36 +2023,36 @@ protected:
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-            num_regions=Region::generate_regions(gene_sets, region_names, feature, window_5,
-             window_3, genome_wide_background, gtf_name, gmt_name,
-             bed_names, snp_set, background, 22, reporter);
-            SET_BIT(0, not_found.data());
-            // because we use genome_wide_background, which should have same bit set
-            // as base
-            SET_BIT(1, not_found.data());
-            required_size = BITCT_TO_WORDCT(num_regions);
-        }
-        std::vector<uintptr_t> get_flag(const int chr, const int bp){
-            std::vector<uintptr_t> index(required_size,0);
-            Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
-                                     genome_wide_background);
-            return index;
-        }
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        SET_BIT(0, not_found.data());
+        // because we use genome_wide_background, which should have same bit set
+        // as base
+        SET_BIT(1, not_found.data());
+        required_size = BITCT_TO_WORDCT(num_regions);
+    }
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
+        Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
+                                 genome_wide_background);
+        return index;
+    }
 };
-TEST_F(REGION_GTF_PAD, FEATURE_FILTER)
-{
-    ASSERT_EQ(num_regions, 8);
-}
+TEST_F(REGION_GTF_PAD, FEATURE_FILTER) { ASSERT_EQ(num_regions, 8); }
 TEST_F(REGION_GTF_PAD, FOUND_SNP_SET1)
 {
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(1+1, found.data());
-    SET_BIT(6+1, found.data());
+    SET_BIT(1 + 1, found.data());
+    SET_BIT(6 + 1, found.data());
     // 1 havana gene 11869 14409
-    ASSERT_EQ(get_flag(1,11858).front(), not_found.front());
-    ASSERT_EQ(get_flag(1,11859).front(), found.front());
+    ASSERT_EQ(get_flag(1, 11858).front(), not_found.front());
+    ASSERT_EQ(get_flag(1, 11859).front(), found.front());
     ASSERT_EQ(get_flag(1, 11860).front(), found.front());
     ASSERT_EQ(get_flag(1, 14428).front(), found.front());
     ASSERT_EQ(get_flag(1, 14429).front(), found.front());
@@ -2049,7 +2074,7 @@ TEST_F(REGION_GTF_PAD, FOUND_SNP_SET3)
     ASSERT_EQ(get_flag(12, 11399360).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11399361).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11399362).front(), not_found.front());
-    ASSERT_EQ(get_flag(12 ,11486687).front(), not_found.front());
+    ASSERT_EQ(get_flag(12, 11486687).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11486688).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 11486689).front(), not_found.front());
 }
@@ -2058,8 +2083,8 @@ TEST_F(REGION_GTF_PAD, FOUND_SNP_SET4)
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(4+1, found.data());
-    SET_BIT(6+1, found.data());
+    SET_BIT(4 + 1, found.data());
+    SET_BIT(6 + 1, found.data());
     // 1 havana gene 11869 14409
     ASSERT_EQ(get_flag(12, 119697638).front(), not_found.front());
     ASSERT_EQ(get_flag(12, 119697639).front(), found.front());

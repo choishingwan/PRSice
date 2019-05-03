@@ -118,14 +118,16 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::add_flags(const std::vector<IITree<int, int>>& gene_sets,
-                         const size_t num_sets,
-                         const bool genome_wide_background)
+void Genotype::add_flags(
+    const std::vector<IITree<int, int>>& gene_sets,
+    const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+    const size_t num_sets, const bool genome_wide_background)
 {
     const size_t num_snps = m_existed_snps.size();
     const size_t required_size = BITCT_TO_WORDCT(num_sets);
     int chr, bp;
     std::vector<uintptr_t> flag(required_size, 0);
+    std::unordered_map<std::string, std::vector<int>>::const_iterator snp_idx;
     for (size_t i = 0; i < num_snps; ++i) {
         auto&& snp = m_existed_snps[i];
         chr = snp.chr();
@@ -136,6 +138,12 @@ void Genotype::add_flags(const std::vector<IITree<int, int>>& gene_sets,
         // flag)
         construct_flag(gene_sets, flag, required_size, chr, bp,
                        genome_wide_background);
+        snp_idx = snp_in_sets.find(snp.rs());
+        if (snp_idx != snp_in_sets.end()) {
+            for (auto&& i : snp_idx->second) {
+                SET_BIT(i, flag.data());
+            }
+        }
         m_existed_snps[i].set_flag(num_sets, flag);
     }
 }

@@ -153,6 +153,7 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
 size_t Region::generate_regions(
     std::vector<IITree<int, int>>& gene_sets,
     std::vector<std::string>& region_names,
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets,
     const std::vector<std::string>& feature, const int window_5,
     const int window_3, const bool genome_wide_background,
     const std::string& gtf, const std::string& msigdb,
@@ -185,7 +186,6 @@ size_t Region::generate_regions(
     // It all depends on the file content
     // (only one column = SNP list, mutliple column = SNP sets)
     std::vector<std::string> snp_sets = misc::split(snp_set, ",");
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     for (auto&& s : snp_sets) {
         message = "Loading " + s + " (SNP sets)";
         reporter.report(message);
@@ -432,7 +432,8 @@ void Region::load_gtf(
     std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
     Reporter& reporter)
 {
-    // don't bother if there's no msigdb genes and we are using genome wide background
+    // don't bother if there's no msigdb genes and we are using genome wide
+    // background
 
     if (msigdb_list.empty() && genome_wide_background) return;
     bool gz_input = false;
@@ -645,11 +646,12 @@ void Region::load_gtf(
         }
     }
     std::string message = "";
-    if(!num_line){
+    if (!num_line) {
         throw std::runtime_error("Error: Empty GTF file detected!\n");
     }
-    if(exclude_feature + chr_exclude >= num_line){
-        throw std::runtime_error("Error: No GTF entry remain after filter by feature and chromosome!\n");
+    if (exclude_feature + chr_exclude >= num_line) {
+        throw std::runtime_error("Error: No GTF entry remain after filter by "
+                                 "feature and chromosome!\n");
     }
     if (exclude_feature == 1) {
         message.append("A total of " + std::to_string(exclude_feature)

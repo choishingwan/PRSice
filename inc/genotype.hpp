@@ -404,7 +404,7 @@ public:
         std::vector<size_t> output;
         if (chr < 0) return false;
         if (static_cast<size_t>(chr) >= cr.size()) return false;
-        cr[static_cast<size_t>(chr)].overlap(loc-1, loc+1, output);
+        cr[static_cast<size_t>(chr)].overlap(loc - 1, loc + 1, output);
         return !output.empty();
     }
 
@@ -434,8 +434,10 @@ public:
         }
         return;
     }
-    void add_flags(const std::vector<IITree<int, int>>& cr,
-                   const size_t num_sets, const bool genome_wide_background);
+    void add_flags(
+        const std::vector<IITree<int, int>>& cr,
+        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        const size_t num_sets, const bool genome_wide_background);
 
 protected:
     // friend with all child class so that they can also access the
