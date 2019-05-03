@@ -126,8 +126,6 @@ public:
             m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
         }
     }
-
-    size_t max_category() const { return m_max_category; }
     /*!
      * \brief Return the number of sample we wish to perform PRS on
      * \return the number of sample
@@ -199,24 +197,7 @@ public:
             break;
         }
     }
-    /*!
-     * \brief This function will provide the snp coordinate of a single snp,
-     * return true when the SNP is found and false when it is not
-     * \param rs_id is the rs id of the SNP
-     * \param chr is chr return value
-     * \param loc is the bp of the SNP
-     * \return true if found, false if not
-     */
-    bool get_snp_loc(const std::string& rs_id, intptr_t& chr,
-                     intptr_t& loc) const
-    {
-        auto&& snp_index = m_existed_snps_index.find(rs_id);
-        if (snp_index == m_existed_snps_index.end()) return false;
-        // TODO: Might want to unify the int type usage
-        chr = m_existed_snps[snp_index->second].chr();
-        loc = m_existed_snps[snp_index->second].loc();
-        return true;
-    }
+
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression flag
      * to false and propagate it later on to indicate if the sample is used in
@@ -344,19 +325,6 @@ public:
                         const bool first_run, const bool require_standardize,
                         const bool use_ref_maf);
     /*!
-     * \brief Return the number of SNPs included in the background
-     * \return  the number of background SNPs
-     */
-    size_t num_background() const { return m_background_snp_index.size(); }
-    /*!
-     * \brief Get the index of background SNPs on the m_existed_snp vector
-     * \return the index of background SNPs on the m_existed_snp vector
-     */
-    std::vector<size_t> background_index() const
-    {
-        return m_background_snp_index;
-    }
-    /*!
      * \brief return the largest chromosome allowed
      * \return  the largest chromosome
      */
@@ -366,12 +334,6 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    /*!
-     * \brief Return the i th SNP, only use for unit testing
-     * \param i is the index to the SNP
-     * \return the ith SNP object
-     */
-    SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
@@ -473,7 +435,6 @@ protected:
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
-    std::vector<size_t> m_background_snp_index;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     // std::vector<int32_t> m_chrom_start;
@@ -567,7 +528,7 @@ protected:
     int calculate_category(const double& pvalue,
                            const std::vector<double>& barlevels, double& pthres)
     {
-        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i) {
+        for (size_t i = 0; i < barlevels.size(); ++i) {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
@@ -578,6 +539,7 @@ protected:
         pthres = 1.0;
         return static_cast<int>(barlevels.size());
     }
+
     /*!
      * \brief Replace # in the name of the genotype file and generate list
      * of file for subsequent analysis \param prefix contains the name of

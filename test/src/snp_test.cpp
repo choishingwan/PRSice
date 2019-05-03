@@ -430,22 +430,24 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     ASSERT_EQ(result[3], 1);
     ASSERT_EQ(result[4], 3);
 }
-/*
+
 // clump will need a special test just for that (Need to take into account of
 // both region and SNP)
-class GenotypeSNPTest : public Genotype
-{
-public:
-    GenotypeSNPTest() { m_max_code = 22; }
-};
 // Any error in the GTF file will lead to throw
+
 class SNP_REGION : public ::testing::Test
 {
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    Region region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
+    size_t num_regions;
+    size_t required_size;
+    // make sure genome_wide_background is true, or each set will
+    // have a different not_found bit
+    bool genome_wide_background = true;
     void SetUp() override
     {
         std::string gtf_name = path + "Test.gtf";
@@ -454,10 +456,6 @@ protected:
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
         gtf << "#!genome-build GRCh38.p7\n"
-               "#!genome - version GRCh38\n"
-               "#!genome - date 2013 - 12\n"
-               "#!genome - build - accession NCBI : GCA_000001405 .22\n"
-               "#!genebuild - last - updated 2016 - 06\n"
                "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
                "\"ENSG00000223972\"; "
                "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
@@ -521,33 +519,49 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        region = Region(feature, 0, 0, false, false);
+        int window_5 = 0;
+        int window_3 = 0;
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        GenotypeSNPTest dummy;
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
 };
 
+
 TEST_F(SNP_REGION, BASE_SET1_STANDARD)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index, required_size, 1, 1,
+                             genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index, required_size, 1, 11869,
+                             genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
-
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    // genome_wide_background is set to true. All SNPs therefore have their
+    // background bit set no matter what
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i==2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -560,14 +574,15 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-    // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    // the set SNP should've lost the base and background flag
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 1 || i == 6) {
+        if (i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -576,23 +591,31 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
         }
     }
 }
+
 TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // use proxy clumping, but LD not high enough to consider for proxy clump
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index, required_size, 1, 1,
+                             genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index, required_size, 1, 11869,
+                             genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i==2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -605,14 +628,15 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 1 || i == 6) {
+        if (i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -624,22 +648,29 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
 
 TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // use proxy clumping and LD is high enough
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index, required_size, 1, 1,
+                             genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index, required_size, 1, 11869,
+                             genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
-        // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+    for (size_t i = 0; i < num_regions; ++i) {
+        // we should not acquire the flag from base_snp
+        if (i == 0 || i == 1 || i==2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -651,9 +682,9 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should have acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i ==2 || i == 7) {
             ASSERT_TRUE(base_snp.in(i));
         }
         else
@@ -663,18 +694,27 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     }
     // we simply set the set_snp to clumped without setting its flags to zero
 }
+
 TEST_F(SNP_REGION, BASE_BASE_STANDARD)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 2, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // both base and set SNPs were not found in any regions
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 2, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index, required_size, 1, 1,
+                             genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index, required_size, 1, 2,
+                             genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(set_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    ASSERT_TRUE(set_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
         ASSERT_FALSE(set_snp.in(i));
@@ -683,16 +723,18 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     base_snp.clump(set_snp, 0.1, false, 0.8);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
+    // all flag of set_snp should now be in base
     ASSERT_TRUE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-    // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    // the set SNP should've lost all flags
+    for (size_t i = 0; i < num_regions; ++i) {
         ASSERT_FALSE(set_snp.in(i));
     }
 }
-*/
+
 #endif // SNP_TEST_HPP
