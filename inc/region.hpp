@@ -76,13 +76,12 @@ private:
                 std::vector<std::string>& region_names,
                 std::unordered_set<std::string> duplicated_sets, int& set_idx,
                 Reporter& reporter);
-    static void load_gtf(
-        const std::string& gtf,
+    static void load_gtf(const std::string& gtf,
         const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
         const std::vector<std::string>& features, const uint32_t max_chr,
         const int window_5, const int window_3,
         std::vector<IITree<int, int>>& gene_sets,
-        const bool genome_wide_background, Reporter& reporter);
+        const bool genome_wide_background, const bool provided_background, Reporter& reporter);
     static bool load_bed_regions(
         const std::string& bed_file, std::vector<IITree<int, int>>& gene_sets,
         const int window_5, const int window_3, bool& print_warning,

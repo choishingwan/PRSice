@@ -224,7 +224,7 @@ size_t Region::generate_regions(
         message = "Loading GTF file: " + gtf;
         reporter.report(message);
         load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
-                 gene_sets, genome_wide_background, reporter);
+                 gene_sets, genome_wide_background, !background.empty(), reporter);
     }
     // index gene list
     for (auto&& tree : gene_sets) tree.index();
@@ -430,7 +430,7 @@ void Region::load_gtf(
     const std::vector<std::string>& feature, const uint32_t max_chr,
     const int window_5, const int window_3,
     std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
-    Reporter& reporter)
+        const bool provided_background, Reporter& reporter)
 {
     // don't bother if there's no msigdb genes and we are using genome wide
     // background
@@ -622,8 +622,9 @@ void Region::load_gtf(
                                                                  idx);
                 }
             }
-            if (!genome_wide_background) {
+            if (!genome_wide_background & !provided_background) {
                 // we want to generate the background from GTF
+                // but not when a background file is provided
                 // background index is 1
                 gene_sets[static_cast<size_t>(chr_code)].add(start, end, 1);
             }

@@ -1756,7 +1756,6 @@ TEST(REGION_GTF_BASIC, NO_GENE_ID)
         SUCCEED();
     }
 }
-
 class REGION_GTF_FEATURE : public ::testing::Test
 {
     // For exclusion, strand information should not alter result (window
@@ -1868,7 +1867,6 @@ protected:
     }
 };
 TEST_F(REGION_GTF_FEATURE, FEATURE_FILTER) { ASSERT_EQ(num_regions, 8); }
-
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
 {
     std::vector<uintptr_t> found = {0};
@@ -1895,7 +1893,6 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET2)
     ASSERT_EQ(get_flag(1, 16409).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 16410).front(), not_found.front());
 }
-
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET3)
 {
     // should all be failed as filtered by feature
@@ -2099,7 +2096,7 @@ TEST_F(REGION_GTF_PAD, FOUND_SNP_SET5)
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(5, found.data());
+    SET_BIT(5+1, found.data());
     // 1 havana gene 11869 14409
     ASSERT_EQ(get_flag(15, 55320264).front(), not_found.front());
     ASSERT_EQ(get_flag(15, 55320265).front(), found.front());
@@ -2108,13 +2105,17 @@ TEST_F(REGION_GTF_PAD, FOUND_SNP_SET5)
     ASSERT_EQ(get_flag(15, 55320430).front(), found.front());
     ASSERT_EQ(get_flag(15, 55320431).front(), not_found.front());
 }
-/*
 // need class for following
 class REGION_GTF_MULTI_EX : public ::testing::Test
 {
 protected:
-    Region region;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
+    size_t num_regions;
+    size_t required_size;
+    // make sure genome_wide_background is true, or each set will
+    // have a different not_found bit
+    bool genome_wide_background = true;
     void SetUp() override
     {
         std::string gtf_name = path + "Test.gtf";
@@ -2177,109 +2178,85 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        region = Region(feature, 0, 0, false, false);
+        int window_5 = 0;
+        int window_3 = 0;
+        bool genome_wide_background = false;
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        GenotypeTest dummy;
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
         SET_BIT(0, not_found.data());
+        // because we use genome_wide_background, which should have same bit set
+        // as base
+        SET_BIT(1, not_found.data());
+        required_size = BITCT_TO_WORDCT(num_regions);
+    }
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
+        Genotype::construct_flag(gene_sets, index, required_size, chr, bp,
+                                 genome_wide_background);
+        return index;
     }
 };
 TEST_F(REGION_GTF_MULTI_EX, MULTI_NAME_MAP)
 {
     // same name mapped to multiple transcript
-    std::vector<uintptr_t> found = {0}, index = {0};
+    std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(3, found.data());
-    SET_BIT(4, found.data());
+    SET_BIT(1+1, found.data());
+    SET_BIT(3+1, found.data());
+    SET_BIT(4+1, found.data());
     // 1 11869 14409
     // 1 15869 16409
-    region.update_flag(1, "", 11868, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 11869, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 11870, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14408, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14409, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14410, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
+    ASSERT_EQ(get_flag(1, 11868).front(), not_found.front());
+    ASSERT_EQ(get_flag(1, 11869).front(), found.front());
+    ASSERT_EQ(get_flag(1, 11870).front(), found.front());
+    ASSERT_EQ(get_flag(1,14408).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14409).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14410).front(), not_found.front());
     found.front() = 0;
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(3, found.data());
-    SET_BIT(5, found.data());
-    region.update_flag(1, "", 15868, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 15869, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 15870, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 16408, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 16409, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 16410, index);
-    ASSERT_EQ(index.front(), not_found.front());
+    SET_BIT(1+1, found.data());
+    SET_BIT(3+1, found.data());
+    SET_BIT(5+1, found.data());
+    ASSERT_EQ(get_flag(1, 15868).front(), not_found.front());
+    ASSERT_EQ(get_flag(1, 15869).front(), found.front());
+    ASSERT_EQ(get_flag(1, 15870).front(), found.front());
+    ASSERT_EQ(get_flag(1, 16408).front(), found.front());
+    ASSERT_EQ(get_flag(1, 16409).front(), found.front());
+    ASSERT_EQ(get_flag(1, 16410).front(), not_found.front());
 }
 TEST_F(REGION_GTF_MULTI_EX, SIMPLE_MULTI)
 {
     // 12 11399381 11486678
     // 12 119697659 119697838
-    std::vector<uintptr_t> found = {0}, index = {0};
+    std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    SET_BIT(3, found.data());
-    SET_BIT(6, found.data());
-    region.update_flag(12, "", 11399380, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11399381, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11399382, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486677, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486678, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486679, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697658, index);
-    ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697659, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697660, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697837, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697838, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697839, index);
-    ASSERT_EQ(index.front(), not_found.front());
+    SET_BIT(1, found.data());
+    SET_BIT(2+1, found.data());
+    SET_BIT(3+1, found.data());
+    SET_BIT(6+1, found.data());
+    ASSERT_EQ(get_flag(12,11399380).front(), not_found.front());
+    ASSERT_EQ(get_flag(12, 11399381).front(), found.front());
+    ASSERT_EQ(get_flag(12, 11399382).front(), found.front());
+    ASSERT_EQ(get_flag(12, 11486677).front(), found.front());
+    ASSERT_EQ(get_flag(12, 11486678).front(), found.front());
+    ASSERT_EQ(get_flag(12, 11486679).front(), not_found.front());
+    ASSERT_EQ(get_flag(12, 119697658).front(), not_found.front());
+    ASSERT_EQ(get_flag(12, 119697659).front(), found.front());
+    ASSERT_EQ(get_flag(12, 119697660).front(), found.front());
+    ASSERT_EQ(get_flag(12, 119697837).front(), found.front());
+    ASSERT_EQ(get_flag(12, 119697838).front(), found.front());
+    ASSERT_EQ(get_flag(12, 119697839).front(), not_found.front());
 }
 TEST(REGION_MSIGDB, NAME_CROSS_CHR)
 {
@@ -2340,13 +2317,22 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, false, false);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
-    GenotypeTest dummy;
     try
     {
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         SUCCEED();
     }
     catch (...)
@@ -2413,13 +2399,22 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, false, false);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
-    GenotypeTest dummy;
     try
     {
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
         SUCCEED();
     }
     catch (...)
@@ -2429,7 +2424,6 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
 }
 TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 {
-    // This should be ok? Transplicing or something like that?
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
@@ -2486,13 +2480,22 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, true, false);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
-    GenotypeTest dummy;
+    size_t num_regions;
     try
     {
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         SUCCEED();
     }
     catch (...)
@@ -2500,23 +2503,26 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
         FAIL();
     }
     // we should have the 2 sets, the base and the background
-    ASSERT_EQ(region.size(), 4);
+    ASSERT_EQ(num_regions, 4);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
-    SET_BIT(3, found.data());
+    SET_BIT(1, found.data());
     // 12 11399381 11486678
-    // SNP not in any location
-    region.update_flag(12, "", 1139, index);
+    // SNP not in any location, not even in the background
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 1139,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     index.front() = 0;
     // SNP not in any region, but in background
-    region.update_flag(12, "", 11399381, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11399381,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
 }
+
 TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
 {
-    // This should be ok? Transplicing or something like that?
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
@@ -2573,27 +2579,48 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, true, true);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = true;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<std::string> bed_names = {};
-    GenotypeTest dummy;
-    region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "", dummy,
-                            reporter);
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
     // we should have the 2 sets, the base and the background
-    ASSERT_EQ(region.size(), 4);
+    ASSERT_EQ(num_regions, 4);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
-    SET_BIT(3, found.data());
+    SET_BIT(1, found.data());
     // 12 11399381 11486678
     // SNP not in any location will still be included in the background (genome
     // wide background)
-    region.update_flag(12, "", 1139, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 1139,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     index[0] = 0;
     // SNP not in any region, but in background
-    region.update_flag(12, "", 11399381, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11399381,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
 }
+
 TEST(REGION_BACKGROUND, BED_BACKGROUND)
 {
     std::ofstream bed_file;
@@ -2643,64 +2670,88 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
                 "14 22104 47572\n";
     bed_file.close();
     background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, true, false);
-    std::vector<std::string> bed_names = {bed_name};
-    Genotype dummy;
-    region.generate_regions("", "", bed_names, "", "", background, dummy,
-                            reporter);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name="", gmt_name="";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 3 sets, the base, the bed and the background
+    ASSERT_EQ(num_regions, 3);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0}, index = {0};
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
+    SET_BIT(1, found.data());
     // 4  3016 87782
     //"4 20139 97433 . . .\n"
     // 4  87000 should be found in both the set and the background
     // 13 53970 should only be found in the background
-    region.update_flag(4, "", 3015 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3015+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 3016 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3016+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 3017 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3017+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 20138 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20138+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    SET_BIT(1, found.data());
-    index.front() = 0;
-    region.update_flag(4, "", 20139 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 20140 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 87781 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    index.front() = 0;
-    region.update_flag(4, "", 87782 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 87783 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
+    // found in both background and the bed file
     SET_BIT(2, found.data());
-    region.update_flag(13, "", 53970 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20139+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20140+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87781+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // only found in bed but not background
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87782+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87783+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // found in all
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    Genotype::construct_flag(gene_sets, index, required_size, 13, 53970+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     // anything on chromosome 17 should only be found in the base
-    index.front() = 0;
-    region.update_flag(17, "", 53970 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 17, 53970+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
 }
+
 TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
 {
     std::ofstream bed_file;
@@ -2753,62 +2804,86 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, true, false);
     std::vector<std::string> bed_names = {bed_name};
-    Genotype dummy;
-    region.generate_regions("", "", bed_names, "", "", background, dummy,
-                            reporter);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name="", gmt_name="";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 3 sets, the base, the bed and the background
+    ASSERT_EQ(num_regions, 3);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0}, index = {0};
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
+    SET_BIT(1, found.data());
     // 4  3016 87782
     //"4 20139 97433 . . .\n"
     // 4  87000 should be found in both the set and the background
     // 13 53970 should only be found in the background
-    region.update_flag(4, "", 3015, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3015,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 3016, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3016,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 3017, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 3017,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 20138 + 1, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20138+1,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    SET_BIT(1, found.data());
-    index.front() = 0;
-    // the non-background range should be bed format
-    region.update_flag(4, "", 20139 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 20140 + 1, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 87781, index);
-    ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(4, "", 87782, index);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    index.front() = 0;
-    region.update_flag(4, "", 87783, index);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
+    // also found in set
     SET_BIT(2, found.data());
-    region.update_flag(13, "", 53970, index);
+    // the non-background range should be bed format
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20139+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 20140+1,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87781,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87782,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // now only found in set
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    Genotype::construct_flag(gene_sets, index, required_size, 4, 87783,
+                             genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // found in background only
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    Genotype::construct_flag(gene_sets, index, required_size, 13, 53970,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     // anything on chromosome 17 should only be found in the base
-    index.front() = 0;
-    region.update_flag(17, "", 53970, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 17, 53970,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
 }
+
 TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
 {
     // This should be ok? Transplicing or something like that?
@@ -2867,111 +2942,132 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     gmt.close();
     std::string background = path + "background";
     gmt.open(background.c_str());
+    // accept both single line and multi-line (maybe a little bit too
+    // flexible?
     gmt << "DDX11L1" << std::endl;
-    gmt << "CIT" << std::endl;
-    gmt << "CCTV" << std::endl;
+    gmt << "CIT CCTV" << std::endl;
     gmt.close();
     background.append(":gene");
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    Region region(feature, 0, 0, true, false);
     std::vector<std::string> bed_names = {};
-    GenotypeTest dummy;
-    region.generate_regions(gtf_name, gmt_name, bed_names, "", "", background,
-                            dummy, reporter);
-    // we should have the 2 sets, the base and the background
-    ASSERT_EQ(region.size(), 4);
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 4 sets, the base, the 2 regions and the background
+    ASSERT_EQ(num_regions, 4);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> found = {0}, not_found = {0}, index = {0};
-    // 1 11869 14409 1101
+    // 1 11869 14409 1110
 
     SET_BIT(0, not_found.data());
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(3, found.data());
+    SET_BIT(2, found.data());
     index.front() = 0;
-    region.update_flag(1, "", 11868, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 11868,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 11869, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 11869,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 11870, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 11870,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14408, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 14408,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14409, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 14409,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(1, "", 14410, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 1, 14410,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     // 2 15869 16409 1000
-    index.front() = 0;
-    region.update_flag(2, "", 15868, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 15868,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(2, "", 15869, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 15869,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(2, "", 15870, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 15870,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(2, "", 16408, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 16408,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(2, "", 16409, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 16409,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(2, "", 16410, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 2, 16410,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    // 12 11399381 11486678 1001
+    // 12 11399381 11486678 1100
+    // only found in background
     found.front() = 0;
     SET_BIT(0, found.data());
-    SET_BIT(3, found.data());
-    index.front() = 0;
-    region.update_flag(12, "", 11399380, index);
+    SET_BIT(1, found.data());
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11399380,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11399381, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11399381,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11399382, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11399382,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486677, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11486677,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486678, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11486678,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 11486679, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 11486679,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    // 12 119697659 119697838 1011
+    // 12 119697659 119697838 1101
+    //
     found.front() = 0;
     SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
+    SET_BIT(1, found.data());
     SET_BIT(3, found.data());
-    index.front() = 0;
-    region.update_flag(12, "", 119697658, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697658,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697659, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697659,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697660, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697660,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697837, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697837,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697838, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697838,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    index.front() = 0;
-    region.update_flag(12, "", 119697839, index);
+    Genotype::construct_flag(gene_sets, index, required_size, 12, 119697839,
+                             genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
 }
-*/
+
 // TODO  SNP Test (this will require information from Genotype)
 #endif // REGION_TEST_HPP
