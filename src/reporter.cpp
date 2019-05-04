@@ -19,18 +19,6 @@ void split(std::vector<std::string>& result, const char* str, char c = ' ')
     } while (0 != *str++);
 }
 
-bool Reporter::isNumeric(std::string s)
-{
-    try
-    {
-        misc::convert<double>(s);
-    }
-    catch (...)
-    {
-        return false;
-    }
-    return true;
-}
 
 void Reporter::report(const std::string& input, bool wrap)
 {
@@ -58,7 +46,7 @@ void Reporter::report(const std::string& input, bool wrap)
             // (no in line list allowed)
             split(check_list, message.c_str(), ')');
             if (check_list.size() > 1) {
-                if (isNumeric(check_list.front())) {
+                if (misc::isNumeric(check_list.front())) {
                     is_list = true;
                     list_prefix = check_list.front() + ")";
                     space_pad = list_prefix.size() + 1;

@@ -1,38 +1,112 @@
 #ifndef MISC_TEST_HPP
 #define MISC_TEST_HPP
-#include "reporter.hpp"
 #include "global.hpp"
+#include "reporter.hpp"
 #include "gtest/gtest.h"
 #include <vector>
 
-TEST(REPORTER, FILE_NOT_WRITABLE){
-    try {
+TEST(REPORTER, CHANGE_WIDTH)
+{
+    try
+    {
         // shouldn't be able to write in the base file
-        Reporter reporter(std::string("/LOG"));
+        Reporter reporter(std::string(path + "LOG"), 80);
+        SUCCEED();
+    }
+    catch (...)
+    {
         FAIL();
-    } catch (...) {
+    }
+}
+
+TEST(REPORTER, FILE_WRITE_FAILED)
+{
+    try
+    {
+        // shouldn't be able to write in the base file
+        Reporter reporter("", 80);
+        FAIL();
+    }
+    catch (...)
+    {
         SUCCEED();
     }
 }
 
-TEST(REPORTER, CHANGE_WIDTH){
-    try {
-        // shouldn't be able to write in the base file
-        Reporter reporter(std::string(path+"LOG"), 80);
-        FAIL();
-    } catch (...) {
-        SUCCEED();
-    }
-}
 
-
-TEST(REPORTER, INIT){
-    try {
+TEST(REPORTER, EMPTY_INIT)
+{
+    try
+    {
         // initialize with nothing
         Reporter reporter;
+        SUCCEED();
+    }
+    catch (...)
+    {
         FAIL();
-    } catch (...) {
+    }
+}
+
+TEST(REPORTER, INITIALIZE)
+{
+    try
+    {
+        // initialize with nothing
+        Reporter reporter;
+        reporter.initiailize(std::string(path + "LOC"));
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REPORTER, FAIL_INITIALIZE)
+{
+    try
+    {
+        // initialize with nothing
+        Reporter reporter;
+        reporter.initiailize("");
+        FAIL();
+    }
+    catch (...)
+    {
         SUCCEED();
     }
 }
-#endif //MISC_TEST_HPP
+
+
+TEST(REPORTER, REPORTING_MESSAGE)
+{
+    try
+    {
+        // initialize with nothing
+        Reporter reporter(std::string(path + "LOG"));
+        reporter.report("OUTPUT");
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REPORTER, LIST_MESSAGE)
+{
+    try
+    {
+        // initialize with nothing
+        Reporter reporter(std::string(path + "LOG"));
+        reporter.report("1) Testing\n2)If this is ok\n");
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+#endif // MISC_TEST_HPP

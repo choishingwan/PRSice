@@ -371,14 +371,13 @@ public:
     }
 
 
-    static void construct_flag(const std::string &rs,
-                               const std::vector<IITree<int, int>>& gene_sets,
-                               const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
-                               std::vector<uintptr_t>& flag,
-                               const size_t required_size, const int chr,
-                               const int bp, const bool genome_wide_background)
+    static void construct_flag(
+        const std::string& rs, const std::vector<IITree<int, int>>& gene_sets,
+        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        std::vector<uintptr_t>& flag, const size_t required_size, const int chr,
+        const int bp, const bool genome_wide_background)
     {
-        if(flag.size() != required_size){
+        if (flag.size() != required_size) {
             flag.resize(required_size);
         }
         std::fill(flag.begin(), flag.end(), 0);
@@ -388,7 +387,7 @@ public:
         }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr >= 0 && !gene_sets.empty()){
+        if (chr >= 0 && !gene_sets.empty()) {
             std::vector<size_t> out;
             if (static_cast<size_t>(chr) >= gene_sets.size()) return;
             gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
@@ -399,8 +398,8 @@ public:
                 SET_BIT(static_cast<size_t>(idx), flag.data());
             }
         }
-        if(snp_in_sets.empty() || rs.empty()) return;
-        auto &&snp_idx = snp_in_sets.find(rs);
+        if (snp_in_sets.empty() || rs.empty()) return;
+        auto&& snp_idx = snp_in_sets.find(rs);
         if (snp_idx != snp_in_sets.end()) {
             for (auto&& i : snp_idx->second) {
                 SET_BIT(i, flag.data());
@@ -440,8 +439,6 @@ protected:
     // std::vector<int32_t> m_chrom_start;
     // sample file name. Fam for plink
     std::string m_sample_file;
-    std::mutex m_get_maf_mutex;
-    std::mutex m_update_beta_mutex;
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;

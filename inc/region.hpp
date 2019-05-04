@@ -52,9 +52,10 @@ public:
     virtual ~Region();
     static void generate_exclusion(std::vector<IITree<int, int>>& cr,
                                    const std::string& exclusion_range);
-    static size_t generate_regions(std::vector<IITree<int, int>>& gene_sets,
+    static size_t generate_regions(
+        std::vector<IITree<int, int>>& gene_sets,
         std::vector<std::string>& region_names,
-        std::unordered_map<std::string, std::vector<int> > &snp_in_sets,
+        std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
         const std::vector<std::string>& feature, const int window_5,
         const int window_3, const bool genome_wide_background,
         const std::string& gtf, const std::string& msigdb,
@@ -75,12 +76,14 @@ private:
                 std::vector<std::string>& region_names,
                 std::unordered_set<std::string> duplicated_sets, int& set_idx,
                 Reporter& reporter);
-    static void load_gtf(const std::string& gtf,
+    static void load_gtf(
+        const std::string& gtf,
         const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
         const std::vector<std::string>& features, const uint32_t max_chr,
         const int window_5, const int window_3,
         std::vector<IITree<int, int>>& gene_sets,
-        const bool genome_wide_background, const bool provided_background, Reporter& reporter);
+        const bool genome_wide_background, const bool provided_background,
+        Reporter& reporter);
     static bool load_bed_regions(
         const std::string& bed_file, std::vector<IITree<int, int>>& gene_sets,
         const int window_5, const int window_3, bool& print_warning,
@@ -100,6 +103,7 @@ private:
             is_header = true;
             return;
         }
+
         if (column_size == 0) {
             column_size = bed_line.size();
         }
@@ -117,6 +121,16 @@ private:
         // don't bother to check the coordinate as those are kinda check later
         // on and allow for better error report (though we can also pull in
         // reporter here)
+        std::string chr = bed_line.front();
+        std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
+        if (bed_line.front().rfind("CHR") != 0) {
+            if (!misc::isNumeric(bed_line.front())) {
+                std::string message =
+                    "Error: Invalid BED format. First field "
+                    "of BED file should be chromosomal information\n";
+                throw std::runtime_error(message);
+            }
+        }
         if (bed_line.size() > 5) {
             if (bed_line[5] != "." && bed_line[5] != "+" && bed_line[5] != "-")
             {
