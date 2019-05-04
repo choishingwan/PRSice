@@ -1029,5 +1029,19 @@ inline bool logically_equal(double a, double b, double error_factor = 1.0)
                                       * std::numeric_limits<double>::epsilon()
                                       * error_factor));
 }
+
+inline bool isNumeric(std::string s)
+{
+    try
+    {
+        convert<double>(s);
+    }
+    catch (...)
+    {
+        return false;
+    }
+    return true;
 }
+}
+
 #endif /* misc_hpp */

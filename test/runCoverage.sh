@@ -12,8 +12,8 @@ UNIT_TEST="${2}"
 TEST_DIR="${3}"
 
 # Generate our base line info
-
-"${LCOV}" -z -c -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info"
+"${LCOV}" -d "${SRC_DIR}" -z
+"${LCOV}" -c -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info"
 
 "${UNIT_TEST}" "${3}"
 
@@ -22,7 +22,7 @@ HTML_RESULTS="${1}/html"
 mkdir -p ${HTML_RESULTS}
 
 # generate our coverage info
-"${LCOV}" -b "${SRC_DIR}/../" -d "${SRC_DIR}" -c -o "${SRC_DIR}/coverage.info"
+"${LCOV}" -c -b "${SRC_DIR}/../" -d "${SRC_DIR}" -o "${SRC_DIR}/coverage.info"
 
 # Combine the two info
 "${LCOV}" -a "${SRC_DIR}/baseline.info" -a "${SRC_DIR}/coverage.info" -o "${SRC_DIR}/coverage-combined.info"
@@ -33,10 +33,10 @@ mkdir -p ${HTML_RESULTS}
 #"${LCOV}" -r "${SRC_DIR}/coverage.info" "*gtest*"
 
 # generate our HTML
-"${GENHTML}" -o "${HTML_RESULTS}" "${SRC_DIR}/coverage-filtered.info"
+"${GENHTML}" --branch-coverage -o "${HTML_RESULTS}" "${SRC_DIR}/coverage-filtered.info"
 
 # reset our counts
 "${LCOV}" -d "${SRC_DIR}" -z
 
 # open in browser and bring to front
-open -a "${BROWSER}" "${HTML_RESULTS}/index.html"
+#open -a "${BROWSER}" "${HTML_RESULTS}/index.html"
