@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include <fstream>
 #include <math.h>
-/*
+
 class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:
@@ -29,6 +29,7 @@ protected:
     }
     void TearDown() override { delete plink; }
 };
+
 TEST_F(BPLINK_GEN_SAMPLE_TARGET, NO_SELECTION)
 {
     std::string keep_file = "";
@@ -174,6 +175,7 @@ TEST(BPLINK_FOUNDER, FOUNDER_REMOVE)
     // paternal and maternal is here, that sample is from a different family
     ASSERT_EQ(sum_founder, 862);
 }
+/*
 class BPLINK_GEN_SNP_TARGET : public ::testing::Test
 {
 protected:

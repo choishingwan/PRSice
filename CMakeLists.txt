@@ -18,7 +18,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Don't use e.g. GNU extension (like -std=gnu++11) for portability
 set(CMAKE_CXX_EXTENSIONS OFF)
-
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 ################################
 #  Googletest configuration
 ################################
@@ -46,6 +46,7 @@ if(CMAKE_VERSION VERSION_LESS 2.8.11)
     include_directories("${gtest_SOURCE_DIR}/include"
                         "${gmock_SOURCE_DIR}/include")
 endif()
+
 
 add_library(coverage_config INTERFACE)
 option(CODE_COVERAGE "Enable coverage reporting" OFF)
