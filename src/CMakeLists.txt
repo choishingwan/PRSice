@@ -5,41 +5,23 @@ cmake_minimum_required (VERSION 3.1)
 # Eigen from http://bitbucket.org/eigen/eigen/get/3.2.9.tar.bz2
 set(EIGEN3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/lib)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-
-
-
-add_library(bgen bgen_lib.cpp)
-add_library(binarygen binarygen.cpp)
-add_library(binaryplink binaryplink.cpp)
-add_library(commander commander.cpp)
-add_library(genotype genotype.cpp)
-add_library(gzstream gzstream.cpp)
-add_library(misc misc.cpp)
-add_library(plink plink_common.cpp)
-add_library(prsice prsice.cpp)
-add_library(region region.cpp)
-add_library(regression regression.cpp)
-add_library(reporter reporter.cpp)
-add_library(snp snp.cpp)
 include_directories(${CMAKE_SOURCE_DIR}/inc)
 
+add_library(bgen ${CMAKE_SOURCE_DIR}/src/bgen_lib.cpp)
+add_library(binarygen ${CMAKE_SOURCE_DIR}/src/binarygen.cpp)
+add_library(binaryplink ${CMAKE_SOURCE_DIR}/src/binaryplink.cpp)
+add_library(commander ${CMAKE_SOURCE_DIR}/src/commander.cpp)
+add_library(genotype ${CMAKE_SOURCE_DIR}/src/genotype.cpp)
+add_library(gzstream ${CMAKE_SOURCE_DIR}/src/gzstream.cpp)
+add_library(misc ${CMAKE_SOURCE_DIR}/src/misc.cpp)
+add_library(plink ${CMAKE_SOURCE_DIR}/src/plink_common.cpp)
+add_library(prsice_class ${CMAKE_SOURCE_DIR}/src/prsice.cpp)
+add_library(region ${CMAKE_SOURCE_DIR}/src/region.cpp)
+add_library(regression ${CMAKE_SOURCE_DIR}/src/regression.cpp)
+add_library(reporter ${CMAKE_SOURCE_DIR}/src/reporter.cpp)
+add_library(snp ${CMAKE_SOURCE_DIR}/src/snp.cpp)
 
-add_executable(PRSice main.cpp)
-target_link_libraries(PRSice PRIVATE
-    bgen
-    binarygen
-    binaryplink
-    commander
-    genotype
-    gzstream
-    misc
-    plink
-    prsice
-    region
-    regression
-    reporter
-    snp
-    coverage_config)
+add_executable(PRSice ${CMAKE_SOURCE_DIR}/src/main.cpp)
 ################################
 #           Add zlib
 ################################
@@ -53,4 +35,19 @@ endif( ZLIB_FOUND )
 ################################
 find_package (Threads)
 target_link_libraries (PRSice PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(PRSice PRIVATE
+    bgen
+    binarygen
+    binaryplink
+    commander
+    genotype
+    gzstream
+    misc
+    plink
+    prsice_class
+    region
+    regression
+    reporter
+    snp
+    coverage_config)
 
