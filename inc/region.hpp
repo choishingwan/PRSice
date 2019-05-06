@@ -63,7 +63,7 @@ public:
         const std::string& background, const uint32_t max_chr,
         Reporter& reporter);
 
-private:
+protected:
     static void load_background(
         const std::string& background, const int window_5, const int window_3,
         const uint32_t max_chr,

@@ -25,7 +25,28 @@ TEST(REGION, SINGLE_INIT)
     }
     SUCCEED();
 }
+class RegionTest : public Region
+{
+public:
+    bool in_feature(std::string in, const std::vector<std::string>&feature){
+        return Region::in_feature(in, feature);
+    }
+};
 
+TEST(REGION, IN_FEATURE){
+    RegionTest test;
+    const std::vector<std::string> feature={"gene", "intron", "exon","5'-UTR"};
+    ASSERT_TRUE(test.in_feature("gene", feature));
+    // case sensitive
+    ASSERT_FALSE(test.in_feature("Gene", feature));
+    ASSERT_TRUE(test.in_feature("intron", feature));
+    ASSERT_TRUE(test.in_feature("exon", feature));
+    ASSERT_TRUE(test.in_feature("5'-UTR", feature));
+    ASSERT_FALSE(test.in_feature("3'-UTR", feature));
+    ASSERT_FALSE(test.in_feature("Genes", feature));
+    ASSERT_FALSE(test.in_feature("transcript", feature));
+
+}
 TEST(REGION, INVALID_INPUT)
 {
     std::string range = "chr2:1234:456";
@@ -911,6 +932,7 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     }
     exclusion_region.clear();
 }
+
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 {
     std::ofstream bed_file;
@@ -1170,7 +1192,88 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     }
 }
 
-TEST(REGION_STD_BED_INPUT, WITH_INVALID_HEADER)
+
+TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
+{
+    // test BED file with valid header
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "browser position chr7:127471196-127495720\n"
+             << "browser hide all useScore=1\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        SUCCEED();
+    }
+    catch (const std::runtime_error& re)
+    {
+        std::cerr << re.what() << std::endl;
+        FAIL();
+    }
+}
+TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
+{
+    // test BED file with valid header
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
+                "useScore=1\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+// now test different type of malform BED file
+TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_EXCLUSION)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "#CHR START END\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
 {
     // test BED file with invalid header
     std::ofstream bed_file;
@@ -1192,24 +1295,23 @@ TEST(REGION_STD_BED_INPUT, WITH_INVALID_HEADER)
     std::string gtf = "";
     std::string msigdb = "";
     std::string snp_set = "";
-    std::vector<std::string> bed;
+    std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<IITree<int, int>> gene_sets;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        size_t num_regions = Region::generate_regions(
+        // malformed anything are considered as fatal
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
             reporter);
-        // because the bed file is invalid, it should only contains the
-        // background and base
-        ASSERT_EQ(num_regions, 2);
+        FAIL();
     }
     catch (...)
     {
-        FAIL();
+        SUCCEED();
     }
 }
 
