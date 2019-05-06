@@ -823,13 +823,6 @@ bool Region::load_bed_regions(const std::string& bed_file,
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::split(line);
-        if (token.size() < 3) {
-            message = "Error: " + file_name
-                      + " contain less than 3 columns, please check your "
-                        "bed files in the correct format";
-            throw std::runtime_error(message);
-        }
-
         try
         {
             is_bed_line(token, column_size, is_header);
@@ -841,6 +834,14 @@ bool Region::load_bed_regions(const std::string& bed_file,
             throw std::runtime_error(message);
         }
         if (is_header) continue; // skip header
+
+        if (token.size() < 3) {
+            message = "Error: " + file_name
+                      + " contain less than 3 columns, please check your "
+                        "bed files in the correct format";
+            throw std::runtime_error(message);
+        }
+
         // skip all check later
         chr_code = get_chrom_code_raw(token[0].c_str());
         if (chr_code > static_cast<int32_t>(max_chr) || chr_code < 0) continue;

@@ -25,7 +25,28 @@ TEST(REGION, SINGLE_INIT)
     }
     SUCCEED();
 }
+class RegionTest : public Region
+{
+public:
+    bool in_feature(std::string in, const std::vector<std::string>&feature){
+        return Region::in_feature(in, feature);
+    }
+};
 
+TEST(REGION, IN_FEATURE){
+    RegionTest test;
+    const std::vector<std::string> feature={"gene", "intron", "exon","5'-UTR"};
+    ASSERT_TRUE(test.in_feature("gene", feature));
+    // case sensitive
+    ASSERT_FALSE(test.in_feature("Gene", feature));
+    ASSERT_TRUE(test.in_feature("intron", feature));
+    ASSERT_TRUE(test.in_feature("exon", feature));
+    ASSERT_TRUE(test.in_feature("5'-UTR", feature));
+    ASSERT_FALSE(test.in_feature("3'-UTR", feature));
+    ASSERT_FALSE(test.in_feature("Genes", feature));
+    ASSERT_FALSE(test.in_feature("transcript", feature));
+
+}
 TEST(REGION, INVALID_INPUT)
 {
     std::string range = "chr2:1234:456";
@@ -1163,6 +1184,63 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
                                  window_5, window_3, genome_wide_background,
                                  gtf, msigdb, bed, snp_set, background, 22,
                                  reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+
+TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
+{
+    // test BED file with valid header
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "browser position chr7:127471196-127495720\n"
+             << "browser hide all\n"
+                "useScore=1\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        SUCCEED();
+    }
+    catch (const std::runtime_error& re)
+    {
+        std::cerr << re.what() << std::endl;
+        FAIL();
+    }
+    FAIL();
+}
+TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
+{
+    // test BED file with valid header
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
+                "useScore=1\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
         SUCCEED();
     }
     catch (...)
