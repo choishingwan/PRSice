@@ -1219,7 +1219,6 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
         std::cerr << re.what() << std::endl;
         FAIL();
     }
-    FAIL();
 }
 TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
 {
