@@ -24,7 +24,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.9
-            - lcov
       env:
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
 
@@ -36,7 +35,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-7
-            - lcov
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
@@ -44,10 +42,7 @@ matrix:
       osx_image: xcode8
       env:
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
-      addons:
-        apt:
-          packages:
-            - lcov
+        
 
         
 before_install:
