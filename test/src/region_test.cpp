@@ -911,6 +911,7 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     }
     exclusion_region.clear();
 }
+
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 {
     std::ofstream bed_file;
@@ -1170,7 +1171,33 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     }
 }
 
-TEST(REGION_STD_BED_INPUT, WITH_INVALID_HEADER)
+// now test different type of malform BED file
+TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_EXCLUSION)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "#CHR START END\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
 {
     // test BED file with invalid header
     std::ofstream bed_file;
@@ -1192,24 +1219,23 @@ TEST(REGION_STD_BED_INPUT, WITH_INVALID_HEADER)
     std::string gtf = "";
     std::string msigdb = "";
     std::string snp_set = "";
-    std::vector<std::string> bed;
+    std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<IITree<int, int>> gene_sets;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        size_t num_regions = Region::generate_regions(
+        // malformed anything are considered as fatal
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
             reporter);
-        // because the bed file is invalid, it should only contains the
-        // background and base
-        ASSERT_EQ(num_regions, 2);
+        FAIL();
     }
     catch (...)
     {
-        FAIL();
+        SUCCEED();
     }
 }
 
