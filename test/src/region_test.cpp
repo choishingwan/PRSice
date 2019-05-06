@@ -1204,8 +1204,7 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
     }
     //  now generate the output required
     bed_file << "browser position chr7:127471196-127495720\n"
-             << "browser hide all\n"
-                "useScore=1\n"
+             << "browser hide all useScore=1\n"
              << "2 19182 32729 . . .\n";
     bed_file.close();
     std::vector<IITree<int, int>> exclusion_region;
