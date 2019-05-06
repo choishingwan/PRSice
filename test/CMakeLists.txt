@@ -15,18 +15,9 @@ add_executable(runUnitTests
     src/commander_test.cpp)
 target_link_libraries(runUnitTests PRIVATE
     bgen
-    binarygen
-    binaryplink
-    commander
-    genotype
     gzstream
-    misc
     plink
-    prsice_class
-    region
-    regression
-    reporter
-    snp
+    prsice_lib
     coverage_config)
 ################################
 #           Add zlib
