@@ -21,8 +21,7 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITH_HASH)
     m_autosome_ct = 22;
     m_genotype_files = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i)
-    {
+    for (size_t i = 1; i <= m_autosome_ct; ++i) {
         std::string name = "chr" + std::to_string(i) + "test";
         ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
     }
@@ -36,8 +35,7 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_MULTI_HASH)
     m_autosome_ct = 22;
     m_genotype_files = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i)
-    {
+    for (size_t i = 1; i <= m_autosome_ct; ++i) {
         std::string name =
             "chr" + std::to_string(i) + "test" + std::to_string(i);
         ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());

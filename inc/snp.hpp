@@ -109,7 +109,6 @@ public:
         m_ref_missing = missing;
     }
 
-    std::string get_rs() const { return m_rs; }
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
      * p-value
@@ -183,26 +182,12 @@ public:
      * \return the effect size of the SNP
      */
     double stat() const { return m_stat; }
-    /*!
-     * \brief Return the MAF of the SNP
-     * \return the MAF of the SNP based on Base data
-     */
-    double get_maf() const { return m_maf; }
+
     /*!
      * \brief Return the p-value threshold of which this SNP falls into
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    /*!
-     * \brief Update the beta by minusing the null from it
-     * \param null is the null beta
-     */
-    void update_stat(const double& null)
-    {
-        double temp = std::abs(m_stat) - null;
-        // we multiply the sign of the statistic to the adjusted beta
-        m_stat = ((m_stat > 0) - (m_stat < 0)) * std::max(temp, 0.0);
-    }
     std::streampos byte_pos() const { return m_target_byte_pos; }
     std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
     std::string file_name() const { return m_target_file; }
@@ -211,7 +196,7 @@ public:
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
     bool is_flipped() const { return m_flipped; }
-    bool is_ref_flipped() const {return m_ref_flipped; }
+    bool is_ref_flipped() const { return m_ref_flipped; }
 
     /*!
      * \brief check if this SNP is within the i th region
@@ -434,7 +419,6 @@ private:
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
-    double m_maf = 0.0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
     int m_chr = -1;

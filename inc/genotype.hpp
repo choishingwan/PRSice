@@ -17,7 +17,7 @@
 #ifndef GENOTYPE_H
 #define GENOTYPE_H
 
-#include "cgranges.h"
+#include "IITree.h"
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
@@ -54,7 +54,6 @@
 // class BinaryGen;
 #define MULTIPLEX_LD 1920
 #define MULTIPLEX_2LD (MULTIPLEX_LD * 2)
-
 class Genotype
 {
 public:
@@ -99,8 +98,7 @@ public:
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract,
-                   bool verbose, Reporter& reporter,
+                   const std::string& extract, bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
@@ -128,8 +126,6 @@ public:
             m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
         }
     }
-
-    size_t max_category() const { return m_max_category; }
     /*!
      * \brief Return the number of sample we wish to perform PRS on
      * \return the number of sample
@@ -161,9 +157,6 @@ public:
      */
     void efficient_clumping(Genotype& reference, Reporter& reporter,
                             bool const use_pearson);
-    void set_flag(size_t i, const size_t num_region, const std::vector<uintptr_t>& flags){
-        m_existed_snps[i].set_flag(num_region, flags);
-    }
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more
@@ -204,24 +197,7 @@ public:
             break;
         }
     }
-    /*!
-     * \brief This function will provide the snp coordinate of a single snp,
-     * return true when the SNP is found and false when it is not
-     * \param rs_id is the rs id of the SNP
-     * \param chr is chr return value
-     * \param loc is the bp of the SNP
-     * \return true if found, false if not
-     */
-    bool get_snp_loc(const std::string& rs_id, intptr_t& chr,
-                     intptr_t& loc) const
-    {
-        auto&& snp_index = m_existed_snps_index.find(rs_id);
-        if (snp_index == m_existed_snps_index.end()) return false;
-        // TODO: Might want to unify the int type usage
-        chr = m_existed_snps[snp_index->second].chr();
-        loc = m_existed_snps[snp_index->second].loc();
-        return true;
-    }
+
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression flag
      * to false and propagate it later on to indicate if the sample is used in
@@ -349,19 +325,6 @@ public:
                         const bool first_run, const bool require_standardize,
                         const bool use_ref_maf);
     /*!
-     * \brief Return the number of SNPs included in the background
-     * \return  the number of background SNPs
-     */
-    size_t num_background() const { return m_background_snp_index.size(); }
-    /*!
-     * \brief Get the index of background SNPs on the m_existed_snp vector
-     * \return the index of background SNPs on the m_existed_snp vector
-     */
-    std::vector<size_t> background_index() const
-    {
-        return m_background_snp_index;
-    }
-    /*!
      * \brief return the largest chromosome allowed
      * \return  the largest chromosome
      */
@@ -371,24 +334,19 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    /*!
-     * \brief Return the i th SNP, only use for unit testing
-     * \param i is the index to the SNP
-     * \return the ith SNP object
-     */
-    SNP get_snp(size_t i) const { return m_existed_snps.at(i); }
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, cgranges_t* exclusion_region,
-                   const double& maf_control,
-                   const double& maf_case, const double& info_threshold,
-                   const bool maf_control_filter, const bool maf_case_filter,
-                   const bool info_filter, const bool fastscore,
-                   const bool no_full, const bool is_beta, const bool is_index,
-                   const bool keep_ambig, Reporter& reporter);
+                   const double& bound_end,
+                   const std::vector<IITree<int, int>>& exclusion_region,
+                   const double& maf_control, const double& maf_case,
+                   const double& info_threshold, const bool maf_control_filter,
+                   const bool maf_case_filter, const bool info_filter,
+                   const bool fastscore, const bool no_full, const bool is_beta,
+                   const bool is_index, const bool keep_ambig,
+                   Reporter& reporter);
     void build_clump_windows();
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
@@ -402,6 +360,57 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
+    static bool within_region(const std::vector<IITree<int, int>>& cr,
+                              const int chr, const int loc)
+    {
+        std::vector<size_t> output;
+        if (chr < 0) return false;
+        if (static_cast<size_t>(chr) >= cr.size()) return false;
+        cr[static_cast<size_t>(chr)].overlap(loc - 1, loc + 1, output);
+        return !output.empty();
+    }
+
+
+    static void construct_flag(
+        const std::string& rs, const std::vector<IITree<int, int>>& gene_sets,
+        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        std::vector<uintptr_t>& flag, const size_t required_size, const int chr,
+        const int bp, const bool genome_wide_background)
+    {
+        if (flag.size() != required_size) {
+            flag.resize(required_size);
+        }
+        std::fill(flag.begin(), flag.end(), 0);
+        SET_BIT(0, flag.data());
+        if (genome_wide_background) {
+            SET_BIT(1, flag.data());
+        }
+        // because the chromosome number is undefined. It will not be presented
+        // in any of the region (we filter out any region with undefined chr)
+        if (chr >= 0 && !gene_sets.empty()) {
+            std::vector<size_t> out;
+            if (static_cast<size_t>(chr) >= gene_sets.size()) return;
+            gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
+            int idx;
+            for (auto&& j : out) {
+                idx = gene_sets[static_cast<size_t>(chr)].data(j);
+                // idx= cr_label(gene_sets, b[j]);
+                SET_BIT(static_cast<size_t>(idx), flag.data());
+            }
+        }
+        if (snp_in_sets.empty() || rs.empty()) return;
+        auto&& snp_idx = snp_in_sets.find(rs);
+        if (snp_idx != snp_in_sets.end()) {
+            for (auto&& i : snp_idx->second) {
+                SET_BIT(i, flag.data());
+            }
+        }
+        return;
+    }
+    void add_flags(
+        const std::vector<IITree<int, int>>& cr,
+        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        const size_t num_sets, const bool genome_wide_background);
 
 protected:
     // friend with all child class so that they can also access the
@@ -425,14 +434,11 @@ protected:
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
-    std::vector<size_t> m_background_snp_index;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     // std::vector<int32_t> m_chrom_start;
     // sample file name. Fam for plink
     std::string m_sample_file;
-    std::mutex m_get_maf_mutex;
-    std::mutex m_update_beta_mutex;
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
@@ -519,7 +525,7 @@ protected:
     int calculate_category(const double& pvalue,
                            const std::vector<double>& barlevels, double& pthres)
     {
-        for (std::vector<double>::size_type i = 0; i < barlevels.size(); ++i) {
+        for (size_t i = 0; i < barlevels.size(); ++i) {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
@@ -530,6 +536,7 @@ protected:
         pthres = 1.0;
         return static_cast<int>(barlevels.size());
     }
+
     /*!
      * \brief Replace # in the name of the genotype file and generate list
      * of file for subsequent analysis \param prefix contains the name of

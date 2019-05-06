@@ -51,19 +51,18 @@ public:
     void report(const std::string& input, bool wrap = true);
 
 private:
-    bool isNumeric(std::string s);
     std::ofstream m_log_file;
-    std::string m_error_prefix = "Error:";
-    std::string m_warning_prefix = "Warning:";
+    const std::string m_error_prefix = "Error:";
+    const std::string m_warning_prefix = "Warning:";
 #if defined(WIN32) || defined(_WIN32) \
     || defined(__WIN32) && !defined(__CYGWIN__)
-    std::string m_error_color_start = "";
-    std::string m_warning_color_start = "";
-    std::string m_color_end = "";
+    const std::string m_error_color_start = "";
+    const std::string m_warning_color_start = "";
+    const std::string m_color_end = "";
 #else
-    std::string m_error_color_start = "\033[1;31m";
-    std::string m_warning_color_start = "\033[1;33m";
-    std::string m_color_end = "\033[0m";
+    const std::string m_error_color_start = "\033[1;31m";
+    const std::string m_warning_color_start = "\033[1;33m";
+    const std::string m_color_end = "\033[0m";
 #endif
     size_t m_width = 60;
     size_t m_error_prefix_size;

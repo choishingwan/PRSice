@@ -1,62 +1,29 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.1)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
+
 set(PROJECT_NAME PRSice)
 project(${PROJECT_NAME})
 set(CMAKE_CXX_FLAGS "-g -Wall")
 
 option(march "Use --march." OFF)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-set(CMAKE_CXX_FLAGS "-Wall -march=native")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 if(march)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
-
-################################
-#          Add EIGEN
-################################
-# Eigen from http://bitbucket.org/eigen/eigen/get/3.2.9.tar.bz2
-set(EIGEN3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/lib)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-
-################################
-# Normal Libraries & Executables
-################################
-
-include_directories(${CMAKE_SOURCE_DIR}/inc)
-file(GLOB SOURCES "src/*.cpp")
-LIST(REMOVE_ITEM SOURCES
-    ${CMAKE_SOURCE_DIR}/src/main.cpp)
-add_library(prsice_lib ${SOURCES})
-add_executable(PRSice ${CMAKE_SOURCE_DIR}/src/main.cpp)
-target_compile_features(PRSice PRIVATE cxx_range_for)
-target_compile_features(prsice_lib PRIVATE cxx_range_for)
-################################
-#           Add zlib
-################################
-find_package( ZLIB REQUIRED )
-if ( ZLIB_FOUND )
-    include_directories( ${ZLIB_INCLUDE_DIRS} )
-    target_link_libraries( PRSice ${ZLIB_LIBRARIES} )
-    target_link_libraries( prsice_lib ${ZLIB_LIBRARIES} )
-endif( ZLIB_FOUND )
-################################
-#          Add pthread
-################################
-find_package (Threads)
-target_link_libraries (PRSice ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries (prsice_lib ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(PRSice prsice_lib)
-
-
+# Use C++11
+set(CMAKE_CXX_STANDARD 11)
+# Require (at least) it
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Don't use e.g. GNU extension (like -std=gnu++11) for portability
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 ################################
 #  Googletest configuration
 ################################
 # Download and unpack googletest at configure time
-configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
+configure_file(${CMAKE_SOURCE_DIR}/test/CMakeLists.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/googletest-download" )
 execute_process(COMMAND "${CMAKE_COMMAND}" --build .
@@ -81,17 +48,28 @@ if(CMAKE_VERSION VERSION_LESS 2.8.11)
 endif()
 
 
-# Header files
+add_library(coverage_config INTERFACE)
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  # Add required flags (GCC & LLVM/Clang)
+  target_compile_options(coverage_config INTERFACE
+    -O0        # no optimization
+    -g         # generate debug info
+    --coverage # sets all required flags
+  )
+  if(CMAKE_VERSION VERSION_GREATER 3.13 OR CMAKE_VERSION VERSION_EQUAL 3.13)
+    target_link_options(coverage_config INTERFACE --coverage)
+  else()
+    target_link_libraries(coverage_config INTERFACE --coverage)
+  endif()
+endif()
 
-file(GLOB TEST_SRC "${PROJECT_SOURCE_DIR}/test/src/*.cpp")
-include_directories( ${PROJECT_SOURCE_DIR}/test/inc )
-# We don't want to include the PRSice main to our test program
-add_executable(runUnitTests ${PROJECT_SOURCE_DIR}/test/main.cpp ${TEST_SRC})
-target_include_directories(runUnitTests PRIVATE ${PROJECT_SOURCE_DIR}/inc)
-target_link_libraries(runUnitTests prsice_lib)
-target_link_libraries(runUnitTests gtest gtest_main)
-target_link_libraries( runUnitTests ${ZLIB_LIBRARIES} )
-target_link_libraries( runUnitTests  ${CMAKE_THREAD_LIBS_INIT} )
-target_compile_features(runUnitTests PRIVATE cxx_range_for)
-enable_testing()
-add_test(runUnitTests COMMAND runUnitTests "${CMAKE_CURRENT_LIST_DIR}/test/data/")
+add_subdirectory(src)
+
+option (BUILD_TESTING "Build the testing tree." ON)
+# Only build tests if we are the top-level project
+# Allows this to be used by super projects with `add_subdirectory`
+if (BUILD_TESTING AND (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
+  enable_testing()
+  add_subdirectory(test)
+endif()

@@ -278,13 +278,16 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "perm")
             {
                 // use double to account for scientific?
-                if(std::string(optarg).at(0)=='-'){
+                if (std::string(optarg).at(0) == '-') {
                     error = true;
-                    error_messages.append("Error: Negative permutation number detected!\n");
-                }else{
-                    error |=
-                        !set_numeric<size_t>(optarg, message_store, error_messages,
-                                             m_permutation, dummy, command);
+                    error_messages.append(
+                        "Error: Negative permutation number detected!\n");
+                }
+                else
+                {
+                    error |= !set_numeric<size_t>(optarg, message_store,
+                                                  error_messages, m_permutation,
+                                                  dummy, command);
                     m_perform_permutation = true;
                 }
             }
@@ -302,13 +305,16 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            m_provided_standard_error, command, error_messages);
             else if (command == "set-perm")
             {
-                if(std::string(optarg).at(0)=='-'){
+                if (std::string(optarg).at(0) == '-') {
                     error = true;
-                    error_messages.append("Error: Negative set based permutation number detected!\n");
-                }else{
-                    error |=
-                            !set_numeric<size_t>(optarg, message_store, error_messages,
-                                                 m_set_perm, dummy, command);
+                    error_messages.append("Error: Negative set based "
+                                          "permutation number detected!\n");
+                }
+                else
+                {
+                    error |= !set_numeric<size_t>(optarg, message_store,
+                                                  error_messages, m_set_perm,
+                                                  dummy, command);
                     m_perform_set_perm = true;
                 }
             }

@@ -364,15 +364,6 @@ public:
         return (!m_provided_memory || m_memory > detected) ? detected
                                                            : m_memory;
     }
-    // p_thresholds
-    /*!
-     * \brief Obtain the largest bar level
-     * \return the largest bar level threshold
-     */
-    double bar_upper() const
-    {
-        return *std::max_element(m_barlevel.begin(), m_barlevel.end());
-    }
     /*!
      * \brief Return the full bar level
      * \return the vector containing the sorted bar levels
@@ -411,21 +402,7 @@ public:
      */
     double inter() const { return m_inter_threshold; }
 
-    /*!
-     * \brief Given a p-value, generate the category ID from the bar-level input
-     * \param p the input p-value
-     * \return the category ID based on the bar-level input
-     */
-    int get_category(double p) const
-    {
-        // iterate through the bar-level and return first index
-        // containing p-value larger than or equal to the input p-value
-        for (std::vector<int>::size_type i = 0; i < m_barlevel.size(); ++i) {
-            if (p < m_barlevel[i] || misc::logically_equal(p, m_barlevel[i]))
-                return static_cast<int>(i);
-        }
-        return static_cast<int>(m_barlevel.size());
-    }
+
     /*!
      * \brief Check if user do not want to include p-value threshold of 1
      * \return True if user do not want to include p-value threshold of 1
@@ -685,16 +662,6 @@ public:
      * \return True if non-founders should be included
      */
     bool nonfounders() const { return m_include_nonfounders; }
-    /*!
-     * \brief Indicate if Base input is binary trait and therefore require
-     * adjustment
-     * \return True if base input is binary
-     */
-    bool base_is_binary() const
-    {
-        return m_provided_num_case && m_provided_num_control
-               && m_provided_base_prevalence;
-    }
 
     bool use_ref_maf() const { return m_use_ref_maf; }
 
@@ -810,9 +777,6 @@ private:
     bool m_provided_bp = false;
     bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
-    bool m_provided_num_case = false;
-    bool m_provided_num_control = false;
-    bool m_provided_base_prevalence = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
     bool m_perform_base_maf_case_filter = false;

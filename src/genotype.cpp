@@ -118,10 +118,37 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::read_base(const std::string& base_file, const std::vector<size_t>& col_index,
+void Genotype::add_flags(
+    const std::vector<IITree<int, int>>& gene_sets,
+    const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+    const size_t num_sets, const bool genome_wide_background)
+{
+    const size_t num_snps = m_existed_snps.size();
+    const size_t required_size = BITCT_TO_WORDCT(num_sets);
+    int chr, bp;
+    std::vector<uintptr_t> flag(required_size, 0);
+    std::unordered_map<std::string, std::vector<int>>::const_iterator snp_idx;
+    for (size_t i = 0; i < num_snps; ++i) {
+        auto&& snp = m_existed_snps[i];
+        chr = snp.chr();
+        bp = snp.loc();
+        // if we want more speed, we can move b and max_b from the construct
+        // flag function to avoid re-allocation of memory. Also for the flag
+        // structure as that can almost always be reused (we copy when we set
+        // flag)
+        construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size, chr, bp,
+                       genome_wide_background);
+        m_existed_snps[i].set_flag(num_sets, flag);
+    }
+}
+
+void Genotype::read_base(
+    const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
-    const double& bound_end, cgranges_t *exclusion_regions, const double& maf_control, const double& maf_case,
+    const double& bound_end,
+    const std::vector<IITree<int, int>>& exclusion_regions,
+    const double& maf_control, const double& maf_case,
     const double& info_threshold, const bool maf_control_filter,
     const bool maf_case_filter, const bool info_filter, const bool fastscore,
     const bool no_full, const bool is_beta, const bool is_index,
@@ -137,7 +164,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
-    int64_t *b = nullptr, max_b = 0;
     // Read in threshold information
     const double max_threshold =
         no_full
@@ -198,7 +224,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     int category = -1;
     int32_t chr_code;
     std::unordered_set<std::string> dup_index;
-
     // Actual reading the file, will do a bunch of QC
     std::streampos file_length = 0;
     if (gz_input) {
@@ -321,9 +346,8 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
                 }
             }
             to_remove =
-                cr_overlap(exclusion_regions, std::to_string(chr_code).c_str(),
-                           loc - 1, loc + 1, &b, &max_b);
-            if(to_remove){
+                Genotype::within_region(exclusion_regions, chr_code, loc);
+            if (to_remove) {
                 num_region_exclude++;
                 exclude = true;
             }
@@ -476,7 +500,6 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
     else
         snp_file.close();
 
-    free(b);
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
                    + " variant(s) observed in base file, with:\n");
@@ -490,9 +513,10 @@ void Genotype::read_base(const std::string& base_file, const std::vector<size_t>
         message.append(std::to_string(num_excluded)
                        + " variant(s) excluded due to p-value threshold\n");
     }
-    if(num_region_exclude){
-        message.append(std::to_string(num_region_exclude)
-                       + " variant(s) excluded as they fall within x-range region(s)\n");
+    if (num_region_exclude) {
+        message.append(
+            std::to_string(num_region_exclude)
+            + " variant(s) excluded as they fall within x-range region(s)\n");
     }
     if (num_chr_filter) {
         message.append(
@@ -888,7 +912,6 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
 }
-
 
 
 Genotype::~Genotype() {}
@@ -1854,9 +1877,9 @@ void Genotype::build_membership_matrix(
                     }
                     snp_out << "\tY";
                     temporary_storage[index].push_back(i_snp);
-                    prev_idx = index+1;
+                    prev_idx = index + 1;
                 }
-                for(;prev_idx < num_sets; ++prev_idx){
+                for (; prev_idx < num_sets; ++prev_idx) {
                     snp_out << "\tN";
                 }
                 snp_out << "\n";
