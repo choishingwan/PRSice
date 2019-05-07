@@ -2229,8 +2229,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
     ASSERT_STREQ(region_names[2].c_str(), "Name");
-    ASSERT_STREQ(region_names[3].c_str(),
-                 std::string(path + "Test2.bed").c_str());
+    ASSERT_STREQ(region_names[3].c_str(), "Test2.bed");
 }
 
 TEST(REGION_MULTI_BED, CHECK_NAME2)
@@ -2274,8 +2273,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
-    ASSERT_STREQ(region_names[2].c_str(),
-                 std::string(path + "Test.bed").c_str());
+    ASSERT_STREQ(region_names[2].c_str(), "Test.bed");
     ASSERT_STREQ(region_names[3].c_str(), "Name");
 }
 
@@ -2758,7 +2756,7 @@ TEST(REGION_GTF_BASIC, NO_BOTH_ID)
 }
 TEST(REGION_GTF_BASIC, NO_GZ)
 {
-    std::string gtf_name = path + "Test.gtf.gz";
+    std::string gtf_name = path + "404.gz";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
@@ -3071,8 +3069,138 @@ protected:
         return index;
     }
 };
+
+class REGION_GTF_GZ : public ::testing::Test
+{
+    // For exclusion, strand information should not alter result (window
+    // padding should all be 0)
+protected:
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<uintptr_t> not_found = {0};
+    size_t num_regions;
+    size_t required_size;
+    // make sure genome_wide_background is true, or each set will
+    // have a different not_found bit
+    bool genome_wide_background = true;
+    void SetUp() override
+    {
+        std::string gtf_name = path + "Test.gtf.gz";
+        std::string gmt_name = path + "Test.gmt";
+        GZSTREAM_NAMESPACE::ogzstream gtf;
+        std::ofstream gmt;
+        gtf.open(gtf_name.c_str());
+        gmt.open(gmt_name.c_str());
+        gtf << "#!genome-build GRCh38.p7\n"
+               "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+               "\"ENSG00000223972\"; "
+               "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+               "\"havana\"; "
+               "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+               "havana_gene "
+               "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+               "1\thavana\tfive_prime_utr\t15869\t16409\t.\t+\t.\tgene_id "
+               "\"ENSG00000223973\"; "
+               "gene_version \"5\"; gene_name \"DDX11L2\"; gene_source "
+               "\"havana\"; "
+               "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+               "havana_gene "
+               "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_id "
+               "\"ENSG00000255790\"; gene_version \"5\"; transcript_id "
+               "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+               "\"RP11-711K1.7\"; gene_source \"havana\"; gene_biotype "
+               "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+               "havana_gene_version \"2\"; transcript_name "
+               "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+               "transcript_biotype \"sense_intronic\"; havana_transcript "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"basic\"; transcript_support_level \"4\";\n"
+
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+               "gene_biotype \"protein_coding\"; havana_gene "
+               "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+               "transcript_name \"CIT-001\"; transcript_source "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+               "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+               "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+               "\"basic\"; transcript_support_level \"1\";\n"
+
+               "15\tensembl\tCDS\t55320275\t55320410\t.\t+\t2\tgene_id "
+               "\"ENSG00000069943\"; gene_version \"9\"; transcript_id "
+               "\"ENST00000539642\"; transcript_version \"5\"; exon_number "
+               "\"2\"; gene_name \"PIGB\"; gene_source \"ensembl_havana\"; "
+               "gene_biotype \"protein_coding\"; havana_gene "
+               "\"OTTHUMG00000172654\"; havana_gene_version \"1\"; "
+               "transcript_name \"PIGB-201\"; transcript_source \"ensembl\"; "
+               "transcript_biotype \"protein_coding\"; protein_id "
+               "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
+               "transcript_support_level \"5\";\n";
+
+        gtf.close();
+        gmt << "SET1 ENSG00000223972" << std::endl;
+        gmt << "SET2 ENSG00000223973" << std::endl; // should be filtered
+        gmt << "SET3 ENSG00000255790" << std::endl; // should also be filtered
+        gmt << "SET4 CIT" << std::endl;
+        gmt << "SET5 www.google.com ENSG00000069943" << std::endl;
+        gmt << "SET6 www.google.com ENSG00000223972 ENSG00000255790 "
+               "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
+            << std::endl;
+        gmt.close();
+        Reporter reporter(std::string(path + "LOG"));
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        int window_5 = 0;
+        int window_3 = 0;
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> region_names;
+        std::vector<std::string> bed_names = {};
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        SET_BIT(0, not_found.data());
+        // because we use genome_wide_background, which should have same bit set
+        // as base
+        SET_BIT(1, not_found.data());
+        required_size = BITCT_TO_WORDCT(num_regions);
+    }
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, chr, bp,
+                                 genome_wide_background);
+        return index;
+    }
+};
+TEST_F(REGION_GTF_GZ, FEATURE_FILTER) { ASSERT_EQ(num_regions, 8); }
 TEST_F(REGION_GTF_FEATURE, FEATURE_FILTER) { ASSERT_EQ(num_regions, 8); }
 TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
+{
+    std::vector<uintptr_t> found = {0};
+    // both base and background are set
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    SET_BIT(2, found.data());
+    SET_BIT(7, found.data());
+    // 1 havana gene 11869 14409
+    ASSERT_EQ(get_flag(1, 11868).front(), not_found.front());
+    ASSERT_EQ(get_flag(1, 11869).front(), found.front());
+    ASSERT_EQ(get_flag(1, 11870).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14408).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14409).front(), found.front());
+    ASSERT_EQ(get_flag(1, 14410).front(), not_found.front());
+}
+TEST_F(REGION_GTF_GZ, FOUND_SNP_SET1)
 {
     std::vector<uintptr_t> found = {0};
     // both base and background are set
@@ -4001,6 +4129,389 @@ TEST(REGION_MSIGDB, WRONG_MSIG_NAME)
     }
 }
 
+TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names,
+            snp_set_name + ":Name:Wrong", background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "404_set";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set_name,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "Base";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            background, 22, reporter);
+        ASSERT_EQ(num_regions, 2);
+    }
+    catch (const std::runtime_error& re)
+    {
+        FAIL();
+    }
+}
+
+TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 3 sets, the base, the SNP_SET and the background
+    ASSERT_EQ(num_regions, 3);
+    // for single set, we use the file name as the set name
+    ASSERT_STREQ(region_names[2].c_str(), "snp_set");
+    // Or we allow user defined name
+    snp_set_name.append(":SNP_SET");
+    region_names.clear();
+    num_regions = Region::generate_regions(
+        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+        genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+        background, 22, reporter);
+    ASSERT_EQ(num_regions, 3);
+    ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
+    ASSERT_EQ(snp_in_sets.size(), 4);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    // we can simply check if the target SNPs are located in snp_in_sets
+    // we have 1245
+    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
+        index(required_size, 0);
+    // here, we don't provide anything for background construction,
+    // and as we set genome_wide_background as false, we will never
+    // set the bit for background
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    SET_BIT(0, not_found.data());
+    Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+}
+
+TEST(REGION_SNP_SET, MULTI_SNP_SET)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
+    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
+    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
+    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
+    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        // we don't want multi-set
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names,
+            snp_set_name + ":SNP_SET", background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 7 sets, the base, the SNP_SET and the background
+    ASSERT_EQ(num_regions, 7);
+    // For multi-set, we always use the first row as their name
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+
+    // now check inclusion
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    // we can simply check if the target SNPs are located in snp_in_sets
+    // we have 1245
+    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
+        index(required_size, 0);
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    SET_BIT(4, found.data());
+    SET_BIT(0, not_found.data());
+    // SNP_2 1,3
+    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // SNP_32 3
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(4, found.data());
+    Genotype::construct_flag("SNP_32", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // SNP_912 5
+    found.front() = 0;
+    SET_BIT(0, found.data());
+    SET_BIT(6, found.data());
+    Genotype::construct_flag("SNP_912", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+}
+
+TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
+    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
+    snp_set << "SET_2 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
+    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
+    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        // we don't want multi-set
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names,
+            snp_set_name + ":SNP_SET", background, 22, reporter);
+
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    ASSERT_EQ(num_regions, 6);
+    // For multi-set, we always use the first row as their name
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_5");
+}
+
+
+TEST(REGION, UNINIT_INDEX)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
+    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
+    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
+    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
+    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        // we don't want multi-set
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names,
+            snp_set_name + ":SNP_SET", background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 7 sets, the base, the SNP_SET and the background
+    ASSERT_EQ(num_regions, 7);
+    // For multi-set, we always use the first row as their name
+    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+
+    // now check inclusion
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    // we can simply check if the target SNPs are located in snp_in_sets
+    // we have 1245
+    // should still work without initializing the index
+    std::vector<uintptr_t> index;
+    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                             required_size, -1, -1, genome_wide_background);
+}
+
+
 TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 {
     std::string gtf_name = path + "Test.gtf";
@@ -4648,128 +5159,702 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     ASSERT_EQ(index.front(), not_found.front());
 }
 
-TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
-{
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "snp_set";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
-    snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
-    try
-    {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":Name:Wrong", background, 22, reporter);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
 
-TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
+TEST(REGION_BACKGROUND, INVALID_FORMAT)
 {
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "404_set";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
-    try
-    {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set_name,
-                                 background, 22, reporter);
-        FAIL();
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
     }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
 
-TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
-{
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "Base";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
-    snp_set.close();
+    std::vector<std::string> bed_names = {bed_name};
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    std::vector<std::string> bed_names = {};
     int window_5 = 0;
     int window_3 = 0;
     bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
         num_regions = Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
-        ASSERT_EQ(num_regions, 2);
-    }
-    catch (const std::runtime_error& re)
-    {
-        std::cerr << re.what() << std::endl;
         FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
     }
 }
 
-TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
+TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
 {
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "snp_set";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
-    snp_set.close();
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":undefined");
+    std::vector<std::string> bed_names = {bed_name};
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    std::vector<std::string> bed_names = {};
     int window_5 = 0;
     int window_3 = 0;
     bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
         num_regions = Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_BACKGROUND, NEGATIVE_END)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4 3016 -1239\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_BACKGROUND, NEGATIVE_START)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4 -3016 1239\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_BACKGROUND, INVALID_END)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4 3016 kg\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_BACKGROUND, INVALID_START)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4 A 1239\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_BACKGROUND, SMALLER_END)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4 3016 1239\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_BACKGROUND, NOT_FOUND)
+{
+    std::ofstream bed_file;
+    std::string background = path + "404.bed";
+    background.append(":bed");
+    std::vector<std::string> bed_names ;
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+TEST(REGION_BACKGROUND, SKIP_CHR)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "97 56146 67102 . . .\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "97 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
         SUCCEED();
     }
@@ -4777,189 +5862,131 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
     {
         FAIL();
     }
-    // we should have the 3 sets, the base, the SNP_SET and the background
+    // we should have the 3 sets, the base, the bed and the background
     ASSERT_EQ(num_regions, 3);
-    // for single set, we use the file name as the set name
-    ASSERT_STREQ(region_names[2].c_str(), snp_set_name.c_str());
-    // Or we allow user defined name
-    snp_set_name.append(":SNP_SET");
-    region_names.clear();
-    num_regions = Region::generate_regions(
-        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-        genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-        background, 22, reporter);
-    ASSERT_EQ(num_regions, 3);
-    ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
-    ASSERT_EQ(snp_in_sets.size(), 4);
     const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
-        index(required_size, 0);
-    // here, we don't provide anything for background construction,
-    // and as we set genome_wide_background as false, we will never
-    // set the bit for background
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0}, index = {0};
     SET_BIT(0, not_found.data());
-    Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    // 4  3016 87782
+    //"4 20139 97433 . . .\n"
+    // 4  87000 should be found in both the set and the background
+    // 13 53970 should only be found in the background
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3015 + 1, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
-    Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3016 + 1, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3017 + 1, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-}
-
-TEST(REGION_SNP_SET, MULTI_SNP_SET)
-{
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "snp_set";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
-    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
-    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
-    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
-    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
-    snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
-    size_t num_regions;
-    try
-    {
-        // we don't want multi-set
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":SNP_SET", background, 22, reporter);
-        SUCCEED();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-    try
-    {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-            background, 22, reporter);
-        SUCCEED();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    // we should have the 7 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 7);
-    // For multi-set, we always use the first row as their name
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-
-    // now check inclusion
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
-        index(required_size, 0);
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20138 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // found in both background and the bed file
+    SET_BIT(2, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20139 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20140 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87781 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // only found in bed but not background
     SET_BIT(0, found.data());
     SET_BIT(2, found.data());
-    SET_BIT(4, found.data());
-    SET_BIT(0, not_found.data());
-    // SNP_2 1,3
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87782 + 1, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
-    // SNP_32 3
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87783 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
     found.front() = 0;
+    // found in all
     SET_BIT(0, found.data());
-    SET_BIT(4, found.data());
-    Genotype::construct_flag("SNP_32", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // SNP_912 5
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(6, found.data());
-    Genotype::construct_flag("SNP_912", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
+    SET_BIT(1, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53970 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    // anything on chromosome 17 should only be found in the base
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             17, 53970 + 1, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
 }
 
 
-TEST(REGION, UNINIT_INDEX)
+TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
 {
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "snp_set";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
-    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
-    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
-    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
-    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
-    snp_set.close();
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . +\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038 . . .\n"
+                "4  3016 87782 . . +\n"
+                "10 14013 68802 . . .\n"
+                "13 53964 90572 . . -\n"
+                "14 22104 47572 . . .\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    int window_5 = 10;
+    int window_3 = 20;
     bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
-        // we don't want multi-set
         num_regions = Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":SNP_SET", background, 22, reporter);
-        SUCCEED();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-    try
-    {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
         SUCCEED();
     }
@@ -4967,22 +5994,270 @@ TEST(REGION, UNINIT_INDEX)
     {
         FAIL();
     }
-    // we should have the 7 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 7);
-    // For multi-set, we always use the first row as their name
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-
-    // now check inclusion
+    // we should have the 3 sets, the base, the bed and the background
+    ASSERT_EQ(num_regions, 3);
     const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    // should still work without initializing the index
-    std::vector<uintptr_t> index;
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    // 4  3016 87782
+    //"4 20139 97433 . . .\n"
+    // 4  87000 should be found in both the set and the background
+    // 13 53970 should only be found in the background
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3015 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3016 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3017 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20138 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // found in both background and the bed file
+    SET_BIT(2, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20139 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20140 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87781 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // only found in bed but not background
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87782 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87783 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // found in all
+    // 13 53964 90572 . . -
+    // 13 56146 67102 . . +
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53963 + 1-20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53964 + 1-20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53965 + 1-20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90571 + 1+10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90572 + 1+10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90573 + 1+10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    SET_BIT(2, found.data());
+    SET_BIT(1, not_found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56145 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56146 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56147 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67101 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67102 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67103 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    // anything on chromosome 17 should only be found in the base
+    not_found.front()= 0;
+    SET_BIT(0, not_found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             17, 53970 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+}
+
+TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 32729 . . .\n"
+             << "2 94644 98555 . . .\n"
+             << "3 3209 18821 . . .\n"
+             << "3 29863 38285 . . .\n"
+             << "4 20139 97433 . . .\n"
+             << "5 13998 35076 . . .\n"
+             << "5 50433 97855 . . .\n"
+             << "6 34611 45099 . . .\n"
+             << "6 45503 49751 . . .\n"
+             << "7 7080 45054 . . .\n"
+             << "7 30305 45723 . . .\n" // overlap
+             << "10 54504 62968 . . .\n"
+             << "11 20844 26475 . . .\n"
+             << "12 38890 50405 . . .\n"
+             << "13 56146 67102 . . +\n"
+             << "14 1694 47285 . . .\n"
+             << "14 5225 78548 . . .\n"  // overlap
+             << "14 13102 45658 . . .\n" // overlap
+             << "15 4706 10214 . . .\n"
+             << "15 26926 85344 . . .\n"
+             << "15 78969 98716 . . .\n" // overlap
+             << "16 7139 73747 . . .\n"
+             << "16 12143 36596 . . .\n" // overlap
+             << "16 31326 56532 . . .\n" // overlap
+             << "16 43942 85160 . . .\n" // overlap
+             << "19 22463 39329 . . .\n"
+             << "19 46559 49131 . . .\n"
+             << "20 64037 98171 . . .\n"
+             << "21 9363 49431 . . .\n"
+             << "21 43440 82120 . . .\n"; // overlap
+    bed_file.close();
+    std::string background = path + "background";
+    bed_file.open(background);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "13 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
+    background.append(":bed");
+    std::vector<std::string> bed_names = {bed_name};
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 10;
+    int window_3 = 20;
+    bool genome_wide_background = false;
+    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    // we should have the 3 sets, the base, the bed and the background
+    ASSERT_EQ(num_regions, 3);
+    const size_t required_size = BITCT_TO_WORDCT(num_regions);
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0}, index = {0};
+    SET_BIT(0, not_found.data());
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    // 4  3016 87782
+    //"4 20139 97433 . . .\n"
+    // 4  87000 should be found in both the set and the background
+    // 13 53970 should only be found in the background
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3015 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3016 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 3017 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20138 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    // found in both background and the bed file
+    SET_BIT(2, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20139 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 20140 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87781 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // only found in bed but not background
+    SET_BIT(0, found.data());
+    SET_BIT(2, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87782 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             4, 87783 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    found.front() = 0;
+    // found in all
+    // 13 53964 90572 . . -
+    // 13 56146 67102 . . +
+    SET_BIT(0, found.data());
+    SET_BIT(1, found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53963 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53964 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 53965 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90571 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90572 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 90573 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    SET_BIT(2, found.data());
+    SET_BIT(1, not_found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56145 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56146 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 56147 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67101 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67102 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             13, 67103 + 1+20, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
+    // anything on chromosome 17 should only be found in the base
+    not_found.front()= 0;
+    SET_BIT(0, not_found.data());
+    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
+                             17, 53970 + 1-10, genome_wide_background);
+    ASSERT_EQ(index.front(), not_found.front());
 }
 #endif // REGION_TEST_HPP

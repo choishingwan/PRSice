@@ -365,9 +365,11 @@ void Region::load_background(
                                "end coordinate!\n");
                 message.append("start: " + std::to_string(start) + "\n");
                 message.append("end: " + std::to_string(end) + "\n");
-                reporter.report(message);
+                throw std::runtime_error(message);
             }
-            if (error) break;
+            else if (error){
+                throw std::runtime_error("");
+            }
             // the strand location is different depending on the type
             // if it is bed, then we use the STRAND index
             // if not, then we assume the format is CHR START END STRAND

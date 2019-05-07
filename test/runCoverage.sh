@@ -13,7 +13,7 @@ TEST_DIR="${3}"
 
 # Generate our base line info
 "${LCOV}" -d "${SRC_DIR}" -z
-"${LCOV}" -c -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info" > log
+"${LCOV}" --rc lcov_branch_coverage=1 --capture -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info" > log
 
 "${UNIT_TEST}" "${3}"
 
@@ -22,7 +22,7 @@ HTML_RESULTS="${1}/html"
 mkdir -p ${HTML_RESULTS}
 
 # generate our coverage info
-"${LCOV}" -c -b "${SRC_DIR}/../" -d "${SRC_DIR}" -o "${SRC_DIR}/coverage.info" > log
+"${LCOV}" --rc lcov_branch_coverage=1  --capture -b "${SRC_DIR}/../" -d "${SRC_DIR}" -o "${SRC_DIR}/coverage.info" > log
 
 # Combine the two info
 "${LCOV}" -a "${SRC_DIR}/baseline.info" -a "${SRC_DIR}/coverage.info" -o "${SRC_DIR}/coverage-combined.info" >log
