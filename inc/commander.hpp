@@ -740,7 +740,7 @@ private:
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 250000;
+    int m_clump_distance = 1000000;
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
