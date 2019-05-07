@@ -631,6 +631,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
+            //default to RS
+            cur_id = RSID;
             // by this time point, we should always have the m_existed_snps_index propagated
             // with SNPs from the base. So we can first check if the SNP are presented in base
             if (reference->m_existed_snps_index.find(RSID)
@@ -651,6 +653,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 cur_id = RSID;
             }
 
+
+
             // user exclude indicate this SNP is discard by user, not because of
             // QC matric
             if (!m_is_ref) {
@@ -661,9 +665,6 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     exclude_snp = true;
                 }
             }
-
-
-
             if (processed_snps.find(cur_id) != processed_snps.end()) {
                 duplicated_snps.insert(cur_id);
                 exclude_snp = true;
