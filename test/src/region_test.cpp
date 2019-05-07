@@ -4648,6 +4648,103 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     ASSERT_EQ(index.front(), not_found.front());
 }
 
+TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "snp_set";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names,
+            snp_set_name + ":Name:Wrong", background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "404_set";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set_name,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string snp_set_name = path + "Base";
+    std::ofstream snp_set;
+    snp_set.open(snp_set_name.c_str());
+    snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
+    snp_set.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> bed_names = {};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "", background = "";
+    size_t num_regions;
+    try
+    {
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
+            background, 22, reporter);
+        ASSERT_EQ(num_regions, 2);
+    }
+    catch (const std::runtime_error& re)
+    {
+        std::cerr << re.what() << std::endl;
+        FAIL();
+    }
+}
+
 TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
 {
     // This should be ok? Transplicing or something like that?

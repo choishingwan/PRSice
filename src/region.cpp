@@ -720,6 +720,8 @@ void Region::load_snp_sets(
         is_set_file = (token.size() > 1);
         break;
     }
+    // we want to only use the file name
+    set_name = misc::base_name(set_name);
     if (!is_set_file) {
         if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
             std::string message =
@@ -813,6 +815,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
             "Error: Undefine bed file input format: " + bed_file;
         throw std::runtime_error(error_message);
     }
+    set_name = misc::base_name(set_name);
     if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
         std::string message = "Warning: Set name of " + set_name
                               + " is duplicated, it will be ignored";
