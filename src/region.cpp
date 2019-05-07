@@ -173,7 +173,8 @@ size_t Region::generate_regions(
     region_names.push_back("Base");
     region_names.push_back("Background");
     std::unordered_set<std::string> duplicated_sets;
-
+    duplicated_sets.insert("Base");
+    duplicated_sets.insert("Background");
     // 0 reserved for base
     // 1 reserved for background
     int set_idx = 2;

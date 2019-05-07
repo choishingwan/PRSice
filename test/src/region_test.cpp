@@ -1639,7 +1639,7 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     std::string gtf = "";
     std::string msigdb = "";
     std::string snp_set = "";
-    std::vector<std::string> bed;
+    std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<IITree<int, int>> gene_sets;
@@ -1658,7 +1658,8 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     }
 }
 
-TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
+
+TEST(REGION_STD_BED_INPUT, DUPLICATED_SET_NAME)
 {
     // test BED file with valid header
     std::ofstream bed_file;
@@ -1668,8 +1669,7 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
         throw std::runtime_error("Error: Cannot open bed file");
     }
     //  now generate the output required
-    bed_file << "browser position chr7:127471196-127495720\n"
-             << "browser hide all\n"
+    bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
                 "useScore=1\n"
              << "2 19182 32729 . . .\n";
     bed_file.close();
@@ -1682,7 +1682,50 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     std::string gtf = "";
     std::string msigdb = "";
     std::string snp_set = "";
-    std::vector<std::string> bed;
+    std::vector<std::string> bed = {std::string(bed_name + ":Base")};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        size_t num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        // only base and background, skip the set as it is named as Base
+        ASSERT_EQ(num_regions, 2);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
+{
+    // test BED file with valid header
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "browser position chr7:127471196-127495720\n"
+             << "browser hide all useScore=1\n"
+             << "2 19182 32729 . . .\n";
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<IITree<int, int>> gene_sets;
