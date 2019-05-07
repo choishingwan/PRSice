@@ -1065,6 +1065,23 @@ TEST(REGION_MALFORM_BED, NOT_FOUND)
     }
     exclusion_region.clear();
 }
+
+TEST(REGION_MALFORM_BED, MALFORM_INPUT_FORMAT)
+{
+    std::string bed_name = path + "Test.bed:Name:Wrong";
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    exclusion_region.clear();
+}
 TEST(REGION_MALFORM_BED, NOT_FOUND_SET)
 {
     std::string bed_name = path + "404.bed";
@@ -1097,6 +1114,37 @@ TEST(REGION_MALFORM_BED, NOT_FOUND_SET)
     }
 }
 
+TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
+{
+    std::string bed_name = path + "Test.bed:Name:Wrong";
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
 
 
 TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
@@ -1234,6 +1282,34 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE)
     bed_file << "2 19182 ABC . . +\n"
              << "2 94644 123567 . . +\n"
              << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    exclusion_region.clear();
+}
+
+
+TEST(REGION_MALFORM_BED, SMALLER_END)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 . . +\n"
+             << "3 123141 3209 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
     std::vector<IITree<int, int>> exclusion_region;
@@ -1392,6 +1468,48 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . +\n"
              << "3 3209 ABC . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_MALFORM_BED, SMALLER_END_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 123567 94644 . . +\n"
+             << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
@@ -1934,6 +2052,97 @@ TEST_F(REGION_STD_BED_PAD, CHECK_PAD)
     EXPECT_EQ(get_flag(6, 45099 + 1).front(), found.front());
     EXPECT_EQ(get_flag(6, 45099 + 1 + 9).front(), found.front());
     EXPECT_EQ(get_flag(6, 45099 + 1 + 10).front(), not_found.front());
+}
+
+class REGION_MINIMUM_BED_PAD : public ::testing::Test
+{
+    // test window padding
+protected:
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
+    std::vector<std::string> region_names;
+    size_t num_regions;
+    size_t required_size;
+    bool genome_wide_background = false;
+    void SetUp() override
+    {
+        std::ofstream bed_file;
+        std::string bed_name = path + "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open()) {
+            throw std::runtime_error("Error: Cannot open bed file");
+        }
+        //  now generate the output required
+        bed_file << "2 19182 32729\n"
+                 << "2 94644 98555\n"
+                 << "3 3209 18821\n"
+                 << "3 29863 38285\n"
+                 << "6 34611 45099\n"
+                 << "6 45503 49751\n"
+                 << "14 1694 47285\n"
+                 << "14 5225 78548\n"  // overlap
+                 << "14 13102 45658\n" // overlap
+                 << "15 4706 10214\n"
+                 << "15 26926 85344\n"
+                 << "15 78969 98716\n" // overlap
+                 << "16 7139 73747\n"
+                 << "16 12143 36596\n" // overlap
+                 << "16 31326 56532\n" // overlap
+                 << "16 43942 85160\n" // overlap
+                 << "19 22463 39329\n"
+                 << "21 9363 49431\n"
+                 << "21 43440 82120\n"; // overlap
+        bed_file.close();
+        Reporter reporter(std::string(path + "LOG"));
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        int window_5 = 10;
+        int window_3 = 20;
+        std::string gtf = "";
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> bed_names = {bed_name};
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
+            22, reporter);
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        // 2 because 1 is reserved for background and 2 is the first set
+        SET_BIT(2, found.data());
+        required_size = BITCT_TO_WORDCT(num_regions);
+    }
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, chr, bp,
+                                 genome_wide_background);
+        return index;
+    }
+};
+TEST_F(REGION_MINIMUM_BED_PAD, CHECK_PAD)
+{
+    // We will see how the padding change the inclusion criteria
+    // this SNP doesn't contain the strand info, we should assume the start
+    // is the 5' end
+    // we always pad 10 bp to the 5' and 20 to the 3' when strand info is not available
+    EXPECT_EQ(get_flag(3, 29863 + 1 - 11).front(), not_found.front());
+    EXPECT_EQ(get_flag(3, 29863 + 1 - 10).front(), found.front());
+    EXPECT_EQ(get_flag(3, 29863 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1 + 19).front(), found.front());
+    EXPECT_EQ(get_flag(3, 38285 + 1 + 20).front(), not_found.front());
+    // 6 34611 45099 . . -
+    EXPECT_EQ(get_flag(6, 34611 + 1 - 11).front(), not_found.front());
+    EXPECT_EQ(get_flag(6, 34611 + 1 - 10).front(), found.front());
+    EXPECT_EQ(get_flag(6, 34611 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1 + 19).front(), found.front());
+    EXPECT_EQ(get_flag(6, 45099 + 1 + 20).front(), not_found.front());
 }
 
 TEST(REGION_MULTI_BED, CHECK_NAME)
