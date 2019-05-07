@@ -911,6 +911,10 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
 
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
+    if(target->m_existed_snps.empty()){
+        message = "Error: No vairant remained!\n";
+        throw std::runtime_error(message);
+    }
 }
 
 
