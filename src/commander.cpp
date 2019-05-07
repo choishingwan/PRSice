@@ -1542,7 +1542,8 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
     }
     if(m_allow_inter){
         if((m_target_type!="bgen" && m_ref_type!="bgen") ||
-                (m_use_reference && m_ref_type!="bgen") ||
+                (m_use_reference && m_ref_type!="bgen" &&
+                 !m_target_is_hard_coded) ||
                 (!m_use_reference && m_target_type!= "bgen")){
             m_allow_inter = false;
             error_message.append("Warning: Intermediate not required. Will not generate intermediate file\n");
