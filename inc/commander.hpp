@@ -725,7 +725,7 @@ private:
     double m_ref_maf = 0.0;
     double m_ref_info_score = 0.0;
     // TODO: might consider using 1e-8 instead
-    double m_lower_threshold = 0.0001;
+    double m_lower_threshold = 5e-8;
     double m_inter_threshold = 0.00005;
     double m_upper_threshold = 0.5;
     double m_target_geno = 1.0;
