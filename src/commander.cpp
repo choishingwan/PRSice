@@ -1540,6 +1540,14 @@ bool Commander::misc_check(std::map<std::string, std::string>& message,
         error_message.append("Error: Cannot use reference MAF for missingness "
                              "imputation if reference file isn't used\n");
     }
+    if(m_allow_inter){
+        if((m_target_type!="bgen" && m_ref_type!="bgen") ||
+                (m_use_reference && m_ref_type!="bgen") ||
+                (!m_use_reference && m_target_type!= "bgen")){
+            m_allow_inter = false;
+            error_message.append("Warning: Intermediate not required. Will not generate intermediate file\n");
+        }
+    }
     return !error;
 }
 

@@ -929,6 +929,7 @@ void BinaryGen::calc_freq_gen_inter(
                 throw std::runtime_error(error_message);
             }
         }
+        processed_count++;
         // bgen always seek as there are always something stored in between
         // the genotype data
         if (!bgen_file.seekg(byte_pos, std::ios_base::beg)) {
