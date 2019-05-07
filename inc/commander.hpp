@@ -1426,6 +1426,87 @@ private:
         return true;
     }
 
+    inline int set_distance(const std::string& input,
+                               const std::string& command,
+                               std::map<std::string, std::string>& message,
+                            bool& error,
+                           std::string& error_messages
+                               )
+    {
+        std::string in = input;
+        if (message.find(command) != message.end()) {
+            error_messages.append("Warning: Duplicated argument --"+command+"\n");
+        }
+        message[command] = in;
+        int dist;
+        try
+        {
+             dist = misc::convert<int>(input);
+            return dist;
+        }
+        catch (...)
+        {
+            // contain MB KB or B here
+            if (input.length() >= 2) {
+                try
+                {
+                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
+                    std::string unit = in.substr(in.length() - 2);
+                    std::string value = in.substr(0, in.length() - 2);
+                    if (unit == "KB") {
+                         dist = misc::convert<int>(value) * 1000;
+                        return dist;
+                    }
+                    else if (unit == "MB")
+                    {
+                         dist = misc::convert<int>(value) * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "GB")
+                    {
+                        // kinda stupid here, but whatever
+                         dist =
+                            misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "TB")
+                    {
+                        // way too much....
+                         dist =
+                            misc::convert<int>(value) * 1000 * 1000 * 1000*1000;
+                        return dist;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(in.length() - 1);
+                        value = input.substr(0, in.length() - 1);
+                        if (unit == "B") {
+                             dist = misc::convert<int>(value);
+                            return dist;
+                        }
+                    }
+                }
+                catch (...)
+                {
+                    error_messages.append("Error: Undefined distance input: "
+                                          + in);
+                    message.erase(command);
+                    error = true;
+                    return 0;
+                }
+            }
+            else
+            {
+                error_messages.append("Error: Undefined memory distance: " + in);
+                message.erase(command);
+                error = true;
+                return 0;
+            }
+        }
+        error = true;
+        return 0;
+    }
     /*!
      * \brief Get the column index based on file header and the input string
      * \param target is the input string
