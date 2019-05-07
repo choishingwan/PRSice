@@ -535,6 +535,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
     std::string allele;
     std::string SNPID;
     std::string RSID;
+    std::string cur_id;
     std::string chromosome;
     std::string prev_chr = "";
     std::string file_name;
@@ -630,29 +631,41 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
+            // by this time point, we should always have the m_existed_snps_index propagated
+            // with SNPs from the base. So we can first check if the SNP are presented in base
+            if (reference->m_existed_snps_index.find(RSID)
+                == reference->m_existed_snps_index.end() &&
+                    reference->m_existed_snps_index.find(SNPID)
+                                         == reference->m_existed_snps_index.end())
+            {
+                // this is the reference panel, and the SNP wasn't found in the
+                // target doens't matter if we use RSID or SNPID
+                exclude_snp = true;
+            }else if(reference->m_existed_snps_index.find(RSID)
+                     == reference->m_existed_snps_index.end()){
+                // we found the SNPID
+                cur_id = SNPID;
+            }else if(reference->m_existed_snps_index.find(SNPID)
+                     == reference->m_existed_snps_index.end()){
+                // we found the RSID
+                cur_id = RSID;
+            }
+
             // user exclude indicate this SNP is discard by user, not because of
             // QC matric
             if (!m_is_ref) {
                 if ((!m_exclude_snp
-                     && m_snp_selection_list.find(RSID)
-                            == m_snp_selection_list.end())
-                    || (m_exclude_snp
-                        && m_snp_selection_list.find(RSID)
-                               != m_snp_selection_list.end()))
+                     && m_snp_selection_list.find(cur_id)
+                            == m_snp_selection_list.end()))
                 {
                     exclude_snp = true;
                 }
             }
 
-            if (reference->m_existed_snps_index.find(RSID)
-                == reference->m_existed_snps_index.end())
-            {
-                // this is the reference panel, and the SNP wasn't found in the
-                // target
-                exclude_snp = true;
-            }
-            if (processed_snps.find(RSID) != processed_snps.end()) {
-                duplicated_snps.insert(RSID);
+
+
+            if (processed_snps.find(cur_id) != processed_snps.end()) {
+                duplicated_snps.insert(cur_id);
                 exclude_snp = true;
             }
             // perform check on ambiguousity
@@ -670,7 +683,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp) {
-                auto&& target_index = reference->m_existed_snps_index[RSID];
+                auto&& target_index = reference->m_existed_snps_index[cur_id];
                 if (!reference->m_existed_snps[target_index].matching(
                         chr_code, SNP_position, alleles.back(), alleles.front(),
                         flipping))
@@ -709,7 +722,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     m_mismatch_file_output = true;
                     if (m_is_ref) {
                         mismatch_snp_record
-                            << "Reference\t" << RSID << "\t"
+                            << "Reference\t" << cur_id << "\t"
                             << target->m_existed_snps[target_index].chr()
                             << "\t" << chr_code << "\t"
                             << target->m_existed_snps[target_index].loc()
@@ -722,7 +735,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     else
                     {
                         mismatch_snp_record
-                            << "Base\t" << RSID << "\t" << chr_code << "\t"
+                            << "Base\t" << cur_id << "\t" << chr_code << "\t"
                             << m_existed_snps[target_index].chr() << "\t"
                             << SNP_position << "\t"
                             << m_existed_snps[target_index].loc() << "\t"
@@ -735,7 +748,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 }
                 else
                 {
-                    processed_snps.insert(RSID);
+                    processed_snps.insert(cur_id);
                     if (m_is_ref) {
                         target->m_existed_snps[target_index].add_reference(
                             prefix, byte_pos, flipping);
