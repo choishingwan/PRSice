@@ -228,7 +228,8 @@ size_t Region::generate_regions(
         message = "Loading GTF file: " + gtf;
         reporter.report(message);
         load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
-                 gene_sets, genome_wide_background, !background.empty(), reporter);
+                 gene_sets, genome_wide_background, !background.empty(),
+                 reporter);
     }
     // index gene list
     for (auto&& tree : gene_sets) tree.index();
@@ -434,7 +435,7 @@ void Region::load_gtf(
     const std::vector<std::string>& feature, const uint32_t max_chr,
     const int window_5, const int window_3,
     std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
-        const bool provided_background, Reporter& reporter)
+    const bool provided_background, Reporter& reporter)
 {
     // don't bother if there's no msigdb genes and we are using genome wide
     // background
@@ -662,7 +663,8 @@ void Region::load_gtf(
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entry removed due to feature selection\n");
     }
-    else if (exclude_feature > 1) {
+    else if (exclude_feature > 1)
+    {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entries removed due to feature selection\n");
     }
@@ -671,7 +673,8 @@ void Region::load_gtf(
             "A total of " + std::to_string(chr_exclude)
             + " entries removed as they are not on autosomal chromosome\n");
     }
-    else if (chr_exclude == 1) {
+    else if (chr_exclude == 1)
+    {
         message.append(
             "A total of " + std::to_string(chr_exclude)
             + " entry removed as they are not on autosomal chromosome\n");
@@ -718,15 +721,19 @@ void Region::load_snp_sets(
     }
     if (!is_set_file) {
         if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
-            std::string message = "Warning: Set name of " + set_name
-                                  + " is duplicated, this set will be ignored\n";
+            std::string message =
+                "Warning: Set name of " + set_name
+                + " is duplicated, this set will be ignored\n";
             reporter.report(message);
             return;
         }
         duplicated_sets.insert(set_name);
         region_names.push_back(set_name);
-    }else{
-        std::string message = "Warning: Set name provided for multi-SNP set input, the set name will be ignored\n";
+    }
+    else
+    {
+        std::string message = "Warning: Set name provided for multi-SNP set "
+                              "input, the set name will be ignored\n";
         reporter.report(message);
     }
     input.clear();
@@ -821,10 +828,11 @@ bool Region::load_bed_regions(const std::string& bed_file,
     }
 
     // now read in the file
-    bool has_strand = false, first_read = true, error = false, is_header=false;
-    size_t num_line = 0, column_size=0;
+    bool has_strand = false, first_read = true, error = false,
+         is_header = false;
+    size_t num_line = 0, column_size = 0;
     while (std::getline(input, line)) {
-        is_header=false;
+        is_header = false;
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::split(line);

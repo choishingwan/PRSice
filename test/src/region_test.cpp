@@ -28,14 +28,17 @@ TEST(REGION, SINGLE_INIT)
 class RegionTest : public Region
 {
 public:
-    bool in_feature(std::string in, const std::vector<std::string>&feature){
+    bool in_feature(std::string in, const std::vector<std::string>& feature)
+    {
         return Region::in_feature(in, feature);
     }
 };
 
-TEST(REGION, IN_FEATURE){
+TEST(REGION, IN_FEATURE)
+{
     RegionTest test;
-    const std::vector<std::string> feature={"gene", "intron", "exon","5'-UTR"};
+    const std::vector<std::string> feature = {"gene", "intron", "exon",
+                                              "5'-UTR"};
     ASSERT_TRUE(test.in_feature("gene", feature));
     // case sensitive
     ASSERT_FALSE(test.in_feature("Gene", feature));
@@ -45,7 +48,6 @@ TEST(REGION, IN_FEATURE){
     ASSERT_FALSE(test.in_feature("3'-UTR", feature));
     ASSERT_FALSE(test.in_feature("Genes", feature));
     ASSERT_FALSE(test.in_feature("transcript", feature));
-
 }
 TEST(REGION, INVALID_INPUT)
 {
@@ -962,10 +964,10 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1035,10 +1037,10 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1102,10 +1104,10 @@ TEST(REGION_MALFORM_BED, NOT_FOUND_SET)
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1134,10 +1136,10 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1177,10 +1179,10 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1356,10 +1358,10 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1399,10 +1401,10 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1410,7 +1412,6 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
         SUCCEED();
     }
 }
-
 
 
 TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
@@ -1443,10 +1444,10 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1486,10 +1487,10 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1528,10 +1529,10 @@ TEST(REGION_MALFORM_BED, SMALLER_END_SET)
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -1813,10 +1814,10 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
     try
     {
         // malformed anything are considered as fatal
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf, msigdb, bed, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -2129,7 +2130,8 @@ TEST_F(REGION_MINIMUM_BED_PAD, CHECK_PAD)
     // We will see how the padding change the inclusion criteria
     // this SNP doesn't contain the strand info, we should assume the start
     // is the 5' end
-    // we always pad 10 bp to the 5' and 20 to the 3' when strand info is not available
+    // we always pad 10 bp to the 5' and 20 to the 3' when strand info is not
+    // available
     EXPECT_EQ(get_flag(3, 29863 + 1 - 11).front(), not_found.front());
     EXPECT_EQ(get_flag(3, 29863 + 1 - 10).front(), found.front());
     EXPECT_EQ(get_flag(3, 29863 + 1).front(), found.front());
@@ -3526,13 +3528,13 @@ TEST(REGION_MSIGDB, CHR_OVER)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
-    "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
-    "\"ENSG00000223972\"; "
-    "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
-    "\"havana\"; "
-    "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
-    "havana_gene "
-    "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
     gmt << "SET1 DDX11L1" << std::endl;
     gmt.close();
@@ -3560,8 +3562,7 @@ TEST(REGION_MSIGDB, CHR_OVER)
         // the size will be 2, because chr1 will be translate to 1 and we
         // use the chr as index. Might want to -1 for memory compactness.
         // but for now, keep it this way
-        ASSERT_EQ(gene_sets.size(),2);
-
+        ASSERT_EQ(gene_sets.size(), 2);
     }
     catch (const std::runtime_error& error)
     {
@@ -3574,8 +3575,7 @@ TEST(REGION_MSIGDB, CHR_OVER)
     }
     try
     {
-        feature = {"exon", "protein_coding",
-                                                "CDS"};
+        feature = {"exon", "protein_coding", "CDS"};
         Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
                                  window_5, window_3, genome_wide_background,
                                  gtf_name, msigdb, bed_names, snp_set,
@@ -3583,7 +3583,6 @@ TEST(REGION_MSIGDB, CHR_OVER)
         // now check if we can ge the correct structure
         // should be empty, because we have no valid set region
         FAIL();
-
     }
     catch (...)
     {
@@ -3699,9 +3698,9 @@ TEST(REGION_MSIGDB, NO_GTF)
     try
     {
         Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 "", gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+                                 window_5, window_3, genome_wide_background, "",
+                                 gmt_name, bed_names, snp_set, background, 22,
+                                 reporter);
         FAIL();
     }
     catch (...)
@@ -3781,10 +3780,10 @@ TEST(REGION_MSIGDB, DUP_SET_NAME)
     try
     {
         // it is ok to have duplicate, but the second set will be ignored
-        size_t num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        size_t num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
         // base, background and one unique set
         ASSERT_EQ(num_regions, 3);
     }
