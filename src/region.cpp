@@ -828,8 +828,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
     }
 
     // now read in the file
-    bool has_strand = false, first_read = true, error = false,
-         is_header = false;
+    bool error = false, is_header = false;
     size_t num_line = 0, column_size = 0;
     while (std::getline(input, line)) {
         is_header = false;
@@ -858,21 +857,6 @@ bool Region::load_bed_regions(const std::string& bed_file,
         // skip all check later
         chr_code = get_chrom_code_raw(token[0].c_str());
         if (chr_code > static_cast<int32_t>(max_chr) || chr_code < 0) continue;
-
-        if (first_read) {
-            first_read = false;
-            if (token.size() > +BED::STRAND) has_strand = true;
-        }
-        if (has_strand && token.size() <= +BED::STRAND) {
-            message = "Error: line " + misc::to_string(num_line)
-                      + " of the bed file: " + file_name
-                      + " contain less than than "
-                      + misc::to_string(+BED::STRAND)
-                      + " columns. BED file should have the same number of "
-                        "column for each row. Please check if you have the "
-                        "correct input format!";
-            throw std::runtime_error(message);
-        }
         if (token.size() <= +BED::STRAND && (window_5 > 0 || window_3 > 0)
             && (window_5 != window_3) && !printed_warning)
         {

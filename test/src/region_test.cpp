@@ -987,7 +987,7 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
     }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
-             << "2 94644 123567 .  \n"
+             << "2 94644 123567 . \n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
@@ -1016,11 +1016,10 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
     }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
-             << "2 94644 123567 .  \n"
+             << "2 94644 123567 .\n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
@@ -1047,7 +1046,6 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
     {
         SUCCEED();
     }
-    exclusion_region.clear();
 }
 
 
