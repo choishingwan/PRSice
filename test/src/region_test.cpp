@@ -932,6 +932,48 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     }
     exclusion_region.clear();
 }
+TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182\n"
+             << "2 94644 \n"
+             << "3 3209\n"
+             << "21 43440\n"; // overlap
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    gene_sets.clear();
+}
 
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 {
@@ -960,6 +1002,53 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
     }
     exclusion_region.clear();
 }
+
+
+TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 .  \n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    exclusion_region.clear();
+}
+
+
 TEST(REGION_MALFORM_BED, NOT_FOUND)
 {
     std::string bed_name = path + "404.bed";
@@ -976,7 +1065,41 @@ TEST(REGION_MALFORM_BED, NOT_FOUND)
     }
     exclusion_region.clear();
 }
-TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
+TEST(REGION_MALFORM_BED, NOT_FOUND_SET)
+{
+    std::string bed_name = path + "404.bed";
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        // we want to penalize any form of malformed input
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+
+TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
 {
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
@@ -987,6 +1110,49 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . L\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+TEST(REGION_MALFORM_BED, INVALID_COORDINATE)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 ABS 123567 . . +\n"
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
@@ -1002,6 +1168,7 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND)
     }
     exclusion_region.clear();
 }
+
 TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
 {
     std::ofstream bed_file;
@@ -1028,7 +1195,232 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
     }
     exclusion_region.clear();
 }
+TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 -123141 . . +\n"
+             << "2 94644 123567 . . +\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    exclusion_region.clear();
+}
 
+TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 ABC . . +\n"
+             << "2 94644 123567 . . +\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<IITree<int, int>> exclusion_region;
+    try
+    {
+        Region::generate_exclusion(exclusion_region, bed_name);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    exclusion_region.clear();
+}
+
+TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 -94644 123567 . . +\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 ABC 123567 . . +\n"
+             << "3 3209 123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+
+TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 . . +\n"
+             << "3 3209 -123141 . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
+{
+    std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name.c_str());
+    if (!bed_file.is_open()) {
+        throw std::runtime_error("Error: Cannot open bed file");
+    }
+    //  now generate the output required
+    bed_file << "2 19182 123141 . . +\n"
+             << "2 94644 123567 . . +\n"
+             << "3 3209 ABC . . .\n"
+             << "21 43440 123141 . . +\n"; // overlap
+    bed_file.close();
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    std::vector<std::string> region_names;
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string gtf = "";
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::vector<std::string> bed = {bed_name};
+    std::string background = "";
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    try
+    {
+        Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
+            reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
 TEST(REGION_STD_BED_INPUT, NO_RUN)
 {
     std::ofstream bed_file;
@@ -1785,7 +2177,7 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
+TEST(REGION_GTF_BASIC, NEGATIVE_START_COORDINATE)
 {
     std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
@@ -1802,6 +2194,319 @@ TEST(REGION_GTF_BASIC, NEGATIVE_COORDINATE)
            "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_GTF_BASIC, NEGATIVE_END_COORDINATE)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "1\thavana\tgene\t11869\t-14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_GTF_BASIC, SINGLE_FEATURE_REMOVE)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "1\thavana\t5'UTR\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REGION_GTF_BASIC, SINGLE_CHR_REMOVE)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "67\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+
+TEST(REGION_GTF_BASIC, MULTI_CHR_REMOVE)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "67\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "976\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "68\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "913\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+
+
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+TEST(REGION_GTF_BASIC, NO_GENE_ID)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\t"
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+
+TEST(REGION_GTF_BASIC, NO_BOTH_ID)
+{
+    std::string gtf_name = path + "Test.gtf";
+    std::ofstream gtf;
+    gtf.open(gtf_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\t"
+           "gene_version \"5\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_GTF_BASIC, NO_GZ)
+{
+    std::string gtf_name = path + "Test.gtf.gz";
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
@@ -1960,7 +2665,7 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, NO_GENE_ID)
+TEST(REGION_GTF_BASIC, NO_GENE_ID_2)
 {
 
     std::string gtf_name = path + "Test.gtf";
@@ -2074,6 +2779,7 @@ protected:
                "transcript_biotype \"protein_coding\"; protein_id "
                "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
                "transcript_support_level \"5\";\n";
+
         gtf.close();
         gmt << "SET1 ENSG00000223972" << std::endl;
         gmt << "SET2 ENSG00000223973" << std::endl; // should be filtered
@@ -2589,6 +3295,92 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
         FAIL();
     }
 }
+
+TEST(REGION_MSIGDB, CHR_OVER)
+{
+    // invalid chromosome, skip region
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "ABC\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+    "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+    "\"ENSG00000223972\"; "
+    "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+    "\"havana\"; "
+    "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+    "havana_gene "
+    "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string msigdb = "";
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        // now check if we can ge the correct structure
+        // should be empty, because we have no valid set region
+        // the size will be 2, because chr1 will be translate to 1 and we
+        // use the chr as index. Might want to -1 for memory compactness.
+        // but for now, keep it this way
+        ASSERT_EQ(gene_sets.size(),2);
+
+    }
+    catch (const std::runtime_error& error)
+    {
+        std::cerr << error.what() << std::endl;
+        FAIL();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        feature = {"exon", "protein_coding",
+                                                "CDS"};
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, msigdb, bed_names, snp_set,
+                                 background, 22, reporter);
+        // now check if we can ge the correct structure
+        // should be empty, because we have no valid set region
+        FAIL();
+
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
 TEST(REGION_MSIGDB, ID_CROSS_CHR)
 {
     // This should be ok? Transplicing or something like that?
@@ -2671,6 +3463,295 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
         FAIL();
     }
 }
+
+
+TEST(REGION_MSIGDB, NO_GTF)
+{
+    // This should be ok? Transplicing or something like that?
+
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gmt.open(gmt_name.c_str());
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2 CIT" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 "", gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
+TEST(REGION_MSIGDB, DUP_SET_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122966\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CIT\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET1 CIT" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        // it is ok to have duplicate, but the second set will be ignored
+        size_t num_regions = Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        // base, background and one unique set
+        ASSERT_EQ(num_regions, 3);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+TEST(REGION_MSIGDB, INVALID_MSIG_FORMAT)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122966\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CIT\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2" << std::endl;
+    gmt << "SET3 ENSG00000122966" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        // it is ok to have duplicate, but the second set will be ignored
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
+        // base, background and one unique set
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MSIGDB, WRONG_MSIG_NAME)
+{
+    // This should be ok? Transplicing or something like that?
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "2\thavana\tgene\t15869\t16409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "12\thavana\tCDS\t11399381\t11486678\t.\t-\t.\tgene_id "
+           "\"ENSG00000122966\"; gene_version \"5\"; transcript_id "
+           "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
+           "\"CIT\"; gene_source \"havana\"; gene_biotype "
+           "\"sense_intronic\"; havana_gene \"OTTHUMG00000169117\"; "
+           "havana_gene_version \"2\"; transcript_name "
+           "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
+           "transcript_biotype \"sense_intronic\"; havana_transcript "
+           "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+           "\"basic\"; transcript_support_level \"4\";\n"
+
+           "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+           "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
+           "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+           "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
+           "gene_biotype \"protein_coding\"; havana_gene "
+           "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
+           "transcript_name \"CIT-001\"; transcript_source "
+           "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+           "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
+           "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
+           "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
+           "\"basic\"; transcript_support_level \"1\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt << "SET2 CIT" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    int window_5 = 0;
+    int window_3 = 0;
+    bool genome_wide_background = false;
+    std::string snp_set = "";
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        // We should fail if we can't find the MSigDB file
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, "404.gmt", bed_names, snp_set,
+                                 background, 22, reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
 TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 {
     std::string gtf_name = path + "Test.gtf";

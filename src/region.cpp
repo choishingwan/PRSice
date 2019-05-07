@@ -662,7 +662,7 @@ void Region::load_gtf(
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entry removed due to feature selection\n");
     }
-    if (exclude_feature > 1) {
+    else if (exclude_feature > 1) {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entries removed due to feature selection\n");
     }
@@ -670,6 +670,11 @@ void Region::load_gtf(
         message.append(
             "A total of " + std::to_string(chr_exclude)
             + " entries removed as they are not on autosomal chromosome\n");
+    }
+    else if (chr_exclude == 1) {
+        message.append(
+            "A total of " + std::to_string(chr_exclude)
+            + " entry removed as they are not on autosomal chromosome\n");
     }
     reporter.report(message);
 }
@@ -693,7 +698,7 @@ void Region::load_snp_sets(
     else
     {
         std::string error_message =
-            "Error: Undefine bed file input format: " + snp_file;
+            "Error: Undefine SNP set file input format: " + snp_file;
         throw std::runtime_error(error_message);
     }
     // first check if it is a set file
