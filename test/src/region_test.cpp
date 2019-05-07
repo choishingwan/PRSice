@@ -5220,10 +5220,10 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5295,10 +5295,10 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5370,10 +5370,10 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5445,10 +5445,10 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5519,10 +5519,10 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5594,10 +5594,10 @@ TEST(REGION_BACKGROUND, INVALID_END)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+        Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5668,10 +5668,10 @@ TEST(REGION_BACKGROUND, INVALID_START)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+       Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5743,10 +5743,9 @@ TEST(REGION_BACKGROUND, SMALLER_END)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
+       Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
@@ -5773,10 +5772,10 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<int>> snp_in_sets;
     std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions;
+
     try
     {
-        num_regions = Region::generate_regions(
+       Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
             background, 22, reporter);
