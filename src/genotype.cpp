@@ -918,8 +918,8 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
            }
        }
        else{
-           if(target->m_existed_snps.size()){
-               message = "Error: No vairant remained!\n";
+           if(target->m_existed_snps.size()==0){
+               message = "Error: No vairant remained after matching with reference!\n";
                throw std::runtime_error(message);
            }
        }
