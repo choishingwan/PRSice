@@ -528,11 +528,9 @@ void Region::load_gtf(
                 throw std::runtime_error(error);
             }
             // Now extract the name
-            // It is not required by GTF format to contain Gene ID and Gene
-            // Name. In that case, we will just refuse to work on this GTF file
-            // as we won't be able to conntect it with the MSigDB file
-            id = get_attribute_info(token[+GTF::ATTRIBUTE], "gene_id");
-            name = get_attribute_info(token[+GTF::ATTRIBUTE], "gene_name");
+            attribute = get_attribute(token[+GTF::ATTRIBUTE]);
+            name = attribute[1];
+            id = attribute[0];
             if (name.empty() && id.empty()) {
                 // lack both
                 std::string message =
