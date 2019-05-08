@@ -312,30 +312,30 @@ private:
                       const bool not_first)
         {
             m_stat = stat;
-            m_flipped = flipped;
             m_homcom_weight = homcom_weight;
             m_het_weight = het_weight;
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
             m_expected = expected;
-            if (m_flipped) {
+            if (flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
             m_adj_score = 0;
+            // here we don't need to multiple the m_expected by ploidy, the reason
+            // is that the expected is ranged from 0-2, instead of the 0-1 of MAF
             if (m_centre) {
                 // as is_centre will never change, branch prediction might be
                 // rather accurate, therefore we don't need to do the complex
                 // stat*maf*is_centre
-                m_adj_score = m_ploidy * m_stat * m_expected;
+                m_adj_score =  m_stat * m_expected;
             }
-
             m_miss_score = 0;
             m_miss_count = 0;
             if (!m_setzero) {
                 m_miss_count = 1;
                 // again, mean_impute is stable, branch prediction should be ok
-                m_miss_score = m_ploidy * m_stat * m_expected;
+                m_miss_score =  m_stat * m_expected;
             }
         }
         /*!
@@ -461,7 +461,6 @@ private:
         uint32_t m_prs_sample_i = 0;
         int m_miss_count = 0;
         int m_ploidy = 2;
-        bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
         bool m_start_geno = false;
