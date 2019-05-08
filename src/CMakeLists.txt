@@ -34,19 +34,19 @@ add_executable(PRSice ${CMAKE_SOURCE_DIR}/src/main.cpp)
 find_package( ZLIB REQUIRED )
 if ( ZLIB_FOUND )
     include_directories( ${ZLIB_INCLUDE_DIRS} )
-    target_link_libraries( PRSice PUBLIC ${ZLIB_LIBRARIES} )
-    target_link_libraries( bgen PUBLIC ${ZLIB_LIBRARIES} )
-    target_link_libraries( plink PUBLIC ${ZLIB_LIBRARIES} )
-    target_link_libraries( gzstream PUBLIC ${ZLIB_LIBRARIES} )
-    target_link_libraries( prsice_lib PUBLIC ${ZLIB_LIBRARIES} )
+    target_link_libraries( PRSice PRIVATE ${ZLIB_LIBRARIES} )
+    target_link_libraries( bgen PRIVATE ${ZLIB_LIBRARIES} )
+    target_link_libraries( plink PRIVATE ${ZLIB_LIBRARIES} )
+    target_link_libraries( gzstream PRIVATE ${ZLIB_LIBRARIES} )
+    target_link_libraries( prsice_lib PRIVATE ${ZLIB_LIBRARIES} )
 endif( ZLIB_FOUND )
 ################################
 #          Add pthread
 ################################
 find_package (Threads)
-target_link_libraries (PRSice PUBLIC ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries (plink PUBLIC ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries( prsice_lib PUBLIC ${CMAKE_THREAD_LIBS_INIT} )
+target_link_libraries (PRSice PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (plink PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries( prsice_lib PRIVATE ${CMAKE_THREAD_LIBS_INIT} )
 target_link_libraries(PRSice PRIVATE
     bgen
     gzstream

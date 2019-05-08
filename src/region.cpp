@@ -70,9 +70,9 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
                 }
                 if (is_header) continue; // skip header
                 int chr = get_chrom_code_raw(boundary[0].c_str());
-                int low_bound = misc::convert<int>(boundary[1]) + 1;
+                int low_bound = misc::string_to_int(boundary[1].c_str()) + 1;
                 // +1 because start at 0
-                int upper_bound = misc::convert<int>(boundary[2]);
+                int upper_bound = misc::string_to_int(boundary[2].c_str());
                 // Do nothing because while BED end is exclusive, it is 0 base.
                 // For an inclusive end bound, we will need to do -1 (make it
                 // inclusive) and +1 (transform to 1 base)
@@ -114,8 +114,8 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
                     "Should be chr:start, chr:start-end or a bed file\n";
                 throw std::runtime_error(message);
             }
-            int low_bound = misc::convert<int>(boundary.front());
-            int upper_bound = misc::convert<int>(boundary.back());
+            int low_bound = misc::string_to_int(boundary.front().c_str());
+            int upper_bound = misc::string_to_int(boundary.back().c_str());
             // the library find overlap, which for SNP at 10
             // the boundary should be defined as 9-11 when we read in the SNP
             // here we do nothing but sainity check of the input
@@ -321,7 +321,7 @@ void Region::load_background(
             std::string message = "";
             try
             {
-                start = misc::convert<int>(token[+BED::START]);
+                start = misc::string_to_int(token[+BED::START].c_str());
                 if (start >= 0)
                     // That's because bed is 0 based and range format is 1
                     // based. and type for bed is 1 and type for range is 0
@@ -343,7 +343,7 @@ void Region::load_background(
             }
             try
             {
-                end = misc::convert<int>(token[+BED::END]);
+                end = misc::string_to_int(token[+BED::END].c_str());
                 if (end < 0) {
                     message.append("Error: Negative End Coordinate at line "
                                    + misc::to_string(num_line) + "!");
@@ -490,7 +490,7 @@ void Region::load_gtf(
             end = 0;
             try
             {
-                start = misc::convert<int>(token[+GTF::START]);
+                start = misc::string_to_int(token[+GTF::START].c_str());
                 if (start < 0) {
                     // we opt for extreme stringency. Will definitely want the
                     // whole gtf file to contain valid entries
@@ -510,7 +510,7 @@ void Region::load_gtf(
             }
             try
             {
-                end = misc::convert<int>(token[+GTF::END]);
+                end = misc::string_to_int(token[+GTF::END].c_str());
                 if (end < 0) {
                     std::string error =
                         "Error: Negative End Coordinate! (line: "
@@ -528,39 +528,11 @@ void Region::load_gtf(
                 throw std::runtime_error(error);
             }
             // Now extract the name
-            attribute = misc::split(token[+GTF::ATTRIBUTE], ";");
-            name = "";
-            id = "";
             // It is not required by GTF format to contain Gene ID and Gene
             // Name. In that case, we will just refuse to work on this GTF file
             // as we won't be able to conntect it with the MSigDB file
-            for (auto& info : attribute) {
-                if (info.find("gene_id") != std::string::npos) {
-                    extract = misc::split(info);
-                    if (extract.size() > 1) {
-                        // WARNING: HARD CODING HERE
-                        // we assume this should be of the format gene_id "ID"
-                        extract[1].erase(std::remove(extract[1].begin(),
-                                                     extract[1].end(), '\"'),
-                                         extract[1].end());
-                        id = extract[1];
-                    }
-                }
-                else if (info.find("gene_name") != std::string::npos)
-                {
-                    extract = misc::split(info);
-                    if (extract.size() > 1) {
-                        // WARNING: HARD CODING HERE
-                        // Again, we assume this should be of the format
-                        // gene_name "Name"
-                        extract[1].erase(std::remove(extract[1].begin(),
-                                                     extract[1].end(), '\"'),
-                                         extract[1].end());
-                        name = extract[1];
-                    }
-                }
-                if (!name.empty() && !id.empty()) break;
-            }
+            id = get_attribute_info(token[+GTF::ATTRIBUTE], "gene_id");
+            name = get_attribute_info(token[+GTF::ATTRIBUTE], "gene_name");
             if (name.empty() && id.empty()) {
                 // lack both
                 std::string message =
@@ -882,7 +854,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
         message = "";
         try
         {
-            start = misc::convert<int>(token[+BED::START]);
+            start = misc::string_to_int(token[+BED::START].c_str());
             if (start >= 0)
                 ++start; // That's because bed is 0 based
             else
@@ -901,7 +873,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
 
         try
         {
-            end = misc::convert<int>(token[+BED::END]);
+            end = misc::string_to_int(token[+BED::END].c_str());
             if (end < 0) {
                 message.append("Error: Negative End Coordinate at line "
                                + misc::to_string(num_line) + "!");

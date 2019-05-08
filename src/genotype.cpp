@@ -329,7 +329,7 @@ void Genotype::read_base(
                 // obtain the SNP coordinate
                 try
                 {
-                    loc = misc::convert<int>(
+                    loc = misc::string_to_int(
                         token[col_index[+BASE_INDEX::BP]].c_str());
                     if (loc < 0) {
                         std::string error_message =

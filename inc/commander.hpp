@@ -1116,66 +1116,6 @@ private:
     }
 
     /*!
-     * \brief Function to convert user clump distance into a numeric
-     * distance \param input the input value \param message the parameter
-     * storage \param error_message the error message storage \param target
-     * the target storage \param c the command flag \return true if we can
-     * parse the distance value
-     */
-    inline bool parse_distance(const std::string& input,
-                               std::map<std::string, std::string>& message,
-                               std::string& error_message, int& target,
-                               const std::string& c)
-    {
-        if (message.find(c) != message.end()) {
-            error_message.append("Warning: Duplicated argument --" + c + "\n");
-        }
-        message[c] = input;
-        // first check if there are any suffix
-        // KB, MB, BP are the only 3 valid options
-        if (input.length() > 3) {
-            std::string suffix = input.substr(input.length() - 2);
-            std::transform(suffix.begin(), suffix.end(), suffix.begin(),
-                           ::toupper);
-            std::string prefix = input.substr(0, input.size() - 2);
-            try
-            {
-                int num = misc::convert<int>(prefix);
-                if (suffix == "BP") {
-                    target = num;
-                }
-                else if (suffix == "KB")
-                {
-                    target = num * 1000;
-                }
-                else if (suffix == "MB")
-                {
-                    target = num * 1000000;
-                }
-            }
-            catch (...)
-            {
-                error_message.append("Error: Non numeric argument passed to "
-                                     + c + ": " + input + "!\n");
-                return false;
-            }
-        }
-        else
-        {
-            try
-            {
-                // default is KB, so we will multiply it by 1000
-                target = misc::convert<int>(input) * 1000;
-            }
-            catch (...)
-            {
-                error_message.append("Error: Cannot parse clump distance!\n");
-                return false;
-            }
-        }
-        return true;
-    }
-    /*!
      * \brief Function parsing string into genetic model used
      * \param in the input
      * \param message the parameter storage
@@ -1485,6 +1425,14 @@ private:
                              dist = misc::convert<int>(value);
                             return dist;
                         }
+                        else if(unit == "K"){
+                            dist = misc::convert<int>(value)*1000;
+                            return dist;
+                        }
+                        else if(unit == "M"){
+                            dist = misc::convert<int>(value)*1000*1000;
+                            return dist;
+                        }
                     }
                 }
                 catch (...)
@@ -1498,7 +1446,7 @@ private:
             }
             else
             {
-                error_messages.append("Error: Undefined memory distance: " + in);
+                error_messages.append("Error: Undefined distance input: " + in);
                 message.erase(command);
                 error = true;
                 return 0;

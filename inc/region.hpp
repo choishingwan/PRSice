@@ -147,6 +147,17 @@ protected:
     {
         return std::find(feature.begin(), feature.end(), in) != feature.end();
     }
+
+
+    static std::string get_attribute_info(const std::string &attribute, const std::string &tag){
+        size_t found = attribute.find(tag);
+        if(found==std::string::npos) return "";
+        // now find from end
+        size_t end_info = attribute.find(";", found+tag.length());
+        std::string str = misc::trimmed(attribute.substr(found+tag.length(), end_info-(found+tag.length())));
+        str.erase(std::remove(str.begin(), str.end(), '"'), str.end());
+        return str;
+    }
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */

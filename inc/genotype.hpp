@@ -598,6 +598,7 @@ protected:
         Genotype* /*target=nullptr*/)
     {
     }
+
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
      * subclass must implement this function to assist the processing of their

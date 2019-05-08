@@ -195,8 +195,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_chr, m_provided_chr_col,
                            command, error_messages);
             else if (command == "clump-kb")
-                error |= !parse_distance(optarg, message_store, error_messages,
-                                         m_clump_distance, command);
+                 m_clump_distance = set_distance(optarg, command,message_store, error, error_messages);
             else if (command == "clump-p")
                 error |=
                     !set_numeric<double>(optarg, message_store, error_messages,
