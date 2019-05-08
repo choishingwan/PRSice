@@ -1870,6 +1870,7 @@ void Genotype::build_membership_matrix(
         snp_out << "\n";
     }
     size_t prev_idx;
+    bool has_snp = false;
     if (num_sets > 2) {
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
             auto&& snp = m_existed_snps[i_snp];
@@ -1889,6 +1890,7 @@ void Genotype::build_membership_matrix(
                         snp_out << "\tN";
                     }
                     snp_out << "\tY";
+                    if(index > 1) has_snp = true;
                     temporary_storage[index].push_back(i_snp);
                     prev_idx = index + 1;
                 }
@@ -1902,6 +1904,7 @@ void Genotype::build_membership_matrix(
                 idx = snp.get_set_idx(num_sets);
                 for (auto&& index : idx) {
                     temporary_storage[index].push_back(i_snp);
+                    if(index > 1) has_snp = true;
                 }
             }
         }
@@ -1914,6 +1917,10 @@ void Genotype::build_membership_matrix(
                                          temporary_storage[i].end());
                 cur_idx = region_membership.size();
             }
+        }
+        if(!has_snp){
+            std::string error_message = "Error: None of the gene sets contain any SNP(s) after clumping. Have you provided the correct input? E.g. GMT file containing Entrez ID with GTF files that uses the Ensembl gene ID?\n";
+            throw std::runtime_error(error_message);
         }
     }
     else
