@@ -1060,7 +1060,7 @@ inline int string_to_int(const char *p) {
     }else if(*p=='+'){
         ++p;
     }
-    else if(*p != '+' && *p <'0' && *p >='9'){
+    else if(*p <'0' || *p >'9'){
         throw std::runtime_error("Error: Not an integer\n");
     }
     while (*p >= '0' && *p <= '9') {
