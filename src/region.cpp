@@ -606,6 +606,7 @@ void Region::load_gtf(
                 // background index is 1
                 gene_sets[static_cast<size_t>(chr_code)].add(start, end, 1);
             }
+            std::cerr << "Load " << chr_code << "\t" << start << "\t" << end << std::endl;
         }
         else if (chr_code >= 0 && chr_code <= static_cast<int>(max_chr)
                  && token.size() == 9)

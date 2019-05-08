@@ -151,7 +151,7 @@ public:
     {
         return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
     }
-    void run_prsice(const Commander& c_commander, const size_t pheno_index,
+    bool run_prsice(const Commander& c_commander, const size_t pheno_index,
                     const size_t region_index,
                     const std::vector<size_t>& region_membership,
                     const std::vector<size_t>& region_start_idx,

@@ -956,7 +956,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     reporter.report(message);
 }
 
-void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
+bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                         const size_t region_index,
                         const std::vector<size_t>& region_membership,
                         const std::vector<size_t>& region_start_idx,
@@ -982,10 +982,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     {
         std::advance(cur_end_idx, region_start_idx[region_index + 1]);
     }
-    // if cur_start_idx == cur_end_idx, this is an empty region
-    if (cur_start_idx == cur_end_idx) {
-        return;
-    }
+
     Eigen::initParallel();
     Eigen::setNbThreads(static_cast<int>(num_thread));
     m_best_index = -1;
@@ -1003,6 +1000,10 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
         p.threshold = -1;
         p.r2 = 0.0;
         p.num_snp = 0;
+    }
+    // if cur_start_idx == cur_end_idx, this is an empty region
+    if (cur_start_idx == cur_end_idx) {
+        return false;
     }
     // initialize score vector
     // this stores the best score for each sample. Ideally, we will only do it
@@ -1090,6 +1091,7 @@ void PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
         // output
         print_best(target, pheno_index, c_commander);
     }
+    return true;
 }
 
 void PRSice::print_best(Genotype& target, const size_t pheno_index,

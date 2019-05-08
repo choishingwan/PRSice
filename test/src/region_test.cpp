@@ -3190,8 +3190,8 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
     // both base and background are set
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(2, found.data());
-    SET_BIT(7, found.data());
+    SET_BIT(1+1, found.data());
+    SET_BIT(6+1, found.data());
     // 1 havana gene 11869 14409
     ASSERT_EQ(get_flag(1, 11868).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 11869).front(), found.front());
