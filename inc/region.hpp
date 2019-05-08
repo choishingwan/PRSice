@@ -167,8 +167,10 @@ protected:
                     add_next= true;
                     add_id = 1;
                 }
-                if(add_next){
+                else if(add_next){
                     add_next =false;
+                    temp.erase(std::remove(temp.begin(),temp.end(), '\"'),
+                    temp.end());
                     result[add_id] = temp;
                     num_added++;
                 }
