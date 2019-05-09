@@ -631,28 +631,32 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
-            //default to RS
+            // default to RS
             cur_id = RSID;
-            // by this time point, we should always have the m_existed_snps_index propagated
-            // with SNPs from the base. So we can first check if the SNP are presented in base
+            // by this time point, we should always have the
+            // m_existed_snps_index propagated with SNPs from the base. So we
+            // can first check if the SNP are presented in base
             if (reference->m_existed_snps_index.find(RSID)
-                == reference->m_existed_snps_index.end() &&
-                    reference->m_existed_snps_index.find(SNPID)
-                                         == reference->m_existed_snps_index.end())
+                    == reference->m_existed_snps_index.end()
+                && reference->m_existed_snps_index.find(SNPID)
+                       == reference->m_existed_snps_index.end())
             {
                 // this is the reference panel, and the SNP wasn't found in the
                 // target doens't matter if we use RSID or SNPID
                 exclude_snp = true;
-            }else if(reference->m_existed_snps_index.find(RSID)
-                     == reference->m_existed_snps_index.end()){
+            }
+            else if (reference->m_existed_snps_index.find(RSID)
+                     == reference->m_existed_snps_index.end())
+            {
                 // we found the SNPID
                 cur_id = SNPID;
-            }else if(reference->m_existed_snps_index.find(SNPID)
-                     == reference->m_existed_snps_index.end()){
+            }
+            else if (reference->m_existed_snps_index.find(SNPID)
+                     == reference->m_existed_snps_index.end())
+            {
                 // we found the RSID
                 cur_id = RSID;
             }
-
 
 
             // user exclude indicate this SNP is discard by user, not because of
@@ -964,14 +968,6 @@ void BinaryGen::calc_freq_gen_inter(
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
         }
-        if (misc::logically_equal(cur_maf, 0.0)
-            || misc::logically_equal(cur_maf, 1.0))
-        {
-            // none of the sample contain this SNP
-            // still count as MAF filtering (for now)
-            m_num_maf_filter++;
-            continue;
-        }
         // filter by genotype missingness
         if (geno_filter && geno_threshold < cur_geno) {
             m_num_geno_filter++;
@@ -985,6 +981,16 @@ void BinaryGen::calc_freq_gen_inter(
             m_num_maf_filter++;
             continue;
         }
+        else if (maf_filter
+                 && (misc::logically_equal(cur_maf, 0.0)
+                     || misc::logically_equal(cur_maf, 1.0)))
+        {
+            // none of the sample contain this SNP
+            // still count as MAF filtering (for now)
+            m_num_maf_filter++;
+            continue;
+        }
+
         if (info_filter && setter.info_score() < info_threshold) {
             m_num_info_filter++;
             continue;
