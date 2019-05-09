@@ -1367,21 +1367,20 @@ private:
     }
 
     inline int set_distance(const std::string& input,
-                               const std::string& command,
-                               std::map<std::string, std::string>& message,
-                            bool& error,
-                           std::string& error_messages
-                               )
+                            const std::string& command,
+                            std::map<std::string, std::string>& message,
+                            bool& error, std::string& error_messages)
     {
         std::string in = input;
         if (message.find(command) != message.end()) {
-            error_messages.append("Warning: Duplicated argument --"+command+"\n");
+            error_messages.append("Warning: Duplicated argument --" + command
+                                  + "\n");
         }
         message[command] = in;
         int dist;
         try
         {
-             dist = misc::convert<int>(input);
+            dist = misc::convert<int>(input);
             return dist;
         }
         catch (...)
@@ -1394,26 +1393,25 @@ private:
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
                     if (unit == "KB") {
-                         dist = misc::convert<int>(value) * 1000;
+                        dist = misc::convert<int>(value) * 1000;
                         return dist;
                     }
                     else if (unit == "MB")
                     {
-                         dist = misc::convert<int>(value) * 1000 * 1000;
+                        dist = misc::convert<int>(value) * 1000 * 1000;
                         return dist;
                     }
                     else if (unit == "GB")
                     {
                         // kinda stupid here, but whatever
-                         dist =
-                            misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
                         return dist;
                     }
                     else if (unit == "TB")
                     {
                         // way too much....
-                         dist =
-                            misc::convert<int>(value) * 1000 * 1000 * 1000*1000;
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000
+                               * 1000;
                         return dist;
                     }
                     else
@@ -1422,15 +1420,17 @@ private:
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
-                             dist = misc::convert<int>(value);
+                            dist = misc::convert<int>(value);
                             return dist;
                         }
-                        else if(unit == "K"){
-                            dist = misc::convert<int>(value)*1000;
+                        else if (unit == "K")
+                        {
+                            dist = misc::convert<int>(value) * 1000;
                             return dist;
                         }
-                        else if(unit == "M"){
-                            dist = misc::convert<int>(value)*1000*1000;
+                        else if (unit == "M")
+                        {
+                            dist = misc::convert<int>(value) * 1000 * 1000;
                             return dist;
                         }
                     }

@@ -911,19 +911,20 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
 
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
-       if (!m_is_ref) {
-           if(m_marker_ct==0){
-               message = "Error: No vairant remained!\n";
-               throw std::runtime_error(message);
-           }
-       }
-       else{
-           if(target->m_existed_snps.size()==0){
-               message = "Error: No vairant remained after matching with reference!\n";
-               throw std::runtime_error(message);
-           }
-       }
-
+    if (!m_is_ref) {
+        if (m_marker_ct == 0) {
+            message = "Error: No vairant remained!\n";
+            throw std::runtime_error(message);
+        }
+    }
+    else
+    {
+        if (target->m_existed_snps.size() == 0) {
+            message =
+                "Error: No vairant remained after matching with reference!\n";
+            throw std::runtime_error(message);
+        }
+    }
 }
 
 
@@ -1890,7 +1891,7 @@ void Genotype::build_membership_matrix(
                         snp_out << "\tN";
                     }
                     snp_out << "\tY";
-                    if(index > 1) has_snp = true;
+                    if (index > 1) has_snp = true;
                     temporary_storage[index].push_back(i_snp);
                     prev_idx = index + 1;
                 }
@@ -1904,7 +1905,7 @@ void Genotype::build_membership_matrix(
                 idx = snp.get_set_idx(num_sets);
                 for (auto&& index : idx) {
                     temporary_storage[index].push_back(i_snp);
-                    if(index > 1) has_snp = true;
+                    if (index > 1) has_snp = true;
                 }
             }
         }
@@ -1918,8 +1919,12 @@ void Genotype::build_membership_matrix(
                 cur_idx = region_membership.size();
             }
         }
-        if(!has_snp){
-            std::string error_message = "Error: None of the gene sets contain any SNP(s) after clumping. Have you provided the correct input? E.g. GMT file containing Entrez ID with GTF files that uses the Ensembl gene ID?\n";
+        if (!has_snp) {
+            std::string error_message =
+                "Error: None of the gene sets contain any SNP(s) after "
+                "clumping. Have you provided the correct input? E.g. GMT file "
+                "containing Entrez ID with GTF files that uses the Ensembl "
+                "gene ID?\n";
             throw std::runtime_error(error_message);
         }
     }

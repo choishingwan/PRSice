@@ -3190,8 +3190,8 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET1)
     // both base and background are set
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    SET_BIT(1+1, found.data());
-    SET_BIT(6+1, found.data());
+    SET_BIT(1 + 1, found.data());
+    SET_BIT(6 + 1, found.data());
     // 1 havana gene 11869 14409
     ASSERT_EQ(get_flag(1, 11868).front(), not_found.front());
     ASSERT_EQ(get_flag(1, 11869).front(), found.front());
@@ -4423,7 +4423,6 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names,
             snp_set_name + ":SNP_SET", background, 22, reporter);
-
     }
     catch (...)
     {
@@ -5223,10 +5222,10 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5298,10 +5297,10 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5373,10 +5372,10 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5448,10 +5447,10 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5522,10 +5521,10 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5597,10 +5596,10 @@ TEST(REGION_BACKGROUND, INVALID_END)
 
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5671,10 +5670,10 @@ TEST(REGION_BACKGROUND, INVALID_START)
 
     try
     {
-       Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5745,10 +5744,10 @@ TEST(REGION_BACKGROUND, SMALLER_END)
     std::vector<IITree<int, int>> gene_sets;
     try
     {
-       Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -5761,7 +5760,7 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
     std::ofstream bed_file;
     std::string background = path + "404.bed";
     background.append(":bed");
-    std::vector<std::string> bed_names ;
+    std::vector<std::string> bed_names;
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
@@ -5775,10 +5774,10 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
 
     try
     {
-       Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
+                                 window_5, window_3, genome_wide_background,
+                                 gtf_name, gmt_name, bed_names, snp_set,
+                                 background, 22, reporter);
         FAIL();
     }
     catch (...)
@@ -6006,37 +6005,37 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
     // 4  87000 should be found in both the set and the background
     // 13 53970 should only be found in the background
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3015 + 1-10, genome_wide_background);
+                             4, 3015 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3016 + 1-10, genome_wide_background);
+                             4, 3016 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3017 + 1-10, genome_wide_background);
+                             4, 3017 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20138 + 1-10, genome_wide_background);
+                             4, 20138 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     // found in both background and the bed file
     SET_BIT(2, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20139 + 1-10, genome_wide_background);
+                             4, 20139 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20140 + 1-10, genome_wide_background);
+                             4, 20140 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87781 + 1+20, genome_wide_background);
+                             4, 87781 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     found.front() = 0;
     // only found in bed but not background
     SET_BIT(0, found.data());
     SET_BIT(2, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87782 + 1+20, genome_wide_background);
+                             4, 87782 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87783 + 1+20, genome_wide_background);
+                             4, 87783 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     found.front() = 0;
     // found in all
@@ -6045,48 +6044,48 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53963 + 1-20, genome_wide_background);
+                             13, 53963 + 1 - 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53964 + 1-20, genome_wide_background);
+                             13, 53964 + 1 - 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53965 + 1-20, genome_wide_background);
+                             13, 53965 + 1 - 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90571 + 1+10, genome_wide_background);
+                             13, 90571 + 1 + 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90572 + 1+10, genome_wide_background);
+                             13, 90572 + 1 + 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90573 + 1+10, genome_wide_background);
+                             13, 90573 + 1 + 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     SET_BIT(2, found.data());
     SET_BIT(1, not_found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56145 + 1-10, genome_wide_background);
+                             13, 56145 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56146 + 1-10, genome_wide_background);
+                             13, 56146 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56147 + 1-10, genome_wide_background);
+                             13, 56147 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67101 + 1+20, genome_wide_background);
+                             13, 67101 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67102 + 1+20, genome_wide_background);
+                             13, 67102 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67103 + 1+20, genome_wide_background);
+                             13, 67103 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     // anything on chromosome 17 should only be found in the base
-    not_found.front()= 0;
+    not_found.front() = 0;
     SET_BIT(0, not_found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             17, 53970 + 1-10, genome_wide_background);
+                             17, 53970 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
 }
 
@@ -6176,37 +6175,37 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
     // 4  87000 should be found in both the set and the background
     // 13 53970 should only be found in the background
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3015 + 1-10, genome_wide_background);
+                             4, 3015 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3016 + 1-10, genome_wide_background);
+                             4, 3016 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3017 + 1-10, genome_wide_background);
+                             4, 3017 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20138 + 1-10, genome_wide_background);
+                             4, 20138 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     // found in both background and the bed file
     SET_BIT(2, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20139 + 1-10, genome_wide_background);
+                             4, 20139 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20140 + 1-10, genome_wide_background);
+                             4, 20140 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87781 + 1+20, genome_wide_background);
+                             4, 87781 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     found.front() = 0;
     // only found in bed but not background
     SET_BIT(0, found.data());
     SET_BIT(2, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87782 + 1+20, genome_wide_background);
+                             4, 87782 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87783 + 1+20, genome_wide_background);
+                             4, 87783 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     found.front() = 0;
     // found in all
@@ -6215,48 +6214,48 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53963 + 1-10, genome_wide_background);
+                             13, 53963 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53964 + 1-10, genome_wide_background);
+                             13, 53964 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53965 + 1-10, genome_wide_background);
+                             13, 53965 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90571 + 1+20, genome_wide_background);
+                             13, 90571 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90572 + 1+20, genome_wide_background);
+                             13, 90572 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 90573 + 1+20, genome_wide_background);
+                             13, 90573 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     SET_BIT(2, found.data());
     SET_BIT(1, not_found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56145 + 1-10, genome_wide_background);
+                             13, 56145 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56146 + 1-10, genome_wide_background);
+                             13, 56146 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 56147 + 1-10, genome_wide_background);
+                             13, 56147 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67101 + 1+20, genome_wide_background);
+                             13, 67101 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67102 + 1+20, genome_wide_background);
+                             13, 67102 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 67103 + 1+20, genome_wide_background);
+                             13, 67103 + 1 + 20, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
     // anything on chromosome 17 should only be found in the base
-    not_found.front()= 0;
+    not_found.front() = 0;
     SET_BIT(0, not_found.data());
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             17, 53970 + 1-10, genome_wide_background);
+                             17, 53970 + 1 - 10, genome_wide_background);
     ASSERT_EQ(index.front(), not_found.front());
 }
 #endif // REGION_TEST_HPP

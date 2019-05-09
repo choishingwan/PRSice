@@ -367,7 +367,8 @@ void Region::load_background(
                 message.append("end: " + std::to_string(end) + "\n");
                 throw std::runtime_error(message);
             }
-            else if (error){
+            else if (error)
+            {
                 throw std::runtime_error("");
             }
             // the strand location is different depending on the type

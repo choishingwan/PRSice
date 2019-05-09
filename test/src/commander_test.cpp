@@ -67,7 +67,7 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_STREQ(commander.ref_type().c_str(), "bed");
     ASSERT_TRUE(commander.ref_keep_file().empty());
     ASSERT_TRUE(commander.ref_remove_file().empty());
-    double dummy=-1;
+    double dummy = -1;
     ASSERT_FALSE(commander.target_maf(dummy));
     ASSERT_FALSE(commander.target_geno(dummy));
     ASSERT_FALSE(commander.target_info(dummy));
@@ -77,7 +77,7 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_FALSE(commander.ref_info(dummy));
     ASSERT_FALSE(commander.ref_hard_threshold(dummy));
     ASSERT_FALSE(commander.proxy(dummy));
-    ASSERT_DOUBLE_EQ(commander.base_info_score(),0.0);
+    ASSERT_DOUBLE_EQ(commander.base_info_score(), 0.0);
     ASSERT_DOUBLE_EQ(commander.clump_p(), 1.0);
     ASSERT_DOUBLE_EQ(commander.clump_r2(), 0.1);
     ASSERT_DOUBLE_EQ(commander.lower(), 5e-8);
@@ -85,8 +85,8 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_DOUBLE_EQ(commander.upper(), 0.5);
     // we will use the parameter if memory is not provided, otherwise,
     // we will return the actual memory allowed
-    ASSERT_DOUBLE_EQ(commander.max_memory(1.0),1.0);
-    ASSERT_DOUBLE_EQ(commander.max_memory(2.0),2.0);
+    ASSERT_DOUBLE_EQ(commander.max_memory(1.0), 1.0);
+    ASSERT_DOUBLE_EQ(commander.max_memory(2.0), 2.0);
     size_t dummy_int;
     ASSERT_FALSE(commander.num_perm(dummy_int));
     ASSERT_FALSE(commander.set_perm(dummy_int));
@@ -103,14 +103,17 @@ TEST(COMMANDER_BASIC, USAGE)
 {
     Commander commander;
     Reporter reporter(std::string(path + "LOG"));
-    int argc=2;
+    int argc = 2;
     char name[7], help[7];
     strcpy(name, "PRSice");
     strcpy(help, "--help");
-    char* argv[2] ={name, help};
-    try {
+    char* argv[2] = {name, help};
+    try
+    {
         ASSERT_FALSE(commander.init(argc, argv, reporter));
-    } catch (...) {
+    }
+    catch (...)
+    {
         FAIL();
     }
 }
@@ -120,15 +123,18 @@ TEST(COMMANDER_BASIC, NO_ARG)
 {
     Commander commander;
     Reporter reporter(std::string(path + "LOG"));
-    int argc=1;
+    int argc = 1;
     std::string name = "PRSice";
     char name_c[7];
     strcpy(name_c, name.c_str());
-    char* argv[1] ={name_c};
-    try {
+    char* argv[1] = {name_c};
+    try
+    {
         commander.init(argc, argv, reporter);
         FAIL();
-    } catch (...) {
+    }
+    catch (...)
+    {
         SUCCEED();
     }
 }

@@ -290,9 +290,10 @@ int main(int argc, char* argv[])
                 for (size_t i_region = 0; i_region < num_regions; ++i_region) {
                     // always skip background region
                     if (i_region == 1) continue;
-                    if(!prsice.run_prsice(commander, i_pheno, i_region,
-                                      region_membership, region_start_idx,
-                                          *target_file)){
+                    if (!prsice.run_prsice(commander, i_pheno, i_region,
+                                           region_membership, region_start_idx,
+                                           *target_file))
+                    {
                         // did not run
                         continue;
                     }

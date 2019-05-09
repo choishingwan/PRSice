@@ -153,24 +153,29 @@ protected:
     {
         std::size_t prev = 0, pos;
         std::string temp;
-        std::vector<std::string> result(2,"");
+        std::vector<std::string> result(2, "");
         bool add_next = false;
         size_t add_id = 3;
-        size_t num_added =0;
-        while ((pos = attribute.find_first_of(" ;", prev)) != std::string::npos && num_added<2) {
-            if (pos > prev){
+        size_t num_added = 0;
+        while ((pos = attribute.find_first_of(" ;", prev)) != std::string::npos
+               && num_added < 2)
+        {
+            if (pos > prev) {
                 temp = attribute.substr(prev, pos - prev);
-                if(temp.find("gene_id")!=std::string::npos){
+                if (temp.find("gene_id") != std::string::npos) {
                     add_next = true;
                     add_id = 0;
-                }else if(temp.find("gene_name")!=std::string::npos){
-                    add_next= true;
+                }
+                else if (temp.find("gene_name") != std::string::npos)
+                {
+                    add_next = true;
                     add_id = 1;
                 }
-                else if(add_next){
-                    add_next =false;
-                    temp.erase(std::remove(temp.begin(),temp.end(), '\"'),
-                    temp.end());
+                else if (add_next)
+                {
+                    add_next = false;
+                    temp.erase(std::remove(temp.begin(), temp.end(), '\"'),
+                               temp.end());
                     result[add_id] = temp;
                     num_added++;
                 }
@@ -179,7 +184,7 @@ protected:
             prev = pos + 1;
         }
         if (add_next)
-            result[add_id] =(attribute.substr(prev, std::string::npos));
+            result[add_id] = (attribute.substr(prev, std::string::npos));
         return result;
     }
 };

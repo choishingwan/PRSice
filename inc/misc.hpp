@@ -299,7 +299,7 @@ double qnorm(double p, double mu = 0.0, double sigma = 1.0,
 
 // codes from stackoverflow
 inline std::vector<std::string> split(const std::string& seq,
-                               const std::string& separators="\t ")
+                                      const std::string& separators = "\t ")
 {
     std::size_t prev = 0, pos;
     std::vector<std::string> result;
@@ -1051,20 +1051,24 @@ inline bool isNumeric(std::string s)
     return true;
 }
 
-inline int string_to_int(const char *p) {
+inline int string_to_int(const char* p)
+{
     int x = 0;
     bool neg = false;
     if (*p == '-') {
         neg = true;
         ++p;
-    }else if(*p=='+'){
+    }
+    else if (*p == '+')
+    {
         ++p;
     }
-    else if(*p <'0' || *p >'9'){
+    else if (*p < '0' || *p > '9')
+    {
         throw std::runtime_error("Error: Not an integer\n");
     }
     while (*p >= '0' && *p <= '9') {
-        x = (x*10) + (*p - '0');
+        x = (x * 10) + (*p - '0');
         ++p;
     }
     if (neg) {
@@ -1072,6 +1076,4 @@ inline int string_to_int(const char *p) {
     }
     return x;
 }
-
 }
-

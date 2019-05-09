@@ -174,5 +174,4 @@ double qnorm(double p, double mu, double sigma, bool lower_tail, bool log_p)
     }
     return mu + sigma * val;
 }
-
 }

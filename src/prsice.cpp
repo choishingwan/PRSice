@@ -2185,7 +2185,8 @@ void PRSice::run_competitive(
         // if we have already calculated the competitive p-value for the set, we
         // will just skip them. This help us to handle multiple-phenotype
         // without too much additional coding
-        if (m_prs_summary[i].has_competitive || m_prs_summary[i].set == "Base") continue;
+        if (m_prs_summary[i].has_competitive || m_prs_summary[i].set == "Base")
+            continue;
         if (!started) {
             // remembering the index of the first set that need to perform the
             // competitive p-value calculation. This allow us to later reassign
@@ -2196,7 +2197,7 @@ void PRSice::run_competitive(
         auto&& res = m_prs_summary[i].result;
         // store the location of this set w.r.t number of SNPs in set
         set_index[res.num_snp].push_back(cur_set_index++);
-        if (res.num_snp > max_set_size ) max_set_size = res.num_snp;
+        if (res.num_snp > max_set_size) max_set_size = res.num_snp;
         // ori_t_value will contain the obesrved t-value
         obs_t_value.push_back(std::abs(res.coefficient / res.se));
         set_perm_res.push_back(0);
