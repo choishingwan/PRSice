@@ -1180,7 +1180,7 @@ private:
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
-            input = "add";
+            input = "avg";
             m_scoring_method = SCORING::AVERAGE;
         }
         else if (input.at(0) == 'S')
@@ -1206,7 +1206,7 @@ private:
                                  + "!\n");
             return false;
         }
-        if (message.find("model") != message.end()) {
+        if (message.find("score") != message.end()) {
             error_message.append("Warning: Duplicated argument --score\n");
         }
         message["score"] = input;
