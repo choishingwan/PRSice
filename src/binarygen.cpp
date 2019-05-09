@@ -43,9 +43,11 @@ BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
     init_chr();
     std::string message = "Initializing Genotype";
     std::string file_name;
-    bool is_list = list_file.empty();
+    bool is_list = !(list_file.empty());
     if(!is_list){
         file_name = file;
+    }else{
+        file_name = list_file;
     }
     if(is_list){
         std::vector<std::string> token = misc::split(file_name, ",");

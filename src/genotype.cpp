@@ -569,7 +569,7 @@ Genotype::load_genotype_prefix(const std::string& file_name)
     multi.open(file_name.c_str());
     if (!multi.is_open()) {
         throw std::runtime_error(
-            std::string("Error: Cannot open file: " + file_name));
+            std::string("Error: Cannot open list file: " + file_name));
     }
     std::string line;
     while (std::getline(multi, line)) {
@@ -659,7 +659,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     // first, we read in the file
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "Error: Cannot open file: " + input;
+        std::string error_message = "Error: Cannot open extract / exclude file: " + input;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -750,7 +750,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
     std::ifstream in;
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "Error: Cannot open file: " + input;
+        std::string error_message = "Error: Cannot open keep / remove file: " + input;
         throw std::runtime_error(error_message);
     }
     // read in the file
