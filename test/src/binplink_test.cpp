@@ -12,34 +12,6 @@
 #include <fstream>
 #include <math.h>
 
-class FakeCommander : public Commander{
-public:
-    size_t thread(){return 1;}
-    bool ignore_fid() { return m_ignore_fid;}
-    bool nonfounders() { return m_non_founders;}
-    bool keep_ambig() { return m_keep_ambig; }
-    bool ref_list(std::string& name){
-        name = m_ref_list;
-        return m_use_ref_list;
-    }
-    bool target_list(std::string& name){
-        name = m_target_list;
-        return m_use_target_list;
-    }
-    std::string ref_name(){
-        return m_ref_name;
-    }
-    std::string target_name(){
-        return m_target_name;
-    }
-    bool m_use_target_list=false,
-    m_use_ref_list = false,
-    m_keep_ambig=false,
-    m_ignore_fid = false,
-    m_non_founders = false;
-    std::string m_target_name, m_ref_name, m_target_list, m_ref_list;
-};
-
 class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:
@@ -48,11 +20,12 @@ protected:
     {
         std::string file_list;
         std::string file = std::string(path + "TOY_TARGET_DATA");
-        bool is_ref = false;
+        uint32_t thread = 1;
+        bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
+             is_ref = false;
         Reporter reporter(std::string(path + "LOG"));
-        FakeCommander commander;
-        commander.m_target_name = file;
-        plink = new BinaryPlink(commander, is_ref, reporter);
+        plink = new BinaryPlink(file_list, file, thread, ignore_fid,
+                                keep_nonfounder, keep_ambig, is_ref, reporter);
     }
     void TearDown() override { delete plink; }
 };
@@ -145,11 +118,12 @@ TEST(BPLINK_EXTERNAL, EXTERNAL_SAMPLE)
     std::string file_list;
     std::string file =
         std::string(path + "TOY_TARGET_DATA," + path + "TOY_TARGET_DATA.fam");
-    bool is_ref = false;
+    uint32_t thread = 1;
+    bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
+         is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
-    FakeCommander commander;
-    commander.m_target_name = file;
-    BinaryPlink plinkBinary(commander, is_ref, reporter);
+    BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
+                            keep_nonfounder, keep_ambig, is_ref, reporter);
     plinkBinary.load_samples("", "", true, reporter);
     ASSERT_EQ(plinkBinary.num_sample(), 2000);
 }
@@ -158,11 +132,12 @@ TEST(BPLINK_SAMPLE_CHECK, DUPLICATE_SAMPLE)
     std::string file_list;
     std::string file = std::string(path + "TOY_TARGET_DATA," + path
                                    + "TOY_TARGET_DATA.dup.fam");
-    bool is_ref = false;
+    uint32_t thread = 1;
+    bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
+         is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
-    FakeCommander commander;
-    commander.m_target_name = file;
-    BinaryPlink plinkBinary(commander, is_ref, reporter);
+    BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
+                            keep_nonfounder, keep_ambig, is_ref, reporter);
     try
     {
         plinkBinary.load_samples("", "", true, reporter);
@@ -181,11 +156,12 @@ TEST(BPLINK_FOUNDER, FOUNDER_REMOVE)
     std::string file_list;
     std::string file = std::string(path + "TOY_TARGET_DATA," + path
                                    + "TOY_TARGET_DATA.founder.fam");
-    bool is_ref = false;
+    uint32_t thread = 1;
+    bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
+         is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
-    FakeCommander commander;
-    commander.m_target_name = file;
-    BinaryPlink plinkBinary(commander, is_ref, reporter);
+    BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
+                            keep_nonfounder, keep_ambig, is_ref, reporter);
     plinkBinary.load_samples("", "", true, reporter);
     // we still keep the non-founders, just not using them for regression
     ASSERT_EQ(plinkBinary.num_sample(), 2000);

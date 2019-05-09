@@ -17,8 +17,8 @@
 #include "binarygen.hpp"
 
 
-BinaryGen::BinaryGen(const Commander& commander,
-                     const bool is_ref, Reporter& reporter)
+BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
+                     const bool is_ref)
 {
     m_intermediate = commander.use_inter();
     m_thread = static_cast<uint32_t>(commander.thread());

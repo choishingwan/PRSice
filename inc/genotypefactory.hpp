@@ -49,8 +49,26 @@ public:
         }
         switch (code)
         {
-        case 0: return new BinaryPlink(commander, is_ref, reporter);
-        case 2: return new BinaryGen(commander, is_ref,reporter);
+        case 0:
+        {
+            if (is_ref) {
+                return new BinaryPlink(
+                    commander.ref_list(), commander.ref_name(),
+                    commander.thread(), commander.ignore_fid(),
+                    commander.nonfounders(), commander.keep_ambig(), is_ref,
+                    reporter);
+            }
+            else
+            {
+                return new BinaryPlink(
+                    commander.target_list(), commander.target_name(),
+                    commander.thread(), commander.ignore_fid(),
+                    commander.nonfounders(), commander.keep_ambig(), is_ref,
+                    reporter);
+            }
+        }
+        case 2: { return new BinaryGen(commander, reporter, is_ref);
+        }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");
         }
