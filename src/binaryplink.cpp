@@ -18,7 +18,7 @@
 
 
 BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
-                         uint32_t thread, const bool ignore_fid,
+                         size_t thread, const bool ignore_fid,
                          const bool keep_nonfounder, const bool keep_ambig,
                          const bool is_ref, Reporter& reporter)
 {

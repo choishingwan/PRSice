@@ -32,16 +32,14 @@
 class BinaryGen : public Genotype
 {
 public:
-    /*!
-     * \brief Constructor of binarygen object
-     * \param commander contains the user input
-     * \param reporter is the logger
-     * \param is_ref indicate if this is the reference panel
-     */
-    BinaryGen(const Commander& commander, Reporter& reporter,
-              const bool is_ref = false);
+    BinaryGen(const std::string &list_file, const std::string &file,
+              const std::string &pheno_file,
+              const std::string &id_delim, const size_t thread,
+              const bool use_inter, const bool use_hard_coded,
+              const bool no_regress, const bool ignore_fid,
+              const bool keep_nonfounder, const bool keep_ambig,
+              const bool is_ref, Reporter& reporter);
     ~BinaryGen();
-
 private:
     typedef std::vector<std::vector<double>> Data;
     std::unordered_map<std::string, genfile::bgen::Context> m_context_map;

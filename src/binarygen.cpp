@@ -16,20 +16,22 @@
 
 #include "binarygen.hpp"
 
-
-BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
-                     const bool is_ref)
+BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
+          const std::string &pheno_file,
+          const std::string &id_delim, const size_t thread,
+          const bool use_inter, const bool use_hard_coded,
+          const bool no_regress, const bool ignore_fid,
+          const bool keep_nonfounder, const bool keep_ambig,
+                     const bool is_ref, Reporter& reporter)
 {
-    m_intermediate = commander.use_inter();
-    m_thread = static_cast<uint32_t>(commander.thread());
-    m_id_delim = commander.delim();
-    m_ignore_fid = commander.ignore_fid();
-    m_keep_nonfounder = commander.nonfounders();
-    m_keep_ambig = commander.keep_ambig();
+    m_intermediate = use_inter;
+    m_thread = thread;
+    m_id_delim = id_delim;
+    m_ignore_fid = ignore_fid;
+    m_keep_nonfounder = keep_nonfounder;
+    m_keep_ambig = keep_ambig;
     m_is_ref = is_ref;
-    m_hard_coded = commander.hard_coded();
-    const bool no_regress = commander.no_regress();
-    const std::string pheno_file = commander.pheno_file();
+    m_hard_coded = use_hard_coded;
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -39,9 +41,9 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     init_chr();
     std::string message = "Initializing Genotype";
     std::string file_name;
-    bool is_list = is_ref? commander.ref_list(file_name) : commander.target_list(file_name);
+    bool is_list = list_file.empty();
     if(!is_list){
-        file_name = is_ref? commander.ref_name() : commander.target_name();
+        file_name = file;
     }
     if(is_list){
         std::vector<std::string> token = misc::split(file_name, ",");
