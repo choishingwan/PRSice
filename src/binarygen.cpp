@@ -849,7 +849,6 @@ void BinaryGen::calc_freq_gen_inter(
             // a new intermediate file
             inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
         }
-        std::cerr << "Intermediate file generated at: " << m_intermediate_file << std::endl;
     }
     // now start processing the bgen file
     double progress = 0, prev_progress = -1.0;
