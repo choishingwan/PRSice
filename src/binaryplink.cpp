@@ -17,15 +17,13 @@
 #include "binaryplink.hpp"
 
 
-BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
-                         uint32_t thread, const bool ignore_fid,
-                         const bool keep_nonfounder, const bool keep_ambig,
+BinaryPlink::BinaryPlink(const Commander &commander,
                          const bool is_ref, Reporter& reporter)
 {
-    m_thread = thread;
-    m_ignore_fid = ignore_fid;
-    m_keep_nonfounder = keep_nonfounder;
-    m_keep_ambig = keep_ambig;
+    m_thread = commander.thread();
+    m_ignore_fid = commander.ignore_fid();
+    m_keep_nonfounder = commander.nonfounders();
+    m_keep_ambig = commander.keep_ambig();
     m_is_ref = is_ref;
     // set the chromosome information
     // will need to add more script here if we want to support something other
@@ -35,31 +33,12 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
     // main use of following function is to set the max code
     init_chr();
     std::string message = "Initializing Genotype ";
-    std::string listed_input = file_list;
-    std::string input = file;
-    if (!listed_input.empty()) {
+    std::string input;
+    bool is_list = is_ref? commander.ref_list(input) : commander.target_list(input);
+    if(!is_list) input = is_ref? commander.ref_name() : commander.target_name();
+    if (is_list) {
         // has listed input
         // check if there is an external sample file
-        std::vector<std::string> token = misc::split(listed_input, ",");
-        bool external_sample = false;
-        if (token.size() == 2) {
-            m_sample_file = token[1];
-            listed_input = token[0];
-            external_sample = true;
-        }
-        message.append("info from file: " + listed_input + " (bed)\n");
-        if (external_sample) {
-            message.append("With external fam file: " + m_sample_file + "\n");
-        }
-        m_genotype_files = load_genotype_prefix(listed_input);
-        if (!external_sample) {
-            m_sample_file = m_genotype_files.front() + ".fam";
-        }
-    }
-    else
-    {
-        // single file input, check for # and replace it with 1-22
-
         std::vector<std::string> token = misc::split(input, ",");
         bool external_sample = false;
         if (token.size() == 2) {
@@ -67,7 +46,26 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
             input = token[0];
             external_sample = true;
         }
-        message.append("file: " + file + " (bed)\n");
+        message.append("info from file: " + input + " (bed)\n");
+        if (external_sample) {
+            message.append("With external fam file: " + m_sample_file + "\n");
+        }
+        m_genotype_files = load_genotype_prefix(input);
+        if (!external_sample) {
+            m_sample_file = m_genotype_files.front() + ".fam";
+        }
+    }
+    else
+    {
+        // single file input, check for # and replace it with 1-22
+        std::vector<std::string> token = misc::split(input, ",");
+        bool external_sample = false;
+        if (token.size() == 2) {
+            m_sample_file = token[1];
+            input = token[0];
+            external_sample = true;
+        }
+        message.append("file: " + input + " (bed)\n");
         if (external_sample) {
             message.append("With external fam file: " + m_sample_file + "\n");
         }
@@ -79,7 +77,6 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
 
     reporter.report(message);
 }
-
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 {
     assert(m_genotype_files.size() > 0);

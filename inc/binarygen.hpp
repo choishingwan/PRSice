@@ -38,8 +38,7 @@ public:
      * \param reporter is the logger
      * \param is_ref indicate if this is the reference panel
      */
-    BinaryGen(const Commander& commander, Reporter& reporter,
-              const bool is_ref = false);
+    BinaryGen(const Commander& commander, const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:

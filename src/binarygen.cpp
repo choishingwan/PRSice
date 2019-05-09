@@ -17,8 +17,8 @@
 #include "binarygen.hpp"
 
 
-BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
-                     const bool is_ref)
+BinaryGen::BinaryGen(const Commander& commander,
+                     const bool is_ref, Reporter& reporter)
 {
     m_intermediate = commander.use_inter();
     m_thread = static_cast<uint32_t>(commander.thread());
@@ -36,111 +36,53 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     // main use of following function is to set the max code
     init_chr();
-    std::string message = "Initializing Genotype ";
-    if (is_ref) {
-        std::string reference_name;
-        if (commander.ref_list(reference_name)) {
-            // has listed input
-            // check if there is an external sample file
-            std::vector<std::string> token = misc::split(reference_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                reference_name = token[0];
-                external_sample = true;
-            }
-            message.append(" info from file " + reference_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external sample file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = load_genotype_prefix(reference_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
-        }
-        else
-        {
-            // single file input, check for # and replace it with 1-22
-            commander.ref_name(reference_name);
-            std::vector<std::string> token = misc::split(reference_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                reference_name = token[0];
-                external_sample = true;
-            }
-            message.append(" file: " + reference_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = set_genotype_files(reference_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
-        }
+    std::string message = "Initializing Genotype";
+    std::string file_name;
+    bool is_list = is_ref? commander.ref_list(file_name) : commander.target_list(file_name);
+    if(!is_list){
+        file_name = is_ref? commander.ref_name() : commander.target_name();
     }
-    else
-    {
-
-        std::string target_name;
-        if (commander.target_list(target_name)) {
-            // has listed input
-            // check if there is an external sample file
-            std::vector<std::string> token = misc::split(target_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                target_name = token[0];
-                external_sample = true;
-            }
-            message.append(" info from file " + target_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = load_genotype_prefix(target_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+    if(is_list){
+        std::vector<std::string> token = misc::split(file_name, ",");
+        bool external_sample = false;
+        if (token.size() == 2) {
+            m_sample_file = token[1];
+            file_name = token[0];
+            external_sample = true;
         }
-        else
-        {
-            // single file input, check for # and replace it with 1-22
-            target_name = commander.target_name();
-            std::vector<std::string> token = misc::split(target_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                target_name = token[0];
-                external_sample = true;
-            }
-            message.append(" file: " + target_name + " (bgen");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = set_genotype_files(target_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+        message.append(" info from file " + file_name + " (bgen)\n");
+        if (external_sample) {
+            message.append("With external sample file: " + m_sample_file
+                           + "\n");
+        }
+        if (!external_sample && no_regress && pheno_file.empty()) {
+            throw std::runtime_error("ERROR: You must provide a phenotype "
+                                     "file for bgen format!\n");
+        }
+        m_genotype_files = load_genotype_prefix(file_name);
+        if (!external_sample) {
+            m_sample_file = pheno_file;
+        }
+    }else{
+        std::vector<std::string> token = misc::split(file_name, ",");
+        bool external_sample = false;
+        if (token.size() == 2) {
+            m_sample_file = token[1];
+            file_name = token[0];
+            external_sample = true;
+        }
+        message.append(" file: " + file_name + " (bgen)\n");
+        if (external_sample) {
+            message.append("With external fam file: " + m_sample_file
+                           + "\n");
+        }
+        if (!external_sample && no_regress && pheno_file.empty()) {
+            throw std::runtime_error("ERROR: You must provide a phenotype "
+                                     "file for bgen format!\n");
+        }
+        m_genotype_files = set_genotype_files(file_name);
+        if (!external_sample) {
+            m_sample_file = pheno_file;
         }
     }
     reporter.report(message);
@@ -1132,7 +1074,6 @@ void BinaryGen::hard_code_score(
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
     const bool use_ref_maf)
 {
-
     // we need to calculate the size of possible vectors
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);

@@ -449,6 +449,7 @@ protected:
     double m_het_weight = 1;
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
+    size_t m_thread = 1; // number of final samples
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -457,7 +458,6 @@ protected:
     uintptr_t m_marker_ct = 0;
     intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
-    uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
     std::random_device::result_type m_seed = 0;

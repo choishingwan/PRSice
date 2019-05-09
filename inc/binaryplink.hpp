@@ -26,23 +26,7 @@
 class BinaryPlink : public Genotype
 {
 public:
-    /*!
-     * \brief Constructor of BinaryPlink
-     * \param file_list is the file contain all genotype file prefix
-     * \param file is the prefix of genotype file
-     * \param thread is the allowed number of thread
-     * \param ignore_fid indicate if we should assume FID is absent from all
-     * input
-     * \param keep_nonfounder indicate if user wish to include non-founders in
-     * their model
-     * \param keep_ambig indicate if user wish to include ambiguous SNPs
-     * \param is_ref indicate if this object should be reference (T) or target
-     * (F)
-     * \param reporter is the logger
-     */
-    BinaryPlink(const std::string& file_list, const std::string& file,
-                const uint32_t thread, const bool ignore_fid,
-                const bool keep_nonfounder, const bool keep_ambig,
+    BinaryPlink(const Commander &commander,
                 const bool is_ref, Reporter& reporter);
     BinaryPlink() {}
     ~BinaryPlink();
