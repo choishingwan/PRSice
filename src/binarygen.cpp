@@ -18,6 +18,7 @@
 
 BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
           const std::string &pheno_file,
+                     const std::string &out_prefix,
           const std::string &id_delim, const size_t thread,
           const bool use_inter, const bool use_hard_coded,
           const bool no_regress, const bool ignore_fid,
@@ -32,6 +33,7 @@ BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
     m_keep_ambig = keep_ambig;
     m_is_ref = is_ref;
     m_hard_coded = use_hard_coded;
+    m_intermediate_file = out_prefix + ".inter";
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -845,6 +847,7 @@ void BinaryGen::calc_freq_gen_inter(
             // a new intermediate file
             inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
         }
+        std::cerr << "Intermediate file generated at: " << m_intermediate_file << std::endl;
     }
     // now start processing the bgen file
     double progress = 0, prev_progress = -1.0;

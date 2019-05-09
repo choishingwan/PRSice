@@ -33,7 +33,7 @@ class BinaryGen : public Genotype
 {
 public:
     BinaryGen(const std::string &list_file, const std::string &file,
-              const std::string &pheno_file,
+              const std::string &pheno_file, const std::string &out_prefix,
               const std::string &id_delim, const size_t thread,
               const bool use_inter, const bool use_hard_coded,
               const bool no_regress, const bool ignore_fid,
