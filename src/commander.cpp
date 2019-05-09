@@ -300,9 +300,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            command, error_messages);
             else if (command == "score")
                 error |= !set_score(optarg, message_store, error_messages);
-            else if (command == "se")
-                set_string(optarg, message_store, m_standard_error,
-                           m_provided_standard_error, command, error_messages);
             else if (command == "set-perm")
             {
                 if (std::string(optarg).at(0) == '-') {
@@ -1043,7 +1040,6 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         if (!m_provided_statistic) m_statistic = "";
         if (!m_provided_snp_id) m_snp = "";
         if (!m_provided_bp) m_bp = "";
-        if (!m_provided_standard_error) m_standard_error = "";
         if (!m_provided_p_value) m_p_value = "";
         if (!m_provided_info_threshold) m_info_col = "";
     }
@@ -1105,17 +1101,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Warning: " + m_bp + " not found in base file\n");
         message.erase("bp");
     }
-    has_col = index_check(m_standard_error, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::SE] = col_index;
-    m_base_has_col[+BASE_INDEX::SE] = has_col;
-    if (has_col)
-        message["se"] = m_standard_error;
-    else if (m_provided_standard_error)
-    {
-        error_message.append("Warning: " + m_standard_error
-                             + " not found in base file\n");
-        message.erase("se");
-    }
+
     has_col = index_check(m_p_value, column_names, col_index);
     if (has_col) m_base_col_index[+BASE_INDEX::P] = col_index;
     m_base_has_col[+BASE_INDEX::P] = has_col;

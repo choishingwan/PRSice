@@ -698,7 +698,6 @@ private:
     std::string m_statistic = "";
     std::string m_snp = "SNP";
     std::string m_bp = "BP";
-    std::string m_standard_error = "SE";
     std::string m_p_value = "P";
     std::string m_id_delim = " ";
     std::string m_info_col = "INFO,0.9";
@@ -775,7 +774,6 @@ private:
     bool m_provided_statistic = false;
     bool m_provided_snp_id = false;
     bool m_provided_bp = false;
-    bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
