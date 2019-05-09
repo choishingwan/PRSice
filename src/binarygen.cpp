@@ -27,6 +27,7 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     m_keep_nonfounder = commander.nonfounders();
     m_keep_ambig = commander.keep_ambig();
     m_is_ref = is_ref;
+    m_hard_coded = commander.hard_coded();
     const bool no_regress = commander.no_regress();
     const std::string pheno_file = commander.pheno_file();
     // set the chromosome information
