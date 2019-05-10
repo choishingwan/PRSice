@@ -16,14 +16,14 @@
 
 #include "binarygen.hpp"
 
-BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
-          const std::string &pheno_file,
-                     const std::string &out_prefix,
-          const std::string &id_delim, const size_t thread,
-          const bool use_inter, const bool use_hard_coded,
-          const bool no_regress, const bool ignore_fid,
-          const bool keep_nonfounder, const bool keep_ambig,
-                     const bool is_ref, Reporter& reporter)
+BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
+                     const std::string& pheno_file,
+                     const std::string& out_prefix, const std::string& id_delim,
+                     const size_t thread, const bool use_inter,
+                     const bool use_hard_coded, const bool no_regress,
+                     const bool ignore_fid, const bool keep_nonfounder,
+                     const bool keep_ambig, const bool is_ref,
+                     Reporter& reporter)
 {
     m_intermediate = use_inter;
     m_thread = thread;
@@ -44,12 +44,14 @@ BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
     std::string message = "Initializing Genotype";
     std::string file_name;
     bool is_list = !(list_file.empty());
-    if(!is_list){
+    if (!is_list) {
         file_name = file;
-    }else{
+    }
+    else
+    {
         file_name = list_file;
     }
-    if(is_list){
+    if (is_list) {
         std::vector<std::string> token = misc::split(file_name, ",");
         bool external_sample = false;
         if (token.size() == 2) {
@@ -70,7 +72,9 @@ BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
         if (!external_sample) {
             m_sample_file = pheno_file;
         }
-    }else{
+    }
+    else
+    {
         std::vector<std::string> token = misc::split(file_name, ",");
         bool external_sample = false;
         if (token.size() == 2) {
@@ -80,8 +84,7 @@ BinaryGen::BinaryGen(const std::string &list_file, const std::string &file,
         }
         message.append(" file: " + file_name + " (bgen)\n");
         if (external_sample) {
-            message.append("With external fam file: " + m_sample_file
-                           + "\n");
+            message.append("With external fam file: " + m_sample_file + "\n");
         }
         if (!external_sample && no_regress && pheno_file.empty()) {
             throw std::runtime_error("ERROR: You must provide a phenotype "

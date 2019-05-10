@@ -67,22 +67,26 @@ public:
                     reporter);
             }
         }
-        case 2: {
-            if(is_ref){
-                return new BinaryGen(commander.ref_list(), commander.ref_name(),
-                          commander.pheno_file(), commander.out(), commander.delim(),
-                          commander.thread(), commander.use_inter(),
-                          commander.hard_coded(), commander.no_regress(),
-                          commander.ignore_fid(), commander.nonfounders(),
-                          commander.keep_ambig(),is_ref, reporter);
+        case 2:
+        {
+            if (is_ref) {
+                return new BinaryGen(
+                    commander.ref_list(), commander.ref_name(),
+                    commander.pheno_file(), commander.out(), commander.delim(),
+                    commander.thread(), commander.use_inter(),
+                    commander.hard_coded(), commander.no_regress(),
+                    commander.ignore_fid(), commander.nonfounders(),
+                    commander.keep_ambig(), is_ref, reporter);
             }
-            else{
-                return new BinaryGen(commander.target_list(), commander.target_name(),
-                          commander.pheno_file(), commander.out(), commander.delim(),
-                          commander.thread(), commander.use_inter(),
-                          commander.hard_coded(), commander.no_regress(),
-                          commander.ignore_fid(), commander.nonfounders(),
-                          commander.keep_ambig(),is_ref, reporter);
+            else
+            {
+                return new BinaryGen(
+                    commander.target_list(), commander.target_name(),
+                    commander.pheno_file(), commander.out(), commander.delim(),
+                    commander.thread(), commander.use_inter(),
+                    commander.hard_coded(), commander.no_regress(),
+                    commander.ignore_fid(), commander.nonfounders(),
+                    commander.keep_ambig(), is_ref, reporter);
             }
         }
         default:

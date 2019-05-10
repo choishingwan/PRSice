@@ -449,7 +449,7 @@ protected:
     double m_het_weight = 1;
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
-    size_t m_thread = 1; // number of final samples
+    size_t m_thread = 1;                  // number of final samples
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
