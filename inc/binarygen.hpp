@@ -513,8 +513,8 @@ private:
         {
             // we set the sample index to i
             m_sample_i = i;
-            // set the genotype to 1 (missing)
-            m_geno = 1;
+            // set the genotype binary representation to 2 (missing)
+            m_geno = 2;
             // we also reset the hard_prob to 0
             m_hard_prob = 0.0;
             // and expected value to 0
