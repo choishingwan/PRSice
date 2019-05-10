@@ -160,7 +160,8 @@ void PRSice::pheno_check(const std::string& pheno_file,
 }
 
 void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
-                         Genotype& target, Reporter& reporter)
+                         const std::string& delim, Genotype& target,
+                         Reporter& reporter)
 {
     // reset the null R2 to 0 (different phenotype might lead to different
     // missingness, thus a different null model R2)
@@ -184,24 +185,24 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     // don't need to do anything if we don't need to do regression
     if (no_regress) return;
     // read in phenotype vector
-    gen_pheno_vec(target, pheno_file, pheno_index, reporter);
+    gen_pheno_vec(target, pheno_file, pheno_index, delim, reporter);
     // now that we've got the phenotype, we can start processing the more
     // complicated covariate
     gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_name(),
                    c_commander.get_cov_index(),
-                   c_commander.get_factor_cov_index(), reporter);
+                   c_commander.get_factor_cov_index(), delim, reporter);
     // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no
     // longer correct as we have not updated that to account for invalid
     // covariates.
 
     // now inform PRSice which samples should be included in the regression
     // model (mainly for best score output)
-    update_sample_included(target);
+    update_sample_included(delim, target);
 
     // now we want to calculate the null R2 (if covariates are included)
     double null_r2_adjust = 0.0;
     // get the number of thread available
-    int n_thread = c_commander.thread();
+    size_t n_thread = c_commander.thread();
     if (m_independent_variables.cols() > 2 && !no_regress) {
         // only do it if we have the correct number of sample
         assert(m_independent_variables.rows() == m_phenotype.rows());
@@ -231,7 +232,7 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     }
 }
 
-void PRSice::update_sample_included(Genotype& target)
+void PRSice::update_sample_included(const std::string& delim, Genotype& target)
 {
     // this is a bit tricky. The reason we need to calculate the max fid and iid
     // length is so that we can generate the best file and all score file
@@ -255,7 +256,7 @@ void PRSice::update_sample_included(Genotype& target)
         if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
         if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
-        if (m_sample_with_phenotypes.find(target.sample_id(i_sample))
+        if (m_sample_with_phenotypes.find(target.sample_id(i_sample, delim))
             != m_sample_with_phenotypes.end())
         {
             m_matrix_index.push_back(i_sample);
@@ -267,7 +268,8 @@ void PRSice::update_sample_included(Genotype& target)
 
 
 void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                           const size_t pheno_index, Reporter& reporter)
+                           const size_t pheno_index, const std::string& delim,
+                           Reporter& reporter)
 {
 
     // reserve the maximum size (All samples)
@@ -331,7 +333,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             // read in the sample ID
             // TODO: potential problem with BGEN. Might want to allow for
             //       delim here
-            id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+            id = (m_ignore_fid) ? token[0] : token[0] + delim + token[1];
             // and store the information into the map
             if (phenotype_info.find(id) != phenotype_info.end()) {
                 std::string error_message = "Error: Duplicated sample ID in "
@@ -347,7 +349,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample) {
             // now we go through all the samples
             // get the sample ID from the genotype object
-            id = target.sample_id(i_sample);
+            id = target.sample_id(i_sample, delim);
             if (phenotype_info.find(id) != phenotype_info.end()
                 && phenotype_info[id] != "NA" && target.is_founder(i_sample))
             {
@@ -469,7 +471,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 // we indicate we have this phenotype
                 // sample_index_ct should currently be representative of the
                 // sample index because we use the suffix++
-                m_sample_with_phenotypes[target.sample_id(i_sample)] =
+                m_sample_with_phenotypes[target.sample_id(i_sample, delim)] =
                     sample_index_ct++;
             }
             catch (const std::runtime_error&)
@@ -583,7 +585,7 @@ void PRSice::process_cov_file(
     const std::vector<uint32_t>& cov_index,
     const std::vector<std::string>& cov_name,
     std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-    size_t& num_column, Reporter& reporter)
+    size_t& num_column, const std::string& delim, Reporter& reporter)
 {
     // first, go through the covariate and generate the factor level vector
     std::ifstream cov;
@@ -631,7 +633,7 @@ void PRSice::process_cov_file(
                 + std::to_string(max_index) + " columns");
         }
         // check if this sample has a valid phenotype
-        id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+        id = (m_ignore_fid) ? token[0] : token[0] + delim + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
             valid = true;
@@ -829,7 +831,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             const std::vector<std::string> cov_header_name,
                             const std::vector<uint32_t> cov_header_index,
                             const std::vector<uint32_t> factor_cov_index,
-                            Reporter& reporter)
+                            const std::string& delim, Reporter& reporter)
 {
     // The size of the map should be informative of the number of sample
     // currently included in the data
@@ -867,7 +869,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // level
     process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
                      cov_header_index, cov_header_name, factor_list, num_column,
-                     reporter);
+                     delim, reporter);
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
     reporter.report(message);
@@ -904,7 +906,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                 + std::to_string(max_index) + " column!";
             throw std::runtime_error(error_message);
         }
-        id = (m_ignore_fid) ? token[0] : token[0] + "_" + token[1];
+        id = (m_ignore_fid) ? token[0] : token[0] + delim + token[1];
         if (m_sample_with_phenotypes.find(id) != m_sample_with_phenotypes.end())
         {
             // Only valid samples will be found in the m_sample_with_phenotypes
@@ -1302,7 +1304,7 @@ void PRSice::permutation(const size_t n_thread, bool is_binary)
         std::vector<std::thread> consume_store;
         // we have used one thread as the producer, therefore we need to reduce
         // the number of available thread by 1
-        for (int i = 0; i < n_thread - 1; ++i) {
+        for (size_t i = 0; i < n_thread - 1; ++i) {
             consume_store.push_back(
                 std::thread(&PRSice::consume_null_pheno, this,
                             std::ref(set_perm_queue), std::ref(decomposed),
@@ -1949,13 +1951,14 @@ void PRSice::null_set_no_thread(
     // a boolean to tell the genotype class whether the PRS should be reset
     bool first_run = true;
     while (processed < num_perm) {
-        int begin = 0;
+        size_t begin = 0;
         // we will shuffle n where n is the set with the largest size
         // this is the Fisher-Yates shuffle algorithm for random selection
         // without replacement
         size_t num_snp = max_size;
         while (num_snp--) {
-            std::uniform_int_distribution<int> dist(begin, num_background - 1);
+            std::uniform_int_distribution<int> dist(
+                static_cast<int>(begin), static_cast<int>(num_background) - 1);
             int advance_index = dist(g);
             std::swap(background[static_cast<size_t>(begin)],
                       background[static_cast<size_t>(advance_index)]);
@@ -2046,8 +2049,8 @@ void PRSice::produce_null_prs(
         begin = 0;
         size_t num_snp = max_size;
         while (num_snp--) {
-            std::uniform_int_distribution<int> dist(static_cast<int>(begin),
-                                                    num_background - 1);
+            std::uniform_int_distribution<int> dist(
+                static_cast<int>(begin), static_cast<int>(num_background) - 1);
             r = background[begin];
             advance_index = static_cast<size_t>(dist(g));
             background[begin] = background[advance_index];

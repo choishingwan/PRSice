@@ -93,8 +93,8 @@ public:
      * \param reporter is the logger
      */
     void load_samples(const std::string& keep_file,
-                      const std::string& remove_file, bool verbose,
-                      Reporter& reporter);
+                      const std::string& remove_file, const std::string& delim,
+                      bool verbose, Reporter& reporter);
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
@@ -218,14 +218,14 @@ public:
      * \param i is the index of the sample
      * \return the sample ID
      */
-    std::string sample_id(size_t i) const
+    std::string sample_id(const size_t i, const std::string& delim) const
     {
         if (i > m_sample_id.size())
             throw std::out_of_range("Sample name vector out of range");
         if (m_ignore_fid)
             return m_sample_id[i].IID;
         else
-            return m_sample_id[i].FID + "_" + m_sample_id[i].IID;
+            return m_sample_id[i].FID + delim + m_sample_id[i].IID;
     }
 
     /*!
@@ -581,7 +581,7 @@ protected:
      * m_tmp_genotype (optional)
      * \return vector containing the sample information
      */
-    virtual std::vector<Sample_ID> gen_sample_vector()
+    virtual std::vector<Sample_ID> gen_sample_vector(const std::string& delim)
     {
         return std::vector<Sample_ID>(0);
     }
@@ -626,7 +626,8 @@ protected:
      * \param ignore_fid whether we should ignore the FID (use 2 column or 1)
      * \return an unordered_set use for checking if the sample is in the file
      */
-    std::unordered_set<std::string> load_ref(std::string input,
+    std::unordered_set<std::string> load_ref(const std::string& input,
+                                             const std::string& delim,
                                              bool ignore_fid);
     /*!
      * \brief Function to load in SNP extraction exclusion list

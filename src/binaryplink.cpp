@@ -80,7 +80,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
     reporter.report(message);
 }
 
-std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
+std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)
 {
     assert(m_genotype_files.size() > 0);
     std::ifstream famfile;
@@ -115,7 +115,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
             // there is a situation where a sample with FID A_B IID A and
             // a sample with FID A and IID B_A, then this will be
             // in-distinguishable
-            founder_info.insert(token[+FAM::FID] + "_" + token[+FAM::IID]);
+            founder_info.insert(token[+FAM::FID] + delim + token[+FAM::IID]);
             m_unfiltered_sample_ct++;
         }
     }
@@ -152,7 +152,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         }
         std::string id = (m_ignore_fid)
                              ? token[+FAM::IID]
-                             : token[+FAM::FID] + "_" + token[+FAM::IID];
+                             : token[+FAM::FID] + delim + token[+FAM::IID];
         if (!m_remove_sample) {
             // we don't want to include this sample if it is not found in the
             // selection_list
@@ -167,9 +167,9 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
                          == m_sample_selection_list.end());
         }
 
-        if (founder_info.find(token[+FAM::FID] + "_" + token[+FAM::FATHER])
+        if (founder_info.find(token[+FAM::FID] + delim + token[+FAM::FATHER])
                 == founder_info.end()
-            && founder_info.find(token[+FAM::FID] + "_" + token[+FAM::MOTHER])
+            && founder_info.find(token[+FAM::FID] + delim + token[+FAM::MOTHER])
                    == founder_info.end()
             && inclusion)
         {
@@ -1028,6 +1028,7 @@ void BinaryPlink::read_score(
             // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
+
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS
         not_first = true;

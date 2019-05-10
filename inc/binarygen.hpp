@@ -34,11 +34,10 @@ class BinaryGen : public Genotype
 public:
     BinaryGen(const std::string& list_file, const std::string& file,
               const std::string& pheno_file, const std::string& out_prefix,
-              const std::string& id_delim, const size_t thread,
-              const bool use_inter, const bool use_hard_coded,
-              const bool no_regress, const bool ignore_fid,
-              const bool keep_nonfounder, const bool keep_ambig,
-              const bool is_ref, Reporter& reporter);
+              const size_t thread, const bool use_inter,
+              const bool use_hard_coded, const bool no_regress,
+              const bool ignore_fid, const bool keep_nonfounder,
+              const bool keep_ambig, const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:
@@ -47,8 +46,8 @@ private:
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
     std::string m_cur_file;
-    std::string m_id_delim;
     std::string m_intermediate_file;
+    std::string m_id_delim;
     std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
@@ -58,7 +57,7 @@ private:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     //
     /*!
      * \brief check if the sample file is of the sample format specified by bgen
@@ -89,6 +88,7 @@ private:
      * \return true if the sample is consistent
      */
     bool check_sample_consistent(const std::string& bgen_name,
+                                 const std::string& delim,
                                  const genfile::bgen::Context& context);
 
     /*!

@@ -22,10 +22,10 @@ namespace Regression
 // on purposely perform the copying of x
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
                        double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double& standard_error, intptr_t thread,
+                       double& coeff, double& standard_error, size_t thread,
                        bool intercept)
 {
-    Eigen::setNbThreads(thread);
+    Eigen::setNbThreads(static_cast<int>(thread));
     // in more general cases, the following is needed (adding the intercept)
     // but here in PRSice, we always include the intercept, so we will skip
     // this to speed things up
@@ -206,7 +206,7 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          double& r2, double& coeff, double& standard_error, size_t max_iter,
-         intptr_t thread, bool intercept)
+         size_t thread, bool intercept)
 {
     Eigen::setNbThreads(static_cast<int>(thread));
     Eigen::MatrixXd A = x;

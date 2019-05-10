@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
                 "============================================================");
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
-                                      commander.remove_sample_file(), verbose,
-                                      reporter);
+                                      commander.remove_sample_file(),
+                                      commander.delim(), verbose, reporter);
             // For bgen or any format that require intermediate generation, we
             // need to know if a reference file is going to be used, therefore
             // decide if we are going to generate the target intermediate or the
@@ -130,9 +130,9 @@ int main(int argc, char* argv[])
                 message.append("==============================================="
                                "=============");
                 reporter.report(message);
-                reference_file->load_samples(commander.ref_keep_file(),
-                                             commander.ref_remove_file(),
-                                             verbose, reporter);
+                reference_file->load_samples(
+                    commander.ref_keep_file(), commander.ref_remove_file(),
+                    commander.delim(), verbose, reporter);
                 // load the reference file
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
@@ -282,7 +282,8 @@ int main(int argc, char* argv[])
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 fprintf(stderr, "\nProcessing the %zu th phenotype\n",
                         i_pheno + 1);
-                prsice.init_matrix(commander, i_pheno, *target_file, reporter);
+                prsice.init_matrix(commander, i_pheno, commander.delim(),
+                                   *target_file, reporter);
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
                                    region_names, i_pheno);

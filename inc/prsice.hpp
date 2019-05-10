@@ -142,7 +142,8 @@ public:
      * \param reporter is the logger
      */
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
-                     Genotype& target, Reporter& reporter);
+                     const std::string& delim, Genotype& target,
+                     Reporter& reporter);
     /*!
      * \brief Return the total number of phenotype involved
      * \return the total number of phenotype to process
@@ -368,7 +369,7 @@ private:
      * regression flag for each sample
      * \param target is the target genotype object
      */
-    void update_sample_included(Genotype& target);
+    void update_sample_included(const std::string& delim, Genotype& target);
     /*!
      * \brief gen_pheno_vec is the function responsible for generating the
      * phenotype vector
@@ -379,7 +380,8 @@ private:
      * \param reporter is the logger
      */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const size_t pheno_index, Reporter& reporter);
+                       const size_t pheno_index, const std::string& delim,
+                       Reporter& reporter);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -395,7 +397,7 @@ private:
                         const std::vector<std::string> cov_header_name,
                         const std::vector<uint32_t> cov_header_index,
                         const std::vector<uint32_t> factor_cov_index,
-                        Reporter& reporter);
+                        const std::string& delim, Reporter& reporter);
     /*!
      * \brief Function use to process the covariate file, should be able to
      * determine the level of factors
@@ -417,7 +419,7 @@ private:
         const std::vector<uint32_t>& cov_index,
         const std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-        size_t& num_column, Reporter& reporter);
+        size_t& num_column, const std::string& delim, Reporter& reporter);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all

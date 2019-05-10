@@ -745,7 +745,8 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     return result;
 }
 
-std::unordered_set<std::string> Genotype::load_ref(std::string input,
+std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
+                                                   const std::string& delim,
                                                    bool ignore_fid)
 {
     std::ifstream in;
@@ -773,7 +774,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
                 throw std::runtime_error(
                     "Error: Require FID and IID for extraction. "
                     "You can ignore the FID by using the --ignore-fid flag");
-            result.insert(token[0] + "_" + token[1]);
+            result.insert(token[0] + delim + token[1]);
         }
     }
     in.close();
@@ -809,26 +810,27 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
 }
 
 void Genotype::load_samples(const std::string& keep_file,
-                            const std::string& remove_file, bool verbose,
+                            const std::string& remove_file,
+                            const std::string& delim, bool verbose,
                             Reporter& reporter)
 {
     if (!remove_file.empty()) {
-        m_sample_selection_list = load_ref(remove_file, m_ignore_fid);
+        m_sample_selection_list = load_ref(remove_file, delim, m_ignore_fid);
     }
     else if (!keep_file.empty())
     {
         m_remove_sample = false;
-        m_sample_selection_list = load_ref(keep_file, m_ignore_fid);
+        m_sample_selection_list = load_ref(keep_file, delim, m_ignore_fid);
     }
     if (!m_is_ref) {
         // m_sample_names = gen_sample_vector();
-        m_sample_id = gen_sample_vector();
+        m_sample_id = gen_sample_vector(delim);
     }
     else
     {
         // don't bother loading up the sample vector as it should
         // never be used for reference panel (except for the founder_info)
-        gen_sample_vector();
+        gen_sample_vector(delim);
     }
     std::string message = misc::to_string(m_unfiltered_sample_ct) + " people ("
                           + misc::to_string(m_num_male) + " male(s), "
