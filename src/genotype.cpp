@@ -1869,8 +1869,10 @@ void Genotype::build_membership_matrix(
             throw std::runtime_error(error_message);
         }
         snp_out << "CHR\tSNP\tBP\tP";
-        for (auto&& name : region_name) {
-            snp_out << "\t" << name;
+        for (size_t i = 0; i < region_name.size() - (region_name.size() == 2);
+             ++i)
+        {
+            snp_out << "\t" << region_name[i];
         }
         snp_out << "\n";
     }
