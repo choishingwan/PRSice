@@ -183,7 +183,10 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
     // this reset the in_regression flag of all samples
     target.reset_in_regression_flag();
     // don't need to do anything if we don't need to do regression
-    if (no_regress) return;
+    if (no_regress) {
+        update_sample_included(delim, target);
+        return;
+    }
     // read in phenotype vector
     gen_pheno_vec(target, pheno_file, pheno_index, delim, reporter);
     // now that we've got the phenotype, we can start processing the more
@@ -1612,6 +1615,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // but we will only try and generate the all score file when we are dealing
     // with the first phenotype (pheno_index == 0)
     const bool all_scores = all_score && !pheno_index;
+    const bool print_background = (region_name.size() != 2);
     if (all_scores) {
         all_out.open(out_all.c_str());
         if (!all_out.is_open()) {
@@ -1652,11 +1656,12 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // if the line is too long, we might encounter overflow
         m_all_file.header_length = static_cast<int>(end_byte - begin_byte);
         m_all_file.processed_threshold = 0;
-        m_all_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1
-                                + num_thresholds
-                                      * static_cast<int>(region_name.size())
-                                      * (m_numeric_width + 1)
-                                + 1;
+        m_all_file.line_width =
+            m_max_fid_length + 1 + m_max_iid_length + 1
+            + num_thresholds
+                  * static_cast<int>(region_name.size() - !print_background)
+                  * (m_numeric_width + 1)
+            + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
         // all_out << header_line << "\n";
     }
@@ -1682,6 +1687,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
                     << std::left << name << "\n";
         }
     }
+
     // another one spacing for new line (just to be safe)
     m_all_file.line_width++;
     m_best_file.line_width++;
