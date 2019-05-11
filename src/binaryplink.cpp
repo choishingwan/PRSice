@@ -247,8 +247,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)
 
 void BinaryPlink::calc_freq_gen_inter(
     const double& maf_threshold, const double& geno_threshold,
-    const double& /*info_threshold*/, const double& /*hard_threshold*/,
-    const bool maf_filter, const bool geno_filter, const bool /*info_filter*/,
+    const double& /*info_threshold*/, const bool maf_filter,
+    const bool geno_filter, const bool /*info_filter*/,
     const bool /*hard_coded*/, Genotype* target)
 {
     // we will go through all the SNPs
@@ -928,20 +928,19 @@ void BinaryPlink::read_score(
         }
         // directly read in the current location
         m_prev_loc = m_bed_file.tellg();
-
         cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                            use_ref_maf);
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
             / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
                * static_cast<double>(ploidy));
         if (cur_snp.is_flipped()) {
+
             // change the mean to reflect flipping
             maf = 1.0 - maf;
             // swap the weighting
@@ -966,7 +965,6 @@ void BinaryPlink::read_score(
             // again, mean_impute is stable, branch prediction should be ok
             miss_score = ploidy * stat * maf;
         }
-
         // now we go through the SNP vector
         lbptr = genotype.data();
         uii = 0;

@@ -262,16 +262,9 @@ public:
         geno = m_ref_geno;
         return m_perform_ref_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold for reference
-     * \param threshold is the storage of threshold
-     * \return true if hard thresholding is required
-     */
-    bool ref_hard_threshold(double& threshold) const
-    {
-        threshold = m_ref_hard_threshold;
-        return m_perform_ref_hard_thresholding;
-    }
+    bool get_ref_hard_threshold() const { return m_ref_hard_threshold; }
+    bool target_hard_threshold() const { return m_target_hard_thresholding; }
+    bool ref_hard_threshold() const { return m_perform_ref_hard_thresholding; }
     /*!
      * \brief Get the MAF filtering threshold for reference
      * \param maf is the storage of the threshold
@@ -457,16 +450,7 @@ public:
         geno = m_target_geno;
         return m_target_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold of target
-     * \param threshold stores the hard threshold
-     * \return return true if hard thresholding is required
-     */
-    bool target_hard_threshold(double& threshold) const
-    {
-        threshold = m_target_hard_threshold;
-        return m_target_hard_thresholding;
-    }
+    double get_target_hard_threshold() const { return m_target_hard_threshold; }
     /*!
      * \brief Get the maf filtering threshold of target
      * \param The threshold is stored in maf

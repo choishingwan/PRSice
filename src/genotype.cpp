@@ -843,14 +843,14 @@ void Genotype::load_samples(const std::string& keep_file,
 
 void Genotype::calc_freqs_and_intermediate(
     const double& maf_threshold, const double& geno_threshold,
-    const double& info_threshold, const double& hard_threshold,
-    const bool maf_filter, const bool geno_filter, const bool info_filter,
-    const bool hard_coded, bool verbose, Reporter& reporter, Genotype* target)
+    const double& info_threshold, const bool maf_filter, const bool geno_filter,
+    const bool info_filter, const bool hard_coded, bool verbose,
+    Reporter& reporter, Genotype* target)
 {
     std::string message = "";
     calc_freq_gen_inter(maf_threshold, geno_threshold, info_threshold,
-                        hard_threshold, maf_filter, geno_filter, info_filter,
-                        hard_coded, target);
+                        maf_filter, geno_filter, info_filter, hard_coded,
+                        target);
     if (m_num_geno_filter != 0) {
         message.append(
             std::to_string(m_num_geno_filter)

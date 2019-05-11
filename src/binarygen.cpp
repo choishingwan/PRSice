@@ -18,11 +18,12 @@
 
 BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
                      const std::string& pheno_file,
-                     const std::string& out_prefix, const size_t thread,
-                     const bool use_inter, const bool use_hard_coded,
-                     const bool no_regress, const bool ignore_fid,
-                     const bool keep_nonfounder, const bool keep_ambig,
-                     const bool is_ref, Reporter& reporter)
+                     const std::string& out_prefix, const double hard_threshold,
+                     const size_t thread, const bool use_inter,
+                     const bool use_hard_coded, const bool no_regress,
+                     const bool ignore_fid, const bool keep_nonfounder,
+                     const bool keep_ambig, const bool is_ref,
+                     Reporter& reporter)
 {
     m_intermediate = use_inter;
     m_thread = thread;
@@ -32,6 +33,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
     m_is_ref = is_ref;
     m_hard_coded = use_hard_coded;
     m_intermediate_file = out_prefix + ".inter";
+    m_hard_threshold = hard_threshold;
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -495,6 +497,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
     std::string file_name;
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::string error_message = "";
+    std::string A1, A2;
     std::streampos byte_pos;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
@@ -643,10 +646,11 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp) {
+                A1 = alleles.back();
+                A2 = alleles.front();
                 auto&& target_index = reference->m_existed_snps_index[cur_id];
                 if (!reference->m_existed_snps[target_index].matching(
-                        chr_code, SNP_position, alleles.back(), alleles.front(),
-                        flipping))
+                        chr_code, SNP_position, A1, A2, flipping))
                 {
                     // SNP not matched
                     if (!mismatch_snp_record.is_open()) {
@@ -688,9 +692,9 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                             << target->m_existed_snps[target_index].loc()
                             << "\t" << SNP_position << "\t"
                             << target->m_existed_snps[target_index].ref()
-                            << "\t" << alleles.front() << "\t"
+                            << "\t" << A1 << "\t"
                             << target->m_existed_snps[target_index].alt()
-                            << "\t" << alleles.back() << "\n";
+                            << "\t" << A2 << "\n";
                     }
                     else
                     {
@@ -698,10 +702,9 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                             << "Base\t" << cur_id << "\t" << chr_code << "\t"
                             << m_existed_snps[target_index].chr() << "\t"
                             << SNP_position << "\t"
-                            << m_existed_snps[target_index].loc() << "\t"
-                            << alleles.front() << "\t"
-                            << m_existed_snps[target_index].ref() << "\t"
-                            << alleles.back() << "\t"
+                            << m_existed_snps[target_index].loc() << "\t" << A1
+                            << "\t" << m_existed_snps[target_index].ref()
+                            << "\t" << A2 << "\t"
                             << m_existed_snps[target_index].alt() << "\n";
                     }
                     m_num_ref_target_mismatch++;
@@ -716,8 +719,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     else
                     {
                         m_existed_snps[target_index].add_target(
-                            prefix, byte_pos, chr_code, SNP_position,
-                            alleles.front(), alleles.back(), flipping);
+                            prefix, byte_pos, chr_code, SNP_position, A1, A2,
+                            flipping);
                     }
                     retain_snp[target_index] = true;
                     ref_target_match++;
@@ -772,9 +775,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
 
 void BinaryGen::calc_freq_gen_inter(
     const double& maf_threshold, const double& geno_threshold,
-    const double& info_threshold, const double& hard_threshold,
-    const bool maf_filter, const bool geno_filter, const bool info_filter,
-    const bool hard_coded, Genotype* target)
+    const double& info_threshold, const bool maf_filter, const bool geno_filter,
+    const bool info_filter, const bool hard_coded, Genotype* target)
 {
     std::vector<bool> retain_snp;
     auto&& reference = (m_is_ref) ? target : this;
@@ -817,15 +819,11 @@ void BinaryGen::calc_freq_gen_inter(
     std::streampos byte_pos, tmp_byte_pos;
     size_t processed_count = 0;
     size_t retained = 0;
-    uint32_t ll_ct = 0;
-    uint32_t lh_ct = 0;
-    uint32_t hh_ct = 0;
-    uint32_t ll_ctf = 0;
-    uint32_t lh_ctf = 0;
-    uint32_t hh_ctf = 0;
-    uint32_t uii = 0;
-    uint32_t missing = 0;
-    uint32_t tmp_total = 0;
+    size_t ll_ct = 0;
+    size_t lh_ct = 0;
+    size_t hh_ct = 0;
+    size_t uii = 0;
+    size_t missing = 0;
     // initialize the sample inclusion mask
     std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
     std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
@@ -839,7 +837,7 @@ void BinaryGen::calc_freq_gen_inter(
     // also the tempory genotype vector list. We also provide the hard coding
     // threshold
     PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
-                           hard_threshold, true);
+                           m_hard_threshold, true);
     // now consider if we are generating the intermediate file
     std::ofstream inter_out;
     if (m_intermediate) {
@@ -905,22 +903,27 @@ void BinaryGen::calc_freq_gen_inter(
         genfile::bgen::parse_probability_data<PLINK_generator>(
             &(m_buffer2)[0], &(m_buffer2)[0] + m_buffer2.size(), context,
             setter);
+        // there's no founder for bgen, can simply calculate the genotyping rate
+        // and maf directly when we parse the probability data
+        /*
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
             sample_include2.data(), founder_include2.data(), m_sample_ct,
             &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+            */
+        setter.get_count(ll_ct, lh_ct, hh_ct, missing);
         uii = ll_ct + lh_ct + hh_ct;
         cur_geno = 1.0 - ((static_cast<int32_t>(uii)) * sample_ct_recip);
-        uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
-        tmp_total = (ll_ctf + lh_ctf + hh_ctf);
-        assert(m_founder_ct >= tmp_total);
-        missing = m_founder_ct - tmp_total;
+        uii = 2 * (ll_ct + lh_ct + hh_ct);
+        // tmp_total = (ll_ctf + lh_ctf + hh_ctf);
+        // assert(m_founder_ct >= tmp_total);
+        // missing = m_founder_ct - tmp_total;
         if (!uii) {
             cur_maf = 0.5;
         }
         else
         {
-            cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
+            cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
         }
         // filter by genotype missingness
@@ -952,12 +955,12 @@ void BinaryGen::calc_freq_gen_inter(
         }
         // if we can reach here, it is not removed
         if (m_is_ref) {
-            snp.set_ref_counts(ll_ctf, lh_ctf, hh_ctf, missing);
+            snp.set_ref_counts(ll_ct, lh_ct, hh_ct, missing);
             snp.set_ref_expected(setter.expected());
         }
         else
         {
-            snp.set_counts(ll_ctf, lh_ctf, hh_ctf, missing);
+            snp.set_counts(ll_ct, lh_ct, hh_ct, missing);
             snp.set_expected(setter.expected());
         }
         retained++;
@@ -1071,6 +1074,7 @@ void BinaryGen::dosage_score(
         setter.set_stat(snp.stat(), m_homcom_weight, m_het_weight,
                         m_homrar_weight, snp.get_expected(use_ref_maf),
                         snp.is_flipped(), not_first);
+
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
@@ -1159,7 +1163,6 @@ void BinaryGen::hard_code_score(
             // again, mean_impute is stable, branch prediction should be ok
             miss_score = ploidy * stat * maf;
         }
-
         // start reading the genotype
         lbptr = genotype.data();
         uii = 0;

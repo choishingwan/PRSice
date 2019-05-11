@@ -70,9 +70,12 @@ public:
         case 2:
         {
             if (is_ref) {
+                // for reference bgen, we ALWAYS hard code it. so we don't
+                // really use the hard_coded flag
                 return new BinaryGen(
                     commander.ref_list(), commander.ref_name(),
-                    commander.pheno_file(), commander.out(), commander.thread(),
+                    commander.pheno_file(), commander.out(),
+                    commander.get_ref_hard_threshold(), commander.thread(),
                     commander.use_inter(), commander.hard_coded(),
                     commander.no_regress(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,
@@ -82,7 +85,8 @@ public:
             {
                 return new BinaryGen(
                     commander.target_list(), commander.target_name(),
-                    commander.pheno_file(), commander.out(), commander.thread(),
+                    commander.pheno_file(), commander.out(),
+                    commander.get_target_hard_threshold(), commander.thread(),
                     commander.use_inter(), commander.hard_coded(),
                     commander.no_regress(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,

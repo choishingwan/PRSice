@@ -34,10 +34,11 @@ class BinaryGen : public Genotype
 public:
     BinaryGen(const std::string& list_file, const std::string& file,
               const std::string& pheno_file, const std::string& out_prefix,
-              const size_t thread, const bool use_inter,
-              const bool use_hard_coded, const bool no_regress,
-              const bool ignore_fid, const bool keep_nonfounder,
-              const bool keep_ambig, const bool is_ref, Reporter& reporter);
+              const double hard_threshold, const size_t thread,
+              const bool use_inter, const bool use_hard_coded,
+              const bool no_regress, const bool ignore_fid,
+              const bool keep_nonfounder, const bool keep_ambig,
+              const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:
@@ -70,7 +71,6 @@ private:
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold,
                              const double& info_threshold,
-                             const double& hard_threshold,
                              const bool maf_filter, const bool geno_filter,
                              const bool info_filter, const bool hard_coded,
                              Genotype* target = nullptr);
@@ -333,7 +333,8 @@ private:
             m_miss_score = 0;
             m_miss_count = 0;
             if (!m_setzero) {
-                m_miss_count = 1;
+                // this is the only one that depends on ploidy
+                m_miss_count = 2;
                 // again, mean_impute is stable, branch prediction should be ok
                 m_miss_score = m_stat * m_expected;
             }
@@ -491,6 +492,10 @@ private:
             // indicate where we push the byte onto genotype
             m_index = 0;
             m_shift = 0;
+            m_homcom_ct = 0;
+            m_homrar_ct = 0;
+            m_het_ct = 0;
+            m_missing_ct = 0;
             // we also clean the running stat (not RS ID), so that we can go
             // through another round of calculation of mean and sd
             rs.clear();
@@ -554,6 +559,7 @@ private:
                  *   2           11              3
                  *   the binary code 10 is reserved for missing sample
                  */
+                // plink do 3 2 0 1
                 m_geno = (geno == 2) ? 3 : geno;
                 m_hard_prob = value;
             }
@@ -587,6 +593,13 @@ private:
             if (m_shift == 0) m_genotype[m_index] = 0;
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
+            switch (m_geno)
+            {
+            case 0: m_homrar_ct++; break;
+            case 1: m_het_ct++; break;
+            case 2: m_missing_ct++; break;
+            case 3: m_homcom_ct++; break;
+            }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
             // if we reach the boundary, we will now add the index and reset
@@ -611,6 +624,14 @@ private:
             return (rs.var() / p_all);
         }
         double expected() const { return rs.mean(); }
+        void get_count(size_t& homcom_ct, size_t& het_ct, size_t& homrar_ct,
+                       size_t& missing_ct) const
+        {
+            homcom_ct = m_homcom_ct;
+            het_ct = m_het_ct;
+            homrar_ct = m_homrar_ct;
+            missing_ct = m_missing_ct;
+        }
 
     private:
         // is the sample inclusion vector, if bit is set, sample is required
@@ -625,6 +646,10 @@ private:
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
+        size_t m_homcom_ct = 0;
+        size_t m_homrar_ct = 0;
+        size_t m_het_ct = 0;
+        size_t m_missing_ct = 0;
         bool m_filtering;
     };
 };

@@ -71,11 +71,11 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_FALSE(commander.target_maf(dummy));
     ASSERT_FALSE(commander.target_geno(dummy));
     ASSERT_FALSE(commander.target_info(dummy));
-    ASSERT_FALSE(commander.target_hard_threshold(dummy));
+    ASSERT_FALSE(commander.target_hard_threshold());
     ASSERT_FALSE(commander.ref_maf(dummy));
     ASSERT_FALSE(commander.ref_geno(dummy));
     ASSERT_FALSE(commander.ref_info(dummy));
-    ASSERT_FALSE(commander.ref_hard_threshold(dummy));
+    ASSERT_FALSE(commander.ref_hard_threshold());
     ASSERT_FALSE(commander.proxy(dummy));
     ASSERT_DOUBLE_EQ(commander.base_info_score(), 0.0);
     ASSERT_DOUBLE_EQ(commander.clump_p(), 1.0);

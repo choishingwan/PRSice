@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
         info_filter = commander.target_info(info);
-        commander.target_hard_threshold(hard_threshold);
+        hard_threshold = commander.get_target_hard_threshold();
         hard_coded = commander.hard_coded();
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
@@ -146,13 +146,14 @@ int main(int argc, char* argv[])
                 "============================================================");
             reporter.report(message);
             target_file->calc_freqs_and_intermediate(
-                maf, geno, info, hard_threshold, maf_filter, geno_filter,
-                info_filter, hard_coded, true, reporter);
+                maf, geno, info, maf_filter, geno_filter, info_filter,
+                hard_coded, true, reporter);
 
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
-            hard_coded = commander.ref_hard_threshold(hard_threshold);
+            hard_coded = commander.ref_hard_threshold();
+            hard_threshold = commander.get_ref_hard_threshold();
             if (init_ref
                 && (commander.use_ref_maf() || maf_filter || geno_filter
                     || info_filter || commander.use_inter()))
@@ -167,8 +168,8 @@ int main(int argc, char* argv[])
                                "=============");
                 reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
-                    maf, geno, info, hard_threshold, maf_filter, geno_filter,
-                    info_filter, hard_coded, true, reporter, target_file);
+                    maf, geno, info, maf_filter, geno_filter, info_filter,
+                    hard_coded, true, reporter, target_file);
             }
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly

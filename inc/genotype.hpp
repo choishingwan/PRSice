@@ -103,10 +103,9 @@ public:
 
     void calc_freqs_and_intermediate(
         const double& maf_threshold, const double& geno_threshold,
-        const double& info_threshold, const double& hard_threshold,
-        const bool maf_filter, const bool geno_filter, const bool info_filter,
-        const bool hard_coded, bool verbose, Reporter& reporter,
-        Genotype* target = nullptr);
+        const double& info_threshold, const bool maf_filter,
+        const bool geno_filter, const bool info_filter, const bool hard_coded,
+        bool verbose, Reporter& reporter, Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -592,10 +591,9 @@ protected:
     }
     virtual void calc_freq_gen_inter(
         const double& /*maf_threshold*/, const double& /*geno_threshold*/,
-        const double& /*info_threshold*/, const double& /*hard_threshold*/,
-        const bool /*maf_filter*/, const bool /*geno_filter*/,
-        const bool /*info_filter*/, const bool /*hard_coded*/,
-        Genotype* /*target=nullptr*/)
+        const double& /*info_threshold*/, const bool /*maf_filter*/,
+        const bool /*geno_filter*/, const bool /*info_filter*/,
+        const bool /*hard_coded*/, Genotype* /*target=nullptr*/)
     {
     }
 
