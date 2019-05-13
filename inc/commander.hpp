@@ -704,7 +704,7 @@ private:
     double m_clump_p = 1.0;
     double m_clump_r2 = 0.1;
     double m_ref_geno = 1.0;
-    double m_ref_hard_threshold = 0.9;
+    double m_ref_hard_threshold = 0.1;
     double m_ref_maf = 0.0;
     double m_ref_info_score = 0.0;
     // TODO: might consider using 1e-8 instead
@@ -712,7 +712,7 @@ private:
     double m_inter_threshold = 0.00005;
     double m_upper_threshold = 0.5;
     double m_target_geno = 1.0;
-    double m_target_hard_threshold = 0.9;
+    double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
     size_t m_memory = 0;

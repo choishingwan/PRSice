@@ -946,6 +946,9 @@ void BinaryPlink::read_score(
             // swap the weighting
             std::swap(homcom_weight, homrar_weight);
         }
+        std::cerr << std::endl
+                  << homcom_ct << "\t" << het_ct << "\t" << homrar_ct << "\t"
+                  << missing_ct << "\t" << maf << std::endl;
         // Multiply by ploidy
         // we don't allow the use of center and mean impute together
         // if centre, missing = 0 anyway (kinda like mean imputed)
@@ -1013,6 +1016,7 @@ void BinaryPlink::read_score(
                     break;
                 case 2:
                     // handle missing sample
+                    std::cout << "Missing: " << uii + (ujj / 2) << std::endl;
                     sample_prs.num_snp =
                         sample_prs.num_snp * not_first + miss_count;
                     sample_prs.prs = sample_prs.prs * not_first + miss_score;

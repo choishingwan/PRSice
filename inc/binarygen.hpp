@@ -496,6 +496,7 @@ private:
             m_homrar_ct = 0;
             m_het_ct = 0;
             m_missing_ct = 0;
+            m_prob.resize(3);
             // we also clean the running stat (not RS ID), so that we can go
             // through another round of calculation of mean and sd
             rs.clear();
@@ -524,6 +525,7 @@ private:
             m_hard_prob = 0.0;
             // and expected value to 0
             m_exp_value = 0.0;
+            std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
             // if this is for filtering, we will always include all samples
@@ -550,24 +552,29 @@ private:
         {
             // if the current probability is the highest and the value is
             // higher than the required threshold, we will assign it
-            if (value > m_hard_prob && value >= m_hard_threshold) {
-                /*
-                 * Representation of each geno to their binary code:
-                 *   geno    desired binary  decimal representation
-                 *   0           00              0
-                 *   1           01              1
-                 *   2           11              3
-                 *   the binary code 10 is reserved for missing sample
-                 */
-                // plink do 3 2 0 1
-                m_geno = (geno == 2) ? 3 : geno;
-                m_hard_prob = value;
-            }
+            //            if (value > m_hard_prob && value >= m_hard_threshold)
+            //            {
+            //                /*
+            //                 * Representation of each geno to their binary
+            //                 code:
+            //                 *   geno    desired binary  decimal
+            //                 representation
+            //                 *   0           00              0
+            //                 *   1           01              1
+            //                 *   2           11              3
+            //                 *   the binary code 10 is reserved for missing
+            //                 sample
+            //                 */
+            //                // plink do 3 2 0 1
+            //                m_geno = (geno == 2) ? 3 : geno;
+            //                m_hard_prob = value;
+            //            }
+            m_prob[geno] = value;
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-            // checked with PLINK, the expected value should be coded as 0, 1, 2
-            // instead of 0, 0.5, 1 as in PRS
+            // checked with PLINK, the expected value should be coded as 0,
+            // 1, 2 instead of 0, 0.5, 1 as in PRS
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
@@ -591,6 +598,28 @@ private:
             // if m_shift is zero, it is when we meet the index for the
             // first time, therefore we want to initialize it
             if (m_shift == 0) m_genotype[m_index] = 0;
+            // check if it is missing in addition to original
+            double prob1 = m_prob[0] * 2 + m_prob[1];
+            double prob2 = m_prob[2] * 2 + m_prob[1];
+            if ((std::fabs(prob1 - std::round(prob1))
+                 + std::fabs(prob2 - std::round(prob2)))
+                        * 0.5
+                    > m_hard_threshold
+                || misc::logically_equal(m_exp_value, 0.0))
+            {
+                // set to missing
+                m_geno = 2;
+            }
+            else
+            {
+                m_hard_prob = 0;
+                for (size_t geno = 0; geno < 3; ++geno) {
+                    if (m_prob[geno] > m_hard_prob) {
+                        m_geno = (geno == 2) ? 3 : geno;
+                        m_hard_prob = m_prob[geno];
+                    }
+                }
+            }
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
             switch (m_geno)
@@ -636,6 +665,7 @@ private:
     private:
         // is the sample inclusion vector, if bit is set, sample is required
         std::vector<uintptr_t>* m_sample;
+        std::vector<double> m_prob;
         // is the genotype vector
         uintptr_t* m_genotype;
         misc::RunningStat rs;
