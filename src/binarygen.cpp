@@ -1152,9 +1152,6 @@ void BinaryGen::hard_code_score(
             std::swap(homcom_weight, homrar_weight);
         }
         stat = cur_snp.stat(); // Multiply by ploidy
-        std::cerr << std::endl
-                  << homcom_ct << "\t" << het_ct << "\t" << homrar_ct << "\t"
-                  << missing_ct << std::endl;
         // only set these value to the imputed value if we require them
         adj_score = 0;
         if (is_centre) {
@@ -1213,7 +1210,6 @@ void BinaryGen::hard_code_score(
                                      + homrar_weight * stat - adj_score;
                     break;
                 case 2:
-                    std::cout << "Missing: " << uii + (ujj / 2) << std::endl;
                     sample_prs.num_snp =
                         sample_prs.num_snp * not_first + miss_count;
                     sample_prs.prs = sample_prs.prs * not_first + miss_score;
