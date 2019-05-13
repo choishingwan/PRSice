@@ -19,6 +19,7 @@
 BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
                      const std::string& pheno_file,
                      const std::string& out_prefix, const double hard_threshold,
+                     const double dose_threshold,
                      const size_t thread, const bool use_inter,
                      const bool use_hard_coded, const bool no_regress,
                      const bool ignore_fid, const bool keep_nonfounder,
@@ -34,6 +35,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
     m_hard_coded = use_hard_coded;
     m_intermediate_file = out_prefix + ".inter";
     m_hard_threshold = hard_threshold;
+    m_dose_threshold = dose_threshold;
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -773,8 +775,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
 }
 
 
-void BinaryGen::calc_freq_gen_inter(
-    const double& maf_threshold, const double& geno_threshold,
+void BinaryGen::calc_freq_gen_inter(const double& maf_threshold, const double& geno_threshold,
     const double& info_threshold, const bool maf_filter, const bool geno_filter,
     const bool info_filter, const bool hard_coded, Genotype* target)
 {
@@ -837,7 +838,7 @@ void BinaryGen::calc_freq_gen_inter(
     // also the tempory genotype vector list. We also provide the hard coding
     // threshold
     PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
-                           m_hard_threshold, true);
+                           m_hard_threshold, m_dose_threshold, true);
     // now consider if we are generating the intermediate file
     std::ofstream inter_out;
     if (m_intermediate) {

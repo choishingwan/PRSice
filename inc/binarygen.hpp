@@ -34,7 +34,7 @@ class BinaryGen : public Genotype
 public:
     BinaryGen(const std::string& list_file, const std::string& file,
               const std::string& pheno_file, const std::string& out_prefix,
-              const double hard_threshold, const size_t thread,
+              const double hard_threshold, const double dose_threshold, const size_t thread,
               const bool use_inter, const bool use_hard_coded,
               const bool no_regress, const bool ignore_fid,
               const bool keep_nonfounder, const bool keep_ambig,
@@ -221,7 +221,7 @@ private:
             // need to re-initialize it? Though it only contain pointers and
             // doesn't have any big structures
             PLINK_generator setter(&m_sample_include, mainbuf,
-                                   m_hard_threshold);
+                                   m_hard_threshold, m_dose_threshold);
             // we can now use the bgen library to parse the BGEN input and
             // transform it into PLINK format (NOTE: The
             // read_and_parse_genotype_data_block function has been modified
@@ -478,10 +478,11 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold, bool filtering = false)
+                        double hard_threshold,double dose_threshold,  bool filtering = false)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
+            , m_dose_threshold(dose_threshold)
             , m_filtering(filtering)
         {
         }
@@ -619,6 +620,10 @@ private:
                         m_hard_prob = m_prob[geno];
                     }
                 }
+                if(m_hard_prob < m_dose_threshold){
+                    // set to missing
+                    m_geno  = 2;
+                }
             }
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
@@ -670,6 +675,7 @@ private:
         uintptr_t* m_genotype;
         misc::RunningStat rs;
         double m_hard_threshold = 0.0;
+        double m_dose_threshold = 0.0;
         double m_hard_prob = 0;
         double m_exp_value = 0.0;
         uintptr_t m_geno = 1;

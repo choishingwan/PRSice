@@ -648,7 +648,8 @@ public:
     bool nonfounders() const { return m_include_nonfounders; }
 
     bool use_ref_maf() const { return m_use_ref_maf; }
-
+    double ref_dose_thres() const { return m_ref_dose_thres; }
+    double target_dose_thres() const { return m_target_dose_thres; }
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -703,6 +704,7 @@ private:
     double m_proxy_threshold = -1.0;
     double m_clump_p = 1.0;
     double m_clump_r2 = 0.1;
+    double m_ref_dose_thres = 0.0;
     double m_ref_geno = 1.0;
     double m_ref_hard_threshold = 0.1;
     double m_ref_maf = 0.0;
@@ -711,6 +713,7 @@ private:
     double m_lower_threshold = 5e-8;
     double m_inter_threshold = 0.00005;
     double m_upper_threshold = 0.5;
+    double m_target_dose_thres = 0.0;
     double m_target_geno = 1.0;
     double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
