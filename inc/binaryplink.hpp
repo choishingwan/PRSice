@@ -41,13 +41,14 @@ public:
      * \param reporter is the logger
      */
     BinaryPlink(const std::string& file_list, const std::string& file,
-                const uint32_t thread, const bool ignore_fid,
+                const size_t thread, const bool ignore_fid,
                 const bool keep_nonfounder, const bool keep_ambig,
                 const bool is_ref, Reporter& reporter);
     BinaryPlink() {}
     ~BinaryPlink();
 
 protected:
+    std::vector<uintptr_t> m_sample_mask;
     std::string m_cur_file;
     std::ifstream m_bed_file;
     std::streampos m_prev_loc = 0;
@@ -56,28 +57,14 @@ protected:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
-    /*!
-     * \brief Function to generate the SNP vector
-     * \param out_prefix is the output prefix
-     * \param maf_threshold is the maf threshold
-     * \param maf_filter is the boolean indicate if we want to perform maf
-     * filtering
-     * \param geno_threshold is the geno threshold
-     * \param geno_filter is the boolean indicate if we want to perform geno
-     * filtering
-     * \param exclusion is the exclusion region
-     * \param target  contain the target genotype information (if is reference)
-     * \return a vector of SNP
-     */
-    std::vector<SNP>
-    gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
-                   const bool maf_filter, const double& geno_threshold,
-                   const bool geno_filter, const double& /*hard_threshold*/,
-                   const bool /*hard_coded*/, const double& /*info_threshold*/,
-                   const bool /*info_filter*/, Region& exclusion,
-                   Genotype* target = nullptr);
-
+    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
+    void gen_snp_vector(const std::string& out_prefix,
+                        Genotype* target = nullptr);
+    void calc_freq_gen_inter(const double& maf_threshold,
+                             const double& geno_threshold, const double&,
+                             const bool maf_filter, const bool geno_filter,
+                             const bool, const bool,
+                             Genotype* target = nullptr);
     /*!
      * \brief This function is use to check the bed version. Most importantly,
      *        this should give the correct bed_offset for file reading
@@ -143,29 +130,18 @@ protected:
                 static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
                 final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
         {
-            throw std::runtime_error("Error: Cannot read the bed file!");
+            std::string error_message =
+                "Error: Failed to read the bed file: " + m_cur_file;
+            throw std::runtime_error(error_message);
         }
         // directly read in the current location to avoid possible calculation
         // error
         m_prev_loc = m_bed_file.tellg();
     }
-    /*!
-     * \brief read_score is the master function for performing the score reading
-     * \param index contain the index of SNPs that we should read from
-     * \param reset_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void read_score(const std::vector<size_t>& index, bool reset_zero);
-    /*!
-     * \brief read_score is the master function for performing the score reading
-     * \param start_index is the index of SNP that we should start reading from
-     * \param end_bound is the index of the first SNP for us to ignore
-     * \param region_index is the index of the region of interest
-     * \param reset_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void read_score(const size_t start_index, const size_t end_bound,
-                    const size_t region_index, bool reset_zero);
+    virtual void
+    read_score(const std::vector<size_t>::const_iterator& start_idx,
+               const std::vector<size_t>::const_iterator& end_idx,
+               bool reset_zero, const bool use_ref_maf);
     /*!
      * \brief This is a slightly modified version of load_and_collapse_incl copy
      * from PLINK2, main difference is the use of ifstream
@@ -219,6 +195,20 @@ protected:
         if (do_reverse) {
             // this will never be callsed in PRSice
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
+        }
+        return 0;
+    }
+
+    inline uint32_t load_raw(uintptr_t unfiltered_sample_ct4,
+                             std::ifstream& bedfile, uintptr_t* rawbuf)
+    {
+        // only use this if all accesses to the data involve
+        // 1. some sort of mask, or
+        // 2. explicit iteration from 0..(unfiltered_sample_ct-1).
+        // otherwise improper trailing bits might cause a segfault, when we
+        // should be ignoring them or just issuing a warning.
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
+            return RET_READ_FAIL;
         }
         return 0;
     }

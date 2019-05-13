@@ -20,7 +20,6 @@
 #include "commander.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
-#include "region.hpp"
 #include "storage.hpp"
 #include <algorithm>
 #include <limits.h>
@@ -33,65 +32,25 @@ class SNP
 {
 public:
     SNP() {}
-    SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
+    SNP(const std::string& rs_id, const int chr, const int loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const std::string& file_name, const std::streampos byte_pos,
-        const uint32_t homcom_ct, const uint32_t het_ct,
-        const uint32_t homrar_ct, const uint32_t missing)
+        const double& stat, const double& p_value, const int category,
+        const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
-        , m_target_file(file_name)
-        , m_ref_file(file_name)
-        , m_target_byte_pos(byte_pos)
-        , m_ref_byte_pos(byte_pos)
-        , m_chr(chr)
-        , m_loc(loc)
-        , m_homcom(homcom_ct)
-        , m_het(het_ct)
-        , m_homrar(homrar_ct)
-        , m_missing(missing)
-    {
-        m_has_count = true;
-    }
-    SNP(const std::string& rs_id, const intptr_t chr, const intptr_t loc,
-        const std::string& ref_allele, const std::string& alt_allele,
-        const std::string& file_name, const std::streampos byte_pos)
-        : m_alt(alt_allele)
-        , m_ref(ref_allele)
-        , m_rs(rs_id)
-        , m_target_file(file_name)
-        , m_ref_file(file_name)
-        , m_target_byte_pos(byte_pos)
-        , m_ref_byte_pos(byte_pos)
+        , m_stat(stat)
+        , m_p_value(p_value)
         , m_chr(chr)
         , m_loc(loc)
     {
         m_has_count = false;
-    }
-    virtual ~SNP();
-    /*!
-     * \brief Add the statistic information for this SNP
-     * \param stat is the effect size
-     * \param se is the standard error of the effect size
-     * \param p_value is the p-value
-     * \param category is the category of this SNP
-     * \param p_threshold is the p-value threshold this SNP fall into
-     */
-    void set_statistic(const double& stat, const double& p_value,
-                       const double& se, const double& maf,
-                       const intptr_t category, const double p_threshold)
-    {
-        m_stat = stat;
-        m_p_value = p_value;
-        // by our algorithm, we should always have category bigger than or equal
-        // to 0
         assert(category < 0);
         m_category = category;
         m_p_threshold = p_threshold;
-        m_standard_error = se;
-        m_maf = maf;
     }
+
+    virtual ~SNP();
     /*!
      * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
      * reference panel. Without reference panel, ref_file and byte_pos equals to
@@ -102,15 +61,54 @@ public:
      * file
      */
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos)
+                       const std::streampos ref_byte_pos, const bool flip)
+    {
+        m_ref_file = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
+        m_ref_flipped = flip;
+    }
+    // use by bgen to redirect read to the intermediate file
+    void update_reference(const std::string& ref_file,
+                          const std::streampos ref_byte_pos)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
     }
+    void update_target(const std::string& target_file,
+                       const std::streampos byte_pos)
+    {
+        m_target_file = target_file;
+        m_target_byte_pos = byte_pos;
+    }
+    void add_target(const std::string& target_file,
+                    const std::streampos target_byte_pos, const int chr,
+                    const int loc, const std::string& ref,
+                    const std::string& alt, const bool flipping)
+    {
+        m_target_file = target_file;
+        m_target_byte_pos = target_byte_pos;
+        // set reference to target by default
+        m_ref_file = target_file;
+        m_ref_byte_pos = target_byte_pos;
+        m_chr = chr;
+        m_loc = loc;
+        m_flipped = flipping;
+        m_ref = ref;
+        m_alt = alt;
+    }
+    void add_reference(const std::string& ref_file,
+                       const std::streampos ref_byte_pos, const size_t homcom,
+                       const size_t het, const size_t homrar,
+                       const size_t missing)
+    {
+        m_ref_file = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
+        m_homcom = homcom;
+        m_ref_het = het;
+        m_ref_homrar = homrar;
+        m_ref_missing = missing;
+    }
 
-
-    inline void set_flipped() { m_flipped = true; }
-    std::string get_rs() const { return m_rs; }
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
      * p-value
@@ -171,9 +169,9 @@ public:
             return false; // cannot flip nor match
     }
 
-    intptr_t chr() const { return m_chr; }
-    intptr_t loc() const { return m_loc; }
-    intptr_t category() const { return m_category; }
+    int chr() const { return m_chr; }
+    int loc() const { return m_loc; }
+    int category() const { return m_category; }
     /*!
      * \brief Get the p-value of the SNP
      * \return the p-value of the SNP
@@ -184,31 +182,12 @@ public:
      * \return the effect size of the SNP
      */
     double stat() const { return m_stat; }
-    /*!
-     * \brief Get the SE of the SNP
-     * \return the standard error of the SNP
-     */
-    double get_se() const { return m_standard_error; }
-    /*!
-     * \brief Return the MAF of the SNP
-     * \return the MAF of the SNP based on Base data
-     */
-    double get_maf() const { return m_maf; }
+
     /*!
      * \brief Return the p-value threshold of which this SNP falls into
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    /*!
-     * \brief Update the beta by minusing the null from it
-     * \param null is the null beta
-     */
-    void update_stat(const double& null)
-    {
-        double temp = std::abs(m_stat) - null;
-        // we multiply the sign of the statistic to the adjusted beta
-        m_stat = ((m_stat > 0) - (m_stat < 0)) * std::max(temp, 0.0);
-    }
     std::streampos byte_pos() const { return m_target_byte_pos; }
     std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
     std::string file_name() const { return m_target_file; }
@@ -216,7 +195,8 @@ public:
     std::string rs() const { return m_rs; }
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
-    bool is_flipped() { return m_flipped; }
+    bool is_flipped() const { return m_flipped; }
+    bool is_ref_flipped() const { return m_ref_flipped; }
 
     /*!
      * \brief check if this SNP is within the i th region
@@ -229,16 +209,13 @@ public:
             throw std::out_of_range("Out of range for flag");
         return (IS_SET(m_flags.data(), i));
     }
-    /*!
-     * \brief Set the gene set flag for this SNP
-     * \param region is the region object that will construct the gene set flag
-     */
-    void set_flag(Region& region)
+
+    void set_flag(const size_t num_region, const std::vector<uintptr_t> flags)
     {
-        m_max_flag_index = BITCT_TO_WORDCT(region.size());
-        m_flags.resize(m_max_flag_index);
-        region.update_flag(m_chr, m_rs, m_loc, m_flags);
+        m_max_flag_index = BITCT_TO_WORDCT(num_region);
+        m_flags = flags;
     }
+
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be
      * considered in clumping
@@ -306,27 +283,17 @@ public:
      */
     bool clumped() const { return m_clumped; }
     /*!
-     * \brief return whether this is a valid SNP
-     * \return true if valid
-     */
-    bool valid() const { return m_valid; }
-    /*!
-     * \brief When call, this function suggest that the SNP is invalid (likely
-     * due to 100% genotype missingness)
-     */
-    void invalidate() { m_valid = false; }
-    /*!
      * \brief Set the lower boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param low the designated bound index
      */
-    void set_low_bound(intptr_t low) { m_low_bound = low; }
+    void set_low_bound(int low) { m_low_bound = low; }
     /*!
      * \brief Set the upper boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param up the designated bound index
      */
-    void set_up_bound(intptr_t up) { m_up_bound = up; }
+    void set_up_bound(int up) { m_up_bound = up; }
     /*!
      * \brief get_counts will return the current genotype count for this SNP.
      * Return true if this was previously calculated (and indicate the need of
@@ -338,14 +305,26 @@ public:
      * \param missing is the number of missing genotypes
      * \return true if calculation is already done
      */
-    bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing) const
+
+    // TODO: Potential slow down here
+    bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
+                    size_t& missing, const bool use_ref_maf) const
     {
-        homcom = m_homcom;
-        het = m_het;
-        homrar = m_homrar;
-        missing = m_missing;
-        return m_has_count;
+        if (use_ref_maf) {
+            homcom = m_ref_homcom;
+            het = m_ref_het;
+            homrar = m_ref_homrar;
+            missing = m_ref_missing;
+            return m_has_ref_count;
+        }
+        else
+        {
+            homcom = m_homcom;
+            het = m_het;
+            homrar = m_homrar;
+            missing = m_missing;
+            return m_has_count;
+        }
     }
     /*!
      * \brief This function will set the genotype count for the current SNP, and
@@ -356,8 +335,7 @@ public:
      * \param homrar is the count of homozygous rare allele
      * \param missing is the number of missing genotypes
      */
-    void set_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
-                    uint32_t& missing)
+    void set_counts(size_t homcom, size_t het, size_t homrar, size_t missing)
     {
         m_homcom = homcom;
         m_het = het;
@@ -365,16 +343,65 @@ public:
         m_missing = missing;
         m_has_count = true;
     }
+
+    std::vector<size_t> get_set_idx(const size_t num_sets) const
+    {
+        std::vector<uintptr_t> flags = m_flags;
+        uintptr_t bitset;
+        std::vector<size_t> out;
+        out.reserve(num_sets);
+        for (size_t k = 0; k < m_max_flag_index; ++k) {
+            bitset = m_flags[k];
+            while (bitset != 0) {
+                uint64_t t = bitset & -bitset;
+                size_t r = CTZLU(bitset);
+                out.push_back(k * BITCT + r);
+                bitset ^= t;
+            }
+        }
+        return out;
+    }
+
+
+    void set_ref_counts(size_t homcom, size_t het, size_t homrar,
+                        size_t missing)
+    {
+        if (m_ref_flipped) {
+            // we flip the count here so that the count will be
+            // identical to the allele identity in target
+            // we process the score, we only need to consider
+            // flipping w.r.t target and base
+            m_ref_homcom = homrar;
+            m_ref_het = het;
+            m_ref_homrar = homcom;
+            m_ref_missing = missing;
+        }
+        else
+        {
+            m_ref_homcom = homcom;
+            m_ref_het = het;
+            m_ref_homrar = homrar;
+            m_ref_missing = missing;
+        }
+        m_has_ref_count = true;
+    }
     /*!
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
-    intptr_t up_bound() const { return m_up_bound; }
+    int up_bound() const { return m_up_bound; }
     /*!
      * \brief Obtain the lower bound of the clump region correspond to this SNP
      * \return the lower bound of the region
      */
-    intptr_t low_bound() const { return m_low_bound; }
+    int low_bound() const { return m_low_bound; }
+    void set_expected(double expected) { m_expected_value = expected; }
+    void set_ref_expected(double expected) { m_ref_expected_value = expected; }
+    double get_expected(bool use_ref_maf) const
+    {
+        if (use_ref_maf) return m_ref_expected_value;
+        return m_expected_value;
+    }
 
 private:
     // basic info
@@ -392,36 +419,36 @@ private:
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
-    double m_maf = 0.0;
-    double m_standard_error = 0.0;
-    intptr_t m_chr = -1;
-    intptr_t m_category = -1;
-    intptr_t m_loc = -1;
-    intptr_t m_low_bound = 0;
-    intptr_t m_up_bound = 0;
-    uint32_t m_homcom = 0;
-    uint32_t m_het = 0;
-    uint32_t m_homrar = 0;
-    uint32_t m_missing = 0;
+    double m_expected_value = 0.0;
+    double m_ref_expected_value = 0.0;
+    int m_chr = -1;
+    int m_category = -1;
+    int m_loc = -1;
+    int m_low_bound = 0;
+    int m_up_bound = 0;
+    size_t m_homcom = 0;
+    size_t m_het = 0;
+    size_t m_homrar = 0;
+    size_t m_missing = 0;
+    size_t m_ref_homcom = 0;
+    size_t m_ref_het = 0;
+    size_t m_ref_homrar = 0;
+    size_t m_ref_missing = 0;
     bool m_has_count = false;
+    bool m_has_ref_count = false;
     bool m_clumped = false;
-    bool m_valid = true;
     bool m_flipped = false;
-    // This indicate where this SNP's bound is at
-    // useful for PRSlice and also clumping
-    // thinking about it. Even if the location isn't given for
-    // PRSet or PRSlice, we can still use the coordinates from
-    // the target / reference file
-    // the bound is [ )
+    bool m_ref_flipped = false;
     // prset related
     size_t m_max_flag_index = 0;
 
     inline std::string complement(const std::string& allele) const
     {
-        if (allele.compare("A") == 0 || allele.compare("a") == 0) return "T";
-        if (allele.compare("T") == 0 || allele.compare("t") == 0) return "A";
-        if (allele.compare("G") == 0 || allele.compare("g") == 0) return "C";
-        if (allele.compare("C") == 0 || allele.compare("c") == 0)
+        // assume capitalized
+        if (allele == "A") return "T";
+        if (allele == "T") return "A";
+        if (allele == "G") return "C";
+        if (allele == "C")
             return "G";
         else
             return allele; // Cannot flip, so will just return it as is

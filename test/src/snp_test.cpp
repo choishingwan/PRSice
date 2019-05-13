@@ -6,211 +6,366 @@
 #include "snp.hpp"
 #include "gtest/gtest.h"
 #include <vector>
-TEST(SNP_TEST, INITIALIZE_NO_COUNT)
+class SNP_INIT_TEST : public ::testing::Test
+{
+protected:
+    SNP snp;
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "C";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    void SetUp() override
+    {
+        snp = SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    }
+    void TearDown() override {}
+};
+
+TEST_F(SNP_INIT_TEST, INIT_TEST)
 {
     // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    size_t homcom, het, homrar, missing;
+    ASSERT_STREQ(snp.rs().c_str(), rs.c_str());
+    ASSERT_STREQ(snp.ref().c_str(), ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), alt.c_str());
+    ASSERT_EQ(snp.chr(), chr);
+    ASSERT_EQ(snp.loc(), loc);
+    // The file information should be missing thus far
+    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
     // When initialize without count, has_count (return value of get_counts)
     // should be false
-    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing));
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, false));
+    // should be false for both using reference maf and not using it
+    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, true));
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
     // default of flipped should be false
     ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
+    ASSERT_DOUBLE_EQ(snp.stat(), stat);
+    ASSERT_DOUBLE_EQ(snp.p_value(), p);
+    ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
+    ASSERT_EQ(snp.category(), category);
     // default bounaries is always 0
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.up_bound(), 0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
     ASSERT_EQ(homcom, 0);
     ASSERT_EQ(het, 0);
     ASSERT_EQ(homrar, 0);
     ASSERT_EQ(missing, 0);
 }
-TEST(SNP_TEST, INITIALIZE_COUNT)
+
+TEST_F(SNP_INIT_TEST, ADD_REF)
 {
-    // check if the initialization sets all the parameters correctly
-    uint32_t homcom, het, homrar, missing;
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    ASSERT_STREQ(snp.rs().c_str(), "Test");
-    ASSERT_STREQ(snp.ref().c_str(), "A");
-    ASSERT_STREQ(snp.alt().c_str(), "C");
-    ASSERT_EQ(snp.chr(), 1);
-    ASSERT_EQ(snp.loc(), 1);
-    // We want the target and reference to be the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
-    // When initialize with count, has_count (return value of get_counts)
-    // should be true
-    ASSERT_TRUE(snp.get_counts(homcom, het, homrar, missing));
-    // default of clump should be false
-    ASSERT_FALSE(snp.clumped());
-    // default of flipped should be false
-    ASSERT_FALSE(snp.is_flipped());
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // default bounaries is always 0
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
-    ASSERT_EQ(homcom, 1);
-    ASSERT_EQ(het, 2);
-    ASSERT_EQ(homrar, 3);
-    ASSERT_EQ(missing, 4);
-}
-TEST(SNP_TEST, SET_STATISTIC)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default statistic is 0.0
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.0);
-    // default p-value is 2.0, therefore always the least significant
-    ASSERT_DOUBLE_EQ(snp.p_value(), 2.0);
-    // default threshold should be 0.0
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.0);
-    // default category is -1,
-    ASSERT_EQ(snp.category(), -1);
-    // setting statistic
-    snp.set_statistic(0.23498, 0.05, 0.123, 0.06, 1, 0.05);
-    ASSERT_DOUBLE_EQ(snp.stat(), 0.23498);
-    ASSERT_DOUBLE_EQ(snp.p_value(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), 0.05);
-    ASSERT_DOUBLE_EQ(snp.get_se(), 0.123);
-    ASSERT_DOUBLE_EQ(snp.get_maf(), 0.06);
-    ASSERT_EQ(snp.category(), 1);
-}
-// Might want a test to test if set_statistic throw the correct assertion error
-// when category == -1
-TEST(SNP_TEST, INVALIDATE)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default is valid
-    ASSERT_TRUE(snp.valid());
-    // we then invalidate it
-    snp.invalidate();
-    ASSERT_FALSE(snp.valid());
-}
-TEST(SNP_TEST, ADD_REF)
-{
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    // default, reference and the target are the same unless set_ref is used
-    ASSERT_STREQ(snp.file_name().c_str(), "Input");
-    ASSERT_EQ(snp.byte_pos(), 1);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Input");
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
-    snp.add_reference("Reference", 1);
+    // default, reference are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    snp.add_reference("Reference", 1, true);
     ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
     ASSERT_EQ(snp.ref_byte_pos(), 1);
-    snp.add_reference("Reference", 13789560123);
+    // should not touch target's flip flag
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_TRUE(snp.is_ref_flipped());
+    snp.add_reference("Reference", 1, false);
+    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    snp.add_reference("Reference", 13789560123, true);
     ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
 }
+
+
+TEST_F(SNP_INIT_TEST, UPDATE_REF)
+{
+    // default, reference are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    snp.add_reference("Reference", 1, true);
+    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    // should not touch target's flip flag
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_TRUE(snp.is_ref_flipped());
+    snp.add_reference("Reference", 13789560123, false);
+    ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    snp.update_reference("Another", 18691);
+    ASSERT_STREQ(snp.ref_file_name().c_str(), "Another");
+    ASSERT_EQ(snp.ref_byte_pos(), 18691);
+    // update won't touch the flip only different really...
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+}
+
+TEST_F(SNP_INIT_TEST, ADD_TARGET)
+{
+    // default, target are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    int new_chr = 2;
+    int new_loc = 3;
+    std::string new_ref = "C";
+    std::string new_alt = "G";
+    std::string target_name = "Target";
+    std::streampos new_pos = 1;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   true);
+    // check if the names are updated correctly
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.chr(), new_chr);
+    ASSERT_EQ(snp.loc(), new_loc);
+    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    // check none-flip
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   false);
+    ASSERT_FALSE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    new_loc = 189560123;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   false);
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+}
+
+TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
+{
+    // default, target are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    int new_chr = 2;
+    int new_loc = 3;
+    std::string new_ref = "C";
+    std::string new_alt = "G";
+    std::string target_name = "Target";
+    std::streampos new_pos = 1;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   true);
+    // check if the names are updated correctly
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.chr(), new_chr);
+    ASSERT_EQ(snp.loc(), new_loc);
+    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    // check update
+    std::string new_target_name = "Test";
+    std::streampos updated_pos = 1426;
+    snp.update_target(new_target_name, updated_pos);
+    ASSERT_EQ(snp.byte_pos(), updated_pos);
+    ASSERT_STREQ(new_target_name.c_str(), snp.file_name().c_str());
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+}
+
+TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
+{
+    // default, target are empty
+    ASSERT_TRUE(snp.file_name().empty());
+    // and the bytepos is 0
+    ASSERT_EQ(snp.byte_pos(), 0);
+    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    // we also need to know if we are flipping
+    int new_chr = 2;
+    int new_loc = 3;
+    std::string new_ref = "C";
+    std::string new_alt = "G";
+    std::string target_name = "Target";
+    std::streampos new_pos = 1;
+    std::string ref_name = "reference";
+    std::streampos new_ref_pos = 19;
+    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
+                   true);
+    // check if the names are updated correctly
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.chr(), new_chr);
+    ASSERT_EQ(snp.loc(), new_loc);
+    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
+    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    // check none-flip
+    snp.add_reference(ref_name, new_ref_pos, false);
+    ASSERT_TRUE(snp.is_flipped());
+    ASSERT_FALSE(snp.is_ref_flipped());
+    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.byte_pos(), new_pos);
+    // Reference should follow target's name (always do target before ref)
+    ASSERT_STREQ(snp.ref_file_name().c_str(), ref_name.c_str());
+    ASSERT_EQ(snp.ref_byte_pos(), new_ref_pos);
+}
+
 TEST(SNP_MATCHING, FLIPPING_AC)
 {
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "C";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
     bool flipped = false;
-    std::string ref = "A", alt = "C";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
     flipped = false;
     // we should get the same result if we have complements
     ref = "T";
     alt = "G";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
+    ref = "G";
+    alt = "A";
+    // should be a mismatch
+    ASSERT_FALSE(snp.matching(chr, loc, ref, alt, flipped));
+}
+
+
+TEST(SNP_MATCHING, INDEL)
+{
+    std::string rs = "Test";
+    std::string ref = "ACC";
+    std::string alt = "CAA";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    // Flipping occurrs
+    bool flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    // the flipped boolean should change to true
+    ASSERT_FALSE(flipped);
+    // we should be able to do exact match
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
+    // the flipped boolean should change to true
+    ASSERT_TRUE(flipped);
+    // but not if there is complementary
+    ref = "TGG";
+    alt = "GTT";
+    ASSERT_FALSE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
 }
 TEST(SNP_MATCHING, FLIPPING_GT)
 {
     // Flipping occurrs
-    SNP snp("Test", 1, 1, "G", "T", "Input", 1, 1, 2, 3, 4);
     bool flipped = false;
     std::string ref = "G", alt = "T";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    std::string rs = "Test";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    // change referenace and alt using add_target function
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
     flipped = false;
     // we should get the same result if we have complements
     ref = "C";
     alt = "A";
-    ASSERT_TRUE(snp.matching(1, 1, alt, ref, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
     // the flipped boolean should change to true
     ASSERT_TRUE(flipped);
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
+    ASSERT_FALSE(flipped);
 }
+
 TEST(SNP_MATCHING, NO_ALT_AC)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "A";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    std::string ref = "A", alt = "";
+    alt = "C";
     // should still return true
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
-    // We won't do flipping if we don't have the information of the
-    // alternative allele and will assume this is a mismatch
-    ref = "C";
     flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
+    // as the original alt is "" and ref is A
+    // and the input is ref C alt A we will consider this mismatch
+    // as we are not comfortable in flipping it
+    ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
+    ref = "T";
+    // now we have A"" and TC and we will allow this to match
+    flipped = false;
+    ASSERT_TRUE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
-    // Same for the complement
+    // but again, we don't allow A"" and CT to match
+    flipped = false;
+    ASSERT_FALSE(snp.matching(chr, loc, alt, ref, flipped));
+    ASSERT_FALSE(flipped);
+    // similarly, we don't allow A"" and GT to match
     ref = "G";
+    alt = "T";
     flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // but we will assume true if this is a complement
-    ref = "T";
-    flipped = false;
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr, loc, ref, alt, flipped));
     ASSERT_FALSE(flipped);
 }
-TEST(SNP_MATCHING, NO_ALT_GT)
-{
-    SNP snp("Test", 1, 1, "G", "T", "Input", 1, 1, 2, 3, 4);
-    bool flipped = false;
-    std::string ref = "G", alt = "";
-    // should still return true
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // We won't do flipping if we don't have the information of the
-    // alternative allele and will consider it as mismatch
-    ref = "T";
-    flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // Same for the complement
-    ref = "A";
-    flipped = false;
-    ASSERT_FALSE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-    // but we will assume true if this is a complement
-    ref = "C";
-    flipped = false;
-    ASSERT_TRUE(snp.matching(1, 1, ref, alt, flipped));
-    ASSERT_FALSE(flipped);
-}
+
 TEST(SNP_MATCHING, CHR_POS_MATCHING)
 {
     // we assume we always got the chr and loc information when we
@@ -218,68 +373,130 @@ TEST(SNP_MATCHING, CHR_POS_MATCHING)
     // bgen which contain those information as part of the file
     // specification Matching has an assumption that the alleles should be
     // in the same case
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
-    std::string ref = "A", alt = "C";
     // chromosome mismatch
-    ASSERT_FALSE(snp.matching(2, 1, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr + 1, loc, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
     // base pair mismatch
-    ASSERT_FALSE(snp.matching(1, 2, ref, alt, flipped));
+    ASSERT_FALSE(snp.matching(chr, loc + 1, ref, alt, flipped));
     // the flipped boolean should remain the same
     ASSERT_FALSE(flipped);
     flipped = false;
-    // No chromosome information mismatch
-    ASSERT_TRUE(snp.matching(-1, 1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
-    flipped = false;
-    // No BP information mismatch
-    ASSERT_TRUE(snp.matching(1, -1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
-    flipped = false;
-    // No BP & CHR information mismatch
-    ASSERT_TRUE(snp.matching(-1, -1, ref, alt, flipped));
-    // the flipped boolean should remain the same
-    ASSERT_FALSE(flipped);
 }
-TEST(SNP_MATCHING, SET_FLIPPED)
+
+TEST(SNP_MATCHING, NO_CHR_MATCHING)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
-    ASSERT_FALSE(snp.is_flipped());
-    snp.set_flipped();
-    ASSERT_TRUE(snp.is_flipped());
+    // we assume we always got the chr and loc information when we
+    // initialize our SNP object (as we are either reading from bim or from
+    // bgen which contain those information as part of the file
+    // specification Matching has an assumption that the alleles should be
+    // in the same case
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = -1, loc = 1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    bool flipped = false;
+    // When chr is -1, we don't care if it is different as we assume it is
+    // missing
+    ASSERT_TRUE(snp.matching(chr + 10, loc, ref, alt, flipped));
+    // the flipped boolean should remain the same
+    ASSERT_FALSE(flipped);
+    flipped = false;
 }
+TEST(SNP_MATCHING, NO_BP_MATCHING)
+{
+    // we assume we always got the chr and loc information when we
+    // initialize our SNP object (as we are either reading from bim or from
+    // bgen which contain those information as part of the file
+    // specification Matching has an assumption that the alleles should be
+    // in the same case
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
+    bool flipped = false;
+    // When bp is -1, we don't care if it is different as we assume it is
+    // missing
+    ASSERT_TRUE(snp.matching(chr, loc + 10, ref, alt, flipped));
+    // the flipped boolean should remain the same
+    ASSERT_FALSE(flipped);
+    flipped = false;
+}
+
 TEST(SNP_CLUMP, SET_CLUMP)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
     snp.set_clumped();
     // set clumped should set clump to true
     ASSERT_TRUE(snp.clumped());
 }
-TEST(SNP_TEST, SET_LOW_BOUND)
+
+TEST(SNP_BOUND, SET_LOW_BOUND)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.up_bound(), 0);
     snp.set_low_bound(10);
     ASSERT_EQ(snp.low_bound(), 10);
     ASSERT_EQ(snp.up_bound(), 0);
 }
-TEST(SNP_TEST, SET_UP_BOUND)
+TEST(SNP_BOUND, SET_UP_BOUND)
 {
-    SNP snp("Test", 1, 1, "A", "C", "Input", 1, 1, 2, 3, 4);
+    std::string rs = "Test";
+    std::string ref = "G";
+    std::string alt = "";
+    double stat = 0.0;
+    double p = 0.0;
+    double p_threshold = 1;
+    int category = 1;
+    int chr = 1, loc = -1;
+    SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), 0);
     ASSERT_EQ(snp.low_bound(), 0);
     snp.set_up_bound(10);
     ASSERT_EQ(snp.up_bound(), 10);
     ASSERT_EQ(snp.low_bound(), 0);
 }
+
 TEST(SNP_TEST, SORT_BY_P_CHR)
 {
     std::vector<SNP> snps;
@@ -287,7 +504,6 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     // we need to test the following
     // 1. Same chromosome
     //    a. Different p-value    : SNP_A SNP_C
-    //       i. Same everything (except name)
     //    b. Same p-value
     //       i. different location : SNP_B SNP_D
     //      ii. same location:  SNP_C SNP_E
@@ -297,18 +513,11 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
 
     // by definition, we don't allow multiple SNPs with the same name. Using SNP
     // name as the last comparison condition should allow us to avoid troubles
-
-
-    snps.emplace_back(SNP("SNP_A", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_C", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.01, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_D", 2, 11, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.05, 0.123, 0.5, 1, 0.05);
-    snps.emplace_back(SNP("SNP_E", 1, 10, "A", "", "Input", 1));
-    snps.back().set_statistic(1, 0.01, 0.123, 0.5, 1, 0.05);
+    snps.emplace_back(SNP("SNP_A", 1, 10, "A", "", 1, 0.05, 1, 0.05));
+    snps.emplace_back(SNP("SNP_B", 2, 10, "A", "", 1, 0.05, 1, 0.05));
+    snps.emplace_back(SNP("SNP_C", 1, 10, "A", "", 1, 0.01, 1, 0.05));
+    snps.emplace_back(SNP("SNP_D", 2, 11, "A", "", 1, 0.05, 1, 0.05));
+    snps.emplace_back(SNP("SNP_E", 1, 10, "A", "", 1, 0.01, 1, 0.05));
 
     // our desired order for the above input should be
     // 2,4,0,1,3
@@ -320,21 +529,24 @@ TEST(SNP_TEST, SORT_BY_P_CHR)
     ASSERT_EQ(result[3], 1);
     ASSERT_EQ(result[4], 3);
 }
+
 // clump will need a special test just for that (Need to take into account of
 // both region and SNP)
-class GenotypeSNPTest : public Genotype
-{
-public:
-    GenotypeSNPTest() { m_max_code = 22; }
-};
 // Any error in the GTF file will lead to throw
+
 class SNP_REGION : public ::testing::Test
 {
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    Region region;
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
+    size_t num_regions;
+    size_t required_size;
+    // make sure genome_wide_background is true, or each set will
+    // have a different not_found bit
+    bool genome_wide_background = true;
     void SetUp() override
     {
         std::string gtf_name = path + "Test.gtf";
@@ -343,10 +555,6 @@ protected:
         gtf.open(gtf_name.c_str());
         gmt.open(gmt_name.c_str());
         gtf << "#!genome-build GRCh38.p7\n"
-               "#!genome - version GRCh38\n"
-               "#!genome - date 2013 - 12\n"
-               "#!genome - build - accession NCBI : GCA_000001405 .22\n"
-               "#!genebuild - last - updated 2016 - 06\n"
                "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
                "\"ENSG00000223972\"; "
                "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
@@ -410,33 +618,49 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        region = Region(feature, 0, 0, false, false);
+        int window_5 = 0;
+        int window_3 = 0;
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        GenotypeSNPTest dummy;
-        region.generate_regions(gtf_name, gmt_name, bed_names, "", "", "",
-                                dummy, reporter);
+        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
+            background, 22, reporter);
+        required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
 };
 
+
 TEST_F(SNP_REGION, BASE_SET1_STANDARD)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 11869, genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
-
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    // genome_wide_background is set to true. All SNPs therefore have their
+    // background bit set no matter what
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -449,14 +673,15 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-    // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    // the set SNP should've lost the base and background flag
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 1 || i == 6) {
+        if (i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -465,23 +690,66 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
         }
     }
 }
+
+TEST_F(SNP_REGION, CHECK_IDX)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 11869, genome_wide_background);
+    set_snp.set_flag(num_regions, index);
+    std::vector<size_t> idx = base_snp.get_set_idx(num_regions);
+    ASSERT_EQ(idx.size(), 2);
+    ASSERT_EQ(idx[0], 0);
+    ASSERT_EQ(idx[1], 1);
+    // in set 1 and set 6
+    idx = set_snp.get_set_idx(num_regions);
+    ASSERT_EQ(idx.size(), 4);
+    ASSERT_EQ(idx[0], 0);
+    ASSERT_EQ(idx[1], 1);
+    ASSERT_EQ(idx[2], 1 + 1);
+    ASSERT_EQ(idx[3], 6 + 1);
+    base_snp.clump(set_snp, 0.1, false, 0.8);
+    // no change for base
+    idx = base_snp.get_set_idx(num_regions);
+    ASSERT_EQ(idx.size(), 2);
+    ASSERT_EQ(idx[0], 0);
+    ASSERT_EQ(idx[1], 1);
+    // target should now lost the base and background
+    idx = set_snp.get_set_idx(num_regions);
+    ASSERT_EQ(idx.size(), 2);
+    ASSERT_EQ(idx[0], 1 + 1);
+    ASSERT_EQ(idx[1], 6 + 1);
+}
+
 TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // use proxy clumping, but LD not high enough to consider for proxy clump
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 11869, genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -494,14 +762,15 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
-        if (i == 1 || i == 6) {
+        if (i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -513,22 +782,29 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
 
 TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 11869, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // use proxy clumping and LD is high enough
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 11869, genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < 7; ++i) {
-        // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+    for (size_t i = 0; i < num_regions; ++i) {
+        // we should not acquire the flag from base_snp
+        if (i == 0 || i == 1 || i == 2 || i == 7) {
             ASSERT_TRUE(set_snp.in(i));
         }
         else
@@ -540,9 +816,9 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
-    for (size_t i = 0; i < 7; ++i) {
+    for (size_t i = 0; i < num_regions; ++i) {
         // we should have acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 6) {
+        if (i == 0 || i == 1 || i == 2 || i == 7) {
             ASSERT_TRUE(base_snp.in(i));
         }
         else
@@ -552,18 +828,55 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     }
     // we simply set the set_snp to clumped without setting its flags to zero
 }
+
+TEST_F(SNP_REGION, OUT_OF_RANGE_ERROR)
+{
+    // Test we correctly stop IN feature when out of range is reached
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    try
+    {
+        ASSERT_FALSE(base_snp.in(63));
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        base_snp.in(64);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
 TEST_F(SNP_REGION, BASE_BASE_STANDARD)
 {
-    SNP base_snp("Base_SNP", 1, 1, "A", "C", "Test", 1);
-    SNP set_snp("Set_SNP", 1, 2, "A", "C", "Test", 1);
-    base_snp.set_flag(region);
-    set_snp.set_flag(region);
+    // both base and set SNPs were not found in any regions
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    SNP set_snp("Set_SNP", 1, 2, "A", "C", 1, 0.05, 1, 0.05);
+    std::vector<uintptr_t> index(required_size, 0);
+    Genotype::construct_flag("Base_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 1, genome_wide_background);
+    base_snp.set_flag(num_regions, index);
+    Genotype::construct_flag("Set_SNP", gene_sets, snp_in_sets, index,
+                             required_size, 1, 2, genome_wide_background);
+    set_snp.set_flag(num_regions, index);
     ASSERT_FALSE(base_snp.clumped());
     ASSERT_FALSE(set_snp.clumped());
 
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(set_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    ASSERT_TRUE(set_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
         ASSERT_FALSE(set_snp.in(i));
@@ -572,15 +885,92 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     base_snp.clump(set_snp, 0.1, false, 0.8);
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
+    // all flag of set_snp should now be in base
     ASSERT_TRUE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
-    for (size_t i = 1; i < 7; ++i) {
+    ASSERT_TRUE(base_snp.in(1));
+    for (size_t i = 2; i < num_regions; ++i) {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
-    // the set SNP should've lost the base flag
-    for (size_t i = 0; i < 7; ++i) {
+    // the set SNP should've lost all flags
+    for (size_t i = 0; i < num_regions; ++i) {
         ASSERT_FALSE(set_snp.in(i));
     }
+}
+
+TEST(SNP_COUNTS, SET_COUNTS)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    size_t a, b, c, d;
+    base_snp.get_counts(a, b, c, d, false);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+    base_snp.get_counts(a, b, c, d, true);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+    base_snp.set_counts(10, 20, 30, 40);
+    base_snp.get_counts(a, b, c, d, false);
+    ASSERT_EQ(a, 10);
+    ASSERT_EQ(b, 20);
+    ASSERT_EQ(c, 30);
+    ASSERT_EQ(d, 40);
+    base_snp.get_counts(a, b, c, d, true);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+}
+TEST(SNP_COUNTS, SET_REF_COUNTS)
+{
+    SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    size_t a, b, c, d;
+    base_snp.get_counts(a, b, c, d, false);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+    base_snp.get_counts(a, b, c, d, true);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+    base_snp.set_ref_counts(10, 20, 30, 40);
+    base_snp.get_counts(a, b, c, d, true);
+    ASSERT_EQ(a, 10);
+    ASSERT_EQ(b, 20);
+    ASSERT_EQ(c, 30);
+    ASSERT_EQ(d, 40);
+    base_snp.get_counts(a, b, c, d, false);
+    ASSERT_EQ(a, 0);
+    ASSERT_EQ(b, 0);
+    ASSERT_EQ(c, 0);
+    ASSERT_EQ(d, 0);
+    base_snp.add_reference("Test", 1, true);
+    base_snp.set_ref_counts(10, 20, 30, 40);
+    // now flipped
+    base_snp.get_counts(a, b, c, d, true);
+    ASSERT_EQ(a, 30);
+    ASSERT_EQ(b, 20);
+    ASSERT_EQ(c, 10);
+    ASSERT_EQ(d, 40);
+}
+
+TEST(SNP_BASIC, SET_EXPECTED)
+{
+    SNP snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+    double maf = 0.123, ref_maf = 0.7548;
+    ASSERT_DOUBLE_EQ(snp.get_expected(false), 0.0);
+    ASSERT_DOUBLE_EQ(snp.get_expected(true), 0.0);
+    snp.set_expected(maf);
+    ASSERT_DOUBLE_EQ(snp.get_expected(false), maf);
+    ASSERT_DOUBLE_EQ(snp.get_expected(true), 0.0);
+    snp.set_ref_expected(ref_maf);
+    ASSERT_DOUBLE_EQ(snp.get_expected(false), maf);
+    ASSERT_DOUBLE_EQ(snp.get_expected(true), ref_maf);
 }
 #endif // SNP_TEST_HPP

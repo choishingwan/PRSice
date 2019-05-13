@@ -1,4 +1,4 @@
-# PRSice
+# PRSice [![Build Status](https://travis-ci.org/choishingwan/PRSice.svg?branch=master)](https://travis-ci.org/choishingwan/PRSice)
 PRSice (pronounced 'precise') is a software package for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS). 
 PRSice can run at high-resolution to provide the best-fit PRS as well as provide results calculated at broad P-value thresholds, illustrating results corresponding to either, can thin SNPs according to linkage disequilibrium and P-value ("clumping"), and can be applied across multiple traits in a single run.
 

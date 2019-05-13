@@ -40,8 +40,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.1.9";
-const std::string date = "25 Feburary 2019";
+const std::string version = "2.2.0";
+const std::string date = "13 May 2019";
 class Commander
 {
 public:
@@ -54,7 +54,8 @@ public:
      * \brief Return the column index of the base file
      * \return The column index of the base
      */
-    std::vector<int> index() const { return m_base_col_index; }
+    std::vector<size_t> index() const { return m_base_col_index; }
+    std::vector<bool> has_col() const { return m_base_has_col; }
     /*!
      * \brief Get the base file name
      * \return Base file name
@@ -261,16 +262,9 @@ public:
         geno = m_ref_geno;
         return m_perform_ref_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold for reference
-     * \param threshold is the storage of threshold
-     * \return true if hard thresholding is required
-     */
-    bool ref_hard_threshold(double& threshold) const
-    {
-        threshold = m_ref_hard_threshold;
-        return m_perform_ref_hard_thresholding;
-    }
+    bool get_ref_hard_threshold() const { return m_ref_hard_threshold; }
+    bool target_hard_threshold() const { return m_target_hard_thresholding; }
+    bool ref_hard_threshold() const { return m_perform_ref_hard_thresholding; }
     /*!
      * \brief Get the MAF filtering threshold for reference
      * \param maf is the storage of the threshold
@@ -292,6 +286,7 @@ public:
         return m_perform_ref_info_filter;
     }
     // misc
+    std::string delim() const { return m_id_delim; }
     /*!
      * \brief Get output prefix
      * \return the output prefix
@@ -337,7 +332,7 @@ public:
      * \param perm stores the number of permutation to be performed
      * \return true if we want to perform permutation
      */
-    bool num_perm(int& perm) const
+    bool num_perm(size_t& perm) const
     {
         perm = m_permutation;
         return m_perform_permutation;
@@ -351,7 +346,7 @@ public:
      * \brief Return the number of thread to be used
      * \return the number of thread
      */
-    int thread() const { return m_thread; }
+    size_t thread() const { return static_cast<size_t>(m_thread); }
     /*!
      * \brief Return the maximum memory allowed to use
      * \param detected should be the available memory
@@ -361,15 +356,6 @@ public:
     {
         return (!m_provided_memory || m_memory > detected) ? detected
                                                            : m_memory;
-    }
-    // p_thresholds
-    /*!
-     * \brief Obtain the largest bar level
-     * \return the largest bar level threshold
-     */
-    double bar_upper() const
-    {
-        return *std::max_element(m_barlevel.begin(), m_barlevel.end());
     }
     /*!
      * \brief Return the full bar level
@@ -409,21 +395,7 @@ public:
      */
     double inter() const { return m_inter_threshold; }
 
-    /*!
-     * \brief Given a p-value, generate the category ID from the bar-level input
-     * \param p the input p-value
-     * \return the category ID based on the bar-level input
-     */
-    int get_category(double p) const
-    {
-        // iterate through the bar-level and return first index
-        // containing p-value larger than or equal to the input p-value
-        for (std::vector<int>::size_type i = 0; i < m_barlevel.size(); ++i) {
-            if (p < m_barlevel[i] || misc::logically_equal(p, m_barlevel[i]))
-                return static_cast<int>(i);
-        }
-        return static_cast<int>(m_barlevel.size());
-    }
+
     /*!
      * \brief Check if user do not want to include p-value threshold of 1
      * \return True if user do not want to include p-value threshold of 1
@@ -478,16 +450,7 @@ public:
         geno = m_target_geno;
         return m_target_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold of target
-     * \param threshold stores the hard threshold
-     * \return return true if hard thresholding is required
-     */
-    bool target_hard_threshold(double& threshold) const
-    {
-        threshold = m_target_hard_threshold;
-        return m_target_hard_thresholding;
-    }
+    double get_target_hard_threshold() const { return m_target_hard_threshold; }
     /*!
      * \brief Get the maf filtering threshold of target
      * \param The threshold is stored in maf
@@ -542,17 +505,12 @@ public:
      * \return MSigDB file name
      */
     std::string msigdb() const { return m_msigdb; }
-    // TODO: Maybe allow multiple single SNP set input?
     /*!
-     * \brief Return file name containing the single SNP Set
-     * \return File name containing the single SNP set
+     * \brief snp_set return file name containing SNP set(s)
+     * \return File name containing the SNP set(s)
      */
-    std::string single_snp_set() const { return m_single_snp_set; }
-    /*!
-     * \brief Return file name containing the multiple SNP Sets
-     * \return File name containing the multiple SNP sets
-     */
-    std::string multi_snp_sets() const { return m_multi_snp_sets; }
+    std::string snp_set() const { return m_snp_set; }
+
     /*!
      * \brief Return file name containing background regions
      * \return File name containing backgroudn regions
@@ -564,7 +522,7 @@ public:
      * \param perm stores the number of permutation
      * \return Return true if we want to perform set based permutation
      */
-    bool set_perm(int& perm) const
+    bool set_perm(size_t& perm) const
     {
         perm = m_set_perm;
         return m_perform_set_perm;
@@ -579,12 +537,6 @@ public:
      * \return True if we want the whole genome to be used as the background
      */
     bool genome_wide_background() const { return m_full_background; }
-    // prslice
-    bool perform_prslice() const { return m_perform_prslice; }
-    /*!
-     * \brief Return the 5' extension of regions in \b bp
-     * \return The length of extension to 5' regions
-     */
     int window_5() const
     {
         if (m_window_5 < 0) {
@@ -694,28 +646,10 @@ public:
      * \return True if non-founders should be included
      */
     bool nonfounders() const { return m_include_nonfounders; }
-    /*!
-     * \brief Check if we want to perform shrinkage analysis
-     * \return True if shrinkage is to be performed
-     */
-    bool perform_shrinkage() const { return m_perform_shrinkage; }
-    /*!
-     * \brief Indicate if Base input is binary trait and therefore require
-     * adjustment
-     * \return True if base input is binary
-     */
-    bool base_is_binary() const
-    {
-        return m_provided_num_case && m_provided_num_control
-               && m_provided_base_prevalence;
-    }
-    double maf_bin() const { return m_maf_bin; }
-    double base_prevalence() const { return m_base_prevalence; }
-    uint32_t num_sample() const { return m_num_sample; }
-    uint32_t num_case() const { return m_num_case; }
-    uint32_t num_control() const { return m_num_control; }
-    int num_shrinkage_perm() const { return m_shrink_perm; }
 
+    bool use_ref_maf() const { return m_use_ref_maf; }
+    double ref_dose_thres() const { return m_ref_dose_thres; }
+    double target_dose_thres() const { return m_target_dose_thres; }
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -725,23 +659,22 @@ private:
     std::vector<std::string> m_feature;
     std::vector<std::string> m_pheno_col;
     std::vector<double> m_barlevel;
-    // should equal to number of binary target
     std::vector<double> m_prevalence;
     std::vector<uint32_t> m_col_index_of_cov;
     std::vector<uint32_t> m_col_index_of_factor_cov;
-    std::vector<int> m_base_col_index;
+    std::vector<size_t> m_base_col_index;
+    std::vector<bool> m_base_has_col;
     std::vector<bool> m_is_binary;
     std::string m_target_file = "";
-    std::string m_target_keep = "";
     std::string m_target_file_list = "";
-    std::string m_pheno_file = "";
+    std::string m_target_keep = "";
     std::string m_target_remove = "";
     std::string m_target_type = "bed";
+    std::string m_pheno_file = "";
     std::string m_gtf = "";
     std::string m_msigdb = "";
     std::string m_background = "";
-    std::string m_single_snp_set = "";
-    std::string m_multi_snp_sets = "";
+    std::string m_snp_set = "";
     std::string m_cov_file;
     std::string m_base_file = "";
     std::string m_chr = "CHR";
@@ -750,8 +683,8 @@ private:
     std::string m_statistic = "";
     std::string m_snp = "SNP";
     std::string m_bp = "BP";
-    std::string m_standard_error = "SE";
     std::string m_p_value = "P";
+    std::string m_id_delim = " ";
     std::string m_info_col = "INFO,0.9";
     std::string m_maf_col;
     std::string m_out_prefix = "PRSice";
@@ -771,57 +704,52 @@ private:
     double m_proxy_threshold = -1.0;
     double m_clump_p = 1.0;
     double m_clump_r2 = 0.1;
+    double m_ref_dose_thres = 0.0;
     double m_ref_geno = 1.0;
-    double m_ref_hard_threshold = 0.9;
+    double m_ref_hard_threshold = 0.1;
     double m_ref_maf = 0.0;
     double m_ref_info_score = 0.0;
     // TODO: might consider using 1e-8 instead
-    double m_lower_threshold = 0.0001;
+    double m_lower_threshold = 5e-8;
     double m_inter_threshold = 0.00005;
     double m_upper_threshold = 0.5;
+    double m_target_dose_thres = 0.0;
     double m_target_geno = 1.0;
-    double m_target_hard_threshold = 0.9;
+    double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
-    double m_maf_bin = 0.01;
-    double m_base_prevalence = 0.01;
     size_t m_memory = 0;
-    uint32_t m_num_sample = 0;
-    uint32_t m_num_case = 0;
-    uint32_t m_num_control = 0;
+    size_t m_permutation = 0;
+    size_t m_set_perm = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
-    int m_set_perm = 0;
+
+    int m_clump_distance = 1000000;
+    int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
-    int m_clump_distance = 250000;
-    int m_permutation = 0;
-    int m_thread = 1;
-    int m_shrink_perm = 1000;
-    int m_target_is_hard_coded = false;
-    int m_keep_ambig = false;
-    int m_no_regress = false;
+    int m_allow_inter = false;
     int m_fastscore = false;
+    int m_full_background = false;
+    int m_ignore_fid = false;
+    int m_include_nonfounders = false;
+    int m_input_is_index = false;
+    int m_keep_ambig = false;
+    int m_logit_perm = false;
+    int m_no_clump = false;
     int m_no_full = false;
+    int m_no_regress = false;
+    int m_non_cumulate_prs = false;
+    int m_pearson = false;
+    int m_print_all_scores = false;
+    int m_print_snp = false;
     int m_stat_is_beta = false;
     int m_stat_is_or = false;
-    int m_input_is_index = false;
+    int m_target_is_hard_coded = false;
     int m_user_no_default = false;
-    int m_no_clump = false;
-    int m_non_cumulate_prs = false;
-    int m_print_all_scores = false;
-    int m_ignore_fid = false;
-    int m_logit_perm = false;
-    int m_pearson = false;
-    int m_print_snp = false;
-    int m_include_nonfounders = false;
-    int m_allow_inter = false;
-    int m_full_background = false;
-    int m_perform_shrinkage = false;
-    // TODO: Most likely not going to use this
-    int m_prslice_size = 0;
+    int m_use_ref_maf = false;
     bool m_use_reference = false;
     bool m_ref_list_provided = false;
     bool m_provided_seed = false;
@@ -833,14 +761,7 @@ private:
     bool m_provided_statistic = false;
     bool m_provided_snp_id = false;
     bool m_provided_bp = false;
-    bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
-    bool m_provided_maf_bin = false;
-    bool m_provided_num_sample = false;
-    bool m_provided_num_case = false;
-    bool m_provided_num_control = false;
-    bool m_provided_base_prevalence = false;
-    bool m_provided_shrink_perm_num = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
     bool m_perform_base_maf_case_filter = false;
@@ -850,13 +771,13 @@ private:
     bool m_perform_ref_maf_filter = false;
     bool m_perform_ref_info_filter = false;
     bool m_set_use_thresholds = false;
+    bool m_set_delim = false;
     bool m_target_geno_filter = false;
     bool m_target_hard_thresholding = false;
     bool m_target_maf_filter = false;
     bool m_target_info_filter = false;
     bool m_perform_prset = false;
     bool m_perform_set_perm = false;
-    bool m_perform_prslice = false;
     bool m_use_target_list = false;
 
     ////////////////////////////////////////////
@@ -893,8 +814,7 @@ private:
     bool base_check(std::map<std::string, std::string>& message,
                     std::string& error_message);
     /*!
-     * \brief Function to check if parameters for clumping and reference
-     * panel are correct
+     * \brief Function to check if parameters for clumping
      * \param message is the parameter storage
      * \param
      * error_message is the storage for error messages
@@ -903,6 +823,16 @@ private:
      */
     bool clump_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
+    /*!
+     * \brief Function to check if parameters for reference panel are correct
+     * \param message is the parameter storage
+     * \param
+     * error_message is the storage for error messages
+     * \return  return true if
+     * reference panel parameters are alright
+     */
+    bool ref_check(std::map<std::string, std::string>& message,
+                   std::string& error_message);
     /*!
      * \brief Function to check if parameters for covariate are correct
      * \param error_message is the storage for error messages
@@ -929,12 +859,6 @@ private:
      */
     bool prset_check(std::map<std::string, std::string>& message,
                      std::string& error_message);
-    /*!
-     * \brief Function to check if parameters for prslice are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
-    bool prslice_check(std::string& error_message);
     /*!
      * \brief Function to check if parameters for prsice thresholding are
      * correct \param error_message is the storage for error messages \return
@@ -1177,66 +1101,6 @@ private:
     }
 
     /*!
-     * \brief Function to convert user clump distance into a numeric
-     * distance \param input the input value \param message the parameter
-     * storage \param error_message the error message storage \param target
-     * the target storage \param c the command flag \return true if we can
-     * parse the distance value
-     */
-    inline bool parse_distance(const std::string& input,
-                               std::map<std::string, std::string>& message,
-                               std::string& error_message, int& target,
-                               const std::string& c)
-    {
-        if (message.find(c) != message.end()) {
-            error_message.append("Warning: Duplicated argument --" + c + "\n");
-        }
-        message[c] = input;
-        // first check if there are any suffix
-        // KB, MB, BP are the only 3 valid options
-        if (input.length() > 3) {
-            std::string suffix = input.substr(input.length() - 2);
-            std::transform(suffix.begin(), suffix.end(), suffix.begin(),
-                           ::toupper);
-            std::string prefix = input.substr(0, input.size() - 2);
-            try
-            {
-                int num = misc::convert<int>(prefix);
-                if (suffix == "BP") {
-                    target = num;
-                }
-                else if (suffix == "KB")
-                {
-                    target = num * 1000;
-                }
-                else if (suffix == "MB")
-                {
-                    target = num * 1000000;
-                }
-            }
-            catch (...)
-            {
-                error_message.append("Error: Non numeric argument passed to "
-                                     + c + ": " + input + "!\n");
-                return false;
-            }
-        }
-        else
-        {
-            try
-            {
-                // default is KB, so we will multiply it by 1000
-                target = misc::convert<int>(input) * 1000;
-            }
-            catch (...)
-            {
-                error_message.append("Error: Cannot parse clump distance!\n");
-                return false;
-            }
-        }
-        return true;
-    }
-    /*!
      * \brief Function parsing string into genetic model used
      * \param in the input
      * \param message the parameter storage
@@ -1303,7 +1167,7 @@ private:
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
-            input = "add";
+            input = "avg";
             m_scoring_method = SCORING::AVERAGE;
         }
         else if (input.at(0) == 'S')
@@ -1329,7 +1193,7 @@ private:
                                  + "!\n");
             return false;
         }
-        if (message.find("model") != message.end()) {
+        if (message.find("score") != message.end()) {
             error_message.append("Warning: Duplicated argument --score\n");
         }
         message["score"] = input;
@@ -1393,17 +1257,25 @@ private:
     inline void set_string(const std::string& input,
                            std::map<std::string, std::string>& message,
                            std::string& target, bool& target_boolean,
-                           const std::string& c, std::string& error_message)
+                           const std::string& c, std::string& error_message,
+                           bool add_quote = false)
     {
 
         if (message.find(c) != message.end()) {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
         }
-        message[c] = input;
+        if (add_quote) {
+            message[c] = "\"" + input + "\"";
+        }
+        else
+        {
+            message[c] = input;
+        }
         target = input;
         target_boolean = true;
     }
 
+    // currently, we don't anticipate anything more than TB
     /*!
      * \brief Convert user input into valid memory format
      * \param input the input string
@@ -1479,6 +1351,95 @@ private:
         return true;
     }
 
+    inline int set_distance(const std::string& input,
+                            const std::string& command,
+                            std::map<std::string, std::string>& message,
+                            bool& error, std::string& error_messages)
+    {
+        std::string in = input;
+        if (message.find(command) != message.end()) {
+            error_messages.append("Warning: Duplicated argument --" + command
+                                  + "\n");
+        }
+        message[command] = in;
+        int dist;
+        try
+        {
+            dist = misc::convert<int>(input);
+            return dist;
+        }
+        catch (...)
+        {
+            // contain MB KB or B here
+            if (input.length() >= 2) {
+                try
+                {
+                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
+                    std::string unit = in.substr(in.length() - 2);
+                    std::string value = in.substr(0, in.length() - 2);
+                    if (unit == "KB") {
+                        dist = misc::convert<int>(value) * 1000;
+                        return dist;
+                    }
+                    else if (unit == "MB")
+                    {
+                        dist = misc::convert<int>(value) * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "GB")
+                    {
+                        // kinda stupid here, but whatever
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "TB")
+                    {
+                        // way too much....
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000
+                               * 1000;
+                        return dist;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(in.length() - 1);
+                        value = input.substr(0, in.length() - 1);
+                        if (unit == "B") {
+                            dist = misc::convert<int>(value);
+                            return dist;
+                        }
+                        else if (unit == "K")
+                        {
+                            dist = misc::convert<int>(value) * 1000;
+                            return dist;
+                        }
+                        else if (unit == "M")
+                        {
+                            dist = misc::convert<int>(value) * 1000 * 1000;
+                            return dist;
+                        }
+                    }
+                }
+                catch (...)
+                {
+                    error_messages.append("Error: Undefined distance input: "
+                                          + in);
+                    message.erase(command);
+                    error = true;
+                    return 0;
+                }
+            }
+            else
+            {
+                error_messages.append("Error: Undefined distance input: " + in);
+                message.erase(command);
+                error = true;
+                return 0;
+            }
+        }
+        error = true;
+        return 0;
+    }
     /*!
      * \brief Get the column index based on file header and the input string
      * \param target is the input string
@@ -1486,51 +1447,121 @@ private:
      * \return the index to the column containing the column name. -1 if it is
      * not found
      */
-    inline int index_check(const std::string& target,
-                           const std::vector<std::string>& ref) const
+    inline bool index_check(const std::string& target,
+                            const std::vector<std::string>& ref,
+                            size_t& index) const
     {
-        for (std::vector<int>::size_type i = 0; i < ref.size(); ++i) {
+        for (size_t i = 0; i < ref.size(); ++i) {
             if (target == ref[i]) {
-                return static_cast<int>(i);
+                index = i;
+                return true;
             }
         }
-        return -1;
+        return false;
     }
-    /*!
-     * \brief Check if the column index is out of bound
-     * \param target the column index
-     * \param max is the number of column observed in base file
-     * \param error indicate if the input is valid (T = invalid)
-     * \param error_message contain the error messages
-     * \param name contain the name of the column
-     * \return return -1 if invalid, otherwise return the index as numberic
-     */
-    inline int index_check(const std::string& target, const int max,
-                           bool& error, std::string& error_message,
-                           const std::string& name)
+
+    // return true if ok
+    inline bool set_base_info_threshold(const std::vector<std::string>& ref,
+                                        std::string& error_message)
     {
+        std::vector<std::string> info = misc::split(m_info_col, ",");
+        size_t index;
+        bool contain = index_check(info[0], ref, index);
+        m_base_has_col[+BASE_INDEX::INFO] = contain;
+        if (contain) m_base_col_index[+BASE_INDEX::INFO] = index;
+        if (!contain) {
+            error_message.append("Error: INFO field not found in base file\n");
+            return false;
+        }
+        if (info.size() != 2) {
+            error_message.append("Error: Invalid format of "
+                                 "--info-base. Should be "
+                                 "ColName,Threshold.\n");
+            return false;
+        }
         try
         {
-            int index = misc::convert<int>(target);
-            if (index >= max) {
-                error = true;
-                error_message.append("Error: " + name
-                                     + " index out of bound!\n");
-                return -1;
+            m_base_info_threshold = misc::convert<double>(info[1]);
+            if (m_base_info_threshold < 0 || m_base_info_threshold > 1) {
+                error_message.append("Error: Base INFO threshold "
+                                     "must be within 0 and 1!\n");
+                return false;
             }
-            if (index < 0) {
-                error = true;
-                error_message.append("Error: Negative " + name + " index!\n");
-                return -1;
-            }
-            return index;
         }
         catch (...)
         {
-            error = true;
-            error_message.append("Error: " + name + " index is not numeric!\n");
-            return -1;
+            error_message.append(
+                "Error: Invalid argument passed to --info-base: " + m_info_col
+                + "! Second argument must be numeric\n");
+            return false;
         }
+        return true;
+    }
+    // return true if valid
+    inline bool set_base_maf_filter(const std::vector<std::string>& ref,
+                                    std::string& error_message)
+    {
+        std::string maf_error = "Error: Invalid format of --maf-base. "
+                                "Should be ColName,Threshold."
+                                "or ColName,Threshold:ColName,Threshold.\n";
+        std::vector<std::string> case_control = misc::split(m_maf_col, ":");
+        if (case_control.size() > 2) {
+            error_message.append(maf_error);
+            return false;
+        }
+        bool control = true;
+        size_t index = 0;
+        bool contain = false;
+        for (auto&& maf : case_control) {
+            std::vector<std::string> detail = misc::split(maf, ",");
+            if (control) {
+                contain = index_check(detail[0], ref, index);
+                m_base_has_col[+BASE_INDEX::MAF] = contain;
+                if (contain) m_base_col_index[+BASE_INDEX::MAF] = index;
+                if (!contain) {
+                    error_message.append(
+                        "Error: MAF field not found in base file\n");
+                    return false;
+                }
+            }
+            else
+            {
+                contain = index_check(detail[0], ref, index);
+                if (contain) m_base_col_index[+BASE_INDEX::MAF_CASE] = index;
+                m_base_has_col[+BASE_INDEX::MAF_CASE] = contain;
+                if (!contain) {
+                    error_message.append(
+                        "Error: Case MAF field not found in base file\n");
+                    return false;
+                }
+            }
+            double cur_maf;
+            try
+            {
+                cur_maf = misc::convert<double>(detail[1]);
+                if (cur_maf < 0 || cur_maf > 1) {
+                    error_message.append("Error: Base MAF threshold must "
+                                         "be within 0 and 1!\n");
+                    return false;
+                }
+            }
+            catch (...)
+            {
+                error_message.append(
+                    "Error: Invalid argument passed to --maf-base: " + m_maf_col
+                    + "! Threshold must be numeric\n");
+                return false;
+            }
+            if (control) {
+                m_control_maf_threshold = cur_maf;
+            }
+            else
+            {
+                m_case_maf_threshold = cur_maf;
+            }
+            control = false;
+        }
+        return true;
     }
 };
 

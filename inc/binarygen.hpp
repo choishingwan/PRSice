@@ -32,14 +32,13 @@
 class BinaryGen : public Genotype
 {
 public:
-    /*!
-     * \brief Constructor of binarygen object
-     * \param commander contains the user input
-     * \param reporter is the logger
-     * \param is_ref indicate if this is the reference panel
-     */
-    BinaryGen(const Commander& commander, Reporter& reporter,
-              const bool is_ref = false);
+    BinaryGen(const std::string& list_file, const std::string& file,
+              const std::string& pheno_file, const std::string& out_prefix,
+              const double hard_threshold, const double dose_threshold, const size_t thread,
+              const bool use_inter, const bool use_hard_coded,
+              const bool no_regress, const bool ignore_fid,
+              const bool keep_nonfounder, const bool keep_ambig,
+              const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:
@@ -49,9 +48,8 @@ private:
     std::ifstream m_bgen_file;
     std::string m_cur_file;
     std::string m_intermediate_file;
+    std::string m_id_delim;
     std::streampos m_prev_loc = 0;
-    std::string m_base_file;
-    size_t m_rs_id_index;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -60,7 +58,7 @@ private:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     //
     /*!
      * \brief check if the sample file is of the sample format specified by bgen
@@ -68,33 +66,14 @@ private:
      * \return
      */
     bool check_is_sample_format();
-    /*!
-     * \brief Function to generate the SNP vector
-     * \param out_prefix is the output prefix
-     * \param maf_threshold is the maf threshold
-     * \param maf_filter is the boolean indicate if we want to perform maf
-     * filtering
-     * \param geno_threshold is the geno threshold
-     * \param geno_filter is the boolean indicate if we want to perform geno
-     * filtering
-     * \param hard_threshold is the hard coding threshold
-     * \param hard_coded is the boolean indicate if hard coding should be
-     * performed
-     * \param info_threshold is the INFO score threshold
-     * \param info_filter is the boolean indicate if we want to perform INFO
-     * score filtering
-     * \param exclusion is the exclusion region
-     * \param target  contain the target genotype information (if is reference)
-     * \return a vector of SNP
-     */
-    std::vector<SNP>
-    gen_snp_vector(const std::string& out_prefix, const double& maf_threshold,
-                   const bool maf_filter, const double& geno_threshold,
-                   const bool geno_filter, const double& hard_threshold,
-                   const bool hard_coded, const double& info_threshold,
-                   const bool info_filter, Region& exclusion,
-                   Genotype* target = nullptr);
-
+    void gen_snp_vector(const std::string& out_prefix,
+                        Genotype* target = nullptr);
+    void calc_freq_gen_inter(const double& maf_threshold,
+                             const double& geno_threshold,
+                             const double& info_threshold,
+                             const bool maf_filter, const bool geno_filter,
+                             const bool info_filter, const bool hard_coded,
+                             Genotype* target = nullptr);
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map
@@ -109,6 +88,7 @@ private:
      * \return true if the sample is consistent
      */
     bool check_sample_consistent(const std::string& bgen_name,
+                                 const std::string& delim,
                                  const genfile::bgen::Context& context);
 
     /*!
@@ -241,7 +221,7 @@ private:
             // need to re-initialize it? Though it only contain pointers and
             // doesn't have any big structures
             PLINK_generator setter(&m_sample_include, mainbuf,
-                                   m_hard_threshold);
+                                   m_hard_threshold, m_dose_threshold);
             // we can now use the bgen library to parse the BGEN input and
             // transform it into PLINK format (NOTE: The
             // read_and_parse_genotype_data_block function has been modified
@@ -271,62 +251,16 @@ private:
         return 0;
     }
 
-    /*!
-     * \brief read_score is the master function for performing the score reading
-     * \param index contain the index of SNPs that we should read from
-     * \param reset_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void read_score(const std::vector<size_t>& index, bool reset_zero);
-    /*!
-     * \brief Function responsible for generate the score based on hard coding
-     * \param index contain the index of SNP we want to include in our analysis
-     * \param region_index is the index of the region of interest
-     * \param set_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void hard_code_score(const std::vector<size_t>& index, bool set_zero);
-    /*!
-     * \brief Function responsible for generate the score based on the genotype
-     * dosage information
-     * \param index contain the index of SNP we want to include in our analysis
-     * \param region_index is the index of the region of interest
-     * \param set_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void dosage_score(const std::vector<size_t>& index, bool set_zero);
-    /*!
-     * \brief read_score is the master function for performing the score reading
-     * \param start_index is the index of SNP that we should start reading from
-     * \param end_bound is the index of the first SNP for us to ignore
-     * \param region_index is the index of the region of interest
-     * \param reset_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void read_score(const size_t start_index, const size_t end_bound,
-                    const size_t region_index, bool set_zero);
-    /*!
-     * \brief Function responsible for generate the score based on hard coding
-     * \param start_index is the index of SNP that we should start reading from
-     * \param end_bound is the index of first SNP that we stop reading from
-     * \param region_index is the index of the region of interest
-     * \param set_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void hard_code_score(const size_t start_index, const size_t end_bound,
-                         const size_t region_index, bool set_zero);
-    /*!
-     * \brief Function responsible for generate the score based on the genotype
-     * dosage information
-     * \param start_index is the index of SNP that we should start reading from
-     * \param end_bound is the index of first SNP that we stop reading from
-     * \param region_index is the index of the region of interest
-     * \param set_zero is a boolean indicate if we want to reset the score to
-     * 0
-     */
-    void dosage_score(size_t start_index, const size_t end_bound,
-                      const size_t region_index, bool set_zero);
-
+    virtual void
+    read_score(const std::vector<size_t>::const_iterator& start_idx,
+               const std::vector<size_t>::const_iterator& end_idx,
+               bool reset_zero, const bool use_ref_maf);
+    void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
+                         const std::vector<size_t>::const_iterator& end_idx,
+                         bool reset_zero, const bool use_ref_maf);
+    void dosage_score(const std::vector<size_t>::const_iterator& start_idx,
+                      const std::vector<size_t>::const_iterator& end_idx,
+                      bool reset_zero, const bool use_ref_maf);
 
     /*
      * Different structures use for reading in the bgen info
@@ -356,7 +290,6 @@ private:
             // a result of that, we need a vector to store the index of the
             // missing sample. The maximum possible number of missing sample is
             // the number of sample, thus we can reserve the required size
-            m_sample_missing_index.reserve(m_sample_prs->size());
             m_setzero = (missing == MISSING_SCORE::SET_ZERO);
             m_centre = (missing == MISSING_SCORE::CENTER);
         }
@@ -374,17 +307,36 @@ private:
          */
         void set_stat(const double& stat, const double& homcom_weight,
                       const double& het_weight, const double& homrar_weight,
-                      const bool flipped, const bool not_first)
+                      const double expected, const bool flipped,
+                      const bool not_first)
         {
             m_stat = stat;
-            m_flipped = flipped;
             m_homcom_weight = homcom_weight;
             m_het_weight = het_weight;
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
-            if (m_flipped) {
+            m_expected = expected;
+            if (flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
+            }
+            m_adj_score = 0;
+            // here we don't need to multiple the m_expected by ploidy, the
+            // reason is that the expected is ranged from 0-2, instead of the
+            // 0-1 of MAF
+            if (m_centre) {
+                // as is_centre will never change, branch prediction might be
+                // rather accurate, therefore we don't need to do the complex
+                // stat*maf*is_centre
+                m_adj_score = m_stat * m_expected;
+            }
+            m_miss_score = 0;
+            m_miss_count = 0;
+            if (!m_setzero) {
+                // this is the only one that depends on ploidy
+                m_miss_count = 2;
+                // again, mean_impute is stable, branch prediction should be ok
+                m_miss_score = m_stat * m_expected;
             }
         }
         /*!
@@ -397,11 +349,6 @@ private:
             // m_prs_sample_i represent the sample index of the result PRS
             // vector which does not contain samples that are removed
             m_prs_sample_i = 0;
-            // we clear the number of missingness from the data
-            m_sample_missing_index.clear();
-            m_total_exp = 0.0;
-            // every new SNP is start of as a valid SNP
-            m_valid = true;
         }
         /*!
          * \brief Another function mandated by bgen library that we don't use
@@ -476,32 +423,19 @@ private:
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
             if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
-                // this is a missing sample
-                m_sample_missing_index.push_back(m_prs_sample_i);
-                if (!m_setzero) {
-                    // we will try to use either centre scoring or mean
-                    // imputation to account for missing data. This will require
-                    // us to add  / assign 1 to the number of SNP
-                    if (m_not_first)
-                        sample_prs.num_snp += m_ploidy;
-                    else
-                        sample_prs.num_snp = m_ploidy;
-                }
+                sample_prs.num_snp =
+                    sample_prs.num_snp * m_not_first + m_miss_count;
+                sample_prs.prs = sample_prs.prs * m_not_first + m_miss_score;
             }
             // this is not a missing sample and we can either add the prs or
             // assign the PRS
-            else if (m_not_first)
-            {
-                // this is not the first SNP in the region, we will add
-                sample_prs.num_snp += m_ploidy;
-                sample_prs.prs += m_sum * m_stat;
-                m_total_exp += m_sum;
-            }
             else
             {
-                sample_prs.num_snp = m_ploidy;
-                sample_prs.prs = m_sum * m_stat;
-                m_total_exp += m_sum;
+                // this is not the first SNP in the region, we will add
+                sample_prs.num_snp =
+                    sample_prs.num_snp * m_not_first + m_ploidy;
+                sample_prs.prs =
+                    sample_prs.prs * m_not_first + m_sum * m_stat - m_adj_score;
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -511,86 +445,28 @@ private:
          * processing samples with missing data. This requires us to calculate
          * the expected value and use that as the PRS of the samples
          */
-        void finalise()
-        {
-            const size_t num_miss = m_sample_missing_index.size();
-            const size_t num_prs = m_sample_prs->size();
-            if (num_prs == num_miss) {
-                // all samples are missing. This should in theory invalidate the
-                // SNP
-                m_valid = false;
-                return;
-            }
-            // if we use SET_ZERO as our missing_score handling method, we can
-            // just avoid doing any missingness handling
-            if (m_setzero) return;
-            // here, we multiply the denominator by 2 to ensure the
-            // expected_value is ranging from 0 - 2
-            // which has already accounted for ploidy (ploidy is a constant
-            // anyway)
-            // m_total_exp is equivelant to Allele Frequency * Ploidy
-            double expected_value = m_stat
-                                    * (m_total_exp
-                                       / ((static_cast<double>(num_prs)
-                                           - static_cast<double>(num_miss))));
-            // worth separating centre score out
-            if (m_centre) {
-                // we want to minus the expected value from all samples
-                size_t i_miss = 0;
-                for (size_t i = 0; i < num_prs; ++i) {
-                    // we will iterate through all the sample that we are using
-                    if (i_miss < num_miss
-                        && m_sample_missing_index[i_miss] == i)
-                    {
-                        // if the missing index is smaller than the number of
-                        // missing sample, and the missing sample index is the
-                        // same as the current sample, we will skip this
-                        // sample
-
-                        ++i_miss;
-                        continue;
-                    }
-                    // otherwise, we will simply remove the expected value from
-                    // the score
-                    (*m_sample_prs)[i].prs -= expected_value;
-                }
-            }
-            else
-            {
-                // just normal mean imputation
-                for (auto&& index : m_sample_missing_index) {
-                    (*m_sample_prs)[index].prs += expected_value;
-                }
-            }
-        }
-
-        /*!
-         * \brief This function will inform us if the current SNP is valid
-         * \return
-         */
-        bool is_valid() const { return m_valid; }
+        void finalise() {}
 
     private:
         std::vector<PRS>* m_sample_prs;
         std::vector<uintptr_t>* m_sample_inclusion;
-        std::vector<uint32_t> m_sample_missing_index;
         double m_stat = 0.0;
         double m_sum = 0.0;
-        double m_total_exp = 0.0;
         double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
+        double m_expected = 0.0;
+        double m_miss_score = 0.0;
+        double m_adj_score = 0.0;
         uint32_t m_prs_sample_i = 0;
         int m_miss_count = 0;
         int m_ploidy = 2;
-        bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
         bool m_start_geno = false;
         bool m_setzero = false;
         bool m_centre = false;
-        bool m_valid = true;
     };
 
     /*!
@@ -602,10 +478,12 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold)
+                        double hard_threshold,double dose_threshold,  bool filtering = false)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
+            , m_dose_threshold(dose_threshold)
+            , m_filtering(filtering)
         {
         }
         void initialise(std::size_t, std::size_t)
@@ -615,6 +493,11 @@ private:
             // indicate where we push the byte onto genotype
             m_index = 0;
             m_shift = 0;
+            m_homcom_ct = 0;
+            m_homrar_ct = 0;
+            m_het_ct = 0;
+            m_missing_ct = 0;
+            m_prob.resize(3);
             // we also clean the running stat (not RS ID), so that we can go
             // through another round of calculation of mean and sd
             rs.clear();
@@ -637,15 +520,17 @@ private:
         {
             // we set the sample index to i
             m_sample_i = i;
-            // set the genotype to 1 (missing)
-            m_geno = 1;
+            // set the genotype binary representation to 2 (missing)
+            m_geno = 2;
             // we also reset the hard_prob to 0
             m_hard_prob = 0.0;
             // and expected value to 0
             m_exp_value = 0.0;
+            std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
-            return IS_SET(m_sample->data(), m_sample_i);
+            // if this is for filtering, we will always include all samples
+            return m_filtering || IS_SET(m_sample->data(), m_sample_i);
         }
         /*!
          * \brief set_number_of_entries is yet another function required by
@@ -668,23 +553,29 @@ private:
         {
             // if the current probability is the highest and the value is
             // higher than the required threshold, we will assign it
-            if (value > m_hard_prob && value >= m_hard_threshold) {
-                /*
-                 * Representation of each geno to their binary code:
-                 *   geno    desired binary  decimal representation
-                 *   0           00              0
-                 *   1           01              1
-                 *   2           11              3
-                 *   the binary code 10 is reserved for missing sample
-                 */
-                m_geno = (geno == 2) ? 3 : geno;
-                m_hard_prob = value;
-            }
+            //            if (value > m_hard_prob && value >= m_hard_threshold)
+            //            {
+            //                /*
+            //                 * Representation of each geno to their binary
+            //                 code:
+            //                 *   geno    desired binary  decimal
+            //                 representation
+            //                 *   0           00              0
+            //                 *   1           01              1
+            //                 *   2           11              3
+            //                 *   the binary code 10 is reserved for missing
+            //                 sample
+            //                 */
+            //                // plink do 3 2 0 1
+            //                m_geno = (geno == 2) ? 3 : geno;
+            //                m_hard_prob = value;
+            //            }
+            m_prob[geno] = value;
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-            // checked with PLINK, the expected value should be coded as 0, 1, 2
-            // instead of 0, 0.5, 1 as in PRS
+            // checked with PLINK, the expected value should be coded as 0,
+            // 1, 2 instead of 0, 0.5, 1 as in PRS
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
@@ -708,8 +599,41 @@ private:
             // if m_shift is zero, it is when we meet the index for the
             // first time, therefore we want to initialize it
             if (m_shift == 0) m_genotype[m_index] = 0;
+            // check if it is missing in addition to original
+            double prob1 = m_prob[0] * 2 + m_prob[1];
+            double prob2 = m_prob[2] * 2 + m_prob[1];
+            if ((std::fabs(prob1 - std::round(prob1))
+                 + std::fabs(prob2 - std::round(prob2)))
+                        * 0.5
+                    > m_hard_threshold
+                || misc::logically_equal(m_exp_value, 0.0))
+            {
+                // set to missing
+                m_geno = 2;
+            }
+            else
+            {
+                m_hard_prob = 0;
+                for (size_t geno = 0; geno < 3; ++geno) {
+                    if (m_prob[geno] > m_hard_prob) {
+                        m_geno = (geno == 2) ? 3 : geno;
+                        m_hard_prob = m_prob[geno];
+                    }
+                }
+                if(m_hard_prob < m_dose_threshold){
+                    // set to missing
+                    m_geno  = 2;
+                }
+            }
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
+            switch (m_geno)
+            {
+            case 0: m_homrar_ct++; break;
+            case 1: m_het_ct++; break;
+            case 2: m_missing_ct++; break;
+            case 3: m_homcom_ct++; break;
+            }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
             // if we reach the boundary, we will now add the index and reset
@@ -720,7 +644,8 @@ private:
             }
             // we can now push in the expected value for this sample. This
             // can then use for the calculation of the info score
-            rs.push(m_exp_value);
+            // always calculate for any inclusion
+            if (IS_SET(m_sample->data(), m_sample_i)) rs.push(m_exp_value);
         }
         /*!
          * \brief info_score is the function use to calculate the info score
@@ -732,20 +657,36 @@ private:
             double p_all = 2.0 * p * (1.0 - p);
             return (rs.var() / p_all);
         }
+        double expected() const { return rs.mean(); }
+        void get_count(size_t& homcom_ct, size_t& het_ct, size_t& homrar_ct,
+                       size_t& missing_ct) const
+        {
+            homcom_ct = m_homcom_ct;
+            het_ct = m_het_ct;
+            homrar_ct = m_homrar_ct;
+            missing_ct = m_missing_ct;
+        }
 
     private:
         // is the sample inclusion vector, if bit is set, sample is required
         std::vector<uintptr_t>* m_sample;
+        std::vector<double> m_prob;
         // is the genotype vector
         uintptr_t* m_genotype;
         misc::RunningStat rs;
         double m_hard_threshold = 0.0;
+        double m_dose_threshold = 0.0;
         double m_hard_prob = 0;
         double m_exp_value = 0.0;
         uintptr_t m_geno = 1;
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
+        size_t m_homcom_ct = 0;
+        size_t m_homrar_ct = 0;
+        size_t m_het_ct = 0;
+        size_t m_missing_ct = 0;
+        bool m_filtering;
     };
 };
 

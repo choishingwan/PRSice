@@ -20,9 +20,11 @@
 class Reporter
 {
 public:
-    Reporter(){
-
-    };
+    Reporter()
+    {
+        m_error_prefix_size = m_error_prefix.size();
+        m_warning_prefix_size = m_warning_prefix.size();
+    }
     Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
     {
         m_log_file.open(log_name.c_str());
@@ -31,7 +33,9 @@ public:
                 "Error: " + log_name + " cannot be open";
             throw std::runtime_error(error_message);
         }
-    };
+        m_error_prefix_size = m_error_prefix.size();
+        m_warning_prefix_size = m_warning_prefix.size();
+    }
     void initiailize(const std::string& log_name, size_t width = 60)
     {
         m_width = width;
@@ -43,16 +47,26 @@ public:
             throw std::runtime_error(error_message);
         }
     }
-    virtual ~Reporter()
-    {
-        if (m_log_file.is_open()) m_log_file.close();
-    };
+    virtual ~Reporter() {}
     void report(const std::string& input, bool wrap = true);
 
 private:
-    bool isNumeric(std::string s);
     std::ofstream m_log_file;
+    const std::string m_error_prefix = "Error:";
+    const std::string m_warning_prefix = "Warning:";
+#if defined(WIN32) || defined(_WIN32) \
+    || defined(__WIN32) && !defined(__CYGWIN__)
+    const std::string m_error_color_start = "";
+    const std::string m_warning_color_start = "";
+    const std::string m_color_end = "";
+#else
+    const std::string m_error_color_start = "\033[1;31m";
+    const std::string m_warning_color_start = "\033[1;33m";
+    const std::string m_color_end = "\033[0m";
+#endif
     size_t m_width = 60;
+    size_t m_error_prefix_size;
+    size_t m_warning_prefix_size;
 };
 
 #endif /* REPORTER_HPP_ */
