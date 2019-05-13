@@ -23,10 +23,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.1.11](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_linux.zip) |
-| OS X 64-bit | [v2.1.11](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_mac.zip) |
-| Windows 32-bit | [v2.1.11](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win32.zip) |
-| Windows 64-bit | [v2.1.11](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win64.zip) |
 
 !!! Caution 
 
@@ -102,7 +102,7 @@ For more details on the authors, see:
 
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
 
-[PRSet](prset_detail.md) is developed and test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
+[PRSet](prset_detail.md) is test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
 
 PRSice-2 and all new functionalities are coded by:
 
