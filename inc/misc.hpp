@@ -13,9 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-#ifndef misc_hpp
-#define misc_hpp
+#pragma once
 
 #include <assert.h>
 #include <stdexcept>
@@ -300,9 +298,19 @@ double qnorm(double p, double mu = 0.0, double sigma = 1.0,
              bool lower_tail = true, bool log_p = false);
 
 // codes from stackoverflow
-std::vector<std::string> split(const std::string& seq,
-                               const std::string& separators = "\t ");
-
+inline std::vector<std::string> split(const std::string& seq,
+                                      const std::string& separators = "\t ")
+{
+    std::size_t prev = 0, pos;
+    std::vector<std::string> result;
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
+        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
+        prev = pos + 1;
+    }
+    if (prev < seq.length())
+        result.emplace_back(seq.substr(prev, std::string::npos));
+    return result;
+}
 template <typename T>
 inline T convert(const std::string& str)
 {
@@ -1042,6 +1050,30 @@ inline bool isNumeric(std::string s)
     }
     return true;
 }
-}
 
-#endif /* misc_hpp */
+inline int string_to_int(const char* p)
+{
+    int x = 0;
+    bool neg = false;
+    if (*p == '-') {
+        neg = true;
+        ++p;
+    }
+    else if (*p == '+')
+    {
+        ++p;
+    }
+    else if (*p < '0' || *p > '9')
+    {
+        throw std::runtime_error("Error: Not an integer\n");
+    }
+    while (*p >= '0' && *p <= '9') {
+        x = (x * 10) + (*p - '0');
+        ++p;
+    }
+    if (neg) {
+        x = -x;
+    }
+    return x;
+}
+}

@@ -174,19 +174,4 @@ double qnorm(double p, double mu, double sigma, bool lower_tail, bool log_p)
     }
     return mu + sigma * val;
 }
-
-
-std::vector<std::string> split(const std::string& seq,
-                               const std::string& separators)
-{
-    std::size_t prev = 0, pos;
-    std::vector<std::string> result;
-    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
-        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
-        prev = pos + 1;
-    }
-    if (prev < seq.length())
-        result.emplace_back(seq.substr(prev, std::string::npos));
-    return result;
-}
 }

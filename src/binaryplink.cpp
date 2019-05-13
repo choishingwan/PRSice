@@ -18,7 +18,7 @@
 
 
 BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
-                         uint32_t thread, const bool ignore_fid,
+                         size_t thread, const bool ignore_fid,
                          const bool keep_nonfounder, const bool keep_ambig,
                          const bool is_ref, Reporter& reporter)
 {
@@ -67,7 +67,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
             input = token[0];
             external_sample = true;
         }
-        message.append("file: " + file + " (bed)\n");
+        message.append("file: " + input + " (bed)\n");
         if (external_sample) {
             message.append("With external fam file: " + m_sample_file + "\n");
         }
@@ -80,7 +80,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
     reporter.report(message);
 }
 
-std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
+std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)
 {
     assert(m_genotype_files.size() > 0);
     std::ifstream famfile;
@@ -115,7 +115,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
             // there is a situation where a sample with FID A_B IID A and
             // a sample with FID A and IID B_A, then this will be
             // in-distinguishable
-            founder_info.insert(token[+FAM::FID] + "_" + token[+FAM::IID]);
+            founder_info.insert(token[+FAM::FID] + delim + token[+FAM::IID]);
             m_unfiltered_sample_ct++;
         }
     }
@@ -152,7 +152,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         }
         std::string id = (m_ignore_fid)
                              ? token[+FAM::IID]
-                             : token[+FAM::FID] + "_" + token[+FAM::IID];
+                             : token[+FAM::FID] + delim + token[+FAM::IID];
         if (!m_remove_sample) {
             // we don't want to include this sample if it is not found in the
             // selection_list
@@ -167,9 +167,9 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
                          == m_sample_selection_list.end());
         }
 
-        if (founder_info.find(token[+FAM::FID] + "_" + token[+FAM::FATHER])
+        if (founder_info.find(token[+FAM::FID] + delim + token[+FAM::FATHER])
                 == founder_info.end()
-            && founder_info.find(token[+FAM::FID] + "_" + token[+FAM::MOTHER])
+            && founder_info.find(token[+FAM::FID] + delim + token[+FAM::MOTHER])
                    == founder_info.end()
             && inclusion)
         {
@@ -247,8 +247,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 
 void BinaryPlink::calc_freq_gen_inter(
     const double& maf_threshold, const double& geno_threshold,
-    const double& /*info_threshold*/, const double& /*hard_threshold*/,
-    const bool maf_filter, const bool geno_filter, const bool /*info_filter*/,
+    const double& /*info_threshold*/, const bool maf_filter,
+    const bool geno_filter, const bool /*info_filter*/,
     const bool /*hard_coded*/, Genotype* target)
 {
     // we will go through all the SNPs
@@ -928,20 +928,19 @@ void BinaryPlink::read_score(
         }
         // directly read in the current location
         m_prev_loc = m_bed_file.tellg();
-
         cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                            use_ref_maf);
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
             / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
                * static_cast<double>(ploidy));
         if (cur_snp.is_flipped()) {
+
             // change the mean to reflect flipping
             maf = 1.0 - maf;
             // swap the weighting
@@ -966,7 +965,6 @@ void BinaryPlink::read_score(
             // again, mean_impute is stable, branch prediction should be ok
             miss_score = ploidy * stat * maf;
         }
-
         // now we go through the SNP vector
         lbptr = genotype.data();
         uii = 0;
@@ -1028,6 +1026,7 @@ void BinaryPlink::read_score(
             // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
+
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS
         not_first = true;

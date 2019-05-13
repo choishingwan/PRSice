@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         maf_filter = commander.target_maf(maf);
         geno_filter = commander.target_geno(geno);
         info_filter = commander.target_info(info);
-        commander.target_hard_threshold(hard_threshold);
+        hard_threshold = commander.get_target_hard_threshold();
         hard_coded = commander.hard_coded();
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
                 "============================================================");
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
-                                      commander.remove_sample_file(), verbose,
-                                      reporter);
+                                      commander.remove_sample_file(),
+                                      commander.delim(), verbose, reporter);
             // For bgen or any format that require intermediate generation, we
             // need to know if a reference file is going to be used, therefore
             // decide if we are going to generate the target intermediate or the
@@ -130,9 +130,9 @@ int main(int argc, char* argv[])
                 message.append("==============================================="
                                "=============");
                 reporter.report(message);
-                reference_file->load_samples(commander.ref_keep_file(),
-                                             commander.ref_remove_file(),
-                                             verbose, reporter);
+                reference_file->load_samples(
+                    commander.ref_keep_file(), commander.ref_remove_file(),
+                    commander.delim(), verbose, reporter);
                 // load the reference file
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
@@ -146,13 +146,14 @@ int main(int argc, char* argv[])
                 "============================================================");
             reporter.report(message);
             target_file->calc_freqs_and_intermediate(
-                maf, geno, info, hard_threshold, maf_filter, geno_filter,
-                info_filter, hard_coded, true, reporter);
+                maf, geno, info, maf_filter, geno_filter, info_filter,
+                hard_coded, true, reporter);
 
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
-            hard_coded = commander.ref_hard_threshold(hard_threshold);
+            hard_coded = commander.ref_hard_threshold();
+            hard_threshold = commander.get_ref_hard_threshold();
             if (init_ref
                 && (commander.use_ref_maf() || maf_filter || geno_filter
                     || info_filter || commander.use_inter()))
@@ -167,8 +168,8 @@ int main(int argc, char* argv[])
                                "=============");
                 reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
-                    maf, geno, info, hard_threshold, maf_filter, geno_filter,
-                    info_filter, hard_coded, true, reporter, target_file);
+                    maf, geno, info, maf_filter, geno_filter, info_filter,
+                    hard_coded, true, reporter, target_file);
             }
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
@@ -282,7 +283,8 @@ int main(int argc, char* argv[])
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
                 fprintf(stderr, "\nProcessing the %zu th phenotype\n",
                         i_pheno + 1);
-                prsice.init_matrix(commander, i_pheno, *target_file, reporter);
+                prsice.init_matrix(commander, i_pheno, commander.delim(),
+                                   *target_file, reporter);
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
                                    region_names, i_pheno);
@@ -290,9 +292,13 @@ int main(int argc, char* argv[])
                 for (size_t i_region = 0; i_region < num_regions; ++i_region) {
                     // always skip background region
                     if (i_region == 1) continue;
-                    prsice.run_prsice(commander, i_pheno, i_region,
-                                      region_membership, region_start_idx,
-                                      *target_file);
+                    if (!prsice.run_prsice(commander, i_pheno, i_region,
+                                           region_membership, region_start_idx,
+                                           *target_file))
+                    {
+                        // did not run
+                        continue;
+                    }
                     if (!commander.no_regress())
                         // if we performed regression, we'd like to generate
                         // the output file (.prsice)

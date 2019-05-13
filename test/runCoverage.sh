@@ -13,7 +13,7 @@ TEST_DIR="${3}"
 
 # Generate our base line info
 "${LCOV}" -d "${SRC_DIR}" -z
-"${LCOV}" -c -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info"
+"${LCOV}" --rc lcov_branch_coverage=1 --capture -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info" > log
 
 "${UNIT_TEST}" "${3}"
 
@@ -22,18 +22,18 @@ HTML_RESULTS="${1}/html"
 mkdir -p ${HTML_RESULTS}
 
 # generate our coverage info
-"${LCOV}" -c -b "${SRC_DIR}/../" -d "${SRC_DIR}" -o "${SRC_DIR}/coverage.info"
+"${LCOV}" --rc lcov_branch_coverage=1  --capture -b "${SRC_DIR}/../" -d "${SRC_DIR}" -o "${SRC_DIR}/coverage.info" > log
 
 # Combine the two info
-"${LCOV}" -a "${SRC_DIR}/baseline.info" -a "${SRC_DIR}/coverage.info" -o "${SRC_DIR}/coverage-combined.info"
+"${LCOV}" -a "${SRC_DIR}/baseline.info" -a "${SRC_DIR}/coverage.info" -o "${SRC_DIR}/coverage-combined.info" >log
 
 # remove some paths
-"${LCOV}" -r "${SRC_DIR}/coverage-combined.info" "*gtest*" "*lib*" "*Qt*.framework*" "*Xcode.app*" "*.moc" "*moc_*.cpp" "*/test/*" -o "${SRC_DIR}/coverage-filtered.info"
+"${LCOV}" -r "${SRC_DIR}/coverage-combined.info" "*gtest*" "*lib*" "*Qt*.framework*" "*Xcode.app*" "*.moc" "*moc_*.cpp" "*/test/*" -o "${SRC_DIR}/coverage-filtered.info"  >log
 
-#"${LCOV}" -r "${SRC_DIR}/coverage.info" "*gtest*"
+#"${LCOV}" -r "${SRC_DIR}/coverage.info" "*gtest*" 
 
 # generate our HTML
-"${GENHTML}" --branch-coverage -o "${HTML_RESULTS}" "${SRC_DIR}/coverage-filtered.info"
+"${GENHTML}" --branch-coverage -o "${HTML_RESULTS}" "${SRC_DIR}/coverage-filtered.info" >log
 
 # reset our counts
 "${LCOV}" -d "${SRC_DIR}" -z

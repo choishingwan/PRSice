@@ -16,19 +16,26 @@
 
 #include "binarygen.hpp"
 
-
-BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
-                     const bool is_ref)
+BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
+                     const std::string& pheno_file,
+                     const std::string& out_prefix, const double hard_threshold,
+                     const double dose_threshold,
+                     const size_t thread, const bool use_inter,
+                     const bool use_hard_coded, const bool no_regress,
+                     const bool ignore_fid, const bool keep_nonfounder,
+                     const bool keep_ambig, const bool is_ref,
+                     Reporter& reporter)
 {
-    m_intermediate = commander.use_inter();
-    m_thread = static_cast<uint32_t>(commander.thread());
-    m_id_delim = commander.delim();
-    m_ignore_fid = commander.ignore_fid();
-    m_keep_nonfounder = commander.nonfounders();
-    m_keep_ambig = commander.keep_ambig();
+    m_intermediate = use_inter;
+    m_thread = thread;
+    m_ignore_fid = ignore_fid;
+    m_keep_nonfounder = keep_nonfounder;
+    m_keep_ambig = keep_ambig;
     m_is_ref = is_ref;
-    const bool no_regress = commander.no_regress();
-    const std::string pheno_file = commander.pheno_file();
+    m_hard_coded = use_hard_coded;
+    m_intermediate_file = out_prefix + ".inter";
+    m_hard_threshold = hard_threshold;
+    m_dose_threshold = dose_threshold;
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -36,118 +43,65 @@ BinaryGen::BinaryGen(const Commander& commander, Reporter& reporter,
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     // main use of following function is to set the max code
     init_chr();
-    std::string message = "Initializing Genotype ";
-    if (is_ref) {
-        std::string reference_name;
-        if (commander.ref_list(reference_name)) {
-            // has listed input
-            // check if there is an external sample file
-            std::vector<std::string> token = misc::split(reference_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                reference_name = token[0];
-                external_sample = true;
-            }
-            message.append(" info from file " + reference_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external sample file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = load_genotype_prefix(reference_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+    std::string message = "Initializing Genotype";
+    std::string file_name;
+    bool is_list = !(list_file.empty());
+    if (!is_list) {
+        file_name = file;
+    }
+    else
+    {
+        file_name = list_file;
+    }
+    if (is_list) {
+        std::vector<std::string> token = misc::split(file_name, ",");
+        bool external_sample = false;
+        if (token.size() == 2) {
+            m_sample_file = token[1];
+            file_name = token[0];
+            external_sample = true;
         }
-        else
-        {
-            // single file input, check for # and replace it with 1-22
-            commander.ref_name(reference_name);
-            std::vector<std::string> token = misc::split(reference_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                reference_name = token[0];
-                external_sample = true;
-            }
-            message.append(" file: " + reference_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = set_genotype_files(reference_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+        message.append(" info from file " + file_name + " (bgen)\n");
+        if (external_sample) {
+            message.append("With external sample file: " + m_sample_file
+                           + "\n");
+        }
+        if (!external_sample && no_regress && pheno_file.empty()) {
+            throw std::runtime_error("ERROR: You must provide a phenotype "
+                                     "file for bgen format!\n");
+        }
+        m_genotype_files = load_genotype_prefix(file_name);
+        if (!external_sample) {
+            m_sample_file = pheno_file;
         }
     }
     else
     {
-
-        std::string target_name;
-        if (commander.target_list(target_name)) {
-            // has listed input
-            // check if there is an external sample file
-            std::vector<std::string> token = misc::split(target_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                target_name = token[0];
-                external_sample = true;
-            }
-            message.append(" info from file " + target_name + " (bgen)\n");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = load_genotype_prefix(target_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+        std::vector<std::string> token = misc::split(file_name, ",");
+        bool external_sample = false;
+        if (token.size() == 2) {
+            m_sample_file = token[1];
+            file_name = token[0];
+            external_sample = true;
         }
-        else
-        {
-            // single file input, check for # and replace it with 1-22
-            target_name = commander.target_name();
-            std::vector<std::string> token = misc::split(target_name, ",");
-            bool external_sample = false;
-            if (token.size() == 2) {
-                m_sample_file = token[1];
-                target_name = token[0];
-                external_sample = true;
-            }
-            message.append(" file: " + target_name + " (bgen");
-            if (external_sample) {
-                message.append("With external fam file: " + m_sample_file
-                               + "\n");
-            }
-            if (!external_sample && no_regress && pheno_file.empty()) {
-                throw std::runtime_error("ERROR: You must provide a phenotype "
-                                         "file for bgen format!\n");
-            }
-            m_genotype_files = set_genotype_files(target_name);
-            if (!external_sample) {
-                m_sample_file = pheno_file;
-            }
+        message.append(" file: " + file_name + " (bgen)\n");
+        if (external_sample) {
+            message.append("With external fam file: " + m_sample_file + "\n");
+        }
+        if (!external_sample && no_regress && pheno_file.empty()) {
+            throw std::runtime_error("ERROR: You must provide a phenotype "
+                                     "file for bgen format!\n");
+        }
+        m_genotype_files = set_genotype_files(file_name);
+        if (!external_sample) {
+            m_sample_file = pheno_file;
         }
     }
     reporter.report(message);
 }
 
 
-std::vector<Sample_ID> BinaryGen::gen_sample_vector()
+std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)
 {
     // first, check if the sample file is in the sample format specified by BGEN
     bool is_sample_format = check_is_sample_format();
@@ -255,7 +209,7 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                 FID = "";
                 IID = token[0];
             }
-            std::string id = (m_ignore_fid) ? IID : FID + m_id_delim + IID;
+            std::string id = (m_ignore_fid) ? IID : FID + delim + IID;
             // we assume all bgen samples are founders
             if (!m_remove_sample) {
                 inclusion = (m_sample_selection_list.find(id)
@@ -333,6 +287,9 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
     }
     // initialize regression flag
     m_in_regression.resize(m_sample_include.size(), 0);
+    // I don't really like to use this but I also don't want to un-necessarily
+    // pass the delimitor to gen_snp
+    m_id_delim = delim;
     return sample_name;
 }
 
@@ -443,6 +400,7 @@ void BinaryGen::get_context(std::string& prefix)
 }
 
 bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
+                                        const std::string& delim,
                                         const genfile::bgen::Context& context)
 {
     // only do this if our gen file contains the sample information
@@ -491,7 +449,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 // if FID is provided. When FID is provided, then the ID
                 // should be FID + delimitor + IID; otherwise it'd be IID
                 if (m_sample_id[i].IID != identifier
-                    && (m_sample_id[i].FID + m_id_delim + m_sample_id[i].IID)
+                    && (m_sample_id[i].FID + delim + m_sample_id[i].IID)
                            != identifier)
                 {
                     std::string error_message =
@@ -501,7 +459,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                         ":"
                         + identifier + " and in phentoype file is: ";
                     if (has_fid)
-                        error_message.append(m_sample_id[i].FID + m_id_delim
+                        error_message.append(m_sample_id[i].FID + delim
                                              + m_sample_id[i].IID);
                     else
                         error_message.append(m_sample_id[i].IID);
@@ -535,11 +493,13 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
     std::string allele;
     std::string SNPID;
     std::string RSID;
+    std::string cur_id;
     std::string chromosome;
     std::string prev_chr = "";
     std::string file_name;
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::string error_message = "";
+    std::string A1, A2;
     std::streampos byte_pos;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
@@ -560,6 +520,7 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
         total_unfiltered_snps += m_context_map[prefix].number_of_variants;
     }
     check_sample_consistent(std::string(m_genotype_files.front() + ".bgen"),
+                            m_id_delim,
                             m_context_map[m_genotype_files.front()]);
     // we don't need to reserve the vector now, as we have already
     // read in the base file
@@ -630,29 +591,46 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                 RSID = std::to_string(chr_code) + ":"
                        + std::to_string(SNP_position);
             }
+            // default to RS
+            cur_id = RSID;
+            // by this time point, we should always have the
+            // m_existed_snps_index propagated with SNPs from the base. So we
+            // can first check if the SNP are presented in base
+            if (reference->m_existed_snps_index.find(RSID)
+                    == reference->m_existed_snps_index.end()
+                && reference->m_existed_snps_index.find(SNPID)
+                       == reference->m_existed_snps_index.end())
+            {
+                // this is the reference panel, and the SNP wasn't found in the
+                // target doens't matter if we use RSID or SNPID
+                exclude_snp = true;
+            }
+            else if (reference->m_existed_snps_index.find(RSID)
+                     == reference->m_existed_snps_index.end())
+            {
+                // we found the SNPID
+                cur_id = SNPID;
+            }
+            else if (reference->m_existed_snps_index.find(SNPID)
+                     == reference->m_existed_snps_index.end())
+            {
+                // we found the RSID
+                cur_id = RSID;
+            }
+
+
             // user exclude indicate this SNP is discard by user, not because of
             // QC matric
             if (!m_is_ref) {
                 if ((!m_exclude_snp
-                     && m_snp_selection_list.find(RSID)
-                            == m_snp_selection_list.end())
-                    || (m_exclude_snp
-                        && m_snp_selection_list.find(RSID)
-                               != m_snp_selection_list.end()))
+                     && m_snp_selection_list.find(cur_id)
+                            == m_snp_selection_list.end()))
                 {
                     exclude_snp = true;
                 }
             }
-
-            if (reference->m_existed_snps_index.find(RSID)
-                == reference->m_existed_snps_index.end())
-            {
-                // this is the reference panel, and the SNP wasn't found in the
-                // target
-                exclude_snp = true;
-            }
-            if (processed_snps.find(RSID) != processed_snps.end()) {
-                duplicated_snps.insert(RSID);
+            if (processed_snps.find(cur_id) != processed_snps.end()) {
+                duplicated_snps.insert(cur_id);
                 exclude_snp = true;
             }
             // perform check on ambiguousity
@@ -670,10 +648,11 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp) {
-                auto&& target_index = reference->m_existed_snps_index[RSID];
+                A1 = alleles.back();
+                A2 = alleles.front();
+                auto&& target_index = reference->m_existed_snps_index[cur_id];
                 if (!reference->m_existed_snps[target_index].matching(
-                        chr_code, SNP_position, alleles.back(), alleles.front(),
-                        flipping))
+                        chr_code, SNP_position, A1, A2, flipping))
                 {
                     // SNP not matched
                     if (!mismatch_snp_record.is_open()) {
@@ -709,33 +688,32 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     m_mismatch_file_output = true;
                     if (m_is_ref) {
                         mismatch_snp_record
-                            << "Reference\t" << RSID << "\t"
+                            << "Reference\t" << cur_id << "\t"
                             << target->m_existed_snps[target_index].chr()
                             << "\t" << chr_code << "\t"
                             << target->m_existed_snps[target_index].loc()
                             << "\t" << SNP_position << "\t"
                             << target->m_existed_snps[target_index].ref()
-                            << "\t" << alleles.front() << "\t"
+                            << "\t" << A1 << "\t"
                             << target->m_existed_snps[target_index].alt()
-                            << "\t" << alleles.back() << "\n";
+                            << "\t" << A2 << "\n";
                     }
                     else
                     {
                         mismatch_snp_record
-                            << "Base\t" << RSID << "\t" << chr_code << "\t"
+                            << "Base\t" << cur_id << "\t" << chr_code << "\t"
                             << m_existed_snps[target_index].chr() << "\t"
                             << SNP_position << "\t"
-                            << m_existed_snps[target_index].loc() << "\t"
-                            << alleles.front() << "\t"
-                            << m_existed_snps[target_index].ref() << "\t"
-                            << alleles.back() << "\t"
+                            << m_existed_snps[target_index].loc() << "\t" << A1
+                            << "\t" << m_existed_snps[target_index].ref()
+                            << "\t" << A2 << "\t"
                             << m_existed_snps[target_index].alt() << "\n";
                     }
                     m_num_ref_target_mismatch++;
                 }
                 else
                 {
-                    processed_snps.insert(RSID);
+                    processed_snps.insert(cur_id);
                     if (m_is_ref) {
                         target->m_existed_snps[target_index].add_reference(
                             prefix, byte_pos, flipping);
@@ -743,8 +721,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
                     else
                     {
                         m_existed_snps[target_index].add_target(
-                            prefix, byte_pos, chr_code, SNP_position,
-                            alleles.back(), alleles.front(), flipping);
+                            prefix, byte_pos, chr_code, SNP_position, A1, A2,
+                            flipping);
                     }
                     retain_snp[target_index] = true;
                     ref_target_match++;
@@ -797,11 +775,9 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
 }
 
 
-void BinaryGen::calc_freq_gen_inter(
-    const double& maf_threshold, const double& geno_threshold,
-    const double& info_threshold, const double& hard_threshold,
-    const bool maf_filter, const bool geno_filter, const bool info_filter,
-    const bool hard_coded, Genotype* target)
+void BinaryGen::calc_freq_gen_inter(const double& maf_threshold, const double& geno_threshold,
+    const double& info_threshold, const bool maf_filter, const bool geno_filter,
+    const bool info_filter, const bool hard_coded, Genotype* target)
 {
     std::vector<bool> retain_snp;
     auto&& reference = (m_is_ref) ? target : this;
@@ -844,15 +820,11 @@ void BinaryGen::calc_freq_gen_inter(
     std::streampos byte_pos, tmp_byte_pos;
     size_t processed_count = 0;
     size_t retained = 0;
-    uint32_t ll_ct = 0;
-    uint32_t lh_ct = 0;
-    uint32_t hh_ct = 0;
-    uint32_t ll_ctf = 0;
-    uint32_t lh_ctf = 0;
-    uint32_t hh_ctf = 0;
-    uint32_t uii = 0;
-    uint32_t missing = 0;
-    uint32_t tmp_total = 0;
+    size_t ll_ct = 0;
+    size_t lh_ct = 0;
+    size_t hh_ct = 0;
+    size_t uii = 0;
+    size_t missing = 0;
     // initialize the sample inclusion mask
     std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
     std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
@@ -866,7 +838,7 @@ void BinaryGen::calc_freq_gen_inter(
     // also the tempory genotype vector list. We also provide the hard coding
     // threshold
     PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
-                           hard_threshold, true);
+                           m_hard_threshold, m_dose_threshold, true);
     // now consider if we are generating the intermediate file
     std::ofstream inter_out;
     if (m_intermediate) {
@@ -915,6 +887,7 @@ void BinaryGen::calc_freq_gen_inter(
                 throw std::runtime_error(error_message);
             }
         }
+        processed_count++;
         // bgen always seek as there are always something stored in between
         // the genotype data
         if (!bgen_file.seekg(byte_pos, std::ios_base::beg)) {
@@ -931,31 +904,28 @@ void BinaryGen::calc_freq_gen_inter(
         genfile::bgen::parse_probability_data<PLINK_generator>(
             &(m_buffer2)[0], &(m_buffer2)[0] + m_buffer2.size(), context,
             setter);
+        // there's no founder for bgen, can simply calculate the genotyping rate
+        // and maf directly when we parse the probability data
+        /*
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
             sample_include2.data(), founder_include2.data(), m_sample_ct,
             &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+            */
+        setter.get_count(ll_ct, lh_ct, hh_ct, missing);
         uii = ll_ct + lh_ct + hh_ct;
         cur_geno = 1.0 - ((static_cast<int32_t>(uii)) * sample_ct_recip);
-        uii = 2 * (ll_ctf + lh_ctf + hh_ctf);
-        tmp_total = (ll_ctf + lh_ctf + hh_ctf);
-        assert(m_founder_ct >= tmp_total);
-        missing = m_founder_ct - tmp_total;
+        uii = 2 * (ll_ct + lh_ct + hh_ct);
+        // tmp_total = (ll_ctf + lh_ctf + hh_ctf);
+        // assert(m_founder_ct >= tmp_total);
+        // missing = m_founder_ct - tmp_total;
         if (!uii) {
             cur_maf = 0.5;
         }
         else
         {
-            cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
+            cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
-        }
-        if (misc::logically_equal(cur_maf, 0.0)
-            || misc::logically_equal(cur_maf, 1.0))
-        {
-            // none of the sample contain this SNP
-            // still count as MAF filtering (for now)
-            m_num_maf_filter++;
-            continue;
         }
         // filter by genotype missingness
         if (geno_filter && geno_threshold < cur_geno) {
@@ -970,18 +940,28 @@ void BinaryGen::calc_freq_gen_inter(
             m_num_maf_filter++;
             continue;
         }
+        else if (maf_filter
+                 && (misc::logically_equal(cur_maf, 0.0)
+                     || misc::logically_equal(cur_maf, 1.0)))
+        {
+            // none of the sample contain this SNP
+            // still count as MAF filtering (for now)
+            m_num_maf_filter++;
+            continue;
+        }
+
         if (info_filter && setter.info_score() < info_threshold) {
             m_num_info_filter++;
             continue;
         }
         // if we can reach here, it is not removed
         if (m_is_ref) {
-            snp.set_ref_counts(ll_ctf, lh_ctf, hh_ctf, missing);
+            snp.set_ref_counts(ll_ct, lh_ct, hh_ct, missing);
             snp.set_ref_expected(setter.expected());
         }
         else
         {
-            snp.set_counts(ll_ctf, lh_ctf, hh_ctf, missing);
+            snp.set_counts(ll_ct, lh_ct, hh_ct, missing);
             snp.set_expected(setter.expected());
         }
         retained++;
@@ -1095,6 +1075,7 @@ void BinaryGen::dosage_score(
         setter.set_stat(snp.stat(), m_homcom_weight, m_het_weight,
                         m_homrar_weight, snp.get_expected(use_ref_maf),
                         snp.is_flipped(), not_first);
+
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
@@ -1111,7 +1092,6 @@ void BinaryGen::hard_code_score(
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
     const bool use_ref_maf)
 {
-
     // we need to calculate the size of possible vectors
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -1173,7 +1153,6 @@ void BinaryGen::hard_code_score(
             std::swap(homcom_weight, homrar_weight);
         }
         stat = cur_snp.stat(); // Multiply by ploidy
-
         // only set these value to the imputed value if we require them
         adj_score = 0;
         if (is_centre) {
@@ -1184,7 +1163,6 @@ void BinaryGen::hard_code_score(
             // again, mean_impute is stable, branch prediction should be ok
             miss_score = ploidy * stat * maf;
         }
-
         // start reading the genotype
         lbptr = genotype.data();
         uii = 0;

@@ -32,14 +32,13 @@
 class BinaryGen : public Genotype
 {
 public:
-    /*!
-     * \brief Constructor of binarygen object
-     * \param commander contains the user input
-     * \param reporter is the logger
-     * \param is_ref indicate if this is the reference panel
-     */
-    BinaryGen(const Commander& commander, Reporter& reporter,
-              const bool is_ref = false);
+    BinaryGen(const std::string& list_file, const std::string& file,
+              const std::string& pheno_file, const std::string& out_prefix,
+              const double hard_threshold, const double dose_threshold, const size_t thread,
+              const bool use_inter, const bool use_hard_coded,
+              const bool no_regress, const bool ignore_fid,
+              const bool keep_nonfounder, const bool keep_ambig,
+              const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:
@@ -48,8 +47,8 @@ private:
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::ifstream m_bgen_file;
     std::string m_cur_file;
-    std::string m_id_delim;
     std::string m_intermediate_file;
+    std::string m_id_delim;
     std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
@@ -59,7 +58,7 @@ private:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     //
     /*!
      * \brief check if the sample file is of the sample format specified by bgen
@@ -72,7 +71,6 @@ private:
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold,
                              const double& info_threshold,
-                             const double& hard_threshold,
                              const bool maf_filter, const bool geno_filter,
                              const bool info_filter, const bool hard_coded,
                              Genotype* target = nullptr);
@@ -90,6 +88,7 @@ private:
      * \return true if the sample is consistent
      */
     bool check_sample_consistent(const std::string& bgen_name,
+                                 const std::string& delim,
                                  const genfile::bgen::Context& context);
 
     /*!
@@ -222,7 +221,7 @@ private:
             // need to re-initialize it? Though it only contain pointers and
             // doesn't have any big structures
             PLINK_generator setter(&m_sample_include, mainbuf,
-                                   m_hard_threshold);
+                                   m_hard_threshold, m_dose_threshold);
             // we can now use the bgen library to parse the BGEN input and
             // transform it into PLINK format (NOTE: The
             // read_and_parse_genotype_data_block function has been modified
@@ -312,30 +311,32 @@ private:
                       const bool not_first)
         {
             m_stat = stat;
-            m_flipped = flipped;
             m_homcom_weight = homcom_weight;
             m_het_weight = het_weight;
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
             m_expected = expected;
-            if (m_flipped) {
+            if (flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
             m_adj_score = 0;
+            // here we don't need to multiple the m_expected by ploidy, the
+            // reason is that the expected is ranged from 0-2, instead of the
+            // 0-1 of MAF
             if (m_centre) {
                 // as is_centre will never change, branch prediction might be
                 // rather accurate, therefore we don't need to do the complex
                 // stat*maf*is_centre
-                m_adj_score = m_ploidy * m_stat * m_expected;
+                m_adj_score = m_stat * m_expected;
             }
-
             m_miss_score = 0;
             m_miss_count = 0;
             if (!m_setzero) {
-                m_miss_count = 1;
+                // this is the only one that depends on ploidy
+                m_miss_count = 2;
                 // again, mean_impute is stable, branch prediction should be ok
-                m_miss_score = m_ploidy * m_stat * m_expected;
+                m_miss_score = m_stat * m_expected;
             }
         }
         /*!
@@ -461,7 +462,6 @@ private:
         uint32_t m_prs_sample_i = 0;
         int m_miss_count = 0;
         int m_ploidy = 2;
-        bool m_flipped = false;
         bool m_not_first = false;
         bool m_is_missing = false;
         bool m_start_geno = false;
@@ -478,10 +478,11 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold, bool filtering = false)
+                        double hard_threshold,double dose_threshold,  bool filtering = false)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
+            , m_dose_threshold(dose_threshold)
             , m_filtering(filtering)
         {
         }
@@ -492,6 +493,11 @@ private:
             // indicate where we push the byte onto genotype
             m_index = 0;
             m_shift = 0;
+            m_homcom_ct = 0;
+            m_homrar_ct = 0;
+            m_het_ct = 0;
+            m_missing_ct = 0;
+            m_prob.resize(3);
             // we also clean the running stat (not RS ID), so that we can go
             // through another round of calculation of mean and sd
             rs.clear();
@@ -514,12 +520,13 @@ private:
         {
             // we set the sample index to i
             m_sample_i = i;
-            // set the genotype to 1 (missing)
-            m_geno = 1;
+            // set the genotype binary representation to 2 (missing)
+            m_geno = 2;
             // we also reset the hard_prob to 0
             m_hard_prob = 0.0;
             // and expected value to 0
             m_exp_value = 0.0;
+            std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
             // if this is for filtering, we will always include all samples
@@ -546,23 +553,29 @@ private:
         {
             // if the current probability is the highest and the value is
             // higher than the required threshold, we will assign it
-            if (value > m_hard_prob && value >= m_hard_threshold) {
-                /*
-                 * Representation of each geno to their binary code:
-                 *   geno    desired binary  decimal representation
-                 *   0           00              0
-                 *   1           01              1
-                 *   2           11              3
-                 *   the binary code 10 is reserved for missing sample
-                 */
-                m_geno = (geno == 2) ? 3 : geno;
-                m_hard_prob = value;
-            }
+            //            if (value > m_hard_prob && value >= m_hard_threshold)
+            //            {
+            //                /*
+            //                 * Representation of each geno to their binary
+            //                 code:
+            //                 *   geno    desired binary  decimal
+            //                 representation
+            //                 *   0           00              0
+            //                 *   1           01              1
+            //                 *   2           11              3
+            //                 *   the binary code 10 is reserved for missing
+            //                 sample
+            //                 */
+            //                // plink do 3 2 0 1
+            //                m_geno = (geno == 2) ? 3 : geno;
+            //                m_hard_prob = value;
+            //            }
+            m_prob[geno] = value;
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-            // checked with PLINK, the expected value should be coded as 0, 1, 2
-            // instead of 0, 0.5, 1 as in PRS
+            // checked with PLINK, the expected value should be coded as 0,
+            // 1, 2 instead of 0, 0.5, 1 as in PRS
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
@@ -586,8 +599,41 @@ private:
             // if m_shift is zero, it is when we meet the index for the
             // first time, therefore we want to initialize it
             if (m_shift == 0) m_genotype[m_index] = 0;
+            // check if it is missing in addition to original
+            double prob1 = m_prob[0] * 2 + m_prob[1];
+            double prob2 = m_prob[2] * 2 + m_prob[1];
+            if ((std::fabs(prob1 - std::round(prob1))
+                 + std::fabs(prob2 - std::round(prob2)))
+                        * 0.5
+                    > m_hard_threshold
+                || misc::logically_equal(m_exp_value, 0.0))
+            {
+                // set to missing
+                m_geno = 2;
+            }
+            else
+            {
+                m_hard_prob = 0;
+                for (size_t geno = 0; geno < 3; ++geno) {
+                    if (m_prob[geno] > m_hard_prob) {
+                        m_geno = (geno == 2) ? 3 : geno;
+                        m_hard_prob = m_prob[geno];
+                    }
+                }
+                if(m_hard_prob < m_dose_threshold){
+                    // set to missing
+                    m_geno  = 2;
+                }
+            }
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
+            switch (m_geno)
+            {
+            case 0: m_homrar_ct++; break;
+            case 1: m_het_ct++; break;
+            case 2: m_missing_ct++; break;
+            case 3: m_homcom_ct++; break;
+            }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
             // if we reach the boundary, we will now add the index and reset
@@ -612,20 +658,34 @@ private:
             return (rs.var() / p_all);
         }
         double expected() const { return rs.mean(); }
+        void get_count(size_t& homcom_ct, size_t& het_ct, size_t& homrar_ct,
+                       size_t& missing_ct) const
+        {
+            homcom_ct = m_homcom_ct;
+            het_ct = m_het_ct;
+            homrar_ct = m_homrar_ct;
+            missing_ct = m_missing_ct;
+        }
 
     private:
         // is the sample inclusion vector, if bit is set, sample is required
         std::vector<uintptr_t>* m_sample;
+        std::vector<double> m_prob;
         // is the genotype vector
         uintptr_t* m_genotype;
         misc::RunningStat rs;
         double m_hard_threshold = 0.0;
+        double m_dose_threshold = 0.0;
         double m_hard_prob = 0;
         double m_exp_value = 0.0;
         uintptr_t m_geno = 1;
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
+        size_t m_homcom_ct = 0;
+        size_t m_homrar_ct = 0;
+        size_t m_het_ct = 0;
+        size_t m_missing_ct = 0;
         bool m_filtering;
     };
 };

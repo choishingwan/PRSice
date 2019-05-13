@@ -44,12 +44,12 @@ help_message <-
     --index                 If set, assume the INDEX instead of NAME  for\n
                             the corresponding columns are provided. Index\n
                             should be 0-based (start counting from 0)\n
-    --info-base             Base INFO score filtering. Format should be\n
+    --base-info             Base INFO score filtering. Format should be\n
                             <Column name>,<Threshold>. SNPs with info \n
                             score less than <Threshold> will be ignored\n
                             Column name default: INFO\n
                             Threshold default: 0.9\n
-    --maf-base              Base MAF filtering. Format should be\n
+    --base-maf              Base MAF filtering. Format should be\n
                             <Column name>,<Threshold>. SNPs with maf\n
                             less than <Threshold> will be ignored. An\n
                             additional column can also be added (e.g.\n
@@ -66,8 +66,6 @@ help_message <-
                             from --beta \n
     --pvalue        | -p    Column header containing the p-value\n
                             Default: P\n
-    --se                    Column header containing the standard error\n
-                            Default: SE\n
     --snp                   Column header containing the SNP ID\n
                             Default: SNP\n
     --stat                  Column header containing the summary statistic\n
@@ -92,15 +90,15 @@ help_message <-
     --maf                   Filter SNPs based on minor allele frequency (MAF)\n
     --nonfounders           Keep the nonfounders in the analysis\n
                             Note: They will still be excluded from LD calculation\n
-    --pheno-col     | -F    Headers of phenotypes to be included from the\n
-                            phenotype file\n
-    --pheno-file    | -f    Phenotype file containing the phenotype(s).\n
+    --pheno         | -f    Phenotype file containing the phenotype(s).\n
                             First column must be FID of the samples and\n
                             the second column must be IID of the samples.\n
                             When --ignore-fid is set, first column must\n
                             be the IID of the samples.\n
                             Must contain a header if --pheno-col is\n
                             specified\n
+    --pheno-col     | -F    Headers of phenotypes to be included from the\n
+                            phenotype file\n
     --prevalence    | -k    Prevalence of all binary trait. If provided\n
                             will adjust the ascertainment bias of the R2.\n
                             Note that when multiple binary trait is found,\n
@@ -129,10 +127,12 @@ help_message <-
     --allow-inter           Allow the generate of intermediate file. This will\n
                             speed up PRSice when using dosage data as clumping\n
                             reference and for hard coding PRS calculation\n
-    --hard-thres            Hard threshold for dosage data. Any call less than\n
-                            this will be treated as missing. Note that if dosage\n
-                            data is used as a LD reference, it will always be\n
-                            hard coded to calculate the LD\n
+    --dose-thres            Translate any SNPs with highest genotype probability\n
+                            less than this threshold to missing call\n
+    --hard-thres            A hardcall is saved when the distance to the nearest\n
+                            hardcall is less than the hardcall threshold.\n
+                            Otherwise a missing code is saved\n
+                            Default is: 0.1\n
     --hard                  Use hard coding instead of dosage for PRS construction.\n
                             Default is to use dosage instead of hard coding\n
 \nClumping:\n
@@ -146,22 +146,25 @@ help_message <-
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
                             Please see --target for more information\n
-    --ld-list               File containing prefix of LD reference files.\n
-                            Similar to --ld but allow more \n
-                            flexibility. Do not support external fam file\n
-                            at the moment\n
+    --ld-dose-thres         Translate any SNPs with highest genotype probability\n
+                            less than this threshold to missing call\n
     --ld-geno               Filter SNPs based on genotype missingness\n
+    --ld-hard-thres         A hardcall is saved when the distance to the nearest\n
+                            hardcall is less than the hardcall threshold.\n
+                            Otherwise a missing code is saved\n
+                            Default is: 0.1\n
     --ld-info               Filter SNPs based on info score. Only used\n
                             for imputed LD reference\n
-    --ld-hard-thres         Hard threshold for dosage data. Any call less than\n
-                            this will be treated as missing.\n
-                            Default: 0.9\n
     --ld-keep               File containing the sample(s) to be extracted from\n
                             the LD reference file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
                             set, first column should be IID\n
                             Mutually exclusive from --ld-remove\n
                             No effect if --ld was not provided\n
+    --ld-list               File containing prefix of LD reference files.\n
+                            Similar to --ld but allow more \n
+                            flexibility. Do not support external fam file\n
+                            at the moment\n
     --ld-maf                Filter SNPs based on minor allele frequency\n
     --ld-remove             File containing the sample(s) to be removed from\n
                             the LD reference file. First column should be FID and\n
@@ -178,6 +181,9 @@ help_message <-
                             R2>=0.8 even if the index SNP does not physically\n
                             locate within the region\n
 \nCovariate:\n
+    --cov           | -C    Covariate file. First column should be FID and \n
+                            the second column should be IID. If --ignore-fid\n
+                            is set, first column should be IID\n
     --cov-col       | -c    Header of covariates. If not provided, will use\n
                             all variables in the covariate file. By adding\n
                             @ in front of the string, any numbers within [\n
@@ -189,9 +195,6 @@ help_message <-
                             will be automatically generated. Any items in\n
                             --cov-factor must also be found in --cov-col\n
                             Also accept continuous input (start with @).\n
-    --cov-file      | -C    Covariate file. First column should be FID and \n
-                            the second column should be IID. If --ignore-fid\n
-                            is set, first column should be IID\n
 \nP-value Thresholding:\n
     --bar-levels            Level of barchart to be plotted. When --fastscore\n
                             is set, PRSice will only calculate the PRS for \n
@@ -253,14 +256,6 @@ help_message <-
                             column containing name of the SNP set.\n    
     --wind-3                Add N base(s) to the 3' region of each feature(s) \n
     --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
-\nPRSlice:\n
-    --prslice               Perform PRSlice where the whole genome is first cut\n
-                            into bin size specified by this option. PRSice will\n
-                            then be performed on each bin. Bins are then sorted\n
-                            according to the their R2. PRSice is then performed\n
-                            again to find the best bin combination.\n
-                            This cannot be performed together with PRSet\n
-                            (Currently not implemented)\n
 \nPlotting:\n
     --bar-col-high          Colour of the most predicting threshold\n
                             Default: firebrick\n

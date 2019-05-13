@@ -109,4 +109,25 @@ TEST(REPORTER, LIST_MESSAGE)
     }
 }
 
+
+TEST(REPORTER, NO_WRAP_MESSAGE)
+{
+    try
+    {
+        // initialize with nothing
+        Reporter reporter(std::string(path + "LOG"), 10);
+        reporter.report("Should not wrap this message and should allow this to "
+                        "go on and on\n",
+                        false);
+        // need to figure out how to do mocking and actually test if the output
+        // is correct. However, reporter is kinda a minor class
+        SUCCEED();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
+
 #endif // MISC_TEST_HPP

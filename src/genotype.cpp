@@ -136,8 +136,8 @@ void Genotype::add_flags(
         // flag function to avoid re-allocation of memory. Also for the flag
         // structure as that can almost always be reused (we copy when we set
         // flag)
-        construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size, chr, bp,
-                       genome_wide_background);
+        construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size,
+                       chr, bp, genome_wide_background);
         m_existed_snps[i].set_flag(num_sets, flag);
     }
 }
@@ -329,7 +329,7 @@ void Genotype::read_base(
                 // obtain the SNP coordinate
                 try
                 {
-                    loc = misc::convert<int>(
+                    loc = misc::string_to_int(
                         token[col_index[+BASE_INDEX::BP]].c_str());
                     if (loc < 0) {
                         std::string error_message =
@@ -569,7 +569,7 @@ Genotype::load_genotype_prefix(const std::string& file_name)
     multi.open(file_name.c_str());
     if (!multi.is_open()) {
         throw std::runtime_error(
-            std::string("Error: Cannot open file: " + file_name));
+            std::string("Error: Cannot open list file: " + file_name));
     }
     std::string line;
     while (std::getline(multi, line)) {
@@ -659,7 +659,8 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     // first, we read in the file
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "Error: Cannot open file: " + input;
+        std::string error_message =
+            "Error: Cannot open extract / exclude file: " + input;
         throw std::runtime_error(error_message);
     }
     std::string line;
@@ -744,13 +745,15 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     return result;
 }
 
-std::unordered_set<std::string> Genotype::load_ref(std::string input,
+std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
+                                                   const std::string& delim,
                                                    bool ignore_fid)
 {
     std::ifstream in;
     in.open(input.c_str());
     if (!in.is_open()) {
-        std::string error_message = "Error: Cannot open file: " + input;
+        std::string error_message =
+            "Error: Cannot open keep / remove file: " + input;
         throw std::runtime_error(error_message);
     }
     // read in the file
@@ -771,7 +774,7 @@ std::unordered_set<std::string> Genotype::load_ref(std::string input,
                 throw std::runtime_error(
                     "Error: Require FID and IID for extraction. "
                     "You can ignore the FID by using the --ignore-fid flag");
-            result.insert(token[0] + "_" + token[1]);
+            result.insert(token[0] + delim + token[1]);
         }
     }
     in.close();
@@ -807,26 +810,27 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
 }
 
 void Genotype::load_samples(const std::string& keep_file,
-                            const std::string& remove_file, bool verbose,
+                            const std::string& remove_file,
+                            const std::string& delim, bool verbose,
                             Reporter& reporter)
 {
     if (!remove_file.empty()) {
-        m_sample_selection_list = load_ref(remove_file, m_ignore_fid);
+        m_sample_selection_list = load_ref(remove_file, delim, m_ignore_fid);
     }
     else if (!keep_file.empty())
     {
         m_remove_sample = false;
-        m_sample_selection_list = load_ref(keep_file, m_ignore_fid);
+        m_sample_selection_list = load_ref(keep_file, delim, m_ignore_fid);
     }
     if (!m_is_ref) {
         // m_sample_names = gen_sample_vector();
-        m_sample_id = gen_sample_vector();
+        m_sample_id = gen_sample_vector(delim);
     }
     else
     {
         // don't bother loading up the sample vector as it should
         // never be used for reference panel (except for the founder_info)
-        gen_sample_vector();
+        gen_sample_vector(delim);
     }
     std::string message = misc::to_string(m_unfiltered_sample_ct) + " people ("
                           + misc::to_string(m_num_male) + " male(s), "
@@ -839,14 +843,14 @@ void Genotype::load_samples(const std::string& keep_file,
 
 void Genotype::calc_freqs_and_intermediate(
     const double& maf_threshold, const double& geno_threshold,
-    const double& info_threshold, const double& hard_threshold,
-    const bool maf_filter, const bool geno_filter, const bool info_filter,
-    const bool hard_coded, bool verbose, Reporter& reporter, Genotype* target)
+    const double& info_threshold, const bool maf_filter, const bool geno_filter,
+    const bool info_filter, const bool hard_coded, bool verbose,
+    Reporter& reporter, Genotype* target)
 {
     std::string message = "";
     calc_freq_gen_inter(maf_threshold, geno_threshold, info_threshold,
-                        hard_threshold, maf_filter, geno_filter, info_filter,
-                        hard_coded, target);
+                        maf_filter, geno_filter, info_filter, hard_coded,
+                        target);
     if (m_num_geno_filter != 0) {
         message.append(
             std::to_string(m_num_geno_filter)
@@ -911,6 +915,20 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
 
     if (verbose) reporter.report(message);
     m_snp_selection_list.clear();
+    if (!m_is_ref) {
+        if (m_marker_ct == 0) {
+            message = "Error: No vairant remained!\n";
+            throw std::runtime_error(message);
+        }
+    }
+    else
+    {
+        if (target->m_existed_snps.size() == 0) {
+            message =
+                "Error: No vairant remained after matching with reference!\n";
+            throw std::runtime_error(message);
+        }
+    }
 }
 
 
@@ -1851,12 +1869,15 @@ void Genotype::build_membership_matrix(
             throw std::runtime_error(error_message);
         }
         snp_out << "CHR\tSNP\tBP\tP";
-        for (auto&& name : region_name) {
-            snp_out << "\t" << name;
+        for (size_t i = 0; i < region_name.size() - (region_name.size() == 2);
+             ++i)
+        {
+            snp_out << "\t" << region_name[i];
         }
         snp_out << "\n";
     }
     size_t prev_idx;
+    bool has_snp = false;
     if (num_sets > 2) {
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
             auto&& snp = m_existed_snps[i_snp];
@@ -1876,6 +1897,7 @@ void Genotype::build_membership_matrix(
                         snp_out << "\tN";
                     }
                     snp_out << "\tY";
+                    if (index > 1) has_snp = true;
                     temporary_storage[index].push_back(i_snp);
                     prev_idx = index + 1;
                 }
@@ -1889,6 +1911,7 @@ void Genotype::build_membership_matrix(
                 idx = snp.get_set_idx(num_sets);
                 for (auto&& index : idx) {
                     temporary_storage[index].push_back(i_snp);
+                    if (index > 1) has_snp = true;
                 }
             }
         }
@@ -1901,6 +1924,14 @@ void Genotype::build_membership_matrix(
                                          temporary_storage[i].end());
                 cur_idx = region_membership.size();
             }
+        }
+        if (!has_snp) {
+            std::string error_message =
+                "Error: None of the gene sets contain any SNP(s) after "
+                "clumping. Have you provided the correct input? E.g. GMT file "
+                "containing Entrez ID with GTF files that uses the Ensembl "
+                "gene ID?\n";
+            throw std::runtime_error(error_message);
         }
     }
     else

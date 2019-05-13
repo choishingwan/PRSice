@@ -70,9 +70,9 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
                 }
                 if (is_header) continue; // skip header
                 int chr = get_chrom_code_raw(boundary[0].c_str());
-                int low_bound = misc::convert<int>(boundary[1]) + 1;
+                int low_bound = misc::string_to_int(boundary[1].c_str()) + 1;
                 // +1 because start at 0
-                int upper_bound = misc::convert<int>(boundary[2]);
+                int upper_bound = misc::string_to_int(boundary[2].c_str());
                 // Do nothing because while BED end is exclusive, it is 0 base.
                 // For an inclusive end bound, we will need to do -1 (make it
                 // inclusive) and +1 (transform to 1 base)
@@ -114,8 +114,8 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
                     "Should be chr:start, chr:start-end or a bed file\n";
                 throw std::runtime_error(message);
             }
-            int low_bound = misc::convert<int>(boundary.front());
-            int upper_bound = misc::convert<int>(boundary.back());
+            int low_bound = misc::string_to_int(boundary.front().c_str());
+            int upper_bound = misc::string_to_int(boundary.back().c_str());
             // the library find overlap, which for SNP at 10
             // the boundary should be defined as 9-11 when we read in the SNP
             // here we do nothing but sainity check of the input
@@ -173,7 +173,8 @@ size_t Region::generate_regions(
     region_names.push_back("Base");
     region_names.push_back("Background");
     std::unordered_set<std::string> duplicated_sets;
-
+    duplicated_sets.insert("Base");
+    duplicated_sets.insert("Background");
     // 0 reserved for base
     // 1 reserved for background
     int set_idx = 2;
@@ -228,7 +229,8 @@ size_t Region::generate_regions(
         message = "Loading GTF file: " + gtf;
         reporter.report(message);
         load_gtf(gtf, msigdb_list, feature, max_chr, window_5, window_3,
-                 gene_sets, genome_wide_background, !background.empty(), reporter);
+                 gene_sets, genome_wide_background, !background.empty(),
+                 reporter);
     }
     // index gene list
     for (auto&& tree : gene_sets) tree.index();
@@ -319,7 +321,7 @@ void Region::load_background(
             std::string message = "";
             try
             {
-                start = misc::convert<int>(token[+BED::START]);
+                start = misc::string_to_int(token[+BED::START].c_str());
                 if (start >= 0)
                     // That's because bed is 0 based and range format is 1
                     // based. and type for bed is 1 and type for range is 0
@@ -341,7 +343,7 @@ void Region::load_background(
             }
             try
             {
-                end = misc::convert<int>(token[+BED::END]);
+                end = misc::string_to_int(token[+BED::END].c_str());
                 if (end < 0) {
                     message.append("Error: Negative End Coordinate at line "
                                    + misc::to_string(num_line) + "!");
@@ -363,9 +365,12 @@ void Region::load_background(
                                "end coordinate!\n");
                 message.append("start: " + std::to_string(start) + "\n");
                 message.append("end: " + std::to_string(end) + "\n");
-                reporter.report(message);
+                throw std::runtime_error(message);
             }
-            if (error) break;
+            else if (error)
+            {
+                throw std::runtime_error("");
+            }
             // the strand location is different depending on the type
             // if it is bed, then we use the STRAND index
             // if not, then we assume the format is CHR START END STRAND
@@ -434,7 +439,7 @@ void Region::load_gtf(
     const std::vector<std::string>& feature, const uint32_t max_chr,
     const int window_5, const int window_3,
     std::vector<IITree<int, int>>& gene_sets, const bool genome_wide_background,
-        const bool provided_background, Reporter& reporter)
+    const bool provided_background, Reporter& reporter)
 {
     // don't bother if there's no msigdb genes and we are using genome wide
     // background
@@ -486,7 +491,7 @@ void Region::load_gtf(
             end = 0;
             try
             {
-                start = misc::convert<int>(token[+GTF::START]);
+                start = misc::string_to_int(token[+GTF::START].c_str());
                 if (start < 0) {
                     // we opt for extreme stringency. Will definitely want the
                     // whole gtf file to contain valid entries
@@ -506,7 +511,7 @@ void Region::load_gtf(
             }
             try
             {
-                end = misc::convert<int>(token[+GTF::END]);
+                end = misc::string_to_int(token[+GTF::END].c_str());
                 if (end < 0) {
                     std::string error =
                         "Error: Negative End Coordinate! (line: "
@@ -524,39 +529,9 @@ void Region::load_gtf(
                 throw std::runtime_error(error);
             }
             // Now extract the name
-            attribute = misc::split(token[+GTF::ATTRIBUTE], ";");
-            name = "";
-            id = "";
-            // It is not required by GTF format to contain Gene ID and Gene
-            // Name. In that case, we will just refuse to work on this GTF file
-            // as we won't be able to conntect it with the MSigDB file
-            for (auto& info : attribute) {
-                if (info.find("gene_id") != std::string::npos) {
-                    extract = misc::split(info);
-                    if (extract.size() > 1) {
-                        // WARNING: HARD CODING HERE
-                        // we assume this should be of the format gene_id "ID"
-                        extract[1].erase(std::remove(extract[1].begin(),
-                                                     extract[1].end(), '\"'),
-                                         extract[1].end());
-                        id = extract[1];
-                    }
-                }
-                else if (info.find("gene_name") != std::string::npos)
-                {
-                    extract = misc::split(info);
-                    if (extract.size() > 1) {
-                        // WARNING: HARD CODING HERE
-                        // Again, we assume this should be of the format
-                        // gene_name "Name"
-                        extract[1].erase(std::remove(extract[1].begin(),
-                                                     extract[1].end(), '\"'),
-                                         extract[1].end());
-                        name = extract[1];
-                    }
-                }
-                if (!name.empty() && !id.empty()) break;
-            }
+            attribute = get_attribute(token[+GTF::ATTRIBUTE]);
+            name = attribute[1];
+            id = attribute[0];
             if (name.empty() && id.empty()) {
                 // lack both
                 std::string message =
@@ -662,7 +637,8 @@ void Region::load_gtf(
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entry removed due to feature selection\n");
     }
-    if (exclude_feature > 1) {
+    else if (exclude_feature > 1)
+    {
         message.append("A total of " + std::to_string(exclude_feature)
                        + " entries removed due to feature selection\n");
     }
@@ -670,6 +646,12 @@ void Region::load_gtf(
         message.append(
             "A total of " + std::to_string(chr_exclude)
             + " entries removed as they are not on autosomal chromosome\n");
+    }
+    else if (chr_exclude == 1)
+    {
+        message.append(
+            "A total of " + std::to_string(chr_exclude)
+            + " entry removed as they are not on autosomal chromosome\n");
     }
     reporter.report(message);
 }
@@ -693,7 +675,7 @@ void Region::load_snp_sets(
     else
     {
         std::string error_message =
-            "Error: Undefine bed file input format: " + snp_file;
+            "Error: Undefine SNP set file input format: " + snp_file;
         throw std::runtime_error(error_message);
     }
     // first check if it is a set file
@@ -711,17 +693,23 @@ void Region::load_snp_sets(
         is_set_file = (token.size() > 1);
         break;
     }
+    // we want to only use the file name
+    set_name = misc::base_name(set_name);
     if (!is_set_file) {
         if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
-            std::string message = "Warning: Set name of " + set_name
-                                  + " is duplicated, this set will be ignored\n";
+            std::string message =
+                "Warning: Set name of " + set_name
+                + " is duplicated, this set will be ignored\n";
             reporter.report(message);
             return;
         }
         duplicated_sets.insert(set_name);
         region_names.push_back(set_name);
-    }else{
-        std::string message = "Warning: Set name provided for multi-SNP set input, the set name will be ignored\n";
+    }
+    else
+    {
+        std::string message = "Warning: Set name provided for multi-SNP set "
+                              "input, the set name will be ignored\n";
         reporter.report(message);
     }
     input.clear();
@@ -800,6 +788,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
             "Error: Undefine bed file input format: " + bed_file;
         throw std::runtime_error(error_message);
     }
+    set_name = misc::base_name(set_name);
     if (duplicated_sets.find(set_name) != duplicated_sets.end()) {
         std::string message = "Warning: Set name of " + set_name
                               + " is duplicated, it will be ignored";
@@ -816,10 +805,10 @@ bool Region::load_bed_regions(const std::string& bed_file,
     }
 
     // now read in the file
-    bool has_strand = false, first_read = true, error = false, is_header=false;
-    size_t num_line = 0, column_size=0;
+    bool error = false, is_header = false;
+    size_t num_line = 0, column_size = 0;
     while (std::getline(input, line)) {
-        is_header=false;
+        is_header = false;
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::split(line);
@@ -845,21 +834,6 @@ bool Region::load_bed_regions(const std::string& bed_file,
         // skip all check later
         chr_code = get_chrom_code_raw(token[0].c_str());
         if (chr_code > static_cast<int32_t>(max_chr) || chr_code < 0) continue;
-
-        if (first_read) {
-            first_read = false;
-            if (token.size() > +BED::STRAND) has_strand = true;
-        }
-        if (has_strand && token.size() <= +BED::STRAND) {
-            message = "Error: line " + misc::to_string(num_line)
-                      + " of the bed file: " + file_name
-                      + " contain less than than "
-                      + misc::to_string(+BED::STRAND)
-                      + " columns. BED file should have the same number of "
-                        "column for each row. Please check if you have the "
-                        "correct input format!";
-            throw std::runtime_error(message);
-        }
         if (token.size() <= +BED::STRAND && (window_5 > 0 || window_3 > 0)
             && (window_5 != window_3) && !printed_warning)
         {
@@ -879,7 +853,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
         message = "";
         try
         {
-            start = misc::convert<int>(token[+BED::START]);
+            start = misc::string_to_int(token[+BED::START].c_str());
             if (start >= 0)
                 ++start; // That's because bed is 0 based
             else
@@ -898,7 +872,7 @@ bool Region::load_bed_regions(const std::string& bed_file,
 
         try
         {
-            end = misc::convert<int>(token[+BED::END]);
+            end = misc::string_to_int(token[+BED::END].c_str());
             if (end < 0) {
                 message.append("Error: Negative End Coordinate at line "
                                + misc::to_string(num_line) + "!");

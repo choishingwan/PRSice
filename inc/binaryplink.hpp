@@ -41,7 +41,7 @@ public:
      * \param reporter is the logger
      */
     BinaryPlink(const std::string& file_list, const std::string& file,
-                const uint32_t thread, const bool ignore_fid,
+                const size_t thread, const bool ignore_fid,
                 const bool keep_nonfounder, const bool keep_ambig,
                 const bool is_ref, Reporter& reporter);
     BinaryPlink() {}
@@ -57,14 +57,13 @@ protected:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     void gen_snp_vector(const std::string& out_prefix,
                         Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold, const double&,
-                             const double& /*info_threshold*/,
                              const bool maf_filter, const bool geno_filter,
-                             const bool, const bool /*info_filter*/,
+                             const bool, const bool,
                              Genotype* target = nullptr);
     /*!
      * \brief This function is use to check the bed version. Most importantly,

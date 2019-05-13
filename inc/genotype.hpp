@@ -93,8 +93,8 @@ public:
      * \param reporter is the logger
      */
     void load_samples(const std::string& keep_file,
-                      const std::string& remove_file, bool verbose,
-                      Reporter& reporter);
+                      const std::string& remove_file, const std::string& delim,
+                      bool verbose, Reporter& reporter);
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
@@ -103,10 +103,9 @@ public:
 
     void calc_freqs_and_intermediate(
         const double& maf_threshold, const double& geno_threshold,
-        const double& info_threshold, const double& hard_threshold,
-        const bool maf_filter, const bool geno_filter, const bool info_filter,
-        const bool hard_coded, bool verbose, Reporter& reporter,
-        Genotype* target = nullptr);
+        const double& info_threshold, const bool maf_filter,
+        const bool geno_filter, const bool info_filter, const bool hard_coded,
+        bool verbose, Reporter& reporter, Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -218,14 +217,14 @@ public:
      * \param i is the index of the sample
      * \return the sample ID
      */
-    std::string sample_id(size_t i) const
+    std::string sample_id(const size_t i, const std::string& delim) const
     {
         if (i > m_sample_id.size())
             throw std::out_of_range("Sample name vector out of range");
         if (m_ignore_fid)
             return m_sample_id[i].IID;
         else
-            return m_sample_id[i].FID + "_" + m_sample_id[i].IID;
+            return m_sample_id[i].FID + delim + m_sample_id[i].IID;
     }
 
     /*!
@@ -442,6 +441,7 @@ protected:
     double m_mean_score = 0.0;
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
+    double m_dose_threshold = 0.0;
     double m_clump_r2 = 0.0;
     double m_clump_proxy = 0.0;
     double m_clump_p = 0.0;
@@ -449,6 +449,7 @@ protected:
     double m_het_weight = 1;
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
+    size_t m_thread = 1;                  // number of final samples
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -457,7 +458,6 @@ protected:
     uintptr_t m_marker_ct = 0;
     intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
-    uint32_t m_thread = 1; // number of final samples
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
     std::random_device::result_type m_seed = 0;
@@ -581,7 +581,7 @@ protected:
      * m_tmp_genotype (optional)
      * \return vector containing the sample information
      */
-    virtual std::vector<Sample_ID> gen_sample_vector()
+    virtual std::vector<Sample_ID> gen_sample_vector(const std::string& delim)
     {
         return std::vector<Sample_ID>(0);
     }
@@ -592,12 +592,12 @@ protected:
     }
     virtual void calc_freq_gen_inter(
         const double& /*maf_threshold*/, const double& /*geno_threshold*/,
-        const double& /*info_threshold*/, const double& /*hard_threshold*/,
-        const bool /*maf_filter*/, const bool /*geno_filter*/,
-        const bool /*info_filter*/, const bool /*hard_coded*/,
-        Genotype* /*target=nullptr*/)
+        const double& /*info_threshold*/, const bool /*maf_filter*/,
+        const bool /*geno_filter*/, const bool /*info_filter*/,
+        const bool /*hard_coded*/, Genotype* /*target=nullptr*/)
     {
     }
+
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
      * subclass must implement this function to assist the processing of their
@@ -625,7 +625,8 @@ protected:
      * \param ignore_fid whether we should ignore the FID (use 2 column or 1)
      * \return an unordered_set use for checking if the sample is in the file
      */
-    std::unordered_set<std::string> load_ref(std::string input,
+    std::unordered_set<std::string> load_ref(const std::string& input,
+                                             const std::string& delim,
                                              bool ignore_fid);
     /*!
      * \brief Function to load in SNP extraction exclusion list

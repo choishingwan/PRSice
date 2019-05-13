@@ -262,16 +262,9 @@ public:
         geno = m_ref_geno;
         return m_perform_ref_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold for reference
-     * \param threshold is the storage of threshold
-     * \return true if hard thresholding is required
-     */
-    bool ref_hard_threshold(double& threshold) const
-    {
-        threshold = m_ref_hard_threshold;
-        return m_perform_ref_hard_thresholding;
-    }
+    bool get_ref_hard_threshold() const { return m_ref_hard_threshold; }
+    bool target_hard_threshold() const { return m_target_hard_thresholding; }
+    bool ref_hard_threshold() const { return m_perform_ref_hard_thresholding; }
     /*!
      * \brief Get the MAF filtering threshold for reference
      * \param maf is the storage of the threshold
@@ -457,16 +450,7 @@ public:
         geno = m_target_geno;
         return m_target_geno_filter;
     }
-    /*!
-     * \brief Get the hard threshold of target
-     * \param threshold stores the hard threshold
-     * \return return true if hard thresholding is required
-     */
-    bool target_hard_threshold(double& threshold) const
-    {
-        threshold = m_target_hard_threshold;
-        return m_target_hard_thresholding;
-    }
+    double get_target_hard_threshold() const { return m_target_hard_threshold; }
     /*!
      * \brief Get the maf filtering threshold of target
      * \param The threshold is stored in maf
@@ -664,7 +648,8 @@ public:
     bool nonfounders() const { return m_include_nonfounders; }
 
     bool use_ref_maf() const { return m_use_ref_maf; }
-
+    double ref_dose_thres() const { return m_ref_dose_thres; }
+    double target_dose_thres() const { return m_target_dose_thres; }
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -698,7 +683,6 @@ private:
     std::string m_statistic = "";
     std::string m_snp = "SNP";
     std::string m_bp = "BP";
-    std::string m_standard_error = "SE";
     std::string m_p_value = "P";
     std::string m_id_delim = " ";
     std::string m_info_col = "INFO,0.9";
@@ -720,16 +704,18 @@ private:
     double m_proxy_threshold = -1.0;
     double m_clump_p = 1.0;
     double m_clump_r2 = 0.1;
+    double m_ref_dose_thres = 0.0;
     double m_ref_geno = 1.0;
-    double m_ref_hard_threshold = 0.9;
+    double m_ref_hard_threshold = 0.1;
     double m_ref_maf = 0.0;
     double m_ref_info_score = 0.0;
     // TODO: might consider using 1e-8 instead
-    double m_lower_threshold = 0.0001;
+    double m_lower_threshold = 5e-8;
     double m_inter_threshold = 0.00005;
     double m_upper_threshold = 0.5;
+    double m_target_dose_thres = 0.0;
     double m_target_geno = 1.0;
-    double m_target_hard_threshold = 0.9;
+    double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
     size_t m_memory = 0;
@@ -740,7 +726,7 @@ private:
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 250000;
+    int m_clump_distance = 1000000;
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
@@ -775,7 +761,6 @@ private:
     bool m_provided_statistic = false;
     bool m_provided_snp_id = false;
     bool m_provided_bp = false;
-    bool m_provided_standard_error = false;
     bool m_provided_p_value = false;
     bool m_provided_info_threshold = false;
     bool m_perform_base_maf_control_filter = false;
@@ -1116,66 +1101,6 @@ private:
     }
 
     /*!
-     * \brief Function to convert user clump distance into a numeric
-     * distance \param input the input value \param message the parameter
-     * storage \param error_message the error message storage \param target
-     * the target storage \param c the command flag \return true if we can
-     * parse the distance value
-     */
-    inline bool parse_distance(const std::string& input,
-                               std::map<std::string, std::string>& message,
-                               std::string& error_message, int& target,
-                               const std::string& c)
-    {
-        if (message.find(c) != message.end()) {
-            error_message.append("Warning: Duplicated argument --" + c + "\n");
-        }
-        message[c] = input;
-        // first check if there are any suffix
-        // KB, MB, BP are the only 3 valid options
-        if (input.length() > 3) {
-            std::string suffix = input.substr(input.length() - 2);
-            std::transform(suffix.begin(), suffix.end(), suffix.begin(),
-                           ::toupper);
-            std::string prefix = input.substr(0, input.size() - 2);
-            try
-            {
-                int num = misc::convert<int>(prefix);
-                if (suffix == "BP") {
-                    target = num;
-                }
-                else if (suffix == "KB")
-                {
-                    target = num * 1000;
-                }
-                else if (suffix == "MB")
-                {
-                    target = num * 1000000;
-                }
-            }
-            catch (...)
-            {
-                error_message.append("Error: Non numeric argument passed to "
-                                     + c + ": " + input + "!\n");
-                return false;
-            }
-        }
-        else
-        {
-            try
-            {
-                // default is KB, so we will multiply it by 1000
-                target = misc::convert<int>(input) * 1000;
-            }
-            catch (...)
-            {
-                error_message.append("Error: Cannot parse clump distance!\n");
-                return false;
-            }
-        }
-        return true;
-    }
-    /*!
      * \brief Function parsing string into genetic model used
      * \param in the input
      * \param message the parameter storage
@@ -1242,7 +1167,7 @@ private:
         }
         std::transform(input.begin(), input.end(), input.begin(), ::toupper);
         if (input.at(0) == 'A') {
-            input = "add";
+            input = "avg";
             m_scoring_method = SCORING::AVERAGE;
         }
         else if (input.at(0) == 'S')
@@ -1268,7 +1193,7 @@ private:
                                  + "!\n");
             return false;
         }
-        if (message.find("model") != message.end()) {
+        if (message.find("score") != message.end()) {
             error_message.append("Warning: Duplicated argument --score\n");
         }
         message["score"] = input;
@@ -1426,6 +1351,95 @@ private:
         return true;
     }
 
+    inline int set_distance(const std::string& input,
+                            const std::string& command,
+                            std::map<std::string, std::string>& message,
+                            bool& error, std::string& error_messages)
+    {
+        std::string in = input;
+        if (message.find(command) != message.end()) {
+            error_messages.append("Warning: Duplicated argument --" + command
+                                  + "\n");
+        }
+        message[command] = in;
+        int dist;
+        try
+        {
+            dist = misc::convert<int>(input);
+            return dist;
+        }
+        catch (...)
+        {
+            // contain MB KB or B here
+            if (input.length() >= 2) {
+                try
+                {
+                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
+                    std::string unit = in.substr(in.length() - 2);
+                    std::string value = in.substr(0, in.length() - 2);
+                    if (unit == "KB") {
+                        dist = misc::convert<int>(value) * 1000;
+                        return dist;
+                    }
+                    else if (unit == "MB")
+                    {
+                        dist = misc::convert<int>(value) * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "GB")
+                    {
+                        // kinda stupid here, but whatever
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        return dist;
+                    }
+                    else if (unit == "TB")
+                    {
+                        // way too much....
+                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000
+                               * 1000;
+                        return dist;
+                    }
+                    else
+                    {
+                        // maybe only one input?
+                        unit = input.substr(in.length() - 1);
+                        value = input.substr(0, in.length() - 1);
+                        if (unit == "B") {
+                            dist = misc::convert<int>(value);
+                            return dist;
+                        }
+                        else if (unit == "K")
+                        {
+                            dist = misc::convert<int>(value) * 1000;
+                            return dist;
+                        }
+                        else if (unit == "M")
+                        {
+                            dist = misc::convert<int>(value) * 1000 * 1000;
+                            return dist;
+                        }
+                    }
+                }
+                catch (...)
+                {
+                    error_messages.append("Error: Undefined distance input: "
+                                          + in);
+                    message.erase(command);
+                    error = true;
+                    return 0;
+                }
+            }
+            else
+            {
+                error_messages.append("Error: Undefined distance input: " + in);
+                message.erase(command);
+                error = true;
+                return 0;
+            }
+        }
+        error = true;
+        return 0;
+    }
     /*!
      * \brief Get the column index based on file header and the input string
      * \param target is the input string
