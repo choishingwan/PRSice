@@ -4,14 +4,14 @@ However, when performing set based analysis, special care are required to perfor
 Take the following as an example:
 Assume that:
 
-- Grey fragments are the intergenic regions
-- Organ fragments are the genic regions
-- Yellow fragments are the gene set regions
-- SNPs are represented as thunder bolt, with the "index" SNP in clumping denoted by the blue thunderbolt
+- Light Blue fragments are the intergenic regions
+- Dark Blue fragments are the genic regions
+- Red fragments are the gene set regions
+- SNPs are represented as thunder bolt, with the "index" SNP in clumping denoted by the green thunderbolt
 
 If we simply perform a genome wide clumping, we might remove all SNPs residing within the gene set of interest, 
 reducing the signal:
-![Genome Wide Clumping](img/gemome_wide_clump.gif)
+![Genome Wide Clumping](img/genome_wide_clump.gif)
 
 Therefore, to maximize signal within each gene set, we must perform clumping for each gene sets separately:
 ![Set Base Clumping](img/set_clump.gif)
@@ -38,4 +38,3 @@ If we use SNP 1 as the index SNP, then after clumping, we will have
 | SNP 3 | 0| 1 | 0 | 0| 
 
 which removes SNP 2, but will retain SNP 3. This allow us to achieve set based clumping by only performing a single pass genome wide clumping. 
-
