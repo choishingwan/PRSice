@@ -340,14 +340,6 @@ Specifically, `--quant-break` indicates the **upper bound** of each group and `-
     The quantile boundaries are non-overlapping, with the inclusive upper bound and exclusive lower bound 
 
 
-!!! Warning
-
-    While it is tempting to interpret samples in the last quantile as high-risk individual, it is important to remember that
-    this an averaging of a population of samples, some individual within the last quantile can have a low risk of disease
-    and samples in the reference quantile or the first quantile might have a high risk of disease. A good discussion can be found [here](https://discourse.datamethods.org/t/discussion-of-polygenic-prediction-of-weight-and-obesity-trajectories-from-birth-to-adulthood/1585). 
-    
-    For now, we believe the quantile plot serves as a good starting point for downstream analysis but are not very useful for personalized medicine as of now. 
-
 
 ## PRS model-fit
 A file containing the PRS model fit across thresholds is named *[Name].prsice*; this is stored as

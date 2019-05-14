@@ -13,6 +13,7 @@ pages:
 
     - Special Features:
         - Empirical P-Value: permutation.md
+        - Set Based Clumping: set_clump.md
         - Competitive P-value: set_perm.md
 
     - Available Commands: command_detail.md
