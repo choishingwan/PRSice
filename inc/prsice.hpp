@@ -321,6 +321,7 @@ private:
     std::vector<size_t> m_matrix_index;
     std::vector<size_t> m_significant_store{0, 0, 0};
     std::vector<bool> m_target_binary;
+    std::ofstream m_all_out, m_best_out, m_prsice_out;
     column_file_info m_all_file, m_best_file;
     std::string m_target;
     std::string m_out;

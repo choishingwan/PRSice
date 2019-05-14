@@ -318,7 +318,6 @@ int main(int argc, char* argv[])
             if (!commander.no_regress())
                 // now generate the summary file
                 prsice.summarize(commander, reporter);
-            exit(0);
         }
         catch (const std::invalid_argument& ia)
         {
