@@ -481,7 +481,7 @@ void Region::load_gtf(
         if (line.empty() || line[0] == '#') continue;
         // we don't count the header lines
         num_line++;
-        token = misc::split(line, "\t");
+        misc::split(token, line, "\t");
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
         if (in_feature(token[+GTF::FEATURE], feature) && chr_code >= 0

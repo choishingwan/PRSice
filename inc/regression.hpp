@@ -48,7 +48,7 @@ void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
                 Eigen::VectorXd& gprime);
 inline double y_log_y(double y, double mu)
 {
-    return (y != 0.) ? (y * log(y / mu)) : 0;
+    return (!misc::logically_equal(y, 0)) ? (y * log(y / mu)) : 0;
 }
 }
 
