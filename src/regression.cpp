@@ -44,10 +44,10 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
 
 
     double resvar = rss / static_cast<double>(rdf);
-    size_t se_index = intercept;
+    long se_index = intercept;
     for (long ind = 0; ind < beta.rows(); ++ind) {
         if (z.colsPermutation().indices()(ind) == intercept) {
-            se_index = static_cast<size_t>(ind);
+            se_index = ind;
             break;
         }
     }
@@ -229,8 +229,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     Eigen::VectorXd mu = logit_linkinv(eta);
     double devold = binomial_dev_resids_sum(y, mu, weights), dev = 0.0;
     // Iterative reweighting
-    Eigen::MatrixXd A_tmp;
-    Eigen::VectorXd varmu, mu_eta_val, z, w, good, fit, start;
+    Eigen::VectorXd varmu, mu_eta_val, z=weights, w=weights, good, fit, start;
     bool converge = false;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
     qr.setThreshold(
@@ -244,8 +243,6 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         //			good = (weights.array()>0 && mu_eta_val.array() !=
         // 0).select(weights.array(), 0);
         good = (mu_eta_val.array() != 0).select(mu_eta_val.array(), 0);
-        z = weights;
-        w = weights;
         Eigen::Index i_good = 0;
         Eigen::Index start_block = 0;
         Eigen::Index prev_block=0;
@@ -261,18 +258,12 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
                 w(i_good) =
                     std::sqrt(mu_eta_val_store*mu_eta_val_store
                               / (mu_store * (1 - mu_store)));
-                /*
-                if(i_good != i_weights){
-                    A.row(i_good) = A.row(i_weights);
-                }*/
                 if(!has_block){
                     has_block = true;
                     start_block = i_weights;
                 }
                 i_good++;
             }else if(has_block){
-                // do block move?
-                // end = i_weights-1
                 if(prev_block != start_block){
                     A.block(prev_block, 0, i_weights-start_block, nvars) =
                         A.block(start_block,0,i_weights-start_block,nvars);
@@ -284,11 +275,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         z.conservativeResize(i_good);
         w.conservativeResize(i_good);
         A.conservativeResize(i_good, nvars);
-        A_tmp = A;
-        for (Eigen::Index i = 0; i < nvars; ++i) {
-            A_tmp.col(i) = A.col(i).array() * w.array();
-        }
-        qr.compute(A_tmp);
+        qr.compute(w.asDiagonal()*A);
         start = qr.solve(Eigen::MatrixXd(z.array() * w.array()));
         if (nobs < qr.rank()) {
             std::string error_message =
@@ -352,4 +339,5 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     p_value = misc::chiprob_p(tvalue * tvalue, 1);
     standard_error = se(se_index);
 }
+
 }
