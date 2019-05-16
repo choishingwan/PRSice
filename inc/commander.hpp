@@ -650,6 +650,7 @@ public:
     bool use_ref_maf() const { return m_use_ref_maf; }
     double ref_dose_thres() const { return m_ref_dose_thres; }
     double target_dose_thres() const { return m_target_dose_thres; }
+
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};

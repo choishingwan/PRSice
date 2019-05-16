@@ -34,11 +34,11 @@ class BinaryGen : public Genotype
 public:
     BinaryGen(const std::string& list_file, const std::string& file,
               const std::string& pheno_file, const std::string& out_prefix,
-              const double hard_threshold, const double dose_threshold, const size_t thread,
-              const bool use_inter, const bool use_hard_coded,
-              const bool no_regress, const bool ignore_fid,
-              const bool keep_nonfounder, const bool keep_ambig,
-              const bool is_ref, Reporter& reporter);
+              const double hard_threshold, const double dose_threshold,
+              const size_t thread, const bool use_inter,
+              const bool use_hard_coded, const bool no_regress,
+              const bool ignore_fid, const bool keep_nonfounder,
+              const bool keep_ambig, const bool is_ref, Reporter& reporter);
     ~BinaryGen();
 
 private:
@@ -220,8 +220,8 @@ private:
             // TODO, might want to make this struct a member so that we don't
             // need to re-initialize it? Though it only contain pointers and
             // doesn't have any big structures
-            PLINK_generator setter(&m_sample_include, mainbuf,
-                                   m_hard_threshold, m_dose_threshold);
+            PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold,
+                                   m_dose_threshold);
             // we can now use the bgen library to parse the BGEN input and
             // transform it into PLINK format (NOTE: The
             // read_and_parse_genotype_data_block function has been modified
@@ -478,7 +478,8 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold,double dose_threshold,  bool filtering = false)
+                        double hard_threshold, double dose_threshold,
+                        bool filtering = false)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
@@ -620,9 +621,9 @@ private:
                         m_hard_prob = m_prob[geno];
                     }
                 }
-                if(m_hard_prob < m_dose_threshold){
+                if (m_hard_prob < m_dose_threshold) {
                     // set to missing
-                    m_geno  = 2;
+                    m_geno = 2;
                 }
             }
             // we now add the genotype to the vector

@@ -99,7 +99,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"id-delim", required_argument, nullptr, 0},
         {"info", required_argument, nullptr, 0},
         {"keep", required_argument, nullptr, 0},
-    {"ld-dose-thres", required_argument, nullptr, 0},
+        {"ld-dose-thres", required_argument, nullptr, 0},
         {"ld-keep", required_argument, nullptr, 0},
         {"ld-list", required_argument, nullptr, 0},
         {"ld-type", required_argument, nullptr, 0},
@@ -212,8 +212,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                    error_messages);
             else if (command == "dose-thres")
                 error |=
-                        !set_numeric<double>(optarg, message_store, error_messages,
-                                             m_target_dose_thres, dummy, command);
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         m_target_dose_thres, dummy, command);
             else if (command == "exclude")
                 set_string(optarg, message_store, m_exclude_file, dummy,
                            command, error_messages);
@@ -242,10 +242,10 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "keep")
                 set_string(optarg, message_store, m_target_keep, dummy, command,
                            error_messages);
-            else if(command == "ld-dose-thres")
-                error |= !set_numeric<double>(
-                            optarg, message_store, error_messages, m_ref_dose_thres,
-                            dummy, command);
+            else if (command == "ld-dose-thres")
+                error |=
+                    !set_numeric<double>(optarg, message_store, error_messages,
+                                         m_ref_dose_thres, dummy, command);
             else if (command == "ld-geno")
                 error |= !set_numeric<double>(
                     optarg, message_store, error_messages, m_ref_geno,

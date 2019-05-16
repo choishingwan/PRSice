@@ -68,7 +68,21 @@ public:
         mlock.unlock();
         m_cond_not_empty.notify_one();
     }
-    size_t num_processing() const { return m_num_processing; };
+    void completed(){
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        m_completed = true;
+        mlock.unlock();
+        m_cond_not_empty.notify_one();
+    }
+    bool has_completed(){
+        bool completed = false;
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        completed = m_completed;
+        mlock.unlock();
+        m_cond_not_full.notify_one();
+        return completed;
+    }
+    size_t num_processing() const { return m_num_processing; }
     Thread_Queue() = default;
     Thread_Queue(const Thread_Queue&) = delete;            // disable copying
     Thread_Queue& operator=(const Thread_Queue&) = delete; // disable assignment
@@ -78,6 +92,7 @@ private:
     std::condition_variable m_cond_not_empty;
     std::condition_variable m_cond_not_full;
     size_t m_num_processing = 0;
+    bool m_completed = false;
 };
 
 

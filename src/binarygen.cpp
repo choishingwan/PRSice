@@ -19,12 +19,11 @@
 BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
                      const std::string& pheno_file,
                      const std::string& out_prefix, const double hard_threshold,
-                     const double dose_threshold,
-                     const size_t thread, const bool use_inter,
-                     const bool use_hard_coded, const bool no_regress,
-                     const bool ignore_fid, const bool keep_nonfounder,
-                     const bool keep_ambig, const bool is_ref,
-                     Reporter& reporter)
+                     const double dose_threshold, const size_t thread,
+                     const bool use_inter, const bool use_hard_coded,
+                     const bool no_regress, const bool ignore_fid,
+                     const bool keep_nonfounder, const bool keep_ambig,
+                     const bool is_ref, Reporter& reporter)
 {
     m_intermediate = use_inter;
     m_thread = thread;
@@ -775,7 +774,8 @@ void BinaryGen::gen_snp_vector(const std::string& out_prefix, Genotype* target)
 }
 
 
-void BinaryGen::calc_freq_gen_inter(const double& maf_threshold, const double& geno_threshold,
+void BinaryGen::calc_freq_gen_inter(
+    const double& maf_threshold, const double& geno_threshold,
     const double& info_threshold, const bool maf_filter, const bool geno_filter,
     const bool info_filter, const bool hard_coded, Genotype* target)
 {
