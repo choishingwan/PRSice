@@ -236,7 +236,6 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         std::min(1e-7, std::numeric_limits<double>::epsilon() / 1000));
     double mu_eta_val_store, mu_store;
     for (size_t iter = 0; iter < max_iter; ++iter) {
-        // varmu = (weights.array()>0).select(mu.array()*(1-mu.array()),0);
         mu_eta_val = logit_mu_eta(eta);
         // we can ignore weight array check because we don't allow weighted glm
         // at the moment. So all weight must be 1
@@ -247,34 +246,39 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         Eigen::Index start_block = 0;
         Eigen::Index prev_block=0;
         bool has_block = false;
-        for (Eigen::Index i_weights = 0; i_weights < good.rows(); ++i_weights) {
-            if (good(i_weights) > 0) {
-                // because offset is 0, we ignore it
-                mu_eta_val_store = mu_eta_val(i_weights);
-                mu_store = mu(i_weights);
-                z(i_good) =
-                    eta(i_weights)
-                    + (y(i_weights) - mu_store) / mu_eta_val_store;
-                w(i_good) =
-                    std::sqrt(mu_eta_val_store*mu_eta_val_store
-                              / (mu_store * (1 - mu_store)));
-                if(!has_block){
-                    has_block = true;
-                    start_block = i_weights;
+        if((good.array() > 0).all()){
+            z = (eta).array() + (y - mu).array() / mu_eta_val.array();
+            w = (mu_eta_val.array().square() / (mu.array()*(1-mu.array())).array()).array().sqrt();
+        }else{
+            for (Eigen::Index i_weights = 0; i_weights < good.rows(); ++i_weights) {
+                if (good(i_weights) > 0) {
+                    // because offset is 0, we ignore it
+                    mu_eta_val_store = mu_eta_val(i_weights);
+                    mu_store = mu(i_weights);
+                    z(i_good) =
+                            eta(i_weights)
+                            + (y(i_weights) - mu_store) / mu_eta_val_store;
+                    w(i_good) =
+                            std::sqrt(mu_eta_val_store*mu_eta_val_store
+                                      / (mu_store * (1 - mu_store)));
+                    if(!has_block){
+                        has_block = true;
+                        start_block = i_weights;
+                    }
+                    i_good++;
+                }else if(has_block){
+                    if(prev_block != start_block){
+                        A.block(prev_block, 0, i_weights-start_block, nvars) =
+                                A.block(start_block,0,i_weights-start_block,nvars);
+                    }
+                    prev_block = i_weights;
+                    has_block = false;
                 }
-                i_good++;
-            }else if(has_block){
-                if(prev_block != start_block){
-                    A.block(prev_block, 0, i_weights-start_block, nvars) =
-                        A.block(start_block,0,i_weights-start_block,nvars);
-                }
-                prev_block = i_weights;
-                has_block = false;
             }
+            z.conservativeResize(i_good);
+            w.conservativeResize(i_good);
+            A.conservativeResize(i_good, nvars);
         }
-        z.conservativeResize(i_good);
-        w.conservativeResize(i_good);
-        A.conservativeResize(i_good, nvars);
         qr.compute(w.asDiagonal()*A);
         start = qr.solve(Eigen::MatrixXd(z.array() * w.array()));
         if (nobs < qr.rank()) {
@@ -302,12 +306,6 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     if (!converge) throw std::runtime_error("GLM algorithm did not converge");
     Eigen::VectorXd residuals =
         (y.array() - mu.array()) / (logit_mu_eta(eta).array());
-    int sum_good = 0;
-    // there'd be no bad weight if we don't allow weighted regression
-    for (Eigen::Index i = 0; i < good.rows(); ++i) {
-        if (!misc::logically_equal(good(i), 0)) sum_good++;
-    }
-
     Eigen::VectorXd wtdmu =
         (intercept) ? Eigen::VectorXd::Constant(nobs, y.sum()/nobs)
                     : logit_linkinv(Eigen::VectorXd::Zero(nobs));
