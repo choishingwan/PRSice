@@ -68,13 +68,15 @@ public:
         mlock.unlock();
         m_cond_not_empty.notify_one();
     }
-    void completed(){
+    void completed()
+    {
         std::unique_lock<std::mutex> mlock(m_mutex);
         m_completed = true;
         mlock.unlock();
         m_cond_not_empty.notify_one();
     }
-    bool has_completed(){
+    bool has_completed()
+    {
         bool completed = false;
         std::unique_lock<std::mutex> mlock(m_mutex);
         completed = m_completed;

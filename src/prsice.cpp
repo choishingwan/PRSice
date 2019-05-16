@@ -163,9 +163,9 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                          const std::string& delim, Genotype& target,
                          Reporter& reporter)
 {
-    if(m_prsice_out.is_open()) m_prsice_out.close();
-    if(m_all_out.is_open()) m_all_out.close();
-    if(m_best_out.is_open()) m_best_out.close();
+    if (m_prsice_out.is_open()) m_prsice_out.close();
+    if (m_all_out.is_open()) m_all_out.close();
+    if (m_best_out.is_open()) m_best_out.close();
     m_prsice_out.clear();
     m_all_out.clear();
     m_best_out.clear();
@@ -1047,7 +1047,7 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     {
         m_analysis_done++;
         print_progress();
-        if (print_all_scores && pheno_index==0) {
+        if (print_all_scores && pheno_index == 0) {
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 // we will calculate the the number of white space we need to
                 // skip to reach the current sample + threshold's output
@@ -1061,7 +1061,7 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                 m_all_out.seekp(loc);
                 // then we will output the score
                 m_all_out << std::setprecision(m_precision)
-                        << target.calculate_score(m_score, sample);
+                          << target.calculate_score(m_score, sample);
             }
         }
         // we need to then tell the file that we have finish processing one
@@ -1134,7 +1134,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
 
             m_best_out.seekp(loc);
             m_best_out << std::setprecision(m_precision)
-                     << m_best_sample_score[static_cast<size_t>(sample)];
+                       << m_best_sample_score[static_cast<size_t>(sample)];
         }
     }
     // once we finish outputing the result, we need to increment the
@@ -1670,10 +1670,10 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // characters, which we can then overwrite later on, therefore achieving
         // a vertical output
         m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
-                 << std::left << best_line << "\n";
+                   << std::left << best_line << "\n";
         if (all_scores) {
             m_all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
-                    << std::left << name << "\n";
+                      << std::left << name << "\n";
         }
     }
 
@@ -1754,16 +1754,17 @@ void PRSice::output(const Commander& c_commander,
 
         double r2 = full - null;
         m_prsice_out << region_names[region_index] << "\t"
-                   << m_prs_results[i].threshold << "\t" << r2 << "\t";
+                     << m_prs_results[i].threshold << "\t" << r2 << "\t";
         if (has_prevalence) {
             if (is_binary)
                 m_prsice_out << full_adj - null_adj << "\t";
             else
                 m_prsice_out << "NA\t";
         }
-        m_prsice_out << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
-                   << "\t" << m_prs_results[i].se << "\t"
-                   << m_prs_results[i].num_snp << "\n";
+        m_prsice_out << m_prs_results[i].p << "\t"
+                     << m_prs_results[i].coefficient << "\t"
+                     << m_prs_results[i].se << "\t" << m_prs_results[i].num_snp
+                     << "\n";
         // the empirical p-value will now be excluded from the .prsice output
         // (the "-" isn't that helpful anyway)
     }

@@ -312,9 +312,8 @@ inline std::vector<std::string> split(const std::string& seq,
     return result;
 }
 
-inline void split(std::vector<std::string> &result,
-                                    const std::string& seq,
-                                      const std::string& separators = "\t ")
+inline void split(std::vector<std::string>& result, const std::string& seq,
+                  const std::string& separators = "\t ")
 {
     std::size_t prev = 0, pos;
     result.clear();
