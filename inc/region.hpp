@@ -31,6 +31,7 @@
 #include <iterator>
 #include <limits.h>
 #include <map>
+#include <memory>
 #include <set>
 #include <stdio.h>
 #include <string.h>
@@ -187,6 +188,7 @@ protected:
             result[add_id] = (attribute.substr(prev, std::string::npos));
         return result;
     }
+
 };
 
 #endif /* PRSICE_INC_REGION_HPP_ */
