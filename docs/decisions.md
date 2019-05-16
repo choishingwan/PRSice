@@ -9,7 +9,7 @@ This is because
 
 # Removal of PCA calculation
 The main goal of PRSice 2 is to support the polygenic score analysis on large scale data. 
-With such data, the calculation of PCA on the fly will be time consuming and will require specific algorithms
+With such data, it is very time consuming to the PCA and will require specific algorithms
 such as those implemented in [flashPCA](https://github.com/gabraham/flashpca).
 In order to support the in-place PCA calculation, not only will we have to implement the flashPCA algorithm, we 
 will also need to implement prunning, which is required prior to PCA calculation. 

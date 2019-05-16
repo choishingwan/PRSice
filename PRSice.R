@@ -248,12 +248,16 @@ help_message <-
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
                             Require the gtf file\n
-    --snp-set               Provide a SNP set file containing a single snp set.\n
-                            Name of SNP set file will be used as the region\n
-                            identifier. This file should contain only one column.\n
-    --snp-sets              Provide a SNP set file containing multiple snp sets.\n
-                            Each row represent a single SNP set with the first\n
-                            column containing name of the SNP set.\n    
+    --snp-set               Provide a SNP set file containing the snp set(s).\n
+                            Two different file format is allowed:\n
+                            SNP list format - A file containing a single\n
+                                              column of SNP ID. Name of the\n
+                                              set will be the file name or\n
+                                              can be provided using \n
+                                              --snp-set File:Name\n
+                            MSigDB format   - Each row represent a single SNP \n
+                                              set with the first column containing\n
+                                              the name of the SNP set.\n
     --wind-3                Add N base(s) to the 3' region of each feature(s) \n
     --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
 \nPlotting:\n
@@ -285,9 +289,6 @@ help_message <-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
-    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
-                            to 0 for each new P-value threshold instead of\n
-                            adding up\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
@@ -301,6 +302,9 @@ help_message <-
                             has the same A1 and A2 alleles\n
     --memory                Maximum memory usage allowed. PRSice will try\n
                            its best to honor this setting\n
+    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
+                            to 0 for each new P-value threshold instead of\n
+                            adding up\n
     --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n

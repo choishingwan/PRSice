@@ -3,7 +3,7 @@
 Before performing PRSice, quality control should be performed on the target samples. [See here](quick_start.md#quality-control-of-target-samples) for an example.
 
 ## Input
-- **PRSice.R file:** A wrapper for the PRSice binary and for plotting
+- **PRSice.R file:** A wrapper for the PRSice executable and for plotting
 - **PRSice executable file:** Perform all analysis except plotting
 - **Base data set:** GWAS summary results, which the PRS is based on
 - **Target data set:** Raw genotype data of **target phenotype**.
@@ -21,7 +21,8 @@ PRSice executable is located in `($HOME)/PRSice/` and the working directory is `
 
 ## Binary Traits
 For binary traits, the following command can be used (commands specific to binary traits are highlighted in yellow)
-``` bash hl_lines="6 7"
+
+``` bash hl_lines="6 7" tab="Unix"
 Rscript PRSice.R --dir . \
     --prsice ./PRSice \
     --base TOY_BASE_GWAS.assoc \
@@ -31,10 +32,20 @@ Rscript PRSice.R --dir . \
     --binary-target T
 ```
 
+``` bash hl_lines="6 7" tab="Windows"
+Rscript.exe PRSice.R --dir . ^
+    --prsice ./PRSice.exe ^
+    --base TOY_BASE_GWAS.assoc ^
+    --target TOY_TARGET_DATA ^
+    --thread 1 ^
+    --stat OR ^
+    --binary-target T
+```
+
 ## Quantitative Traits
 For quantitative traits, the following can be used instead  (commands specific to quantitative traits are highlighted in yellow)
 
-``` bash hl_lines="6 7 8"
+``` bash tab="Unix" hl_lines="6 7 8" 
 Rscript PRSice.R --dir . \
     --prsice ./PRSice \
     --base TOY_BASE_GWAS.assoc \
@@ -44,6 +55,18 @@ Rscript PRSice.R --dir . \
     --beta \
     --binary-target F
 ```
+
+``` bash tab="Windows" hl_lines="6 7 8" 
+Rscript.exe PRSice.R --dir . ^
+    --prsice ./PRSice.exe ^
+    --base TOY_BASE_GWAS.assoc ^
+    --target TOY_TARGET_DATA ^
+    --thread 1 ^
+    --stat BETA ^
+    --beta ^
+    --binary-target F
+```
+
 
 !!! Note
     If the type of Effect (`--stat`) or data type (`--binary-target`) were not specified, PRSice will try to determine these information based on the header of the base file:
@@ -61,7 +84,7 @@ Rscript PRSice.R --dir . \
 Quality controls can be performed on the target samples using PLINK. 
 A good starting point is (assume **_($target)_** is the prefix of the target binary file)
 
-``` bash
+``` bash tab="Unix"
 plink --bfile ($target) \
     --maf 0.05 \
     --mind 0.1 \
@@ -72,5 +95,19 @@ plink --bfile ($target) \
     --out ($target).qc
 ```
 
+``` bash tab="Windows"
+plink.exe --bfile ($target) ^
+    --maf 0.05 ^
+    --mind 0.1 ^
+    --geno 0.1 ^
+    --hwe 1e-6 ^
+    --make-just-bim ^
+    --make-just-fam ^
+    --out ($target).qc
+```
+
+
 Then, `--keep ($target).qc.fam --extract ($target).qc.bim` can be added to the PRSice command to filter out
-the samples and SNPs
+the samples and SNPs.
+
+You can refer to [Marees et al (2018)](https://www.ncbi.nlm.nih.gov/pubmed/29484742) for a more detail guide.
