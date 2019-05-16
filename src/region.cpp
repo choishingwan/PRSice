@@ -465,12 +465,6 @@ void Region::load_gtf(
             throw std::runtime_error(error_message);
         }
     }
-    std::istream *stream;
-    if(gz_input){
-        stream = &(gz_gtf_file);
-    }else{
-        stream = &(gtf_file);
-    }
     std::vector<std::string> token, attribute, extract;
     std::string chr, name, id, line;
     int chr_code, start, end;
@@ -479,7 +473,8 @@ void Region::load_gtf(
 
     // this should ensure we will be reading either from the gz stream or
     // ifstream
-    while (std::getline(*stream, line))
+    while ((!gz_input && std::getline(gtf_file, line))
+           || (gz_input && std::getline(gz_gtf_file, line)))
     {
         misc::trim(line);
         // skip headers
@@ -660,8 +655,6 @@ void Region::load_gtf(
     }
     reporter.report(message);
 }
-
-
 void Region::load_snp_sets(
     std::string snp_file,
     std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
