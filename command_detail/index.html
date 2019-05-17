@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Shing Wan CHOI">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Available Commands - PRSice-2</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../css/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Available Commands";
+    var mkdocs_page_input_path = "command_detail.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-113286405-1', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> PRSice-2</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Quick Start</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../quick_start/">PRSice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../quick_start_prset/">PRSet</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Detail Guides</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../step_by_step/">PRSice</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../prset_detail/">PRSet</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href="./">Available Commands</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#base-file">Base File</a></li>
+    
+
+    <li class="toctree-l2"><a href="#target-file">Target File</a></li>
+    
+
+    <li class="toctree-l2"><a href="#dosage">Dosage</a></li>
+    
+
+    <li class="toctree-l2"><a href="#clumping">Clumping</a></li>
+    
+
+    <li class="toctree-l2"><a href="#covariate">Covariate</a></li>
+    
+
+    <li class="toctree-l2"><a href="#p-value-thresholding">P-value Thresholding</a></li>
+    
+
+    <li class="toctree-l2"><a href="#prset">PRSet</a></li>
+    
+
+    <li class="toctree-l2"><a href="#r-specific-commands">R specific commands</a></li>
+    
+
+    <li class="toctree-l2"><a href="#plotting">Plotting</a></li>
+    
+
+    <li class="toctree-l2"><a href="#miscellaneous">Miscellaneous</a></li>
+    
+
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Developers</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../compilation/">Compile from Source</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../decisions/">Development Decisions</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Misc</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../faq/">Frequently Asked Questions</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">PRSice-2</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Available Commands</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/command_detail.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p>This page contains all command available in PRSice. </p>
+<div class="admonition tips">
+<p class="admonition-title">Tips</p>
+<p>When constructing new parameters, we follow the following rule: if the command has effect on any file that is not the target, 
+it will have a prefix of the file name. For example, <code>--base-info</code> applies INFO score filtering on the base file, <code>--ld-info</code> perform INFO score filtering on the LD reference file and <code>--info</code> applies the INFO score filtering on the target file. </p>
+</div>
+<h1 id="base-file">Base File<a class="headerlink" href="#base-file" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--A1</code></p>
+<p>Column header containing the <strong>effective allele</strong>.
+There isn't any standardized label for the effective allele, therefore
+extra care must be taken to ensure the correct label is provided, otherwise, 
+the effect will be flipped. </p>
+</li>
+<li>
+<p><code>--A2</code></p>
+<p>Column header containing <strong>non-effective allele</strong>.</p>
+</li>
+<li>
+<p><code>--base</code> | <code>-b</code></p>
+<p>Base (i.e. GWAS) association file. This is a whitespace delimited file
+containing association results for SNPs on the base phenotype.
+This file can be <em>gzipped</em> (must have the .gz suffix).
+For PRSice to run, the base file must contain the effective allele
+(<code>--A1</code>), effect size estimates (<code>--stat</code>), p-value for association
+(<code>--pvalue</code>), and the SNP ID (<code>--snp</code>).</p>
+</li>
+<li>
+<p><code>--beta</code></p>
+<p>This flag is used to indicate if the test statistic is in the form
+of BETA. If set, PRSice assume the statistic is in the form BETA. 
+Mutually exclusive from <code>--or</code></p>
+</li>
+<li>
+<p><code>--bp</code></p>
+<p>Column header containing the coordinate of SNPs. When provided,
+the coordinate of the SNPs will be scrutinized between the base and target file.
+SNPs with mismatched coordinate will be excluded.</p>
+</li>
+<li>
+<p><code>--chr</code></p>
+<p>Column header containing the chromosome information. When provided,
+the chromosome information of the SNPs will be scrutinized between the base
+and target file. SNPs with mismatched chromosome information will be automatically excluded.</p>
+</li>
+<li>
+<p><code>--index</code></p>
+<p>If set, assume the base columns are INDEX instead of the name of the corresponding
+columns. Index should be 0-based (start counting from 0)</p>
+</li>
+<li>
+<p><code>--base-info</code></p>
+<p>Base INFO score filtering. Format should be <code>&lt;Column name&gt;,&lt;Threshold&gt;</code>.
+SNPs with info score less than <code>&lt;Threshold&gt;</code> will be ignored.
+It is useful to perform INFO score filtering to remove SNPs
+with low imputation confidence score. By default, PRSice will search for
+the <strong>INFO</strong> column in your base file and perform info score filtering with
+threshold of <strong>0.9</strong>. You can disable this behaviour by using <code>--no-default</code></p>
+</li>
+<li>
+<p><code>--base-maf</code></p>
+<p>Base minor allele frequency (MAF) filtering.
+Format should be <code>&lt;Column name&gt;,&lt;Threshold&gt;</code>.
+SNPs with MAF less than <code>&lt;Threshold&gt;</code> will be ignored.
+Additional column can be provided (e.g. different filtering threshold
+for case and control), using the following format:
+    <code>&lt;Column name&gt;,&lt;Threshold&gt;:&lt;Column name&gt;,&lt;Threshold&gt;</code></p>
+</li>
+<li>
+<p><code>--no-default</code>
+    Remove all default options. If set, PRSice will not set any defaults.</p>
+</li>
+<li>
+<p><code>--or</code></p>
+<p>This flag is used to indicate if the test statistic is in the form
+of odd ratios. If set, PRSice assume the statistic is in the form OR. 
+Mutually exclusive from <code>--beta</code></p>
+</li>
+<li>
+<p><code>--pvalue</code> | <code>-p</code></p>
+<p>Column header containing the p-value.
+The p-value information must be provided </p>
+</li>
+<li>
+<p><code>--snp</code></p>
+<p>Column header containing the SNP ID.
+This is required to allow SNP matching between the base and target file.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While it is possible to implement a feature to allow SNP matching purely based
+on the chromosome number and coordinate of a variant, the possibiliy of 
+flipping and multi-allelic input complicates the matter. Therefore this feature
+will not be implemented until an elegant solution can be provided.</p>
+</div>
+</li>
+<li>
+<p><code>--stat</code></p>
+<p>Column header containing the summary statistic. If <code>--beta</code> is set, default
+to <strong>BETA</strong>; likewise, if <code>--or</code> is set, default to <strong>OR</strong>. 
+Otherwise, will try and search for <strong>OR</strong> or <strong>BETA</strong> from the header of the base
+file. If both <strong>OR</strong> and <strong>BETA</strong> is presented in the header, PRSice will terminate. </p>
+</li>
+</ul>
+<h1 id="target-file">Target File<a class="headerlink" href="#target-file" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--binary-target</code></p>
+<p>Indicate whether the target phenotype is binary or not.
+Either <strong>T</strong> or <strong>F</strong> should be provided where <strong>T</strong> represent a binary phenotype.
+For multiple phenotypes, the input should be separated by comma without space.</p>
+<p>Default: <strong>F</strong> if <code>--beta</code> is set and <strong>T</strong> if <code>--or</code> is set</p>
+</li>
+<li>
+<p><code>--geno</code></p>
+<p>Filter SNPs based on gentype missingness. Must be a value
+between <em>0.0</em> and <em>1.0</em>.</p>
+</li>
+<li>
+<p><code>--info</code>
+    Filter SNPs based on info score. Only used for imputed target data.
+    The INFO score is calculated as the MaCH imputation r-squared value, 
+    represented by the following pseudo code:
+<div class="codehilite"><pre><span></span>    m=Mean of expected genotype
+    v=variance of expected genotype
+    p=m/2
+    p_a = 2p(1-p)
+    INFO = v/p_a
+</pre></div></p>
+</li>
+<li>
+<p><code>--keep</code></p>
+<p>File containing the sample(s) to be extracted from
+the target file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID
+Mutually exclusive from <code>--remove</code></p>
+</li>
+<li>
+<p><code>--maf</code></p>
+<p>Filter SNPs based on minor allele frequency (MAF). MAF is calculated using only the founder samples</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When perform MAF filtering on dosage data, the MAF 
+is calculated using the hard-coded genotype</p>
+</div>
+</li>
+<li>
+<p><code>--nonfounders</code></p>
+<p>By default, PRSice will exclude all non-founders from the analysis.
+When this flag is set, non-founders will be included in the
+regression model but will still be excluded from LD estimation.</p>
+</li>
+<li>
+<p><code>--pheno</code> | <code>-f</code></p>
+<p>Tab or space delimited phenotype file containing the phenotype(s).
+First column must be FID of the samples and
+the second column must be IID of the samples.
+When <code>--ignore-fid</code> is set, first column must
+be the IID of the samples. Must contain a
+header if <code>--pheno-col</code> is specified</p>
+</li>
+<li>
+<p><code>--pheno-col</code></p>
+<p>Headers of phenotypes to be included from the phenotype file.
+When multiple phenotypes are provided, the phenotype name will be
+used as part of the file output prefix</p>
+</li>
+<li>
+<p><code>--prevalence</code> | <code>-k</code></p>
+<p>Prevalence of all binary trait.
+If provided, PRSice will adjust the ascertainment bias of the R2.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When multiple binary trait is found,
+prevalence information must be provided for
+all of them (Either adjust all binary traits,
+or don't adjust at all).
+For example, if there are 3 traits A, B and C,
+ where A and C are binary traits with population
+ prevalence of 0.1 and 0.2 respectively. The correct input should be
+ <code>--binary-target T,F,T --prevalence 0.1,0.2</code></p>
+</div>
+</li>
+<li>
+<p><code>--remove</code></p>
+<p>File containing the sample(s) to be removed from
+the target file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID
+Mutually exclusive from <code>--keep</code></p>
+</li>
+<li>
+<p><code>--target</code> | <code>-t</code></p>
+<p>Target genotype file. Currently support
+both BGEN and binary PLINK format. For
+multiple chromosome input, simply substitute
+the chromosome number with #.
+PRSice will automatically replace # with 1-22.
+A separate fam/sample file can be specified by
+<code>--target &lt;prefix&gt;,&lt;fam or sample file&gt;</code></p>
+</li>
+<li>
+<p><code>--target-list</code></p>
+<p>File containing prefix of target genotype files. 
+Similar to <code>--target</code> but allow for more flexibility.
+A separate fam/sample file can be specified by
+<code>--target-list &lt;list-file&gt;,&lt;fam or sample file&gt;</code></p>
+</li>
+<li>
+<p><code>--type</code></p>
+<p>File type of the target file. Support bed (binary plink) and bgen format. Default: bed</p>
+</li>
+</ul>
+<h1 id="dosage">Dosage<a class="headerlink" href="#dosage" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--allow-inter</code></p>
+<p>Allow the generate of intermediate file. This will
+speed up PRSice when using dosage data as clumping
+reference and for hard coding PRS calculation</p>
+</li>
+<li>
+<p><code>--dose-thres</code></p>
+<p>Translate any SNPs with highest genotype probability less than this threshold to missing call. 
+For example, with <code>--dose-thres 0.9</code>, sample with genotype probability of <span class="arithmatex">\(P(0/0)=0.2\)</span>, <span class="arithmatex">\(P(0/1)=0.52\)</span>, <span class="arithmatex">\(P(1/1)=0.28\)</span> will be set to missing</p>
+</li>
+<li>
+<p><code>--hard-thres</code></p>
+<p>A hardcall is saved when the distance to the nearest 
+hardcall is less than the hardcall threshold.
+Otherwise a missing code is saved. Default is: 0.1</p>
+<p>The distance (<span class="arithmatex">\(D\)</span>) to the nearest hardcall is calculated as:</p>
+<div class="arithmatex">\[
+    P(Ref) = 2 \times P(HomRef) + P(Het) \\
+    P(Alt) = 2 \times P(HomAlt) + P(Het) \\
+    D = 0.5 \times \left(|P\left(Ref\right)- round\left(P\left(Ref\right)\right)| + |P\left(Alt\right)- round\left(P\left(Alt\right)\right)|\right)
+\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If dosage data is used as a LD reference, it will always be
+hard coded to calculate the LD</p>
+<p>Default: 0.9</p>
+</div>
+</li>
+<li>
+<p><code>--hard</code></p>
+<p>When set, will use hard thresholding instead of dosage for PRS construction.
+Default is to use dosage.</p>
+</li>
+</ul>
+<h1 id="clumping">Clumping<a class="headerlink" href="#clumping" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--clump-kb</code>
+    The distance for clumping in kb.
+    For example, if <code>--clump-kb 250</code> is provided, PRSice will clump any SNPs that is 
+    within 250kb to <strong>both</strong> end of the index SNP (therefore a 500kb window with the index SNP at the center).
+    Now also support distance with a unit. e.g. <code>--clump-kb 1M</code> is a valid input.
+    Default: 1M</p>
+</li>
+<li>
+<p><code>--clump-r2</code></p>
+<p>The r<sup>2</sup> threshold for clumping. Default: 0.1</p>
+</li>
+<li>
+<p><code>--clump-p</code></p>
+<p>The p-value threshold use for clumping. Default: 1.</p>
+</li>
+<li>
+<p><code>--ld</code> | <code>-L</code></p>
+<p>LD reference file. Use for estimation of LD during clumping.
+If not provided, will use the post-filtered target genotype
+for LD calculation. Support multiple chromosome input.
+Please see <a href="./#target-file"><code>--target</code></a> for more information.
+When the target sample is small (e.g. &lt; 500) and
+external panel of the same population is available (e.g. 1000 genome),
+an external reference panel might be used to improve the LD estimation for clumping.</p>
+</li>
+<li>
+<p><code>--ld-dose-thres</code></p>
+<p>Translate any SNPs with highest genotype probability less than this threshold to missing call. 
+For example, with <code>--ld-dose-thres 0.9</code>, sample with genotype probability of <span class="arithmatex">\(P(0/0)=0.2\)</span>, <span class="arithmatex">\(P(0/1)=0.52\)</span>, <span class="arithmatex">\(P(1/1)=0.28\)</span> will be set to missing</p>
+</li>
+<li>
+<p><code>--ld-geno</code></p>
+<p>Filter SNPs based on genotype missingness. Must be a value
+between <em>0.0</em> and <em>1.0</em>.</p>
+</li>
+<li>
+<p><code>--ld-info</code></p>
+<p>Filter SNPs based on info score. Only used for imputed LD reference.
+The INFO score is calculated as the MaCH imputation r-squared value, 
+represented by the following pseudo code</p>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span>    m=Mean of expected genotype
+    v=variance of expected genotype
+    p=m/2
+    p_a = 2p(1-p)
+    INFO = v/p_a
+</pre></div>
+
+<ul>
+<li>
+<p><code>--ld-hard-thres</code></p>
+<p>A hardcall is saved when the distance to the nearest 
+hardcall is less than the hardcall threshold.
+Otherwise a missing code is saved. Default is: 0.1</p>
+<p>The distance (<span class="arithmatex">\(D\)</span>) to the nearest hardcall is calculated as:</p>
+<div class="arithmatex">\[
+    P(Ref) = 2 \times P(HomRef) + P(Het) \\
+    P(Alt) = 2 \times P(HomAlt) + P(Het) \\
+    D = 0.5 \times \left(|P\left(Ref\right)- round\left(P\left(Ref\right)\right)| + |P\left(Alt\right)- round\left(P\left(Alt\right)\right)|\right)
+\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If dosage data is used as a LD reference, it will always be
+hard coded to calculate the LD</p>
+<p>Default: 0.9</p>
+</div>
+</li>
+<li>
+<p><code>--ld-keep</code></p>
+<p>File containing the sample(s) to be extracted from
+the LD reference file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID.
+Mutually exclusive from <code>--ld-remove</code>. No effect if <code>--ld</code> was not provided</p>
+</li>
+<li>
+<p><code>--ld-list</code></p>
+<p>File containing prefix of multiple LD reference files. 
+Similar to --ld but allow more flexibility. 
+A separate fam/sample file can be specified by
+<code>--ld-list &lt;list-file&gt;,&lt;fam or sample file&gt;</code></p>
+</li>
+<li>
+<p><code>--ld-maf</code></p>
+<p>Filter SNPs based on minor allele frequency (MAF)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When perform MAF filtering on dosage data, MAF 
+is calculated using the hard-coded genotype</p>
+</div>
+</li>
+<li>
+<p><code>--ld-remove</code></p>
+<p>File containing the sample(s) to be removed from
+the LD reference file. First column should be FID and
+the second column should be IID. If <code>--ignore-fid</code> is
+set, first column should be IID.
+Mutually exclusive from <code>--ld-keep</code></p>
+</li>
+<li>
+<p><code>--ld-type</code></p>
+<p>File type of the LD file. Support bed (binary plink)
+and bgen format. Default: bed\n"</p>
+</li>
+<li>
+<p><code>--no-clump</code></p>
+<p>When set, PRSice will not perform clumping. This is useful
+a pre-clumped list of SNPs is available.</p>
+</li>
+<li>
+<p><code>--pearson</code></p>
+<p>Use Pearson Correlation instead of maximum likelihood haplotype frequency estimates for LD calculation</p>
+</li>
+<li>
+<p><code>--proxy</code></p>
+<p>Proxy threshold for index SNP to be considered
+as part of the region represented by the clumped
+SNP(s). e.g. <code>--proxy 0.8</code> means the index SNP will
+represent region of any clumped SNP(s) that has
+r<sup>2</sup>=0.8 even if the index SNP does not physically
+locate within the region</p>
+</li>
+</ul>
+<h1 id="covariate">Covariate<a class="headerlink" href="#covariate" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--cov</code> | <code>-C</code>
+    Covariate file. First column should be FID and
+    the second column should be IID. If <code>--ignore-fid</code>
+    is set, first column should be IID</p>
+</li>
+<li>
+<p><code>--cov-col</code> | <code>-c</code>
+    Header of covariates. If not provided, will use
+    all variables in the covariate file. By adding
+    <code>@</code> in front of the string, any numbers within <code>[</code>
+    and <code>]</code> will be parsed. E.g. <code>@PC[1-3]</code> will be
+    read as <strong>PC1,PC2,PC3</strong>. Discontinuous input are also
+    supported: <code>@cov[1.3-5]</code> will be parsed as
+    <strong>cov1,cov3,cov4,cov5</strong></p>
+</li>
+<li>
+<p><code>--cov-factor</code></p>
+<p>Header of categorical covariate(s). Dummy variable 
+will be automatically generated. Any items in
+<code>--cov-factor</code> must also be found in <code>--cov-col</code>
+Also accept continuous input (start with <code>@</code>).</p>
+</li>
+</ul>
+<h1 id="p-value-thresholding">P-value Thresholding<a class="headerlink" href="#p-value-thresholding" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--bar-levels</code></p>
+<p>Level of barchart to be plotted. When <code>--fastscore</code>
+is set, PRSice will only calculate the PRS for
+threshold within the bar level. Levels should be
+comma separated without space</p>
+</li>
+<li>
+<p><code>--fastscore</code></p>
+<p>Only calculate threshold stated in <code>--bar-levels</code></p>
+</li>
+<li>
+<p><code>--no-full</code></p>
+<p>By default, PRSice will include the full model,
+i.e. p-value threshold = 1. Setting this flag will
+disable that behaviour</p>
+</li>
+<li>
+<p><code>--interval</code> | <code>-i</code></p>
+<p>The step size of the threshold. Default: 5e-05</p>
+</li>
+<li>
+<p><code>--lower</code> | <code>-l</code></p>
+<p>The starting p-value threshold. Default: 5e-08</p>
+</li>
+<li>
+<p><code>--model</code></p>
+<p>Genetic model use for regression. The genetic
+encoding is based on the base data where the
+encoding represent number of the effective allele
+Available models include:</p>
+<ul>
+<li><code>add</code> - Additive model, code as 0/1/2 (default)</li>
+<li><code>dom</code> - Dominant model, code as 0/1/1</li>
+<li><code>rec</code> - Recessive model, code as 0/0/1</li>
+<li><code>het</code> - Heterozygous only model, code as 0/1/0</li>
+</ul>
+</li>
+<li>
+<p><code>--missing</code></p>
+<p>Method to handle missing genotypes. 
+Available methods include:
+- <code>MEAN_IMPUTE</code> - Missing genotypes contribute an amount
+proportional to imputed allele frequency (default)
+- <code>SET_ZERO</code> - To throw out missing observations instead
+- <code>CENTER</code> - shift all scores to mean zero.</p>
+</li>
+<li>
+<p><code>--no-regress</code>            </p>
+<p>Do not perform the regression analysis and simply
+output all PRS.</p>
+</li>
+<li>
+<p><code>--score</code></p>
+<p>Method to calculate the polygenic score.
+Available methods include:</p>
+<ul>
+<li><code>avg</code> - Take the average effect size (default)</li>
+<li><code>std</code> - Standardize the effect size</li>
+<li><code>sum</code> - Direct summation of the effect size</li>
+</ul>
+</li>
+<li>
+<p><code>--upper</code> | <code>-u</code></p>
+<p>The final p-value threshold. Default: 0.5</p>
+</li>
+</ul>
+<h1 id="prset">PRSet<a class="headerlink" href="#prset" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--background</code></p>
+<p>String to indicate a background file. This string
+should have the format of Name:Type where type can be</p>
+<ul>
+<li>bed   - 0-based range with 3 column. Chr Start End</li>
+<li>range - 1-based range with 3 column. Chr Start End</li>
+<li>gene  - A file contain a column of gene name</li>
+</ul>
+<p>As the name suggest, the background file inform PRSet of 
+the background signal to be used for competitive p-value calculation.</p>
+<p>When a background file is not provided, PRSet will construct the background
+using the GTF file. However, if both the background and the GTF file isn't provided, 
+PRSet cannot perform the set base permutation. In this case, you can use <code>--full-back</code> to 
+indicate that you'd like to use the whole genome as the background set</p>
+</li>
+<li>
+<p><code>--bed</code> | <code>-B</code></p>
+<p>Bed file containing the selected regions.
+Name of bed file will be used as the region
+identifier. </p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Bed file is 0-based. </p>
+</div>
+</li>
+<li>
+<p><code>--feature</code></p>
+<p>Feature(s) to be included from the gtf file.</p>
+<p>Default: <em>exon,CDS,gene,protein_coding</em></p>
+</li>
+<li>
+<p><code>--full-back</code></p>
+<p>Use the whole genome as background set for competitive p-value calculation</p>
+</li>
+<li>
+<p><code>--gtf</code> | <code>-g</code></p>
+<p>GTF file containing gene boundaries. Required when <code>--msigdb</code> is used</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Human Genome build GRCh38 can be downloaded from <a href="ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens">here</a>.</p>
+</div>
+</li>
+<li>
+<p><code>--msigdb</code> | <code>-m</code></p>
+<p>MSigDB file containing the pathway information. Require the gtf file.
+The GMT file format used by MSigDB is a simple tab/space delimited text file
+where each line correspond to a single gene set following by Gene IDs:
+<div class="codehilite"><pre><span></span>    <span class="p">[</span><span class="n">Set</span> <span class="n">A</span><span class="p">]</span> <span class="p">[</span><span class="n">Gene</span> <span class="mi">1</span><span class="p">]</span> <span class="p">[</span><span class="n">Gene</span> <span class="mi">2</span><span class="p">]</span> <span class="p">...</span>
+    <span class="p">[</span><span class="n">Set</span> <span class="n">B</span><span class="p">]</span> <span class="p">[</span><span class="n">Gene</span> <span class="mi">1</span><span class="p">]</span> <span class="p">[</span><span class="n">Gene</span> <span class="mi">2</span><span class="p">]</span> <span class="p">...</span>
+</pre></div></p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Curated MSigDB files can be downloaded from <a href="http://software.broadinstitute.org/gsea/msigdb/">here</a> after registration in <a href="http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb">here</a></p>
+</div>
+</li>
+<li>
+<p><code>--set-perm</code>               </p>
+<p>The number of set base permutation to perform. 
+This is only used for calculating the competitive p-value. 
+10,000 permutation nshould generally be enough. </p>
+</li>
+<li>
+<p><code>--snp-set</code>               </p>
+<p>Provide gene sets using SNP ID. Two different format is allowed:</p>
+<ul>
+<li>SNP Set list format: A file containing a single column of SNP ID. Name of the set will
+be the file name or can be provided using <code>--snp-set File:Name</code></li>
+<li>MSigDB format: Each row represent a single SNP set with the first column containing the name of the SNP set. </li>
+</ul>
+</li>
+<li>
+<p><code>--wind-3</code></p>
+<p>Add N base(s) to the 3' region of each gene regions. Unit suffix are allowed e.g. <code>--wind-3 1M</code></p>
+</li>
+<li>
+<p><code>--wind-5</code></p>
+<p>Add N base(s) to the 5' region of each gene regions. Unit suffix are allowed e.g. <code>--wind-5 1M</code></p>
+</li>
+</ul>
+<h1 id="r-specific-commands">R specific commands<a class="headerlink" href="#r-specific-commands" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--prsice</code></p>
+<p>Location of the PRSice executable.</p>
+</li>
+<li>
+<p><code>--dir</code></p>
+<p>Location to install require R packages. Only require if the required packages are not installed.
+We require the following packages: <code>optparse</code>, <code>method</code>, <code>tools</code>, <code>ggplot2</code>, <code>data.table</code>, <code>grDevices</code>, <code>RColorBrewer</code></p>
+</li>
+</ul>
+<h1 id="plotting">Plotting<a class="headerlink" href="#plotting" title="Permanent link">&para;</a></h1>
+<ul>
+<li><code>--bar-col-high</code></li>
+</ul>
+<p>Colour of the most predicting threshold. Default: <code>firebrick</code></p>
+<ul>
+<li><code>--bar-col-low</code></li>
+</ul>
+<p>Colour of the poorest predicting threshold. Default: <code>dodgerblue</code></p>
+<ul>
+<li><code>--bar-col-p</code></li>
+</ul>
+<p>When set, will change the colour of bar to p-value threshold instead of
+  the p-value from the association with phenotype</p>
+<ul>
+<li><code>--bar-palatte</code></li>
+</ul>
+<p>Colour palatte to be used for bar plotting when <code>--bar_col_p</code> is set. Default: <code>YlOrRd</code></p>
+<ul>
+<li>
+<p><code>--device</code></p>
+<p>Select different plotting devices. You can choose
+any plotting devices supported by base R. Default: png</p>
+</li>
+<li>
+<p><code>--multi-plot</code></p>
+</li>
+</ul>
+<p>Plot the top N target phenotypes / gene sets in a summary plot</p>
+<ul>
+<li><code>--plot</code></li>
+</ul>
+<p>When set, will only perform plotting using existing PRSice result files. 
+  All other parameters are still required such that PRSice
+  can correctly locate the required input files for plotting.</p>
+<ul>
+<li><code>--plot-set</code></li>
+</ul>
+<p>The default behaviour of PRSet is to plot the bar-chart, high-resolution plot and
+  quantile plot of the "Base" gene set, which consider
+  all SNPs within the genome. By using the <code>--plot-set</code> option, you can plot the
+  specific set of interest.</p>
+<ul>
+<li>
+<p><code>--quantile</code> | <code>-q</code></p>
+<p>Number of quantiles to plot.
+No quantile plot will be generated when this is not provided.</p>
+</li>
+<li>
+<p><code>--quant-break</code></p>
+<p>Parameter to indicate an uneven distribution of quantile. Values represent
+the upperbound of each quantile group. </p>
+<p>e.g. With <code>--quantile 10 --quant-break 1,5,10</code>, the quantiles will be grouped into</p>
+<blockquote>
+<p><span class="arithmatex">\(0\lt Q \le 1\)</span>, <span class="arithmatex">\(1\lt Q \le 5\)</span>, <span class="arithmatex">\(5\lt Q \le 10\)</span></p>
+</blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To use <code>--quant-break</code>, you must set the correct amount of quantiles. For example, 
+if the largest value in <code>--quant-break</code> is 100, then you must use <code>--quantile 100</code></p>
+</div>
+</li>
+<li>
+<p><code>--quant-extract</code> | <code>-e</code></p>
+</li>
+</ul>
+<p>File containing sample ID to be plot on a separated
+  quantile e.g. extra quantile containing only
+  schizophrenia samples. Must contain IID. Should
+  contain FID if <code>--ignore-fid</code> isn't set.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This will only work if the base and target has a different
+phenotype or if the target phenotype is quantitative</p>
+</div>
+<ul>
+<li><code>--quant-ref</code></li>
+</ul>
+<p>Reference quantile for quantile plot. Default is number of quantiles divided by 2</p>
+<p>Or in the event where <code>--quant-break</code> is used, represent the upper bound of the 
+  reference quantile</p>
+<ul>
+<li><code>--scatter-r2</code></li>
+</ul>
+<p>When set, will change the y-axis of the high resolution scatter plot to R2 instead</p>
+<h1 id="miscellaneous">Miscellaneous<a class="headerlink" href="#miscellaneous" title="Permanent link">&para;</a></h1>
+<ul>
+<li>
+<p><code>--all-score</code></p>
+<p>Output PRS for ALL threshold.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This will generate a huge file</p>
+</div>
+</li>
+<li>
+<p><code>--exclude</code></p>
+<p>File contains SNPs to be excluded from the analysis.
+Mutually exclusive from <code>--extract</code></p>
+</li>
+<li>
+<p><code>--extract</code></p>
+<p>File contains SNPs to be included in the analysis.
+Mutually exclusive from <code>--exclude</code></p>
+</li>
+<li>
+<p><code>--id-delim</code></p>
+<p>Delimiter used to concatinate FID and IID when performing ID matching. 
+Especially useful for BGEN file processing</p>
+</li>
+<li>
+<p><code>--ignore-fid</code></p>
+<p>Ignore FID for all input. When this is set,
+first column of all file will be assume to
+be IID instead of FID</p>
+</li>
+<li>
+<p><code>--keep-ambig</code></p>
+<p>Keep ambiguous SNPs. Only use this option
+whe base and target has the same A1 and A2 alleles</p>
+</li>
+<li>
+<p><code>--logit-perm</code></p>
+<p>When performing permutation on binary phenotypes, 
+use logistic regression instead of linear regression. 
+This will substantially slow down PRSice.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>One problem with using <code>--logit-perm</code> is that some of
+the permuted phenotype might be suffer from perfect
+separation. This leads to the GLM logistic model not
+being able to be converge (thus terminating PRSice).</p>
+<p>If you encounter such problem, you might want to exclude
+the <code>--logit-perm</code> option. In most case, the p-value of the
+linear model should be similar to the logistic model</p>
+</div>
+</li>
+<li>
+<p><code>--memory</code></p>
+<p>Maximum memory usage allowed. PRSice will try its best to honor this setting. 
+For example, <code>--memory 10Gb</code> will restrict PRSice to use no more than 10Gb of memory.<br />
+However, as we are not using memory pool like PLINK, it is possible for PRSice 
+to use more than the allowed amount. PRSice will mainly check the memory usage when:</p>
+<ul>
+<li>Perform Clumping</li>
+<li>Perform permutation analysis</li>
+<li>Perform set-based permutation</li>
+</ul>
+</li>
+<li>
+<p><code>--non-cumulate</code></p>
+<p>Calculate non-cumulative PRS. PRS will be reset
+to 0 for each new P-value threshold instead ofadding up</p>
+</li>
+<li>
+<p><code>--out</code> | <code>-o</code></p>
+<p>Prefix for all file output.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If multiple target phenotypes are included (e.g. using <code>--pheno-col</code>),
+the phenotype will be appended to the output prefix</p>
+<p>If multiple gene set are included, the name of the set will be appended
+to the output prefix (after the phenotype (if any))</p>
+</div>
+</li>
+<li>
+<p><code>--perm</code></p>
+<p>Number of permutation to perform. This will
+generate the empirical p-value. Recommend to
+use value larger than or equal to 10,000</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When permutation is required, PRSice will perform the following
+operation</p>
+<ol>
+<li>Perform normal PRSice across all thresholds and obtain p-value of the
+most significant threshold</li>
+<li>Repeat PRSice analysis <em>N</em> times with permuted phenotype. Count the
+number of time where the p-value of the most significant threshold for
+the permuted</li>
+</ol>
+</div>
+</li>
+<li>
+<p><code>--print-snp</code></p>
+<p>Print all SNPs that remains in the analysis after clumping is performed. For PRSet, <code>Y</code> indicate the SNPs
+falls within the gene set of interest and <code>N</code> otherwise. If only PRSice is performed, a single "gene set" called
+"Base" will be indicated with all entries marked as <code>Y</code></p>
+</li>
+<li>
+<p><code>--seed</code> | <code>-s</code></p>
+<p>Seed used for permutation. If not provided,
+system time will be used as seed. This will
+allow the same results to be generated when
+the same seed and input is used</p>
+</li>
+<li>
+<p><code>--thread</code> | <code>-n</code></p>
+<p>Number of thread use</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Maximum number of thread can be specified by using <code>--thread max</code></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.</p>
+</div>
+</li>
+<li>
+<p><code>--x-range</code>             <br />
+    Range of SNPs to be excluded from the whole
+    analysis. It can either be a single bed file
+    or a comma seperated list of range. Range must
+    be in the format of <em>chr:start-end</em> or <em>chr:coordinate</em></p>
+</li>
+<li>
+<p><code>--help</code> | <code>-h</code></p>
+<p>Display the help messages</p>
+</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../compilation/" class="btn btn-neutral float-right" title="Compile from Source">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../prset_detail/" class="btn btn-neutral" title="PRSet"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../prset_detail/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../compilation/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js" defer></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+      <script src="../search/main.js" defer></script>
+
+</body>
+</html>
