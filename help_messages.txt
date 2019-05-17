@@ -235,8 +235,9 @@ m_help_message =
        "                                              can be provided using \n"
        "                                              --snp-set File:Name\n"
        "                            MSigDB format   - Each row represent a single SNP \n"
-       "                                              set with the first column containing\n"
-       "                                              the name of the SNP set.\n"
+       "                                              set with the first column \n"
+       "                                              containing the name of the SNP\n"
+       "                                              set.\n"
        "    --wind-3                Add N base(s) to the 3' region of each feature(s) \n"
        "    --wind-5                Add N base(s) to the 5' region of each feature(s) \n"     
        //Misc
