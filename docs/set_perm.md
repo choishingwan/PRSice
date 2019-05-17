@@ -1,1 +1,0 @@
-# Competitive P-value Calculation

@@ -11,10 +11,6 @@ pages:
         - PRSice: step_by_step.md
         - PRSet: prset_detail.md
 
-    - Special Features:
-        - Set Based Clumping: set_clump.md
-        - Competitive P-value: set_perm.md
-
     - Available Commands: command_detail.md
 
     - Developers:
