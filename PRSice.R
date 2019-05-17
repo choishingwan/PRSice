@@ -205,7 +205,7 @@ help_message <-
                             i.e. p-value threshold = 1. Setting this flag will\n
                             disable that behaviour\n
     --interval      | -i    The step size of the threshold. Default: 0.00005 \n
-    --lower         | -l    The starting p-value threshold. Default: 0.0001 \n
+    --lower         | -l    The starting p-value threshold. Default: 5e-08 \n
     --model                 Genetic model use for regression. The genetic\n
                             encoding is based on the base data where the\n
                             encoding represent number of the coding allele\n
@@ -293,7 +293,9 @@ help_message <-
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
-    --id-delim              Delimiter used to concatinate FID and IID in bgen\n
+    --id-delim              This parameter causes sample IDs to be parsed as\n
+                            <FID><delimiter><IID>; the default delimiter\n
+                            is '_'. \n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
