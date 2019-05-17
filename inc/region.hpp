@@ -162,11 +162,11 @@ protected:
         {
             if (pos > prev) {
                 temp = attribute.substr(prev, pos - prev);
-                if (temp.size()==7 && temp.substr(5) == "id") {
+                if (temp.size() == 7 && temp.substr(5) == "id") {
                     add_next = true;
                     add_id = 0;
                 }
-                else if (temp.size()==9 && temp.substr(5) == "name")
+                else if (temp.size() == 9 && temp.substr(5) == "name")
                 {
                     add_next = true;
                     add_id = 1;

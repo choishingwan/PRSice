@@ -465,10 +465,12 @@ void Region::load_gtf(
             throw std::runtime_error(error_message);
         }
     }
-    std::istream *stream;
-    if(gz_input){
+    std::istream* stream;
+    if (gz_input) {
         stream = &(gz_gtf_file);
-    }else{
+    }
+    else
+    {
         stream = &(gtf_file);
     }
     std::vector<std::string> token, attribute, extract;
@@ -479,8 +481,7 @@ void Region::load_gtf(
 
     // this should ensure we will be reading either from the gz stream or
     // ifstream
-    while (std::getline(*stream, line))
-    {
+    while (std::getline(*stream, line)) {
         misc::trim(line);
         // skip headers
         if (line.empty() || line[0] == '#') continue;

@@ -1332,17 +1332,24 @@ private:
                         if (unit == "B") {
                             m_memory = misc::convert<size_t>(value);
                         }
-                        else if (unit == "K") {
-                            m_memory = misc::convert<size_t>(value)* 1024 ;
+                        else if (unit == "K")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024;
                         }
-                        else if (unit == "M") {
-                            m_memory = misc::convert<size_t>(value)* 1024 * 1024 ;
+                        else if (unit == "M")
+                        {
+                            m_memory =
+                                misc::convert<size_t>(value) * 1024 * 1024;
                         }
-                        else if (unit == "G") {
-                            m_memory = misc::convert<size_t>(value)* 1024 * 1024 * 1024 ;
+                        else if (unit == "G")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024
+                                       * 1024 * 1024;
                         }
-                        else if (unit == "T") {
-                            m_memory = misc::convert<size_t>(value)* 1024 * 1024 * 1024 * 1024 ;
+                        else if (unit == "T")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024
+                                       * 1024 * 1024 * 1024;
                         }
                     }
                 }
