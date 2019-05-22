@@ -1385,7 +1385,8 @@ private:
         int dist;
         try
         {
-            dist = misc::convert<int>(input);
+            // when no unit is provided, we assume it is KB
+            dist = misc::convert<int>(input)*1000;
             return dist;
         }
         catch (...)
