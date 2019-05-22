@@ -229,9 +229,11 @@ private:
             // reading each sample. This allow for a more elegant implementation
             // on our side
             genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-                m_bgen_file, context, setter, &m_buffer1, &m_buffer2, false);
+                m_bgen_file, context, setter, &m_buffer1, &m_buffer2);
             // output from load_raw should have already copied all samples
             // to the front without the need of subseting
+
+            m_prev_loc = m_bgen_file.tellg();
         }
         else
         {
@@ -241,18 +243,17 @@ private:
             // the transformation as that should be dealt with when we generate
             // the intermidate file
             m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
+            m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
         }
         // mainbuf should contains the information
         // update the m_prev_loc counter. However, for bgen, it is most likely
         // that we will need to seek for every SNP as there are padded data
         // between each SNP's genotype
-        m_prev_loc = m_bgen_file.tellg();
 
         return 0;
     }
 
-    virtual void
-    read_score(const std::vector<size_t>::const_iterator& start_idx,
+    void read_score(const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
                bool reset_zero, const bool use_ref_maf);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
@@ -307,36 +308,31 @@ private:
          */
         void set_stat(const double& stat, const double& homcom_weight,
                       const double& het_weight, const double& homrar_weight,
-                      const double expected, const bool flipped,
+                      const bool flipped,
                       const bool not_first)
         {
+            // don't use external expected as that doesn't take into account of the
+            // weighting
+            m_missing.clear();
             m_stat = stat;
             m_homcom_weight = homcom_weight;
             m_het_weight = het_weight;
             m_homrar_weight = homrar_weight;
             m_not_first = not_first;
-            m_expected = expected;
+            m_cal_expected = 0;
+            rs.clear();
             if (flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
             m_adj_score = 0;
-            // here we don't need to multiple the m_expected by ploidy, the
-            // reason is that the expected is ranged from 0-2, instead of the
-            // 0-1 of MAF
-            if (m_centre) {
-                // as is_centre will never change, branch prediction might be
-                // rather accurate, therefore we don't need to do the complex
-                // stat*maf*is_centre
-                m_adj_score = m_stat * m_expected;
-            }
             m_miss_score = 0;
             m_miss_count = 0;
             if (!m_setzero) {
                 // this is the only one that depends on ploidy
                 m_miss_count = 2;
                 // again, mean_impute is stable, branch prediction should be ok
-                m_miss_score = m_stat * m_expected;
+                // 0 if we don't have the expected score
             }
         }
         /*!
@@ -422,10 +418,11 @@ private:
         void sample_completed()
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
+
             if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
+                m_missing.push_back(m_prs_sample_i);
                 sample_prs.num_snp =
                     sample_prs.num_snp * m_not_first + m_miss_count;
-                sample_prs.prs = sample_prs.prs * m_not_first + m_miss_score;
             }
             // this is not a missing sample and we can either add the prs or
             // assign the PRS
@@ -436,6 +433,7 @@ private:
                     sample_prs.num_snp * m_not_first + m_ploidy;
                 sample_prs.prs =
                     sample_prs.prs * m_not_first + m_sum * m_stat - m_adj_score;
+                rs.push(m_sum);
             }
             // go to next sample that we need (not the bgen index)
             ++m_prs_sample_i;
@@ -445,20 +443,44 @@ private:
          * processing samples with missing data. This requires us to calculate
          * the expected value and use that as the PRS of the samples
          */
-        void finalise() {}
+        void finalise() {
+                if (m_centre) {
+                    m_adj_score = m_stat * rs.mean();
+                }
+                if (!m_setzero) {
+                    m_miss_count = 2;
+                    m_miss_score = m_stat * rs.mean();
+                }
+
+                // only need to do this if we don't have the expected information
+                size_t cur_idx = 0;
+                for(size_t i = 0; i < m_sample_prs->size(); ++i){
+                    if(cur_idx < m_missing.size() && i == m_missing[cur_idx]){
+                        (*m_sample_prs)[i].prs = (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
+                        cur_idx++;
+                    }else if(m_centre){
+                        // if it is not missing and we want the centre the score
+                        // we will need to minus the adjusted score which was 0 before
+                        // this run
+                        (*m_sample_prs)[i].prs -= m_adj_score;
+                    }
+                }
+        }
 
     private:
         std::vector<PRS>* m_sample_prs;
         std::vector<uintptr_t>* m_sample_inclusion;
+        std::vector<size_t> m_missing;
+        misc::RunningStat rs;
         double m_stat = 0.0;
         double m_sum = 0.0;
         double m_sum_prob = 0.0;
         double m_homcom_weight = 0;
         double m_het_weight = 0.1;
         double m_homrar_weight = 1;
-        double m_expected = 0.0;
         double m_miss_score = 0.0;
         double m_adj_score = 0.0;
+        double m_cal_expected =0.0;
         uint32_t m_prs_sample_i = 0;
         int m_miss_count = 0;
         int m_ploidy = 2;
@@ -478,13 +500,11 @@ private:
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
-                        double hard_threshold, double dose_threshold,
-                        bool filtering = false)
+                        double hard_threshold, double dose_threshold)
             : m_sample(sample)
             , m_genotype(genotype)
             , m_hard_threshold(hard_threshold)
             , m_dose_threshold(dose_threshold)
-            , m_filtering(filtering)
         {
         }
         void initialise(std::size_t, std::size_t)
@@ -530,8 +550,7 @@ private:
             std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
-            // if this is for filtering, we will always include all samples
-            return m_filtering || IS_SET(m_sample->data(), m_sample_i);
+            return IS_SET(m_sample->data(), m_sample_i);
         }
         /*!
          * \brief set_number_of_entries is yet another function required by
@@ -687,7 +706,6 @@ private:
         size_t m_homrar_ct = 0;
         size_t m_het_ct = 0;
         size_t m_missing_ct = 0;
-        bool m_filtering;
     };
 };
 
