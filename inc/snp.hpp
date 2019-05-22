@@ -138,6 +138,9 @@ public:
         if (loc != -1 && m_loc != -1 && loc != m_loc) {
             return false;
         }
+
+        flipped = false;
+
         if (m_ref == ref) {
             if (!m_alt.empty() && !alt.empty()) {
                 return (m_alt == alt);
