@@ -40,8 +40,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.2.0";
-const std::string date = "13 May 2019";
+const std::string version = "2.2.1";
+const std::string date = "22 May 2019";
 class Commander
 {
 public:
@@ -1385,7 +1385,8 @@ private:
         int dist;
         try
         {
-            dist = misc::convert<int>(input);
+            // when no unit is provided, we assume it is KB
+            dist = misc::convert<int>(input)*1000;
             return dist;
         }
         catch (...)

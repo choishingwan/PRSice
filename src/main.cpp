@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
                 misc::base_name<std::string>(commander.base_name()));
             std::string message = "Start processing " + base_name + "\n";
             message.append(
-                "============================================================");
+                "==================================================");
             reporter.report(message);
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
             message.append(
-                "============================================================");
+                "==================================================");
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(),
@@ -120,15 +120,12 @@ int main(int argc, char* argv[])
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
             {
-                message = ("==================================================="
-                           "=========");
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
-                message.append("==============================================="
-                               "=============");
+                message.append("==================================================");
                 reporter.report(message);
                 reference_file->load_samples(
                     commander.ref_keep_file(), commander.ref_remove_file(),
@@ -141,21 +138,28 @@ int main(int argc, char* argv[])
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
 
-            message = "Calculate MAF and perform filtering on target SNPs\n";
-            message.append(
-                "============================================================");
-            reporter.report(message);
-            target_file->calc_freqs_and_intermediate(
-                maf, geno, info, maf_filter, geno_filter, info_filter,
-                hard_coded, true, reporter);
+            if(maf_filter || geno_filter || info_filter ||
+                    (commander.use_inter() && (hard_coded || !commander.use_ref())) ){
+                message = "Calculate MAF and perform filtering on target SNPs\n";
+                message.append(
+                    "==================================================");
+                reporter.report(message);
+                // only calculate the MAF if we need to
+                // We want to only invoke the MAF calculation if we need to
+                // i.e after clumping, to speed up the process
+                target_file->calc_freqs_and_intermediate(
+                            maf, geno, info, maf_filter, geno_filter, info_filter,
+                            hard_coded, true, reporter);
+            }
 
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
             hard_coded = commander.ref_hard_threshold();
             hard_threshold = commander.get_ref_hard_threshold();
+            bool has_ref_maf = false;
             if (init_ref
-                && (commander.use_ref_maf() || maf_filter || geno_filter
+                && ( maf_filter || geno_filter
                     || info_filter || commander.use_inter()))
             {
                 // we only go through the reference file if we are
@@ -164,12 +168,12 @@ int main(int argc, char* argv[])
                 // 3. Need to generate an intermediate file for clumping
                 message =
                     "Calculate MAF and perform filtering on reference SNPs\n";
-                message.append("==============================================="
-                               "=============");
+                message.append("==================================================");
                 reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
                     maf, geno, info, maf_filter, geno_filter, info_filter,
                     hard_coded, true, reporter, target_file);
+                has_ref_maf = true;
             }
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
@@ -215,7 +219,26 @@ int main(int argc, char* argv[])
                     reporter, commander.pearson());
                 // immediately free the memory
             }
-            if (init_ref) delete reference_file;
+            if (init_ref){
+                if (commander.use_ref_maf() && !has_ref_maf)
+                {
+                    // doesn't need to worry about generating the intermediate file
+                    // as we will always have the reference maf if we are going
+                    // to generate the intermediate file
+                    message =
+                        "Calculate MAF based on Reference\n";
+                    message.append("==================================================");
+                    reporter.report(message);
+                    reference_file->calc_freqs_and_intermediate(
+                        maf, geno, info, maf_filter, geno_filter, info_filter,
+                        hard_coded, true, reporter, target_file);
+                }
+                delete reference_file;
+            }
+            // We now have problem:
+            // MAF has not been calculated, and can therefore cause a
+            // problem in PRS calculation
+
             // can do the update structure here
             // Use sparse matrix for space and speed
             // Column = set, row = SNPs (because EIGEN is column major)
@@ -281,11 +304,11 @@ int main(int argc, char* argv[])
             prsice.init_process_count(commander, num_regions,
                                       target_file->num_threshold());
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
-                fprintf(stderr, "\nProcessing the %zu th phenotype\n",
+                fprintf(stderr, "Processing the %zu th phenotype\n",
                         i_pheno + 1);
                 prsice.init_matrix(commander, i_pheno, commander.delim(),
                                    *target_file, reporter);
-                fprintf(stderr, "\nPreparing Output Files\n");
+                fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
                                    region_names, i_pheno);

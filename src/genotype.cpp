@@ -1528,7 +1528,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     else
     {
         message.append("Allocated " + misc::to_string(malloc_size_mb)
-                       + " MB successfully\n");
+                       + " MB successfully");
     }
     reporter.report(message);
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
@@ -1826,9 +1826,8 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     // release the memory)
     m_existed_snps_index.clear();
 
-    message = "";
-    message.append("Number of variant(s) after clumping : "
-                   + misc::to_string(m_existed_snps.size()) + "\n");
+    message = "Number of variant(s) after clumping : "
+                   + misc::to_string(m_existed_snps.size());
     reporter.report(message);
 }
 
