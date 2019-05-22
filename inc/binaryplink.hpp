@@ -94,9 +94,9 @@ protected:
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
         // that there'll be trailling bytes that we don't want
-        uintptr_t final_mask =
+        const uintptr_t final_mask =
             get_final_mask(static_cast<uint32_t>(m_founder_ct));
-
+        const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
         // we don't need to check if m_cur_file is empty because empty equals
         // only to empty, which shouldn't happen
         if (m_cur_file != file_name) {
@@ -136,7 +136,7 @@ protected:
         }
         // directly read in the current location to avoid possible calculation
         // error
-        m_prev_loc = m_bed_file.tellg();
+        m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
     }
     virtual void
     read_score(const std::vector<size_t>::const_iterator& start_idx,

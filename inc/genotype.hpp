@@ -429,7 +429,9 @@ protected:
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
+    std::vector<uintptr_t> m_founder_include2;
     std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_sample_include2;
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;

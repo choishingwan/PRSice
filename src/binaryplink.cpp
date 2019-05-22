@@ -242,6 +242,15 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)
     }
     // also resize the in_regression flag
     m_in_regression.resize(m_sample_include.size(), 0);
+    // initialize the sample_include2 and founder_include2 which are
+    // both needed in cal_maf or read_score for MAF calculation
+    m_sample_include2.resize(unfiltered_sample_ctv2);
+    m_founder_include2.resize(unfiltered_sample_ctv2);
+    // fill it with the required mask (copy from PLINK2)
+    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
+                               m_sample_include2.data());
+    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
+                               m_founder_include2.data());
     return sample_name;
 }
 
@@ -294,7 +303,7 @@ void BinaryPlink::calc_freq_gen_inter(
     double cur_maf, cur_geno;
     double sample_ct_recip =
         1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
-    std::streampos byte_pos;
+    std::streampos byte_pos, prev_pos;
     size_t processed_count = 0;
     size_t retained = 0;
     uint32_t ll_ct = 0;
@@ -307,13 +316,6 @@ void BinaryPlink::calc_freq_gen_inter(
     uint32_t missing = 0;
     uint32_t tmp_total = 0;
     // initialize the sample inclusion mask
-    std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
-    std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
-    // fill it with the required mask (copy from PLINK2)
-    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
-                               sample_include2.data());
-    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
-                               founder_include2.data());
 
     for (auto&& snp : reference->m_existed_snps) {
         progress = static_cast<double>(processed_count)
@@ -344,7 +346,7 @@ void BinaryPlink::calc_freq_gen_inter(
                 throw std::runtime_error(error_message);
             }
         }
-        if (bed_file.tellg() != byte_pos) {
+        if (prev_pos != byte_pos) {
             // only skip line if we are not reading sequentially
             if (!bed_file.seekg(byte_pos, std::ios_base::beg)) {
                 std::string error_message =
@@ -358,10 +360,11 @@ void BinaryPlink::calc_freq_gen_inter(
                 "Error: Cannot read the bed file(read): " + bed_name;
             throw std::runtime_error(error_message);
         }
+        prev_pos = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
         // calculate the MAF using PLINK2 function
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
-            sample_include2.data(), founder_include2.data(), m_sample_ct,
+            m_sample_include2.data(), m_founder_include2.data(), m_sample_ct,
             &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
         uii = ll_ct + lh_ct + hh_ct;
         cur_geno = 1.0 - (static_cast<int32_t>(uii)) * sample_ct_recip;
@@ -841,16 +844,21 @@ void BinaryPlink::read_score(
     // this is use for initialize the array sizes
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
     uintptr_t* lbptr;
     uintptr_t ulii;
     uint32_t uii;
     uint32_t ujj;
     uint32_t ukk;
+    uint32_t ll_ct, lh_ct, hh_ct;
+    uint32_t ll_ctf, lh_ctf, hh_ctf;
     // for storing the count of each observation
     size_t homrar_ct = 0;
     size_t missing_ct = 0;
     size_t het_ct = 0;
     size_t homcom_ct = 0;
+    size_t tmp_total=0;
     int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
@@ -918,18 +926,64 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        if (load_and_collapse_incl(
-                static_cast<uint32_t>(m_unfiltered_sample_ct),
-                static_cast<uint32_t>(m_sample_ct), m_sample_include.data(),
-                final_mask, false, m_bed_file, m_tmp_genotype.data(),
-                genotype.data()))
-        {
-            throw std::runtime_error("Error: Cannot read the bed file!");
+        if(!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                               use_ref_maf)){
+            // we need to calculate the MA
+            if (m_unfiltered_sample_ct != m_sample_ct) {
+                // if we need to perform selection, we will remove all unwanted
+                // sample and push the data forward
+                if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+                    std::string error_message =
+                        "Error: Cannot read the bed file(read): " + m_cur_file;
+                    throw std::runtime_error(error_message);
+                }
+            }
+            else
+            {
+                // if we dno't need filtering, then we simply mask out the unwanted
+                // region (to avoid the leftover, if any)
+                if (load_raw(unfiltered_sample_ct4, m_bed_file, genotype.data())) {
+                    std::string error_message =
+                        "Error: Cannot read the bed file(read): " + m_cur_file;
+                    throw std::runtime_error(error_message);
+                }
+            }
+            single_marker_freqs_and_hwe(
+                unfiltered_sample_ctv2, m_tmp_genotype.data(),
+                m_sample_include2.data(), m_founder_include2.data(), m_sample_ct,
+                &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+            homcom_ct = ll_ctf;
+            het_ct = lh_ctf;
+            homrar_ct = hh_ctf;
+            tmp_total = (homcom_ct + het_ct + homrar_ct);
+            assert(m_founder_ct >= tmp_total);
+            missing_ct = m_founder_ct - tmp_total;
+            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
+            if(m_unfiltered_sample_ct != m_sample_ct){
+                copy_quaterarr_nonempty_subset(m_tmp_genotype.data(),
+                                               m_sample_include.data(),
+                                               static_cast<uint32_t>(m_unfiltered_sample_ct),
+                                               static_cast<uint32_t>(m_sample_ct),
+                                               genotype.data());
+            }else{
+
+                genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            }
         }
+        else{
+            // business as usual
+            if (load_and_collapse_incl(
+                    static_cast<uint32_t>(m_unfiltered_sample_ct),
+                    static_cast<uint32_t>(m_sample_ct), m_sample_include.data(),
+                    final_mask, false, m_bed_file, m_tmp_genotype.data(),
+                    genotype.data()))
+            {
+                throw std::runtime_error("Error: Cannot read the bed file!");
+            }
+        }
+
         // directly read in the current location
-        m_prev_loc = m_bed_file.tellg();
-        cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                           use_ref_maf);
+        m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
