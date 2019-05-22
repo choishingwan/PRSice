@@ -36,16 +36,19 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
     double mss = (fitted.array() - fitted.mean()).pow(2).sum();
     r2 = mss / (mss + rss);
 
-    int n = A.rows();
-    int rank = z.rank();
-    int rdf = n - rank;
-    int df_int = intercept; // 0 false 1 true
-    r2_adjust = 1.0 - (1.0 - r2) * ((double) (n - df_int) / (double) rdf);
+    long n = A.rows();
+    long rank = z.rank();
+    long rdf = n - rank;
+    long df_int = intercept; // 0 false 1 true
+    r2_adjust =
+        1.0
+        - (1.0 - r2)
+              * (static_cast<double>(n - df_int) / static_cast<double>(rdf));
 
 
-    double resvar = rss / (double) rdf;
-    size_t se_index = intercept;
-    for (size_t ind = 0; ind < beta.rows(); ++ind) {
+    double resvar = rss / static_cast<double>(rdf);
+    long se_index = intercept;
+    for (long ind = 0; ind < beta.rows(); ++ind) {
         if (z.colsPermutation().indices()(ind) == intercept) {
             se_index = ind;
             break;
@@ -66,21 +69,23 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
 
 Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta)
 {
-    Eigen::VectorXd ans = eta;
-    for (size_t i = 0; i < eta.rows(); ++i) ans(i) = eta(i) * (1.0 - eta(i));
-    return ans;
+    // Eigen::VectorXd ans = eta;
+    return eta.array() * (1 - eta.array());
+    // for (long i = 0; i < eta.rows(); ++i) ans(i) = eta(i) * (1.0 - eta(i));
+    // return ans;
 }
 
 Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta)
 {
     Eigen::VectorXd ans = eta;
-    int n = eta.rows();
-    for (size_t i = 0; i < n; ++i) {
-        double etai = eta(i);
-        double opexp = 1 + exp(etai);
-        ans(i) = (etai > 30 || etai < -30)
-                     ? std::numeric_limits<double>::epsilon()
-                     : exp(etai) / (opexp * opexp);
+    long n = eta.rows();
+    double etai, opexp;
+    const double limit = std::numeric_limits<double>::epsilon();
+    for (long i = 0; i < n; ++i) {
+        etai = eta(i);
+        opexp = 1 + exp(etai);
+        ans(i) =
+            (etai > 30 || etai < -30) ? limit : exp(etai) / (opexp * opexp);
     }
     return ans;
 }
@@ -88,14 +93,14 @@ Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta)
 Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta)
 {
     Eigen::VectorXd ans = eta;
-    int n = eta.rows();
-    for (size_t i = 0; i < n; ++i) {
-        double etai = eta(i);
-        double temp =
-            (etai < -30)
-                ? std::numeric_limits<double>::epsilon()
-                : ((etai > 30) ? 1 / std::numeric_limits<double>::epsilon()
-                               : exp(etai));
+    long n = eta.rows();
+    double etai, temp;
+    for (long i = 0; i < n; ++i) {
+        etai = eta(i);
+        temp = (etai < -30)
+                   ? std::numeric_limits<double>::epsilon()
+                   : ((etai > 30) ? 1 / std::numeric_limits<double>::epsilon()
+                                  : exp(etai));
         ans(i) = temp / (1.0 + temp);
     }
     return ans;
@@ -104,21 +109,18 @@ Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta)
 void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
                 Eigen::VectorXd& gprime)
 {
-    int n = eta.rows();
+    long n = eta.rows();
     g = eta;
     gprime = eta;
-    for (size_t i = 0; i < n; ++i) {
-        double etai = eta(i);
-        double temp =
-            (etai < -30)
-                ? std::numeric_limits<double>::epsilon()
-                : ((etai > 30) ? 1 / std::numeric_limits<double>::epsilon()
-                               : exp(etai));
+    double etai, temp, opexp;
+    const double limit = std::numeric_limits<double>::epsilon();
+    for (long i = 0; i < n; ++i) {
+        etai = eta(i);
+        temp = (etai < -30) ? limit : ((etai > 30) ? 1 / limit : exp(etai));
         g(i) = temp / (1.0 + temp);
-        double opexp = 1 + exp(etai);
-        gprime(i) = (etai > 30 || etai < -30)
-                        ? std::numeric_limits<double>::epsilon()
-                        : exp(etai) / (opexp * opexp);
+        opexp = 1 + exp(etai);
+        gprime(i) =
+            (etai > 30 || etai < -30) ? limit : exp(etai) / (opexp * opexp);
     }
 }
 
@@ -162,12 +164,15 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     return ans;
 }
 
+
 double binomial_dev_resids_sum(const Eigen::VectorXd& y,
                                const Eigen::VectorXd& mu,
                                const Eigen::VectorXd& wt)
 {
-    Eigen::Index n = y.rows();
-    Eigen::Index lmu = mu.rows(), lwt = wt.rows();
+    // wt should always be 1 in our case, because we don't allow weighted
+    // regression
+    const Eigen::Index n = y.rows();
+    const Eigen::Index lmu = mu.rows(), lwt = wt.rows();
     double ans = 0.0;
     if (lmu != n && lmu != 1) {
         std::string error_message =
@@ -186,8 +191,9 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
         for (Eigen::Index i = 0; i < n; ++i) {
             mui = mu(i);
             yi = y(i);
-            ans += 2 * wt((lwt > 1) ? i : 0)
-                   * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
+            ans += 2 * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
+            // ans += 2 * wt((lwt > 1) ? i : 0) * (y_log_y(yi, mui) + y_log_y(1
+            // - yi, 1 - mui));
         }
     }
     else
@@ -195,12 +201,14 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
         mui = mu[0];
         for (Eigen::Index i = 0; i < n; ++i) {
             yi = y(i);
-            ans += 2 * wt((lwt > 1) ? i : 0)
-                   * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
+            ans += 2 * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
+            // ans += 2 * wt((lwt > 1) ? i : 0) * (y_log_y(yi, mui) + y_log_y(1
+            // - yi, 1 - mui));
         }
     }
     return ans;
 }
+
 
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
@@ -210,52 +218,76 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 {
     Eigen::setNbThreads(static_cast<int>(thread));
     Eigen::MatrixXd A = x;
-    Eigen::Index nobs = y.rows();
-    Eigen::Index nvars = A.cols();
+    const Eigen::Index nobs = y.rows();
+    const Eigen::Index nvars = A.cols();
     Eigen::VectorXd weights = Eigen::VectorXd::Ones(nobs);
-    Eigen::VectorXd mustart =
-        (weights.array() * y.array() + 0.5) / (weights.array() + 1);
+    Eigen::VectorXd mustart = (y.array() + 0.5) / 2.0;
     Eigen::VectorXd eta =
-        (mustart.array() / (1 - mustart.array())).array().log();
+        //(mustart.array() / (1 - mustart.array())).array().log();
+        mustart.array().log() - (1 - mustart.array()).log();
     Eigen::VectorXd mu = logit_linkinv(eta);
     double devold = binomial_dev_resids_sum(y, mu, weights), dev = 0.0;
     // Iterative reweighting
-    Eigen::MatrixXd A_tmp;
-    Eigen::VectorXd varmu, mu_eta_val, z, w, good, fit, start;
+    Eigen::VectorXd varmu, mu_eta_val, z = weights, w = weights, good, fit,
+                                       start;
     bool converge = false;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
     qr.setThreshold(
         std::min(1e-7, std::numeric_limits<double>::epsilon() / 1000));
+    double mu_eta_val_store, mu_store;
     for (size_t iter = 0; iter < max_iter; ++iter) {
-        // varmu = (weights.array()>0).select(mu.array()*(1-mu.array()),0);
         mu_eta_val = logit_mu_eta(eta);
+        // we can ignore weight array check because we don't allow weighted glm
+        // at the moment. So all weight must be 1
         //			good = (weights.array()>0 && mu_eta_val.array() !=
         // 0).select(weights.array(), 0);
         good = (mu_eta_val.array() != 0).select(mu_eta_val.array(), 0);
-        z = weights;
-        w = weights;
         Eigen::Index i_good = 0;
-        for (Eigen::Index i_weights = 0; i_weights < good.rows(); ++i_weights) {
-            if (good(i_weights) > 0) {
-                // because offset is 0, we ignore it
-                z(i_good) =
-                    eta(i_weights)
-                    + (y(i_weights) - mu(i_weights)) / mu_eta_val(i_weights);
-                w(i_good) =
-                    std::sqrt(mu_eta_val(i_weights) * mu_eta_val(i_weights)
-                              / (mu(i_weights) * (1 - mu(i_weights))));
-                A.row(i_good) = A.row(i_weights);
-                i_good++;
+        Eigen::Index start_block = 0;
+        Eigen::Index prev_block = 0;
+        bool has_block = false;
+        if ((good.array() > 0).all()) {
+            z = (eta).array() + (y - mu).array() / mu_eta_val.array();
+            w = (mu_eta_val.array().square()
+                 / (mu.array() * (1 - mu.array())).array())
+                    .array()
+                    .sqrt();
+        }
+        else
+        {
+            for (Eigen::Index i_weights = 0; i_weights < good.rows();
+                 ++i_weights)
+            {
+                if (good(i_weights) > 0) {
+                    // because offset is 0, we ignore it
+                    mu_eta_val_store = mu_eta_val(i_weights);
+                    mu_store = mu(i_weights);
+                    z(i_good) = eta(i_weights)
+                                + (y(i_weights) - mu_store) / mu_eta_val_store;
+                    w(i_good) = std::sqrt(mu_eta_val_store * mu_eta_val_store
+                                          / (mu_store * (1 - mu_store)));
+                    if (!has_block) {
+                        has_block = true;
+                        start_block = i_weights;
+                    }
+                    i_good++;
+                }
+                else if (has_block)
+                {
+                    if (prev_block != start_block) {
+                        A.block(prev_block, 0, i_weights - start_block, nvars) =
+                            A.block(start_block, 0, i_weights - start_block,
+                                    nvars);
+                    }
+                    prev_block = i_weights;
+                    has_block = false;
+                }
             }
+            z.conservativeResize(i_good);
+            w.conservativeResize(i_good);
+            A.conservativeResize(i_good, nvars);
         }
-        z.conservativeResize(i_good);
-        w.conservativeResize(i_good);
-        A.conservativeResize(i_good, nvars);
-        A_tmp = A;
-        for (Eigen::Index i = 0; i < nvars; ++i) {
-            A_tmp.col(i) = A.col(i).array() * w.array();
-        }
-        qr.compute(A_tmp);
+        qr.compute(w.asDiagonal() * A);
         start = qr.solve(Eigen::MatrixXd(z.array() * w.array()));
         if (nobs < qr.rank()) {
             std::string error_message =
@@ -282,17 +314,15 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     if (!converge) throw std::runtime_error("GLM algorithm did not converge");
     Eigen::VectorXd residuals =
         (y.array() - mu.array()) / (logit_mu_eta(eta).array());
-    int sum_good = 0;
-    int weight_bad = 0;
-    for (Eigen::Index i = 0; i < good.rows(); ++i) {
-        if (!misc::logically_equal(good(i), 0)) sum_good++;
-        if (misc::logically_equal(weights(i), 0)) weight_bad++;
-    }
     Eigen::VectorXd wtdmu =
-        (intercept) ? Eigen::VectorXd::Constant(
-                          nobs, (weights.array() * y.array()).array().sum()
-                                    / weights.array().sum())
+        (intercept) ? Eigen::VectorXd::Constant(nobs, y.sum() / nobs)
                     : logit_linkinv(Eigen::VectorXd::Zero(nobs));
+
+    /*Eigen::VectorXd wtdmu =
+            (intercept) ? Eigen::VectorXd::Constant(
+                              nobs, (weights.array() * y.array()).array().sum()
+                                        / weights.array().sum())
+    : logit_linkinv(Eigen::VectorXd::Zero(nobs));*/
     double nulldev = binomial_dev_resids_sum(y, wtdmu, weights);
     Eigen::Index rank = qr.rank();
     Eigen::MatrixXd R =

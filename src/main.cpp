@@ -285,10 +285,12 @@ int main(int argc, char* argv[])
                         i_pheno + 1);
                 prsice.init_matrix(commander, i_pheno, commander.delim(),
                                    *target_file, reporter);
+                fprintf(stderr, "\nPreparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
                                    region_names, i_pheno);
                 // go through each region
+                fprintf(stderr, "\nStart Processing\n");
                 for (size_t i_region = 0; i_region < num_regions; ++i_region) {
                     // always skip background region
                     if (i_region == 1) continue;
@@ -318,7 +320,6 @@ int main(int argc, char* argv[])
             if (!commander.no_regress())
                 // now generate the summary file
                 prsice.summarize(commander, reporter);
-            exit(0);
         }
         catch (const std::invalid_argument& ia)
         {

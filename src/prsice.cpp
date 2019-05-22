@@ -163,6 +163,12 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                          const std::string& delim, Genotype& target,
                          Reporter& reporter)
 {
+    if (m_prsice_out.is_open()) m_prsice_out.close();
+    if (m_all_out.is_open()) m_all_out.close();
+    if (m_best_out.is_open()) m_best_out.close();
+    m_prsice_out.clear();
+    m_all_out.clear();
+    m_best_out.clear();
     // reset the null R2 to 0 (different phenotype might lead to different
     // missingness, thus a different null model R2)
     m_null_r2 = 0.0;
@@ -1017,18 +1023,6 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     if (region_index == 0) m_best_sample_score.resize(target.num_sample());
 
     // now prepare all score
-    std::fstream all_out;
-    if (print_all_scores && pheno_index == 0) {
-        const std::string all_out_name = c_commander.out() + ".all.score";
-        all_out.open(all_out_name.c_str(),
-                     std::fstream::out | std::fstream::in | std::fstream::ate);
-        if (!all_out.is_open()) {
-            std::string error_message =
-                "Cannot open file " + all_out_name + " for write";
-            throw std::runtime_error(error_message);
-        }
-    }
-
 
     // current threshold iteration
     // must iterate after each threshold even if no-regress is called
@@ -1053,7 +1047,7 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     {
         m_analysis_done++;
         print_progress();
-        if (print_all_scores) {
+        if (print_all_scores && pheno_index == 0) {
             for (size_t sample = 0; sample < num_samples_included; ++sample) {
                 // we will calculate the the number of white space we need to
                 // skip to reach the current sample + threshold's output
@@ -1064,10 +1058,10 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                           + NEXT_LENGTH + m_all_file.skip_column_length
                           + m_all_file.processed_threshold
                           + m_all_file.processed_threshold * m_numeric_width;
-                all_out.seekp(loc);
+                m_all_out.seekp(loc);
                 // then we will output the score
-                all_out << std::setprecision(m_precision)
-                        << target.calculate_score(m_score, sample);
+                m_all_out << std::setprecision(m_precision)
+                          << target.calculate_score(m_score, sample);
             }
         }
         // we need to then tell the file that we have finish processing one
@@ -1113,10 +1107,8 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     // not make the best score file too big, and because each phenotype might
     // have different set of sample included in the regression due to
     // missingness
-    const std::string out_best = output_prefix + ".best";
     // we have to overwrite the white spaces with the desired values
-    std::fstream best_out(out_best.c_str(), std::fstream::out | std::fstream::in
-                                                | std::fstream::ate);
+
     auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
     size_t best_snp_size = best_info.num_snp;
     if (best_snp_size == 0) {
@@ -1140,12 +1132,11 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
                       + m_best_file.processed_threshold
                       + m_best_file.processed_threshold * m_numeric_width;
 
-            best_out.seekp(loc);
-            best_out << std::setprecision(m_precision)
-                     << m_best_sample_score[static_cast<size_t>(sample)];
+            m_best_out.seekp(loc);
+            m_best_out << std::setprecision(m_precision)
+                       << m_best_sample_score[static_cast<size_t>(sample)];
         }
     }
-    best_out.close();
     // once we finish outputing the result, we need to increment the
     // processed_threshold index such that when we process the next region, we
     // will be writing to the next column instead of overwriting the current
@@ -1547,12 +1538,11 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // generate it once
     const std::string out_all = out + ".all.score";
     const std::string out_best = output_name + ".best";
-    std::ofstream prsice_out, best_out, all_out;
 
     // .prsice output
     // we only need to generate the header for it
-    prsice_out.open(out_prsice.c_str());
-    if (!prsice_out.is_open()) {
+    m_prsice_out.open(out_prsice.c_str());
+    if (!m_prsice_out.is_open()) {
         std::string error_message =
             "Error: Cannot open file: " + out_prsice + " to write";
         throw std::runtime_error(error_message);
@@ -1560,15 +1550,14 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // we won't store the empirical p and competitive p output in the prsice
     // file now as that seems like a waste (only one threshold will contain that
     // information, storing that in the summary file should be enough)
-    prsice_out << "Set\tThreshold\tR2\t";
+    m_prsice_out << "Set\tThreshold\tR2\t";
     // but generate the adjusted R2 if prevalence is provided
-    if (has_prev) prsice_out << "R2.adj\t";
-    prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
-    prsice_out.close();
+    if (has_prev) m_prsice_out << "R2.adj\t";
+    m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
 
     // .best output
-    best_out.open(out_best.c_str());
-    if (!best_out.is_open()) {
+    m_best_out.open(out_best.c_str());
+    if (!m_best_out.is_open()) {
         std::string error_message =
             "Error: Cannot open file: " + out_best + " to write";
         throw std::runtime_error(error_message);
@@ -1589,9 +1578,9 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     }
     // the safetest way to calculate the length we need to speed is to directly
     // count the number of byte involved
-    auto begin_byte = best_out.tellp();
-    best_out << header_line << "\n";
-    auto end_byte = best_out.tellp();
+    auto begin_byte = m_best_out.tellp();
+    m_best_out << header_line << "\n";
+    auto end_byte = m_best_out.tellp();
     // we now know the exact number of byte the header contain and can correctly
     // skip it acordingly
     m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
@@ -1617,8 +1606,8 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     const bool all_scores = all_score && !pheno_index;
     const bool print_background = (region_name.size() != 2);
     if (all_scores) {
-        all_out.open(out_all.c_str());
-        if (!all_out.is_open()) {
+        m_all_out.open(out_all.c_str());
+        if (!m_all_out.is_open()) {
             std::string error_message =
                 "Cannot open file " + out_all + " for write";
             throw std::runtime_error(error_message);
@@ -1631,12 +1620,12 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // processed_threshold index should be correct)
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         int num_thresholds = static_cast<int>(avail_thresholds.size());
-        begin_byte = all_out.tellp();
-        all_out << "FID IID";
+        begin_byte = m_all_out.tellp();
+        m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!m_perform_prset) {
             for (auto& thres : avail_thresholds) {
-                all_out << " " << thres;
+                m_all_out << " " << thres;
                 // if we are not performing PRSet, it is easy, just one
                 // column per threshold
             }
@@ -1647,12 +1636,12 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             // number * threshold number thresholds
             for (size_t i = 0; i < region_name.size() - 1; ++i) {
                 for (auto& thres : avail_thresholds) {
-                    all_out << " " << region_name[i] << "_" << thres;
+                    m_all_out << " " << region_name[i] << "_" << thres;
                 }
             }
         }
-        all_out << "\n";
-        end_byte = all_out.tellp();
+        m_all_out << "\n";
+        end_byte = m_all_out.tellp();
         // if the line is too long, we might encounter overflow
         m_all_file.header_length = static_cast<int>(end_byte - begin_byte);
         m_all_file.processed_threshold = 0;
@@ -1680,11 +1669,11 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // we print a line containing m_best_file.line_width white space
         // characters, which we can then overwrite later on, therefore achieving
         // a vertical output
-        best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
-                 << std::left << best_line << "\n";
+        m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
+                   << std::left << best_line << "\n";
         if (all_scores) {
-            all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
-                    << std::left << name << "\n";
+            m_all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
+                      << std::left << name << "\n";
         }
     }
 
@@ -1751,14 +1740,6 @@ void PRSice::output(const Commander& c_commander,
         return;
     }
     // now we know can generate the prsice file
-    std::string out_prsice = output_prefix + ".prsice";
-    std::ofstream prsice_out;
-    prsice_out.open(out_prsice.c_str(), std::fstream::app);
-    if (!prsice_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_prsice + " to write";
-        throw std::runtime_error(error_message);
-    }
     // go through every result and output
     for (size_t i = 0; i < m_prs_results.size(); ++i) {
         if (m_prs_results[i].threshold < 0 || m_prs_results[i].p < 0) continue;
@@ -1772,21 +1753,21 @@ void PRSice::output(const Commander& c_commander,
         }
 
         double r2 = full - null;
-        prsice_out << region_names[region_index] << "\t"
-                   << m_prs_results[i].threshold << "\t" << r2 << "\t";
+        m_prsice_out << region_names[region_index] << "\t"
+                     << m_prs_results[i].threshold << "\t" << r2 << "\t";
         if (has_prevalence) {
             if (is_binary)
-                prsice_out << full_adj - null_adj << "\t";
+                m_prsice_out << full_adj - null_adj << "\t";
             else
-                prsice_out << "NA\t";
+                m_prsice_out << "NA\t";
         }
-        prsice_out << m_prs_results[i].p << "\t" << m_prs_results[i].coefficient
-                   << "\t" << m_prs_results[i].se << "\t"
-                   << m_prs_results[i].num_snp << "\n";
+        m_prsice_out << m_prs_results[i].p << "\t"
+                     << m_prs_results[i].coefficient << "\t"
+                     << m_prs_results[i].se << "\t" << m_prs_results[i].num_snp
+                     << "\n";
         // the empirical p-value will now be excluded from the .prsice output
         // (the "-" isn't that helpful anyway)
     }
-    prsice_out.close();
     auto&& best_info =
         m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
             m_best_index)];

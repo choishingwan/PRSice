@@ -205,7 +205,7 @@ help_message <-
                             i.e. p-value threshold = 1. Setting this flag will\n
                             disable that behaviour\n
     --interval      | -i    The step size of the threshold. Default: 0.00005 \n
-    --lower         | -l    The starting p-value threshold. Default: 0.0001 \n
+    --lower         | -l    The starting p-value threshold. Default: 5e-08 \n
     --model                 Genetic model use for regression. The genetic\n
                             encoding is based on the base data where the\n
                             encoding represent number of the coding allele\n
@@ -248,12 +248,16 @@ help_message <-
                             when --msigdb is used\n
     --msigdb        | -m    MSIGDB file containing the pathway information.\n
                             Require the gtf file\n
-    --snp-set               Provide a SNP set file containing a single snp set.\n
-                            Name of SNP set file will be used as the region\n
-                            identifier. This file should contain only one column.\n
-    --snp-sets              Provide a SNP set file containing multiple snp sets.\n
-                            Each row represent a single SNP set with the first\n
-                            column containing name of the SNP set.\n    
+    --snp-set               Provide a SNP set file containing the snp set(s).\n
+                            Two different file format is allowed:\n
+                            SNP list format - A file containing a single\n
+                                              column of SNP ID. Name of the\n
+                                              set will be the file name or\n
+                                              can be provided using \n
+                                              --snp-set File:Name\n
+                            MSigDB format   - Each row represent a single SNP \n
+                                              set with the first column containing\n
+                                              the name of the SNP set.\n
     --wind-3                Add N base(s) to the 3' region of each feature(s) \n
     --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
 \nPlotting:\n
@@ -285,14 +289,13 @@ help_message <-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
-    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
-                            to 0 for each new P-value threshold instead of\n
-                            adding up\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
-    --id-delim              Delimiter used to concatinate FID and IID in bgen\n
+    --id-delim              This parameter causes sample IDs to be parsed as\n
+                            <FID><delimiter><IID>; the default delimiter\n
+                            is '_'. \n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
@@ -301,6 +304,9 @@ help_message <-
                             has the same A1 and A2 alleles\n
     --memory                Maximum memory usage allowed. PRSice will try\n
                            its best to honor this setting\n
+    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
+                            to 0 for each new P-value threshold instead of\n
+                            adding up\n
     --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
@@ -442,15 +448,15 @@ option_list <- list(
   make_option(c("--A1"), type = "character"),
   make_option(c("--A2"), type = "character"),
   make_option(c("-b", "--base"), type = "character"),
+  make_option(c("--base-info"), type = "character", dest = "info_base"),
+  make_option(c("--base-maf"), type = "character", dest="maf_base"),
   make_option(c("--beta"), action = "store_true"),
   make_option(c("--bp"), type = "character"),
   make_option(c("--chr"), type = "character"),
   make_option(c("--index"), action = "store_true"),
-  make_option(c("--info-base"), type = "character", dest = "info_base"),
-  make_option(c("--maf-base"), type = "character", dest="maf_base"),
   make_option(c("--no-default"), action = "store_true", dest="no_default"),
+  make_option(c("--or"), action = "store_true"),
   make_option(c("-p", "--pvalue"), type = "character"),
-  make_option(c("--se"), type = "character"),
   make_option(c("--snp"), type = "character"),
   make_option(c("--stat"), type = "character"),
   # Target file
@@ -462,6 +468,7 @@ option_list <- list(
   make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
   make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
   make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
+  make_option(c("-f", "--pheno"), type = "character", dest = "pheno_file"),
   make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
@@ -470,6 +477,7 @@ option_list <- list(
   # Dosage
   make_option(c("--allow-inter"), action = "store_true", dest="allow_inter"),
   make_option(c("--hard-thres"), type = "numeric", dest="hard_thres"),
+  make_option(c("--dose-thres"), type = "numeric", dest="dose_thres"),
   make_option(c("--hard"), action = "store_true"),
   # Clumping
   make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
@@ -480,6 +488,7 @@ option_list <- list(
   make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
   make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
   make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
+  make_option(c("--ld-dose-thres"), type = "numeric", dest="ld_dose_thres"),
   make_option(c("--ld-keep"), type = "character", dest="ld_keep"),
   make_option(c("--ld-maf"), type = "numeric", dest="ld_maf"),
   make_option(c("--ld-remove"), type = "character", dest="ld_remove"),
@@ -489,6 +498,7 @@ option_list <- list(
   # Covariates
   make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
   make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
+  make_option(c("-C", "--cov"), type = "character", dest = "cov_file"),
   make_option(c("--cov-factor"), type = "character", dest = "cov_factor"),
   # P-thresholding
   make_option(
@@ -507,16 +517,15 @@ option_list <- list(
   make_option(c("-u", "--upper"), type = "numeric"),
   # PRSet
   make_option(c("-B", "--bed"), type = "character"),
+  make_option(c("--background"), type = "character"),
   make_option(c("--feature"), type = "character"),
+  make_option(c("--full-back"), action="store_true", dest="full_back"),
   make_option(c("-g", "--gtf"), type = "character"),
   make_option(c("-m", "--msigdb"), type = "character"),
   make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
   make_option(c("--wind-5"), type = "character", dest="wind_5"),
   make_option(c("--wind-3"), type = "character", dest="wind_3"),
   make_option(c("--snp-set"), type = "character", dest="snp_set"),
-  make_option(c("--snp-sets"), type = "character", dest="snp_sets"),
-  # PRSlice 
-  make_option(c("--prslice"), type = "numeric"),
   # Misc
   make_option(c("--all-score"), action = "store_true", dest="all_score"),
   make_option(c("--exclude"), type = "character"),

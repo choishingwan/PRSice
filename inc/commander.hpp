@@ -650,6 +650,7 @@ public:
     bool use_ref_maf() const { return m_use_ref_maf; }
     double ref_dose_thres() const { return m_ref_dose_thres; }
     double target_dose_thres() const { return m_target_dose_thres; }
+
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -1330,6 +1331,25 @@ private:
                         value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
                             m_memory = misc::convert<size_t>(value);
+                        }
+                        else if (unit == "K")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024;
+                        }
+                        else if (unit == "M")
+                        {
+                            m_memory =
+                                misc::convert<size_t>(value) * 1024 * 1024;
+                        }
+                        else if (unit == "G")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024
+                                       * 1024 * 1024;
+                        }
+                        else if (unit == "T")
+                        {
+                            m_memory = misc::convert<size_t>(value) * 1024
+                                       * 1024 * 1024 * 1024;
                         }
                     }
                 }

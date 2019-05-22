@@ -3,25 +3,19 @@ repo_url: https://github.com/choishingwan/PRSice
 site_author: Shing Wan CHOI
 pages:
     - index.md
-    - PRSice:
-        - Quick Start: quick_start.md
-        - Detailed Guide: step_by_step.md
+    - Quick Start:
+        - PRSice: quick_start.md
+        - PRSet: quick_start_prset.md
+        
+    - Detail Guides:
+        - PRSice: step_by_step.md
+        - PRSet: prset_detail.md
 
-    - PRSet:
-        - Quick Start: quick_start_prset.md
-        - Detailed Guide: prset_detail.md
+    - Special Features:
+        - Set Based Clumping: set_clump.md
+        - Competitive P-value: set_perm.md
 
-    - Details of PRSice/PRSet:
-        - General Usages: general.md
-        - Base File: base_file.md
-        - Target File: target_file.md
-        - Clumping: clumping.md
-        - Adjusting for Covariates: covariate.md
-        - P-value Thresholding: pthresholding.md
-        - PRSet: prset_command.md
-        - PRSlice: prslice_command.md
-        - Plotting: plot.md
-        - Miscellaneous: misc.md
+    - Available Commands: command_detail.md
 
     - Developers:
         - Compile from Source: compilation.md
@@ -34,6 +28,8 @@ pages:
 theme: readthedocs
 markdown_extensions:
     - admonition
+    - pymdownx.details
+    - pymdownx.superfences
     - toc:
         permalink: True
     - codehilite

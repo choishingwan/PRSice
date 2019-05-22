@@ -35,6 +35,7 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          double& r2, double& coeff, double& standard_error,
          size_t max_iter = 25, size_t thread = 1, bool intercept = true);
+
 Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta);
 Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta);
 Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta);
@@ -48,7 +49,7 @@ void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
                 Eigen::VectorXd& gprime);
 inline double y_log_y(double y, double mu)
 {
-    return (y != 0.) ? (y * log(y / mu)) : 0;
+    return (!misc::logically_equal(y, 0)) ? (y * log(y / mu)) : 0;
 }
 }
 
