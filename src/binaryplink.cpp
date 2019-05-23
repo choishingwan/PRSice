@@ -926,28 +926,29 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
+        if (m_unfiltered_sample_ct != m_sample_ct) {
+            // if we need to perform selection, we will remove all unwanted
+            // sample and push the data forward
+            if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+                std::string error_message =
+                    "Error: Cannot read the bed file(read): " + m_cur_file;
+                throw std::runtime_error(error_message);
+            }
+        }
+        else
+        {
+            // if we dno't need filtering, then we simply mask out the unwanted
+            // region (to avoid the leftover, if any)
+            if (load_raw(unfiltered_sample_ct4, m_bed_file, genotype.data())) {
+                std::string error_message =
+                    "Error: Cannot read the bed file(read): " + m_cur_file;
+                throw std::runtime_error(error_message);
+            }
+        }
+
         if(!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                use_ref_maf)){
             // we need to calculate the MA
-            if (m_unfiltered_sample_ct != m_sample_ct) {
-                // if we need to perform selection, we will remove all unwanted
-                // sample and push the data forward
-                if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
-                    std::string error_message =
-                        "Error: Cannot read the bed file(read): " + m_cur_file;
-                    throw std::runtime_error(error_message);
-                }
-            }
-            else
-            {
-                // if we dno't need filtering, then we simply mask out the unwanted
-                // region (to avoid the leftover, if any)
-                if (load_raw(unfiltered_sample_ct4, m_bed_file, genotype.data())) {
-                    std::string error_message =
-                        "Error: Cannot read the bed file(read): " + m_cur_file;
-                    throw std::runtime_error(error_message);
-                }
-            }
             single_marker_freqs_and_hwe(
                 unfiltered_sample_ctv2, m_tmp_genotype.data(),
                 m_sample_include2.data(), m_founder_include2.data(), m_sample_ct,
@@ -959,29 +960,18 @@ void BinaryPlink::read_score(
             assert(m_founder_ct >= tmp_total);
             missing_ct = m_founder_ct - tmp_total;
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-            if(m_unfiltered_sample_ct != m_sample_ct){
-                copy_quaterarr_nonempty_subset(m_tmp_genotype.data(),
-                                               m_sample_include.data(),
-                                               static_cast<uint32_t>(m_unfiltered_sample_ct),
-                                               static_cast<uint32_t>(m_sample_ct),
-                                               genotype.data());
-            }else{
 
-                genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
-            }
         }
-        else{
-            // business as usual
-            if (load_and_collapse_incl(
-                    static_cast<uint32_t>(m_unfiltered_sample_ct),
-                    static_cast<uint32_t>(m_sample_ct), m_sample_include.data(),
-                    final_mask, false, m_bed_file, m_tmp_genotype.data(),
-                    genotype.data()))
-            {
-                throw std::runtime_error("Error: Cannot read the bed file!");
-            }
-        }
+        if(m_unfiltered_sample_ct != m_sample_ct){
+            copy_quaterarr_nonempty_subset(m_tmp_genotype.data(),
+                                           m_sample_include.data(),
+                                           static_cast<uint32_t>(m_unfiltered_sample_ct),
+                                           static_cast<uint32_t>(m_sample_ct),
+                                           genotype.data());
+        }else{
 
+            genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+        }
         // directly read in the current location
         m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
         // reset the weight (as we might have flipped it later on)
@@ -1044,33 +1034,50 @@ void BinaryPlink::read_score(
                 }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
-                switch (ukk)
-                {
-                default:
-                    // true = 1, false = 0
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homcom_weight * stat - adj_score;
-                    break;
-                case 1:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + het_weight * stat - adj_score;
-                    break;
-                case 3:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homrar_weight * stat - adj_score;
-                    break;
-                case 2:
-                    // handle missing sample
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + miss_count;
-                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
-                    break;
+                if(not_first){
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp += miss_count;
+                        sample_prs.prs += miss_score;
+                        break;
+                    }
+                }else{
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp = miss_count;
+                        sample_prs.prs = miss_score;
+                        break;
+                    }
                 }
                 // ulii &= ~((3 * ONELU) << ujj);
                 // as each sample is represented by two byte, we will add 2 to
