@@ -40,6 +40,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
 const std::string version = "2.2.1";
 const std::string date = "22 May 2019";
 class Commander
@@ -727,7 +728,7 @@ private:
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 1000000;
+    int m_clump_distance = 250000;
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
@@ -757,6 +758,7 @@ private:
     bool m_provided_memory = false;
     bool m_perform_permutation = false;
     bool m_provided_chr_col = false;
+    bool m_provided_clump_dist = false;
     bool m_provided_effect_allele = false;
     bool m_provided_non_effect_allele = false;
     bool m_provided_statistic = false;

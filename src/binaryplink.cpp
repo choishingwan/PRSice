@@ -960,7 +960,6 @@ void BinaryPlink::read_score(
             assert(m_founder_ct >= tmp_total);
             missing_ct = m_founder_ct - tmp_total;
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
-
         }
         if(m_unfiltered_sample_ct != m_sample_ct){
             copy_quaterarr_nonempty_subset(m_tmp_genotype.data(),
