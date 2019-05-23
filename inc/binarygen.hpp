@@ -243,7 +243,8 @@ private:
             // the transformation as that should be dealt with when we generate
             // the intermidate file
             m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
-            m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
+            m_prev_loc =
+                static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
         }
         // mainbuf should contains the information
         // update the m_prev_loc counter. However, for bgen, it is most likely
@@ -254,8 +255,8 @@ private:
     }
 
     void read_score(const std::vector<size_t>::const_iterator& start_idx,
-               const std::vector<size_t>::const_iterator& end_idx,
-               bool reset_zero, const bool use_ref_maf);
+                    const std::vector<size_t>::const_iterator& end_idx,
+                    bool reset_zero, const bool use_ref_maf);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
                          bool reset_zero, const bool use_ref_maf);
@@ -308,11 +309,10 @@ private:
          */
         void set_stat(const double& stat, const double& homcom_weight,
                       const double& het_weight, const double& homrar_weight,
-                      const bool flipped,
-                      const bool not_first)
+                      const bool flipped, const bool not_first)
         {
-            // don't use external expected as that doesn't take into account of the
-            // weighting
+            // don't use external expected as that doesn't take into account of
+            // the weighting
             m_missing.clear();
             m_stat = stat;
             m_homcom_weight = homcom_weight;
@@ -443,28 +443,32 @@ private:
          * processing samples with missing data. This requires us to calculate
          * the expected value and use that as the PRS of the samples
          */
-        void finalise() {
-                if (m_centre) {
-                    m_adj_score = m_stat * rs.mean();
-                }
-                if (!m_setzero) {
-                    m_miss_count = 2;
-                    m_miss_score = m_stat * rs.mean();
-                }
+        void finalise()
+        {
+            if (m_centre) {
+                m_adj_score = m_stat * rs.mean();
+            }
+            if (!m_setzero) {
+                m_miss_count = 2;
+                m_miss_score = m_stat * rs.mean();
+            }
 
-                // only need to do this if we don't have the expected information
-                size_t cur_idx = 0;
-                for(size_t i = 0; i < m_sample_prs->size(); ++i){
-                    if(cur_idx < m_missing.size() && i == m_missing[cur_idx]){
-                        (*m_sample_prs)[i].prs = (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
-                        cur_idx++;
-                    }else if(m_centre){
-                        // if it is not missing and we want the centre the score
-                        // we will need to minus the adjusted score which was 0 before
-                        // this run
-                        (*m_sample_prs)[i].prs -= m_adj_score;
-                    }
+            // only need to do this if we don't have the expected information
+            size_t cur_idx = 0;
+            for (size_t i = 0; i < m_sample_prs->size(); ++i) {
+                if (cur_idx < m_missing.size() && i == m_missing[cur_idx]) {
+                    (*m_sample_prs)[i].prs =
+                        (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
+                    cur_idx++;
                 }
+                else if (m_centre)
+                {
+                    // if it is not missing and we want the centre the score
+                    // we will need to minus the adjusted score which was 0
+                    // before this run
+                    (*m_sample_prs)[i].prs -= m_adj_score;
+                }
+            }
         }
 
     private:
@@ -480,7 +484,7 @@ private:
         double m_homrar_weight = 1;
         double m_miss_score = 0.0;
         double m_adj_score = 0.0;
-        double m_cal_expected =0.0;
+        double m_cal_expected = 0.0;
         uint32_t m_prs_sample_i = 0;
         int m_miss_count = 0;
         int m_ploidy = 2;

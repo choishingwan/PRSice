@@ -360,7 +360,8 @@ void BinaryPlink::calc_freq_gen_inter(
                 "Error: Cannot read the bed file(read): " + bed_name;
             throw std::runtime_error(error_message);
         }
-        prev_pos = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
+        prev_pos =
+            static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
         // calculate the MAF using PLINK2 function
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
@@ -858,7 +859,7 @@ void BinaryPlink::read_score(
     size_t missing_ct = 0;
     size_t het_ct = 0;
     size_t homcom_ct = 0;
-    size_t tmp_total=0;
+    size_t tmp_total = 0;
     int ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
@@ -929,7 +930,9 @@ void BinaryPlink::read_score(
         if (m_unfiltered_sample_ct != m_sample_ct) {
             // if we need to perform selection, we will remove all unwanted
             // sample and push the data forward
-            if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+            if (load_raw(unfiltered_sample_ct4, m_bed_file,
+                         m_tmp_genotype.data()))
+            {
                 std::string error_message =
                     "Error: Cannot read the bed file(read): " + m_cur_file;
                 throw std::runtime_error(error_message);
@@ -946,13 +949,15 @@ void BinaryPlink::read_score(
             }
         }
 
-        if(!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                               use_ref_maf)){
+        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                use_ref_maf))
+        {
             // we need to calculate the MA
             single_marker_freqs_and_hwe(
                 unfiltered_sample_ctv2, m_tmp_genotype.data(),
-                m_sample_include2.data(), m_founder_include2.data(), m_sample_ct,
-                &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
+                m_sample_include2.data(), m_founder_include2.data(),
+                m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
+                &lh_ctf, &hh_ctf);
             homcom_ct = ll_ctf;
             het_ct = lh_ctf;
             homrar_ct = hh_ctf;
@@ -961,18 +966,20 @@ void BinaryPlink::read_score(
             missing_ct = m_founder_ct - tmp_total;
             cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
-        if(m_unfiltered_sample_ct != m_sample_ct){
-            copy_quaterarr_nonempty_subset(m_tmp_genotype.data(),
-                                           m_sample_include.data(),
-                                           static_cast<uint32_t>(m_unfiltered_sample_ct),
-                                           static_cast<uint32_t>(m_sample_ct),
-                                           genotype.data());
-        }else{
+        if (m_unfiltered_sample_ct != m_sample_ct) {
+            copy_quaterarr_nonempty_subset(
+                m_tmp_genotype.data(), m_sample_include.data(),
+                static_cast<uint32_t>(m_unfiltered_sample_ct),
+                static_cast<uint32_t>(m_sample_ct), genotype.data());
+        }
+        else
+        {
 
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
         // directly read in the current location
-        m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
+        m_prev_loc =
+            static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
         // reset the weight (as we might have flipped it later on)
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
@@ -1033,7 +1040,7 @@ void BinaryPlink::read_score(
                 }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
-                if(not_first){
+                if (not_first) {
                     switch (ukk)
                     {
                     default:
@@ -1055,7 +1062,9 @@ void BinaryPlink::read_score(
                         sample_prs.prs += miss_score;
                         break;
                     }
-                }else{
+                }
+                else
+                {
                     switch (ukk)
                     {
                     default:

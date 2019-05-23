@@ -1481,9 +1481,11 @@ namespace bgen
     }
 
     template <typename Setter>
-    void read_and_parse_genotype_data_block(
-        std::istream& aStream, Context const& context, Setter& setter,
-        std::vector<byte_t>* buffer1, std::vector<byte_t>* buffer2)
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context const& context,
+                                            Setter& setter,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2)
     {
         read_genotype_data_block(aStream, context, buffer1);
         uncompress_probability_data(context, *buffer1, buffer2);

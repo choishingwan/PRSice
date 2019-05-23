@@ -196,7 +196,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "chr")
                 set_string(optarg, message_store, m_chr, m_provided_chr_col,
                            command, error_messages);
-            else if (command == "clump-kb"){
+            else if (command == "clump-kb")
+            {
                 m_clump_distance = set_distance(optarg, command, message_store,
                                                 error, error_messages);
                 m_provided_clump_dist = true;
@@ -1349,7 +1350,7 @@ bool Commander::clump_check(std::map<std::string, std::string>& message,
         message["clump-p"] = std::to_string(m_clump_p);
         // we divided by 1000 here to make sure it is in KB (our preferred
         // format)
-        if(!m_provided_clump_dist && m_perform_prset){
+        if (!m_provided_clump_dist && m_perform_prset) {
             // change default based on PRSet or not
             m_clump_distance = 1000000;
         }

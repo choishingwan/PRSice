@@ -1827,7 +1827,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
     m_existed_snps_index.clear();
 
     message = "Number of variant(s) after clumping : "
-                   + misc::to_string(m_existed_snps.size());
+              + misc::to_string(m_existed_snps.size());
     reporter.report(message);
 }
 

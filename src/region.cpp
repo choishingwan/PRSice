@@ -165,8 +165,7 @@ size_t Region::generate_regions(
     region_names.clear();
     snp_in_sets.clear();
     std::string message = "Start processing gene set information\n";
-    message.append(
-        "==================================================");
+    message.append("==================================================");
     reporter.report(message);
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest

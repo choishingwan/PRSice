@@ -180,8 +180,9 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)
                 else
                 {
                     // emit a warning so people might be aware of it
-                    std::cerr << "We assume the following line is not a header:\n"
-                              << line << "\n(first column isn't FID or IID)\n";
+                    std::cerr
+                        << "We assume the following line is not a header:\n"
+                        << line << "\n(first column isn't FID or IID)\n";
                 }
             }
             if (static_cast<int>(token.size())
@@ -1087,8 +1088,7 @@ void BinaryGen::hard_code_score(
     // we need to calculate the size of possible vectors
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t unfiltered_sample_ct4 =
-        (m_unfiltered_sample_ct + 3) / 4;
+    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     uintptr_t* lbptr;
     uint32_t uii;
     uint32_t ujj;
@@ -1117,27 +1117,29 @@ void BinaryGen::hard_code_score(
     // initialize the data structure for storing the genotype
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     genfile::bgen::Context context;
-    PLINK_generator setter(&m_sample_include, genotype.data(),
-                           m_hard_threshold, m_dose_threshold);
+    PLINK_generator setter(&m_sample_include, genotype.data(), m_hard_threshold,
+                           m_dose_threshold);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     for (; cur_idx != end_idx; ++cur_idx) {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
         // read in the genotype using the modified load_and_collapse_incl
         // function. m_target_plink will inform the function wheter there's
         // an intermediate file
-        // if it has the intermediate file, then we should have already calculated the
-        // counts
+        // if it has the intermediate file, then we should have already
+        // calculated the counts
         if (m_cur_file != cur_snp.file_name()) {
             // If we are processing a new file we will need to read it
             if (m_bgen_file.is_open()) {
                 m_bgen_file.close();
             }
             m_cur_file = cur_snp.file_name();
-            std::string bgen_name = m_cur_file + ((m_intermediate)? "":".bgen");
+            std::string bgen_name =
+                m_cur_file + ((m_intermediate) ? "" : ".bgen");
             m_bgen_file.open(bgen_name.c_str(), std::ios::binary);
             if (!m_bgen_file.is_open()) {
                 std::string error_message =
-                    "Error: Cannot open bgen file: " + bgen_name + ((m_intermediate)? "(intermediate)":"");
+                    "Error: Cannot open bgen file: " + bgen_name
+                    + ((m_intermediate) ? "(intermediate)" : "");
                 throw std::runtime_error(error_message);
             }
             // reset the m_prev_loc flag to 0
@@ -1145,17 +1147,21 @@ void BinaryGen::hard_code_score(
         }
         byte_pos = cur_snp.byte_pos();
         if ((m_prev_loc != byte_pos)
-             && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
-         {
-             throw std::runtime_error(
-                 "Error: Cannot seek within the intermediate file!");
-         }
-        if(cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                              use_ref_maf)){
+            && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
+        {
+            throw std::runtime_error(
+                "Error: Cannot seek within the intermediate file!");
+        }
+        if (cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                               use_ref_maf))
+        {
             // must have intermediate file
             m_bgen_file.read((char*) genotype.data(), unfiltered_sample_ct4);
-            m_prev_loc = static_cast<std::streampos>(unfiltered_sample_ct4)+byte_pos;
-        }else{
+            m_prev_loc =
+                static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
+        }
+        else
+        {
             // now read in the genotype information
             context = m_context_map[m_cur_file];
             // start performing the parsing
