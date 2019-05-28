@@ -1389,7 +1389,7 @@ private:
         try
         {
             // when no unit is provided, we multiply based on default
-            dist = misc::convert<int>(input) * default_unit;
+            dist = static_cast<int>(misc::convert<double>(input) * default_unit);
             if(default_unit == 1000) message[command] = input+"kb";
             else message[command] = input+"bp";
             return dist;
@@ -1404,33 +1404,33 @@ private:
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
                     if (unit == "BP") {
-                        dist = misc::convert<int>(value) ;
+                        dist = static_cast<int>(misc::convert<double>(value)) ;
                         message[command] = value+"bp";
                         return dist;
                     }
                     else if (unit == "KB") {
-                        dist = misc::convert<int>(value) * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value) * 1000);
                         message[command] = value+"kb";
                         return dist;
                     }
                     else if (unit == "MB")
                     {
-                        dist = misc::convert<int>(value) * 1000 * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000);
                         message[command] = value+"mb";
                         return dist;
                     }
                     else if (unit == "GB")
                     {
                         // kinda stupid here, but whatever
-                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000 * 1000);
                         message[command] = value+"gb";
                         return dist;
                     }
                     else if (unit == "TB")
                     {
                         // way too much....
-                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000
-                               * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000 * 1000
+                               * 1000);
                         message[command] = value+"tb";
                         return dist;
                     }
@@ -1440,31 +1440,31 @@ private:
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
-                            dist = misc::convert<int>(value);
+                            dist = static_cast<int>(misc::convert<double>(value));
                             message[command] = value+"bb";
                             return dist;
                         }
                         else if (unit == "K")
                         {
-                            dist = misc::convert<int>(value) * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value) * 1000);
                             message[command] = value+"kb";
                             return dist;
                         }
                         else if (unit == "M")
                         {
-                            dist = misc::convert<int>(value) * 1000 * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000);
                             message[command] = value+"mb";
                             return dist;
                         }
                         else if (unit == "G")
                         {
-                            dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000 * 1000);
                             message[command] = value+"gb";
                             return dist;
                         }
                         else if (unit == "T")
                         {
-                            dist = misc::convert<int>(value) * 1000 * 1000 * 1000 * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value) * 1000 * 1000 * 1000 * 1000);
                             message[command] = value+"tb";
                             return dist;
                         }
