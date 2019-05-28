@@ -1375,6 +1375,7 @@ private:
 
     inline int set_distance(const std::string& input,
                             const std::string& command,
+                            int default_unit,
                             std::map<std::string, std::string>& message,
                             bool& error, std::string& error_messages)
     {
@@ -1387,8 +1388,10 @@ private:
         int dist;
         try
         {
-            // when no unit is provided, we assume it is KB
-            dist = misc::convert<int>(input) * 1000;
+            // when no unit is provided, we multiply based on default
+            dist = misc::convert<int>(input) * default_unit;
+            if(default_unit == 1000) message[command] = input+"kb";
+            else message[command] = input+"bp";
             return dist;
         }
         catch (...)
@@ -1400,19 +1403,27 @@ private:
                     std::transform(in.begin(), in.end(), in.begin(), ::toupper);
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
-                    if (unit == "KB") {
+                    if (unit == "BP") {
+                        dist = misc::convert<int>(value) ;
+                        message[command] = value+"bp";
+                        return dist;
+                    }
+                    else if (unit == "KB") {
                         dist = misc::convert<int>(value) * 1000;
+                        message[command] = value+"kb";
                         return dist;
                     }
                     else if (unit == "MB")
                     {
                         dist = misc::convert<int>(value) * 1000 * 1000;
+                        message[command] = value+"mb";
                         return dist;
                     }
                     else if (unit == "GB")
                     {
                         // kinda stupid here, but whatever
                         dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        message[command] = value+"gb";
                         return dist;
                     }
                     else if (unit == "TB")
@@ -1420,6 +1431,7 @@ private:
                         // way too much....
                         dist = misc::convert<int>(value) * 1000 * 1000 * 1000
                                * 1000;
+                        message[command] = value+"tb";
                         return dist;
                     }
                     else
@@ -1429,16 +1441,31 @@ private:
                         value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
                             dist = misc::convert<int>(value);
+                            message[command] = value+"bb";
                             return dist;
                         }
                         else if (unit == "K")
                         {
                             dist = misc::convert<int>(value) * 1000;
+                            message[command] = value+"kb";
                             return dist;
                         }
                         else if (unit == "M")
                         {
                             dist = misc::convert<int>(value) * 1000 * 1000;
+                            message[command] = value+"mb";
+                            return dist;
+                        }
+                        else if (unit == "G")
+                        {
+                            dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                            message[command] = value+"gb";
+                            return dist;
+                        }
+                        else if (unit == "T")
+                        {
+                            dist = misc::convert<int>(value) * 1000 * 1000 * 1000 * 1000;
+                            message[command] = value+"tb";
                             return dist;
                         }
                     }
