@@ -467,7 +467,7 @@ option_list <- list(
   make_option(c("--maf"), type = "numeric"),
   make_option(c("--nonfounders"), action = "store_true", dest = "nonfounders"),
   make_option(c("--pheno-col"), type = "character", dest = "pheno_col"),
-  make_option(c("-f", "--pheno-file"), type = "character", dest = "pheno_file"),
+  make_option(c("--pheno-file"), type = "character", dest = "pheno_file"),
   make_option(c("-f", "--pheno"), type = "character", dest = "pheno_file"),
   make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
@@ -497,7 +497,7 @@ option_list <- list(
   make_option(c("--proxy"), type = "numeric"),
   # Covariates
   make_option(c("-c", "--cov-col"), type = "character", dest = "cov_col"),
-  make_option(c("-C", "--cov-file"), type = "character", dest = "cov_file"),
+  make_option(c("--cov-file"), type = "character", dest = "cov_file"),
   make_option(c("-C", "--cov"), type = "character", dest = "cov_file"),
   make_option(c("--cov-factor"), type = "character", dest = "cov_factor"),
   # P-thresholding
