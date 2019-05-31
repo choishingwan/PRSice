@@ -431,7 +431,8 @@ void BinaryPlink::calc_freq_gen_inter(
     }
 }
 
-void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
+void BinaryPlink::gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_regions,
+                                 const std::string& out_prefix,
                                  Genotype* target)
 {
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
@@ -452,7 +453,7 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
     int chr_code = 0;
     int num_snp_read = -1;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, flipping = false;
+         prev_chr_error = false, flipping = false, to_remove=false;
     uintptr_t bed_offset;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file
@@ -583,6 +584,12 @@ void BinaryPlink::gen_snp_vector(const std::string& out_prefix,
                     + bim_token[+BIM::RS] + ":" + bim_token[+BIM::BP] + "\n";
                 error_message.append("Please check you have the correct input");
                 throw std::runtime_error(error_message);
+            }
+            to_remove =
+                Genotype::within_region(exclusion_regions, chr_code, loc);
+            if(to_remove){
+                m_num_xrange++;
+                continue;
             }
             // check if this is a duplicated SNP
             if (processed_snps.find(bim_token[+BIM::RS])

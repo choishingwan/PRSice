@@ -94,8 +94,6 @@ int main(int argc, char* argv[])
                 commander.fastscore(), commander.no_full(), commander.beta(),
                 commander.is_index(), commander.keep_ambig(), reporter);
             // no longer need the exclusion region object
-            // cr_destroy(exclusion_region);
-            exclusion_regions.clear();
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
             message.append(
@@ -115,7 +113,8 @@ int main(int argc, char* argv[])
             // when we do geno and maf
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), commander.exclude_file(),
-                                   commander.extract_file(), verbose, reporter);
+                                   commander.extract_file(),exclusion_regions,
+                                   verbose, reporter);
             // now load the reference file
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
@@ -134,8 +133,9 @@ int main(int argc, char* argv[])
                 // load the reference file
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
-                    commander.extract_file(), verbose, reporter, target_file);
+                    commander.extract_file(), exclusion_regions, verbose, reporter, target_file);
             }
+            exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
 
