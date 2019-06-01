@@ -198,8 +198,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            command, error_messages);
             else if (command == "clump-kb")
             {
-                m_clump_distance = set_distance(optarg, command, 1000, message_store,
-                                                error, error_messages);
+                m_clump_distance =
+                    set_distance(optarg, command, 1000, message_store, error,
+                                 error_messages);
                 m_provided_clump_dist = true;
             }
             else if (command == "clump-p")
@@ -331,8 +332,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_snp, m_provided_snp_id,
                            command, error_messages);
             else if (command == "snp-set")
-                set_string(optarg, message_store, m_snp_set, dummy, command,
-                           error_messages);
+                set_string(optarg, message_store, m_snp_set, m_perform_prset,
+                           command, error_messages);
             else if (command == "stat")
                 set_string(optarg, message_store, m_statistic,
                            m_provided_statistic, command, error_messages);
@@ -343,11 +344,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_target_type, dummy, command,
                            error_messages);
             else if (command == "wind-3")
-                m_window_3 = set_distance(optarg, command, 1, message_store, error,
-                                          error_messages);
+                m_window_3 = set_distance(optarg, command, 1, message_store,
+                                          error, error_messages);
             else if (command == "wind-5")
-                m_window_5 = set_distance(optarg, command, 1, message_store, error,
-                                          error_messages);
+                m_window_5 = set_distance(optarg, command, 1, message_store,
+                                          error, error_messages);
             else if (command.compare("x-range") == 0)
                 set_string(optarg, message_store, m_exclusion_range, dummy,
                            command, error_messages);
