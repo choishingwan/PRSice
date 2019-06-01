@@ -98,7 +98,9 @@ public:
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract, bool verbose, Reporter& reporter,
+                   const std::string& extract,
+                   const std::vector<IITree<int, int>> &exclusion_regions,
+                   bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
@@ -472,6 +474,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    uint32_t m_num_xrange=0;
     uint32_t m_base_missed = 0;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
@@ -588,7 +591,8 @@ protected:
         return std::vector<Sample_ID>(0);
     }
 
-    virtual void gen_snp_vector(const std::string& /*out_prefix*/,
+    virtual void gen_snp_vector(const std::vector<IITree<int, int>>& /*exclusion_regions*/,
+                                const std::string& /*out_prefix*/,
                                 Genotype* /*target*/)
     {
     }

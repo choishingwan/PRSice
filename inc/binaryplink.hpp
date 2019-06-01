@@ -58,7 +58,8 @@ protected:
      * \return Vector containing the sample information
      */
     std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
-    void gen_snp_vector(const std::string& out_prefix,
+    void gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_regions,
+                        const std::string& out_prefix,
                         Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold, const double&,

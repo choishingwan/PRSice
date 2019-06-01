@@ -713,12 +713,6 @@ void Region::load_snp_sets(
         duplicated_sets.insert(set_name);
         region_names.push_back(set_name);
     }
-    else
-    {
-        std::string message = "Warning: Set name provided for multi-SNP set "
-                              "input, the set name will be ignored\n";
-        reporter.report(message);
-    }
     input.clear();
     input.seekg(0, input.beg);
     while (std::getline(input, line)) {
