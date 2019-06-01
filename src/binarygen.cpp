@@ -478,8 +478,9 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
     return true;
 }
 
-void BinaryGen::gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_regions,
-                               const std::string& out_prefix, Genotype* target)
+void BinaryGen::gen_snp_vector(
+    const std::vector<IITree<int, int>>& exclusion_regions,
+    const std::string& out_prefix, Genotype* target)
 {
     std::unordered_set<std::string> duplicated_snps;
     // should only apply to SNPs that are not removed due to extract/exclude
@@ -514,7 +515,7 @@ void BinaryGen::gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_re
     bool prev_chr_sex_error = false;
     bool prev_chr_error = false;
     bool flipping = false;
-    bool to_remove =false;
+    bool to_remove = false;
     for (auto prefix : m_genotype_files) {
         // go through each genotype file and get the context information
         get_context(prefix);
@@ -642,9 +643,9 @@ void BinaryGen::gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_re
                 if (!m_keep_ambig) exclude_snp = true;
             }
 
-            to_remove =
-                Genotype::within_region(exclusion_regions, chr_code, SNP_position);
-            if(to_remove){
+            to_remove = Genotype::within_region(exclusion_regions, chr_code,
+                                                SNP_position);
+            if (to_remove) {
                 m_num_xrange++;
                 exclude_snp = true;
             }

@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
             // when we do geno and maf
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), commander.exclude_file(),
-                                   commander.extract_file(),exclusion_regions,
+                                   commander.extract_file(), exclusion_regions,
                                    verbose, reporter);
             // now load the reference file
             if ((!commander.no_clump() && commander.use_ref())
@@ -133,7 +133,8 @@ int main(int argc, char* argv[])
                 // load the reference file
                 reference_file->load_snps(
                     commander.out(), commander.exclude_file(),
-                    commander.extract_file(), exclusion_regions, verbose, reporter, target_file);
+                    commander.extract_file(), exclusion_regions, verbose,
+                    reporter, target_file);
             }
             exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and

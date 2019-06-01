@@ -66,7 +66,7 @@ private:
      * \return
      */
     bool check_is_sample_format();
-    void gen_snp_vector(const std::vector<IITree<int, int>> &exclusion_regions,
+    void gen_snp_vector(const std::vector<IITree<int, int>>& exclusion_regions,
                         const std::string& out_prefix,
                         Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,

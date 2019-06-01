@@ -879,7 +879,7 @@ void Genotype::calc_freqs_and_intermediate(
 
 void Genotype::load_snps(const std::string& out, const std::string& exclude,
                          const std::string& extract,
-                         const std::vector<IITree<int, int> > &exclusion_regions,
+                         const std::vector<IITree<int, int>>& exclusion_regions,
                          bool verbose, Reporter& reporter, Genotype* target)
 {
 
@@ -905,10 +905,10 @@ void Genotype::load_snps(const std::string& out, const std::string& exclude,
         message.append(std::to_string(m_num_ambig)
                        + " ambiguous variant(s) kept\n");
     }
-    if(m_num_xrange != 0){
-        message.append(std::to_string(m_num_xrange)+
-                       " variant(s) removed as they fall within the "
-                       "--x-range region(s)\n");
+    if (m_num_xrange != 0) {
+        message.append(std::to_string(m_num_xrange)
+                       + " variant(s) removed as they fall within the "
+                         "--x-range region(s)\n");
     }
     if (!m_is_ref) {
         message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
