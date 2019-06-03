@@ -17,17 +17,20 @@ template <typename T>
 class Thread_Queue
 {
 public:
-    void pop(T& item)
+    bool pop(T& item)
     {
+        bool completed = false;
         std::unique_lock<std::mutex> mlock(m_mutex);
-        while (m_storage_queue.empty()) {
-            m_cond_not_empty.wait(mlock);
+        m_cond_not_empty.wait(mlock, [this]{return (m_storage_queue.size() || m_completed);});
+        completed = m_completed;
+        if(!completed){
+            item = std::move(m_storage_queue.front());
+            m_storage_queue.pop();
         }
-        item = std::move(m_storage_queue.front());
         m_num_processing--;
-        m_storage_queue.pop();
         mlock.unlock();
         m_cond_not_full.notify_one();
+        return completed;
     }
 
     void push(const T& item, size_t max_process)
@@ -51,7 +54,7 @@ public:
         while (max_process <= m_num_processing) {
             m_cond_not_full.wait(mlock);
         }
-        m_storage_queue.push(item);
+        m_storage_queue.push(std::move(item));
         m_num_processing++;
         mlock.unlock();
         m_cond_not_empty.notify_one();
@@ -73,16 +76,7 @@ public:
         std::unique_lock<std::mutex> mlock(m_mutex);
         m_completed = true;
         mlock.unlock();
-        m_cond_not_empty.notify_one();
-    }
-    bool has_completed()
-    {
-        bool completed = false;
-        std::unique_lock<std::mutex> mlock(m_mutex);
-        completed = m_completed;
-        mlock.unlock();
-        m_cond_not_full.notify_one();
-        return completed;
+        m_cond_not_empty.notify_all();
     }
     size_t num_processing() const { return m_num_processing; }
     Thread_Queue() = default;

@@ -1438,10 +1438,7 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
         processed++;
     }
     // send termination signal to the consumers
-    for (size_t i = 0; i < num_consumer; ++i) {
-        q.push(std::pair<Eigen::VectorXd, size_t>(Eigen::VectorXd(1), 0),
-               num_consumer);
-    }
+    q.completed();
 }
 
 void PRSice::consume_null_pheno(
@@ -1466,12 +1463,9 @@ void PRSice::consume_null_pheno(
     double coefficient, se_res, r2, obs_p, rss, resvar;
     double obs_t = -1;
     Eigen::Index se_index;
-    while (true) {
+    while (!q.pop(input)) {
         // as long as we have not received a termination signal, we will
         // continue our processing and should read from the queue
-        q.pop(input);
-        // the termination signal is represented by an vector with only 1 row
-        if (std::get<0>(input).rows() == 1) break;
         if (run_glm) {
             // the first entry from the queue should be the permuted phenotype
             // and the second entry is the index. We will pass the phenotype for
@@ -2071,10 +2065,13 @@ void PRSice::produce_null_prs(
         processed++;
     }
     // send termination signal to the consumers
+    q.completed();
+    /*
     for (size_t i = 0; i < num_consumer; ++i) {
         // termination signal is represented by an empty vector
         q.emplace(std::make_pair(std::vector<double>(), 0), num_consumer);
     }
+    */
 }
 
 
@@ -2097,12 +2094,7 @@ void PRSice::consume_prs(
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
     // now listen for producer
-    while (true) {
-        q.pop(prs_info);
-        if (std::get<0>(prs_info).empty()) {
-            // all job finished as the termination signal = empty vector
-            break;
-        }
+    while(!q.pop(prs_info)) {
         // update the independent variable matrix with the new PRS
         for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
              ++i_sample)
