@@ -2005,7 +2005,8 @@ void PRSice::produce_null_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
     const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
-    std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
+    std::map<size_t, std::vector<size_t>>& set_index,
+        std::vector<std::atomic<size_t>>& set_perm_res,const size_t num_perm,
     const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
@@ -2264,7 +2265,8 @@ void PRSice::run_competitive(
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
                              std::cref(bk_start_idx), std::cref(bk_end_idx),
-                             num_thread - 1, std::ref(set_index), num_perm,
+                             num_thread - 1, std::ref(set_index),
+                             std::ref(set_perm_res),num_perm,
                              require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {

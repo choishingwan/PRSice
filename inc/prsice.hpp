@@ -459,7 +459,7 @@ private:
                      const std::vector<size_t>::const_iterator& bk_start_idx,
                      const std::vector<size_t>::const_iterator& bk_end_idx,
                      size_t num_consumer,
-                     std::map<size_t, std::vector<size_t>>& set_index,
+                     std::map<size_t, std::vector<size_t>>& set_index,std::vector<std::atomic<size_t>>& set_perm_res,
                      const size_t num_perm, const bool require_standardize,
                      const bool use_ref_maf);
     /*!
