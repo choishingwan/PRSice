@@ -1241,7 +1241,7 @@ void PRSice::process_permutations()
     // can't generate an empirical p-value if there is no observed p-value
     if (m_best_index == -1) return;
     size_t best_index = static_cast<size_t>(m_best_index);
-    const double best_t = std::abs(m_prs_results[best_index].coefficient
+    const double best_t = std::fabs(m_prs_results[best_index].coefficient
                                    / m_prs_results[best_index].se);
     const auto num_better =
         std::count_if(m_perm_result.begin(), m_perm_result.end(),
@@ -1349,7 +1349,7 @@ void PRSice::run_null_perm_no_thread(
             // run the logistic regression on the permuted phenotype
             Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
                             coefficient, se, 25, 1, true);
-            obs_t = std::abs(coefficient / se);
+            obs_t = std::fabs(coefficient / se);
             // note that for us to calculate the p-value from logistic
             // regression, we take the square of obs_t, but abs should give us
             // similar result and has the added benefit of not needing to worry
@@ -1398,7 +1398,7 @@ void PRSice::run_null_perm_no_thread(
             se = (pre_se * resvar).array().sqrt();
             // we take the absolute of the T-value as we only concern about the
             // magnitude
-            obs_t = std::abs(beta(intercept) / se(se_index));
+            obs_t = std::fabs(beta(intercept) / se(se_index));
             // for T-value, we need the maximum T, not the smallest
             m_perm_result[processed] =
                 std::max(obs_t, m_perm_result[processed]);
@@ -1438,10 +1438,7 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
         processed++;
     }
     // send termination signal to the consumers
-    for (size_t i = 0; i < num_consumer; ++i) {
-        q.push(std::pair<Eigen::VectorXd, size_t>(Eigen::VectorXd(1), 0),
-               num_consumer);
-    }
+    q.completed();
 }
 
 void PRSice::consume_null_pheno(
@@ -1466,19 +1463,16 @@ void PRSice::consume_null_pheno(
     double coefficient, se_res, r2, obs_p, rss, resvar;
     double obs_t = -1;
     Eigen::Index se_index;
-    while (true) {
+    while (!q.pop(input)) {
         // as long as we have not received a termination signal, we will
         // continue our processing and should read from the queue
-        q.pop(input);
-        // the termination signal is represented by an vector with only 1 row
-        if (std::get<0>(input).rows() == 1) break;
         if (run_glm) {
             // the first entry from the queue should be the permuted phenotype
             // and the second entry is the index. We will pass the phenotype for
             // GLM analysis if required
             Regression::glm(std::get<0>(input), m_independent_variables, obs_p,
                             r2, coefficient, se_res, 25, 1, true);
-            obs_t = std::abs(coefficient / se_res);
+            obs_t = std::fabs(coefficient / se_res);
             // although the obs_t^2 is used for calculation of p-value, abs
             // should give us similar result and allow us to use the same
             // comparison method to process the permutation results obs_t *=
@@ -1501,7 +1495,7 @@ void PRSice::consume_null_pheno(
             }
             resvar = rss / static_cast<double>(rdf);
             se = (pre_se * resvar).array().sqrt();
-            obs_t = std::abs(beta(intercept) / se(se_index));
+            obs_t = std::fabs(beta(intercept) / se(se_index));
         }
         temp_store.push_back(obs_t);
         temp_index.push_back(std::get<1>(input));
@@ -1917,7 +1911,7 @@ void PRSice::null_set_no_thread(
     Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx,
     const std::map<size_t, std::vector<size_t>>& set_index,
-    std::vector<double>& obs_t_value, std::vector<size_t>& set_perm_res,
+    std::vector<double>& obs_t_value, std::vector<std::atomic<size_t>>& set_perm_res,
     const size_t num_perm, const bool is_binary, const bool require_standardize,
     const bool use_ref_maf)
 {
@@ -1985,7 +1979,7 @@ void PRSice::null_set_no_thread(
             if (is_binary) {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
                                 coefficient, se, 25, 1, true);
-                t_value = std::abs(coefficient / se);
+                t_value = std::fabs(coefficient / se);
                 // in GLM, p_value is calculated by t_value^2, so to mimic that,
                 // we also do t_value^2, though this should give the same result
                 // as abs(t_value) so we will just use abs(t-value) for both QT
@@ -1996,7 +1990,7 @@ void PRSice::null_set_no_thread(
                 Regression::linear_regression(
                     m_phenotype, m_independent_variables, obs_p, r2, r2_adjust,
                     coefficient, se, 1, true);
-                t_value = std::abs(coefficient / se);
+                t_value = std::fabs(coefficient / se);
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second) {
@@ -2011,7 +2005,8 @@ void PRSice::produce_null_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
     const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
-    std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
+    std::map<size_t, std::vector<size_t>>& set_index,
+        std::vector<std::atomic<size_t>>& set_perm_res,const size_t num_perm,
     const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
@@ -2071,17 +2066,20 @@ void PRSice::produce_null_prs(
         processed++;
     }
     // send termination signal to the consumers
+    q.completed();
+    /*
     for (size_t i = 0; i < num_consumer; ++i) {
         // termination signal is represented by an empty vector
         q.emplace(std::make_pair(std::vector<double>(), 0), num_consumer);
     }
+    */
 }
 
 
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
     std::map<size_t, std::vector<size_t>>& set_index,
-    std::vector<double>& obs_t_value, std::vector<size_t>& set_perm_res,
+    std::vector<double>& obs_t_value, std::vector<std::atomic<size_t>>& set_perm_res,
     const bool is_binary)
 {
     // we first make a local copy of the independent matrix to ensure thread
@@ -2097,12 +2095,7 @@ void PRSice::consume_prs(
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
     // now listen for producer
-    while (true) {
-        q.pop(prs_info);
-        if (std::get<0>(prs_info).empty()) {
-            // all job finished as the termination signal = empty vector
-            break;
-        }
+    while(!q.pop(prs_info)) {
         // update the independent variable matrix with the new PRS
         for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
              ++i_sample)
@@ -2120,23 +2113,13 @@ void PRSice::consume_prs(
             Regression::linear_regression(m_phenotype, independent, obs_p, r2,
                                           r2_adjust, coefficient, se, 1, true);
         }
-        double t_value = std::abs(coefficient / se);
+        double t_value = std::fabs(coefficient / se);
         auto&& index = set_index[std::get<1>(prs_info)];
         // we register the number of time a more significant / bigger t-value is
         // obtained when compared to the observed t-value
         for (auto&& ref : index) {
-            temp_perm_res[ref] += (obs_t_value[ref] < t_value);
-        }
-    }
-
-    {
-        // keep mutex lock within this scope
-        std::unique_lock<std::mutex> locker(m_thread_mutex);
-        size_t num_sets = temp_perm_res.size();
-        // once everything is done, we go through the master copy of the
-        // set_perm_res and add up the results
-        for (size_t i = 0; i < num_sets; ++i) {
-            set_perm_res[i] += temp_perm_res[i];
+            // in theory because set_perm_res is now atomic, it should be ok
+            if(obs_t_value[ref] < t_value) set_perm_res[ref]++;
         }
     }
 }
@@ -2162,8 +2145,7 @@ void PRSice::run_competitive(
     size_t pheno_start_idx = 0;
     // obs_t_value stores the observed t-value
     std::vector<double> obs_t_value;
-    // set_perm_res stores number of perm where a more sig result is obtained
-    std::vector<size_t> set_perm_res;
+
     // set_index stores the index of sets with "key" size
     std::map<size_t, std::vector<size_t>> set_index;
     const size_t num_prs_res = m_prs_summary.size();
@@ -2189,8 +2171,14 @@ void PRSice::run_competitive(
         set_index[res.num_snp].push_back(cur_set_index++);
         if (res.num_snp > max_set_size) max_set_size = res.num_snp;
         // ori_t_value will contain the obesrved t-value
-        obs_t_value.push_back(std::abs(res.coefficient / res.se));
-        set_perm_res.push_back(0);
+        obs_t_value.push_back(std::fabs(res.coefficient / res.se));
+    }
+    // set_perm_res stores number of perm where a more sig result is obtained
+    // initialize here as atomic doesn't have copy and move constructor, making
+    // any operator that need to invoke constructor invalid
+    std::vector<std::atomic<size_t>> set_perm_res(obs_t_value.size());
+    for(auto &set : set_perm_res){
+        set= 0;
     }
     if (max_set_size > num_bk_snps) {
         std::string error_messgae =
@@ -2277,7 +2265,8 @@ void PRSice::run_competitive(
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
                              std::cref(bk_start_idx), std::cref(bk_end_idx),
-                             num_thread - 1, std::ref(set_index), num_perm,
+                             num_thread - 1, std::ref(set_index),
+                             std::ref(set_perm_res),num_perm,
                              require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {

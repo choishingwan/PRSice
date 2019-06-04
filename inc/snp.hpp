@@ -138,6 +138,7 @@ public:
         if (loc != -1 && m_loc != -1 && loc != m_loc) {
             return false;
         }
+        flipped = false;
         if (m_ref == ref) {
             if (!m_alt.empty() && !alt.empty()) {
                 return (m_alt == alt);
@@ -397,6 +398,8 @@ public:
     int low_bound() const { return m_low_bound; }
     void set_expected(double expected) { m_expected_value = expected; }
     void set_ref_expected(double expected) { m_ref_expected_value = expected; }
+    bool has_expected() const { return m_has_expected; }
+    bool has_ref_expected() const { return m_has_ref_expected; }
     double get_expected(bool use_ref_maf) const
     {
         if (use_ref_maf) return m_ref_expected_value;
@@ -436,6 +439,8 @@ private:
     size_t m_ref_missing = 0;
     bool m_has_count = false;
     bool m_has_ref_count = false;
+    bool m_has_expected = false;
+    bool m_has_ref_expected = false;
     bool m_clumped = false;
     bool m_flipped = false;
     bool m_ref_flipped = false;

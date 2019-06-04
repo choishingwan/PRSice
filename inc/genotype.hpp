@@ -98,7 +98,9 @@ public:
 
     // do a quick filtering before we actually read in and process the genotypes
     void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract, bool verbose, Reporter& reporter,
+                   const std::string& extract,
+                   const std::vector<IITree<int, int>>& exclusion_regions,
+                   bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
@@ -429,7 +431,9 @@ protected:
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
+    std::vector<uintptr_t> m_founder_include2;
     std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_sample_include2;
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
@@ -470,6 +474,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    uint32_t m_num_xrange = 0;
     uint32_t m_base_missed = 0;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
@@ -586,8 +591,9 @@ protected:
         return std::vector<Sample_ID>(0);
     }
 
-    virtual void gen_snp_vector(const std::string& /*out_prefix*/,
-                                Genotype* /*target*/)
+    virtual void
+    gen_snp_vector(const std::vector<IITree<int, int>>& /*exclusion_regions*/,
+                   const std::string& /*out_prefix*/, Genotype* /*target*/)
     {
     }
     virtual void calc_freq_gen_inter(

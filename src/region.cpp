@@ -165,8 +165,7 @@ size_t Region::generate_regions(
     region_names.clear();
     snp_in_sets.clear();
     std::string message = "Start processing gene set information\n";
-    message.append(
-        "============================================================");
+    message.append("==================================================");
     reporter.report(message);
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
@@ -713,12 +712,6 @@ void Region::load_snp_sets(
         }
         duplicated_sets.insert(set_name);
         region_names.push_back(set_name);
-    }
-    else
-    {
-        std::string message = "Warning: Set name provided for multi-SNP set "
-                              "input, the set name will be ignored\n";
-        reporter.report(message);
     }
     input.clear();
     input.seekg(0, input.beg);

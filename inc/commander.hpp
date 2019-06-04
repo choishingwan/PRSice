@@ -40,8 +40,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-const std::string version = "2.2.0";
-const std::string date = "13 May 2019";
+
+const std::string version = "2.2.1";
+const std::string date = "4 June 2019";
 class Commander
 {
 public:
@@ -727,7 +728,7 @@ private:
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 1000000;
+    int m_clump_distance = 250000;
     int m_thread = 1;
     int m_window_5 = 0;
     int m_window_3 = 0;
@@ -757,6 +758,7 @@ private:
     bool m_provided_memory = false;
     bool m_perform_permutation = false;
     bool m_provided_chr_col = false;
+    bool m_provided_clump_dist = false;
     bool m_provided_effect_allele = false;
     bool m_provided_non_effect_allele = false;
     bool m_provided_statistic = false;
@@ -1372,7 +1374,7 @@ private:
     }
 
     inline int set_distance(const std::string& input,
-                            const std::string& command,
+                            const std::string& command, int default_unit,
                             std::map<std::string, std::string>& message,
                             bool& error, std::string& error_messages)
     {
@@ -1385,7 +1387,13 @@ private:
         int dist;
         try
         {
-            dist = misc::convert<int>(input);
+            // when no unit is provided, we multiply based on default
+            dist =
+                static_cast<int>(misc::convert<double>(input) * default_unit);
+            if (default_unit == 1000)
+                message[command] = input + "kb";
+            else
+                message[command] = input + "bp";
             return dist;
         }
         catch (...)
@@ -1397,26 +1405,39 @@ private:
                     std::transform(in.begin(), in.end(), in.begin(), ::toupper);
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
-                    if (unit == "KB") {
-                        dist = misc::convert<int>(value) * 1000;
+                    if (unit == "BP") {
+                        dist = static_cast<int>(misc::convert<double>(value));
+                        message[command] = value + "bp";
+                        return dist;
+                    }
+                    else if (unit == "KB")
+                    {
+                        dist = static_cast<int>(misc::convert<double>(value)
+                                                * 1000);
+                        message[command] = value + "kb";
                         return dist;
                     }
                     else if (unit == "MB")
                     {
-                        dist = misc::convert<int>(value) * 1000 * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value)
+                                                * 1000 * 1000);
+                        message[command] = value + "mb";
                         return dist;
                     }
                     else if (unit == "GB")
                     {
                         // kinda stupid here, but whatever
-                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value)
+                                                * 1000 * 1000 * 1000);
+                        message[command] = value + "gb";
                         return dist;
                     }
                     else if (unit == "TB")
                     {
                         // way too much....
-                        dist = misc::convert<int>(value) * 1000 * 1000 * 1000
-                               * 1000;
+                        dist = static_cast<int>(misc::convert<double>(value)
+                                                * 1000 * 1000 * 1000 * 1000);
+                        message[command] = value + "tb";
                         return dist;
                     }
                     else
@@ -1425,17 +1446,38 @@ private:
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
                         if (unit == "B") {
-                            dist = misc::convert<int>(value);
+                            dist =
+                                static_cast<int>(misc::convert<double>(value));
+                            message[command] = value + "bb";
                             return dist;
                         }
                         else if (unit == "K")
                         {
-                            dist = misc::convert<int>(value) * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value)
+                                                    * 1000);
+                            message[command] = value + "kb";
                             return dist;
                         }
                         else if (unit == "M")
                         {
-                            dist = misc::convert<int>(value) * 1000 * 1000;
+                            dist = static_cast<int>(misc::convert<double>(value)
+                                                    * 1000 * 1000);
+                            message[command] = value + "mb";
+                            return dist;
+                        }
+                        else if (unit == "G")
+                        {
+                            dist = static_cast<int>(misc::convert<double>(value)
+                                                    * 1000 * 1000 * 1000);
+                            message[command] = value + "gb";
+                            return dist;
+                        }
+                        else if (unit == "T")
+                        {
+                            dist =
+                                static_cast<int>(misc::convert<double>(value)
+                                                 * 1000 * 1000 * 1000 * 1000);
+                            message[command] = value + "tb";
                             return dist;
                         }
                     }
