@@ -732,6 +732,16 @@ if (!provided("plot", argv)) {
 writeLines("Begin plotting");
 writeLines(paste0("Current Rscript version = ",r.version))
 # Helper functions --------------------------------------------------------
+# allow older version of ggplot2 to work
+expand_scale <- function(mult = 0, add = 0) {
+    stopifnot(is.numeric(mult) && is.numeric(add))
+    stopifnot((length(mult) %in% 1:2) && (length(add) %in% 1:2))
+    
+    mult <- rep(mult, length.out = 2)
+    add <- rep(add, length.out = 2)
+    c(mult[1], add[1], mult[2], add[2])
+}
+
 max_length <- function(x) {
     info <- strsplit(as.character(x), split = "\n")[[1]]
     max(sapply(info, nchar))

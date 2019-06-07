@@ -1242,7 +1242,7 @@ void PRSice::process_permutations()
     if (m_best_index == -1) return;
     size_t best_index = static_cast<size_t>(m_best_index);
     const double best_t = std::fabs(m_prs_results[best_index].coefficient
-                                   / m_prs_results[best_index].se);
+                                    / m_prs_results[best_index].se);
     const auto num_better =
         std::count_if(m_perm_result.begin(), m_perm_result.end(),
                       [&best_t](double t) { return t > best_t; });
@@ -1911,8 +1911,9 @@ void PRSice::null_set_no_thread(
     Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx,
     const std::map<size_t, std::vector<size_t>>& set_index,
-    std::vector<double>& obs_t_value, std::vector<std::atomic<size_t>>& set_perm_res,
-    const size_t num_perm, const bool is_binary, const bool require_standardize,
+    std::vector<double>& obs_t_value,
+    std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
+    const bool is_binary, const bool require_standardize,
     const bool use_ref_maf)
 {
     // we need to know the size of the largest gene set (excluding the base and
@@ -2006,7 +2007,7 @@ void PRSice::produce_null_prs(
     const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
     std::map<size_t, std::vector<size_t>>& set_index,
-        std::vector<std::atomic<size_t>>& set_perm_res,const size_t num_perm,
+    std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
     const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
@@ -2079,8 +2080,8 @@ void PRSice::produce_null_prs(
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
     std::map<size_t, std::vector<size_t>>& set_index,
-    std::vector<double>& obs_t_value, std::vector<std::atomic<size_t>>& set_perm_res,
-    const bool is_binary)
+    std::vector<double>& obs_t_value,
+    std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
 {
     // we first make a local copy of the independent matrix to ensure thread
     // safety
@@ -2095,7 +2096,7 @@ void PRSice::consume_prs(
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
     // now listen for producer
-    while(!q.pop(prs_info)) {
+    while (!q.pop(prs_info)) {
         // update the independent variable matrix with the new PRS
         for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
              ++i_sample)
@@ -2119,7 +2120,7 @@ void PRSice::consume_prs(
         // obtained when compared to the observed t-value
         for (auto&& ref : index) {
             // in theory because set_perm_res is now atomic, it should be ok
-            if(obs_t_value[ref] < t_value) set_perm_res[ref]++;
+            if (obs_t_value[ref] < t_value) set_perm_res[ref]++;
         }
     }
 }
@@ -2177,8 +2178,8 @@ void PRSice::run_competitive(
     // initialize here as atomic doesn't have copy and move constructor, making
     // any operator that need to invoke constructor invalid
     std::vector<std::atomic<size_t>> set_perm_res(obs_t_value.size());
-    for(auto &set : set_perm_res){
-        set= 0;
+    for (auto& set : set_perm_res) {
+        set = 0;
     }
     if (max_set_size > num_bk_snps) {
         std::string error_messgae =
@@ -2262,12 +2263,11 @@ void PRSice::run_competitive(
         //  reading in the PRS and construct the required independent variable
         //  and other threads are responsible for the calculation
         Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
-        std::thread producer(&PRSice::produce_null_prs, this,
-                             std::ref(set_perm_queue), std::ref(target),
-                             std::cref(bk_start_idx), std::cref(bk_end_idx),
-                             num_thread - 1, std::ref(set_index),
-                             std::ref(set_perm_res),num_perm,
-                             require_standardize, use_ref_maf);
+        std::thread producer(
+            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
+            std::ref(target), std::cref(bk_start_idx), std::cref(bk_end_idx),
+            num_thread - 1, std::ref(set_index), std::ref(set_perm_res),
+            num_perm, require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
             consumer_store.push_back(std::thread(
