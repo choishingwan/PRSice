@@ -1108,6 +1108,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     uintptr_t num_core_snps = 0;
     // index_geno points to the base of the stack
     index_geno = (uintptr_t*) bigstack_initial_base;
+    require_size = founder_ct_192_long * sizeof(intptr_t);
     require_size = round_up_pow2(require_size, CACHELINE);
     // index_mask then occupy the next stack, leaving enough memory for
     // index_geno (if my require_size calculation is wrong, then it will lead to

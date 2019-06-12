@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
-                                   region_names, i_pheno);
+                                   region_names, i_pheno, commander.no_regress());
                 // go through each region
                 fprintf(stderr, "\nStart Processing\n");
                 for (size_t i_region = 0; i_region < num_regions; ++i_region) {

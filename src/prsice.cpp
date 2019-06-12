@@ -1517,7 +1517,7 @@ void PRSice::consume_null_pheno(
 void PRSice::prep_output(const std::string& out, const bool all_score,
                          const bool has_prev, const Genotype& target,
                          const std::vector<std::string>& region_name,
-                         const size_t pheno_index)
+                         const size_t pheno_index, const bool no_regress)
 {
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
@@ -1535,64 +1535,64 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
 
     // .prsice output
     // we only need to generate the header for it
-    m_prsice_out.open(out_prsice.c_str());
-    if (!m_prsice_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_prsice + " to write";
-        throw std::runtime_error(error_message);
-    }
-    // we won't store the empirical p and competitive p output in the prsice
-    // file now as that seems like a waste (only one threshold will contain that
-    // information, storing that in the summary file should be enough)
-    m_prsice_out << "Set\tThreshold\tR2\t";
-    // but generate the adjusted R2 if prevalence is provided
-    if (has_prev) m_prsice_out << "R2.adj\t";
-    m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
-
-    // .best output
-    m_best_out.open(out_best.c_str());
-    if (!m_best_out.is_open()) {
-        std::string error_message =
-            "Error: Cannot open file: " + out_best + " to write";
-        throw std::runtime_error(error_message);
-    }
-    std::string header_line = "FID IID In_Regression";
-    // The default name of the output should be PRS, but if we are running
-    // PRSet, it should be call Base
-    if (!m_perform_prset)
-        header_line.append(" PRS");
-    else
-    {
-        for (size_t i = 0; i < region_name.size(); ++i) {
-            // the second item is always the background, which we will not
-            // output
-            if (i == 1) continue;
-            header_line.append(" " + region_name[i]);
+    if(!no_regress){
+        m_prsice_out.open(out_prsice.c_str());
+        if (!m_prsice_out.is_open()) {
+            std::string error_message =
+                    "Error: Cannot open file: " + out_prsice + " to write";
+            throw std::runtime_error(error_message);
         }
+        // we won't store the empirical p and competitive p output in the prsice
+        // file now as that seems like a waste (only one threshold will contain that
+        // information, storing that in the summary file should be enough)
+        m_prsice_out << "Set\tThreshold\tR2\t";
+        // but generate the adjusted R2 if prevalence is provided
+        if (has_prev) m_prsice_out << "R2.adj\t";
+        m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
+        // .best output
+        m_best_out.open(out_best.c_str());
+        if (!m_best_out.is_open()) {
+            std::string error_message =
+                    "Error: Cannot open file: " + out_best + " to write";
+            throw std::runtime_error(error_message);
+        }
+        std::string header_line = "FID IID In_Regression";
+        // The default name of the output should be PRS, but if we are running
+        // PRSet, it should be call Base
+        if (!m_perform_prset)
+            header_line.append(" PRS");
+        else
+        {
+            for (size_t i = 0; i < region_name.size(); ++i) {
+                // the second item is always the background, which we will not
+                // output
+                if (i == 1) continue;
+                header_line.append(" " + region_name[i]);
+            }
+        }
+        // the safetest way to calculate the length we need to speed is to directly
+        // count the number of byte involved
+        auto begin_byte = m_best_out.tellp();
+        m_best_out << header_line << "\n";
+        auto end_byte = m_best_out.tellp();
+        // we now know the exact number of byte the header contain and can correctly
+        // skip it acordingly
+        m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
+        // we will set the processed_threshold information to 0
+        m_best_file.processed_threshold = 0;
+
+        // each numeric output took 12 spaces, then for each output, there is one
+        // space next to each
+        m_best_file.line_width =
+                m_max_fid_length /* FID */ + 1 /* space */ + m_max_iid_length /* IID */
+                + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
+                + static_cast<int>(region_name.size()) /* each region */
+                * (m_numeric_width + 1 /* space */)
+                + 1 /* new line */;
+
+        m_best_file.skip_column_length =
+                m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
     }
-    // the safetest way to calculate the length we need to speed is to directly
-    // count the number of byte involved
-    auto begin_byte = m_best_out.tellp();
-    m_best_out << header_line << "\n";
-    auto end_byte = m_best_out.tellp();
-    // we now know the exact number of byte the header contain and can correctly
-    // skip it acordingly
-    m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
-    // we will set the processed_threshold information to 0
-    m_best_file.processed_threshold = 0;
-
-    // each numeric output took 12 spaces, then for each output, there is one
-    // space next to each
-    m_best_file.line_width =
-        m_max_fid_length /* FID */ + 1 /* space */ + m_max_iid_length /* IID */
-        + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
-        + static_cast<int>(region_name.size()) /* each region */
-              * (m_numeric_width + 1 /* space */)
-        + 1 /* new line */;
-
-    m_best_file.skip_column_length =
-        m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
-
 
     // also handle all score here
     // but we will only try and generate the all score file when we are dealing
@@ -1614,7 +1614,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // processed_threshold index should be correct)
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
         int num_thresholds = static_cast<int>(avail_thresholds.size());
-        begin_byte = m_all_out.tellp();
+        auto begin_byte = m_all_out.tellp();
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!m_perform_prset) {
@@ -1635,7 +1635,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             }
         }
         m_all_out << "\n";
-        end_byte = m_all_out.tellp();
+        auto end_byte = m_all_out.tellp();
         // if the line is too long, we might encounter overflow
         m_all_file.header_length = static_cast<int>(end_byte - begin_byte);
         m_all_file.processed_threshold = 0;
@@ -1658,13 +1658,15 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // when we print the best file, we want to also print whether the sample
         // is used in regression or not (so that user can easily reproduce their
         // results)
-        best_line = name + " "
-                    + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
-        // we print a line containing m_best_file.line_width white space
-        // characters, which we can then overwrite later on, therefore achieving
-        // a vertical output
-        m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
-                   << std::left << best_line << "\n";
+        if(!no_regress){
+            best_line = name + " "
+                        + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+            // we print a line containing m_best_file.line_width white space
+            // characters, which we can then overwrite later on, therefore achieving
+            // a vertical output
+            m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
+                       << std::left << best_line << "\n";
+        }
         if (all_scores) {
             m_all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
                       << std::left << name << "\n";
