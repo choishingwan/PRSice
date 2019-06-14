@@ -662,7 +662,7 @@ void BinaryPlink::gen_snp_vector(
                     else
                     {
                         mismatch_snp_record
-                            << "Reference\t" << bim_token[+BIM::RS] << "\t"
+                            << "Base\t" << bim_token[+BIM::RS] << "\t"
                             << chr_code << "\t"
                             << m_existed_snps[ref_index].chr() << "\t" << loc
                             << "\t" << m_existed_snps[ref_index].loc() << "\t"
