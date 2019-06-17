@@ -1445,34 +1445,34 @@ private:
                         // maybe only one input?
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
-                        if (unit == "B") {
+                        if (unit == "B" || unit=="b") {
                             dist =
                                 static_cast<int>(misc::convert<double>(value));
                             message[command] = value + "bb";
                             return dist;
                         }
-                        else if (unit == "K")
+                        else if (unit == "K" || unit == "k")
                         {
                             dist = static_cast<int>(misc::convert<double>(value)
                                                     * 1000);
                             message[command] = value + "kb";
                             return dist;
                         }
-                        else if (unit == "M")
+                        else if (unit == "M" || unit== "m")
                         {
                             dist = static_cast<int>(misc::convert<double>(value)
                                                     * 1000 * 1000);
                             message[command] = value + "mb";
                             return dist;
                         }
-                        else if (unit == "G")
+                        else if (unit == "G" || unit == "g")
                         {
                             dist = static_cast<int>(misc::convert<double>(value)
                                                     * 1000 * 1000 * 1000);
                             message[command] = value + "gb";
                             return dist;
                         }
-                        else if (unit == "T")
+                        else if (unit == "T" || unit == "t")
                         {
                             dist =
                                 static_cast<int>(misc::convert<double>(value)
