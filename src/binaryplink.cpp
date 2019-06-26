@@ -934,28 +934,11 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        if (m_unfiltered_sample_ct != m_sample_ct) {
-            // if we need to perform selection, we will remove all unwanted
-            // sample and push the data forward
-            if (load_raw(unfiltered_sample_ct4, m_bed_file,
-                         m_tmp_genotype.data()))
-            {
-                std::string error_message =
-                    "Error: Cannot read the bed file(read): " + m_cur_file;
-                throw std::runtime_error(error_message);
-            }
+        if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+            std::string error_message =
+                "Error: Cannot read the bed file(read): " + m_cur_file;
+            throw std::runtime_error(error_message);
         }
-        else
-        {
-            // if we dno't need filtering, then we simply mask out the unwanted
-            // region (to avoid the leftover, if any)
-            if (load_raw(unfiltered_sample_ct4, m_bed_file, genotype.data())) {
-                std::string error_message =
-                    "Error: Cannot read the bed file(read): " + m_cur_file;
-                throw std::runtime_error(error_message);
-            }
-        }
-
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                 use_ref_maf))
         {
@@ -981,7 +964,7 @@ void BinaryPlink::read_score(
         }
         else
         {
-
+            genotype = m_tmp_genotype;
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
         // directly read in the current location
