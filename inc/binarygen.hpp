@@ -322,7 +322,9 @@ private:
             m_not_first = not_first;
             m_cal_expected = 0;
             rs.clear();
-            if (flipped) {
+            // to match the encoding in PLINK format, we "unflip" SNPs here
+            // otherwise our polygenic score will be going to an opposite direction
+            if (!flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
