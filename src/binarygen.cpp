@@ -932,6 +932,11 @@ void BinaryGen::calc_freq_gen_inter(
         {
             cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
+            cur_maf = (cur_maf > 0.5) ? 1-cur_maf: cur_maf;
+        }
+        if(snp.rs() == "RSID_149"){
+            std::cerr << hh_ct << "\t" << lh_ct << "\t" << ll_ct << std::endl;
+            std::cerr << "Maf is: " << cur_maf << std::endl;
         }
         // filter by genotype missingness
         if (geno_filter && geno_threshold < cur_geno) {

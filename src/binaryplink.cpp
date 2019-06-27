@@ -303,7 +303,7 @@ void BinaryPlink::calc_freq_gen_inter(
     double cur_maf, cur_geno;
     double sample_ct_recip =
         1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
-    std::streampos byte_pos, prev_pos;
+    std::streampos byte_pos=1, prev_pos=0;
     size_t processed_count = 0;
     size_t retained = 0;
     uint32_t ll_ct = 0;
@@ -345,6 +345,7 @@ void BinaryPlink::calc_freq_gen_inter(
                     "Error: Cannot open bed file: " + bed_name + "!\n";
                 throw std::runtime_error(error_message);
             }
+            prev_pos = 0;
         }
         if (prev_pos != byte_pos) {
             // only skip line if we are not reading sequentially
@@ -380,6 +381,8 @@ void BinaryPlink::calc_freq_gen_inter(
         {
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
+
+            cur_maf = (cur_maf> 0.5)? 1-cur_maf: cur_maf;
         }
         if (misc::logically_equal(cur_maf, 0.0)
             || misc::logically_equal(cur_maf, 1.0))
