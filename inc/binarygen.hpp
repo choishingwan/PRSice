@@ -634,30 +634,30 @@ private:
                 || misc::logically_equal(m_exp_value, 0.0))
             {
                 // set to missing
-                m_geno = 2;
+                m_geno = 1;
             }
             else
             {
                 m_hard_prob = 0;
                 for (size_t geno = 0; geno < 3; ++geno) {
                     if (m_prob[geno] > m_hard_prob) {
-                        m_geno = (geno == 2) ? 3 : geno;
+                        m_geno = (geno == 0) ? geno : geno+1;
                         m_hard_prob = m_prob[geno];
                     }
                 }
                 if (m_hard_prob < m_dose_threshold) {
                     // set to missing
-                    m_geno = 2;
+                    m_geno = 1;
                 }
             }
             // we now add the genotype to the vector
             m_genotype[m_index] |= m_geno << m_shift;
             switch (m_geno)
             {
-            case 0: m_homrar_ct++; break;
-            case 1: m_het_ct++; break;
-            case 2: m_missing_ct++; break;
-            case 3: m_homcom_ct++; break;
+            case 3: m_homrar_ct++; break;
+            case 2: m_het_ct++; break;
+            case 1: m_missing_ct++; break;
+            case 0: m_homcom_ct++; break;
             }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
