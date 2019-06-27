@@ -1377,11 +1377,12 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 {
     // the m_existed_snp must be sorted before coming into this equation
     reporter.report("Start performing clumping");
+    /*
     if (use_pearson) {
         // use person clump instead
         pearson_clump(reference, reporter);
         return;
-    }
+    }*/
     // we want to initialize the vectors with size correspond to the sample in
     // the reference panel. Need to use the unfiltered sample size
     const uintptr_t unfiltered_sample_ctl =

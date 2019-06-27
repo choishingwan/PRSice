@@ -73,7 +73,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"no-regress", no_argument, &m_no_regress, 1},
         {"nonfounders", no_argument, &m_include_nonfounders, 1},
         {"or", no_argument, &m_stat_is_or, 1},
-        {"pearson", no_argument, &m_pearson, 1},
+        {"pearson", no_argument, nullptr, 0},
         {"print-snp", no_argument, &m_print_snp, 1},
         {"use-ref-maf", no_argument, &m_use_ref_maf, 1},
         // long flags, need to work on them
@@ -288,6 +288,10 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 error |= !set_missing(optarg, message_store, error_messages);
             else if (command == "model")
                 error |= !set_model(optarg, message_store, error_messages);
+            else if(command == "pearson"){
+                error = true;
+                error_messages.append("Error: There is currently a bug with Pearson clumping. This feature is disabled until further notice.\n");
+            }
             else if (command == "perm")
             {
                 // use double to account for scientific?
