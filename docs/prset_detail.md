@@ -50,6 +50,48 @@ PRSet will read in any number of bed files (comma separated) and use the file na
 
     An annoying feature of bed file is that it starts with 0 whereas for example, the plink formats starts the coordinates at 1. So do remember to -1 from the region start when you build your own bed file from scratch.
 
+# Clumping in PRSet
+In PRSice-2, clumping is performed to account for linkage disequilibrium (LD) between SNPs.
+However, when performing set based analysis, special care are required to perform clumping. 
+Take the following as an example:
+Assume that:
+
+- Light Blue fragments are the intergenic regions
+- Dark Blue fragments are the genic regions
+- Red fragments are the gene set regions
+- SNPs are represented as thunder bolt, with the "index" SNP in clumping denoted by the green thunderbolt
+
+If we simply perform a genome wide clumping, we might remove all SNPs residing within the gene set of interest, 
+reducing the signal:
+![Genome Wide Clumping](img/genome_wide_clump.gif)
+
+Therefore, to maximize signal within each gene set, we must perform clumping for each gene sets separately:
+![Set Base Clumping](img/set_clump.gif)
+this can be a tedious process and are prone to error. 
+
+To speed up clumping, PRSice-2 adopt a "*capture the flag*" system.
+
+Each SNPs contains a flag to represent their gene set membership. 
+If a SNP is a member for the set, it will have a flag of 1, otherwise it will have a flag of 0.
+For example: 
+
+| SNP | Set A | Set B | Set C | Set D |
+| -----------------|:----:|:----:|:----:|:----:|
+| SNP 1 | 1 | 0 | 1 | 1| 
+| SNP 2 | 0 | 0 | 1 | 1| 
+| SNP 3 | 1 | 1 | 0 | 1| 
+
+If we use SNP 1 as the index SNP, then after clumping, we will have 
+
+| SNP | Set A | Set B | Set C | Set D |
+| -----------------|:----:|:----:|:----:|:----:|
+| SNP 1 | 1 | 0 | 1 | 1| 
+| SNP 2 | 0 | 0 | 0 | 0| 
+| SNP 3 | 0| 1 | 0 | 0| 
+
+which removes SNP 2, but will retain SNP 3. This allow us to achieve set based clumping by only performing a single pass genome wide clumping. 
+
+
 # P-value Threshold and Proxy Clumping
 
 # Options
@@ -65,11 +107,29 @@ By default, PRSet do not perform p-value thresholding and will simply calculate 
 This is because it is unclear whether the set is associated with the phenotype when the best-threshold contained only a small portion of SNPs within the gene sets.
 If you wish to perform p-value thresholding with PRSet, you will need to specify any of the parameters related to p-value thresholding, i.e. `--interval`, `--lower`, `--upper`, `--fastscore` or `--bar-levels`.
 
-# Set Based Association
-A challenge in Set base analysis is to obtain a competitive p-value, which indicates the level of enrichment, as opposed to the self-contained p-value which indicates the level of association. 
-To obtain a competitive p-value, PRSet can perform a permutation analysis. 
-Briefly, for a set containing $N$ SNPs, PRSet will construct a null set by randomly selecting $N$ SNPs from the background (default is the genic region). 
-A null p-value is then obtained by performing an association between the PRS of the null set with the phenotype. You can specify the number of permutation by `--set-perm`
+# Competitive P-value Calculation
+A challenge in Set base analysis is to obtain a competitive p-value, 
+which indicates the level of enrichment, as opposed to the self-contained 
+p-value which indicates the level of association. 
+To obtain a competitive p-value, PRSet can perform a permutation analysis as follow
+
+1. Allocate SNPs to each gene sets
+2. Allocate SNPs to a background gene set
+    - if `--full-back` is specified, use the whole genome as the background
+    - if a background file is provided via the `--background` command, it will be used to construct the background set
+    - otherwise, will try to use the GTF file provided from `--gtf` command as the background (with feature filtering w.r.t `--feature`)
+3. Perform [set based clumping](prset_detail.md#clumping-in-prset) on all sets (including the background set)
+4. Obtain the p-value of association for the best threshold for each sets ($P_{observed}$)
+    - While PRSet allow one to perform p-value thresholding on the set scores, we recommend against it as it is difficult to interpret the result. Using an extreme example, if only one SNP is included in the best threshold for a set, should we really consider this single SNP as representative of the gene set?
+5. For each gene set with $N$ post-clump SNPs
+    1. Randomly select $N$ post-clump SNPs from the background set and construct a null PRS
+    2. Calculate the p-value of association of the null PRS to obtain a null P-value ($P_{null}$)
+    3. Repeat 1-2 $M$ times, where $M$ can be set via `--set-perm`
+    4. The competitive P-value is calculated as
+        $$
+\text{Competitive-}P = \frac{\sum_{n=1}^NI(P_{null}\lt P_observed)+1}{N+1}
+        $$
+        where $I(.)$ is the indicator function. 
 
 # Output Data
 
