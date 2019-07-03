@@ -26,9 +26,9 @@
 #include "snp.hpp"
 #include "storage.hpp"
 #include "thread_queue.hpp"
-#include <atomic>
 #include <Eigen/Dense>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <errno.h>
 #include <fstream>
@@ -196,7 +196,7 @@ public:
     void prep_output(const std::string& out, const bool all_score,
                      const bool has_prev, const Genotype& target,
                      const std::vector<std::string>& region_name,
-                     const size_t pheno_index);
+                     const size_t pheno_index, const bool no_regress);
     /*!
      * \brief This function will summarize all PRSice / PRSet results and
      * generate the .summary file
@@ -453,15 +453,14 @@ private:
      * \param require_standardize is a boolean, indicating if we want a
      * standardized PRS
      */
-    void
-    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     Genotype& target,
-                     const std::vector<size_t>::const_iterator& bk_start_idx,
-                     const std::vector<size_t>::const_iterator& bk_end_idx,
-                     size_t num_consumer,
-                     std::map<size_t, std::vector<size_t>>& set_index,std::vector<std::atomic<size_t>>& set_perm_res,
-                     const size_t num_perm, const bool require_standardize,
-                     const bool use_ref_maf);
+    void produce_null_prs(
+        Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+        Genotype& target,
+        const std::vector<size_t>::const_iterator& bk_start_idx,
+        const std::vector<size_t>::const_iterator& bk_end_idx,
+        size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index,
+        std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
+        const bool require_standardize, const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -478,7 +477,8 @@ private:
     void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
                      std::map<size_t, std::vector<size_t>>& set_index,
                      std::vector<double>& obs_t_value,
-                     std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
+                     std::vector<std::atomic<size_t>>& set_perm_res,
+                     const bool is_binary);
     /*!
      * \brief Function responsible for running the permutation required for
      * computing the competitive p-value
@@ -499,9 +499,9 @@ private:
                        const std::vector<size_t>::const_iterator& bk_end_idx,
                        const std::map<size_t, std::vector<size_t>>& set_index,
                        std::vector<double>& obs_t_value,
-                       std::vector<std::atomic<size_t> > &set_perm_res, const size_t num_perm,
-                       const bool is_binary, const bool require_standardize,
-                       const bool use_ref_maf);
+                       std::vector<std::atomic<size_t>>& set_perm_res,
+                       const size_t num_perm, const bool is_binary,
+                       const bool require_standardize, const bool use_ref_maf);
 
     /*!
      * \brief The "producer" for generating the permuted phenotypes

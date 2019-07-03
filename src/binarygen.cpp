@@ -658,8 +658,8 @@ void BinaryGen::gen_snp_vector(
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp) {
-                A1 = alleles.back();
-                A2 = alleles.front();
+                A1 = alleles.front();
+                A2 = alleles.back();
                 auto&& target_index = reference->m_existed_snps_index[cur_id];
                 if (!reference->m_existed_snps[target_index].matching(
                         chr_code, SNP_position, A1, A2, flipping))
@@ -932,6 +932,11 @@ void BinaryGen::calc_freq_gen_inter(
         {
             cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
+            cur_maf = (cur_maf > 0.5) ? 1-cur_maf: cur_maf;
+        }
+        if(snp.rs() == "RSID_149"){
+            std::cerr << hh_ct << "\t" << lh_ct << "\t" << ll_ct << std::endl;
+            std::cerr << "Maf is: " << cur_maf << std::endl;
         }
         // filter by genotype missingness
         if (geno_filter && geno_threshold < cur_geno) {
@@ -1213,10 +1218,8 @@ void BinaryGen::hard_code_score(
         ulii = 0;
         do
         {
-            // ulii contain the numeric representation of the current
-            // genotype ulii = ~(*lbptr++); when we generate the PLINK
-            // binary, we were doing what's equivalent to ~
-            ulii = (*lbptr++);
+            // ulii contain the numeric representation of the current genotype
+            ulii = ~(*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct) {
                 // this is PLINK, not sure exactly what this is about
                 ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
@@ -1234,32 +1237,56 @@ void BinaryGen::hard_code_score(
                 }
                 auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
-                switch (ukk)
-                {
-                default:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homcom_weight * stat - adj_score;
-                    break;
-                case 1:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + het_weight * stat - adj_score;
-                    break;
-                case 3:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + ploidy;
-                    sample_prs.prs = sample_prs.prs * not_first
-                                     + homrar_weight * stat - adj_score;
-                    break;
-                case 2:
-                    sample_prs.num_snp =
-                        sample_prs.num_snp * not_first + miss_count;
-                    sample_prs.prs = sample_prs.prs * not_first + miss_score;
-                    break;
+                if (not_first) {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp += miss_count;
+                        sample_prs.prs += miss_score;
+                        break;
+                    }
                 }
+                else
+                {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp = miss_count;
+                        sample_prs.prs = miss_score;
+                        break;
+                    }
+                }
+                // ulii &= ~((3 * ONELU) << ujj);
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
                 ujj += 2;
             }
             // uii is the number of samples we have finished so far

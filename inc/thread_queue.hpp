@@ -21,9 +21,10 @@ public:
     {
         bool completed = false;
         std::unique_lock<std::mutex> mlock(m_mutex);
-        m_cond_not_empty.wait(mlock, [this]{return (m_storage_queue.size() || m_completed);});
+        m_cond_not_empty.wait(
+            mlock, [this] { return (m_storage_queue.size() || m_completed); });
         completed = m_completed;
-        if(!completed){
+        if (!completed) {
             item = std::move(m_storage_queue.front());
             m_storage_queue.pop();
         }

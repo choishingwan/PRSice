@@ -303,7 +303,7 @@ void BinaryPlink::calc_freq_gen_inter(
     double cur_maf, cur_geno;
     double sample_ct_recip =
         1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
-    std::streampos byte_pos, prev_pos;
+    std::streampos byte_pos=1, prev_pos=0;
     size_t processed_count = 0;
     size_t retained = 0;
     uint32_t ll_ct = 0;
@@ -345,6 +345,7 @@ void BinaryPlink::calc_freq_gen_inter(
                     "Error: Cannot open bed file: " + bed_name + "!\n";
                 throw std::runtime_error(error_message);
             }
+            prev_pos = 0;
         }
         if (prev_pos != byte_pos) {
             // only skip line if we are not reading sequentially
@@ -380,6 +381,8 @@ void BinaryPlink::calc_freq_gen_inter(
         {
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
+
+            cur_maf = (cur_maf> 0.5)? 1-cur_maf: cur_maf;
         }
         if (misc::logically_equal(cur_maf, 0.0)
             || misc::logically_equal(cur_maf, 1.0))
@@ -662,7 +665,7 @@ void BinaryPlink::gen_snp_vector(
                     else
                     {
                         mismatch_snp_record
-                            << "Reference\t" << bim_token[+BIM::RS] << "\t"
+                            << "Base\t" << bim_token[+BIM::RS] << "\t"
                             << chr_code << "\t"
                             << m_existed_snps[ref_index].chr() << "\t" << loc
                             << "\t" << m_existed_snps[ref_index].loc() << "\t"
@@ -934,28 +937,11 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        if (m_unfiltered_sample_ct != m_sample_ct) {
-            // if we need to perform selection, we will remove all unwanted
-            // sample and push the data forward
-            if (load_raw(unfiltered_sample_ct4, m_bed_file,
-                         m_tmp_genotype.data()))
-            {
-                std::string error_message =
-                    "Error: Cannot read the bed file(read): " + m_cur_file;
-                throw std::runtime_error(error_message);
-            }
+        if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+            std::string error_message =
+                "Error: Cannot read the bed file(read): " + m_cur_file;
+            throw std::runtime_error(error_message);
         }
-        else
-        {
-            // if we dno't need filtering, then we simply mask out the unwanted
-            // region (to avoid the leftover, if any)
-            if (load_raw(unfiltered_sample_ct4, m_bed_file, genotype.data())) {
-                std::string error_message =
-                    "Error: Cannot read the bed file(read): " + m_cur_file;
-                throw std::runtime_error(error_message);
-            }
-        }
-
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                 use_ref_maf))
         {
@@ -981,7 +967,7 @@ void BinaryPlink::read_score(
         }
         else
         {
-
+            genotype = m_tmp_genotype;
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
         // directly read in the current location

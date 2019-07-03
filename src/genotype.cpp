@@ -1108,6 +1108,7 @@ void Genotype::pearson_clump(Genotype& reference, Reporter& reporter)
     uintptr_t num_core_snps = 0;
     // index_geno points to the base of the stack
     index_geno = (uintptr_t*) bigstack_initial_base;
+    require_size = founder_ct_192_long * sizeof(intptr_t);
     require_size = round_up_pow2(require_size, CACHELINE);
     // index_mask then occupy the next stack, leaving enough memory for
     // index_geno (if my require_size calculation is wrong, then it will lead to
@@ -1376,11 +1377,12 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter,
 {
     // the m_existed_snp must be sorted before coming into this equation
     reporter.report("Start performing clumping");
+    /*
     if (use_pearson) {
         // use person clump instead
         pearson_clump(reference, reporter);
         return;
-    }
+    }*/
     // we want to initialize the vectors with size correspond to the sample in
     // the reference panel. Need to use the unfiltered sample size
     const uintptr_t unfiltered_sample_ctl =
