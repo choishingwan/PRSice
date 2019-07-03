@@ -104,3 +104,4 @@ PRSice is a software package written in C++ (main) and R (plotting).
 The code relies partially on those written in PLINK by [Christopher Chang](https://www.cog-genomics.org/software).
 Management of BGEN file is based on BGEN lib written by [Gavin Band](https://bitbucket.org/gavinband/bgen).
 We also utilize the [Eigen C++](https://eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).
+
