@@ -1,13 +1,5 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-!!! announcement "Our PRS Analyses Summer School is now open!"
-
-    <h2>We are holding a Summer School on PRS analyses!!</h2>
-
-    - **[Polygenic Risk Score Analyses](https://www1.kcl.ac.uk/prospectus/shortcourses/index/name/polygenicriskscoreanalysis2019/alpha/month/day/header_search/polygenic+risk) _(led by Dr. Paul O'Reily, Dr. Sam Choi)_**
-        - *Friday 21st June 2019*
-<br/>
-
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
@@ -23,16 +15,14 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_mac.zip) |
-| Windows 32-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win32.zip) |
-| Windows 64-bit | [v2.2.0](https://github.com/choishingwan/PRSice/releases/download/2.1.11/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_win64.zip) |
 
 !!! Caution 
 
     PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
-
-
 
 # R Packages Requirements
 
@@ -113,4 +103,4 @@ PRSice-2 and all new functionalities are coded by:
 PRSice is a software package written in C++ (main) and R (plotting).
 The code relies partially on those written in PLINK by [Christopher Chang](https://www.cog-genomics.org/software).
 Management of BGEN file is based on BGEN lib written by [Gavin Band](https://bitbucket.org/gavinband/bgen).
-We also utilize the [Eigen C++](eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).
+We also utilize the [Eigen C++](https://eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).
