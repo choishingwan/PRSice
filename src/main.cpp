@@ -119,6 +119,7 @@ int main(int argc, char* argv[])
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
             {
+                message = "Start processing reference\n"
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
