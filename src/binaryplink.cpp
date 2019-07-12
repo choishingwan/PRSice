@@ -346,6 +346,7 @@ void BinaryPlink::calc_freq_gen_inter(
                 throw std::runtime_error(error_message);
             }
             prev_pos = 0;
+            prev_file = cur_file_name;
         }
         if (prev_pos != byte_pos) {
             // only skip line if we are not reading sequentially
