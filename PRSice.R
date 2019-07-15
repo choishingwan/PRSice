@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.0"
+r.version <- "2.2.3"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -448,8 +448,8 @@ option_list <- list(
   make_option(c("--A1"), type = "character"),
   make_option(c("--A2"), type = "character"),
   make_option(c("-b", "--base"), type = "character"),
-  make_option(c("--base-info"), type = "character", dest = "info_base"),
-  make_option(c("--base-maf"), type = "character", dest="maf_base"),
+  make_option(c("--base-info"), type = "character", dest = "base_info"),
+  make_option(c("--base-maf"), type = "character", dest="base_maf"),
   make_option(c("--beta"), action = "store_true"),
   make_option(c("--bp"), type = "character"),
   make_option(c("--chr"), type = "character"),

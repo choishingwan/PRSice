@@ -41,8 +41,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.2";
-const std::string date = "28 June 2019";
+const std::string version = "2.2.3";
+const std::string date = "15 July 2019";
 class Commander
 {
 public:
@@ -1532,12 +1532,13 @@ private:
         m_base_has_col[+BASE_INDEX::INFO] = contain;
         if (contain) m_base_col_index[+BASE_INDEX::INFO] = index;
         if (!contain) {
-            error_message.append("Error: INFO field not found in base file\n");
-            return false;
+            error_message.append("Warning: INFO field not found in base file,");
+            error_message.append("will ignore INFO filtering\n");
+            return true;
         }
         if (info.size() != 2) {
             error_message.append("Error: Invalid format of "
-                                 "--info-base. Should be "
+                                 "--base-info. Should be "
                                  "ColName,Threshold.\n");
             return false;
         }
@@ -1553,7 +1554,7 @@ private:
         catch (...)
         {
             error_message.append(
-                "Error: Invalid argument passed to --info-base: " + m_info_col
+                "Error: Invalid argument passed to --base-info: " + m_info_col
                 + "! Second argument must be numeric\n");
             return false;
         }
@@ -1563,7 +1564,7 @@ private:
     inline bool set_base_maf_filter(const std::vector<std::string>& ref,
                                     std::string& error_message)
     {
-        std::string maf_error = "Error: Invalid format of --maf-base. "
+        std::string maf_error = "Error: Invalid format of --base-maf. "
                                 "Should be ColName,Threshold."
                                 "or ColName,Threshold:ColName,Threshold.\n";
         std::vector<std::string> case_control = misc::split(m_maf_col, ":");
@@ -1582,8 +1583,9 @@ private:
                 if (contain) m_base_col_index[+BASE_INDEX::MAF] = index;
                 if (!contain) {
                     error_message.append(
-                        "Error: MAF field not found in base file\n");
-                    return false;
+                        "Warning: MAF field not found in base file. "
+                        "Will not perform MAF filtering on the base file\n");
+                    return true;
                 }
             }
             else
@@ -1593,8 +1595,9 @@ private:
                 m_base_has_col[+BASE_INDEX::MAF_CASE] = contain;
                 if (!contain) {
                     error_message.append(
-                        "Error: Case MAF field not found in base file\n");
-                    return false;
+                        "Warning: Case MAF field not found in base file"
+                        "Will not perform MAF filtering on the base file\n");
+                    return true;
                 }
             }
             double cur_maf;
@@ -1610,7 +1613,7 @@ private:
             catch (...)
             {
                 error_message.append(
-                    "Error: Invalid argument passed to --maf-base: " + m_maf_col
+                    "Error: Invalid argument passed to --base-maf: " + m_maf_col
                     + "! Threshold must be numeric\n");
                 return false;
             }
