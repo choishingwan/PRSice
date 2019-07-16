@@ -468,7 +468,7 @@ void Genotype::read_base(
             }
             if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele)) {
                 num_ambiguous++;
-                exclude = !keep_ambig;
+                if(!exclude) exclude = !keep_ambig;
             }
             if (!exclude) {
                 category = -1;
