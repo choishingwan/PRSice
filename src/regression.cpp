@@ -342,7 +342,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
-    p_value = misc::chiprob_p(tvalue * tvalue, 1);
+    p_value = chiprob_p(tvalue * tvalue, 1);
     standard_error = se(se_index);
 }
 }

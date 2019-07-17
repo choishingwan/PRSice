@@ -25,7 +25,7 @@
 #include <limits>
 #include <math.h>
 #include <stdexcept>
-
+#include "dcdflib.h"
 namespace Regression
 {
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,

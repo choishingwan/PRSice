@@ -1027,12 +1027,12 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
     return result;
 }
 
-inline double chiprob_p(double chisq, uint32_t df)
-{
-    // todo: figure out when we were depending on this to return -9, and decide
-    // how to handle those situations now
-    return gamma_incomplete_imp2(df, chisq * 0.5, 1, nullptr);
-}
+//inline double chiprob_p(double chisq, uint32_t df)
+//{
+//    // todo: figure out when we were depending on this to return -9, and decide
+//    // how to handle those situations now
+//    return gamma_incomplete_imp2(df, chisq * 0.5, 1, nullptr);
+//}
 
 /*!
  * \brief Function to check if two double are equal from
