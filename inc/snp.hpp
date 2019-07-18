@@ -405,7 +405,9 @@ public:
         if (use_ref_maf) return m_ref_expected_value;
         return m_expected_value;
     }
-
+    void invalid() {
+        m_is_valid = false;
+    }
 private:
     // basic info
     // actually, the packing of the data is problematic and to enhance
@@ -444,6 +446,7 @@ private:
     bool m_clumped = false;
     bool m_flipped = false;
     bool m_ref_flipped = false;
+    bool m_is_valid = true;
     // prset related
     size_t m_max_flag_index = 0;
 

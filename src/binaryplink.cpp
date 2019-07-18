@@ -978,6 +978,11 @@ void BinaryPlink::read_score(
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
+        if(m_founder_ct==missing_ct){
+            // problematic snp
+            cur_snp.invalid();
+            continue;
+        }
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
