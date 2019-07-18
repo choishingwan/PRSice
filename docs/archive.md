@@ -1,7 +1,7 @@
 You can download previous versions of PRSice here
 
 !!! warning
-    We no longer support PRSice-1.x. Please use PRSice-2 unless you need specific features in PRSice-1 that isn't implemented in PRSice-2. Bugs and errors within PRSice-1.x will no be fixed nor will the script be updated. 
+    We no longer support PRSice-1.x. Please use PRSice-2 unless you need specific features in PRSice-1 that isn't implemented in PRSice-2. Bugs and errors within PRSice-1.x will not be fixed nor will the script be updated. 
 
 | Version | Software | Manual | Vignette | 
 | ------- | :------: | :----: | :------: |
