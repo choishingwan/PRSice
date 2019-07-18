@@ -1,5 +1,5 @@
-// This file is part of PRSice2.0, copyright (C) 2016-2017
-// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+// This file is part of PRSice-2, copyright (C) 2016-2019
+// Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -438,6 +438,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         // between the sample name and the ld bgen file to avoid mismatch
         // That can be done later on
         if (!m_is_ref) {
+            size_t sample_vector_idx = 0;
             for (size_t i = 0; i < actual_number_of_samples; ++i) {
                 genfile::bgen::read_length_followed_by_data(
                     bgen_file, &identifier_size, &identifier);
@@ -448,28 +449,32 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 // Need to double check. BGEN format might differ depends
                 // if FID is provided. When FID is provided, then the ID
                 // should be FID + delimitor + IID; otherwise it'd be IID
-                if (m_sample_id[i].IID != identifier
-                    && (m_sample_id[i].FID + delim + m_sample_id[i].IID)
-                           != identifier)
-                {
-                    std::string error_message =
-                        "Error: Sample mismatch "
-                        "between bgen and phenotype file! Name in BGEN "
-                        "file is "
-                        ":"
-                        + identifier + " and in phentoype file is: ";
-                    if (has_fid)
-                        error_message.append(m_sample_id[i].FID + delim
-                                             + m_sample_id[i].IID);
-                    else
-                        error_message.append(m_sample_id[i].IID);
-                    error_message.append(
-                        ". Please note that PRSice require the bgen file and "
-                        "the .sample (or phenotype file if sample file is "
-                        "not provided) to have sample in the same order. (We "
-                        "might be able to losen this requirement in future "
-                        "when we have more time)");
-                    throw std::runtime_error(error_message);
+                if(IS_SET(m_sample_include.data(), i)){
+                    if (m_sample_id[sample_vector_idx].IID != identifier
+                            && (m_sample_id[sample_vector_idx].FID + delim +
+                                m_sample_id[sample_vector_idx].IID)
+                            != identifier)
+                    {
+                        std::string error_message =
+                                "Error: Sample mismatch "
+                                "between bgen and phenotype file! Name in BGEN "
+                                "file is "
+                                ":"
+                                + identifier + " and in phentoype file is: ";
+                        if (has_fid)
+                            error_message.append(m_sample_id[sample_vector_idx].FID + delim
+                                                 + m_sample_id[sample_vector_idx].IID);
+                        else
+                            error_message.append(m_sample_id[sample_vector_idx].IID);
+                        error_message.append(
+                                    ". Please note that PRSice require the bgen file and "
+                                    "the .sample (or phenotype file if sample file is "
+                                    "not provided) to have sample in the same order. (We "
+                                    "might be able to losen this requirement in future "
+                                    "when we have more time)");
+                        throw std::runtime_error(error_message);
+                    }
+                    sample_vector_idx++;
                 }
             }
         }

@@ -1,5 +1,5 @@
-// This file is part of PRSice2.0, copyright (C) 2016-2017
-// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+// This file is part of PRSice-2, copyright (C) 2016-2019
+// Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -507,14 +507,12 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
 
     std::string message = "\nPRSice " + version + " (" + date + ") \n";
     message.append("https://github.com/choishingwan/PRSice\n");
-    message.append("(C) 2016-2017 Shing Wan (Sam) Choi, Jack Euesden, Cathryn "
-                   "M. Lewis, Paul F. O'Reilly\n");
+    message.append("(C) 2016-2019 Shing Wan (Sam) Choi and Paul F. O'Reilly\n");
     message.append("GNU General Public License v3\n\n");
     message.append("If you use PRSice in any published work, please cite:\n");
-    message.append("Jack Euesden Cathryn M. Lewis Paul F. O'Reilly (2015)\n");
-    message.append("PRSice: Polygenic Risk Score software.\n");
-    message.append("Bioinformatics 31 (9): 1466-1468\n\n");
-
+    message.append("Choi SW, O'Reilly PF.\n");
+    message.append("PRSice-2: Polygenic Risk Score Software for Biobank-Scale Data.\n");
+    message.append("GigaScience 8, no. 7 (July 1, 2019)\n\n");
 
     std::string time_str(buffer);
     std::string prog_name = argv[0];

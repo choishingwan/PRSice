@@ -1,5 +1,5 @@
-// This file is part of PRSice2.0, copyright (C) 2016-2017
-// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+// This file is part of PRSice-2, copyright (C) 2016-2019
+// Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 
 #include "regression.hpp"
 namespace Regression
@@ -342,7 +341,7 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
     double tvalue = start(intercept) / se(se_index);
     coeff = start(intercept);
-    p_value = misc::chiprob_p(tvalue * tvalue, 1);
+    p_value = chiprob_p(tvalue * tvalue, 1);
     standard_error = se(se_index);
 }
 }

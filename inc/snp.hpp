@@ -1,5 +1,5 @@
-// This file is part of PRSice2.0, copyright (C) 2016-2017
-// Shing Wan Choi, Jack Euesden, Cathryn M. Lewis, Paul F. O’Reilly
+// This file is part of PRSice-2, copyright (C) 2016-2019
+// Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
 #ifndef SNP_H
 #define SNP_H
@@ -405,7 +406,9 @@ public:
         if (use_ref_maf) return m_ref_expected_value;
         return m_expected_value;
     }
-
+    void invalid() {
+        m_is_valid = false;
+    }
 private:
     // basic info
     // actually, the packing of the data is problematic and to enhance
@@ -444,6 +447,7 @@ private:
     bool m_clumped = false;
     bool m_flipped = false;
     bool m_ref_flipped = false;
+    bool m_is_valid = true;
     // prset related
     size_t m_max_flag_index = 0;
 

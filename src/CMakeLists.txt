@@ -8,7 +8,9 @@ include_directories(${CMAKE_SOURCE_DIR}/inc)
 
 add_library(bgen ${CMAKE_SOURCE_DIR}/src/bgen_lib.cpp)
 add_library(gzstream ${CMAKE_SOURCE_DIR}/src/gzstream.cpp)
-add_library(plink ${CMAKE_SOURCE_DIR}/src/plink_common.cpp)
+add_library(plink
+    ${CMAKE_SOURCE_DIR}/src/plink_common.cpp
+    ${CMAKE_SOURCE_DIR}/src/dcdflib.cpp)
 add_library(prsice_lib
     ${CMAKE_SOURCE_DIR}/src/binarygen.cpp
     ${CMAKE_SOURCE_DIR}/src/binaryplink.cpp
