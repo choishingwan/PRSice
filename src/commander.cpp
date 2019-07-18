@@ -514,6 +514,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     message.append("Jack Euesden Cathryn M. Lewis Paul F. O'Reilly (2015)\n");
     message.append("PRSice: Polygenic Risk Score software.\n");
     message.append("Bioinformatics 31 (9): 1466-1468\n\n");
+    message.append("Shing Wan Choi, Paul F O'Reilly (2019)\n");
+    message.append("PRSice-2: Polygenic Risk Score software for biobank-scale data\n");
+    message.append("GigaScience 8 (7)");
 
 
     std::string time_str(buffer);
