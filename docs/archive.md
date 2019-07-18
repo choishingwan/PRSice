@@ -10,12 +10,14 @@ You can download previous versions of PRSice here
 | 1.22 | [download](archive/PRSice_v1.22.zip) | [download](archive/PRSice_MANUAL_v1.22.pdf) | [download](archive/PRSice_VIGNETTE_v1.22.pdf)|
 | 1.21 | [download](archive/PRSice_v1.21.zip) | [download](archive/PRSice_MANUAL_v1.21.pdf) | [download](archive/PRSice_VIGNETTE_v1.21.pdf)|
 | 1.2 | [download](archive/PRSice_v1.2.zip) | [download](archive/PRSice_MANUAL_v1.2.pdf) | [download](archive/PRSice_VIGNETTE_v1.2.pdf)|
+
 # Citation
 If you use PRSice-1, then please cite:
 
 !!! important "Citation"
 
     PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
+
 
 # Authors 
 Authors of PRSice-1 are as follow:
