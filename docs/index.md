@@ -74,7 +74,8 @@ If you use PRSice, then please cite:
 
 !!! important "Citation"
 
-    PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
+	Choi SW, and O’Reilly PF. "PRSice-2: Polygenic Risk Score Software for Biobank-Scale Data." GigaScience 8, no. 7 (July 1, 2019). [https://doi.org/10.1093/gigascience/giz082](https://doi.org/10.1093/gigascience/giz082).
+
 
 ## Support
 This wiki should contain all the basic instruction for the use of PRSice.
@@ -86,10 +87,7 @@ In addition, you can use the search bar in this webpage to search for specific f
 ## Authors
 For more details on the authors, see:
 
-- [Dr Jack Euesden](https://kclpure.kcl.ac.uk/portal/en/persons/jack-euesden(972d61b2-89c6-4777-8969-7d88b0c0ece5).html)
-
-- [Professor Cathryn Lewis](http://www.kcl.ac.uk/lsm/research/divisions/gmm/departments/mmg/researchgroups/clewis/index.aspx)
-
+- [Dr Shing Wan Choi](https:choishingwan.github.io)
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
 
 [PRSet](prset_detail.md) is test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
