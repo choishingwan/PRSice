@@ -25,12 +25,12 @@ void PRSice::pheno_check(const std::string& pheno_file,
     if (pheno_file.empty()) {
         // user did not provide a phenotype file, will use the information on
         // the fam file or sample file as input
-        pheno_info.use_pheno = false;
+        m_pheno_info.use_pheno = false;
         // we will still need to know if the sample is binary or not. As no
         // phenotype file is provided, there can only be one phenotype, thus the
         // first entry of the binary_target should correspond to the binary
         // status of our phenotype
-        pheno_info.binary.push_back(is_binary[0]);
+        m_pheno_info.binary.push_back(is_binary[0]);
     }
     else
     {
@@ -77,21 +77,28 @@ void PRSice::pheno_check(const std::string& pheno_file,
         if (pheno_header.size() == 0) {
             // user did not provide a phenotype name. We will therefore simply
             // use the first entry
-            pheno_info.use_pheno = true;
+            m_pheno_info.use_pheno = true;
             // The index of the phenotype will be 1 (IID Phenotype) or 2 (FID
             // IID Pheno)
-            pheno_info.col.push_back(1 + !m_ignore_fid);
+            m_pheno_info.col.push_back(1 + !m_ignore_fid);
             // And we will use the default name (as file without header is
             // still consider as a valid input)
-            pheno_info.name.push_back("Phenotype");
+            // if the column starts with number, we will use Phenotype as a
+            // place holder name. This is to avoid using the phenotype number
+            // as a name
+            if(isdigit(col[1+!m_ignore_fid].at(0))){
+                m_pheno_info.name.push_back("Phenotype");
+            }else{
+                m_pheno_info.name.push_back(col[1+!m_ignore_fid]);
+            }
             // phenotype order correspond to the phenotype name in the phenotype
             // name vector. Here we place 0 as a place holder
-            pheno_info.order.push_back(0);
-            pheno_info.binary.push_back(is_binary[0]);
+            m_pheno_info.order.push_back(0);
+            m_pheno_info.binary.push_back(is_binary[0]);
             message.append(
                 "Phenotype Name: "
                 + col[static_cast<std::vector<std::string>::size_type>(
-                      pheno_info.col.back())]
+                      m_pheno_info.col.back())]
                 + "\n");
         }
         else
@@ -99,8 +106,8 @@ void PRSice::pheno_check(const std::string& pheno_file,
             // if user provide the phenotype names, we will go through the
             // phenotype header and try to identify the corresponding phenotype
             // index
-            for (std::vector<std::string>::size_type i_pheno = 0;
-                 i_pheno < pheno_header.size(); ++i_pheno)
+            bool has_valid_column = false;
+            for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno)
             {
                 if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
                     // we will ignore any duplicate phenotype input.
@@ -110,8 +117,7 @@ void PRSice::pheno_check(const std::string& pheno_file,
                     found = false;
                     dup_col[pheno_header[i_pheno]] = true;
                     // start from 1+!m_ignore_fid to skip the iid and fid part
-                    for (std::vector<std::string>::size_type i_column =
-                             1 + !m_ignore_fid;
+                    for (size_t i_column = 1 + !m_ignore_fid;
                          i_column < col.size(); ++i_column)
                     {
                         // now go through each column of the input file to
@@ -129,18 +135,19 @@ void PRSice::pheno_check(const std::string& pheno_file,
                                 throw std::runtime_error(error_message);
                             }
                             found = true;
-                            pheno_info.use_pheno = true;
+                            m_pheno_info.use_pheno = true;
                             // store the column index
-                            pheno_info.col.push_back(
+                            m_pheno_info.col.push_back(
                                 static_cast<int>(i_column));
                             // store the phenotype name
-                            pheno_info.name.push_back(pheno_header[i_pheno]);
+                            m_pheno_info.name.push_back(pheno_header[i_pheno]);
                             // store the order of the phenotype name in the
                             // pheno-col
-                            pheno_info.order.push_back(
+                            m_pheno_info.order.push_back(
                                 static_cast<int>(i_pheno));
                             // store the binary information of teh phenotype
-                            pheno_info.binary.push_back(is_binary[i_pheno]);
+                            m_pheno_info.binary.push_back(is_binary[i_pheno]);
+                            has_valid_column =true;
                             break;
                         }
                     }
@@ -151,9 +158,14 @@ void PRSice::pheno_check(const std::string& pheno_file,
                     }
                 }
             }
+            if(!has_valid_column){
+                message.append("Error: None of the phenotype(s) can be found "
+                               "in the phenotype file!\n");
+                throw std::runtime_error(message);
+            }
         }
     }
-    size_t num_pheno = (pheno_info.use_pheno) ? pheno_info.col.size() : 1;
+    size_t num_pheno = (m_pheno_info.use_pheno) ? m_pheno_info.col.size() : 1;
     message.append("There are a total of " + std::to_string(num_pheno)
                    + " phenotype to process\n");
     reporter.report(message);
@@ -283,7 +295,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
 
     // reserve the maximum size (All samples)
     // check if the phenotype is binary or not
-    const bool binary = pheno_info.binary[pheno_index];
+    const bool binary = m_pheno_info.binary[pheno_index];
     const size_t sample_ct = target.num_sample();
     std::string line;
     int max_pheno_code = 0;
@@ -303,13 +315,13 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     double first_pheno = 0.0;
     bool more_than_one_pheno = false;
 
-    if (pheno_info.use_pheno) // use phenotype file
+    if (m_pheno_info.use_pheno) // use phenotype file
     {
         // read in the phenotype index
         const size_t pheno_col_index =
-            static_cast<size_t>(pheno_info.col[pheno_index]);
+            static_cast<size_t>(m_pheno_info.col[pheno_index]);
         // and get the phenotype name
-        pheno_name = pheno_info.name[pheno_index];
+        pheno_name = m_pheno_info.name[pheno_index];
         // now read in the phenotype file
         std::ifstream pheno_file;
         // check if the file is open
@@ -1100,7 +1112,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     // read in the name of the phenotype. If there's only one phenotype name,
     // we'll do assign an empty string to phenotyp name
     std::string pheno_name = "";
-    if (pheno_info.name.size() > 1) pheno_name = pheno_info.name[pheno_index];
+    if (m_pheno_info.name.size() > 1) pheno_name = m_pheno_info.name[pheno_index];
     std::string output_prefix = commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     // we generate one best score file per phenotype. The reason for this is to
@@ -1522,8 +1534,8 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
     std::string pheno_name = "";
-    if (pheno_info.name.size() > 1)
-        pheno_name = pheno_info.name[static_cast<size_t>(pheno_index)];
+    if (m_pheno_info.name.size() > 1)
+        pheno_name = m_pheno_info.name[static_cast<size_t>(pheno_index)];
     std::string output_prefix = out;
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     const std::string output_name = output_prefix;
@@ -1719,8 +1731,8 @@ void PRSice::output(const Commander& c_commander,
     }
 
     const std::string pheno_name =
-        (pheno_info.name.size() > 1)
-            ? pheno_info.name[static_cast<std::vector<std::string>::size_type>(
+        (m_pheno_info.name.size() > 1)
+            ? m_pheno_info.name[static_cast<std::vector<std::string>::size_type>(
                   pheno_index)]
             : "";
     std::string output_prefix = c_commander.out();
@@ -2009,8 +2021,7 @@ void PRSice::produce_null_prs(
     const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
     std::map<size_t, std::vector<size_t>>& set_index,
-    std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
-    const bool require_standardize, const bool use_ref_maf)
+        const size_t num_perm, const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
     const size_t max_size = set_index.rbegin()->first;
@@ -2092,7 +2103,6 @@ void PRSice::consume_prs(
         static_cast<Eigen::Index>(m_matrix_index.size());
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
-    std::vector<uint32_t> temp_perm_res(set_perm_res.size(), 0);
     double coefficient, se, r2, r2_adjust;
     double obs_p = 2.0; // for safety reason, make sure it is out bound
     // results from queue will be stored in the prs_info
@@ -2268,8 +2278,8 @@ void PRSice::run_competitive(
         std::thread producer(
             &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
             std::ref(target), std::cref(bk_start_idx), std::cref(bk_end_idx),
-            num_thread - 1, std::ref(set_index), std::ref(set_perm_res),
-            num_perm, require_standardize, use_ref_maf);
+            num_thread - 1, std::ref(set_index), num_perm,
+                    require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
             consumer_store.push_back(std::thread(

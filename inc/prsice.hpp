@@ -151,7 +151,7 @@ public:
      */
     size_t num_phenotype() const
     {
-        return (pheno_info.use_pheno) ? pheno_info.name.size() : 1;
+        return (m_pheno_info.use_pheno) ? m_pheno_info.name.size() : 1;
     }
     bool run_prsice(const Commander& c_commander, const size_t pheno_index,
                     const size_t region_index,
@@ -305,8 +305,8 @@ private:
         std::vector<std::string> name;
         std::vector<int> order;
         std::vector<bool> binary;
-        bool use_pheno;
-    } pheno_info;
+        bool use_pheno=false;
+    } m_pheno_info;
 
     // store the number of non-sig, margin sig, and sig pathway & phenotype
     static std::mutex lock_guard;
@@ -453,13 +453,11 @@ private:
      * \param require_standardize is a boolean, indicating if we want a
      * standardized PRS
      */
-    void produce_null_prs(
-        Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    void produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
         Genotype& target,
         const std::vector<size_t>::const_iterator& bk_start_idx,
         const std::vector<size_t>::const_iterator& bk_end_idx,
-        size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index,
-        std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
+        size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
         const bool require_standardize, const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
