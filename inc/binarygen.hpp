@@ -555,6 +555,7 @@ private:
             m_hard_prob = 0.0;
             // and expected value to 0
             m_exp_value = 0.0;
+            m_is_missing = false;
             std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
@@ -612,7 +613,9 @@ private:
          *
          * \param value this is the missing signature used by bgen v1.2+
          */
-        void set_value(uint32_t, genfile::MissingValue) {}
+        void set_value(uint32_t, genfile::MissingValue) {
+            m_is_missing=true;
+        }
         /*!
          * \brief finalise This function is called when the SNP is
          * processed. Do nothing here
@@ -630,11 +633,12 @@ private:
             // check if it is missing in addition to original
             double prob1 = m_prob[0] * 2 + m_prob[1];
             double prob2 = m_prob[2] * 2 + m_prob[1];
+            double missing_check = m_prob[0] + m_prob[1] + m_prob[2];
             if ((std::fabs(prob1 - std::round(prob1))
                  + std::fabs(prob2 - std::round(prob2)))
                         * 0.5
                     > m_hard_threshold
-                || misc::logically_equal(m_exp_value, 0.0))
+                || misc::logically_equal(missing_check, 0.0) || m_is_missing)
             {
                 // set to missing
                 m_geno = 1;
