@@ -86,7 +86,8 @@ int main(int argc, char* argv[])
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
-                commander.upper(), exclusion_regions,
+                commander.upper(), commander.exclude_file(), commander.extract_file(),
+                        exclusion_regions,
                 commander.maf_base_control(), commander.maf_base_case(),
                 commander.base_info_score(),
                 commander.perform_maf_base_control_filter(),

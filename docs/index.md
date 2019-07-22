@@ -15,10 +15,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_mac.zip) |
-| Windows 32-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_win32.zip) |
-| Windows 64-bit | [v2.2.2](https://github.com/choishingwan/PRSice/releases/download/2.2.2/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.3](https://github.com/choishingwan/PRSice/releases/download/2.2.3/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.3](https://github.com/choishingwan/PRSice/releases/download/2.2.3/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.3](https://github.com/choishingwan/PRSice/releases/download/2.2.3/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.3](https://github.com/choishingwan/PRSice/releases/download/2.2.3/PRSice_win64.zip) |
 
 !!! Caution 
 
@@ -74,7 +74,8 @@ If you use PRSice, then please cite:
 
 !!! important "Citation"
 
-    PRSice: Polygenic Risk Score software, Euesden, Lewis, O'Reilly, Bioinformatics (2015) 31 (9):1466-1468
+	Choi SW, and O’Reilly PF. "PRSice-2: Polygenic Risk Score Software for Biobank-Scale Data." GigaScience 8, no. 7 (July 1, 2019). [https://doi.org/10.1093/gigascience/giz082](https://doi.org/10.1093/gigascience/giz082).
+
 
 ## Support
 This wiki should contain all the basic instruction for the use of PRSice.
@@ -86,10 +87,7 @@ In addition, you can use the search bar in this webpage to search for specific f
 ## Authors
 For more details on the authors, see:
 
-- [Dr Jack Euesden](https://kclpure.kcl.ac.uk/portal/en/persons/jack-euesden(972d61b2-89c6-4777-8969-7d88b0c0ece5).html)
-
-- [Professor Cathryn Lewis](http://www.kcl.ac.uk/lsm/research/divisions/gmm/departments/mmg/researchgroups/clewis/index.aspx)
-
+- [Dr Shing Wan Choi](https:choishingwan.github.io)
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
 
 [PRSet](prset_detail.md) is test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
@@ -104,3 +102,4 @@ PRSice is a software package written in C++ (main) and R (plotting).
 The code relies partially on those written in PLINK by [Christopher Chang](https://www.cog-genomics.org/software).
 Management of BGEN file is based on BGEN lib written by [Gavin Band](https://bitbucket.org/gavinband/bgen).
 We also utilize the [Eigen C++](https://eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).
+

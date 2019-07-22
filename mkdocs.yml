@@ -20,6 +20,7 @@ pages:
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md
         - Frequently Asked Questions: faq.md
+        - Archive: archive.md
 
 theme: readthedocs
 markdown_extensions:
