@@ -86,8 +86,8 @@ int main(int argc, char* argv[])
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
-                commander.upper(), commander.exclude_file(), commander.extract_file(),
-                        exclusion_regions,
+                commander.upper(), commander.exclude_file(),
+                commander.extract_file(), exclusion_regions,
                 commander.maf_base_control(), commander.maf_base_case(),
                 commander.base_info_score(),
                 commander.perform_maf_base_control_filter(),
@@ -114,8 +114,7 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-            target_file->load_snps(commander.out(), commander.exclude_file(),
-                                   commander.extract_file(), exclusion_regions,
+            target_file->load_snps(commander.out(), exclusion_regions,
                                    verbose, reporter);
             // now load the reference file
             if ((!commander.no_clump() && commander.use_ref())
@@ -135,8 +134,7 @@ int main(int argc, char* argv[])
                     commander.delim(), verbose, reporter);
                 // load the reference file
                 reference_file->load_snps(
-                    commander.out(), commander.exclude_file(),
-                    commander.extract_file(), exclusion_regions, verbose,
+                    commander.out(), exclusion_regions, verbose,
                     reporter, target_file);
             }
             exclusion_regions.clear();

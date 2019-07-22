@@ -626,17 +626,6 @@ void BinaryGen::gen_snp_vector(
                 cur_id = RSID;
             }
 
-
-            // user exclude indicate this SNP is discard by user, not because of
-            // QC matric
-            if (!m_is_ref) {
-                if ((!m_exclude_snp
-                     && m_snp_selection_list.find(cur_id)
-                            == m_snp_selection_list.end()))
-                {
-                    exclude_snp = true;
-                }
-            }
             if (processed_snps.find(cur_id) != processed_snps.end()) {
                 duplicated_snps.insert(cur_id);
                 exclude_snp = true;
@@ -649,7 +638,7 @@ void BinaryGen::gen_snp_vector(
             }
 
             to_remove = Genotype::within_region(exclusion_regions, chr_code,
-                                                SNP_position);
+                                                static_cast<int>(SNP_position));
             if (to_remove) {
                 m_num_xrange++;
                 exclude_snp = true;
@@ -736,7 +725,8 @@ void BinaryGen::gen_snp_vector(
                     else
                     {
                         m_existed_snps[target_index].add_target(
-                            prefix, byte_pos, chr_code, SNP_position, A1, A2,
+                            prefix, byte_pos, chr_code,
+                                    static_cast<int>(SNP_position), A1, A2,
                             flipping);
                     }
                     retain_snp[target_index] = true;
@@ -1047,8 +1037,7 @@ BinaryGen::~BinaryGen()
 
 void BinaryGen::dosage_score(
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    const bool use_ref_maf)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
     // currently, use_ref_maf doesn't work on bgen dosage file
     // main reason is we need expected value instead of
@@ -1317,6 +1306,6 @@ void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
     }
     else
     {
-        dosage_score(start_idx, end_idx, reset_zero, use_ref_maf);
+        dosage_score(start_idx, end_idx, reset_zero);
     }
 }

@@ -518,24 +518,6 @@ void BinaryPlink::gen_snp_vector(
                            bim_token[+BIM::A2].end(),
                            bim_token[+BIM::A2].begin(), ::toupper);
 
-            // exclude SNPs that are not required
-            if (!m_is_ref) {
-                // don't bother doing it when reading reference genome
-                // as all SNPs should have been removed in target
-                if (!m_exclude_snp
-                    && m_snp_selection_list.find(bim_token[+BIM::RS])
-                           == m_snp_selection_list.end())
-                {
-                    continue;
-                }
-                else if (m_exclude_snp
-                         && m_snp_selection_list.find(bim_token[+BIM::RS])
-                                != m_snp_selection_list.end())
-                {
-                    continue;
-                }
-            }
-
             // read in the chromosome string
             chr = bim_token[+BIM::CHR];
             // check if this is a new chromosome. If this is a new chromosome,

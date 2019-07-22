@@ -240,8 +240,6 @@ void Genotype::read_base(
     size_t num_maf_filter = 0;
     bool maf_filtered = false;
     bool exclude = false;
-    bool has_chr = false;
-    bool has_bp = false;
     bool to_remove = false;
     int category = -1;
     int32_t chr_code;
@@ -289,8 +287,6 @@ void Genotype::read_base(
         num_line_in_base++;
         exclude = false;
         token = misc::split(line);
-        has_chr = false;
-        has_bp = false;
         if (token.size() <= max_index) {
             std::string error_message = line;
             error_message.append("\nMore index than column in data\n");
@@ -353,7 +349,7 @@ void Genotype::read_base(
                     }
                 }
             }
-            has_chr = (chr_code != -1);
+
             ref_allele = (has_col[+BASE_INDEX::REF])
                              ? token[col_index[+BASE_INDEX::REF]]
                              : "";
@@ -376,7 +372,6 @@ void Genotype::read_base(
                             "Error: " + rs_id + " has negative loci!\n";
                         throw std::runtime_error(error_message);
                     }
-                    has_bp = true;
                 }
                 catch (...)
                 {
@@ -942,22 +937,10 @@ void Genotype::calc_freqs_and_intermediate(
     if (verbose) reporter.report(message);
 }
 
-void Genotype::load_snps(const std::string& out, const std::string& exclude,
-                         const std::string& extract,
+void Genotype::load_snps(const std::string& out,
                          const std::vector<IITree<int, int>>& exclusion_regions,
                          bool verbose, Reporter& reporter, Genotype* target)
 {
-
-    if (!m_is_ref) {
-        if (!extract.empty()) {
-            m_exclude_snp = false;
-            m_snp_selection_list = load_snp_list(extract, reporter);
-        }
-        else if (!exclude.empty())
-        {
-            m_snp_selection_list = load_snp_list(exclude, reporter);
-        }
-    }
     gen_snp_vector(exclusion_regions, out, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";

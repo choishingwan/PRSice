@@ -97,9 +97,12 @@ public:
                       const std::string& remove_file, const std::string& delim,
                       bool verbose, Reporter& reporter);
 
-    // do a quick filtering before we actually read in and process the genotypes
-    void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract,
+    // We need the exclusion_region parameter because when we read in the base
+    // we do allow users to provide a base without the CHR and LOC, which forbid
+    // us to do the regional filtering. However, as exclusion and extractions
+    // are based on the SNP ID, we can be confident that they were already done
+    // in read_base
+    void load_snps(const std::string& out,
                    const std::vector<IITree<int, int>>& exclusion_regions,
                    bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
