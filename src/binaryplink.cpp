@@ -353,14 +353,16 @@ void BinaryPlink::calc_freq_gen_inter(
             // only skip line if we are not reading sequentially
             if (!bed_file.seekg(byte_pos, std::ios_base::beg)) {
                 std::string error_message =
-                    "Error: Cannot read the bed file (seek): " + bed_name;
+                    "Error: Cannot read the bed file (seek): " + bed_name+" "+
+                        std::string(strerror(errno));
                 throw std::runtime_error(error_message);
             }
         }
         // read in the genotype information to the genotype vector
         if (load_raw(unfiltered_sample_ct4, bed_file, m_tmp_genotype.data())) {
             std::string error_message =
-                "Error: Cannot read the bed file(read): " + bed_name;
+                "Error: Cannot read the bed file(read): " + bed_name+" "+
+                    std::string(strerror(errno));
             throw std::runtime_error(error_message);
         }
         prev_pos =
