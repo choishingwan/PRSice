@@ -156,6 +156,8 @@ void Genotype::read_base(
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
     const double& bound_end,
+        const std::string& exclude_snps,
+        const std::string& extract_snps,
     const std::vector<IITree<int, int>>& exclusion_regions,
     const double& maf_control, const double& maf_case,
     const double& info_threshold, const bool maf_control_filter,
@@ -169,6 +171,16 @@ void Genotype::read_base(
     // doesn't matter if two SNPs have the same coordinates
     assert(col_index.size() == +BASE_INDEX::MAX + 1);
     assert(!barlevels.empty());
+    if (!m_is_ref) {
+        if (!extract_snps.empty()) {
+            m_exclude_snp = false;
+            m_snp_selection_list = load_snp_list(extract_snps, reporter);
+        }
+        else if (!exclude_snps.empty())
+        {
+            m_snp_selection_list = load_snp_list(exclude_snps, reporter);
+        }
+    }
     const size_t max_index = col_index[+BASE_INDEX::MAX];
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
@@ -216,6 +228,7 @@ void Genotype::read_base(
     double pthres = 0.0;
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
+    size_t num_selected = 0;
     size_t num_region_exclude = 0;
     size_t num_ambiguous = 0;
     size_t num_haploid = 0;
@@ -287,6 +300,18 @@ void Genotype::read_base(
         rs_id = token[col_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) == dup_index.end()) {
             // if this is not a duplicated SNP
+            if(!m_exclude_snp
+                    && m_snp_selection_list.find(rs_id)
+                           == m_snp_selection_list.end()){
+                num_selected++;
+                exclude = true;
+            }
+            else if(m_exclude_snp
+                    && m_snp_selection_list.find(rs_id)
+                           != m_snp_selection_list.end()){
+                num_selected++;
+                exclude = true;
+            }
             dup_index.insert(rs_id);
             chr_code = -1;
             if (has_col[+BASE_INDEX::CHR]) {
@@ -302,14 +327,18 @@ void Genotype::read_base(
                             // this is the sex chromosomes
                             // we don't need to output the error as they will be
                             // filtered out before by the genotype read anyway
-                            exclude = true;
-                            num_haploid++;
+                            if(!exclude){
+                                exclude = true;
+                                num_haploid++;
+                            }
                         }
                         else
                         {
-                            exclude = true;
+                            if(!exclude){
+                                exclude = true;
+                                num_chr_filter++;
+                            }
                             chr_code = -1;
-                            num_chr_filter++;
                         }
                     }
                 }
@@ -318,8 +347,10 @@ void Genotype::read_base(
                          || chr_code == m_xymt_codes[X_OFFSET]
                          || chr_code == m_xymt_codes[Y_OFFSET])
                 {
-                    exclude = true;
-                    num_haploid++;
+                    if(!exclude){
+                        exclude = true;
+                        num_haploid++;
+                    }
                 }
             }
             has_chr = (chr_code != -1);
@@ -356,7 +387,7 @@ void Genotype::read_base(
             }
             to_remove =
                 Genotype::within_region(exclusion_regions, chr_code, loc);
-            if (to_remove) {
+            if (to_remove && !exclude) {
                 num_region_exclude++;
                 exclude = true;
             }
@@ -374,13 +405,17 @@ void Genotype::read_base(
                 {
                     // exclude because we can't read the MAF, therefore assume
                     // this is problematic
+                    if(!exclude){
                     num_maf_filter++;
                     exclude = true;
+                    }
                     maf_filtered = true;
                 }
                 if (maf < maf_control) {
+                    if(!exclude){
                     num_maf_filter++;
                     exclude = true;
+                    }
                     maf_filtered = true;
                 }
             }
@@ -400,12 +435,16 @@ void Genotype::read_base(
                     // we don't want to double count the MAF filtering, thus we
                     // only add one to the maf filter count if we haven't
                     // already filtered this SNP based on the control MAf
+                    if(!exclude){
                     num_maf_filter += !maf_filtered;
                     exclude = true;
+                    }
                 }
                 if (maf_case_temp < maf_case) {
+                    if(!exclude){
                     num_maf_filter += !maf_filtered;
                     exclude = true;
+                    }
                 }
             }
             info_score = 1;
@@ -419,12 +458,16 @@ void Genotype::read_base(
                 catch (...)
                 {
                     // if no info score, just assume it doesn't pass the QC
-                    num_info_filter++;
-                    exclude = true;
+                    if(!exclude){
+                        num_info_filter++;
+                        exclude = true;
+                    }
                 }
                 if (info_score < info_threshold) {
-                    num_info_filter++;
-                    exclude = true;
+                    if(!exclude){
+                        num_info_filter++;
+                        exclude = true;
+                    }
                 }
             }
             pvalue = 2.0;
@@ -439,14 +482,18 @@ void Genotype::read_base(
                 }
                 else if (pvalue > max_threshold)
                 {
-                    exclude = true;
-                    num_excluded++;
+                    if(!exclude){
+                        exclude = true;
+                        num_excluded++;
+                    }
                 }
             }
             catch (...)
             {
-                exclude = true;
-                num_not_converted++;
+                if(!exclude){
+                    exclude = true;
+                    num_not_converted++;
+                }
             }
             stat = 0.0;
             try
@@ -461,8 +508,10 @@ void Genotype::read_base(
                 {
                     // we can't calculate log(0), so we will say we can't
                     // convert it
-                    num_not_converted++;
-                    exclude = true;
+                    if(!exclude){
+                        num_not_converted++;
+                        exclude = true;
+                    }
                 }
                 else if (!is_beta)
                     // if it is OR, we will perform natural log to convert it to
@@ -472,11 +521,14 @@ void Genotype::read_base(
             catch (...)
             {
                 // non-numeric statistic
-                num_not_converted++;
-                exclude = true;
+                if(!exclude){
+                    num_not_converted++;
+                    exclude = true;
+                }
             }
             if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele)) {
-                num_ambiguous++;
+                // only coun the number if the snp is kept
+                if(!exclude && keep_ambig) num_ambiguous++;
                 if(!exclude) exclude = !keep_ambig;
             }
             if (!exclude) {
@@ -518,30 +570,36 @@ void Genotype::read_base(
         message.append(std::to_string(num_duplicated)
                        + " duplicated variant(s)\n");
     }
-    if (num_excluded) {
-        message.append(std::to_string(num_excluded)
-                       + " variant(s) excluded due to p-value threshold\n");
+    if (num_selected) {
+        message.append(std::to_string(num_selected)
+                       + " variant(s) excluded based on user input\n");
+    }
+    if (num_chr_filter) {
+        message.append(
+            std::to_string(num_chr_filter)
+            + " variant(s) excluded as they are on unknown/sex chromosome\n");
+    }
+    if (num_haploid) {
+        message.append(std::to_string(num_haploid)
+                       + " variant(s) located on haploid chromosome\n");
     }
     if (num_region_exclude) {
         message.append(
             std::to_string(num_region_exclude)
             + " variant(s) excluded as they fall within x-range region(s)\n");
     }
-    if (num_chr_filter) {
-        message.append(
-            std::to_string(num_excluded)
-            + " variant(s) excluded as they are on unknown/sex chromosome\n");
+    if (num_maf_filter) {
+        message.append(std::to_string(num_maf_filter)
+                       + " variant(s) excluded due to MAF threshold\n");
     }
-    if (num_ambiguous) {
-        message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
-        if (!keep_ambig) {
-            message.append(" excluded");
-        }
-        message.append("\n");
+    if (num_info_filter) {
+        message.append(std::to_string(num_info_filter)
+                       + " variant(s) with INFO score less than "
+                       + std::to_string(info_threshold) + "\n");
     }
-    if (num_haploid) {
-        message.append(std::to_string(num_haploid)
-                       + " variant(s) located on haploid chromosome\n");
+    if (num_excluded) {
+        message.append(std::to_string(num_excluded)
+                       + " variant(s) excluded due to p-value threshold\n");
     }
     if (num_not_converted) {
         message.append(std::to_string(num_not_converted)
@@ -552,14 +610,12 @@ void Genotype::read_base(
                        + " negative statistic observed. Maybe you have "
                          "forgotten the --beta flag?\n");
     }
-    if (num_info_filter) {
-        message.append(std::to_string(num_info_filter)
-                       + " variant(s) with INFO score less than "
-                       + std::to_string(info_threshold) + "\n");
-    }
-    if (num_maf_filter) {
-        message.append(std::to_string(num_maf_filter)
-                       + " variant(s) excluded due to MAF threshold\n");
+    if (num_ambiguous) {
+        message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
+        if (!keep_ambig) {
+            message.append(" excluded");
+        }
+        message.append("\n");
     }
     message.append(std::to_string(m_existed_snps.size())
                    + " total variant(s) included from base file\n\n");
