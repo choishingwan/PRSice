@@ -324,7 +324,8 @@ private:
             m_cal_expected = 0;
             rs.clear();
             // to match the encoding in PLINK format, we "unflip" SNPs here
-            // otherwise our polygenic score will be going to an opposite direction
+            // otherwise our polygenic score will be going to an opposite
+            // direction
             if (!flipped) {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
@@ -613,9 +614,7 @@ private:
          *
          * \param value this is the missing signature used by bgen v1.2+
          */
-        void set_value(uint32_t, genfile::MissingValue) {
-            m_missing=true;
-        }
+        void set_value(uint32_t, genfile::MissingValue) { m_missing = true; }
         /*!
          * \brief finalise This function is called when the SNP is
          * processed. Do nothing here
@@ -648,7 +647,7 @@ private:
                 m_hard_prob = 0;
                 for (size_t geno = 0; geno < 3; ++geno) {
                     if (m_prob[geno] > m_hard_prob) {
-                        m_geno = (geno == 0) ? geno : geno+1;
+                        m_geno = (geno == 0) ? geno : geno + 1;
                         m_hard_prob = m_prob[geno];
                     }
                 }
@@ -718,7 +717,7 @@ private:
         size_t m_homrar_ct = 0;
         size_t m_het_ct = 0;
         size_t m_missing_ct = 0;
-        bool m_missing =false;
+        bool m_missing = false;
     };
 };
 

@@ -1445,7 +1445,7 @@ private:
                         // maybe only one input?
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
-                        if (unit == "B" || unit=="b") {
+                        if (unit == "B" || unit == "b") {
                             dist =
                                 static_cast<int>(misc::convert<double>(value));
                             message[command] = value + "bb";
@@ -1458,7 +1458,7 @@ private:
                             message[command] = value + "kb";
                             return dist;
                         }
-                        else if (unit == "M" || unit== "m")
+                        else if (unit == "M" || unit == "m")
                         {
                             dist = static_cast<int>(misc::convert<double>(value)
                                                     * 1000 * 1000);

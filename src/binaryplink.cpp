@@ -304,7 +304,7 @@ void BinaryPlink::calc_freq_gen_inter(
     double cur_maf, cur_geno;
     double sample_ct_recip =
         1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
-    std::streampos byte_pos=1, prev_pos=0;
+    std::streampos byte_pos = 1, prev_pos = 0;
     size_t processed_count = 0;
     size_t retained = 0;
     uint32_t ll_ct = 0;
@@ -384,7 +384,7 @@ void BinaryPlink::calc_freq_gen_inter(
             cur_maf = (static_cast<double>(2 * hh_ctf + lh_ctf))
                       / (static_cast<double>(uii));
 
-            cur_maf = (cur_maf> 0.5)? 1-cur_maf: cur_maf;
+            cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
         }
         if (misc::logically_equal(cur_maf, 0.0)
             || misc::logically_equal(cur_maf, 1.0))
@@ -921,7 +921,8 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data())) {
+        if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data()))
+        {
             std::string error_message =
                 "Error: Cannot read the bed file(read): " + m_cur_file;
             throw std::runtime_error(error_message);
@@ -961,7 +962,7 @@ void BinaryPlink::read_score(
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-        if(m_founder_ct==missing_ct){
+        if (m_founder_ct == missing_ct) {
             // problematic snp
             cur_snp.invalid();
             continue;

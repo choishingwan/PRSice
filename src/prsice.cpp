@@ -87,10 +87,12 @@ void PRSice::pheno_check(const std::string& pheno_file,
             // if the column starts with number, we will use Phenotype as a
             // place holder name. This is to avoid using the phenotype number
             // as a name
-            if(isdigit(col[1+!m_ignore_fid].at(0))){
+            if (isdigit(col[1 + !m_ignore_fid].at(0))) {
                 m_pheno_info.name.push_back("Phenotype");
-            }else{
-                m_pheno_info.name.push_back(col[1+!m_ignore_fid]);
+            }
+            else
+            {
+                m_pheno_info.name.push_back(col[1 + !m_ignore_fid]);
             }
             // phenotype order correspond to the phenotype name in the phenotype
             // name vector. Here we place 0 as a place holder
@@ -108,8 +110,7 @@ void PRSice::pheno_check(const std::string& pheno_file,
             // phenotype header and try to identify the corresponding phenotype
             // index
             bool has_valid_column = false;
-            for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno)
-            {
+            for (size_t i_pheno = 0; i_pheno < pheno_header.size(); ++i_pheno) {
                 if (dup_col.find(pheno_header[i_pheno]) == dup_col.end()) {
                     // we will ignore any duplicate phenotype input.
                     // it should still be ok as the binary_target should have
@@ -148,7 +149,7 @@ void PRSice::pheno_check(const std::string& pheno_file,
                                 static_cast<int>(i_pheno));
                             // store the binary information of teh phenotype
                             m_pheno_info.binary.push_back(is_binary[i_pheno]);
-                            has_valid_column =true;
+                            has_valid_column = true;
                             break;
                         }
                     }
@@ -159,7 +160,7 @@ void PRSice::pheno_check(const std::string& pheno_file,
                     }
                 }
             }
-            if(!has_valid_column){
+            if (!has_valid_column) {
                 message.append("Error: None of the phenotype(s) can be found "
                                "in the phenotype file!\n");
                 throw std::runtime_error(message);
@@ -1113,7 +1114,8 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     // read in the name of the phenotype. If there's only one phenotype name,
     // we'll do assign an empty string to phenotyp name
     std::string pheno_name = "";
-    if (m_pheno_info.name.size() > 1) pheno_name = m_pheno_info.name[pheno_index];
+    if (m_pheno_info.name.size() > 1)
+        pheno_name = m_pheno_info.name[pheno_index];
     std::string output_prefix = commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     // we generate one best score file per phenotype. The reason for this is to
@@ -1548,16 +1550,16 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
 
     // .prsice output
     // we only need to generate the header for it
-    if(!no_regress){
+    if (!no_regress) {
         m_prsice_out.open(out_prsice.c_str());
         if (!m_prsice_out.is_open()) {
             std::string error_message =
-                    "Error: Cannot open file: " + out_prsice + " to write";
+                "Error: Cannot open file: " + out_prsice + " to write";
             throw std::runtime_error(error_message);
         }
         // we won't store the empirical p and competitive p output in the prsice
-        // file now as that seems like a waste (only one threshold will contain that
-        // information, storing that in the summary file should be enough)
+        // file now as that seems like a waste (only one threshold will contain
+        // that information, storing that in the summary file should be enough)
         m_prsice_out << "Set\tThreshold\tR2\t";
         // but generate the adjusted R2 if prevalence is provided
         if (has_prev) m_prsice_out << "R2.adj\t";
@@ -1566,7 +1568,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         m_best_out.open(out_best.c_str());
         if (!m_best_out.is_open()) {
             std::string error_message =
-                    "Error: Cannot open file: " + out_best + " to write";
+                "Error: Cannot open file: " + out_best + " to write";
             throw std::runtime_error(error_message);
         }
         std::string header_line = "FID IID In_Regression";
@@ -1583,28 +1585,29 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
                 header_line.append(" " + region_name[i]);
             }
         }
-        // the safetest way to calculate the length we need to speed is to directly
-        // count the number of byte involved
+        // the safetest way to calculate the length we need to speed is to
+        // directly count the number of byte involved
         auto begin_byte = m_best_out.tellp();
         m_best_out << header_line << "\n";
         auto end_byte = m_best_out.tellp();
-        // we now know the exact number of byte the header contain and can correctly
-        // skip it acordingly
+        // we now know the exact number of byte the header contain and can
+        // correctly skip it acordingly
         m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
         // we will set the processed_threshold information to 0
         m_best_file.processed_threshold = 0;
 
-        // each numeric output took 12 spaces, then for each output, there is one
-        // space next to each
+        // each numeric output took 12 spaces, then for each output, there is
+        // one space next to each
         m_best_file.line_width =
-                m_max_fid_length /* FID */ + 1 /* space */ + m_max_iid_length /* IID */
-                + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
-                + static_cast<int>(region_name.size()) /* each region */
-                * (m_numeric_width + 1 /* space */)
-                + 1 /* new line */;
+            m_max_fid_length /* FID */ + 1         /* space */
+            + m_max_iid_length                     /* IID */
+            + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
+            + static_cast<int>(region_name.size()) /* each region */
+                  * (m_numeric_width + 1 /* space */)
+            + 1 /* new line */;
 
         m_best_file.skip_column_length =
-                m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
+            m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
     }
 
     // also handle all score here
@@ -1671,12 +1674,13 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // when we print the best file, we want to also print whether the sample
         // is used in regression or not (so that user can easily reproduce their
         // results)
-        if(!no_regress){
-            best_line = name + " "
-                        + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
+        if (!no_regress) {
+            best_line =
+                name + " "
+                + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
             // we print a line containing m_best_file.line_width white space
-            // characters, which we can then overwrite later on, therefore achieving
-            // a vertical output
+            // characters, which we can then overwrite later on, therefore
+            // achieving a vertical output
             m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
                        << std::left << best_line << "\n";
         }
@@ -1733,8 +1737,9 @@ void PRSice::output(const Commander& c_commander,
 
     const std::string pheno_name =
         (m_pheno_info.name.size() > 1)
-            ? m_pheno_info.name[static_cast<std::vector<std::string>::size_type>(
-                  pheno_index)]
+            ? m_pheno_info
+                  .name[static_cast<std::vector<std::string>::size_type>(
+                      pheno_index)]
             : "";
     std::string output_prefix = c_commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
@@ -2021,8 +2026,8 @@ void PRSice::produce_null_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
     const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
-    std::map<size_t, std::vector<size_t>>& set_index,
-        const size_t num_perm, const bool require_standardize, const bool use_ref_maf)
+    std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
+    const bool require_standardize, const bool use_ref_maf)
 {
     // we need to know the size of the biggest set
     const size_t max_size = set_index.rbegin()->first;
@@ -2276,11 +2281,11 @@ void PRSice::run_competitive(
         //  reading in the PRS and construct the required independent variable
         //  and other threads are responsible for the calculation
         Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
-        std::thread producer(
-            &PRSice::produce_null_prs, this, std::ref(set_perm_queue),
-            std::ref(target), std::cref(bk_start_idx), std::cref(bk_end_idx),
-            num_thread - 1, std::ref(set_index), num_perm,
-                    require_standardize, use_ref_maf);
+        std::thread producer(&PRSice::produce_null_prs, this,
+                             std::ref(set_perm_queue), std::ref(target),
+                             std::cref(bk_start_idx), std::cref(bk_end_idx),
+                             num_thread - 1, std::ref(set_index), num_perm,
+                             require_standardize, use_ref_maf);
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread) {
             consumer_store.push_back(std::thread(

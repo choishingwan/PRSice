@@ -449,29 +449,33 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 // Need to double check. BGEN format might differ depends
                 // if FID is provided. When FID is provided, then the ID
                 // should be FID + delimitor + IID; otherwise it'd be IID
-                if(IS_SET(m_sample_include.data(), i)){
+                if (IS_SET(m_sample_include.data(), i)) {
                     if (m_sample_id[sample_vector_idx].IID != identifier
-                            && (m_sample_id[sample_vector_idx].FID + delim +
-                                m_sample_id[sample_vector_idx].IID)
-                            != identifier)
+                        && (m_sample_id[sample_vector_idx].FID + delim
+                            + m_sample_id[sample_vector_idx].IID)
+                               != identifier)
                     {
                         std::string error_message =
-                                "Error: Sample mismatch "
-                                "between bgen and phenotype file! Name in BGEN "
-                                "file is "
-                                ":"
-                                + identifier + " and in phentoype file is: ";
+                            "Error: Sample mismatch "
+                            "between bgen and phenotype file! Name in BGEN "
+                            "file is "
+                            ":"
+                            + identifier + " and in phentoype file is: ";
                         if (has_fid)
-                            error_message.append(m_sample_id[sample_vector_idx].FID + delim
-                                                 + m_sample_id[sample_vector_idx].IID);
+                            error_message.append(
+                                m_sample_id[sample_vector_idx].FID + delim
+                                + m_sample_id[sample_vector_idx].IID);
                         else
-                            error_message.append(m_sample_id[sample_vector_idx].IID);
+                            error_message.append(
+                                m_sample_id[sample_vector_idx].IID);
                         error_message.append(
-                                    ". Please note that PRSice require the bgen file and "
-                                    "the .sample (or phenotype file if sample file is "
-                                    "not provided) to have sample in the same order. (We "
-                                    "might be able to losen this requirement in future "
-                                    "when we have more time)");
+                            ". Please note that PRSice require the bgen file "
+                            "and "
+                            "the .sample (or phenotype file if sample file is "
+                            "not provided) to have sample in the same order. "
+                            "(We "
+                            "might be able to losen this requirement in future "
+                            "when we have more time)");
                         throw std::runtime_error(error_message);
                     }
                     sample_vector_idx++;
@@ -726,8 +730,7 @@ void BinaryGen::gen_snp_vector(
                     {
                         m_existed_snps[target_index].add_target(
                             prefix, byte_pos, chr_code,
-                                    static_cast<int>(SNP_position), A1, A2,
-                            flipping);
+                            static_cast<int>(SNP_position), A1, A2, flipping);
                     }
                     retain_snp[target_index] = true;
                     ref_target_match++;
@@ -927,9 +930,9 @@ void BinaryGen::calc_freq_gen_inter(
         {
             cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
-            cur_maf = (cur_maf > 0.5) ? 1-cur_maf: cur_maf;
+            cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
         }
-        if(snp.rs() == "RSID_149"){
+        if (snp.rs() == "RSID_149") {
             std::cerr << hh_ct << "\t" << lh_ct << "\t" << ll_ct << std::endl;
             std::cerr << "Maf is: " << cur_maf << std::endl;
         }

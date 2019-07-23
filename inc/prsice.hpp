@@ -306,7 +306,7 @@ private:
         std::vector<std::string> name;
         std::vector<int> order;
         std::vector<bool> binary;
-        bool use_pheno=false;
+        bool use_pheno = false;
     } m_pheno_info;
 
     // store the number of non-sig, margin sig, and sig pathway & phenotype
@@ -454,12 +454,15 @@ private:
      * \param require_standardize is a boolean, indicating if we want a
      * standardized PRS
      */
-    void produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-        Genotype& target,
-        const std::vector<size_t>::const_iterator& bk_start_idx,
-        const std::vector<size_t>::const_iterator& bk_end_idx,
-        size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
-        const bool require_standardize, const bool use_ref_maf);
+    void
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     Genotype& target,
+                     const std::vector<size_t>::const_iterator& bk_start_idx,
+                     const std::vector<size_t>::const_iterator& bk_end_idx,
+                     size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     const size_t num_perm, const bool require_standardize,
+                     const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis

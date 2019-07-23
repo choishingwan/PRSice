@@ -18,6 +18,7 @@
 #ifndef PRSICE_REGRESSION_H_
 #define PRSICE_REGRESSION_H_
 
+#include "dcdflib.h"
 #include "misc.hpp"
 #include <Eigen/Dense>
 #include <cstdio>
@@ -26,7 +27,6 @@
 #include <limits>
 #include <math.h>
 #include <stdexcept>
-#include "dcdflib.h"
 namespace Regression
 {
 void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
