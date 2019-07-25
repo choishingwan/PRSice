@@ -163,92 +163,91 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)
     while (std::getline(sample_file, line)) {
         misc::trim(line);
         line_id++;
-        if (!line.empty()) {
-            token = misc::split(line);
-            // if it is not the sample file, check if this has a header
-            // not the best way, but will do it
-            if (line_id == 1) {
-                std::string header_test = token[0];
-                std::transform(header_test.begin(), header_test.end(),
-                               header_test.begin(), ::toupper);
-                if (header_test == "FID"
-                    || (header_test == "IID" && m_ignore_fid))
-                {
-                    // this is the header, skip
-                    continue;
-                }
-                else
-                {
-                    // emit a warning so people might be aware of it
-                    std::cerr
-                        << "We assume the following line is not a header:\n"
-                        << line << "\n(first column isn't FID or IID)\n";
-                }
-            }
-            if (static_cast<int>(token.size())
-                < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
+        if(line.empty()) continue;
+        token = misc::split(line);
+        // if it is not the sample file, check if this has a header
+        // not the best way, but will do it
+        if (line_id == 1) {
+            std::string header_test = token[0];
+            std::transform(header_test.begin(), header_test.end(),
+                           header_test.begin(), ::toupper);
+            if (header_test == "FID"
+                || (header_test == "IID" && m_ignore_fid))
             {
-                std::string error_message =
-                    "Error: Line " + std::to_string(line_id)
-                    + " must have at least "
-                    + std::to_string((sex_col != -1) ? (sex_col)
-                                                     : (1 + !m_ignore_fid))
-                    + " columns! Number of column="
-                    + misc::to_string(token.size());
-                throw std::runtime_error(error_message);
+                // this is the header, skip
+                continue;
             }
-            m_unfiltered_sample_ct++;
+            else
+            {
+                // emit a warning so people might be aware of it
+                std::cerr
+                    << "We assume the following line is not a header:\n"
+                    << line << "\n(first column isn't FID or IID)\n";
+            }
+        }
+        if (static_cast<int>(token.size())
+            < ((sex_col != -1) ? (sex_col) : (1 + !m_ignore_fid)))
+        {
+            std::string error_message =
+                "Error: Line " + std::to_string(line_id)
+                + " must have at least "
+                + std::to_string((sex_col != -1) ? (sex_col)
+                                                 : (1 + !m_ignore_fid))
+                + " columns! Number of column="
+                + misc::to_string(token.size());
+            throw std::runtime_error(error_message);
+        }
+        m_unfiltered_sample_ct++;
 
-            if (is_sample_format || !m_ignore_fid) {
-                FID = token[0];
-                IID = token[1];
-            }
-            else
+        if (is_sample_format || !m_ignore_fid) {
+            FID = token[0];
+            IID = token[1];
+        }
+        else
+        {
+            // not a sample format or used ignore fid
+            FID = "";
+            IID = token[0];
+        }
+        std::string id = (m_ignore_fid) ? IID : FID + delim + IID;
+        // we assume all bgen samples are founders
+        if (!m_remove_sample) {
+            inclusion = (m_sample_selection_list.find(id)
+                         != m_sample_selection_list.end());
+        }
+        else
+        {
+            inclusion = (m_sample_selection_list.find(id)
+                         == m_sample_selection_list.end());
+        }
+        if (sex_col != -1) {
+            try
             {
-                // not a sample format or used ignore fid
-                FID = "";
-                IID = token[0];
+                int sex_info = misc::convert<int>(
+                    token[static_cast<std::vector<std::string>::size_type>(
+                        sex_col)]);
+                m_num_male += (sex_info == 1);
+                m_num_female += (sex_info == 2);
+                m_num_ambig_sex += (sex_info != 1 && sex_info != 2);
             }
-            std::string id = (m_ignore_fid) ? IID : FID + delim + IID;
-            // we assume all bgen samples are founders
-            if (!m_remove_sample) {
-                inclusion = (m_sample_selection_list.find(id)
-                             != m_sample_selection_list.end());
-            }
-            else
+            catch (...)
             {
-                inclusion = (m_sample_selection_list.find(id)
-                             == m_sample_selection_list.end());
+                throw std::runtime_error(
+                    "Error: Non-numeric sex coding!\n");
             }
-            if (sex_col != -1) {
-                try
-                {
-                    int sex_info = misc::convert<int>(
-                        token[static_cast<std::vector<std::string>::size_type>(
-                            sex_col)]);
-                    m_num_male += (sex_info == 1);
-                    m_num_female += (sex_info == 2);
-                    m_num_ambig_sex += (sex_info != 1 && sex_info != 2);
-                }
-                catch (...)
-                {
-                    throw std::runtime_error(
-                        "Error: Non-numeric sex coding!\n");
-                }
-            }
-            else
-            {
-                m_num_ambig_sex++;
-            }
-            if (duplicated_samples.find(id) != duplicated_samples.end()) {
-                duplicated_sample_id.push_back(id);
-            }
-            duplicated_samples.insert(id);
-            temp_inclusion_vec.push_back(inclusion);
-            if (!m_is_ref && inclusion) {
-                // all sample must be a founder
-                sample_name.emplace_back(Sample_ID(FID, IID, "", true));
-            }
+        }
+        else
+        {
+            m_num_ambig_sex++;
+        }
+        if (duplicated_samples.find(id) != duplicated_samples.end()) {
+            duplicated_sample_id.push_back(id);
+        }
+        duplicated_samples.insert(id);
+        temp_inclusion_vec.push_back(inclusion);
+        if (!m_is_ref && inclusion) {
+            // all sample must be a founder
+            sample_name.emplace_back(Sample_ID(FID, IID, "", true));
         }
     }
     if (!duplicated_sample_id.empty()) {
