@@ -942,9 +942,16 @@ void Genotype::load_snps(const std::string& out,
                          const std::vector<IITree<int, int>>& exclusion_regions,
                          bool verbose, Reporter& reporter, Genotype* target)
 {
+    m_base_missed = 0;
+    m_num_ambig = 0;
+    m_num_xrange = 0;
     gen_snp_vector(exclusion_regions, out, target);
     m_marker_ct = m_existed_snps.size();
     std::string message = "";
+    if(m_base_missed != 0){
+        message.append(std::to_string(m_base_missed)
+                        + " variant(s) not found in previous data\n" );
+    }
     if (m_num_ambig != 0 && !m_keep_ambig) {
         message.append(std::to_string(m_num_ambig)
                        + " ambiguous variant(s) excluded\n");

@@ -510,6 +510,7 @@ void BinaryPlink::gen_snp_vector(
             if (reference->m_existed_snps_index.find(bim_token[+BIM::RS])
                 == reference->m_existed_snps_index.end())
             {
+                m_base_missed++;
                 continue;
             }
             // ensure all alleles are capitalized for easy matching

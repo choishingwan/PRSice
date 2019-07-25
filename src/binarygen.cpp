@@ -614,6 +614,7 @@ void BinaryGen::gen_snp_vector(
             {
                 // this is the reference panel, and the SNP wasn't found in the
                 // target doens't matter if we use RSID or SNPID
+                m_base_missed++;
                 exclude_snp = true;
             }
             else if (reference->m_existed_snps_index.find(RSID)
