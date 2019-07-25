@@ -93,7 +93,9 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_EQ(commander.get_missing_score(), MISSING_SCORE::MEAN_IMPUTE);
     ASSERT_EQ(commander.get_score(), SCORING::AVERAGE);
     ASSERT_EQ(commander.model(), MODEL::ADDITIVE);
-    ASSERT_EQ(commander.clump_dist(), 1000000);
+	// Clump distance default is different between PRSet and PRSice
+    // PRSice uses 250k whereas PRSet uses 1000000
+    ASSERT_EQ(commander.clump_dist(), 250000);
     ASSERT_EQ(commander.thread(), 1);
     ASSERT_EQ(commander.window_3(), 0);
     ASSERT_EQ(commander.window_5(), 0);
