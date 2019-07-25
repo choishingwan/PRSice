@@ -406,9 +406,8 @@ public:
         if (use_ref_maf) return m_ref_expected_value;
         return m_expected_value;
     }
-    void invalid() {
-        m_is_valid = false;
-    }
+    void invalid() { m_is_valid = false; }
+
 private:
     // basic info
     // actually, the packing of the data is problematic and to enhance

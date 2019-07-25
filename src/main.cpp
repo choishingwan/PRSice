@@ -114,8 +114,8 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-            target_file->load_snps(commander.out(), exclusion_regions,
-                                   verbose, reporter);
+            target_file->load_snps(commander.out(), exclusion_regions, verbose,
+                                   reporter);
             // now load the reference file
             if ((!commander.no_clump() && commander.use_ref())
                 || commander.use_ref_maf())
@@ -133,9 +133,8 @@ int main(int argc, char* argv[])
                     commander.ref_keep_file(), commander.ref_remove_file(),
                     commander.delim(), verbose, reporter);
                 // load the reference file
-                reference_file->load_snps(
-                    commander.out(), exclusion_regions, verbose,
-                    reporter, target_file);
+                reference_file->load_snps(commander.out(), exclusion_regions,
+                                          verbose, reporter, target_file);
             }
             exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and
@@ -317,7 +316,8 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
-                                   region_names, i_pheno, commander.no_regress());
+                                   region_names, i_pheno,
+                                   commander.no_regress());
                 // go through each region
                 fprintf(stderr, "\nStart Processing\n");
                 for (size_t i_region = 0; i_region < num_regions; ++i_region) {

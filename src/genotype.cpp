@@ -155,9 +155,8 @@ void Genotype::read_base(
     const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
-    const double& bound_end,
-        const std::string& exclude_snps,
-        const std::string& extract_snps,
+    const double& bound_end, const std::string& exclude_snps,
+    const std::string& extract_snps,
     const std::vector<IITree<int, int>>& exclusion_regions,
     const double& maf_control, const double& maf_case,
     const double& info_threshold, const bool maf_control_filter,
@@ -296,15 +295,17 @@ void Genotype::read_base(
         rs_id = token[col_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) == dup_index.end()) {
             // if this is not a duplicated SNP
-            if(!m_exclude_snp
-                    && m_snp_selection_list.find(rs_id)
-                           == m_snp_selection_list.end()){
+            if (!m_exclude_snp
+                && m_snp_selection_list.find(rs_id)
+                       == m_snp_selection_list.end())
+            {
                 num_selected++;
                 exclude = true;
             }
-            else if(m_exclude_snp
-                    && m_snp_selection_list.find(rs_id)
-                           != m_snp_selection_list.end()){
+            else if (m_exclude_snp
+                     && m_snp_selection_list.find(rs_id)
+                            != m_snp_selection_list.end())
+            {
                 num_selected++;
                 exclude = true;
             }
@@ -323,14 +324,14 @@ void Genotype::read_base(
                             // this is the sex chromosomes
                             // we don't need to output the error as they will be
                             // filtered out before by the genotype read anyway
-                            if(!exclude){
+                            if (!exclude) {
                                 exclude = true;
                                 num_haploid++;
                             }
                         }
                         else
                         {
-                            if(!exclude){
+                            if (!exclude) {
                                 exclude = true;
                                 num_chr_filter++;
                             }
@@ -343,7 +344,7 @@ void Genotype::read_base(
                          || chr_code == m_xymt_codes[X_OFFSET]
                          || chr_code == m_xymt_codes[Y_OFFSET])
                 {
-                    if(!exclude){
+                    if (!exclude) {
                         exclude = true;
                         num_haploid++;
                     }
@@ -400,16 +401,16 @@ void Genotype::read_base(
                 {
                     // exclude because we can't read the MAF, therefore assume
                     // this is problematic
-                    if(!exclude){
-                    num_maf_filter++;
-                    exclude = true;
+                    if (!exclude) {
+                        num_maf_filter++;
+                        exclude = true;
                     }
                     maf_filtered = true;
                 }
                 if (maf < maf_control) {
-                    if(!exclude){
-                    num_maf_filter++;
-                    exclude = true;
+                    if (!exclude) {
+                        num_maf_filter++;
+                        exclude = true;
                     }
                     maf_filtered = true;
                 }
@@ -430,15 +431,15 @@ void Genotype::read_base(
                     // we don't want to double count the MAF filtering, thus we
                     // only add one to the maf filter count if we haven't
                     // already filtered this SNP based on the control MAf
-                    if(!exclude){
-                    num_maf_filter += !maf_filtered;
-                    exclude = true;
+                    if (!exclude) {
+                        num_maf_filter += !maf_filtered;
+                        exclude = true;
                     }
                 }
                 if (maf_case_temp < maf_case) {
-                    if(!exclude){
-                    num_maf_filter += !maf_filtered;
-                    exclude = true;
+                    if (!exclude) {
+                        num_maf_filter += !maf_filtered;
+                        exclude = true;
                     }
                 }
             }
@@ -453,13 +454,13 @@ void Genotype::read_base(
                 catch (...)
                 {
                     // if no info score, just assume it doesn't pass the QC
-                    if(!exclude){
+                    if (!exclude) {
                         num_info_filter++;
                         exclude = true;
                     }
                 }
                 if (info_score < info_threshold) {
-                    if(!exclude){
+                    if (!exclude) {
                         num_info_filter++;
                         exclude = true;
                     }
@@ -477,7 +478,7 @@ void Genotype::read_base(
                 }
                 else if (pvalue > max_threshold)
                 {
-                    if(!exclude){
+                    if (!exclude) {
                         exclude = true;
                         num_excluded++;
                     }
@@ -485,7 +486,7 @@ void Genotype::read_base(
             }
             catch (...)
             {
-                if(!exclude){
+                if (!exclude) {
                     exclude = true;
                     num_not_converted++;
                 }
@@ -503,7 +504,7 @@ void Genotype::read_base(
                 {
                     // we can't calculate log(0), so we will say we can't
                     // convert it
-                    if(!exclude){
+                    if (!exclude) {
                         num_not_converted++;
                         exclude = true;
                     }
@@ -516,15 +517,15 @@ void Genotype::read_base(
             catch (...)
             {
                 // non-numeric statistic
-                if(!exclude){
+                if (!exclude) {
                     num_not_converted++;
                     exclude = true;
                 }
             }
             if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele)) {
                 // only coun the number if the snp is kept
-                if(!exclude && keep_ambig) num_ambiguous++;
-                if(!exclude) exclude = !keep_ambig;
+                if (!exclude && keep_ambig) num_ambiguous++;
+                if (!exclude) exclude = !keep_ambig;
             }
             if (!exclude) {
                 category = -1;
